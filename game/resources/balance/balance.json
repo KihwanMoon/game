@@ -1,0 +1,87 @@
+{
+  "_comment": [
+    "밸런스 초안 (로드맵 Phase 0). 밸런스 수치는 코드에 하드코딩하지 않는다 (TDD §2) —",
+    "데이터 수정만으로 재빌드 없이 튜닝하기 위해서다.",
+    "",
+    "모든 계수는 정수 퍼센트다. TDD §8 의 수식은 skill_coef 와 방어 감쇠를 실수로 적었지만",
+    "TDD §12 R5 는 '정수 연산 원칙'을 요구한다. 둘이 충돌하므로 정수 쪽을 택했다 —",
+    "부동소수는 플랫폼마다 결과가 갈릴 수 있고 그러면 리플레이·골든 테스트가 무너진다.",
+    "정수로 옮긴 수식은 damage_formula 에 적어 두었다."
+  ],
+  "balance_version": 1,
+
+  "damage_formula": {
+    "_note": "TDD §8 을 정수 연산으로 옮긴 것. // 는 내림 나눗셈이다.",
+    "defense_denominator": "defense + soft_cap_base + soft_cap_per_floor * floor",
+    "raw": "(attack * skill_coef_pct * (denominator - defense)) // (100 * denominator)",
+    "surrounded_pct": "min(surround_cap_pct, 100 + surround_step_pct * (adjacent_enemies - 1))",
+    "final": "max(min_damage, raw * surrounded_pct // 100)",
+    "soft_cap_base": 50,
+    "soft_cap_per_floor": 10,
+    "surround_step_pct": 10,
+    "surround_cap_pct": 140,
+    "min_damage": 1
+  },
+
+  "cpu_cost_by_term_count": {"1": 1, "2": 2, "3": 4},
+
+  "player": {
+    "hp_max": 100,
+    "attack": 12,
+    "defense": 5,
+    "attack_range": 1,
+    "move_cost": 1,
+    "regen_base": 1,
+    "cpu_budget": 8,
+    "rule_slots": 5,
+    "potions": 2,
+    "initiative": 50
+  },
+
+  "skills": [
+    {"id": "ATTACK",      "coef_pct": 100, "cooldown": 0, "range": null, "_note": "range null = 엔티티의 attack_range 를 쓴다"},
+    {"id": "SKILL_1",     "coef_pct": 160, "cooldown": 3, "range": null},
+    {"id": "SKILL_2",     "coef_pct": 110, "cooldown": 2, "range": 4,
+     "label_ko": "사격",
+     "_note": "GDD §3.5 의 카이팅 예시가 `쿨타임[사격]` 을 전제한다. 원거리 수단이 없으면 그 전략 자체가 성립하지 않아 §11 의 '전략 2가지 이상' 지표를 검증할 수 없다."},
+    {"id": "AREA_ATTACK", "coef_pct": 90,  "cooldown": 5, "range": 2, "_note": "반경 2 이내 전체"}
+  ],
+
+  "enemies": [
+    {
+      "id": "goblin_rusher", "type": "MELEE", "label_ko": "고블린 돌격병",
+      "hp_max": 40, "attack": 8, "defense": 2, "attack_range": 1,
+      "move_cost": 1, "regen_base": 0, "initiative": 60,
+      "_note": "최단거리 접근 후 인접 시 연타. 플레이어에게 포위 회피를 요구한다 (GDD §5)."
+    },
+    {
+      "id": "goblin_archer", "type": "RANGED", "label_ko": "고블린 궁수",
+      "hp_max": 26, "attack": 10, "defense": 1, "attack_range": 4,
+      "move_cost": 1, "regen_base": 0, "initiative": 40,
+      "_note": "LOS 확보 시에만 공격, 접근하면 후퇴. 엄폐 이동 또는 급속 접근을 요구한다."
+    },
+    {
+      "id": "goblin_summoner", "type": "SUMMONER", "label_ko": "고블린 소환사",
+      "hp_max": 34, "attack": 5, "defense": 3, "attack_range": 3,
+      "move_cost": 1, "regen_base": 0, "initiative": 30,
+      "summon": {"every_ticks": 3, "spawns": "goblin_rusher", "max_alive": 3},
+      "_note": "TARGET TYPE_SUMMONER 로 우선 처리하지 않으면 잡몹이 계속 는다."
+    }
+  ],
+
+  "floor_scale": {
+    "_note": "층이 오를수록 방어 효율이 낮아진다 (TDD §8). 적 능력치는 층 기준 고정 스케일이다.",
+    "enemy_hp_pct_per_floor": 25,
+    "enemy_attack_pct_per_floor": 20
+  },
+
+  "anti_abuse": {
+    "_note": "GDD §7. v1 수식의 최적해가 '회복 타일 위 무한 대기' 였던 것을 막는다.",
+    "combat_regen_pct": 50,
+    "spring_pool_default": 30,
+    "hunter_spawn_tick": 40,
+    "hunter_interval_ticks": 20,
+    "hunter_entity": "goblin_rusher",
+    "floor_attack_pct_per_10_ticks": 1
+  }
+}

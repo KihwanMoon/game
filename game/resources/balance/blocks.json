@@ -1,0 +1,65 @@
+{
+  "_comment": [
+    "블록 목록 동결 (로드맵 Phase 0). 이후 변경 금지.",
+    "정본은 GDD §3.2·§3.3·§3.4 이며 이 파일은 그것을 기계가 읽는 형태로 옮긴 것이다.",
+    "개수는 GDD §9 가 정한 인지 18 / 행동 12 / 셀렉터 7 이고 테스트가 이를 고정한다.",
+    "Phase 3 에서 TypeScript 코어가 이 파일을 그대로 읽는다 (TDD §1.2).",
+    "id 표기 규약은 TDD §3.3 예시를 따른다 — 인지는 snake_case, 행동·셀렉터는 UPPER_SNAKE."
+  ],
+  "block_list_version": 1,
+
+  "perceptions": [
+    {"id": "self_hp_percent",          "category": "self",     "returns": "int",  "range": [0, 100], "label_ko": "내 HP%"},
+    {"id": "self_potion_count",        "category": "self",     "returns": "int",  "label_ko": "내 포션 수"},
+    {"id": "self_on_heal_tile",        "category": "self",     "returns": "bool", "label_ko": "내 위치가 회복타일인가"},
+    {"id": "self_cooldown_ready",      "category": "self",     "returns": "bool", "label_ko": "내 쿨타임[스킬] 완료",
+     "param": {"name": "skill", "values": ["SKILL_1", "SKILL_2", "AREA_ATTACK"]}},
+    {"id": "self_has_status",          "category": "self",     "returns": "bool", "label_ko": "내 상태이상",
+     "param": {"name": "status", "values": ["POISON", "SLOW", "STUN"]}},
+
+    {"id": "nearest_enemy_distance",   "category": "enemy",    "returns": "int",  "label_ko": "가장 가까운 적 거리"},
+    {"id": "visible_enemy_count",      "category": "enemy",    "returns": "int",  "label_ko": "시야 내 적 수"},
+    {"id": "enemy_type_present",       "category": "enemy",    "returns": "bool", "label_ko": "적 유형 존재",
+     "param": {"name": "enemy_type", "values": ["MELEE", "RANGED", "SUMMONER", "BOMBER"]}},
+    {"id": "target_hp_percent",        "category": "enemy",    "returns": "int",  "range": [0, 100], "label_ko": "대상 HP%"},
+    {"id": "target_is_casting",        "category": "enemy",    "returns": "bool", "label_ko": "대상이 시전 중인가"},
+
+    {"id": "self_exposed_to_los",      "category": "terrain",  "returns": "bool", "label_ko": "내 위치가 시야에 노출됨"},
+    {"id": "cover_wall_distance",      "category": "terrain",  "returns": "int",  "label_ko": "엄폐 가능 벽까지 거리"},
+    {"id": "open_neighbor_count",      "category": "terrain",  "returns": "int",  "range": [0, 8], "label_ko": "주변 8칸 중 이동 가능 칸 수"},
+    {"id": "self_on_hazard_telegraph", "category": "terrain",  "returns": "bool", "label_ko": "위험 예고 타일 위에 있는가"},
+    {"id": "nearest_exit_distance",    "category": "terrain",  "returns": "int",  "label_ko": "가장 가까운 문/계단 거리"},
+
+    {"id": "room_elapsed_ticks",       "category": "resource", "returns": "int",  "label_ko": "현재 방 체류 틱"},
+    {"id": "self_cpu_headroom",        "category": "resource", "returns": "int",  "label_ko": "내 CPU 여유"},
+    {"id": "flag_state",               "category": "resource", "returns": "bool", "label_ko": "플래그 상태",
+     "param": {"name": "flag", "values": ["A", "B", "C", "D"]}}
+  ],
+
+  "actions": [
+    {"id": "ATTACK",          "category": "attack",  "targeted": true,  "label_ko": "기본 공격"},
+    {"id": "SKILL_1",         "category": "attack",  "targeted": true,  "label_ko": "스킬 1"},
+    {"id": "SKILL_2",         "category": "attack",  "targeted": true,  "label_ko": "스킬 2"},
+    {"id": "AREA_ATTACK",     "category": "attack",  "targeted": false, "label_ko": "범위 공격"},
+
+    {"id": "APPROACH",        "category": "move",    "targeted": true,  "label_ko": "대상에게 접근"},
+    {"id": "RETREAT",         "category": "move",    "targeted": true,  "label_ko": "후퇴"},
+    {"id": "MOVE_TO_COVER",   "category": "move",    "targeted": false, "label_ko": "엄폐물 뒤로 이동"},
+    {"id": "MOVE_TO_EXIT",    "category": "move",    "targeted": false, "label_ko": "문/계단으로 이동"},
+    {"id": "MOVE_TO_HEAL",    "category": "move",    "targeted": false, "label_ko": "회복타일로 이동"},
+
+    {"id": "HOLD",            "category": "control", "targeted": false, "label_ko": "대기"},
+    {"id": "USE_POTION",      "category": "control", "targeted": false, "label_ko": "포션 사용"},
+    {"id": "SET_FLAG",        "category": "control", "targeted": false, "label_ko": "플래그 설정"}
+  ],
+
+  "selectors": [
+    {"id": "NEAREST",         "label_ko": "가장 가까운 적"},
+    {"id": "LOWEST_HP",       "label_ko": "HP 가 가장 낮은 적"},
+    {"id": "HIGHEST_THREAT",  "label_ko": "위협도가 가장 높은 적"},
+    {"id": "TYPE_RANGED",     "label_ko": "원거리 유형"},
+    {"id": "TYPE_SUMMONER",   "label_ko": "소환사 유형"},
+    {"id": "CASTING",         "label_ko": "시전 중인 적"},
+    {"id": "BOSS",            "label_ko": "보스"}
+  ]
+}
