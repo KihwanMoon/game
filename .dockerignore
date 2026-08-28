@@ -1,0 +1,16 @@
+# 빌드 컨텍스트에서 뺀다. dev·ci 는 소스를 바인드 마운트하므로 이미지에 굽지 않는다.
+.git
+.venv
+volume/
+
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# 문서는 실행에 필요 없다. PDF 가 2.8MB 라 컨텍스트만 무거워진다.
+docs/
+design/
+
+.env

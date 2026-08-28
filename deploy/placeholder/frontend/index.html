@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>코딩형 로그라이크 그리드 RPG</title>
+<!-- 저장소의 design/ 을 그대로 마운트해 읽는다. 토큰이 실제로 로드되는지도 함께 확인된다. -->
+<link rel="stylesheet" href="/design/styles.css">
+<style>
+  body { display:grid; place-items:center; min-height:100vh; }
+  main { width:min(720px,90vw); border:var(--border); background:var(--surface-panel); padding:var(--sp-8); }
+  .label { font:var(--fw-medium) var(--fs-label)/1 var(--font-mono);
+           letter-spacing:var(--ls-label); color:var(--text-dim); }
+  h1 { font-size:var(--fs-display-l); margin:var(--sp-4) 0 var(--sp-6); }
+  table { width:100%; border-collapse:collapse; font-family:var(--font-mono); font-size:var(--fs-mono-s); }
+  th, td { text-align:left; padding:var(--sp-2) 0; border-bottom:var(--border); }
+  th { color:var(--text-dim); font-weight:var(--fw-regular); }
+  .ok { color:var(--text-true); }
+  .pending { color:var(--text-dim); }
+  p { font-size:var(--fs-body-s); color:var(--text-dim); margin:var(--sp-6) 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <div class="label">ROUTING PLACEHOLDER</div>
+  <h1>코딩형 로그라이크 그리드 RPG</h1>
+  <table>
+    <tr><th>경로</th><th>대상</th><th>상태</th></tr>
+    <tr><td>/</td><td>game-frontend-1:8090</td><td class="ok">◈ 연결됨</td></tr>
+    <tr><td>/api/health</td><td>game-backend-1:8000</td><td class="ok">◈ 연결됨</td></tr>
+    <tr><td>규칙 에디터 UI</td><td>Phase 3 · W11~W13</td><td class="pending">· 미구현</td></tr>
+    <tr><td>전투 렌더러</td><td>Phase 3 · W13</td><td class="pending">· 미구현</td></tr>
+  </table>
+  <p>
+    이 페이지는 라우팅 확인용이다. 실제 앱은 로드맵 Phase 3 에서 채운다 —
+    그때까지 자산을 만들지 않는 것이 로드맵 원칙 1 이다.
+    이 문장이 도면 활자(IBM Plex Sans KR)로 보이고 표가 모노로 정렬돼 있다면
+    design/ 토큰까지 정상 로드된 것이다.
+  </p>
+</main>
+</body>
+</html>
