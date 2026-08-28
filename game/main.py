@@ -8,8 +8,10 @@ Phase 1 은 UI 가 없다. 출력은 터미널 텍스트 로그이며, 매 틱 �
 
 import argparse
 import sys
+from pathlib import Path
 
 from game.app.rules.rule_vm import build_rule_vm
+from game.app.services.analyze_battle import build_rule_stats, format_rule_stats
 from game.app.services.run_battle import (
     assign_enemy_policies,
     build_engine,
@@ -44,6 +46,11 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=12345, help="시드")
     parser.add_argument("--room", default=DEFAULT_ROOM, help="룸 템플릿 id")
     parser.add_argument("--ruleset", default=None, help="플레이어 규칙표 id. 생략하면 폴백")
+    parser.add_argument(
+        "--ruleset-file",
+        default=None,
+        help="규칙표 JSON 경로. 생략하면 번들된 예시를 쓴다. 자기 파일로 연습할 때 쓴다",
+    )
     parser.add_argument("--tail", type=int, default=TAIL_LINES, help="출력할 마지막 줄 수")
     return parser.parse_args(argv)
 
@@ -62,7 +69,12 @@ def main() -> int:
 
     engine = build_engine(template, balance, seed=arguments.seed)
     if arguments.ruleset is not None:
-        player_rulesets = load_rulesets(G0_RULESETS_PATH)
+        source = Path(arguments.ruleset_file) if arguments.ruleset_file else G0_RULESETS_PATH
+        player_rulesets = load_rulesets(source)
+        if arguments.ruleset not in player_rulesets:
+            print(f"'{arguments.ruleset}' 를 {source} 에서 찾지 못했다.")
+            print(f"있는 것: {', '.join(sorted(player_rulesets))}")
+            return 1
         engine.policies["player"] = build_rule_vm(
             player_rulesets[arguments.ruleset], catalog, engine.config.kind_types
         )
@@ -74,6 +86,10 @@ def main() -> int:
     for line in result.log_lines[-arguments.tail :]:
         print(line)
     print(f"\n{result.outcome} — {result.ticks}틱, 플레이어 HP {result.player_hp}")
+
+    # 사후 분석 (GDD §8.3). 로그를 처음부터 읽지 않아도 고칠 곳이 특정되어야 한다.
+    print("\n규칙별 성적")
+    print(format_rule_stats(build_rule_stats(engine.log, "player")))
     return 0
 
 

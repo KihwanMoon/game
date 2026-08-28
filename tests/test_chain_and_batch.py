@@ -184,3 +184,26 @@ def test_rule_order_changes_the_outcome(parts):
     kite = run_batch("g0_kite", player_ruleset=parts["player"]["g0_kite"], **common)
     sniper = run_batch("sniper", player_ruleset=benchmark["sniper"], **common)
     assert kite.win_rate_pct > sniper.win_rate_pct
+
+
+# ── 사후 분석 (GDD §8.3) ─────────────────────────────────────────────────────
+
+
+def test_rule_stats_expose_the_broken_rule(parts):
+    # sniper 는 후퇴가 사격보다 위에 있어 사격 규칙까지 평가가 내려가지 않는다.
+    # 성적표 한 줄이 그것을 말해야 로그를 처음부터 읽지 않아도 고칠 곳이 특정된다.
+    from game.app.rules.rule_vm import build_rule_vm
+    from game.app.services.analyze_battle import build_rule_stats
+    from game.app.services.run_battle import assign_enemy_policies, build_engine, run_battle
+    from game.config import BENCHMARK_RULESETS_PATH
+
+    benchmark = load_rulesets(BENCHMARK_RULESETS_PATH)
+    engine = build_engine(parts["chain"][0], parts["balance"], seed=12345)
+    engine.policies["player"] = build_rule_vm(
+        benchmark["sniper"], parts["catalog"], engine.config.kind_types
+    )
+    assign_enemy_policies(engine, parts["balance"], parts["catalog"], parts["enemy"])
+    run_battle(engine)
+
+    stats = {s.label: s for s in build_rule_stats(engine.log, "player")}
+    assert stats["[2]"].fired > stats["[3]"].fired * 5, "후퇴 편중이 드러나야 한다"
