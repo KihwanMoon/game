@@ -16,6 +16,7 @@ from game.app.services.run_batch import run_batch
 from game.app.services.run_battle import load_balance
 from game.config import (
     BALANCE_PATH,
+    BENCHMARK_RULESETS_PATH,
     BLOCKS_PATH,
     ENEMY_RULESETS_PATH,
     G0_RULESETS_PATH,
@@ -79,6 +80,7 @@ def main() -> int:
     chain = tuple(rooms[room_id] for room_id in CHAIN_ROOM_IDS)
     enemy_rulesets = load_rulesets(ENEMY_RULESETS_PATH)
     player_rulesets = load_rulesets(G0_RULESETS_PATH)
+    player_rulesets.update(load_rulesets(BENCHMARK_RULESETS_PATH))
 
     candidates: list[tuple[str, RuleSet | None]] = [("fallback", None)]
     candidates.extend(player_rulesets.items())
