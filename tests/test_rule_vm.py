@@ -10,9 +10,9 @@ import json
 import pytest
 
 from game.app.rules.rule_vm import build_rule_vm, count_cpu_usage, evaluate_condition
-from game.app.rules.selectors import resolve_target
 from game.app.rules.validator import validate_ruleset
 from game.app.services.run_battle import build_engine, load_balance, run_battle
+from game.app.simulation.selectors import resolve_target
 from game.config import BALANCE_PATH, BLOCKS_PATH, G0_RULESETS_PATH, ROOM_TEMPLATES_PATH
 from game.schemas.blocks import load_block_catalog
 from game.schemas.room import load_room_templates
@@ -323,3 +323,78 @@ def test_designed_ruleset_beats_the_fallback(rooms, balance, catalog, rulesets):
     designed_engine.policies["player"] = build_rule_vm(rulesets["g0_pressure"], catalog, kinds)
     designed = run_battle(designed_engine)
     assert designed.player_hp > fallback.player_hp
+
+
+# ── 블록 목록 v2 (F-1 잔여 / F-3 해결) ───────────────────────────────────────
+
+
+def test_target_distance_is_addressable_per_selector(engine, catalog, balance):
+    # 규칙이 자기 TARGET 과 무관하게 어느 셀렉터의 대상까지든 거리를 물을 수 있어야
+    # `쿨타임 완료 → 사격 @소환사` 가 사거리 밖에서 헛치지 않는다.
+    engine.state.tick = 1
+    snapshot = engine.build_perceptions()["player"]
+    for selector in ("NEAREST", "TYPE_SUMMONER", "LOWEST_HP"):
+        assert isinstance(snapshot.read("target_distance", selector), int)
+
+
+def test_target_distance_is_minus_one_when_nobody_matches(engine):
+    # 보스는 이 방에 없다. -1 이어야 `<= 4` 같은 조건이 참이 되지 않는다.
+    engine.state.tick = 1
+    snapshot = engine.build_perceptions()["player"]
+    assert snapshot.read("target_distance", "BOSS") == -1
+
+
+def test_nearest_tile_distance_answers_for_heal_tiles(rooms, balance):
+    # F-3 — 회복타일이 있는 방과 없는 방을 구분할 수 있어야 한다.
+    with_spring = build_engine(rooms["spring_bait"], balance, seed=1)
+    without = build_engine(rooms["open_field"], balance, seed=1)
+    with_spring.state.tick = without.state.tick = 1
+    assert with_spring.build_perceptions()["player"].read("nearest_tile_distance", "SPRING") >= 0
+    assert without.build_perceptions()["player"].read("nearest_tile_distance", "SPRING") == -1
+
+
+def test_skill_uses_its_own_range(rooms, balance, catalog):
+    # balance.json 이 SKILL_2 에 사거리 4 를 선언한다. 엔진이 그것을 무시하면
+    # 원거리 스킬을 전제한 규칙표가 매 틱 '사거리 밖'으로 헛돈다.
+    kinds = {k["id"]: k["type"] for k in balance["enemies"]}
+    rules = (
+        Rule(
+            priority=1,
+            conditions=Condition(op="SINGLE", terms=(Term("target_distance", "<=", 4, "NEAREST"),)),
+            action="SKILL_2",
+            target="NEAREST",
+            cpu_cost=1,
+        ),
+    )
+    local = build_engine(rooms["open_field"], balance, seed=1)
+    local.policies["player"] = build_rule_vm(RuleSet("x", 1, rules), catalog, kinds)
+    for _ in range(12):
+        local.run_tick()
+    hits = [e for e in local.log.entries if e.entity_id == "player" and e.delta is not None]
+    assert hits, "사거리 4 스킬이 한 번도 맞지 않았다"
+
+
+@pytest.mark.parametrize("ruleset_id", ["g0_pressure", "g0_kite", "g0_cover"])
+def test_every_g0_ruleset_beats_the_fallback(
+    rulesets, catalog, balance, rooms, target_rooms, ruleset_id
+):
+    # GDD §11 — 최상위 규칙표가 서로 다른 전략으로 갈리는지 보려면 우선 셋 다
+    # 폴백보다 나아야 한다. 로직 설계가 결과를 바꾸는가 (GDD §0 퍼즐형 주축).
+    kinds = {k["id"]: k["type"] for k in balance["enemies"]}
+    room = rooms[target_rooms[ruleset_id]]
+    fallback = run_battle(build_engine(room, balance, seed=12345))
+    local = build_engine(room, balance, seed=12345)
+    local.policies["player"] = build_rule_vm(rulesets[ruleset_id], catalog, kinds)
+    designed = run_battle(local)
+    assert designed.player_hp > fallback.player_hp
+
+
+@pytest.mark.parametrize("ruleset_id", ["g0_pressure", "g0_kite", "g0_cover"])
+def test_g0_rulesets_waste_no_ticks(rulesets, catalog, balance, rooms, target_rooms, ruleset_id):
+    # 발동했는데 아무 일도 못 하는 규칙이 있으면 플레이어는 자기 논리를 의심한다 (P1).
+    kinds = {k["id"]: k["type"] for k in balance["enemies"]}
+    local = build_engine(rooms[target_rooms[ruleset_id]], balance, seed=12345)
+    local.policies["player"] = build_rule_vm(rulesets[ruleset_id], catalog, kinds)
+    run_battle(local)
+    wasted = [e for e in local.log.entries if e.entity_id == "player" and "낭비" in e.outcome]
+    assert wasted == []

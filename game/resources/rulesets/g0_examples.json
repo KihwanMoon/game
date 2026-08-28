@@ -17,20 +17,87 @@
       "target_room": "open_field",
       "cpu_total": 6,
       "rules": [
-        {"priority": 1, "cpu_cost": 2, "action": "USE_POTION", "target": null, "set_flag": null,
-         "conditions": {"op": "AND", "terms": [
-           {"lhs": "self_hp_percent", "cmp": "<", "rhs": 25},
-           {"lhs": "self_potion_count", "cmp": ">", "rhs": 0}]}},
-        {"priority": 2, "cpu_cost": 2, "action": "SKILL_1", "target": "NEAREST", "set_flag": null,
-         "conditions": {"op": "AND", "terms": [
-           {"lhs": "nearest_enemy_distance", "cmp": "<=", "rhs": 1},
-           {"lhs": "self_cooldown_ready", "lhs_param": "SKILL_1", "cmp": "==", "rhs": true}]}},
-        {"priority": 3, "cpu_cost": 1, "action": "ATTACK", "target": "NEAREST", "set_flag": null,
-         "conditions": {"op": "SINGLE", "terms": [
-           {"lhs": "nearest_enemy_distance", "cmp": "<=", "rhs": 1}]}},
-        {"priority": 4, "cpu_cost": 1, "action": "MOVE_TO_EXIT", "target": null, "set_flag": null,
-         "conditions": {"op": "SINGLE", "terms": [
-           {"lhs": "room_elapsed_ticks", "cmp": ">", "rhs": 35}]}}
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 25
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "SKILL_1",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": 1
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "lhs_param": "SKILL_1",
+                "cmp": "==",
+                "rhs": true
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": 1
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "MOVE_TO_EXIT",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "room_elapsed_ticks",
+                "cmp": ">",
+                "rhs": 35
+              }
+            ]
+          }
+        }
       ]
     },
     {
@@ -40,21 +107,94 @@
       "target_room": "corridor",
       "cpu_total": 7,
       "rules": [
-        {"priority": 1, "cpu_cost": 2, "action": "USE_POTION", "target": null, "set_flag": null,
-         "conditions": {"op": "AND", "terms": [
-           {"lhs": "self_hp_percent", "cmp": "<", "rhs": 30},
-           {"lhs": "self_potion_count", "cmp": ">", "rhs": 0}]}},
-        {"priority": 2, "cpu_cost": 1, "action": "RETREAT", "target": "NEAREST", "set_flag": "A=true",
-         "conditions": {"op": "SINGLE", "terms": [
-           {"lhs": "nearest_enemy_distance", "cmp": "<=", "rhs": 1}]}},
-        {"priority": 3, "cpu_cost": 2, "action": "SKILL_2", "target": "NEAREST", "set_flag": "A=false",
-         "conditions": {"op": "AND", "terms": [
-           {"lhs": "flag_state", "lhs_param": "A", "cmp": "==", "rhs": true},
-           {"lhs": "self_cooldown_ready", "lhs_param": "SKILL_2", "cmp": "==", "rhs": true}]}},
-        {"priority": 4, "cpu_cost": 2, "action": "SKILL_2", "target": "NEAREST", "set_flag": null,
-         "conditions": {"op": "AND", "terms": [
-           {"lhs": "nearest_enemy_distance", "cmp": "<=", "rhs": 4},
-           {"lhs": "self_cooldown_ready", "lhs_param": "SKILL_2", "cmp": "==", "rhs": true}]}}
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 1,
+          "action": "RETREAT",
+          "target": "NEAREST",
+          "set_flag": "A=true",
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": 1
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": "A=false",
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "flag_state",
+                "lhs_param": "A",
+                "cmp": "==",
+                "rhs": true
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "lhs_param": "SKILL_2",
+                "cmp": "==",
+                "rhs": true
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": 4
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "lhs_param": "SKILL_2",
+                "cmp": "==",
+                "rhs": true
+              }
+            ]
+          }
+        }
       ]
     },
     {
@@ -62,25 +202,112 @@
       "version": 1,
       "strategy_ko": "엄폐 우선 — LOS 를 끊어 사격형을 무력화하고 소환사를 먼저 지운다.",
       "target_room": "pillars",
-      "cpu_total": 7,
+      "cpu_total": 8,
       "rules": [
-        {"priority": 1, "cpu_cost": 2, "action": "USE_POTION", "target": null, "set_flag": null,
-         "conditions": {"op": "AND", "terms": [
-           {"lhs": "self_hp_percent", "cmp": "<", "rhs": 30},
-           {"lhs": "self_potion_count", "cmp": ">", "rhs": 0}]}},
-        {"priority": 2, "cpu_cost": 1, "action": "MOVE_TO_COVER", "target": null, "set_flag": null,
-         "conditions": {"op": "SINGLE", "terms": [
-           {"lhs": "self_on_hazard_telegraph", "cmp": "==", "rhs": true}]}},
-        {"priority": 3, "cpu_cost": 2, "action": "MOVE_TO_COVER", "target": null, "set_flag": null,
-         "conditions": {"op": "AND", "terms": [
-           {"lhs": "self_exposed_to_los", "cmp": "==", "rhs": true},
-           {"lhs": "enemy_type_present", "lhs_param": "RANGED", "cmp": "==", "rhs": true}]}},
-        {"priority": 4, "cpu_cost": 1, "action": "ATTACK", "target": "NEAREST", "set_flag": null,
-         "conditions": {"op": "SINGLE", "terms": [
-           {"lhs": "nearest_enemy_distance", "cmp": "<=", "rhs": 1}]}},
-        {"priority": 5, "cpu_cost": 1, "action": "SKILL_2", "target": "TYPE_SUMMONER", "set_flag": null,
-         "conditions": {"op": "SINGLE", "terms": [
-           {"lhs": "self_cooldown_ready", "lhs_param": "SKILL_2", "cmp": "==", "rhs": true}]}}
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 1,
+          "action": "MOVE_TO_COVER",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "self_on_hazard_telegraph",
+                "cmp": "==",
+                "rhs": true
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "MOVE_TO_COVER",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_exposed_to_los",
+                "cmp": "==",
+                "rhs": true
+              },
+              {
+                "lhs": "enemy_type_present",
+                "lhs_param": "RANGED",
+                "cmp": "==",
+                "rhs": true
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": 1
+              }
+            ]
+          }
+        },
+        {
+          "priority": 5,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "TYPE_SUMMONER",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_cooldown_ready",
+                "lhs_param": "SKILL_2",
+                "cmp": "==",
+                "rhs": true
+              },
+              {
+                "lhs": "target_distance",
+                "lhs_param": "TYPE_SUMMONER",
+                "cmp": "<=",
+                "rhs": 4
+              }
+            ]
+          }
+        }
       ]
     }
   ]

@@ -81,6 +81,9 @@ def test_parameterized_perceptions_declare_values(catalog):
         "self_has_status",
         "enemy_type_present",
         "flag_state",
+        # 블록 목록 v2 일반화. 개수는 18 그대로다 — 두 블록을 인자화했을 뿐이다.
+        "target_distance",  # F-1 잔여: 선택된 대상까지의 거리
+        "nearest_tile_distance",  # F-3: 회복타일 존재를 물을 방법
     }
     for block in parameterized:
         assert block.param.values, f"{block.block_id} 의 허용값이 비어 있다"

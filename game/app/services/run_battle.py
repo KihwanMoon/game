@@ -81,6 +81,7 @@ def build_engine(
         damage_rules=build_damage_rules(balance["damage_formula"]),
         kind_types={kind["id"]: kind["type"] for kind in kinds},
         skill_coef_pct={skill["id"]: skill["coef_pct"] for skill in balance["skills"]},
+        skill_range={skill["id"]: skill.get("range") for skill in balance["skills"]},
         max_ticks=max_ticks,
         combat_regen_pct=balance["anti_abuse"]["combat_regen_pct"],
     )

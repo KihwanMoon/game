@@ -153,8 +153,10 @@ class ActionExecutor:
         if target is None or not target.is_alive:
             self._record(entity.entity_id, plan, "대상 없음 — 틱 낭비", None)
             return
-        if get_manhattan_distance(entity.position, target.position) > entity.attack_range:
-            self._record(entity.entity_id, plan, "사거리 밖 — 틱 낭비", None)
+        reach = self.config.skill_range.get(plan.action_id) or entity.attack_range
+        distance = get_manhattan_distance(entity.position, target.position)
+        if distance > reach:
+            self._record(entity.entity_id, plan, f"사거리 밖({distance} > {reach}) — 틱 낭비", None)
             return
         self._apply_strike(entity, target, plan)
 

@@ -6,7 +6,7 @@
     "Phase 3 에서 TypeScript 코어가 이 파일을 그대로 읽는다 (TDD §1.2).",
     "id 표기 규약은 TDD §3.3 예시를 따른다 — 인지는 snake_case, 행동·셀렉터는 UPPER_SNAKE."
   ],
-  "block_list_version": 1,
+  "block_list_version": 2,
 
   "perceptions": [
     {"id": "self_hp_percent",          "category": "self",     "returns": "int",  "range": [0, 100], "label_ko": "내 HP%"},
@@ -17,7 +17,9 @@
     {"id": "self_has_status",          "category": "self",     "returns": "bool", "label_ko": "내 상태이상",
      "param": {"name": "status", "values": ["POISON", "SLOW", "STUN"]}},
 
-    {"id": "nearest_enemy_distance",   "category": "enemy",    "returns": "int",  "label_ko": "가장 가까운 적 거리"},
+    {"id": "target_distance",          "category": "enemy",    "returns": "int",  "label_ko": "대상 거리",
+     "param": {"name": "selector", "values": ["NEAREST", "LOWEST_HP", "HIGHEST_THREAT", "TYPE_RANGED", "TYPE_SUMMONER", "CASTING", "BOSS"]},
+     "_note": "v2 일반화 (F-1 잔여). 셀렉터가 고를 대상까지의 거리. NEAREST 가 이전의 가장 가까운 적 거리다. 대상이 없으면 -1."},
     {"id": "visible_enemy_count",      "category": "enemy",    "returns": "int",  "label_ko": "시야 내 적 수"},
     {"id": "enemy_type_present",       "category": "enemy",    "returns": "bool", "label_ko": "적 유형 존재",
      "param": {"name": "enemy_type", "values": ["MELEE", "RANGED", "SUMMONER", "BOMBER"]}},
@@ -28,7 +30,9 @@
     {"id": "cover_wall_distance",      "category": "terrain",  "returns": "int",  "label_ko": "엄폐 가능 벽까지 거리"},
     {"id": "open_neighbor_count",      "category": "terrain",  "returns": "int",  "range": [0, 8], "label_ko": "주변 8칸 중 이동 가능 칸 수"},
     {"id": "self_on_hazard_telegraph", "category": "terrain",  "returns": "bool", "label_ko": "위험 예고 타일 위에 있는가"},
-    {"id": "nearest_exit_distance",    "category": "terrain",  "returns": "int",  "label_ko": "가장 가까운 문/계단 거리"},
+    {"id": "nearest_tile_distance",    "category": "terrain",  "returns": "int",  "label_ko": "가장 가까운 목표 거리",
+     "param": {"name": "tile", "values": ["DOOR", "STAIRS", "SPRING"]},
+     "_note": "v2 일반화 (F-3). 회복타일 존재를 물을 방법이 없어 MOVE_TO_HEAL 이 헛돌던 문제를 푼다. 방에 없으면 -1."},
 
     {"id": "room_elapsed_ticks",       "category": "resource", "returns": "int",  "label_ko": "현재 방 체류 틱"},
     {"id": "self_cpu_headroom",        "category": "resource", "returns": "int",  "label_ko": "내 CPU 여유"},

@@ -14,9 +14,9 @@ DEFAULT 인 '가장 가까운 적에게 접근' 이 나간다 (TDD §5.2).
 from dataclasses import dataclass
 
 from game.app.grid.geometry import get_manhattan_distance
-from game.app.rules.selectors import resolve_target
 from game.app.simulation.perception import PerceptionSnapshot
 from game.app.simulation.plan import PlannedAction
+from game.app.simulation.selectors import resolve_target
 from game.app.simulation.state import Entity, WorldState
 from game.schemas.blocks import BlockCatalog
 from game.schemas.ruleset import OP_OR, Condition, Rule, RuleSet, Term

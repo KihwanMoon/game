@@ -65,6 +65,10 @@ class EngineConfig:
     damage_rules: DamageRules
     kind_types: dict[str, str]
     skill_coef_pct: dict[str, int]
+    # 스킬이 자체 사거리를 가지면 그것을 쓴다. None 이면 엔티티의 attack_range 다.
+    # 이것이 없으면 balance.json 이 선언한 사거리가 조용히 무시되어, 원거리 스킬을
+    # 전제한 규칙표(GDD §3.5 카이팅)가 매 틱 '사거리 밖'으로 헛돈다.
+    skill_range: dict[str, int | None]
     floor: int = 1
     max_ticks: int = 400
     combat_regen_pct: int = 50

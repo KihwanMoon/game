@@ -12,8 +12,12 @@
 from dataclasses import dataclass
 
 from game.app.grid.geometry import get_manhattan_distance, iter_neighbors
+from game.app.simulation.selectors import ALL_SELECTORS, resolve_target
 from game.app.simulation.state import Entity, WorldState
 from game.schemas.room import TILE_DOOR, TILE_SPRING, TILE_STAIRS, WALKABLE_TILES
+
+# 인지 변수 nearest_tile_distance 의 인자에서 타일 ID 로.
+TILE_BY_NAME = {"DOOR": TILE_DOOR, "STAIRS": TILE_STAIRS, "SPRING": TILE_SPRING}
 
 # W1 시점에 아직 값을 만들 수 없는 블록. 비어 있는 이유를 코드가 알고 있어야
 # 나중에 "왜 안 되지"를 다시 조사하지 않는다.
@@ -103,7 +107,6 @@ def build_snapshot(
         읽기 전용 스냅샷.
     """
     hostiles = state.list_hostiles(entity)
-    distances = [get_manhattan_distance(entity.position, other.position) for other in hostiles]
 
     values: dict[str, int | bool] = {
         "self_hp_percent": entity.hp_percent,
@@ -111,13 +114,24 @@ def build_snapshot(
         "self_on_heal_tile": state.get_tile(*entity.position) == TILE_SPRING,
         # LOS 를 아직 못 보므로 시야 = 방 전체다. W6 에서 가시성 맵으로 좁힌다.
         "visible_enemy_count": len(hostiles),
-        "nearest_enemy_distance": min(distances) if distances else -1,
         "open_neighbor_count": _count_open_neighbors(state, entity),
-        "nearest_exit_distance": _get_nearest_tile_distance(
-            state, entity, {TILE_DOOR, TILE_STAIRS}
-        ),
         "room_elapsed_ticks": state.tick,
     }
+
+    # 셀렉터별 대상 거리 (블록 목록 v2, F-1 잔여 해결). 규칙이 자기 TARGET 과 무관하게
+    # 물을 수 있어야 하므로 스냅샷에서 7개를 모두 미리 푼다 — 틱당 1회 원칙은 지켜진다.
+    for selector_id in ALL_SELECTORS:
+        picked = resolve_target(selector_id, entity, state, kind_types)
+        values[f"target_distance[{selector_id}]"] = (
+            get_manhattan_distance(entity.position, picked.position) if picked else -1
+        )
+
+    # 타일 종류별 최단 거리 (v2, F-3). 회복타일이 방에 있는지 물을 수 있어야
+    # MOVE_TO_HEAL 이 헛돌지 않는다.
+    for tile_name, tile_id in TILE_BY_NAME.items():
+        values[f"nearest_tile_distance[{tile_name}]"] = _get_nearest_tile_distance(
+            state, entity, {tile_id}
+        )
 
     present_types = {kind_types.get(other.kind_id, "") for other in hostiles}
     for enemy_type in ("MELEE", "RANGED", "SUMMONER", "BOMBER"):
