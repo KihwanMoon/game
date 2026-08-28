@@ -12,7 +12,7 @@ from game.app.core.rng import DeterministicRng
 from game.app.grid.geometry import get_manhattan_distance, iter_neighbors, iter_steps
 from game.app.pathfinding.distance_field import build_distance_field, find_next_step
 from game.app.services.run_battle import build_engine, load_balance, run_battle
-from game.app.simulation.engine import (
+from game.app.simulation.plan import (
     OUTCOME_ONGOING,
     OUTCOME_PLAYER_LOSS,
     OUTCOME_PLAYER_WIN,

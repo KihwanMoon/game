@@ -10,11 +10,8 @@ from pathlib import Path
 from game.app.combat.damage import build_damage_rules
 from game.app.core.rng import DeterministicRng
 from game.app.rules.fallback_policy import FallbackPolicy
-from game.app.simulation.engine import (
-    OUTCOME_ONGOING,
-    EngineConfig,
-    TickEngine,
-)
+from game.app.simulation.engine import TickEngine
+from game.app.simulation.plan import OUTCOME_ONGOING, EngineConfig
 from game.app.simulation.state import FACTION_ENEMY, FACTION_PLAYER, Entity, WorldState
 from game.schemas.room import RoomTemplate
 
@@ -59,6 +56,7 @@ def build_engine(
         attack_range=player_stats["attack_range"],
         initiative=player_stats["initiative"],
         regen_base=player_stats["regen_base"],
+        cpu_budget=player_stats["cpu_budget"],
         potions=player_stats["potions"],
     )
 

@@ -28,6 +28,7 @@ class Entity:
     attack_range: int
     initiative: int
     regen_base: int = 0
+    cpu_budget: int = 0
     potions: int = 0
     cooldowns: dict[str, int] = field(default_factory=dict)
     flags: dict[str, bool] = field(default_factory=dict)

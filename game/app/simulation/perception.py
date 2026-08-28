@@ -22,8 +22,8 @@ DEFERRED_BLOCKS = {
     "cover_wall_distance": "Phase 2 W6 — 엄폐 판정",
     "self_on_hazard_telegraph": "Phase 2 W6 — 텔레그래프",
     "target_is_casting": "Phase 2 W6 — 텔레그래프",
-    "target_hp_percent": "F-1 미결 — 조건의 '대상'이 정의되지 않았다",
-    "self_cpu_headroom": "Phase 1 W2 — RuleVM 이 규칙표를 컴파일해야 나온다",
+    # 아래 둘은 스냅샷이 아니라 RuleVM 이 답한다. 대상 계열은 규칙마다 셀렉터가 다르고,
+    # CPU 여유는 규칙표를 알아야 계산된다. 미구현이 아니라 소유자가 다른 것이다.
 }
 
 

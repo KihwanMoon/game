@@ -10,8 +10,8 @@ TDD §5.2 가 정의한 DEFAULT 는 "가장 가까운 적에게 접근" 하나�
 from dataclasses import dataclass
 
 from game.app.grid.geometry import get_manhattan_distance
-from game.app.simulation.engine import PlannedAction
 from game.app.simulation.perception import PerceptionSnapshot
+from game.app.simulation.plan import PlannedAction
 from game.app.simulation.state import Entity, WorldState
 
 LOW_HP_PERCENT = 30
