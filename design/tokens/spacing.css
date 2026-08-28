@@ -1,0 +1,30 @@
+:root{
+  /* 4px 모듈. 도면 종이의 모눈과 같은 단위. */
+  --sp-0:0px;
+  --sp-1:4px;
+  --sp-2:8px;
+  --sp-3:12px;
+  --sp-4:16px;
+  --sp-5:20px;
+  --sp-6:24px;
+  --sp-8:32px;
+  --sp-10:40px;
+  --sp-12:48px;
+
+  /* 레이아웃 고정 치수 (전투 화면) */
+  --bar-top:56px;
+  --bar-bottom:48px;
+  --col-rules:320px;
+  --col-log:300px;
+  --plan-cell:64px;      /* 정사각 셀 */
+  --plan-cols:12;        /* @kind other */
+  --plan-rows:9;         /* @kind other */
+  --hatch-gap:4px;       /* 45도 해칭 간격 */
+
+  /* 밀도: 표준 */
+  --row-h:44px;          /* 규칙표 행(2줄) */
+  --log-row-h:22px;
+  --pad-panel:var(--sp-4);
+  --pad-cell:var(--sp-3);
+  --gap-col:1px;         /* 열 사이는 괘선 하나로만 */
+}

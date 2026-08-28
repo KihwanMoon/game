@@ -1,0 +1,314 @@
+{
+  "_comment": [
+    "G0 게이트 자료 (로드맵 Phase 0). '이 규칙이면 이 방을 클리어한다'가 종이 위에서",
+    "성립하는지 판정하기 위한 예시 3개다. 판정은 사람이 한다.",
+    "",
+    "형식은 TDD §3.3 을 따른다. 인자를 받는 인지 변수(쿨타임[스킬], 플래그[A~D] 등)를",
+    "표현할 자리가 TDD 형식에 없어 lhs_param 을 더했다 — 이 확장은 확정 전이다.",
+    "",
+    "제약: rule_slots 5, cpu_budget 8, cpu 비용 1항=1 / 2항=2 / 3항=4 (GDD §3.6).",
+    "전부 거짓이면 DEFAULT 행동(가장 가까운 적에게 접근)이 나간다 (TDD §5.2)."
+  ],
+  "rulesets": [
+    {
+      "ruleset_id": "g0_pressure",
+      "version": 1,
+      "strategy_ko": "근접 압박 — 붙어서 최단 시간에 처리한다. 소환사를 따로 노리지 않는다.",
+      "target_room": "open_field",
+      "cpu_total": 6,
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 25
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "SKILL_1",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": 1
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "lhs_param": "SKILL_1",
+                "cmp": "==",
+                "rhs": true
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": 1
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "MOVE_TO_EXIT",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "room_elapsed_ticks",
+                "cmp": ">",
+                "rhs": 35
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ruleset_id": "g0_kite",
+      "version": 1,
+      "strategy_ko": "카이팅 — 붙으면 물러나며 플래그를 세우고, 사거리가 벌어지면 사격한다. GDD §3.5 예시.",
+      "target_room": "corridor",
+      "cpu_total": 7,
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 1,
+          "action": "RETREAT",
+          "target": "NEAREST",
+          "set_flag": "A=true",
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": 1
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": "A=false",
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "flag_state",
+                "lhs_param": "A",
+                "cmp": "==",
+                "rhs": true
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "lhs_param": "SKILL_2",
+                "cmp": "==",
+                "rhs": true
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": 4
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "lhs_param": "SKILL_2",
+                "cmp": "==",
+                "rhs": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ruleset_id": "g0_cover",
+      "version": 1,
+      "strategy_ko": "엄폐 우선 — LOS 를 끊어 사격형을 무력화하고 소환사를 먼저 지운다.",
+      "target_room": "pillars",
+      "cpu_total": 8,
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 1,
+          "action": "MOVE_TO_COVER",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "self_on_hazard_telegraph",
+                "cmp": "==",
+                "rhs": true
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "MOVE_TO_COVER",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_exposed_to_los",
+                "cmp": "==",
+                "rhs": true
+              },
+              {
+                "lhs": "enemy_type_present",
+                "lhs_param": "RANGED",
+                "cmp": "==",
+                "rhs": true
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": 1
+              }
+            ]
+          }
+        },
+        {
+          "priority": 5,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "TYPE_SUMMONER",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_cooldown_ready",
+                "lhs_param": "SKILL_2",
+                "cmp": "==",
+                "rhs": true
+              },
+              {
+                "lhs": "target_distance",
+                "lhs_param": "TYPE_SUMMONER",
+                "cmp": "<=",
+                "rhs": 4
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

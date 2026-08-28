@@ -1,0 +1,20 @@
+:root{
+  /* border-radius 전역 2px 고정. 4px 초과 금지. */
+  --radius:2px;
+  --radius-none:0px;
+
+  --bw:1px;              /* @kind spacing — 모든 괘선은 1px */
+  --bw-accent:2px;       /* @kind spacing — 활성 규칙 좌측 세로바만 예외 */
+
+  --border:var(--bw) solid var(--line);           /* @kind other */
+  --border-strong:var(--bw) solid var(--line-strong); /* @kind other */
+  --border-accent:var(--bw) solid var(--line-accent); /* @kind other */
+  --border-danger:var(--bw) solid var(--line-danger); /* @kind other */
+  --border-dashed:var(--bw) dashed var(--line);   /* @kind other */
+
+  /* 그림자는 시스템에 존재하지 않는다. 층위는 명도차 + 1px 괘선. */
+  --shadow-none:none;
+
+  /* 해칭: 벽 단면 표현 전용. 장식 그라디언트로 재사용 금지. */
+  --hatch-45:repeating-linear-gradient(45deg,var(--plan-wall) 0 var(--bw),transparent var(--bw) var(--hatch-gap)); /* @kind other */
+}

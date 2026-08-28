@@ -1,0 +1,32 @@
+[project]
+name = "game"
+version = "0.1.0"
+description = "코딩형 로그라이크 그리드 RPG — 결정론적 시뮬레이션 코어"
+requires-python = ">=3.11"
+
+# TDD §1.2 — Phase 1 프로토타입은 표준 라이브러리만 쓴다.
+# 이 구간의 코드는 명시적으로 '버릴 코드'이고, Phase 3 에서 TypeScript 로 재작성된다.
+# 살아남는 것은 규칙 DSL 스키마와 밸런스 JSON 뿐이므로(TDD §1.2) 런타임 의존성을
+# 늘리지 않는다. 의존성이 필요해지면 그것이 곧 이관 비용(R4)이다.
+dependencies = []
+
+[dependency-groups]
+dev = [
+    # §7.1 — 훅·pre-commit·게이트가 같은 ruff 를 봐야 한다. 핀은 §8.5.2 기준.
+    "ruff==0.16.3",
+    "pydoclint",
+    "mypy",
+    "pre-commit",
+    # TDD §10 — 골든 리플레이·룸 생성 검증을 CI 매 커밋으로 돌린다.
+    "pytest",
+]
+
+# [tool.ruff] 를 여기에 두지 않는다. ruff 는 ruff.toml 을 pyproject.toml 보다
+# 우선하므로 둘을 함께 두면 이 절이 조용히 무효가 된다 (표준 문서 §8).
+# ruff 설정의 유일한 자리는 ruff.toml 이다.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# 저장소 루트를 import 경로에 넣는다. 이 프로토타입은 설치 가능한 패키지로 만들지
+# 않는다 — 빌드 백엔드를 붙이는 값이 버릴 코드(TDD §1.2)에는 남지 않기 때문이다.
+pythonpath = ["."]

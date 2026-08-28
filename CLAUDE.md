@@ -1,0 +1,180 @@
+# game
+
+## 코딩 표준
+
+이 저장소는 사내 파이썬 표준을 따른다. **규칙 정본은 Confluence 라벨
+`python-coding-standard` 문서(RULESET_VERSION 14)이며, 저장소의 설정 파일은
+그 문서로부터 생성된 사본이다.** 규칙을 바꿔야 하면 설정 파일이 아니라 정본 문서를
+고치고 `RULESET_VERSION` 을 올린 뒤 각 저장소에서 재동기화한다(§11).
+
+규칙 본문은 `.claude/rules/python-style.md` 에 있다. 파이썬 파일을 다룰 때 자동으로
+적용되므로 여기에 중복해 적지 않는다.
+
+동기화 이력은 `.claude/conventions.lock` 에 있다.
+
+## 강제 수단 세 계층 (§7.1)
+
+세 계층은 대체 관계가 아니다. 잡히는 것이 서로 다르다.
+
+| 계층 | 시점 | 커버 대상 | 보장 |
+|---|---|---|---|
+| `.claude/rules/python-style.md` | 코드를 쓰기 전 | Claude Code 가 쓰는 코드 | 확률적 |
+| `.claude/hooks/check_python_file.sh` (PostToolUse) | 파일을 쓴 직후 | 방금 쓴 파일 하나 | 결정적, 파일 단위 |
+| `tools/check_all.sh` (게이트) | `git push` 직전 | 저장소 전량 | 결정적, 최종 관문 |
+
+게이트 트리거는 **git pre-push 훅**이다. 클론한 뒤 한 번 켜야 한다:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+`--no-verify` 로 우회할 수 있으므로, 우회했다면 그 사실을 리뷰에 남긴다.
+
+## 작업 절차
+
+- 파일 수정 후 별도 명령을 돌릴 필요는 없다. PostToolUse 훅이 포맷·린트를 자동
+  적용하고, 자동 수정되지 않는 위반은 훅이 되돌려 알려 준다.
+- 훅이 위반을 알려 오면 그 자리에서 고친다. 억제로 넘기지 않는다.
+- 훅은 방금 쓴 파일 하나만 본다. 저장소 전량은 `tools/check_all.sh` 가 본다 —
+  커밋 전에 한 번 돌린다.
+- 검사 결과는 종료 코드로 판정한다. 출력 줄을 세는 방식(`grep -c`)은 도구의 출력
+  형식이 예상과 다르면 0 을 돌려주고, 그것이 "위반 없음"과 구별되지 않는다.
+- 새 공용 함수를 만들기 전에 기존 모듈에 같은 기능이 있는지 먼저 검색한다.
+
+## 예외 처리 (§11)
+
+- 규칙을 어겨야 하면 해당 라인에 `# noqa: RULE` 와 **사유 주석**을 함께 남긴다.
+- 함수명 규칙은 `# naming: allow <사유>` 를 쓴다.
+- 사유 없는 억제는 리뷰에서 반려한다.
+- 설계상 피할 수 없는 규칙군은 개별 억제가 아니라 `ruff.toml` 의 `ignore` 에
+  사유 주석과 함께 적고, 그 판단을 팀에 공유한다.
+- 저장소 설정 파일만 개별 수정하는 것은 금지한다. 정본 문서를 고친다.
+
+## 개발 환경
+
+의존성은 uv 로 관리한다. Python 은 TDD §1.2 및 CI(§8.5.2)에 맞춰 **3.11** 로 고정했다
+(`.python-version`).
+
+```bash
+uv sync --group dev          # .venv 구성
+uv run pytest                # 테스트
+uv run python -m game.main --seed 12345
+./tools/check_all.sh         # 저장소 전량 게이트 — 커밋 전에 한 번
+```
+
+게이트가 쓰는 도구는 세 계층이 같은 버전을 봐야 한다(§7.1). ruff 는 `0.16.3` 으로
+`pyproject.toml` 의 dependency-group 과 `.pre-commit-config.yaml` 의 rev 양쪽에
+고정돼 있다. `jq` 는 훅 입력이 stdin JSON 이라 별도로 필요하다.
+
+**`[tool.ruff]` 를 `pyproject.toml` 에 넣지 않는다.** ruff 는 `ruff.toml` 을 우선하므로
+둘을 함께 두면 pyproject 쪽이 조용히 무효가 된다(§8). ruff 설정의 자리는 `ruff.toml`
+하나뿐이다.
+
+## 디렉터리 구조
+
+표준 문서 §12 는 웹 백엔드 기준이라, 헤드리스 시뮬레이션 코어인 이 프로젝트에 맞게
+변형했다 — §12 가 허용하는 범위다. `api/`·`deploy/` 는 두지 않았고(Phase 1 에 서버가
+없다), 계층 경계 원칙은 그대로 지켰다.
+
+```
+game/
+├─ main.py            컴포지션 루트. 코어를 조립하는 유일한 지점
+├─ config.py          설정 로드
+├─ schemas/           I/O 계약 (TDD §3) — TS 로 이식되는 유일한 코드 자산
+├─ app/
+│  ├─ core/           도메인을 모른다. RNG, 이벤트 로그, 에러 규격
+│  ├─ grid/           타일·LOS·포위도
+│  ├─ pathfinding/    가중 Dijkstra, 거리장 캐싱
+│  ├─ rules/          RuleVM
+│  ├─ combat/         전투 수식
+│  ├─ simulation/     틱 엔진 7페이즈
+│  └─ services/       유스케이스. 파일 하나가 시나리오 하나
+└─ resources/         밸런스 JSON, 룸 템플릿
+tests/                골든 리플레이·회귀
+scripts/              헤드리스 배치 러너 등
+```
+
+어디에 둘지 헷갈리면 **"이것이 우리 도메인을 아는가"** 를 묻는다(§12). 모르면 `core/`,
+하나만 알면 도메인 모듈, 여러 개를 엮으면 `services/` 다. 의존은 한 방향으로만 흐른다.
+
+## 이 프로젝트의 불변 조건
+
+TDD §1.1 이 코어 원칙으로 둔 것이며, 깨지면 리플레이·데일리 챌린지·헤드리스 밸런싱이
+한꺼번에 무너진다(R5).
+
+- **모든 무작위성은 `game.app.core.rng.DeterministicRng` 를 거친다.** 파이썬 `random`,
+  `os.urandom`, 시스템 시간을 코어에서 쓰지 않는다.
+- **집합·딕셔너리를 순회해 게임 상태를 만들지 않는다.** 순서가 보장되지 않는다.
+  정렬된 시퀀스로 바꿔서 쓴다.
+- **부동소수를 피한다.** 확률은 정수 비교로 표현한다 — 30% 는 `rng.get_below(100) < 30`.
+- 난수원을 축별로 가를 때는 `create_stream(label)` 을 쓴다. 한 축의 호출 횟수가 바뀔 때
+  다른 축까지 흔들리면 회귀 검증이 불가능해진다.
+- 골든 테스트(`tests/test_rng.py`)의 기대값을 고치기 전에, 그것이 저장된 리플레이를
+  전부 무효화한다는 사실을 먼저 확인한다.
+
+## 디자인
+
+Claude Design 프로젝트 `fae25530-140a-4873-b9f9-684645b541c6` 가 정본이다. 토큰 사본만
+`design/` 에 가져왔고, 토큰을 고칠 일이 생기면 이 사본이 아니라 Design 프로젝트를
+고치고 다시 가져온다. 상세와 컴포넌트 계약은 `design/README.md` 참조.
+
+성격은 기계 도면이다 — 황동은 화면당 3곳까지, 그림자 없음, 4px 모듈, 1px 괘선,
+참/거짓은 색·글리프·명도 3중 표기.
+
+**디자인이 코어의 출력 계약을 정하는 지점이 있다.** UI 취향이 아니라 Phase 1 에서
+이벤트 로그를 설계할 때 반영해야 하는 것들이다.
+
+- 조건문은 `적거리(2) <= 사거리(3)` 처럼 **각 항의 실측값을 병기**한다. RuleVM 은
+  참/거짓만이 아니라 항별 실제 값을 내보내야 한다 (GDD §8.2, P1).
+- 규칙 상태는 3종이다 — 참·발동, 참·미발동, 거짓. "더 높은 우선순위가 이미 발동해서
+  실행되지 않았다"를 코어가 구분해 내보내야 한다.
+- CPU 예산 초과는 오류가 아니라 수치다. `cpu 10 / 8` 로 표시되고 그 상태에서도 편집이
+  계속된다.
+- 로그 레코드 필드는 `tick, rule, expr, outcome, delta, fired` 다.
+
+## 배포
+
+Docker + Compose. 파일은 표준 §12 가 정한 `deploy/` 에 있고, 상세는
+`deploy/README.md` 를 본다.
+
+```bash
+export COMPOSE_FILE=deploy/docker-compose.yml
+docker compose up -d             # 서빙 스택 (frontend + backend)
+docker compose run --rm check    # 게이트
+docker compose run --rm test     # pytest
+docker compose run --rm sim      # 헤드리스 실행
+docker compose run --rm dev      # 개발 셸
+```
+
+`stock.nullmovie.com` 이 이 스택을 가리킨다. 라우팅은 이 저장소가 아니라
+`/data/workspace/edge-proxy` 에 있고, vtoon·balpum 도 같은 파일에서 라우팅된다 —
+고칠 때 세 도메인이 함께 걸린다. **`container_name`(`game-frontend-1`·`game-backend-1`)
+과 네트워크명 `game_net` 은 edge-proxy 와의 계약이므로 바꾸지 않는다.**
+
+프런트·백엔드는 지금 nginx 자리표시자다. 실제 앱은 Phase 3 (W9~W13) 이고, 그때
+`image` 만 바꾸면 edge-proxy 는 손대지 않아도 된다. 상세는 `deploy/README.md`.
+
+컨테이너는 도구 버전을 맞춰야 하는 **네 번째 계층**이다(§7.1). Python 3.11 · uv 0.12.7 ·
+ruff 0.16.3 이 `.python-version`·`pyproject.toml`·`.pre-commit-config.yaml`·Dockerfile 에
+같은 값으로 박혀 있다. 하나를 올리면 전부 올린다.
+
+`runtime` 이미지에는 uv·ruff·pytest·git 이 없다 — Phase 1 의 런타임 의존성이 0개다.
+가상환경은 `/opt/venv` 에 둔다. `/app` 에 두면 바인드 마운트한 호스트 `.venv` 가
+컨테이너 것을 덮어쓴다.
+
+`PYTHONHASHSEED=0` 은 `runtime` 에만 박는다. `ci` 는 파이썬 기본 무작위 시드로 두어야
+`hash()` 순서에 기댄 코드가 드러난다 (R5).
+
+## 알려진 이슈 — 정본 문서 개정 대기
+
+표준 문서 §8 코드 블록의 결함이다. 저장소에서 규칙을 완화한 것이 아니라 게이트가
+아예 돌지 않는 상태를 푼 것이며, 정본이 `RULESET_VERSION 15` 로 개정되면 로컬 수정을
+지우고 재동기화한다. 상세는 `.claude/conventions.lock` 참조.
+
+| # | 내용 | 상태 |
+|:-:|:--|:--|
+| D1 | `check_all.sh` 가 `python` 을 부른다 (배포판 다수는 `python3` 만 제공) | 로컬 수정함 |
+| D2 | 같은 단계가 `pipefail` 아래라 "검사 대상 0건"이 게이트 실패가 된다 | 로컬 수정함 |
+| D3 | 예외 정규식 `/tests/` 가 저장소 루트 `tests/` 를 놓친다 | 로컬 수정함 |
+| D4 | `pre-commit install` 과 `core.hooksPath` 가 충돌한다 | 훅 직접 배치로 해소 |
+| D5 | §8.9 `BANNED` 목록이 정본 PDF 에서 잘렸다 | **미해결 — 원문 확인 필요** |
