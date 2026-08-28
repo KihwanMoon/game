@@ -152,3 +152,35 @@ def test_batch_detects_the_strategy_gap(parts):
     kite = run_batch("g0_kite", player_ruleset=parts["player"]["g0_kite"], **common)
     pressure = run_batch("g0_pressure", player_ruleset=parts["player"]["g0_pressure"], **common)
     assert kite.win_rate_pct > pressure.win_rate_pct
+
+
+# ── 전략 공간 (R2 조기 감지) ─────────────────────────────────────────────────
+
+
+def test_benchmark_rulesets_all_validate(parts):
+    from game.app.rules.validator import validate_ruleset
+    from game.config import BENCHMARK_RULESETS_PATH
+
+    budget = parts["balance"]["player"]["cpu_budget"]
+    slots = parts["balance"]["player"]["rule_slots"]
+    for ruleset in load_rulesets(BENCHMARK_RULESETS_PATH).values():
+        assert validate_ruleset(ruleset, parts["catalog"], budget, slots) == []
+
+
+def test_rule_order_changes_the_outcome(parts):
+    # sniper 와 g0_kite 는 거의 같은 블록을 쓴다. 차이는 플래그로 후퇴와 사격을
+    # 교대시키느냐뿐이고, 그것이 승패를 가른다 — 이 게임이 파는 재미의 실증이다.
+    from game.config import BENCHMARK_RULESETS_PATH
+
+    benchmark = load_rulesets(BENCHMARK_RULESETS_PATH)
+    common = dict(
+        templates=parts["chain"],
+        balance=parts["balance"],
+        catalog=parts["catalog"],
+        enemy_rulesets=parts["enemy"],
+        runs=BATCH_RUNS,
+        base_seed=1,
+    )
+    kite = run_batch("g0_kite", player_ruleset=parts["player"]["g0_kite"], **common)
+    sniper = run_batch("sniper", player_ruleset=benchmark["sniper"], **common)
+    assert kite.win_rate_pct > sniper.win_rate_pct

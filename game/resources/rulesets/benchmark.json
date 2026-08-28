@@ -1,0 +1,759 @@
+{
+  "_comment": [
+    "전략 공간 벤치마크 (R2 조기 감지). GDD §11 — 최상위 클리어 규칙표가 2가지 이상의",
+    "서로 다른 전략으로 갈리는가. 3개 표본으로는 판단할 수 없어 8개를 더 지었다.",
+    "",
+    "전부 동결된 블록 18/12/7 안에서만 짰고, 슬롯 5 · CPU 예산 8 을 지킨다.",
+    "여기서 한 전략만 통한다면 그것은 규칙표의 문제가 아니라 밸런스나 DSL 의 문제다."
+  ],
+  "rulesets": [
+    {
+      "ruleset_id": "focus_lowest",
+      "version": 1,
+      "strategy_ko": "가장 약한 적부터 지운다. 적 수를 빨리 줄이는 쪽에 건다.",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "LOWEST_HP"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "LOWEST_HP"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "LOWEST_HP"
+              }
+            ]
+          }
+        }
+      ],
+      "cpu_total": 6
+    },
+    {
+      "ruleset_id": "focus_summoner",
+      "version": 1,
+      "strategy_ko": "소환사부터 지운다. 잡몹이 늘기 전에 근원을 끊는다.",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "TYPE_SUMMONER",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "TYPE_SUMMONER"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "TYPE_SUMMONER",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "TYPE_SUMMONER"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "TYPE_SUMMONER",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "TYPE_SUMMONER"
+              }
+            ]
+          }
+        }
+      ],
+      "cpu_total": 6
+    },
+    {
+      "ruleset_id": "focus_ranged",
+      "version": 1,
+      "strategy_ko": "궁수부터 지운다. 쫓아갈 수 없는 위협을 먼저 없앤다.",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "TYPE_RANGED",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "TYPE_RANGED"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "TYPE_RANGED",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "TYPE_RANGED"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "TYPE_RANGED",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "TYPE_RANGED"
+              }
+            ]
+          }
+        }
+      ],
+      "cpu_total": 6
+    },
+    {
+      "ruleset_id": "focus_threat",
+      "version": 1,
+      "strategy_ko": "위협도가 가장 높은 적부터. 공격력이 대리 지표다.",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "HIGHEST_THREAT",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "HIGHEST_THREAT"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "HIGHEST_THREAT",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "HIGHEST_THREAT"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "HIGHEST_THREAT",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "HIGHEST_THREAT"
+              }
+            ]
+          }
+        }
+      ],
+      "cpu_total": 6
+    },
+    {
+      "ruleset_id": "sniper",
+      "version": 1,
+      "strategy_ko": "플래그 없이 거리만으로 카이팅한다. 2칸 안으로 들어오면 물러난다.",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 1,
+          "action": "RETREAT",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 2,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "NEAREST"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 4,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        }
+      ],
+      "cpu_total": 6
+    },
+    {
+      "ruleset_id": "area_sweep",
+      "version": 1,
+      "strategy_ko": "적이 뭉치면 광역으로 쓴다. 포위당하는 것을 오히려 기회로 삼는다.",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "AREA_ATTACK",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "visible_enemy_count",
+                "cmp": ">=",
+                "rhs": 2
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "AREA_ATTACK"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "NEAREST"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 5,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        }
+      ],
+      "cpu_total": 8
+    },
+    {
+      "ruleset_id": "spring_camp",
+      "version": 1,
+      "strategy_ko": "회복타일을 끼고 싸운다. 샘 잔여량이 다하기 전에 끝내야 한다.",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 20
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "MOVE_TO_HEAL",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 55
+              },
+              {
+                "lhs": "nearest_tile_distance",
+                "cmp": ">=",
+                "rhs": 0,
+                "lhs_param": "SPRING"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "NEAREST"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        }
+      ],
+      "cpu_total": 7
+    },
+    {
+      "ruleset_id": "door_hold",
+      "version": 1,
+      "strategy_ko": "문 앞을 지킨다. 통로에서 1:1 구도를 만드는 데 건다.",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "NEAREST"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "MOVE_TO_EXIT",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "nearest_tile_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "DOOR"
+              }
+            ]
+          }
+        }
+      ],
+      "cpu_total": 6
+    }
+  ]
+}
