@@ -1,0 +1,9 @@
+:root{
+  /* 도면은 흔들리지 않는다. 이동/스케일 애니메이션 없음.
+     허용되는 변화는 명도 전환과 틱 단위의 즉시 상태 교체뿐. */
+  --dur-instant:0ms;     /* @kind other */
+  --dur-fast:90ms;       /* @kind other — 호버 명도 전환 */
+  --dur-tick:140ms;      /* @kind other — 틱 경계 값 교체 */
+  --ease:linear;         /* @kind other — 기계적 등속. 바운스/오버슛 금지 */
+  --transition-hover:background-color var(--dur-fast) var(--ease),border-color var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease); /* @kind other */
+}

@@ -1,0 +1,37 @@
+:root{
+  /* ── 활자 계열 ─────────────────────────────────────────────────────── */
+  --font-display:"Zilla Slab","IBM Plex Sans KR",Georgia,serif;
+  --font-body:"IBM Plex Sans KR","Zilla Slab",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono","IBM Plex Sans KR",ui-monospace,monospace;
+
+  /* ── 활자배율 M (1440x900 기준) ───────────────────────────────────── */
+  --fs-display-l:24px;   /* 화면 제목, 층·실 표기 */
+  --fs-display-m:20px;   /* 패널 헤더 */
+  --fs-display-s:16px;
+  --fs-body:14px;        /* 본문 */
+  --fs-body-s:12px;      /* 보조 본문 */
+  --fs-mono:13px;        /* 규칙표, 로그 — 화면 텍스트의 절반 */
+  --fs-mono-s:12px;
+  --fs-label:11px;       /* 대문자/자간 라벨 */
+  --fs-num-l:18px;       /* 틱 카운터, HP 수치 */
+
+  --lh-tight:1.15;       /* @kind font */
+  --lh-data:1.45;        /* @kind font — 모노 컬럼 정렬용 */
+  --lh-body:1.6;         /* @kind font */
+
+  --fw-light:300;        /* @kind font */
+  --fw-regular:400;      /* @kind font */
+  --fw-medium:500;       /* @kind font */
+  --fw-semibold:600;     /* @kind font */
+  --fw-bold:700;         /* @kind font */
+
+  --ls-display:0.005em;  /* @kind font */
+  --ls-label:0.14em;     /* @kind font — 라벨은 자간을 벌려 괘선처럼 읽히게 */
+  --ls-mono:0;           /* @kind font */
+
+  /* ── 의미 별칭 ────────────────────────────────────────────────────── */
+  --type-room:var(--fs-display-l);
+  --type-panel-title:var(--fs-label);
+  --type-rule:var(--fs-mono);
+  --type-log:var(--fs-mono-s);
+}

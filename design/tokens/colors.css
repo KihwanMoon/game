@@ -1,0 +1,64 @@
+:root{
+  /* ── 기본 팔레트 (BASE — 이 9개 값 외의 색은 사용 금지) ───────────────── */
+  --ink:#0E131C;          /* 최하단 배경. 검정이 아니라 청람색 잉크 */
+  --plate:#161D29;        /* 패널 배경 */
+  --plate-high:#1F2836;   /* 카드, 호버, 활성 행 */
+  --rule-line:#2C3849;    /* 보더, 구분선, 그리드 괘선 */
+  --chalk:#C6CFDC;        /* 본문 텍스트 */
+  --chalk-dim:#7C889A;    /* 보조 텍스트, 비활성 */
+  --brass:#C89A4E;        /* 화면의 유일한 따뜻한 광원 — 상한 3곳 */
+  --brass-glow:#E8C079;   /* 황동 하이라이트 (황동 예산 안에서만) */
+  --verdigris:#4F8F7E;    /* 조건 참, 회복, 성공 */
+  --rust:#A65A42;         /* 위험, 예고, 피해 */
+
+  /* ── 의미 별칭 (SEMANTIC) ─────────────────────────────────────────── */
+  /* 표면: 층위는 명도차 + 1px 괘선으로만. 그림자 금지. */
+  --surface-base:var(--ink);
+  --surface-panel:var(--plate);
+  --surface-raised:var(--plate-high);
+  --surface-plan:var(--ink);          /* 도면 그리드 — 화면에서 가장 어두운 면 */
+  --surface-row-active:var(--plate-high);
+  --surface-hover:var(--plate-high);
+
+  /* 텍스트 */
+  --text-body:var(--chalk);
+  --text-dim:var(--chalk-dim);
+  --text-display:var(--chalk);
+  --text-data:var(--chalk);
+  --text-value:var(--chalk);          /* 조건문 괄호 안 실측값 */
+  --text-accent:var(--brass);
+  --text-true:var(--verdigris);
+  --text-false:var(--chalk-dim);
+  --text-danger:var(--rust);
+  --text-inverse:var(--ink);
+
+  /* 선 */
+  --line:var(--rule-line);
+  --line-strong:var(--chalk-dim);
+  --line-grid:var(--rule-line);
+  --line-accent:var(--brass);
+  --line-danger:var(--rust);
+
+  /* 상태 */
+  --state-true:var(--verdigris);
+  --state-false:var(--chalk-dim);
+  --state-armed:var(--brass);         /* 이번 틱 발동 */
+  --state-warn:var(--rust);
+  --state-heal:var(--verdigris);
+  --state-damage:var(--rust);
+
+  /* 자원 게이지 */
+  --gauge-track:var(--rule-line);
+  --gauge-hp:var(--verdigris);
+  --gauge-hp-low:var(--rust);
+  --gauge-cpu:var(--chalk);
+  --gauge-cpu-empty:var(--rule-line);
+
+  /* 도면 요소 */
+  --plan-wall:var(--rule-line);
+  --plan-floor-dot:var(--chalk-dim);
+  --plan-door:var(--chalk-dim);
+  --plan-actor-self:var(--brass);
+  --plan-actor-enemy:var(--chalk);
+  --plan-hazard:var(--rust);
+}
