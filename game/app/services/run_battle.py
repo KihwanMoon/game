@@ -10,10 +10,13 @@ from pathlib import Path
 from game.app.combat.damage import build_damage_rules
 from game.app.core.rng import DeterministicRng
 from game.app.rules.fallback_policy import FallbackPolicy
+from game.app.rules.rule_vm import build_rule_vm
 from game.app.simulation.engine import TickEngine
 from game.app.simulation.plan import OUTCOME_ONGOING, EngineConfig
 from game.app.simulation.state import FACTION_ENEMY, FACTION_PLAYER, Entity, WorldState
+from game.schemas.blocks import BlockCatalog
 from game.schemas.room import RoomTemplate
+from game.schemas.ruleset import RuleSet
 
 
 @dataclass(frozen=True)
@@ -61,13 +64,14 @@ def build_engine(
     )
 
     kinds = balance["enemies"]
-    for index, position in enumerate(template.enemy_spawns):
-        kind = kinds[index % len(kinds)]
+    by_id = {kind["id"]: kind for kind in kinds}
+    for index, spawn in enumerate(template.enemy_spawns):
+        kind = by_id[spawn.kind]
         state.entities[f"{kind['id']}_{index}"] = Entity(
             entity_id=f"{kind['id']}_{index}",
             kind_id=kind["id"],
             faction=FACTION_ENEMY,
-            position=position,
+            position=spawn.position,
             hp=kind["hp_max"],
             hp_max=kind["hp_max"],
             attack=kind["attack"],
@@ -82,10 +86,37 @@ def build_engine(
         kind_types={kind["id"]: kind["type"] for kind in kinds},
         skill_coef_pct={skill["id"]: skill["coef_pct"] for skill in balance["skills"]},
         skill_range={skill["id"]: skill.get("range") for skill in balance["skills"]},
+        summon_rules={k["id"]: k["summon"] for k in kinds if "summon" in k},
+        enemy_stats={k["id"]: k for k in kinds},
         max_ticks=max_ticks,
         combat_regen_pct=balance["anti_abuse"]["combat_regen_pct"],
     )
     return TickEngine(state=state, policy=FallbackPolicy(), config=config)
+
+
+def assign_enemy_policies(
+    engine: TickEngine, balance: dict, catalog: BlockCatalog, enemy_rulesets: dict[str, RuleSet]
+) -> None:
+    """적 엔티티에 각자의 규칙표를 붙인다 (GDD §5).
+
+    붙이지 않으면 적이 폴백 정책으로 싸운다. 그러면 도감이 보여줄 규칙표와 실제 행동이
+    달라져, 플레이어가 도감을 읽고 세운 카운터가 통하지 않는다.
+
+    Args:
+        engine: 대상 엔진.
+        balance: 밸런스 딕셔너리.
+        catalog: 동결된 블록 카탈로그.
+        enemy_rulesets: ruleset_id 에서 규칙표로의 대응표.
+    """
+    kind_types = engine.config.kind_types
+    by_kind = {k["id"]: k.get("ruleset_id") for k in balance["enemies"]}
+    for entity in engine.state.entities.values():
+        ruleset_id = by_kind.get(entity.kind_id)
+        if ruleset_id is None or ruleset_id not in enemy_rulesets:
+            continue
+        engine.policies[entity.entity_id] = build_rule_vm(
+            enemy_rulesets[ruleset_id], catalog, kind_types
+        )
 
 
 def run_battle(engine: TickEngine) -> BattleResult:

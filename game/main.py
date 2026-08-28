@@ -1,17 +1,34 @@
 """컴포지션 루트. 설정을 읽고 코어를 조립해 실행한다 (표준 문서 §12).
 
-지금은 틱 엔진이 없으므로 결정론 하네스가 살아 있는지만 확인한다. 로드맵 Phase 1 W1
-에서 틱 엔진이 들어오면 이 자리에서 조립한다 — 이 파일이 코어를 조립하는 유일한
-지점이고, 코어의 어떤 모듈도 여기를 거꾸로 참조하지 않는다 (TDD §2).
+Phase 1 은 UI 가 없다. 출력은 터미널 텍스트 로그이며, 매 틱 평가된 조건의 실제 값을
+그대로 보여준다 (GDD §8.2) — 죽고 나서 어느 규칙이 왜 틀렸는지 여기서 특정한다.
+
+    uv run python -m game.main --seed 12345 --ruleset g0_kite --room corridor
 """
 
 import argparse
 import sys
 
-from game.app.core.rng import DeterministicRng
-from game.config import SimulationConfig, load_config
+from game.app.rules.rule_vm import build_rule_vm
+from game.app.services.run_battle import (
+    assign_enemy_policies,
+    build_engine,
+    load_balance,
+    run_battle,
+)
+from game.config import (
+    BALANCE_PATH,
+    BLOCKS_PATH,
+    ENEMY_RULESETS_PATH,
+    G0_RULESETS_PATH,
+    ROOM_TEMPLATES_PATH,
+)
+from game.schemas.blocks import load_block_catalog
+from game.schemas.room import load_room_templates
+from game.schemas.ruleset import load_rulesets
 
-PREVIEW_DRAW_COUNT = 5
+DEFAULT_ROOM = "open_field"
+TAIL_LINES = 24
 
 
 def parse_arguments(argv: list[str]) -> argparse.Namespace:
@@ -21,47 +38,14 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
         argv: 프로그램 이름을 뺀 인자 목록.
 
     Returns:
-        해석된 인자. seed 가 None 이면 환경변수/기본값을 쓴다는 뜻이다.
+        해석된 인자.
     """
-    parser = argparse.ArgumentParser(description="결정론 시뮬레이션 코어 진입점")
-    parser.add_argument("--seed", type=int, default=None, help="시드. 생략 시 설정값을 쓴다")
+    parser = argparse.ArgumentParser(description="전투 1회를 돌리고 텍스트 로그를 낸다")
+    parser.add_argument("--seed", type=int, default=12345, help="시드")
+    parser.add_argument("--room", default=DEFAULT_ROOM, help="룸 템플릿 id")
+    parser.add_argument("--ruleset", default=None, help="플레이어 규칙표 id. 생략하면 폴백")
+    parser.add_argument("--tail", type=int, default=TAIL_LINES, help="출력할 마지막 줄 수")
     return parser.parse_args(argv)
-
-
-def build_config(arguments: argparse.Namespace) -> SimulationConfig:
-    """명령행 인자를 설정에 덮어씌운다.
-
-    Args:
-        arguments: 해석된 명령행 인자.
-
-    Returns:
-        인자가 반영된 설정.
-    """
-    config = load_config()
-    if arguments.seed is None:
-        return config
-    return SimulationConfig(
-        seed=arguments.seed,
-        max_ticks=config.max_ticks,
-        speed_label=config.speed_label,
-    )
-
-
-def run_self_check(config: SimulationConfig) -> None:
-    """같은 시드가 같은 수열을 내는지 확인하고 결과를 출력한다.
-
-    Args:
-        config: 실행 설정.
-    """
-    first = DeterministicRng(config.seed)
-    second = DeterministicRng(config.seed)
-    draws = [first.get_uint64() for _ in range(PREVIEW_DRAW_COUNT)]
-    repeats = [second.get_uint64() for _ in range(PREVIEW_DRAW_COUNT)]
-
-    print(f"seed       : {config.seed}")
-    print(f"max_ticks  : {config.max_ticks}")
-    print(f"first draws: {draws}")
-    print(f"결정론      : {'일치' if draws == repeats else '불일치 — R5 위반'}")
 
 
 def main() -> int:
@@ -70,8 +54,26 @@ def main() -> int:
     Returns:
         정상 종료면 0.
     """
-    config = build_config(parse_arguments(sys.argv[1:]))
-    run_self_check(config)
+    arguments = parse_arguments(sys.argv[1:])
+    catalog = load_block_catalog(BLOCKS_PATH)
+    balance = load_balance(BALANCE_PATH)
+    rooms = {t.template_id: t for t in load_room_templates(ROOM_TEMPLATES_PATH)}
+    template = rooms[arguments.room]
+
+    engine = build_engine(template, balance, seed=arguments.seed)
+    if arguments.ruleset is not None:
+        player_rulesets = load_rulesets(G0_RULESETS_PATH)
+        engine.policies["player"] = build_rule_vm(
+            player_rulesets[arguments.ruleset], catalog, engine.config.kind_types
+        )
+    assign_enemy_policies(engine, balance, catalog, load_rulesets(ENEMY_RULESETS_PATH))
+
+    result = run_battle(engine)
+    print(f"방 {template.template_id} — {template.purpose}")
+    print(f"시드 {arguments.seed} / 규칙표 {arguments.ruleset or 'fallback'}\n")
+    for line in result.log_lines[-arguments.tail :]:
+        print(line)
+    print(f"\n{result.outcome} — {result.ticks}틱, 플레이어 HP {result.player_hp}")
     return 0
 
 

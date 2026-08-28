@@ -18,6 +18,7 @@ BLOCKS_PATH = RESOURCES_DIR / "balance" / "blocks.json"
 BALANCE_PATH = RESOURCES_DIR / "balance" / "balance.json"
 ROOM_TEMPLATES_PATH = RESOURCES_DIR / "rooms" / "templates.json"
 G0_RULESETS_PATH = RESOURCES_DIR / "rulesets" / "g0_examples.json"
+ENEMY_RULESETS_PATH = RESOURCES_DIR / "rulesets" / "enemies.json"
 
 DEFAULT_SEED = 1
 DEFAULT_MAX_TICKS = 400

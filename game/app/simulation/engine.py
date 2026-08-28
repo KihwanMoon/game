@@ -12,6 +12,7 @@ DECIDE 는 부작용을 내지 않고 계획만 돌려주며, 실제 변경은 A
 from dataclasses import dataclass, field
 
 from game.app.core.event_log import EventLog, LogEntry
+from game.app.grid.geometry import iter_steps
 from game.app.simulation.actions import ATTACK_ACTIONS, MOVE_ACTIONS, ActionExecutor
 from game.app.simulation.perception import PerceptionSnapshot, build_snapshot
 from game.app.simulation.plan import (
@@ -26,7 +27,7 @@ from game.app.simulation.plan import (
     PlannedAction,
 )
 from game.app.simulation.state import FACTION_PLAYER, Entity, WorldState
-from game.schemas.room import TILE_LAVA, TILE_SPRING
+from game.schemas.room import TILE_LAVA, TILE_SPRING, WALKABLE_TILES
 
 LAVA_DAMAGE = 3
 SPRING_REGEN_PER_TICK = 2
@@ -75,6 +76,69 @@ class TickEngine:
                     entity, LAVA_DAMAGE, PHASE_UPKEEP, "용암 위", actor_id=entity.entity_id
                 )
             self._apply_regen(entity, in_combat=in_combat)
+
+    def run_summons(self) -> None:
+        """소환형이 주기마다 잡몹을 부른다 (GDD §5).
+
+        동결된 행동 12개에 SUMMON 이 없어 규칙표로 기술할 수 없다. 엔티티 종류의
+        속성으로 다루며, 그래서 도감이 이 주기를 따로 보여줘야 한다.
+        """
+        for summoner in self.state.list_actors():
+            rule = self.config.summon_rules.get(summoner.kind_id)
+            if rule is None or self.state.tick % rule["every_ticks"] != 0:
+                continue
+            alive = sum(
+                1 for other in self.state.list_actors() if other.summoner_id == summoner.entity_id
+            )
+            if alive >= rule["max_alive"]:
+                continue
+            self._create_minion(summoner, rule["spawns"])
+
+    def _create_minion(self, summoner: Entity, kind_id: str) -> None:
+        """소환사 옆 빈 칸에 잡몹을 놓는다.
+
+        Args:
+            summoner: 부른 쪽.
+            kind_id: 불러낼 종류 id.
+        """
+        occupied = {other.position for other in self.state.list_actors()}
+        free = [
+            pos
+            for pos in iter_steps(summoner.position)
+            if self.state.get_tile(*pos) in WALKABLE_TILES and pos not in occupied
+        ]
+        if not free:
+            return
+        stats = self.config.enemy_stats.get(kind_id)
+        if stats is None:
+            return
+        self.state.spawn_counter += 1
+        minion_id = f"{kind_id}_s{self.state.spawn_counter}"
+        self.state.entities[minion_id] = Entity(
+            entity_id=minion_id,
+            kind_id=kind_id,
+            faction=summoner.faction,
+            position=free[0],
+            hp=stats["hp_max"],
+            hp_max=stats["hp_max"],
+            attack=stats["attack"],
+            defense=stats["defense"],
+            attack_range=stats["attack_range"],
+            initiative=stats["initiative"],
+            regen_base=stats["regen_base"],
+            cpu_budget=stats["cpu_budget"],
+            summoner_id=summoner.entity_id,
+        )
+        self.log.record(
+            LogEntry(
+                tick=self.state.tick,
+                entity_id=summoner.entity_id,
+                phase=PHASE_UPKEEP,
+                expr=f"소환 주기 ({self.state.tick})",
+                outcome=f"{minion_id} 등장 {free[0]}",
+                fired=True,
+            )
+        )
 
     def run_telegraph(self) -> None:
         """예고 공격을 진행한다 (페이즈 2).
@@ -181,6 +245,7 @@ class TickEngine:
         """
         self.state.tick += 1
         self.run_upkeep()
+        self.run_summons()
         self.run_telegraph()
         snapshots = self.build_perceptions()
         plans = self.plan_actions(snapshots)

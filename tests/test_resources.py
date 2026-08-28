@@ -133,8 +133,10 @@ def test_every_room_is_fully_reachable(templates, index):
 def test_spawns_stand_on_walkable_tiles(templates):
     for template in templates:
         assert template.get_tile(*template.player_spawn) in WALKABLE_TILES
-        for pos in template.enemy_spawns:
-            assert template.get_tile(*pos) in WALKABLE_TILES, f"{template.template_id} {pos}"
+        for spawn in template.enemy_spawns:
+            assert template.get_tile(*spawn.position) in WALKABLE_TILES, (
+                f"{template.template_id} {spawn.kind} {spawn.position}"
+            )
 
 
 def test_every_room_has_at_least_two_exits(templates):
@@ -284,3 +286,20 @@ def test_g0_target_rooms_exist(rulesets, templates):
     known = {t.template_id for t in templates}
     for rs in rulesets:
         assert rs["target_room"] in known
+
+
+def test_room_chain_ramps_difficulty(templates):
+    # 첫 방은 돌진형만 나온다. 처음부터 3종이 다 나오면 배울 틈이 없다 —
+    # 방 설계 의도(포위를 가르친다 / 통로 유인 / 엄폐)가 순서에 반영돼야 한다.
+    by_id = {t.template_id: t for t in templates}
+    first = {s.kind for s in by_id["open_field"].enemy_spawns}
+    assert first == {"goblin_rusher"}
+    assert "goblin_archer" in {s.kind for s in by_id["corridor"].enemy_spawns}
+    assert "goblin_summoner" in {s.kind for s in by_id["pillars"].enemy_spawns}
+
+
+def test_every_spawn_kind_exists_in_balance(templates, balance):
+    known = {e["id"] for e in balance["enemies"]}
+    for template in templates:
+        for spawn in template.enemy_spawns:
+            assert spawn.kind in known, f"{template.template_id}: {spawn.kind}"

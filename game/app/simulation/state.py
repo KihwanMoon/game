@@ -30,6 +30,8 @@ class Entity:
     regen_base: int = 0
     cpu_budget: int = 0
     potions: int = 0
+    # 누가 불러냈는가. 소환 상한을 소환사별로 세기 위해 필요하다.
+    summoner_id: str | None = None
     cooldowns: dict[str, int] = field(default_factory=dict)
     flags: dict[str, bool] = field(default_factory=dict)
     statuses: dict[str, int] = field(default_factory=dict)
@@ -53,6 +55,9 @@ class WorldState:
     rng: DeterministicRng
     entities: dict[str, Entity] = field(default_factory=dict)
     tick: int = 0
+    # 소환된 개체에 붙일 일련번호. 시간이나 난수가 아니라 단조 증가여야
+    # 같은 시드가 같은 id 를 만든다 (R5).
+    spawn_counter: int = 0
     tile_overrides: dict[tuple[int, int], int] = field(default_factory=dict)
     spring_pools: dict[tuple[int, int], int] = field(default_factory=dict)
 

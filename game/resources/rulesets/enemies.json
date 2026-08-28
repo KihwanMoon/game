@@ -1,0 +1,58 @@
+{
+  "_comment": [
+    "적 규칙표 (로드맵 Phase 1 W3). GDD §5 — 몬스터도 플레이어와 완전히 동일한 DSL 로",
+    "기술한다. 도감이 이 규칙표를 그대로 보여주므로, 플레이어는 적의 논리를 읽고",
+    "카운터를 설계할 수 있다. 몬스터 제작 비용도 함께 내려간다.",
+    "",
+    "LOS 는 아직 없다(Phase 2 W6). 사격형의 '시야 확보 시에만 공격' 은 지금 사거리",
+    "조건으로 근사한다 — W6 에서 self_exposed_to_los 를 더해 정확해진다.",
+    "",
+    "소환형의 소환은 이 규칙표에 없다. 동결된 행동 12개에 SUMMON 이 없기 때문이며,",
+    "balance.json 의 kind 속성으로 엔진이 처리한다. GDD §5 의 '완전히 동일한 DSL' 과",
+    "어긋나는 지점이라 도감이 소환 주기를 따로 보여줘야 한다."
+  ],
+  "rulesets": [
+    {
+      "ruleset_id": "ai_rusher",
+      "version": 1,
+      "for_kind": "goblin_rusher",
+      "strategy_ko": "최단거리로 붙어 연타한다. 포위를 만들어 플레이어에게 회피를 요구한다.",
+      "cpu_total": 1,
+      "rules": [
+        {"priority": 1, "cpu_cost": 1, "action": "ATTACK", "target": "NEAREST", "set_flag": null,
+         "conditions": {"op": "SINGLE", "terms": [
+           {"lhs": "target_distance", "lhs_param": "NEAREST", "cmp": "<=", "rhs": 1}]}}
+      ]
+    },
+    {
+      "ruleset_id": "ai_archer",
+      "version": 1,
+      "for_kind": "goblin_archer",
+      "strategy_ko": "사거리를 유지하며 쏜다. 붙으면 물러난다 — 엄폐 이동이나 급속 접근을 요구한다.",
+      "cpu_total": 2,
+      "rules": [
+        {"priority": 1, "cpu_cost": 1, "action": "RETREAT", "target": "NEAREST", "set_flag": null,
+         "conditions": {"op": "SINGLE", "terms": [
+           {"lhs": "target_distance", "lhs_param": "NEAREST", "cmp": "<=", "rhs": 1}]}},
+        {"priority": 2, "cpu_cost": 1, "action": "ATTACK", "target": "NEAREST", "set_flag": null,
+         "conditions": {"op": "SINGLE", "terms": [
+           {"lhs": "target_distance", "lhs_param": "NEAREST", "cmp": "<=", "rhs": 4}]}}
+      ]
+    },
+    {
+      "ruleset_id": "ai_summoner",
+      "version": 1,
+      "for_kind": "goblin_summoner",
+      "strategy_ko": "거리를 두고 소환한다. 먼저 지우지 않으면 잡몹이 계속 는다.",
+      "cpu_total": 2,
+      "rules": [
+        {"priority": 1, "cpu_cost": 1, "action": "RETREAT", "target": "NEAREST", "set_flag": null,
+         "conditions": {"op": "SINGLE", "terms": [
+           {"lhs": "target_distance", "lhs_param": "NEAREST", "cmp": "<=", "rhs": 2}]}},
+        {"priority": 2, "cpu_cost": 1, "action": "ATTACK", "target": "NEAREST", "set_flag": null,
+         "conditions": {"op": "SINGLE", "terms": [
+           {"lhs": "target_distance", "lhs_param": "NEAREST", "cmp": "<=", "rhs": 3}]}}
+      ]
+    }
+  ]
+}

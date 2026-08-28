@@ -4,7 +4,7 @@
 순환 참조가 생긴다.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from game.app.combat.damage import DamageRules
@@ -69,6 +69,11 @@ class EngineConfig:
     # 이것이 없으면 balance.json 이 선언한 사거리가 조용히 무시되어, 원거리 스킬을
     # 전제한 규칙표(GDD §3.5 카이팅)가 매 틱 '사거리 밖'으로 헛돈다.
     skill_range: dict[str, int | None]
+    # kind_id -> 소환 규칙. 동결된 행동 12개에 SUMMON 이 없어 DSL 로 기술할 수
+    # 없으므로 엔티티 종류의 속성으로 다룬다. GDD §5 의 '완전히 동일한 DSL' 과
+    # 어긋나는 지점이며 도감이 이것을 따로 보여줘야 한다.
+    summon_rules: dict[str, dict] = field(default_factory=dict)
+    enemy_stats: dict[str, dict] = field(default_factory=dict)
     floor: int = 1
     max_ticks: int = 400
     combat_regen_pct: int = 50

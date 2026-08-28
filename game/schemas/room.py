@@ -35,6 +35,14 @@ STEP_OFFSETS = ((0, -1), (0, 1), (-1, 0), (1, 0))
 
 
 @dataclass(frozen=True)
+class EnemySpawn:
+    """어떤 적이 어디서 나오는가 (TDD §3.4)."""
+
+    kind: str
+    position: tuple[int, int]
+
+
+@dataclass(frozen=True)
 class RoomTemplate:
     """룸 템플릿 하나. tiles 는 [y][x] 순서다."""
 
@@ -42,7 +50,7 @@ class RoomTemplate:
     purpose: str
     tiles: tuple[tuple[int, ...], ...]
     player_spawn: tuple[int, int]
-    enemy_spawns: tuple[tuple[int, int], ...]
+    enemy_spawns: tuple[EnemySpawn, ...]
 
     @property
     def width(self) -> int:
@@ -124,9 +132,9 @@ def check_room_reachability(template: RoomTemplate) -> list[str]:
         if pos not in reached
     )
     problems.extend(
-        f"{template.template_id}: 적 스폰 {pos} 에 시작점에서 닿을 수 없다"
-        for pos in template.enemy_spawns
-        if pos not in reached
+        f"{template.template_id}: 적 스폰 {spawn.position} 에 시작점에서 닿을 수 없다"
+        for spawn in template.enemy_spawns
+        if spawn.position not in reached
     )
     return problems
 
@@ -158,7 +166,10 @@ def load_room_templates(source_path: Path) -> tuple[RoomTemplate, ...]:
                 purpose=item["purpose"],
                 tiles=tiles,
                 player_spawn=tuple(item["player_spawn"]),
-                enemy_spawns=tuple(tuple(pos) for pos in item["enemy_spawns"]),
+                enemy_spawns=tuple(
+                    EnemySpawn(kind=spawn["kind"], position=tuple(spawn["pos"]))
+                    for spawn in item["enemy_spawns"]
+                ),
             )
         )
     return tuple(templates)
