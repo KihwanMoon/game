@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# 커밋 직전 스테이징된 파일 검사 (§8.3).
+#
+# `pre-commit install` 을 쓰지 못해 직접 둔다 — core.hooksPath 가 설정돼 있으면
+# pre-commit 이 "Cowardly refusing to install hooks with `core.hooksPath` set" 로
+# 거부한다. 표준 문서는 §8.3(pre-commit)과 §8.5.3(core.hooksPath)을 독립 선택지로
+# 제시하지만 둘을 함께 도입할 때의 이 충돌은 다루지 않는다. 정본에 보고 대기 중.
+#
+# pre-commit 이 없으면 조용히 통과한다. §8.3 자체가 "설치하지 않은 사람에게는
+# 작동하지 않으므로 강제의 근거로 삼지 않는다"고 적고 있다. 강제는 게이트가 한다.
+if ! command -v pre-commit >/dev/null 2>&1; then
+    exit 0
+fi
+exec pre-commit run --config .pre-commit-config.yaml

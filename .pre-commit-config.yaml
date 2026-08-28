@@ -1,0 +1,25 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.3   # §8.5.2 의 핀과 같은 값이어야 한다. 올릴 때는 세 계층을 함께 올린다 (7.1)
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: check-function-naming
+        name: 함수명 동사_목적어 검사
+        entry: python tools/check_naming.py
+        # `system` 이 아니라 `python` 이다. system 은 PATH 에 `python` 이 있다고 가정하는데,
+        # 다수의 리눅스 배포판은 `python3` 만 제공해 훅이 "Executable `python` not found" 로
+        # 실패한다. language: python 이면 pre-commit 이 자체 인터프리터를 준비한다.
+        # 이 검사기는 표준 라이브러리만 쓰므로 추가 의존성이 없다.
+        language: python
+        types: [python]
+        # 1장의 예외 경로. ruff 는 per-file-ignores 로 걸러지지만 이 검사는
+        # 스테이징된 파이썬 파일을 그대로 받으므로 여기서 걸러야 한다.
+        # §8.1·§8.5·§8.7 과 같은 기준을 유지한다.
+        # 정본 §8.3 은 `/tests/` 라 저장소 루트의 tests/ 가 걸러지지 않는다.
+        # §8.1 이 같은 이유로 `**/tests/**` 를 쓰는 것과 어긋난다. 정본에 보고 대기 중.
+        exclude: '((^|/)tests/|(^|/)migrations/|_pb2\.py$)'
