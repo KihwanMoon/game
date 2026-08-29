@@ -372,6 +372,8 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   background: var(--surface-base);
+  /* 안쪽이 넘쳐도 문서를 늘리지 않는다 — 패널은 화면을 덮는 것이지 잇는 것이 아니다. */
+  overflow: hidden;
 }
 
 .hud-post__head {
@@ -400,7 +402,7 @@
    비율로 두면 그 폭이 화면 크기에 따라 0 까지 줄어 로그가 가로로 넘친다. */
 .hud-post__body {
   display: grid;
-  grid-template-columns: var(--col-rules) minmax(0, 1fr);
+  grid-template-columns: var(--post-cols);
   gap: var(--sp-4);
   min-height: 0;
   padding: var(--sp-4);
@@ -431,10 +433,15 @@
   background: var(--surface-plan);
 }
 
+/* 로그는 안에서 스크롤한다. 좁은 배치에서는 한 줄이 여러 줄로 접혀(실측값 병기를
+   자르지 않기 위해서다) 그룹 하나가 1,000px 을 넘는데, 내부 스크롤이 없으면 그 높이가
+   그대로 문서 높이가 된다. 실제로 사후 분석 문서가 12,327px 이 되어 패널이 위로
+   밀려 사라지고 '닫기' 를 못 찾는 상태였다. */
 .hud-post__log {
   display: flex;
   min-width: 0;
   max-height: calc(var(--plan-cell) * var(--plan-rows));
+  overflow-y: auto;
   background: var(--surface-panel);
 }
 

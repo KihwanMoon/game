@@ -44,6 +44,9 @@
 
   /* 버튼 히트 높이. 데스크톱은 지금 값(sp-8 / sp-6)을 그대로 둬 시각이 바뀌지 않는다.
      터치 배치에서만 --tap-min 까지 키운다 — 실측에서 세로 모바일 버튼이 25px 였다. */
+  /* 사후 분석 본문의 열 구성. 데스크톱은 규칙표 열 + 로그 열 두 개, 좁은 배치는
+     한 열로 쌓는다. 화면 CSS 가 미디어쿼리를 쓸 수 없으므로 형태 자체를 토큰에 둔다. */
+  --post-cols:var(--col-rules) minmax(0, 1fr);
   --btn-tap-h:var(--sp-8);
   --btn-tap-sm-h:var(--sp-6);        /* 최소 히트 영역 */
   --btn-h:36px;          /* 시트·편집 화면 버튼 높이 */
@@ -88,6 +91,7 @@
     --edit-btn-h:44px;   /* 취소·저장은 손가락이 닿아야 한다 (--tap-min) */
       --btn-tap-h:var(--tap-min);
     --btn-tap-sm-h:var(--tap-min);
+    --post-cols:minmax(0, 1fr);
 }
 }
 
@@ -115,5 +119,6 @@
     --bar-edit:0px;      /* 편집 화면의 취소/저장은 우열 안으로 들어간다 */
       --btn-tap-h:var(--btn-h);
     --btn-tap-sm-h:28px;
+    --post-cols:minmax(0, 1fr);
 }
 }
