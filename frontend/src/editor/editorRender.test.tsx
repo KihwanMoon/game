@@ -17,7 +17,9 @@ import { describe, expect, it } from 'vitest'
 
 import { BLOCK_CATALOG, G0_RULESETS } from '../core/resources'
 import type { RuleSet } from '../core/schemas'
+import { MAX_PRESET_SLOTS, type RulePreset } from '../storage'
 import { RuleEditor } from './RuleEditor'
+import { RuleLibrary } from './RuleLibrary'
 
 const CPU_BUDGET = 8
 const RULE_SLOTS = 5
@@ -124,6 +126,66 @@ describe('규칙 에디터 렌더', () => {
   it('빈 규칙표에서도 화면이 선다', () => {
     const markup = renderEditor({ rulesetId: 'draft', version: 1, rules: [] })
     expect(markup).toContain('규칙 추가')
+  })
+})
+
+/**
+ * 코드 라이브러리를 마크업 문자열로 굽는다.
+ *
+ * @param presets 실을 슬롯들.
+ * @returns 정적 마크업.
+ */
+function renderLibrary(presets: readonly RulePreset[]): string {
+  return renderToStaticMarkup(
+    <RuleLibrary
+      presets={presets}
+      onSave={() => undefined}
+      onLoad={() => undefined}
+      onRemove={() => undefined}
+      onImport={() => ''}
+      onExport={() => 'v2:code'}
+      onExportSlot={() => 'v2:code'}
+    />,
+  )
+}
+
+describe('코드 라이브러리', () => {
+  it('빈 라이브러리는 무엇을 하면 되는지 적는다', () => {
+    const markup = renderLibrary([])
+    expect(markup).toContain('저장한 규칙표가 없다')
+    expect(markup).toContain(`0 / ${String(MAX_PRESET_SLOTS)}`)
+  })
+
+  it('슬롯마다 이름과 세 조작이 나간다', () => {
+    const markup = renderLibrary([{ name: '근접 압박', ruleset: PRESSURE }])
+    expect(markup).toContain('근접 압박')
+    expect(markup).toContain('불러오기')
+    expect(markup).toContain('코드')
+    expect(markup).toContain('삭제')
+    expect(markup).toContain(`1 / ${String(MAX_PRESET_SLOTS)}`)
+  })
+
+  it('입력칸에 라벨이 붙는다 — 키보드와 보조 기술로 닿아야 한다', () => {
+    const markup = renderLibrary([])
+    expect(markup).toContain('for="library-name"')
+    expect(markup).toContain('id="library-name"')
+    expect(markup).toContain('for="library-code"')
+    expect(markup).toContain('id="library-code"')
+  })
+
+  it('에디터의 팔레트 열에 끼워 넣을 수 있다', () => {
+    const markup = renderToStaticMarkup(
+      <RuleEditor
+        ruleset={PRESSURE}
+        catalog={BLOCK_CATALOG}
+        cpuBudget={CPU_BUDGET}
+        ruleSlots={RULE_SLOTS}
+        onChange={() => undefined}
+        library={<div className="library-slot-probe" />}
+      />,
+    )
+    expect(markup).toContain('library-slot-probe')
+    expect(markup).toContain('Ctrl+Z 되돌리기')
   })
 })
 

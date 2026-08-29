@@ -23,6 +23,7 @@ from game.app.simulation.phases import (
     PHASE_TELEGRAPH,
     PHASE_UPKEEP,
 )
+from game.app.simulation.scaling import FloorScale
 from game.app.simulation.state import Entity, WorldState
 
 # 페이즈·판정 이름은 phases.py 가 정본이다. 여기서 다시 내보내는 것은 엔진 쪽
@@ -98,11 +99,18 @@ class EngineConfig:
     # 매 틱 1씩 깎는다. 이것이 비어 있으면 `내 쿨타임[스킬] 완료` 가 영구히 참이 되어
     # 그 항을 쓴 규칙이 사실상 한 항 짧아진다 — 조용히 틀리는 조건이 된다.
     skill_cooldowns: dict[str, int] = field(default_factory=dict)
+    # 행동 id -> 회복량. 대상 최대 HP 의 정수 퍼센트다 (블록 목록 v4 의 HEAL).
+    # 고정값이 아니라 비율인 이유는 회복이 대상의 덩치에 비례해야 하기 때문이고,
+    # 퍼센트 정수인 이유는 R5 다 — 부동소수를 쓰면 플랫폼마다 결과가 갈린다.
+    skill_heal_pct: dict[str, int] = field(default_factory=dict)
     # kind_id -> 소환 규칙(주기·상한·소환물). 블록 목록 v3 이 SUMMON 을 행동으로
     # 올린 뒤로 '언제 소환하는가' 는 규칙표가 정한다 — 여기 남는 것은 '무엇을 몇 마리
     # 까지' 와, 쿨타임[SUMMON] 의 초기값이 되는 주기(every_ticks)다.
     summon_rules: dict[str, dict] = field(default_factory=dict)
     enemy_stats: dict[str, dict] = field(default_factory=dict)
+    # 층 깊이 스케일. 개체를 만드는 자리(방 배치·소환·추격자)가 전부 이것을 거쳐야
+    # 같은 층에 다른 기준의 적이 섞이지 않는다 (scaling.get_scaled_enemy_stats).
+    floor_scale: FloorScale = field(default_factory=FloorScale)
     floor: int = 1
     max_ticks: int = 400
     combat_regen_pct: int = 50

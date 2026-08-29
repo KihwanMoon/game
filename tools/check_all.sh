@@ -76,6 +76,23 @@ if ! git ls-files '*.py' \
     FAILED="${FAILED} check_naming"
 fi
 
+# 모듈 400줄 상한 (§4). 정본 §8.5 에는 없는 단계이며 저장소가 더했다 — 사유는
+# .claude/conventions.lock 의 D7 에 있다. 요약하면, §4 가 요구하는 세 임계값 중 이것만
+# 어디에서도 검사되지 않았다. ruff 에 대응 규칙이 없기 때문이다(C90 은 복잡도,
+# PLR0915 는 문장 수를 잰다). 검사되지 않는 규칙은 지켜지고 있다고 착각하게 만든다(§7.1).
+#
+# 테스트를 제외하지 않는다. §1 이 테스트에 면제하는 것은 독스트링·타입 힌트·함수명
+# 셋뿐이고, §8.1 은 "E501·SIM·C90 은 넣지 않는다 — 테스트도 읽기 쉬워야 한다"고
+# 적는다. 줄 수 상한은 그 셋과 같은 성격이다.
+printf '
+── check_module_length
+'
+if ! git ls-files '*.py' \
+    | { grep -v -E '((^|/)migrations/|_pb2\.py$)' || true; } \
+    | xargs -r python3 tools/check_module_length.py; then
+    FAILED="${FAILED} check_module_length"
+fi
+
 # 구조 검사는 §8.9 를 도입한 저장소만 둔다. 없으면 이 블록을 지운다.
 if [[ -x tools/check_structure.sh ]]; then
     step "check_structure" ./tools/check_structure.sh

@@ -1,0 +1,473 @@
+{
+  "prefix": "v2:",
+  "cases": [
+    {
+      "name": "근접 압박",
+      "ruleset_id": "g0_pressure",
+      "payload": {
+        "name": "근접 압박",
+        "ruleset": {
+          "ruleset_id": "g0_pressure",
+          "version": 1,
+          "rules": [
+            {
+              "priority": 1,
+              "cpu_cost": 2,
+              "action": "USE_POTION",
+              "target": null,
+              "set_flag": null,
+              "conditions": {
+                "op": "AND",
+                "terms": [
+                  {
+                    "lhs": "self_hp_percent",
+                    "cmp": "<",
+                    "rhs": 25
+                  },
+                  {
+                    "lhs": "self_potion_count",
+                    "cmp": ">",
+                    "rhs": 0
+                  }
+                ]
+              }
+            },
+            {
+              "priority": 2,
+              "cpu_cost": 2,
+              "action": "SKILL_1",
+              "target": "NEAREST",
+              "set_flag": null,
+              "conditions": {
+                "op": "AND",
+                "terms": [
+                  {
+                    "lhs": "target_distance",
+                    "cmp": "<=",
+                    "rhs": 1,
+                    "lhs_param": "NEAREST"
+                  },
+                  {
+                    "lhs": "self_cooldown_ready",
+                    "cmp": "==",
+                    "rhs": true,
+                    "lhs_param": "SKILL_1"
+                  }
+                ]
+              }
+            },
+            {
+              "priority": 3,
+              "cpu_cost": 1,
+              "action": "ATTACK",
+              "target": "NEAREST",
+              "set_flag": null,
+              "conditions": {
+                "op": "SINGLE",
+                "terms": [
+                  {
+                    "lhs": "target_distance",
+                    "cmp": "<=",
+                    "rhs": 1,
+                    "lhs_param": "NEAREST"
+                  }
+                ]
+              }
+            },
+            {
+              "priority": 4,
+              "cpu_cost": 1,
+              "action": "MOVE_TO_EXIT",
+              "target": null,
+              "set_flag": null,
+              "conditions": {
+                "op": "SINGLE",
+                "terms": [
+                  {
+                    "lhs": "room_elapsed_ticks",
+                    "cmp": ">",
+                    "rhs": 35
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "canonical_json": "{\"name\":\"근접 압박\",\"ruleset\":{\"rules\":[{\"action\":\"USE_POTION\",\"conditions\":{\"op\":\"AND\",\"terms\":[{\"cmp\":\"<\",\"lhs\":\"self_hp_percent\",\"rhs\":25},{\"cmp\":\">\",\"lhs\":\"self_potion_count\",\"rhs\":0}]},\"cpu_cost\":2,\"priority\":1,\"set_flag\":null,\"target\":null},{\"action\":\"SKILL_1\",\"conditions\":{\"op\":\"AND\",\"terms\":[{\"cmp\":\"<=\",\"lhs\":\"target_distance\",\"lhs_param\":\"NEAREST\",\"rhs\":1},{\"cmp\":\"==\",\"lhs\":\"self_cooldown_ready\",\"lhs_param\":\"SKILL_1\",\"rhs\":true}]},\"cpu_cost\":2,\"priority\":2,\"set_flag\":null,\"target\":\"NEAREST\"},{\"action\":\"ATTACK\",\"conditions\":{\"op\":\"SINGLE\",\"terms\":[{\"cmp\":\"<=\",\"lhs\":\"target_distance\",\"lhs_param\":\"NEAREST\",\"rhs\":1}]},\"cpu_cost\":1,\"priority\":3,\"set_flag\":null,\"target\":\"NEAREST\"},{\"action\":\"MOVE_TO_EXIT\",\"conditions\":{\"op\":\"SINGLE\",\"terms\":[{\"cmp\":\">\",\"lhs\":\"room_elapsed_ticks\",\"rhs\":35}]},\"cpu_cost\":1,\"priority\":4,\"set_flag\":null,\"target\":null}],\"ruleset_id\":\"g0_pressure\",\"version\":1}}",
+      "code": "v2:H4sIAAAAAAACA62T0UrDMBSGX0Vy3Yt1czfFCUWLlM1WbBVBRghpNoNpE5JUGaMP4cXufQTvvPGJdA9hsrLWik4G3jX_-XPO9x_SJShQToAH3l_f1s9PB-vV6uNlBRwgS0YU0cBb1p_Au10ChDXlhXFfJQG8iNMwjowV8yKjtqCsmwtT96NTU9BE5vVFnFv1yGjszihAETaDdwIKIjEptJ1n9f6wcrbm465ZcDsBYl629l41rcx4URpZGdS-A4SkXFK9AJ7rmIsazhiaA68oGTM8SM5tJHuyg5o4yTicTKC7V5ZRw1e3hRlVGhWY1DoUSKLcVKPAvwySdMvstglHo25EzDnL-GMBJUHZ4lubFnHTRsuS7Erf_z19Q9RZgZ-m_sn45w0kYXQ2Cf51CV109yv6YF_08_g6gGkMg5sw3TNA-8gk5zkkDAlFMqgpvldb2MFwF-3hH89s2vxKkGZmzrwHhSRKldLu6IFItQnhVtUnTtSMVIsDAAA="
+    },
+    {
+      "name": "원거리 견제",
+      "ruleset_id": "g0_kite",
+      "payload": {
+        "name": "원거리 견제",
+        "ruleset": {
+          "ruleset_id": "g0_kite",
+          "version": 1,
+          "rules": [
+            {
+              "priority": 1,
+              "cpu_cost": 2,
+              "action": "USE_POTION",
+              "target": null,
+              "set_flag": null,
+              "conditions": {
+                "op": "AND",
+                "terms": [
+                  {
+                    "lhs": "self_hp_percent",
+                    "cmp": "<",
+                    "rhs": 30
+                  },
+                  {
+                    "lhs": "self_potion_count",
+                    "cmp": ">",
+                    "rhs": 0
+                  }
+                ]
+              }
+            },
+            {
+              "priority": 2,
+              "cpu_cost": 1,
+              "action": "RETREAT",
+              "target": "NEAREST",
+              "set_flag": "A=true",
+              "conditions": {
+                "op": "SINGLE",
+                "terms": [
+                  {
+                    "lhs": "target_distance",
+                    "cmp": "<=",
+                    "rhs": 1,
+                    "lhs_param": "NEAREST"
+                  }
+                ]
+              }
+            },
+            {
+              "priority": 3,
+              "cpu_cost": 2,
+              "action": "SKILL_2",
+              "target": "NEAREST",
+              "set_flag": "A=false",
+              "conditions": {
+                "op": "AND",
+                "terms": [
+                  {
+                    "lhs": "flag_state",
+                    "cmp": "==",
+                    "rhs": true,
+                    "lhs_param": "A"
+                  },
+                  {
+                    "lhs": "self_cooldown_ready",
+                    "cmp": "==",
+                    "rhs": true,
+                    "lhs_param": "SKILL_2"
+                  }
+                ]
+              }
+            },
+            {
+              "priority": 4,
+              "cpu_cost": 2,
+              "action": "SKILL_2",
+              "target": "NEAREST",
+              "set_flag": null,
+              "conditions": {
+                "op": "AND",
+                "terms": [
+                  {
+                    "lhs": "target_distance",
+                    "cmp": "<=",
+                    "rhs": 4,
+                    "lhs_param": "NEAREST"
+                  },
+                  {
+                    "lhs": "self_cooldown_ready",
+                    "cmp": "==",
+                    "rhs": true,
+                    "lhs_param": "SKILL_2"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "canonical_json": "{\"name\":\"원거리 견제\",\"ruleset\":{\"rules\":[{\"action\":\"USE_POTION\",\"conditions\":{\"op\":\"AND\",\"terms\":[{\"cmp\":\"<\",\"lhs\":\"self_hp_percent\",\"rhs\":30},{\"cmp\":\">\",\"lhs\":\"self_potion_count\",\"rhs\":0}]},\"cpu_cost\":2,\"priority\":1,\"set_flag\":null,\"target\":null},{\"action\":\"RETREAT\",\"conditions\":{\"op\":\"SINGLE\",\"terms\":[{\"cmp\":\"<=\",\"lhs\":\"target_distance\",\"lhs_param\":\"NEAREST\",\"rhs\":1}]},\"cpu_cost\":1,\"priority\":2,\"set_flag\":\"A=true\",\"target\":\"NEAREST\"},{\"action\":\"SKILL_2\",\"conditions\":{\"op\":\"AND\",\"terms\":[{\"cmp\":\"==\",\"lhs\":\"flag_state\",\"lhs_param\":\"A\",\"rhs\":true},{\"cmp\":\"==\",\"lhs\":\"self_cooldown_ready\",\"lhs_param\":\"SKILL_2\",\"rhs\":true}]},\"cpu_cost\":2,\"priority\":3,\"set_flag\":\"A=false\",\"target\":\"NEAREST\"},{\"action\":\"SKILL_2\",\"conditions\":{\"op\":\"AND\",\"terms\":[{\"cmp\":\"<=\",\"lhs\":\"target_distance\",\"lhs_param\":\"NEAREST\",\"rhs\":4},{\"cmp\":\"==\",\"lhs\":\"self_cooldown_ready\",\"lhs_param\":\"SKILL_2\",\"rhs\":true}]},\"cpu_cost\":2,\"priority\":4,\"set_flag\":null,\"target\":\"NEAREST\"}],\"ruleset_id\":\"g0_kite\",\"version\":1}}",
+      "code": "v2:H4sIAAAAAAACA72TT0vDMBjGv4rk3MO67VScULDIcHSy1pOMENJsC6ZNSFJljH4H73rw5GkH9WPNfQiTlbZbmYKC3tr37-95n3YFMpQS4IHt48Pm7fXjZX2yeV9vn5-AA2TOiCIaeKvyEXg3K4CwpjwzDddRAK_G8XAcmlLMs4TahLLVXJi8H56bhCYyLRtxaqOnJsYWJgIUYTO4EFAQiUmm7T4b73UKpyo-OywW3G6AmOdNeaeYFma9yE1YGdSuA4SkXFK9BJ7rmEYNZwzNgZfljBkeJOdWkn2zi2o5kyCeBH58XEs0DC9GwTE5gxqxnAwTqjTKMCnjUCCJUpMNA38SRHGF7baw3X3s7j428Ada5nZchV7POuCPLoejEez-xItBA293QQOu29x-RWwhGmf2WnfWYM5Zwu8zKAlKlq0ZDVoz6RvXei35M8TUn-j_rXn9_7lD_-uvtznBtP5NIU1MYt6Bt3Tn4h2Rancatyg-Ab-1EInmAwAA"
+    },
+    {
+      "name": "엄폐 우선",
+      "ruleset_id": "g0_cover",
+      "payload": {
+        "name": "엄폐 우선",
+        "ruleset": {
+          "ruleset_id": "g0_cover",
+          "version": 1,
+          "rules": [
+            {
+              "priority": 1,
+              "cpu_cost": 2,
+              "action": "USE_POTION",
+              "target": null,
+              "set_flag": null,
+              "conditions": {
+                "op": "AND",
+                "terms": [
+                  {
+                    "lhs": "self_hp_percent",
+                    "cmp": "<",
+                    "rhs": 30
+                  },
+                  {
+                    "lhs": "self_potion_count",
+                    "cmp": ">",
+                    "rhs": 0
+                  }
+                ]
+              }
+            },
+            {
+              "priority": 2,
+              "cpu_cost": 1,
+              "action": "MOVE_TO_COVER",
+              "target": null,
+              "set_flag": null,
+              "conditions": {
+                "op": "SINGLE",
+                "terms": [
+                  {
+                    "lhs": "self_on_hazard_telegraph",
+                    "cmp": "==",
+                    "rhs": true
+                  }
+                ]
+              }
+            },
+            {
+              "priority": 3,
+              "cpu_cost": 2,
+              "action": "MOVE_TO_COVER",
+              "target": null,
+              "set_flag": null,
+              "conditions": {
+                "op": "AND",
+                "terms": [
+                  {
+                    "lhs": "self_exposed_to_los",
+                    "cmp": "==",
+                    "rhs": true
+                  },
+                  {
+                    "lhs": "enemy_type_present",
+                    "cmp": "==",
+                    "rhs": true,
+                    "lhs_param": "RANGED"
+                  }
+                ]
+              }
+            },
+            {
+              "priority": 4,
+              "cpu_cost": 1,
+              "action": "ATTACK",
+              "target": "NEAREST",
+              "set_flag": null,
+              "conditions": {
+                "op": "SINGLE",
+                "terms": [
+                  {
+                    "lhs": "target_distance",
+                    "cmp": "<=",
+                    "rhs": 1,
+                    "lhs_param": "NEAREST"
+                  }
+                ]
+              }
+            },
+            {
+              "priority": 5,
+              "cpu_cost": 2,
+              "action": "SKILL_2",
+              "target": "TYPE_SUMMONER",
+              "set_flag": null,
+              "conditions": {
+                "op": "AND",
+                "terms": [
+                  {
+                    "lhs": "self_cooldown_ready",
+                    "cmp": "==",
+                    "rhs": true,
+                    "lhs_param": "SKILL_2"
+                  },
+                  {
+                    "lhs": "target_distance",
+                    "cmp": "<=",
+                    "rhs": 4,
+                    "lhs_param": "TYPE_SUMMONER"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "canonical_json": "{\"name\":\"엄폐 우선\",\"ruleset\":{\"rules\":[{\"action\":\"USE_POTION\",\"conditions\":{\"op\":\"AND\",\"terms\":[{\"cmp\":\"<\",\"lhs\":\"self_hp_percent\",\"rhs\":30},{\"cmp\":\">\",\"lhs\":\"self_potion_count\",\"rhs\":0}]},\"cpu_cost\":2,\"priority\":1,\"set_flag\":null,\"target\":null},{\"action\":\"MOVE_TO_COVER\",\"conditions\":{\"op\":\"SINGLE\",\"terms\":[{\"cmp\":\"==\",\"lhs\":\"self_on_hazard_telegraph\",\"rhs\":true}]},\"cpu_cost\":1,\"priority\":2,\"set_flag\":null,\"target\":null},{\"action\":\"MOVE_TO_COVER\",\"conditions\":{\"op\":\"AND\",\"terms\":[{\"cmp\":\"==\",\"lhs\":\"self_exposed_to_los\",\"rhs\":true},{\"cmp\":\"==\",\"lhs\":\"enemy_type_present\",\"lhs_param\":\"RANGED\",\"rhs\":true}]},\"cpu_cost\":2,\"priority\":3,\"set_flag\":null,\"target\":null},{\"action\":\"ATTACK\",\"conditions\":{\"op\":\"SINGLE\",\"terms\":[{\"cmp\":\"<=\",\"lhs\":\"target_distance\",\"lhs_param\":\"NEAREST\",\"rhs\":1}]},\"cpu_cost\":1,\"priority\":4,\"set_flag\":null,\"target\":\"NEAREST\"},{\"action\":\"SKILL_2\",\"conditions\":{\"op\":\"AND\",\"terms\":[{\"cmp\":\"==\",\"lhs\":\"self_cooldown_ready\",\"lhs_param\":\"SKILL_2\",\"rhs\":true},{\"cmp\":\"<=\",\"lhs\":\"target_distance\",\"lhs_param\":\"TYPE_SUMMONER\",\"rhs\":4}]},\"cpu_cost\":2,\"priority\":5,\"set_flag\":null,\"target\":\"TYPE_SUMMONER\"}],\"ruleset_id\":\"g0_cover\",\"version\":1}}",
+      "code": "v2:H4sIAAAAAAACA62U30rrQBDGX0X2Ohdt9dwEFYIGKbaJNPGAiAxLMraBTXbZbNRacue9507wykfwweo7ONvS9qTklCN6kz8z3878Zr9lZ6zgOTKXzV-ePp7_7M1f3-dPb8xhuhJYomHubPnJ3OsZ44nJZEHqy8iHizDuhwFJE1mkmU2UVi0V5b3glBIGdb5cmOQ2ekgxMaEIK1HcwkSBQp1gYWw_G9_v1M5KfNwUK2k7QCKrjbxT39TUXlUULgm15zClM6kzM2Vu16GFBm4FHzO3qIQgHq7HdiT7ZxutxxmGv32IQzih96h9oqgfnA38lqGOjpqgBDnhj1ynYFDgWHM1WfEaXeEWcvdv5N7PIrebsM2LD0qWSLQShCwbqE7LGiwwn4KZKgSl6YQs3KAUKK55ToKRF5z5pztGbri0_4WRvTj2Ts6_aM_hBn1ZGNKsNLxIcIs78L2RH8Ur8O4uow7-Tb2u00CPzvuDAfS-41MipUjlfQEaeTrdgt_Ub3Hvv7cgvrrwIbocDsNgcaYWtQ522fdrx0Y0q9U36zsFspTS4w4VvENNfehZLvapW9efP1uHNJEEAAA="
+    },
+    {
+      "name": "고블린 궁수의 논리",
+      "ruleset_id": "ai_archer",
+      "payload": {
+        "name": "고블린 궁수의 논리",
+        "ruleset": {
+          "ruleset_id": "ai_archer",
+          "version": 2,
+          "rules": [
+            {
+              "priority": 1,
+              "cpu_cost": 1,
+              "action": "RETREAT",
+              "target": "NEAREST",
+              "set_flag": null,
+              "conditions": {
+                "op": "SINGLE",
+                "terms": [
+                  {
+                    "lhs": "target_distance",
+                    "cmp": "<=",
+                    "rhs": 1,
+                    "lhs_param": "NEAREST"
+                  }
+                ]
+              }
+            },
+            {
+              "priority": 2,
+              "cpu_cost": 1,
+              "action": "ATTACK",
+              "target": "NEAREST",
+              "set_flag": null,
+              "conditions": {
+                "op": "SINGLE",
+                "terms": [
+                  {
+                    "lhs": "target_distance",
+                    "cmp": "<=",
+                    "rhs": {
+                      "stat": "attack_range"
+                    },
+                    "lhs_param": "NEAREST"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "canonical_json": "{\"name\":\"고블린 궁수의 논리\",\"ruleset\":{\"rules\":[{\"action\":\"RETREAT\",\"conditions\":{\"op\":\"SINGLE\",\"terms\":[{\"cmp\":\"<=\",\"lhs\":\"target_distance\",\"lhs_param\":\"NEAREST\",\"rhs\":1}]},\"cpu_cost\":1,\"priority\":1,\"set_flag\":null,\"target\":\"NEAREST\"},{\"action\":\"ATTACK\",\"conditions\":{\"op\":\"SINGLE\",\"terms\":[{\"cmp\":\"<=\",\"lhs\":\"target_distance\",\"lhs_param\":\"NEAREST\",\"rhs\":{\"stat\":\"attack_range\"}}]},\"cpu_cost\":1,\"priority\":2,\"set_flag\":null,\"target\":\"NEAREST\"}],\"ruleset_id\":\"ai_archer\",\"version\":2}}",
+      "code": "v2:H4sIAAAAAAACA71RsUrEQBD9lWPqNHdl0CJIEFGuyKWTYxk2a24x2YTZjSBhCwvBD7C4RrC6ykIQxMIvutxHOHsRuUqs7Hbfe_PmPaYHg7WCGLZvz8PH47B5nWzf73YP693TejLcfw6bF4iAukpZ5SDuxyfElz2gdLoxPJqleZYmOetkYwodUBukTcvk4mx-epEy5xTV46CsA3F0zGC1YggcUqmcKLR1aKQacdEiYc3sPE2ydBHsKainful5U9sJ2ViONI2gJd2Qdrf7D-cUVxWWEJuuqqJv8wMfHx1kT_I8OTn_p-g9sCpEQedQXgtCUyrwvxWa_aXQ8udCQhfBXgskuVLEi28U2X3VmfdfTyPFv-0BAAA="
+    },
+    {
+      "name": "소환사 우선",
+      "ruleset_id": "focus_summoner",
+      "payload": {
+        "name": "소환사 우선",
+        "ruleset": {
+          "ruleset_id": "focus_summoner",
+          "version": 1,
+          "rules": [
+            {
+              "priority": 1,
+              "cpu_cost": 2,
+              "action": "USE_POTION",
+              "target": null,
+              "set_flag": null,
+              "conditions": {
+                "op": "AND",
+                "terms": [
+                  {
+                    "lhs": "self_hp_percent",
+                    "cmp": "<",
+                    "rhs": 30
+                  },
+                  {
+                    "lhs": "self_potion_count",
+                    "cmp": ">",
+                    "rhs": 0
+                  }
+                ]
+              }
+            },
+            {
+              "priority": 2,
+              "cpu_cost": 2,
+              "action": "SKILL_2",
+              "target": "TYPE_SUMMONER",
+              "set_flag": null,
+              "conditions": {
+                "op": "AND",
+                "terms": [
+                  {
+                    "lhs": "target_distance",
+                    "cmp": "<=",
+                    "rhs": 4,
+                    "lhs_param": "TYPE_SUMMONER"
+                  },
+                  {
+                    "lhs": "self_cooldown_ready",
+                    "cmp": "==",
+                    "rhs": true,
+                    "lhs_param": "SKILL_2"
+                  }
+                ]
+              }
+            },
+            {
+              "priority": 3,
+              "cpu_cost": 1,
+              "action": "ATTACK",
+              "target": "TYPE_SUMMONER",
+              "set_flag": null,
+              "conditions": {
+                "op": "SINGLE",
+                "terms": [
+                  {
+                    "lhs": "target_distance",
+                    "cmp": "<=",
+                    "rhs": 1,
+                    "lhs_param": "TYPE_SUMMONER"
+                  }
+                ]
+              }
+            },
+            {
+              "priority": 4,
+              "cpu_cost": 1,
+              "action": "APPROACH",
+              "target": "TYPE_SUMMONER",
+              "set_flag": null,
+              "conditions": {
+                "op": "SINGLE",
+                "terms": [
+                  {
+                    "lhs": "target_distance",
+                    "cmp": ">",
+                    "rhs": 1,
+                    "lhs_param": "TYPE_SUMMONER"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "canonical_json": "{\"name\":\"소환사 우선\",\"ruleset\":{\"rules\":[{\"action\":\"USE_POTION\",\"conditions\":{\"op\":\"AND\",\"terms\":[{\"cmp\":\"<\",\"lhs\":\"self_hp_percent\",\"rhs\":30},{\"cmp\":\">\",\"lhs\":\"self_potion_count\",\"rhs\":0}]},\"cpu_cost\":2,\"priority\":1,\"set_flag\":null,\"target\":null},{\"action\":\"SKILL_2\",\"conditions\":{\"op\":\"AND\",\"terms\":[{\"cmp\":\"<=\",\"lhs\":\"target_distance\",\"lhs_param\":\"TYPE_SUMMONER\",\"rhs\":4},{\"cmp\":\"==\",\"lhs\":\"self_cooldown_ready\",\"lhs_param\":\"SKILL_2\",\"rhs\":true}]},\"cpu_cost\":2,\"priority\":2,\"set_flag\":null,\"target\":\"TYPE_SUMMONER\"},{\"action\":\"ATTACK\",\"conditions\":{\"op\":\"SINGLE\",\"terms\":[{\"cmp\":\"<=\",\"lhs\":\"target_distance\",\"lhs_param\":\"TYPE_SUMMONER\",\"rhs\":1}]},\"cpu_cost\":1,\"priority\":3,\"set_flag\":null,\"target\":\"TYPE_SUMMONER\"},{\"action\":\"APPROACH\",\"conditions\":{\"op\":\"SINGLE\",\"terms\":[{\"cmp\":\">\",\"lhs\":\"target_distance\",\"lhs_param\":\"TYPE_SUMMONER\",\"rhs\":1}]},\"cpu_cost\":1,\"priority\":4,\"set_flag\":null,\"target\":\"TYPE_SUMMONER\"}],\"ruleset_id\":\"focus_summoner\",\"version\":1}}",
+      "code": "v2:H4sIAAAAAAACA7WTz0rDMBzHX0Vy7mGdOxU3KLPo2NaWtTuIjBDSbCukSUlSZYxeRDz5AOrJB_Dgg9V3MFnZ5oaKE70139-f7_fzgy4BQxkBDqju7t8eH6qbl6Pq6bW6fQYWEAUlkijgLOtP4FwuAcIq5UwPjCMPhkHcC3zdijlLUlOQppvnuu76p7qgiMjqQZwZ9URrdK4VIAmdwnkOcyIwYcr4Gf24UVrr5s5uc86NA8S82LY3ykmp7fNCy1JHbVogFykXqVoAx7b0oIJTimbAYQWlOg8SM4NkXsZogxP1e4MBbB7E0t7kq9fCJJUKMUxqHeZIoExX44vQg9F4OAx8b7RO3tpyttu7oJhzmvBrBgVByWJv2Tboao0SBfnuBs2vb7CXa-ccbhy73f7n14h6_tnA-_OD2HsY9keM419ihOEocLvnB4J0_o2j9XOOyeYPhGmiy1OOCwllkWWcEaHdroiQK0y7LN8By9CRIMgDAAA="
+    }
+  ]
+}

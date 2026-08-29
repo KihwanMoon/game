@@ -30,6 +30,7 @@ import { buildRuleVm } from './rules/ruleVm'
 import type { RuleSet } from './schemas'
 import type { TickEngine } from './sim/engine'
 import { OUTCOME_ONGOING } from './sim/plan'
+import { getScaledEnemyStats } from './sim/scaling'
 import {
   assignEnemyPolicies,
   buildEngine,
@@ -179,6 +180,8 @@ function addExtraEnemies(engine: TickEngine, extras: readonly GoldenExtra[]): vo
     if (kind === undefined) {
       throw new Error(`balance.json 에 없는 적 종류다: ${extra.kind}`)
     }
+    // 층 깊이 스케일을 방 배치와 같은 함수로 건다 (파이썬 `add_extra_enemies` 와 같다).
+    const scaled = getScaledEnemyStats(kind, engine.config.floorScale, engine.config.floor)
     const entityId = `${extra.kind}_x${index}`
     engine.state.entities.set(
       entityId,
@@ -187,9 +190,9 @@ function addExtraEnemies(engine: TickEngine, extras: readonly GoldenExtra[]): vo
         kindId: extra.kind,
         faction: FACTION_ENEMY,
         position: { x: extra.x, y: extra.y },
-        hp: kind.hp_max,
-        hpMax: kind.hp_max,
-        attack: kind.attack,
+        hp: scaled.hpMax,
+        hpMax: scaled.hpMax,
+        attack: scaled.attack,
         defense: kind.defense,
         attackRange: kind.attack_range,
         initiative: kind.initiative,

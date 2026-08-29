@@ -20,3 +20,8 @@ node_modules/
 dist/
 frontend/.vite/
 *.tsbuildinfo
+
+# Playwright e2e (Phase 3). 브라우저 바이너리는 ~/.cache 에 있고, 아래 둘은 실행 산출물이다.
+# `e2e/screenshots/` 는 산출물이지만 **커밋한다** — 화면이 어떻게 보였는지가 검증 기록이다.
+frontend/test-results/
+frontend/playwright-report/

@@ -332,3 +332,114 @@
 .rule-row.is-drop-target {
   border-top: var(--bw-accent) solid var(--line-strong);
 }
+
+/* ── 코드 라이브러리 ─────────────────────────────────────────────────── */
+/* 팔레트 열은 위아래 두 패널이다. 사이는 다른 열 경계와 같은 1px 괘선 하나. */
+.editor__col--palette {
+  flex-direction: column;
+}
+
+.editor__col--palette > .ds-panel {
+  min-height: var(--sp-0);
+}
+
+.editor__col--palette > .ds-panel + .ds-panel {
+  flex: 0 0 auto;
+  max-height: 50%;
+  border-top: var(--border);
+}
+
+.library {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+}
+
+.library__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.library__label {
+  font-size: var(--fs-label);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.library__hint {
+  margin: var(--sp-0);
+  font-size: var(--fs-body-s);
+  line-height: var(--lh-body);
+  color: var(--text-dim);
+}
+
+.library__field,
+.library__code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+  color: var(--text-body);
+  background: var(--surface-panel);
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-1);
+  transition: var(--transition-hover);
+}
+
+.library__field:hover,
+.library__code:hover {
+  border-color: var(--line-strong);
+}
+
+.library__field {
+  flex: 1;
+  min-width: var(--sp-0);
+}
+
+/* 코드는 한 줄로 길다. 줄바꿈해 전부 보이게 둔다 — 잘린 코드를 그대로 보내면 안 된다. */
+.library__code {
+  width: 100%;
+  box-sizing: border-box;
+  height: var(--sp-12);
+  resize: vertical;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow: auto;
+}
+
+.library__slots {
+  list-style: none;
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  display: flex;
+  flex-direction: column;
+}
+
+.library__slot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  padding: var(--sp-1) var(--sp-0);
+  border-bottom: var(--border);
+}
+
+.library__name {
+  flex: 1;
+  min-width: var(--sp-0);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-s);
+  color: var(--text-body);
+}
+
+.library__share {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  border-top: var(--border);
+  padding-top: var(--sp-3);
+}

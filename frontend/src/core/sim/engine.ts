@@ -374,6 +374,8 @@ export class TickEngine {
       executor.applyAreaAttack(entity, plan)
     } else if (plan.actionId === 'USE_POTION') {
       executor.applyPotion(entity, plan)
+    } else if (plan.actionId === 'HEAL') {
+      executor.applyHeal(entity, plan)
     } else if (plan.actionId === 'HOLD' || plan.actionId === 'SET_FLAG') {
       executor.applyHold(entity, plan)
     } else if (plan.actionId === 'SUMMON') {

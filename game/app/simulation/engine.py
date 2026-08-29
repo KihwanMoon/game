@@ -32,7 +32,8 @@ from game.app.simulation.plan import (
     PlannedAction,
     PolicyFactory,
 )
-from game.app.simulation.pressure import PressureTracker, apply_spring_drain, remove_drained_springs
+from game.app.simulation.pressure import PressureTracker
+from game.app.simulation.springs import apply_spring_drain, remove_drained_springs
 from game.app.simulation.state import FACTION_PLAYER, Entity, WorldState
 from game.app.simulation.telegraph import Telegraph, TelegraphBoard
 from game.schemas.room import TILE_LAVA, TILE_SPRING
@@ -239,6 +240,8 @@ class TickEngine:
             executor.apply_area_attack(entity, plan)
         elif plan.action_id == "USE_POTION":
             executor.apply_potion(entity, plan)
+        elif plan.action_id == "HEAL":
+            executor.apply_heal(entity, plan)
         elif plan.action_id in {"HOLD", "SET_FLAG"}:
             executor.apply_hold(entity, plan)
         elif plan.action_id == "SUMMON":

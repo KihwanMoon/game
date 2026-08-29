@@ -15,6 +15,7 @@ import { describe, expect, it } from 'vitest'
 import golden from '../golden/sim_golden.json'
 import { BALANCE, ROOM_TEMPLATES } from '../resources'
 import { getManhattanDistance } from '../grid/geometry'
+import { ACTION_COUNT } from '../schemas'
 import {
   buildEngine,
   parseBalance,
@@ -29,6 +30,7 @@ import {
   type RawEnemyKind,
   createPlannedAction,
 } from './plan'
+import { getScaledEnemyStats } from './scaling'
 import { SELECTOR_NEAREST, resolveTarget } from './selectors'
 import { FACTION_ENEMY, type Entity, type WorldState, createEntity } from './state'
 
@@ -71,11 +73,16 @@ interface GoldenBattle {
 }
 
 const ACTION_CYCLE: readonly string[] = golden.action_cycle
+
+/** 행동별 대상 셀렉터. 파이썬 쪽 `CYCLE_SELECTORS` 와 같은 표다. */
+const CYCLE_SELECTORS: ReadonlyMap<string, string> = new Map(
+  (golden.cycle_selectors as readonly string[][]).map((pair) => [pair[0] ?? '', pair[1] ?? '']),
+)
 const CYCLE_FLAG: string = golden.cycle_flag
 const BATTLES = golden.battles as readonly GoldenBattle[]
 
 /**
- * 틱과 엔티티 id 만 보고 행동 13개를 차례로 내는 대조 전용 결정기.
+ * 틱과 엔티티 id 만 보고 행동 14개를 차례로 내는 대조 전용 결정기.
  *
  * `scripts/export_sim_golden.py` 의 `CyclingPolicy` 와 같은 것이어야 한다. 폴백 정책은
  * 접근·공격·포션·대기 넷만 내므로 나머지 행동 아홉 개 — 소환·예고·엄폐 이동·플래그 —
@@ -104,7 +111,8 @@ class CyclingPolicy implements DecisionPolicy {
     }
     const index = (snapshot.tick + offset) % ACTION_CYCLE.length
     const actionId = ACTION_CYCLE[index] as string
-    const target = resolveTarget(SELECTOR_NEAREST, entity, state, this.kindTypes)
+    const selectorId = CYCLE_SELECTORS.get(actionId) ?? SELECTOR_NEAREST
+    const target = resolveTarget(selectorId, entity, state, this.kindTypes)
     return createPlannedAction({
       entityId: entity.entityId,
       actionId,
@@ -134,6 +142,8 @@ function addExtraEnemies(
     if (kind === undefined) {
       throw new Error(`balance.json 에 없는 적 종류다: ${extra.kind}`)
     }
+    // 층 깊이 스케일을 방 배치와 같은 함수로 건다 (파이썬 `add_extra_enemies` 와 같다).
+    const scaled = getScaledEnemyStats(kind, engine.config.floorScale, engine.config.floor)
     const entityId = `${extra.kind}_x${index}`
     engine.state.entities.set(
       entityId,
@@ -142,9 +152,9 @@ function addExtraEnemies(
         kindId: extra.kind,
         faction: FACTION_ENEMY,
         position: { x: extra.x, y: extra.y },
-        hp: kind.hp_max,
-        hpMax: kind.hp_max,
-        attack: kind.attack,
+        hp: scaled.hpMax,
+        hpMax: scaled.hpMax,
+        attack: scaled.attack,
         defense: kind.defense,
         attackRange: kind.attack_range,
         initiative: kind.initiative,
@@ -215,7 +225,7 @@ describe('시뮬레이션 골든 대조', () => {
   it('기준 문서가 두 정책을 모두 담고 있다', () => {
     expect(BATTLES.length).toBeGreaterThan(0)
     expect(BATTLES.some((battle) => battle.policy === POLICY_CYCLE)).toBe(true)
-    expect(ACTION_CYCLE).toHaveLength(13)
+    expect(ACTION_CYCLE).toHaveLength(ACTION_COUNT)
   })
 
   for (const battle of BATTLES) {

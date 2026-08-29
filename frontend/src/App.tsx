@@ -23,8 +23,12 @@
  *   에디터 — 출격 버튼(primary) · 선택된 규칙의 좌측 세로바 · 포커스 링
  *   전투   — 도면의 플레이어 말 · 발동한 규칙 줄 · 그 줄에서 말로 잇는 지시선
  * 그래서 전투 화면 쪽 조작부는 전부 ghost 다.
+ *
+ * **짠 것은 탭을 닫아도 남는다** (M3). 상태는 `session.ts` 의 세션 하나이고, 그 세션을
+ * 그대로 구워 localStorage 에 디바운스 저장한다(`storage/`). 상태를 조각조각 들고 있으면
+ * 새로 만든 조각을 저장에 넣는 것을 잊게 되고, 그런 결함은 새로고침을 해 봐야 드러난다.
  */
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { BattleView, checkOngoing, type BattleSetup } from './battle'
 import { BALANCE, BLOCK_CATALOG, G0_RULESETS, ROOM_TEMPLATES } from './core/resources'
@@ -33,9 +37,35 @@ import { validateRuleSet } from './core/rules/validator'
 import type { RuleSet } from './core/schemas'
 import { OUTCOME_ONGOING, OUTCOME_PLAYER_WIN } from './core/sim/phases'
 import { Button, ValueExpr } from './ds'
-import { RuleEditor } from './editor'
-import { ErrorBoundary } from './ErrorBoundary'
+import {
+  RuleEditor,
+  RuleLibrary,
+  checkCanRedo,
+  checkCanUndo,
+  checkTextEntry,
+  resolveHistoryCommand,
+} from './editor'
+import { ErrorBoundary, formatCrash } from './ErrorBoundary'
 import { PostMortem, formatOutcome, recordBattle, usePlanTheme } from './hud'
+import {
+  applyPresetImport,
+  applyPresetLoad,
+  applyPresetRemove,
+  applyPresetSave,
+  applyRedoStep,
+  applyRoomChoice,
+  applyRuleSetEdit,
+  applyRunResult,
+  applySeedChoice,
+  applyUndoStep,
+  buildSessionSave,
+  createSession,
+  exportSessionCode,
+  exportSlotCode,
+  getSessionRuleSet,
+  type EditorSession,
+} from './session'
+import { createSaveScheduler, getLocalStorage, readSave, type RunResult } from './storage'
 
 /** 에디터가 알아야 하는 플레이어 제약. */
 interface PlayerLimits {
@@ -48,13 +78,6 @@ interface RunSpec {
   readonly setup: BattleSetup
   /** 규칙표 대응표. 출격 시점의 규칙표 하나만 든다. */
   readonly rulesets: ReadonlyMap<string, RuleSet>
-}
-
-/** 직전 판의 결과. 에디터로 돌아왔을 때 무엇을 고쳐야 하는지의 출발점이 된다. */
-interface RunResult {
-  readonly outcome: string
-  readonly ticks: number
-  readonly playerHp: number
 }
 
 /** 사후 분석 패널의 표시 상태. auto 는 "판이 끝나면 저절로 뜬다" 다. */
@@ -161,20 +184,74 @@ export function findLaunchBlocker(problems: readonly string[]): string {
  * @returns 렌더 트리.
  */
 export function App(): React.JSX.Element {
-  const [ruleset, setRuleset] = useState<RuleSet>(buildInitialRuleSet)
-  const [roomId, setRoomId] = useState(INITIAL_ROOM_ID)
-  const [seed, setSeed] = useState(INITIAL_SEED)
+  const [session, setSession] = useState<EditorSession>(() =>
+    createSession(readSave(getLocalStorage()), {
+      ruleset: buildInitialRuleSet(),
+      roomId: INITIAL_ROOM_ID,
+      seed: INITIAL_SEED,
+    }),
+  )
   const [run, setRun] = useState<RunSpec | undefined>(undefined)
   const [outcome, setOutcome] = useState(OUTCOME_ONGOING)
   const [postState, setPostState] = useState<PostState>('auto')
-  const [lastResult, setLastResult] = useState<RunResult | undefined>(undefined)
   const { theme } = usePlanTheme()
 
+  const ruleset = getSessionRuleSet(session)
   const limits = useMemo(() => readPlayerLimits(BALANCE), [])
   const problems = useMemo(
     () => validateRuleSet(ruleset, BLOCK_CATALOG, limits.cpuBudget, limits.ruleSlots),
     [ruleset, limits],
   )
+
+  // 저장기는 앱이 사는 동안 하나다. 렌더마다 새로 만들면 앞선 예약이 사라져 디바운스가
+  // "마지막 것 하나" 가 아니라 "아무것도 안 씀" 이 된다.
+  const scheduler = useMemo(() => createSaveScheduler(getLocalStorage()), [])
+
+  // 세션이 바뀔 때마다 예약한다. 화면을 떠날 때는 예약을 버리지 않고 즉시 쓴다 — 마지막
+  // 편집이 400ms 안에 있었다는 이유로 사라지면 저장이 없는 것과 다르지 않다.
+  useEffect(() => {
+    scheduler.schedule(buildSessionSave(session))
+  }, [scheduler, session])
+
+  useEffect(() => {
+    const target = globalThis.window as Window | undefined
+    /** 탭이 닫히거나 뒤로 가기 전에 예약된 저장을 쓴다. */
+    function handleHide(): void {
+      scheduler.flush()
+    }
+    target?.addEventListener('pagehide', handleHide)
+    return () => {
+      target?.removeEventListener('pagehide', handleHide)
+      scheduler.flush()
+    }
+  }, [scheduler])
+
+  // 되돌리기는 화면 전체에서 듣는다. 규칙 행에 포커스가 없을 때도 눌리기 때문이다.
+  // 전투 화면에서는 듣지 않는다 — 도는 판의 입력을 되돌릴 수는 없다 (R5).
+  useEffect(() => {
+    const target = globalThis.window as Window | undefined
+    if (target === undefined || run !== undefined) {
+      return undefined
+    }
+    /**
+     * 되돌리기 단축키를 처리한다.
+     *
+     * @param event 키 입력.
+     */
+    function handleKeyDown(event: KeyboardEvent): void {
+      const command = resolveHistoryCommand(event)
+      const focused = event.target instanceof HTMLElement ? event.target.tagName : ''
+      if (command === undefined || checkTextEntry(focused)) {
+        return
+      }
+      event.preventDefault()
+      setSession(command === 'undo' ? applyUndoStep : applyRedoStep)
+    }
+    target.addEventListener('keydown', handleKeyDown)
+    return () => {
+      target.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [run])
 
   // 판이 끝난 뒤에만 다시 돌린다. 관전 중에 돌리면 매 틱 400틱짜리 재현이 따라 돈다.
   const finished = !checkOngoing(outcome)
@@ -188,7 +265,7 @@ export function App(): React.JSX.Element {
    */
   function startRun(): void {
     setRun({
-      setup: { roomId, rulesetId: ruleset.rulesetId, seed },
+      setup: { roomId: session.roomId, rulesetId: ruleset.rulesetId, seed: session.seed },
       rulesets: new Map([[ruleset.rulesetId, ruleset]]),
     })
     setOutcome(OUTCOME_ONGOING)
@@ -200,31 +277,68 @@ export function App(): React.JSX.Element {
    */
   function goToEditor(): void {
     if (recording !== undefined) {
-      setLastResult({
+      const result = {
         outcome: recording.outcome,
         ticks: recording.ticks,
         playerHp: recording.playerHp,
-      })
+      }
+      setSession((current) => applyRunResult(current, result))
     }
     setRun(undefined)
     setOutcome(OUTCOME_ONGOING)
   }
 
+  /**
+   * 공유 코드를 읽어 들인다.
+   *
+   * @param code 붙여넣은 코드.
+   * @returns 실패 사유. 성공이면 빈 문자열.
+   */
+  function readSharedCode(code: string): string {
+    try {
+      setSession((current) => applyPresetImport(current, code))
+      return ''
+    } catch (error) {
+      return formatCrash(error)
+    }
+  }
+
   const blocker = findLaunchBlocker(problems)
-  const resultText = describeRunResult(lastResult)
+  const resultText = describeRunResult(session.lastResult)
 
   const launchControls = (
     <div className="launch">
       {resultText === '' ? null : <ValueExpr text={resultText} size="sm" dim />}
+      <Button
+        size="sm"
+        variant="ghost"
+        glyph="↶"
+        disabled={!checkCanUndo(session.history)}
+        title="되돌리기 (Ctrl+Z)"
+        onClick={() => {
+          setSession(applyUndoStep)
+        }}
+      />
+      <Button
+        size="sm"
+        variant="ghost"
+        glyph="↷"
+        disabled={!checkCanRedo(session.history)}
+        title="다시 실행 (Ctrl+Shift+Z)"
+        onClick={() => {
+          setSession(applyRedoStep)
+        }}
+      />
       <label className="launch__label" htmlFor="launch-room">
         방
       </label>
       <select
         id="launch-room"
         className="launch__field"
-        value={roomId}
+        value={session.roomId}
         onChange={(event) => {
-          setRoomId(event.target.value)
+          const roomId = event.target.value
+          setSession((current) => applyRoomChoice(current, roomId))
         }}
       >
         {ROOM_TEMPLATES.map((template) => (
@@ -241,10 +355,11 @@ export function App(): React.JSX.Element {
         className="launch__field launch__field--number"
         type="number"
         min={MIN_SEED}
-        value={seed}
+        value={session.seed}
         onChange={(event) => {
           const parsed = Number.parseInt(event.target.value, DECIMAL_RADIX)
-          setSeed(Number.isNaN(parsed) ? MIN_SEED : Math.max(MIN_SEED, parsed))
+          const seed = Number.isNaN(parsed) ? MIN_SEED : Math.max(MIN_SEED, parsed)
+          setSession((current) => applySeedChoice(current, seed))
         }}
       />
       <Button
@@ -253,7 +368,7 @@ export function App(): React.JSX.Element {
         glyph="＋"
         title="다음 시드 — 같은 규칙표를 다른 판에서 시험한다"
         onClick={() => {
-          setSeed((value) => value + SEED_STEP)
+          setSession((current) => applySeedChoice(current, current.seed + SEED_STEP))
         }}
       >
         시드
@@ -279,8 +394,27 @@ export function App(): React.JSX.Element {
           catalog={BLOCK_CATALOG}
           cpuBudget={limits.cpuBudget}
           ruleSlots={limits.ruleSlots}
-          onChange={setRuleset}
+          onChange={(next) => {
+            setSession((current) => applyRuleSetEdit(current, next))
+          }}
           controls={launchControls}
+          library={
+            <RuleLibrary
+              presets={session.presets}
+              onSave={(name) => {
+                setSession((current) => applyPresetSave(current, name))
+              }}
+              onLoad={(index) => {
+                setSession((current) => applyPresetLoad(current, index))
+              }}
+              onRemove={(index) => {
+                setSession((current) => applyPresetRemove(current, index))
+              }}
+              onImport={readSharedCode}
+              onExport={(name) => exportSessionCode(session, name)}
+              onExportSlot={(index) => exportSlotCode(session, index)}
+            />
+          }
         />
       </div>
     )

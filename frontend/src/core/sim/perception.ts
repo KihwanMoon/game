@@ -34,14 +34,21 @@ const TILE_BY_NAME: readonly (readonly [string, number])[] = [
   ['SPRING', TILE_SPRING],
 ]
 
-/** 인지 변수 enemy_type_present 가 묻는 적 유형들. */
-const ENEMY_TYPES: readonly string[] = ['MELEE', 'RANGED', 'SUMMONER', 'BOMBER']
+/** 인지 변수 enemy_type_present 가 묻는 적 유형들. HEALER 는 v4 에서 들어왔다. */
+const ENEMY_TYPES: readonly string[] = ['MELEE', 'RANGED', 'SUMMONER', 'BOMBER', 'HEALER']
 
 /**
- * 인지 변수 self_cooldown_ready 가 묻는 스킬들. SUMMON 이 끼는 것은 v3 부터다 — 소환
- * 주기를 규칙표가 물을 수 있어야 `쿨타임[SUMMON] 완료 → 소환` 이 성립한다 (GDD §5).
+ * 인지 변수 self_cooldown_ready 가 묻는 스킬들. SUMMON 이 끼는 것은 v3, HEAL 은 v4
+ * 부터다 — 주기를 규칙표가 물을 수 있어야 `쿨타임[SUMMON] 완료 → 소환` 과
+ * `쿨타임[HEAL] 완료 → 회복` 이 성립한다 (GDD §5).
  */
-const COOLDOWN_SKILLS: readonly string[] = ['SKILL_1', 'SKILL_2', 'AREA_ATTACK', 'SUMMON']
+const COOLDOWN_SKILLS: readonly string[] = [
+  'SKILL_1',
+  'SKILL_2',
+  'AREA_ATTACK',
+  'SUMMON',
+  'HEAL',
+]
 
 /** 인지 변수 self_has_status 가 묻는 상태이상들. */
 const STATUS_NAMES: readonly string[] = ['POISON', 'SLOW', 'STUN']
@@ -201,7 +208,10 @@ export function buildSnapshot(input: SnapshotInput): PerceptionSnapshot {
   values.set('self_hp_percent', getHpPercent(entity))
   values.set('self_potion_count', entity.potions)
   values.set('self_on_heal_tile', state.getTile(entity.position.x, entity.position.y) === TILE_SPRING)
-  values.set('visible_enemy_count', hostiles.length)
+  // 여기에 방 전체 적 수를 남겨 두지 않는다. 실제 값은 addVisionValues 가 LOS 로 좁혀
+  // 넣으며(파이썬 정본과 같다), 미리 깔아 두면 두 가지가 어긋난다 — 격자를 넘기지 않은
+  // 호출에서 파이썬은 '값 없음' 인데 TS 만 방 전체 수를 답하고, 격자를 넘긴 호출에서는
+  // Map 이 첫 삽입 자리를 지켜 키 순서가 파이썬과 달라진다 (R5·G3).
   values.set('open_neighbor_count', countOpenNeighbors(state, entity))
   values.set('room_elapsed_ticks', state.tick)
 
@@ -217,7 +227,9 @@ export function buildSnapshot(input: SnapshotInput): PerceptionSnapshot {
   }
 
   // 셀렉터별 대상 거리 (블록 목록 v2, F-1 잔여 해결). 규칙이 자기 TARGET 과 무관하게
-  // 물을 수 있어야 하므로 스냅샷에서 7개를 모두 미리 푼다 — 틱당 1회 원칙은 지켜진다.
+  // 물을 수 있어야 하므로 스냅샷에서 전부 미리 푼다 — 틱당 1회 원칙은 지켜진다. v4 의
+  // 아군 셀렉터도 여기 딸려 들어와, 치유형이 `부상한 아군이 사거리 안인가` 를 새 인지
+  // 변수 없이 묻는다.
   for (const selectorId of ALL_SELECTORS) {
     const picked = resolveTarget(selectorId, entity, state, kindTypes)
     values.set(

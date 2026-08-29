@@ -6,6 +6,22 @@
  */
 export { RuleEditor } from './RuleEditor'
 export type { RuleEditorProps } from './RuleEditor'
+export { RuleLibrary } from './RuleLibrary'
+export type { RuleLibraryProps } from './RuleLibrary'
+export { writeClipboard } from './clipboard'
+export {
+  HISTORY_LIMIT,
+  applyChange,
+  applyRedo,
+  applyUndo,
+  TEXT_ENTRY_TAGS,
+  checkCanRedo,
+  checkCanUndo,
+  checkTextEntry,
+  createHistory,
+  resolveHistoryCommand,
+} from './history'
+export type { EditHistory, HistoryCommand, KeyChord } from './history'
 export { formatRuleText, formatRuleLine, formatTermText, parseRuleText, STAT_PREFIX } from './ruleText'
 export type { RuleTextParse } from './ruleText'
 export {

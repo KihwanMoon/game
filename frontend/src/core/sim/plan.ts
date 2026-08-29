@@ -7,6 +7,7 @@
 
 import type { DamageRules } from '../combat/damage'
 import type { PerceptionSnapshot } from './perception'
+import type { FloorScale } from './scaling'
 import type { Entity, WorldState } from './state'
 
 // 페이즈·판정 이름은 phases.ts 가 정본이다. 여기서 다시 내보내는 것은 엔진 쪽 호출자가
@@ -152,11 +153,22 @@ export interface EngineConfig {
    */
   readonly skillCooldowns: ReadonlyMap<string, number>
   /**
+   * 행동 id -> 회복량. 대상 최대 HP 의 정수 퍼센트다 (블록 목록 v4 의 HEAL). 고정값이
+   * 아니라 비율인 이유는 회복이 대상의 덩치에 비례해야 하기 때문이고, 퍼센트 정수인
+   * 이유는 R5 다 — 부동소수를 쓰면 플랫폼마다 결과가 갈린다.
+   */
+  readonly skillHealPct: ReadonlyMap<string, number>
+  /**
    * kindId -> 소환 규칙. '언제 소환하는가' 는 규칙표가 정하고, 여기 남는 것은 '무엇을
    * 몇 마리까지' 와 쿨타임[SUMMON] 의 초기값이 되는 주기(every_ticks)다.
    */
   readonly summonRules: ReadonlyMap<string, RawSummonRule>
   readonly enemyStats: ReadonlyMap<string, RawEnemyKind>
+  /**
+   * 층 깊이 스케일. 개체를 만드는 자리(방 배치·소환·추격자)가 전부 이것을 거쳐야 같은
+   * 층에 다른 기준의 적이 섞이지 않는다 (`scaling.getScaledEnemyStats`).
+   */
+  readonly floorScale: FloorScale
   readonly floor: number
   readonly maxTicks: number
   readonly combatRegenPct: number

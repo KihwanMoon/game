@@ -13,6 +13,7 @@
  */
 
 import {
+  type ActionBlock,
   type BlockCatalog,
   COMPARISONS,
   CONDITION_OPS,
@@ -36,6 +37,12 @@ export const CPU_COST_BY_TERM_COUNT: ReadonlyMap<number, number> = new Map([
  * 뜻이 없다 — 값이 나오는데도 영영 거짓인 규칙이 만들어진다.
  */
 const NUMERIC_RETURN = 'int'
+
+/** 진영 id 를 사람이 읽는 말로. 메시지에 "ally" 라고 적으면 화면에서만 영어가 튄다. */
+const FACTION_LABELS: ReadonlyMap<string, string> = new Map([
+  ['enemy', '적대'],
+  ['ally', '아군'],
+])
 
 /**
  * 빠진 인자를 메시지에 적을 문자열로 만든다.
@@ -159,6 +166,36 @@ function checkTerms(rule: Rule, catalog: BlockCatalog, unlocked: ReadonlySet<str
 }
 
 /**
+ * 행동이 요구하는 진영과 셀렉터가 고르는 진영이 맞는지 본다 (블록 목록 v4).
+ *
+ * `HEAL @NEAREST` 는 적을 회복하고 `ATTACK @ALLY_WOUNDED` 는 아군을 때린다. 둘 다 문법으로는
+ * 만들 수 있으므로 여기서 막지 않으면 규칙표가 조용히 반대로 돈다.
+ *
+ * @param rule 검사할 규칙.
+ * @param action 그 규칙의 행동 블록.
+ * @param catalog 동결된 블록 카탈로그.
+ * @param label 메시지에 붙일 규칙 표시.
+ * @returns 위반 메시지 목록.
+ */
+function checkTargetFaction(
+  rule: Rule,
+  action: ActionBlock,
+  catalog: BlockCatalog,
+  label: string,
+): string[] {
+  const selector = catalog.selectors.get(rule.target ?? '')
+  if (selector === undefined || action.targetFaction === null) {
+    return []
+  }
+  if (selector.faction === action.targetFaction) {
+    return []
+  }
+  const want = FACTION_LABELS.get(action.targetFaction) ?? action.targetFaction
+  const got = FACTION_LABELS.get(selector.faction) ?? selector.faction
+  return [`${label} ${rule.action} 는 ${want} 셀렉터가 필요하다 — ${rule.target} 는 ${got} 셀렉터다`]
+}
+
+/**
  * 행동과 셀렉터의 조합이 성립하는지 본다.
  *
  * @param rule 검사할 규칙.
@@ -185,6 +222,7 @@ function checkAction(rule: Rule, catalog: BlockCatalog, unlocked: ReadonlySet<st
   if (rule.target !== null && !catalog.selectors.has(rule.target)) {
     problems.push(`${label} 목록에 없는 셀렉터 ${rule.target}`)
   }
+  problems.push(...checkTargetFaction(rule, action, catalog, label))
   return problems
 }
 

@@ -14,9 +14,10 @@
 import { EventLog, createLogEntry } from '../eventLog'
 import { divideFloor } from '../combat/damage'
 import { type Position, formatPosition, formatPositionKey, getManhattanDistance } from '../grid/geometry'
-import { TILE_DOOR, TILE_FLOOR, TILE_SPRING, WALKABLE_TILES } from '../schemas'
+import { FIRST_FLOOR, TILE_DOOR, TILE_FLOOR, TILE_SPRING, WALKABLE_TILES } from '../schemas'
 import { PHASE_RESOLVE, PHASE_UPKEEP } from './phases'
 import type { RawEnemyKind } from './plan'
+import { DEFAULT_FLOOR_SCALE, type FloorScale, getScaledEnemyStats } from './scaling'
 import { FACTION_ENEMY, FACTION_PLAYER, type Entity, type WorldState, createEntity } from './state'
 
 export const DEFAULT_HUNTER_SPAWN_TICK = 40
@@ -291,6 +292,15 @@ export class PressureTracker {
     readonly enemyStats: ReadonlyMap<string, RawEnemyKind> = new Map(),
   ) {}
 
+  /**
+   * 층 깊이 스케일과 현재 층. 추격자에게도 방 배치와 같은 기준을 걸기 위해 든다 —
+   * 걸지 않으면 층 3 에서 시간을 끌었을 때 나오는 추격자만 층 1 스탯이 된다.
+   * 엔진 조립(`buildEngine`)이 층을 정본으로 덮어쓴다.
+   */
+  floorScale: FloorScale = DEFAULT_FLOOR_SCALE
+
+  floor = FIRST_FLOOR
+
   /** 방·층 체류 틱을 1 올린다. */
   addTick(): void {
     this.roomTicks += 1
@@ -402,6 +412,7 @@ export class PressureTracker {
     }
 
     const position = state.rng.getChoice(spawns)
+    const scaled = getScaledEnemyStats(stats, this.floorScale, this.floor)
     // 소환물과 같은 일련번호를 쓴다. id 가 겹치면 한쪽이 조용히 덮인다.
     state.spawnCounter += 1
     this.hunterCount += 1
@@ -410,9 +421,9 @@ export class PressureTracker {
       kindId: this.rules.hunterEntity,
       faction: FACTION_ENEMY,
       position,
-      hp: stats.hp_max,
-      hpMax: stats.hp_max,
-      attack: stats.attack,
+      hp: scaled.hpMax,
+      hpMax: scaled.hpMax,
+      attack: scaled.attack,
       defense: stats.defense,
       attackRange: stats.attack_range,
       initiative: stats.initiative,

@@ -111,6 +111,27 @@ export function listSelectors(catalog: BlockCatalog): readonly SelectorBlock[] {
 }
 
 /**
+ * 그 행동이 고를 수 있는 셀렉터만 낸다 (블록 목록 v4).
+ *
+ * 행동은 요구하는 진영을 선언하고 셀렉터는 고르는 진영을 선언한다. 어긋난 조합은 검증기가
+ * 거부하므로, 목록에 그대로 두면 고를 수는 있는데 늘 빨간 줄이 뜨는 칸이 생긴다.
+ *
+ * @param catalog 블록 카탈로그.
+ * @param action 고른 행동. 아직 없거나 대상을 받지 않으면 전체를 낸다.
+ * @returns 카탈로그 순서를 유지한 셀렉터 목록.
+ */
+export function listSelectorsForAction(
+  catalog: BlockCatalog,
+  action: ActionBlock | undefined,
+): readonly SelectorBlock[] {
+  const wanted = action?.targetFaction
+  if (wanted === undefined || wanted === null) {
+    return listSelectors(catalog)
+  }
+  return listSelectors(catalog).filter((item) => item.faction === wanted)
+}
+
+/**
  * 조건 우변에 둘 수 있는 자기 스탯 목록을 낸다 (F-2).
  *
  * @param catalog 블록 카탈로그.

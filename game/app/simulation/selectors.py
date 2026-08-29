@@ -4,7 +4,9 @@
 정해진 대상을 가리킨다. 순서를 반대로 두면 조건이 무엇을 재는지 정의되지 않는다.
 
 셀렉터가 아무도 못 고르면 그 규칙은 발동할 수 없다 — 없는 소환사를 공격하라는 규칙이
-틱을 버리는 것을 막는다.
+틱을 버리는 것을 막는다. 블록 목록 v4 의 아군 셀렉터가 이 성질에 그대로 기댄다:
+부상한 아군이 없으면 `HEAL` 규칙은 발동하지 않고 아래 규칙으로 넘어가므로, 치유형이
+회복 한 줄에 굳지 않는다.
 """
 
 from game.app.grid.geometry import get_manhattan_distance
@@ -15,23 +17,64 @@ SELECTOR_LOWEST_HP = "LOWEST_HP"
 SELECTOR_HIGHEST_THREAT = "HIGHEST_THREAT"
 SELECTOR_TYPE_RANGED = "TYPE_RANGED"
 SELECTOR_TYPE_SUMMONER = "TYPE_SUMMONER"
+SELECTOR_TYPE_HEALER = "TYPE_HEALER"
 SELECTOR_CASTING = "CASTING"
 SELECTOR_BOSS = "BOSS"
+SELECTOR_ALLY_WOUNDED = "ALLY_WOUNDED"
 
+# 순서는 blocks.json 의 selectors 절과 같다. 인지 스냅샷이 이 순서로 거리를 푼다.
 ALL_SELECTORS = (
     SELECTOR_NEAREST,
     SELECTOR_LOWEST_HP,
     SELECTOR_HIGHEST_THREAT,
     SELECTOR_TYPE_RANGED,
     SELECTOR_TYPE_SUMMONER,
+    SELECTOR_TYPE_HEALER,
     SELECTOR_CASTING,
     SELECTOR_BOSS,
+    SELECTOR_ALLY_WOUNDED,
 )
 
+# 적 유형을 직접 가리키는 셀렉터들. BOSS 도 유형 하나이므로 같은 표에 둔다.
 TYPE_BY_SELECTOR = {
     SELECTOR_TYPE_RANGED: "RANGED",
     SELECTOR_TYPE_SUMMONER: "SUMMONER",
+    SELECTOR_TYPE_HEALER: "HEALER",
+    SELECTOR_BOSS: "BOSS",
 }
+
+# HP 가 가장 낮은 쪽을 고르는 셀렉터들. 적대·아군 양쪽에 하나씩이다.
+LOWEST_HP_SELECTORS = frozenset({SELECTOR_LOWEST_HP, SELECTOR_ALLY_WOUNDED})
+
+
+def list_candidates(
+    selector_id: str, actor: Entity, state: WorldState, kind_types: dict[str, str]
+) -> tuple[Entity, ...]:
+    """셀렉터가 고를 수 있는 후보를 진영과 조건으로 좁힌다.
+
+    Args:
+        selector_id: 셀렉터 id.
+        actor: 대상을 고르는 주체.
+        state: 세계 상태.
+        kind_types: 엔티티 종류에서 적 유형으로의 대응표.
+
+    Returns:
+        후보들. 순서는 list_actors 와 같다.
+    """
+    if selector_id == SELECTOR_ALLY_WOUNDED:
+        # 만피인 아군은 회복 대상이 아니다. 여기서 거르지 않으면 HEAL 규칙이 참인데
+        # 회복량 0 으로 끝나 쿨타임도 걸리지 않고, 그 규칙에 치유형이 굳는다.
+        return tuple(other for other in state.list_allies(actor) if other.hp < other.hp_max)
+
+    hostiles = state.list_hostiles(actor)
+    wanted = TYPE_BY_SELECTOR.get(selector_id)
+    if wanted is not None:
+        return tuple(other for other in hostiles if kind_types.get(other.kind_id) == wanted)
+    if selector_id == SELECTOR_CASTING:
+        # 시전 판정은 예고판이 답한다. 예고판은 엔진이 들고 있으므로 TELEGRAPH
+        # 페이즈가 정렬해 내려 준 WorldState.casting_ids 를 읽는다 (W6 통합).
+        return tuple(other for other in hostiles if other.entity_id in state.casting_ids)
+    return hostiles
 
 
 def resolve_target(
@@ -50,32 +93,19 @@ def resolve_target(
         kind_types: 엔티티 종류에서 적 유형으로의 대응표.
 
     Returns:
-        고른 대상. 조건에 맞는 적이 없으면 None.
+        고른 대상. 조건에 맞는 후보가 없으면 None.
     """
-    hostiles = state.list_hostiles(actor)
-    if not hostiles:
+    candidates = list_candidates(selector_id, actor, state, kind_types)
+    if not candidates:
         return None
 
-    if selector_id in TYPE_BY_SELECTOR:
-        wanted = TYPE_BY_SELECTOR[selector_id]
-        hostiles = tuple(e for e in hostiles if kind_types.get(e.kind_id) == wanted)
-    elif selector_id == SELECTOR_BOSS:
-        hostiles = tuple(e for e in hostiles if kind_types.get(e.kind_id) == "BOSS")
-    elif selector_id == SELECTOR_CASTING:
-        # 시전 판정은 예고판이 답한다. 예고판은 엔진이 들고 있으므로 TELEGRAPH
-        # 페이즈가 정렬해 내려 준 WorldState.casting_ids 를 읽는다 (W6 통합).
-        hostiles = tuple(e for e in hostiles if e.entity_id in state.casting_ids)
-
-    if not hostiles:
-        return None
-
-    if selector_id == SELECTOR_LOWEST_HP:
-        return min(hostiles, key=lambda e: (e.hp, e.entity_id))
+    if selector_id in LOWEST_HP_SELECTORS:
+        return min(candidates, key=lambda e: (e.hp, e.entity_id))
     if selector_id == SELECTOR_HIGHEST_THREAT:
         # 위협도는 아직 스탯이 아니다. 공격력을 대리 지표로 쓴다 — Phase 4 에서
         # 보스·정예가 들어오면 실제 위협도 계산으로 바꾼다.
-        return max(hostiles, key=lambda e: (e.attack, e.entity_id))
+        return max(candidates, key=lambda e: (e.attack, e.entity_id))
     return min(
-        hostiles,
+        candidates,
         key=lambda e: (get_manhattan_distance(actor.position, e.position), e.entity_id),
     )

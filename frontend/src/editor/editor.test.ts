@@ -17,6 +17,7 @@ import {
   G0_RULESETS,
 } from '../core/resources'
 import { validateRuleSet } from '../core/rules/validator'
+import { listSelectorsForAction } from './blockOptions'
 import type { RuleSet } from '../core/schemas'
 import {
   addRule,
@@ -204,6 +205,28 @@ describe('편집 조작으로 만든 규칙표', () => {
     expect(untargeted.rules[0]?.target).toBeNull()
     const targeted = applyActionChoice(untargeted, BLOCK_CATALOG, 0, 'ATTACK')
     expect(targeted.rules[0]?.target).toBe('NEAREST')
+  })
+
+  it('회복으로 바꾸면 셀렉터도 아군 쪽으로 넘어간다', () => {
+    // 블록 목록 v4. 적대 셀렉터를 그대로 두면 고르자마자 위반이 뜬다.
+    const draft = addRule(EMPTY, BLOCK_CATALOG, -1, 'self_hp_percent')
+    const attacking = applyActionChoice(draft, BLOCK_CATALOG, 0, 'ATTACK')
+    const healing = applyActionChoice(attacking, BLOCK_CATALOG, 0, 'HEAL')
+    expect(healing.rules[0]?.target).toBe('ALLY_WOUNDED')
+    expect(validateRuleSet(healing, BLOCK_CATALOG, CPU_BUDGET, RULE_SLOTS)).toEqual([])
+    const backToAttack = applyActionChoice(healing, BLOCK_CATALOG, 0, 'ATTACK')
+    expect(backToAttack.rules[0]?.target).toBe('NEAREST')
+  })
+
+  it('행동이 고를 수 있는 셀렉터만 목록에 낸다', () => {
+    const heal = BLOCK_CATALOG.actions.get('HEAL')
+    const attack = BLOCK_CATALOG.actions.get('ATTACK')
+    expect(listSelectorsForAction(BLOCK_CATALOG, heal).map((item) => item.blockId)).toEqual([
+      'ALLY_WOUNDED',
+    ])
+    expect(listSelectorsForAction(BLOCK_CATALOG, attack).map((item) => item.blockId)).not.toContain(
+      'ALLY_WOUNDED',
+    )
   })
 
   it('예산을 넘겨도 편집이 막히지 않는다', () => {

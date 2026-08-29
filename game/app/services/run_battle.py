@@ -13,7 +13,9 @@ from game.app.rules.fallback_policy import FallbackPolicy
 from game.app.rules.rule_vm import build_rule_vm
 from game.app.simulation.engine import TickEngine
 from game.app.simulation.plan import OUTCOME_ONGOING, DecisionPolicy, EngineConfig
-from game.app.simulation.pressure import PressureTracker, build_pressure_rules, init_spring_pools
+from game.app.simulation.pressure import PressureTracker, build_pressure_rules
+from game.app.simulation.scaling import build_floor_scale, get_scaled_enemy_stats
+from game.app.simulation.springs import init_spring_pools
 from game.app.simulation.state import FACTION_ENEMY, FACTION_PLAYER, Entity, WorldState
 from game.schemas.blocks import BlockCatalog
 from game.schemas.room import RoomTemplate
@@ -97,7 +99,9 @@ def build_engine(
         balance: balance.json 을 읽은 딕셔너리.
         seed: 난수 시드.
         max_ticks: 이 틱을 넘기면 시간 초과로 끝낸다.
-        floor: 현재 층. 피해 공식의 방어 감쇠와 층 스케일이 이 값을 본다.
+        floor: 현재 층. 피해 공식의 방어 감쇠와 층 깊이 스케일이 이 값을 본다.
+            층 1 이 balance.json 에 적힌 그대로이고, 한 층 내려갈 때마다 적의 최대
+            HP 와 공격력에 floor_scale 의 퍼센트가 얹힌다.
         pressure: 층 단위 압력 추적기. 방마다 새로 만들면 층 체류 스케일이
             매 방 0 으로 돌아가므로 연쇄 실행은 하나를 만들어 계속 넘긴다.
 
@@ -129,16 +133,18 @@ def build_engine(
 
     kinds = balance["enemies"]
     by_id = {kind["id"]: kind for kind in kinds}
+    scale = build_floor_scale(balance.get("floor_scale", {}))
     for index, spawn in enumerate(template.enemy_spawns):
         kind = by_id[spawn.kind]
+        hp_max, attack = get_scaled_enemy_stats(kind, scale, floor)
         state.entities[f"{kind['id']}_{index}"] = Entity(
             entity_id=f"{kind['id']}_{index}",
             kind_id=kind["id"],
             faction=FACTION_ENEMY,
             position=spawn.position,
-            hp=kind["hp_max"],
-            hp_max=kind["hp_max"],
-            attack=kind["attack"],
+            hp=hp_max,
+            hp_max=hp_max,
+            attack=attack,
             defense=kind["defense"],
             attack_range=kind["attack_range"],
             initiative=kind["initiative"],
@@ -153,13 +159,21 @@ def build_engine(
         skill_coef_pct={skill["id"]: skill["coef_pct"] for skill in balance["skills"]},
         skill_range={skill["id"]: skill.get("range") for skill in balance["skills"]},
         skill_cooldowns={skill["id"]: skill["cooldown"] for skill in balance["skills"]},
+        skill_heal_pct={
+            skill["id"]: skill["heal_pct"] for skill in balance["skills"] if "heal_pct" in skill
+        },
         summon_rules={k["id"]: k["summon"] for k in kinds if "summon" in k},
         enemy_stats={k["id"]: k for k in kinds},
+        floor_scale=scale,
         floor=floor,
         max_ticks=max_ticks,
         combat_regen_pct=rules.combat_regen_pct,
     )
     tracker = pressure or PressureTracker(rules=rules, enemy_stats={k["id"]: k for k in kinds})
+    # 층은 엔진이 정본이다. 넘겨받은 추적기에도 덮어써야 층 3 에서 뒤늦게 나온 추격자만
+    # 층 1 스탯으로 서는 일이 없다 — 추적기는 층 단위 객체라 방마다 재사용된다.
+    tracker.floor = floor
+    tracker.floor_scale = scale
     return TickEngine(state=state, policy=FallbackPolicy(), config=config, pressure=tracker)
 
 

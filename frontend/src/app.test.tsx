@@ -79,6 +79,18 @@ describe('첫 화면', () => {
   it('사후 분석은 판이 끝나기 전에는 그려지지 않는다', () => {
     expect(markup).not.toContain('사후 분석')
   })
+
+  it('코드 라이브러리가 팔레트 아래에 함께 뜬다 — 짠 것을 둘 곳이 화면에 있다', () => {
+    expect(markup).toContain('코드 라이브러리')
+    expect(markup).toContain('id="library-name"')
+    expect(markup).toContain('id="library-code"')
+  })
+
+  it('되돌리기 조작이 상단 바에 있고, 되돌릴 것이 없으면 잠겨 있다', () => {
+    expect(markup).toContain('되돌리기 (Ctrl+Z)')
+    expect(markup).toContain('다시 실행 (Ctrl+Shift+Z)')
+    expect(markup).toContain('disabled="" title="되돌리기 (Ctrl+Z)"')
+  })
 })
 
 describe('출격 차단', () => {

@@ -92,8 +92,15 @@ export function LogStream(props: LogStreamProps): React.JSX.Element {
               <span className="hud-log__tick-label">{formatTickLabel(group.tick)}</span>
               <span className="hud-log__tick-count">{group.count}</span>
             </header>
-            {group.runs.map((run) => (
-              <div className="hud-log__run" key={`${String(group.tick)}-${run.entityId}`}>
+            {group.runs.map((run, runIndex) => (
+              // 한 틱 안에서 같은 개체가 두 번 이상 등장한다 — 결정 페이즈와 행동 페이즈가
+              // 따로 찍히기 때문이다(T006 에 player 가 DECIDE 로 한 번, ACT 로 한 번).
+              // `틱-개체` 로는 그 둘이 같은 키가 되어 React 가 줄을 겹쳐 버린다. 실제
+              // 브라우저에서 잡힌 결함이고, jsdom 테스트는 콘솔을 보지 않아 놓쳤다.
+              <div
+                className="hud-log__run"
+                key={`${String(group.tick)}-${String(runIndex)}-${run.entityId}`}
+              >
                 <p className="hud-log__actor">{run.entityId}</p>
                 {run.entries.map((entry, index) => (
                   <div

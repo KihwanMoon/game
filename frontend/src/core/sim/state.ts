@@ -191,4 +191,20 @@ export class WorldState implements TileReader {
   listHostiles(viewer: Entity): readonly Entity[] {
     return this.listActors().filter((entity) => entity.faction !== viewer.faction)
   }
+
+  /**
+   * 같은 진영의 살아 있는 엔티티들. **자기 자신은 빠진다** (블록 목록 v4).
+   *
+   * 자기 자신을 넣지 않는 이유는 자기 회복이 이미 USE_POTION 의 자리이기 때문이다. 넣으면
+   * 아군 셀렉터가 늘 자기를 후보로 두어, 아군이 하나도 없는 판에서도 HEAL 이 무한 포션처럼
+   * 도는 구멍이 생긴다.
+   *
+   * @param viewer 기준 엔티티.
+   * @returns 진영이 같은 다른 엔티티들. 순서는 listActors 와 같다.
+   */
+  listAllies(viewer: Entity): readonly Entity[] {
+    return this.listActors().filter(
+      (entity) => entity.faction === viewer.faction && entity !== viewer,
+    )
+  }
 }

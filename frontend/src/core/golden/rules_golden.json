@@ -27,6 +27,10 @@
       "BOMBER"
     ],
     [
+      "mender_acolyte",
+      "HEALER"
+    ],
+    [
       "throne_wraith",
       "BOSS"
     ]
@@ -326,6 +330,108 @@
           "potions": 0
         }
       ]
+    },
+    {
+      "world_id": "ward",
+      "room_id": "open_field",
+      "tick": 9,
+      "casting_ids": [],
+      "selector_actors": [
+        "player",
+        "e_mender"
+      ],
+      "entities": [
+        {
+          "entity_id": "player",
+          "kind_id": "hero",
+          "faction": "player",
+          "position": [
+            1,
+            4
+          ],
+          "hp": 70,
+          "hp_max": 100,
+          "attack": 12,
+          "defense": 5,
+          "attack_range": 1,
+          "initiative": 50,
+          "regen_base": 1,
+          "cpu_budget": 8,
+          "potions": 2
+        },
+        {
+          "entity_id": "a_scout",
+          "kind_id": "hero",
+          "faction": "player",
+          "position": [
+            2,
+            4
+          ],
+          "hp": 30,
+          "hp_max": 40,
+          "attack": 12,
+          "defense": 5,
+          "attack_range": 1,
+          "initiative": 45,
+          "regen_base": 1,
+          "cpu_budget": 8,
+          "potions": 2
+        },
+        {
+          "entity_id": "a_guard",
+          "kind_id": "hero",
+          "faction": "player",
+          "position": [
+            1,
+            6
+          ],
+          "hp": 40,
+          "hp_max": 40,
+          "attack": 12,
+          "defense": 5,
+          "attack_range": 1,
+          "initiative": 44,
+          "regen_base": 1,
+          "cpu_budget": 8,
+          "potions": 2
+        },
+        {
+          "entity_id": "e_grunt",
+          "kind_id": "goblin_rusher",
+          "faction": "enemy",
+          "position": [
+            3,
+            4
+          ],
+          "hp": 20,
+          "hp_max": 24,
+          "attack": 7,
+          "defense": 2,
+          "attack_range": 1,
+          "initiative": 40,
+          "regen_base": 0,
+          "cpu_budget": 4,
+          "potions": 0
+        },
+        {
+          "entity_id": "e_mender",
+          "kind_id": "mender_acolyte",
+          "faction": "enemy",
+          "position": [
+            8,
+            4
+          ],
+          "hp": 30,
+          "hp_max": 30,
+          "attack": 7,
+          "defense": 2,
+          "attack_range": 2,
+          "initiative": 40,
+          "regen_base": 0,
+          "cpu_budget": 4,
+          "potions": 0
+        }
+      ]
     }
   ],
   "snapshots": [
@@ -344,10 +450,6 @@
         [
           "self_on_heal_tile",
           false
-        ],
-        [
-          "visible_enemy_count",
-          5
         ],
         [
           "open_neighbor_count",
@@ -378,11 +480,19 @@
           10
         ],
         [
+          "target_distance[TYPE_HEALER]",
+          -1
+        ],
+        [
           "target_distance[CASTING]",
           10
         ],
         [
           "target_distance[BOSS]",
+          -1
+        ],
+        [
+          "target_distance[ALLY_WOUNDED]",
           -1
         ],
         [
@@ -414,6 +524,10 @@
           false
         ],
         [
+          "enemy_type_present[HEALER]",
+          false
+        ],
+        [
           "self_cooldown_ready[SKILL_1]",
           true
         ],
@@ -427,6 +541,10 @@
         ],
         [
           "self_cooldown_ready[SUMMON]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEAL]",
           true
         ],
         [
@@ -476,10 +594,6 @@
           false
         ],
         [
-          "visible_enemy_count",
-          2
-        ],
-        [
           "open_neighbor_count",
           5
         ],
@@ -508,12 +622,20 @@
           -1
         ],
         [
+          "target_distance[TYPE_HEALER]",
+          -1
+        ],
+        [
           "target_distance[CASTING]",
           -1
         ],
         [
           "target_distance[BOSS]",
           5
+        ],
+        [
+          "target_distance[ALLY_WOUNDED]",
+          -1
         ],
         [
           "nearest_tile_distance[DOOR]",
@@ -544,6 +666,10 @@
           false
         ],
         [
+          "enemy_type_present[HEALER]",
+          false
+        ],
+        [
           "self_cooldown_ready[SKILL_1]",
           true
         ],
@@ -557,6 +683,10 @@
         ],
         [
           "self_cooldown_ready[SUMMON]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEAL]",
           true
         ],
         [
@@ -606,10 +736,6 @@
           true
         ],
         [
-          "visible_enemy_count",
-          1
-        ],
-        [
           "open_neighbor_count",
           8
         ],
@@ -638,11 +764,19 @@
           -1
         ],
         [
+          "target_distance[TYPE_HEALER]",
+          -1
+        ],
+        [
           "target_distance[CASTING]",
           -1
         ],
         [
           "target_distance[BOSS]",
+          -1
+        ],
+        [
+          "target_distance[ALLY_WOUNDED]",
           -1
         ],
         [
@@ -674,6 +808,10 @@
           false
         ],
         [
+          "enemy_type_present[HEALER]",
+          false
+        ],
+        [
           "self_cooldown_ready[SKILL_1]",
           true
         ],
@@ -687,6 +825,10 @@
         ],
         [
           "self_cooldown_ready[SUMMON]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEAL]",
           true
         ],
         [
@@ -736,10 +878,6 @@
           false
         ],
         [
-          "visible_enemy_count",
-          0
-        ],
-        [
           "open_neighbor_count",
           6
         ],
@@ -768,11 +906,19 @@
           -1
         ],
         [
+          "target_distance[TYPE_HEALER]",
+          -1
+        ],
+        [
           "target_distance[CASTING]",
           -1
         ],
         [
           "target_distance[BOSS]",
+          -1
+        ],
+        [
+          "target_distance[ALLY_WOUNDED]",
           -1
         ],
         [
@@ -804,6 +950,10 @@
           false
         ],
         [
+          "enemy_type_present[HEALER]",
+          false
+        ],
+        [
           "self_cooldown_ready[SKILL_1]",
           true
         ],
@@ -817,6 +967,10 @@
         ],
         [
           "self_cooldown_ready[SUMMON]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEAL]",
           true
         ],
         [
@@ -866,10 +1020,6 @@
           false
         ],
         [
-          "visible_enemy_count",
-          1
-        ],
-        [
           "open_neighbor_count",
           6
         ],
@@ -898,11 +1048,19 @@
           -1
         ],
         [
+          "target_distance[TYPE_HEALER]",
+          -1
+        ],
+        [
           "target_distance[CASTING]",
           -1
         ],
         [
           "target_distance[BOSS]",
+          -1
+        ],
+        [
+          "target_distance[ALLY_WOUNDED]",
           -1
         ],
         [
@@ -934,6 +1092,10 @@
           false
         ],
         [
+          "enemy_type_present[HEALER]",
+          false
+        ],
+        [
           "self_cooldown_ready[SKILL_1]",
           true
         ],
@@ -947,6 +1109,152 @@
         ],
         [
           "self_cooldown_ready[SUMMON]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEAL]",
+          true
+        ],
+        [
+          "self_has_status[POISON]",
+          false
+        ],
+        [
+          "self_has_status[SLOW]",
+          false
+        ],
+        [
+          "self_has_status[STUN]",
+          false
+        ],
+        [
+          "flag_state[A]",
+          false
+        ],
+        [
+          "flag_state[B]",
+          false
+        ],
+        [
+          "flag_state[C]",
+          false
+        ],
+        [
+          "flag_state[D]",
+          false
+        ]
+      ]
+    },
+    {
+      "world_id": "ward",
+      "entity_id": "player",
+      "values": [
+        [
+          "self_hp_percent",
+          70
+        ],
+        [
+          "self_potion_count",
+          2
+        ],
+        [
+          "self_on_heal_tile",
+          false
+        ],
+        [
+          "open_neighbor_count",
+          5
+        ],
+        [
+          "room_elapsed_ticks",
+          9
+        ],
+        [
+          "target_distance[NEAREST]",
+          2
+        ],
+        [
+          "target_distance[LOWEST_HP]",
+          2
+        ],
+        [
+          "target_distance[HIGHEST_THREAT]",
+          7
+        ],
+        [
+          "target_distance[TYPE_RANGED]",
+          -1
+        ],
+        [
+          "target_distance[TYPE_SUMMONER]",
+          -1
+        ],
+        [
+          "target_distance[TYPE_HEALER]",
+          7
+        ],
+        [
+          "target_distance[CASTING]",
+          -1
+        ],
+        [
+          "target_distance[BOSS]",
+          -1
+        ],
+        [
+          "target_distance[ALLY_WOUNDED]",
+          1
+        ],
+        [
+          "nearest_tile_distance[DOOR]",
+          1
+        ],
+        [
+          "nearest_tile_distance[STAIRS]",
+          -1
+        ],
+        [
+          "nearest_tile_distance[SPRING]",
+          -1
+        ],
+        [
+          "enemy_type_present[MELEE]",
+          true
+        ],
+        [
+          "enemy_type_present[RANGED]",
+          false
+        ],
+        [
+          "enemy_type_present[SUMMONER]",
+          false
+        ],
+        [
+          "enemy_type_present[BOMBER]",
+          false
+        ],
+        [
+          "enemy_type_present[HEALER]",
+          true
+        ],
+        [
+          "self_cooldown_ready[SKILL_1]",
+          true
+        ],
+        [
+          "self_cooldown_ready[SKILL_2]",
+          true
+        ],
+        [
+          "self_cooldown_ready[AREA_ATTACK]",
+          true
+        ],
+        [
+          "self_cooldown_ready[SUMMON]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEAL]",
           true
         ],
         [
@@ -1014,6 +1322,12 @@
     {
       "world_id": "field_mixed",
       "actor_id": "player",
+      "selector": "TYPE_HEALER",
+      "picked_id": null
+    },
+    {
+      "world_id": "field_mixed",
+      "actor_id": "player",
       "selector": "CASTING",
       "picked_id": "e_delta"
     },
@@ -1024,6 +1338,12 @@
       "picked_id": null
     },
     {
+      "world_id": "field_mixed",
+      "actor_id": "player",
+      "selector": "ALLY_WOUNDED",
+      "picked_id": null
+    },
+    {
       "world_id": "throne",
       "actor_id": "player",
       "selector": "NEAREST",
@@ -1056,6 +1376,12 @@
     {
       "world_id": "throne",
       "actor_id": "player",
+      "selector": "TYPE_HEALER",
+      "picked_id": null
+    },
+    {
+      "world_id": "throne",
+      "actor_id": "player",
       "selector": "CASTING",
       "picked_id": null
     },
@@ -1066,6 +1392,12 @@
       "picked_id": "e_boss"
     },
     {
+      "world_id": "throne",
+      "actor_id": "player",
+      "selector": "ALLY_WOUNDED",
+      "picked_id": null
+    },
+    {
       "world_id": "spring",
       "actor_id": "player",
       "selector": "NEAREST",
@@ -1098,6 +1430,12 @@
     {
       "world_id": "spring",
       "actor_id": "player",
+      "selector": "TYPE_HEALER",
+      "picked_id": null
+    },
+    {
+      "world_id": "spring",
+      "actor_id": "player",
       "selector": "CASTING",
       "picked_id": null
     },
@@ -1105,6 +1443,12 @@
       "world_id": "spring",
       "actor_id": "player",
       "selector": "BOSS",
+      "picked_id": null
+    },
+    {
+      "world_id": "spring",
+      "actor_id": "player",
+      "selector": "ALLY_WOUNDED",
       "picked_id": null
     },
     {
@@ -1140,6 +1484,12 @@
     {
       "world_id": "solitude",
       "actor_id": "player",
+      "selector": "TYPE_HEALER",
+      "picked_id": null
+    },
+    {
+      "world_id": "solitude",
+      "actor_id": "player",
       "selector": "CASTING",
       "picked_id": null
     },
@@ -1147,6 +1497,12 @@
       "world_id": "solitude",
       "actor_id": "player",
       "selector": "BOSS",
+      "picked_id": null
+    },
+    {
+      "world_id": "solitude",
+      "actor_id": "player",
+      "selector": "ALLY_WOUNDED",
       "picked_id": null
     },
     {
@@ -1182,6 +1538,12 @@
     {
       "world_id": "wounded",
       "actor_id": "player",
+      "selector": "TYPE_HEALER",
+      "picked_id": null
+    },
+    {
+      "world_id": "wounded",
+      "actor_id": "player",
       "selector": "CASTING",
       "picked_id": null
     },
@@ -1190,6 +1552,120 @@
       "actor_id": "player",
       "selector": "BOSS",
       "picked_id": null
+    },
+    {
+      "world_id": "wounded",
+      "actor_id": "player",
+      "selector": "ALLY_WOUNDED",
+      "picked_id": null
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "player",
+      "selector": "NEAREST",
+      "picked_id": "e_grunt"
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "player",
+      "selector": "LOWEST_HP",
+      "picked_id": "e_grunt"
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "player",
+      "selector": "HIGHEST_THREAT",
+      "picked_id": "e_mender"
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "player",
+      "selector": "TYPE_RANGED",
+      "picked_id": null
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "player",
+      "selector": "TYPE_SUMMONER",
+      "picked_id": null
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "player",
+      "selector": "TYPE_HEALER",
+      "picked_id": "e_mender"
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "player",
+      "selector": "CASTING",
+      "picked_id": null
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "player",
+      "selector": "BOSS",
+      "picked_id": null
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "player",
+      "selector": "ALLY_WOUNDED",
+      "picked_id": "a_scout"
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "e_mender",
+      "selector": "NEAREST",
+      "picked_id": "a_scout"
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "e_mender",
+      "selector": "LOWEST_HP",
+      "picked_id": "a_scout"
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "e_mender",
+      "selector": "HIGHEST_THREAT",
+      "picked_id": "player"
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "e_mender",
+      "selector": "TYPE_RANGED",
+      "picked_id": null
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "e_mender",
+      "selector": "TYPE_SUMMONER",
+      "picked_id": null
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "e_mender",
+      "selector": "TYPE_HEALER",
+      "picked_id": null
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "e_mender",
+      "selector": "CASTING",
+      "picked_id": null
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "e_mender",
+      "selector": "BOSS",
+      "picked_id": null
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "e_mender",
+      "selector": "ALLY_WOUNDED",
+      "picked_id": "e_grunt"
     }
   ],
   "validator": [
@@ -1917,6 +2393,111 @@
           }
         ]
       },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": []
+    },
+    {
+      "name": "회복에 적대 셀렉터를 줬다",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "HEAL",
+            "target": "NEAREST",
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": [
+        "[1] HEAL 는 아군 셀렉터가 필요하다 — NEAREST 는 적대 셀렉터다"
+      ]
+    },
+    {
+      "name": "공격에 아군 셀렉터를 줬다",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "ATTACK",
+            "target": "ALLY_WOUNDED",
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": [
+        "[1] ATTACK 는 적대 셀렉터가 필요하다 — ALLY_WOUNDED 는 아군 셀렉터다"
+      ]
+    },
+    {
+      "name": "진영이 맞으면 통과한다",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "HEAL",
+            "target": "ALLY_WOUNDED",
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": []
+    },
+    {
+      "name": "적 치유형 규칙표는 통과한다",
+      "ruleset_ref": [
+        "enemies",
+        "ai_mender"
+      ],
       "cpu_budget": 99,
       "rule_slots": 5,
       "unlocked": null,
@@ -2750,6 +3331,17 @@
         "target_id": "e_alpha",
         "rule_index": null,
         "expr": "적거리(3) > 사거리(1)",
+        "set_flag": null
+      }
+    },
+    {
+      "world_id": "ward",
+      "plan": {
+        "entity_id": "player",
+        "action_id": "APPROACH",
+        "target_id": "e_grunt",
+        "rule_index": null,
+        "expr": "적거리(2) > 사거리(1)",
         "set_flag": null
       }
     }

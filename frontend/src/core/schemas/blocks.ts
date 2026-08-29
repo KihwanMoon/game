@@ -2,8 +2,12 @@
  * 블록 카탈로그 — 인지 변수·행동·셀렉터 목록 (GDD §3.2·§3.3·§3.4).
  * `game/schemas/blocks.py` 의 TypeScript 이식이다.
  *
- * 개수는 인지 18 / 행동 13 / 셀렉터 7 이며 로드 시점에 그것을 검사한다. 숫자가 어긋난 채로
+ * 개수는 인지 18 / 행동 14 / 셀렉터 9 이며 로드 시점에 그것을 검사한다. 숫자가 어긋난 채로
  * 조용히 로드되면 규칙표가 참조하는 블록이 사라져도 알 수 없다.
+ *
+ * v4 가 치유형을 열었다 (docs/04 H-1~H-3). 대상을 받는 행동은 요구하는 진영을
+ * (`targetFaction`) 선언하고 셀렉터는 고르는 진영을(`faction`) 선언한다 — 검증기가
+ * `HEAL @NEAREST` 처럼 어긋난 조합을 거부한다.
  *
  * `rhsStats` 는 조건 우변에 둘 수 있는 자기 스탯의 닫힌 목록이다 (F-2). 열어 두면 오타 난
  * 스탯 이름이 조용히 거짓이 되어 규칙이 영영 발동하지 않는다.
@@ -15,9 +19,13 @@
 
 /** 동결된 개수. 로드 때마다 실제 개수와 대조한다. */
 export const PERCEPTION_COUNT = 18
-export const ACTION_COUNT = 13
-export const SELECTOR_COUNT = 7
+export const ACTION_COUNT = 14
+export const SELECTOR_COUNT = 9
 export const RHS_STAT_COUNT = 6
+
+/** 셀렉터가 고르는 진영. 행동의 targetFaction 도 이 둘 중 하나다. */
+export const FACTION_ENEMY = 'enemy'
+export const FACTION_ALLY = 'ally'
 
 /** 블록이 내는 값의 종류. */
 export type BlockReturns = 'int' | 'bool'
@@ -44,12 +52,16 @@ export interface ActionBlock {
   readonly category: string
   readonly targeted: boolean
   readonly labelKo: string
+  /** 이 행동이 요구하는 대상 진영. 대상을 받지 않는 행동은 null 이다. */
+  readonly targetFaction: string | null
 }
 
 /** 타겟 셀렉터 하나. targeted 행동이 대상을 고르는 방식. */
 export interface SelectorBlock {
   readonly blockId: string
   readonly labelKo: string
+  /** 이 셀렉터가 고르는 진영. v3 까지는 전부 적대였다. */
+  readonly faction: string
 }
 
 /** 조건 우변에 둘 수 있는 자기 스탯 하나 (F-2). */
@@ -87,6 +99,7 @@ export interface RawAction {
   readonly category: string
   readonly targeted: boolean
   readonly label_ko: string
+  readonly target_faction?: string
 }
 
 export interface RawNamedBlock {
@@ -94,11 +107,16 @@ export interface RawNamedBlock {
   readonly label_ko: string
 }
 
+/** blocks.json 의 selectors 절 한 항목. faction 은 v4 에서 붙었다. */
+export interface RawSelector extends RawNamedBlock {
+  readonly faction?: string
+}
+
 export interface RawBlockCatalog {
   readonly block_list_version: number
   readonly perceptions: readonly RawPerception[]
   readonly actions: readonly RawAction[]
-  readonly selectors: readonly RawNamedBlock[]
+  readonly selectors: readonly RawSelector[]
   readonly rhs_stats: readonly RawNamedBlock[]
 }
 
@@ -226,13 +244,20 @@ export function loadBlockCatalog(raw: RawBlockCatalog): BlockCatalog {
         category: item.category,
         targeted: item.targeted,
         labelKo: item.label_ko,
+        targetFaction: item.target_faction ?? null,
       }),
     ),
     (item) => item.blockId,
     'actions',
   )
   const selectors = buildBlockMap(
-    raw.selectors.map((item): SelectorBlock => ({ blockId: item.id, labelKo: item.label_ko })),
+    raw.selectors.map(
+      (item): SelectorBlock => ({
+        blockId: item.id,
+        labelKo: item.label_ko,
+        faction: item.faction ?? FACTION_ENEMY,
+      }),
+    ),
     (item) => item.blockId,
     'selectors',
   )

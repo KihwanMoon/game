@@ -23,6 +23,8 @@ import {
   type RawEnemyKind,
 } from '../sim/plan'
 import { PressureTracker, buildPressureRules, initSpringPools } from '../sim/pressure'
+import { buildFloorScale, getScaledEnemyStats } from '../sim/scaling'
+import type { RawFloorScale } from '../sim/scaling'
 import type { RawAntiAbuse } from '../sim/pressure'
 import type { RawDamageFormula } from '../combat/damage'
 import { FACTION_ENEMY, FACTION_PLAYER, WorldState, createEntity } from '../sim/state'
@@ -55,6 +57,8 @@ export interface RawSkill {
   readonly coef_pct: number
   readonly cooldown: number
   readonly range: number | null
+  /** 회복 행동만 갖는다. 대상 최대 HP 의 정수 퍼센트다 (블록 목록 v4). */
+  readonly heal_pct?: number
 }
 
 /** 엔진 조립에 필요한 balance.json 의 절들만 모은 것. */
@@ -64,6 +68,11 @@ export interface BalanceData {
   readonly skills: readonly RawSkill[]
   readonly enemies: readonly RawEnemyKind[]
   readonly antiAbuse: RawAntiAbuse
+  /**
+   * 층 깊이 스케일. 절이 없어도 엔진은 돌아야 하므로(파이썬 `balance.get`) 선택 항목이며,
+   * 없으면 `buildFloorScale` 의 기본값이 들어간다.
+   */
+  readonly floorScale: RawFloorScale | undefined
 }
 
 /**
@@ -83,6 +92,7 @@ export function parseBalance(raw: RawBalanceFile): BalanceData {
     skills: readArray<RawSkill>(raw, 'skills'),
     enemies: readArray<RawEnemyKind>(raw, 'enemies'),
     antiAbuse: readObject<RawAntiAbuse>(raw, 'anti_abuse'),
+    floorScale: raw['floor_scale'] as RawFloorScale | undefined,
   }
 }
 
@@ -179,11 +189,14 @@ export function buildEngine(setup: EngineSetup): TickEngine {
   )
 
   const byId = new Map(balance.enemies.map((kind) => [kind.id, kind]))
+  const floor = setup.floor ?? DEFAULT_FLOOR
+  const scale = buildFloorScale(balance.floorScale)
   template.enemySpawns.forEach((spawn, index) => {
     const kind = byId.get(spawn.kind)
     if (kind === undefined) {
       throw new Error(`balance.json 에 없는 적 종류다: ${spawn.kind}`)
     }
+    const scaled = getScaledEnemyStats(kind, scale, floor)
     const entityId = `${kind.id}_${index}`
     state.entities.set(
       entityId,
@@ -192,9 +205,9 @@ export function buildEngine(setup: EngineSetup): TickEngine {
         kindId: kind.id,
         faction: FACTION_ENEMY,
         position: spawn.position,
-        hp: kind.hp_max,
-        hpMax: kind.hp_max,
-        attack: kind.attack,
+        hp: scaled.hpMax,
+        hpMax: scaled.hpMax,
+        attack: scaled.attack,
         defense: kind.defense,
         attackRange: kind.attack_range,
         initiative: kind.initiative,
@@ -212,17 +225,27 @@ export function buildEngine(setup: EngineSetup): TickEngine {
     skillCoefPct: new Map(balance.skills.map((skill) => [skill.id, skill.coef_pct])),
     skillRange: new Map(balance.skills.map((skill) => [skill.id, skill.range ?? null])),
     skillCooldowns: new Map(balance.skills.map((skill) => [skill.id, skill.cooldown])),
+    skillHealPct: new Map(
+      balance.skills
+        .filter((skill) => skill.heal_pct !== undefined)
+        .map((skill) => [skill.id, skill.heal_pct ?? 0]),
+    ),
     summonRules: new Map(
       balance.enemies
         .filter((kind) => kind.summon !== undefined)
         .map((kind) => [kind.id, kind.summon as NonNullable<RawEnemyKind['summon']>]),
     ),
     enemyStats,
-    floor: setup.floor ?? DEFAULT_FLOOR,
+    floorScale: scale,
+    floor,
     maxTicks: setup.maxTicks ?? DEFAULT_MAX_TICKS,
     combatRegenPct: rules.combatRegenPct,
   }
   const tracker = setup.pressure ?? new PressureTracker(rules, enemyStats)
+  // 층은 엔진이 정본이다. 넘겨받은 추적기에도 덮어써야 층 3 에서 뒤늦게 나온 추격자만
+  // 층 1 스탯으로 서는 일이 없다 — 추적기는 층 단위 객체라 방마다 재사용된다.
+  tracker.floor = floor
+  tracker.floorScale = scale
   return new TickEngine({ state, policy: new FallbackPolicy(), config, pressure: tracker })
 }
 

@@ -13,18 +13,23 @@ v1 수식의 최적해는 "회복 타일 위 무한 대기 → 풀피로 처치"
 
 from dataclasses import dataclass, field
 
-from game.app.core.event_log import EventLog, LogEntry
+from game.app.core.event_log import EventLog
 from game.app.grid.geometry import get_manhattan_distance
-from game.app.simulation.phases import PHASE_RESOLVE, PHASE_UPKEEP
+from game.app.simulation.phases import PHASE_UPKEEP
+from game.app.simulation.scaling import FIRST_FLOOR, FloorScale, get_scaled_enemy_stats
+from game.app.simulation.springs import (
+    DEFAULT_SPRING_POOL,
+    list_tiles_of_kind,
+    record_world_event,
+)
 from game.app.simulation.state import FACTION_ENEMY, FACTION_PLAYER, Entity, WorldState
-from game.schemas.room import TILE_DOOR, TILE_FLOOR, TILE_SPRING, WALKABLE_TILES
+from game.schemas.room import TILE_DOOR, WALKABLE_TILES
 
 DEFAULT_HUNTER_SPAWN_TICK = 40
 DEFAULT_HUNTER_INTERVAL_TICKS = 20
 DEFAULT_HUNTER_ENTITY = "goblin_rusher"
 DEFAULT_FLOOR_ATTACK_PCT = 1
 DEFAULT_COMBAT_REGEN_PCT = 50
-DEFAULT_SPRING_POOL = 30
 
 # "+1%/10틱" 의 10틱. 이 단위 미만의 체류는 내림으로 버린다.
 FLOOR_SCALE_TICK_UNIT = 10
@@ -36,9 +41,6 @@ MIN_SPAWN_DISTANCE = 3
 
 # 추격자임을 표시하는 플래그. 규칙표가 쓰는 FLAG_A~D 와 겹치지 않는다.
 HUNTER_FLAG = "HUNTER"
-
-# 특정 개체가 아니라 방 자체가 낸 이벤트의 주체.
-WORLD_ENTITY_ID = "world"
 
 
 @dataclass(frozen=True)
@@ -78,103 +80,6 @@ def build_pressure_rules(anti_abuse: dict) -> PressureRules:
         combat_regen_pct=int(anti_abuse.get("combat_regen_pct", DEFAULT_COMBAT_REGEN_PCT)),
         spring_pool_default=int(anti_abuse.get("spring_pool_default", DEFAULT_SPRING_POOL)),
     )
-
-
-def _record_event(log: EventLog, tick: int, expr: str, outcome: str, phase: str) -> None:
-    """압력 이벤트 한 줄을 남긴다. expr 에는 실측값을 병기한다 (GDD §8.2)."""
-    log.record(
-        LogEntry(
-            tick=tick,
-            entity_id=WORLD_ENTITY_ID,
-            phase=phase,
-            expr=expr,
-            outcome=outcome,
-            fired=True,
-        )
-    )
-
-
-def list_tiles_of_kind(state: WorldState, tile_id: int) -> tuple[tuple[int, int], ...]:
-    """방에서 그 종류의 타일 좌표를 훑는다.
-
-    Args:
-        state: 세계 상태.
-        tile_id: 찾을 타일 ID.
-
-    Returns:
-        y, x 순서로 훑은 좌표들. 순서가 고정이라 같은 방이면 같은 결과다 (R5).
-    """
-    return tuple(
-        (x, y)
-        for y in range(state.room.height)
-        for x in range(state.room.width)
-        if state.get_tile(x, y) == tile_id
-    )
-
-
-def init_spring_pools(state: WorldState, pool_size: int = DEFAULT_SPRING_POOL) -> int:
-    """방의 생명의 샘마다 총 회복량을 채운다.
-
-    **엔진 조립 직후 반드시 한 번 불러야 한다.** 채우지 않으면 잔여량이 늘 0 이라
-    샘은 회복을 한 점도 못 낸 채 첫 RESOLVE 에서 소멸한다 — 차단이 아니라 고장이다.
-    이미 값이 있는 좌표는 건드리지 않는다.
-
-    Args:
-        state: 세계 상태.
-        pool_size: 샘 하나가 낼 총 회복량.
-
-    Returns:
-        새로 채운 샘의 수.
-    """
-    filled = 0
-    for position in list_tiles_of_kind(state, TILE_SPRING):
-        if position in state.spring_pools:
-            continue
-        state.spring_pools[position] = pool_size
-        filled += 1
-    return filled
-
-
-def apply_spring_drain(state: WorldState, position: tuple[int, int], amount: int) -> int:
-    """샘에서 회복량을 꺼내고 잔여량을 그만큼 깎는다.
-
-    Args:
-        state: 세계 상태.
-        position: 샘 좌표.
-        amount: 꺼내려는 양.
-
-    Returns:
-        실제로 꺼낸 양. 잔여량이 모자라면 남은 만큼만, 다 썼으면 0 이다.
-    """
-    pool = state.spring_pools.get(position, 0)
-    drawn = max(0, min(amount, pool))
-    if drawn > 0:
-        state.spring_pools[position] = pool - drawn
-    return drawn
-
-
-def remove_drained_springs(
-    state: WorldState, log: EventLog | None = None
-) -> tuple[tuple[int, int], ...]:
-    """잔여량이 바닥난 샘을 바닥 타일로 지운다 (페이즈 6 RESOLVE).
-
-    Args:
-        state: 세계 상태.
-        log: 이벤트 로그. None 이면 남기지 않는다.
-
-    Returns:
-        이번에 소멸한 샘의 좌표들. 방 좌표 순서를 지킨다.
-    """
-    drained = tuple(
-        position
-        for position in list_tiles_of_kind(state, TILE_SPRING)
-        if state.spring_pools.get(position, 0) <= 0
-    )
-    for position in drained:
-        state.tile_overrides[position] = TILE_FLOOR
-        if log is not None:
-            _record_event(log, state.tick, f"샘 잔여량(0) {position}", "샘 소멸", PHASE_RESOLVE)
-    return drained
 
 
 def calculate_floor_bonus_pct(floor_ticks: int, pct_per_unit: int) -> int:
@@ -246,6 +151,10 @@ class PressureTracker:
     rules: PressureRules = field(default_factory=PressureRules)
     # kind_id -> balance.json 의 적 스탯. 추격자를 만들 때만 읽는다.
     enemy_stats: dict[str, dict] = field(default_factory=dict)
+    # 층 깊이 스케일과 현재 층. 추격자에게도 방 배치와 같은 기준을 걸기 위해 든다 —
+    # 걸지 않으면 층 3 에서 시간을 끌었을 때 나오는 추격자만 층 1 스탯이 된다.
+    floor_scale: FloorScale = field(default_factory=FloorScale)
+    floor: int = FIRST_FLOOR
     room_ticks: int = 0
     floor_ticks: int = 0  # 방을 옮겨도 이어진다 (GDD §7 층 지연).
     hunter_count: int = 0
@@ -312,7 +221,7 @@ class PressureTracker:
             base = self.base_attacks.setdefault(actor.entity_id, actor.attack)
             actor.attack = calculate_scaled_attack(base, bonus_pct)
         if log is not None and bonus_pct != self.applied_pct:
-            _record_event(
+            record_world_event(
                 log,
                 state.tick,
                 f"층 체류({self.floor_ticks}) / 단위({FLOOR_SCALE_TICK_UNIT})",
@@ -339,15 +248,16 @@ class PressureTracker:
         expr = f"방 체류({self.room_ticks}) > 한계({self.rules.hunter_spawn_tick})"
         if stats is None:
             if log is not None:
-                _record_event(log, state.tick, expr, "추격자 스탯 없음", PHASE_UPKEEP)
+                record_world_event(log, state.tick, expr, "추격자 스탯 없음", PHASE_UPKEEP)
             return None
         spawns = list_hunter_spawns(state)
         if not spawns:
             if log is not None:
-                _record_event(log, state.tick, expr, "빈 칸 없음 — 등장 실패", PHASE_UPKEEP)
+                record_world_event(log, state.tick, expr, "빈 칸 없음 — 등장 실패", PHASE_UPKEEP)
             return None
 
         position = state.rng.get_choice(spawns)
+        hp_max, attack = get_scaled_enemy_stats(stats, self.floor_scale, self.floor)
         # 소환물과 같은 일련번호를 쓴다. id 가 겹치면 한쪽이 조용히 덮인다.
         state.spawn_counter += 1
         self.hunter_count += 1
@@ -356,9 +266,9 @@ class PressureTracker:
             kind_id=self.rules.hunter_entity,
             faction=FACTION_ENEMY,
             position=position,
-            hp=stats["hp_max"],
-            hp_max=stats["hp_max"],
-            attack=stats["attack"],
+            hp=hp_max,
+            hp_max=hp_max,
+            attack=attack,
             defense=stats["defense"],
             attack_range=stats["attack_range"],
             initiative=stats["initiative"],
@@ -368,7 +278,7 @@ class PressureTracker:
         )
         state.entities[hunter.entity_id] = hunter
         if log is not None:
-            _record_event(
+            record_world_event(
                 log,
                 state.tick,
                 expr,

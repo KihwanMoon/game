@@ -2,14 +2,14 @@
  * 행동 실행 — `game/app/simulation/actions.py` 의 이식. ACT 페이즈가 계획을 실제 변경으로
  * 옮긴다 (TDD §4.1).
  *
- * **행동 13개를 전부 다룬다.** 처리하지 않는 행동을 조용히 넘기면 규칙이 발동했는데 아무
+ * **행동 14개를 전부 다룬다.** 처리하지 않는 행동을 조용히 넘기면 규칙이 발동했는데 아무
  * 일도 일어나지 않고, 플레이어는 자기 논리가 틀렸다고 오해한다 — 그것이 P1(실패는
  * 정보다)을 가장 직접적으로 깨뜨리는 방식이다. 아직 만들 수 없는 행동은 그 사실을 로그에
  * 남긴다.
  */
 
 import { EventLog, createLogEntry } from '../eventLog'
-import { calculateDamage, divideFloor } from '../combat/damage'
+import { calculateDamage } from '../combat/damage'
 import {
   type Position,
   formatPosition,
@@ -20,7 +20,7 @@ import {
 import { VisionGrid, checkLineOfSight, findCoverPositions } from '../grid/vision'
 import { buildDistanceField, findNextStep } from '../pathfinding/distanceField'
 import { TILE_DOOR, TILE_SPRING, TILE_STAIRS, WALKABLE_TILES } from '../schemas'
-import { registerBlast, resolveSummon } from './abilities'
+import { registerBlast, resolveHeal, resolvePotion, resolveSummon } from './abilities'
 import { PHASE_ACT } from './phases'
 import type { EngineConfig, PlannedAction, RawTelegraphSetting } from './plan'
 import { type Entity, type WorldState, isAlive } from './state'
@@ -43,9 +43,6 @@ export const AREA_ATTACK_RADIUS = 2
 
 /** 이 사거리까지는 시야를 묻지 않는다. 인접한 적은 벽 너머에 있을 수 없다. */
 export const MELEE_REACH = 1
-
-/** 포션이 채우는 비율의 분모. `hpMax // 2` 의 2 다. */
-const POTION_HEAL_DIVISOR = 2
 
 /** 포위 가산을 세는 인접 거리. */
 const ADJACENT_DISTANCE = 1
@@ -216,17 +213,22 @@ export class ActionExecutor {
    * @param plan 실행할 계획.
    */
   applyPotion(entity: Entity, plan: PlannedAction): void {
-    if (entity.potions <= 0) {
-      this.recordResult(entity.entityId, plan, '포션 없음 — 틱 낭비', null)
-      return
+    const { healed, outcome } = resolvePotion(entity)
+    this.recordResult(entity.entityId, plan, outcome, healed)
+  }
+
+  /**
+   * 아군 하나를 회복한다 (GDD §5). 대상은 셀렉터가 이미 골랐다.
+   *
+   * @param entity 시전자.
+   * @param plan 실행할 계획.
+   */
+  applyHeal(entity: Entity, plan: PlannedAction): void {
+    const { healed, outcome } = resolveHeal(this.state, this.config, entity, plan)
+    if (healed > 0) {
+      this.applyCooldown(entity, plan.actionId)
     }
-    entity.potions -= 1
-    const healed = Math.min(
-      entity.hpMax - entity.hp,
-      divideFloor(entity.hpMax, POTION_HEAL_DIVISOR),
-    )
-    entity.hp += healed
-    this.recordResult(entity.entityId, plan, `HP ${entity.hp}/${entity.hpMax}`, healed)
+    this.recordResult(entity.entityId, plan, outcome, healed === 0 ? null : healed)
   }
 
   /**

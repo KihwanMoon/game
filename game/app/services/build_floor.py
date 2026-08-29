@@ -199,6 +199,31 @@ def create_room_plan(
     raise ValueError("도달 가능한 룸 템플릿이 하나도 없다")
 
 
+def list_floor_templates(
+    templates: tuple[RoomTemplate, ...], floor_index: int
+) -> tuple[RoomTemplate, ...]:
+    """그 층에 나올 수 있는 템플릿만 고른다.
+
+    난이도 곡선을 여기서 만든다. 적 8종 중 정예 3종과 사제는 층 2~3 의 방에만 있고,
+    그 방들이 `min_floor` 로 자기가 나올 수 있는 가장 얕은 층을 선언한다 — 거르지
+    않으면 층 1 첫 방에서 대소환사를 만나 "배울 수 있는 첫 방" 이 성립하지 않는다.
+
+    Args:
+        templates: 고를 수 있는 템플릿 전량.
+        floor_index: 층 번호.
+
+    Returns:
+        min_floor 가 그 층 이하인 템플릿들. 파일 순서를 지킨다.
+
+    Raises:
+        ValueError: 그 층에 쓸 수 있는 템플릿이 하나도 없는 경우.
+    """
+    allowed = tuple(template for template in templates if template.min_floor <= floor_index)
+    if not allowed:
+        raise ValueError(f"층 {floor_index} 에 쓸 수 있는 룸 템플릿이 없다")
+    return allowed
+
+
 def build_floor_rooms(
     seed: int, floor_index: int, nodes: tuple[FloorNode, ...], templates: tuple[RoomTemplate, ...]
 ) -> tuple[RoomPlan, ...]:
@@ -211,15 +236,16 @@ def build_floor_rooms(
         seed: 런 시드.
         floor_index: 층 번호.
         nodes: 방을 배정할 노드들.
-        templates: 고를 수 있는 템플릿들.
+        templates: 고를 수 있는 템플릿들. 층에 맞지 않는 것은 여기서 걸러진다.
 
     Returns:
         node_id 오름차순의 방들.
     """
+    allowed = list_floor_templates(templates, floor_index)
     base = DeterministicRng(seed)
     plans = [
         create_room_plan(
-            node, templates, base.create_stream(f"floor:{floor_index}/node:{node.node_id}/room")
+            node, allowed, base.create_stream(f"floor:{floor_index}/node:{node.node_id}/room")
         )
         for node in nodes
         if node.node_type != NODE_START

@@ -1,6 +1,6 @@
 """행동 실행 — ACT 페이즈가 계획을 실제 변경으로 옮긴다 (TDD §4.1).
 
-**행동 13개를 전부 다룬다.** 처리하지 않는 행동을 조용히 넘기면 규칙이 발동했는데
+**행동 14개를 전부 다룬다.** 처리하지 않는 행동을 조용히 넘기면 규칙이 발동했는데
 아무 일도 일어나지 않고, 플레이어는 자기 논리가 틀렸다고 오해한다 — 그것이 P1(실패는
 정보다)을 가장 직접적으로 깨뜨리는 방식이다. 아직 만들 수 없는 행동은 그 사실을
 로그에 남긴다.
@@ -13,7 +13,7 @@ from game.app.core.event_log import EventLog, LogEntry
 from game.app.grid.geometry import get_manhattan_distance, iter_neighbors
 from game.app.grid.vision import VisionGrid, check_line_of_sight, find_cover_positions
 from game.app.pathfinding.distance_field import build_distance_field, find_next_step
-from game.app.simulation.abilities import register_blast, resolve_summon
+from game.app.simulation import abilities
 from game.app.simulation.plan import PHASE_ACT, EngineConfig, PlannedAction
 from game.app.simulation.state import Entity, WorldState
 from game.app.simulation.telegraph import TelegraphBoard
@@ -27,11 +27,8 @@ AREA_ATTACK_RADIUS = 2
 MELEE_REACH = 1
 
 # 아직 만들 수 없는 행동과 그 사유. 조용히 무시하지 않고 로그로 알린다.
-#
-# **W6 통합으로 비었다.** MOVE_TO_COVER 는 vision.py 가, SUMMON 은 summoning.py 가
-# 받았다. 목록과 record_deferred 를 남겨 두는 것은 다음에 같은 상황이 올 때 —
-# 규칙표가 부를 수는 있으나 아직 실행할 수 없는 행동이 생길 때 — 그것을 조용히
-# 무시하지 않기 위해서다. 도감(record_bestiary)도 이 표를 그대로 읽어 경고한다.
+# **W6 통합으로 비었다.** 목록과 record_deferred 를 남겨 두는 것은 규칙표가 부를 수는
+# 있으나 실행할 수 없는 행동이 다시 생길 때를 위해서다. 도감도 이 표를 읽어 경고한다.
 DEFERRED_ACTIONS: dict[str, str] = {}
 
 
@@ -275,7 +272,7 @@ class ActionExecutor:
             plan: 실행 중인 계획.
             telegraph: balance.json 의 그 종류 telegraph 절.
         """
-        outcome = register_blast(self.state, self.telegraphs, entity, telegraph)
+        outcome = abilities.register_blast(self.state, self.telegraphs, entity, telegraph)
         self._apply_cooldown(entity, plan.action_id)
         self._record(entity.entity_id, plan, outcome, None)
 
@@ -286,8 +283,20 @@ class ActionExecutor:
             entity: 소환사.
             plan: 실행할 계획.
         """
-        _, outcome = resolve_summon(self.state, self.config, entity)
+        _, outcome = abilities.resolve_summon(self.state, self.config, entity)
         self._record(entity.entity_id, plan, outcome, None)
+
+    def apply_heal(self, entity: Entity, plan: PlannedAction) -> None:
+        """아군 하나를 회복한다 (GDD §5). 대상은 셀렉터가 이미 골랐다.
+
+        Args:
+            entity: 시전자.
+            plan: 실행할 계획.
+        """
+        healed, outcome = abilities.resolve_heal(self.state, self.config, entity, plan)
+        if healed > 0:
+            self._apply_cooldown(entity, plan.action_id)
+        self._record(entity.entity_id, plan, outcome, healed or None)
 
     def apply_potion(self, entity: Entity, plan: PlannedAction) -> None:
         """포션을 쓴다.
@@ -296,13 +305,8 @@ class ActionExecutor:
             entity: 사용자.
             plan: 실행할 계획.
         """
-        if entity.potions <= 0:
-            self._record(entity.entity_id, plan, "포션 없음 — 틱 낭비", None)
-            return
-        entity.potions -= 1
-        healed = min(entity.hp_max - entity.hp, entity.hp_max // 2)
-        entity.hp += healed
-        self._record(entity.entity_id, plan, f"HP {entity.hp}/{entity.hp_max}", healed)
+        healed, outcome = abilities.resolve_potion(entity)
+        self._record(entity.entity_id, plan, outcome, healed)
 
     def apply_hold(self, entity: Entity, plan: PlannedAction) -> None:
         """의도적으로 아무것도 하지 않는다. 무시와 구분하기 위해 로그는 남긴다.
@@ -375,7 +379,7 @@ class ActionExecutor:
         adjacent = sum(
             1
             for other in self.state.list_hostiles(target)
-            if get_manhattan_distance(other.position, target.position) <= 1
+            if get_manhattan_distance(other.position, target.position) <= MELEE_REACH
         )
         amount = calculate_damage(
             attack=entity.attack,

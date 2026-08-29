@@ -33,6 +33,10 @@ WALKABLE_TILES = frozenset(
 # 이쪽이 더 엄격한 검사다. 이동 방향 수는 아직 정해지지 않았다 (W1 에서 확정).
 STEP_OFFSETS = ((0, -1), (0, 1), (-1, 0), (1, 0))
 
+# 층 번호는 1부터 센다. min_floor 의 기본값이자 층 깊이 스케일의 기준이며
+# (simulation/scaling.py), 두 곳이 각자 1 을 적으면 한쪽만 고쳐질 수 있다.
+FIRST_FLOOR = 1
+
 
 @dataclass(frozen=True)
 class EnemySpawn:
@@ -51,6 +55,10 @@ class RoomTemplate:
     tiles: tuple[tuple[int, ...], ...]
     player_spawn: tuple[int, int]
     enemy_spawns: tuple[EnemySpawn, ...]
+    # 이 방이 나올 수 있는 가장 얕은 층. 난이도 곡선을 적 스탯이 아니라 "어느 층에
+    # 나오는가" 로 표현하는 자리다 — 정예와 사제가 층 1 에 흩뿌려지면 첫 방에서 배울
+    # 것이 없어진다. 층 배치(build_floor)가 이 값으로 후보를 거른다.
+    min_floor: int = FIRST_FLOOR
 
     @property
     def width(self) -> int:
@@ -149,7 +157,8 @@ def load_room_templates(source_path: Path) -> tuple[RoomTemplate, ...]:
         선언된 크기와 일치하는 템플릿들.
 
     Raises:
-        ValueError: 크기가 선언과 다른 템플릿이 있는 경우.
+        ValueError: 크기가 선언과 다르거나 min_floor 가 FIRST_FLOOR 미만인 템플릿이
+            있는 경우.
     """
     raw = json.loads(source_path.read_text(encoding="utf-8"))
     legend = raw["legend"]
@@ -160,6 +169,9 @@ def load_room_templates(source_path: Path) -> tuple[RoomTemplate, ...]:
         tiles = convert_rows_to_tiles(item["rows"], legend)
         if len(tiles) != height or any(len(row) != width for row in tiles):
             raise ValueError(f"{item['id']}: 크기가 선언({width}x{height})과 다르다")
+        min_floor = int(item.get("min_floor", FIRST_FLOOR))
+        if min_floor < FIRST_FLOOR:
+            raise ValueError(f"{item['id']}: min_floor 는 {FIRST_FLOOR} 이상이어야 한다")
         templates.append(
             RoomTemplate(
                 template_id=item["id"],
@@ -170,6 +182,7 @@ def load_room_templates(source_path: Path) -> tuple[RoomTemplate, ...]:
                     EnemySpawn(kind=spawn["kind"], position=tuple(spawn["pos"]))
                     for spawn in item["enemy_spawns"]
                 ),
+                min_floor=min_floor,
             )
         )
     return tuple(templates)

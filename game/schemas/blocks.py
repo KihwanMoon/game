@@ -1,11 +1,18 @@
 """블록 카탈로그 — 인지 변수·행동·셀렉터 목록 (GDD §3.2·§3.3·§3.4).
 
-개수는 인지 18 / 행동 13 / 셀렉터 7 이며, 이 모듈이 로드 시점에 그것을 검사한다.
+개수는 인지 18 / 행동 14 / 셀렉터 9 이며, 이 모듈이 로드 시점에 그것을 검사한다.
 숫자가 어긋난 채로 조용히 로드되면 규칙표가 참조하는 블록이 사라져도 알 수 없다.
 
 행동이 12 에서 13 이 된 것은 v3 의 SUMMON 추가다. GDD §5 가 "몬스터도 플레이어와
 완전히 동일한 DSL 로 기술한다" 고 못박았는데 소환만 밸런스 속성으로 빠져 있어,
 도감이 소환 주기를 규칙표 밖에서 따로 보여줘야 하는 모순이 있었다.
+
+v4 는 치유형에 같은 일을 했다 (docs/04 H-1~H-3). 행동 HEAL 과 셀렉터 두 개
+(ALLY_WOUNDED · TYPE_HEALER)가 늘었고, 인지 변수는 인자값만 늘어 18 그대로다.
+
+**셀렉터에 진영이 붙었다.** targeted 행동은 자기가 요구하는 진영(target_faction)을
+선언하고, 검증기가 `HEAL @NEAREST` 처럼 어긋난 조합을 거부한다. 진영을 인자로 두지
+않은 이유는 docs/04 H-2 에 있다.
 
 rhs_stats 는 조건 우변에 둘 수 있는 자기 스탯의 닫힌 목록이다 (F-2). 열어 두면
 오타 난 스탯 이름이 조용히 거짓이 되어 규칙이 영영 발동하지 않는다.
@@ -17,9 +24,13 @@ from pathlib import Path
 
 # 콘텐츠 범위. 동결 대상이므로 상수로 박아 로드 때마다 대조한다.
 PERCEPTION_COUNT = 18
-ACTION_COUNT = 13
-SELECTOR_COUNT = 7
+ACTION_COUNT = 14
+SELECTOR_COUNT = 9
 RHS_STAT_COUNT = 6
+
+# 셀렉터가 고르는 진영. 행동의 target_faction 도 이 둘 중 하나다.
+FACTION_ENEMY = "enemy"
+FACTION_ALLY = "ally"
 
 
 @dataclass(frozen=True)
@@ -50,6 +61,8 @@ class ActionBlock:
     category: str
     targeted: bool
     label_ko: str
+    # 이 행동이 요구하는 대상 진영. 대상을 받지 않는 행동은 None 이다.
+    target_faction: str | None = None
 
 
 @dataclass(frozen=True)
@@ -58,6 +71,8 @@ class SelectorBlock:
 
     block_id: str
     label_ko: str
+    # 이 셀렉터가 고르는 진영. 기본은 적대다 — v3 까지는 전부 적대였다.
+    faction: str = FACTION_ENEMY
 
 
 @dataclass(frozen=True)
@@ -146,11 +161,16 @@ def load_block_catalog(source_path: Path) -> BlockCatalog:
             category=item["category"],
             targeted=item["targeted"],
             label_ko=item["label_ko"],
+            target_faction=item.get("target_faction"),
         )
         for item in raw["actions"]
     }
     selectors = {
-        item["id"]: SelectorBlock(block_id=item["id"], label_ko=item["label_ko"])
+        item["id"]: SelectorBlock(
+            block_id=item["id"],
+            label_ko=item["label_ko"],
+            faction=item.get("faction", FACTION_ENEMY),
+        )
         for item in raw["selectors"]
     }
     rhs_stats = {

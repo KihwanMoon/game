@@ -44,6 +44,13 @@ export const STEP_OFFSETS: readonly (readonly [number, number])[] = [
   [1, 0],
 ]
 
+/**
+ * 층 번호는 1부터 센다. min_floor 의 기본값이자 층 깊이 스케일의 기준이며
+ * (`sim/scaling`), 두 곳이 각자 1 을 적으면 한쪽만 고쳐질 수 있다. 배럴이 둘이라
+ * 이름이 겹치면 어느 쪽이 들어왔는지 알 수 없게 되는 문제도 함께 막는다.
+ */
+export const FIRST_FLOOR = 1
+
 /** 격자 좌표. 파이썬의 튜플 좌표에 대응한다. */
 export interface GridPosition {
   readonly x: number
@@ -65,6 +72,12 @@ export interface RoomTemplate {
   readonly height: number
   readonly playerSpawn: GridPosition
   readonly enemySpawns: readonly EnemySpawn[]
+  /**
+   * 이 방이 나올 수 있는 가장 얕은 층. 난이도 곡선을 적 스탯이 아니라 "어느 층에
+   * 나오는가" 로 표현하는 자리다. 층 배치는 파이썬 코어(`build_floor`)에만 있고 이쪽은
+   * 값을 읽어 두기만 한다 — 두 코어가 같은 데이터를 같게 해석하는지 대조하기 위해서다.
+   */
+  readonly minFloor: number
 }
 
 /** templates.json 의 원시 형태. */
@@ -79,6 +92,7 @@ export interface RawRoomTemplate {
   readonly rows: readonly string[]
   readonly player_spawn: readonly number[]
   readonly enemy_spawns: readonly RawEnemySpawn[]
+  readonly min_floor?: number
 }
 
 export interface RawRoomFile {
@@ -219,7 +233,8 @@ export function checkRoomReachability(template: RoomTemplate): string[] {
  *
  * @param raw templates.json 의 내용.
  * @returns 선언된 크기와 일치하는 템플릿들.
- * @throws 선언 크기가 [폭, 높이] 가 아니거나 템플릿 크기가 그와 다른 경우.
+ * @throws 선언 크기가 [폭, 높이] 가 아니거나, 템플릿 크기가 그와 다르거나, min_floor 가
+ *   FIRST_FLOOR 미만인 경우.
  */
 export function loadRoomTemplates(raw: RawRoomFile): readonly RoomTemplate[] {
   const declared = parseGridPosition(raw.size, 'size')
@@ -230,6 +245,10 @@ export function loadRoomTemplates(raw: RawRoomFile): readonly RoomTemplate[] {
     const tiles = convertRowsToTiles(item.rows, raw.legend)
     if (tiles.length !== height || tiles.some((row) => row.length !== width)) {
       throw new Error(`${item.id}: 크기가 선언(${width}x${height})과 다르다`)
+    }
+    const minFloor = item.min_floor ?? FIRST_FLOOR
+    if (minFloor < FIRST_FLOOR) {
+      throw new Error(`${item.id}: min_floor 는 ${FIRST_FLOOR} 이상이어야 한다`)
     }
     return {
       templateId: item.id,
@@ -242,6 +261,7 @@ export function loadRoomTemplates(raw: RawRoomFile): readonly RoomTemplate[] {
         kind: spawn.kind,
         position: parseGridPosition(spawn.pos, `${item.id}.enemy_spawns`),
       })),
+      minFloor,
     }
   })
 }

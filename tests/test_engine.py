@@ -18,6 +18,7 @@ from game.app.simulation.plan import (
     OUTCOME_PLAYER_WIN,
     OUTCOME_TIMEOUT,
     PHASE_ORDER,
+    PlannedAction,
 )
 from game.app.simulation.state import FACTION_ENEMY, WorldState
 from game.config import BALANCE_PATH, ROOM_TEMPLATES_PATH
@@ -261,3 +262,49 @@ def test_potion_restores_and_is_consumed(templates, balance):
             break
     assert player.potions < potions_before
     assert player.hp > 20
+
+
+# ── 회복 행동 (블록 목록 v4) ─────────────────────────────────────────────────
+
+
+def build_heal_case(templates, balance):
+    """치유형 하나와 다친 아군 하나가 붙어 선 세계를 만든다."""
+    engine = build_engine(templates["open_field"], balance, seed=11)
+    healer = next(e for e in engine.state.entities.values() if e.faction == FACTION_ENEMY)
+    healer.kind_id = "mender_acolyte"
+    healer.attack_range = 2
+    ally = next(
+        e for e in engine.state.entities.values() if e.faction == FACTION_ENEMY and e is not healer
+    )
+    ally.position = healer.position
+    ally.hp = 10
+    plan = PlannedAction(
+        entity_id=healer.entity_id, action_id="HEAL", target_id=ally.entity_id, rule_index=1
+    )
+    return engine, healer, ally, plan
+
+
+def test_heal_restores_an_ally_and_starts_its_cooldown(templates, balance):
+    engine, healer, ally, plan = build_heal_case(templates, balance)
+    engine.actions.apply_heal(healer, plan)
+    assert ally.hp > 10
+    assert healer.cooldowns["HEAL"] > 0
+
+
+def test_heal_beyond_range_wastes_the_tick(templates, balance):
+    # 사거리 밖이면 회복하지 않고 쿨타임도 걸지 않는다. 실패한 틱에 쿨타임을
+    # 걸면 규칙표를 고쳐도 발동 간격이 그대로여서 원인을 특정할 수 없다 (P1).
+    engine, healer, ally, plan = build_heal_case(templates, balance)
+    ally.position = (healer.position[0] + 5, healer.position[1])
+    engine.actions.apply_heal(healer, plan)
+    assert ally.hp == 10
+    assert "HEAL" not in healer.cooldowns
+    assert any("사거리 밖" in line for line in engine.log.format_lines())
+
+
+def test_heal_on_a_full_ally_wastes_the_tick(templates, balance):
+    engine, healer, ally, plan = build_heal_case(templates, balance)
+    ally.hp = ally.hp_max
+    engine.actions.apply_heal(healer, plan)
+    assert ally.hp == ally.hp_max
+    assert "HEAL" not in healer.cooldowns

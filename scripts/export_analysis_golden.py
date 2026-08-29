@@ -199,7 +199,7 @@ def run_case(plan: tuple[str, str, int, tuple[tuple[str, int, int], ...]]) -> di
     balance, rooms, catalog, rulesets = load_case_resources()
     enemy_rulesets = load_rulesets(ENEMY_RULESETS_PATH)
     engine = build_case_engine(
-        balance, rooms[room_id], catalog, enemy_rulesets, rulesets[ruleset_id], seed
+        balance, rooms[room_id], catalog, enemy_rulesets, rulesets[ruleset_id], seed, FLOOR
     )
     if extras:
         add_extra_enemies(engine, balance, extras)

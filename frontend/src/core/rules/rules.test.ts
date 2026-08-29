@@ -333,7 +333,7 @@ describe('셀렉터', () => {
     },
   )
 
-  it('셀렉터 7종을 빠짐없이 다룬다', () => {
+  it('셀렉터 9종을 빠짐없이 다룬다', () => {
     const covered = new Set(golden.selectors.map((entry) => entry.selector))
     expect([...covered].sort()).toEqual([...ALL_SELECTORS].sort())
   })

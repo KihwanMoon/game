@@ -1,9 +1,10 @@
 {
   "_comment": [
     "전략 공간 벤치마크 (R2 조기 감지). GDD §11 — 최상위 클리어 규칙표가 2가지 이상의",
-    "서로 다른 전략으로 갈리는가. 3개 표본으로는 판단할 수 없어 8개를 더 지었다.",
+    "서로 다른 전략으로 갈리는가. 3개 표본으로는 판단할 수 없어 8개를 더 지었고,",
+    "도감을 읽고 지은 kite_summoner 가 아홉째다 (GDD §2.3 의 검증 — docs/05).",
     "",
-    "전부 동결된 블록 18/12/7 안에서만 짰고, 슬롯 5 · CPU 예산 8 을 지킨다.",
+    "전부 동결된 블록 18/14/9 안에서만 짰고, 슬롯 5 · CPU 예산 8 을 지킨다.",
     "여기서 한 전략만 통한다면 그것은 규칙표의 문제가 아니라 밸런스나 DSL 의 문제다."
   ],
   "rulesets": [
@@ -754,6 +755,102 @@
         }
       ],
       "cpu_total": 6
+    },
+    {
+      "ruleset_id": "kite_summoner",
+      "version": 1,
+      "strategy_ko": "도감을 읽고 지었다. 카이팅은 그대로 두고 사격 대상만 소환사로 돌린다 — ai_summoner 는 사거리 3 안에서만 부르므로 사거리 4 의 사격이 일방적으로 닿는다.",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 1,
+          "action": "RETREAT",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "TYPE_SUMMONER",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "TYPE_SUMMONER"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "NEAREST"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        }
+      ],
+      "cpu_total": 7
     }
   ]
 }

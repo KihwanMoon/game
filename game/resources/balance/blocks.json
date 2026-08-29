@@ -1,11 +1,25 @@
 {
   "_comment": [
-    "블록 목록 (로드맵 Phase 0 동결, v3 개정).",
+    "블록 목록 (로드맵 Phase 0 동결, v4 개정).",
     "정본은 GDD §3.2·§3.3·§3.4 이며 이 파일은 그것을 기계가 읽는 형태로 옮긴 것이다.",
-    "개수는 인지 18 / 행동 13 / 셀렉터 7 이고 테스트가 이를 고정한다.",
+    "개수는 인지 18 / 행동 14 / 셀렉터 9 이고 테스트가 이를 고정한다.",
+    "",
     "v3 에서 행동이 12 -> 13 이 됐다. SUMMON 을 더한 것이며, GDD §5 의 '몬스터도",
     "플레이어와 완전히 동일한 DSL 로 기술한다' 를 지키려면 소환이 규칙표 안에",
     "있어야 하기 때문이다. 밸런스 속성으로 두면 도감이 소환 주기만 따로 보여줘야 한다.",
+    "",
+    "v4 는 같은 이유로 치유형을 연다 (H-1·H-2·H-3, docs/04). 열린 것은 셋뿐이다.",
+    "1) 행동 HEAL (13 -> 14). 아군을 회복하는 행동이 없어 GDD §5 의 치유형이",
+    "   '자기 포션 사용' 으로 근사돼 있었다.",
+    "2) 셀렉터 ALLY_WOUNDED · TYPE_HEALER (7 -> 9). 앞의 것은 DSL 최초의 아군 셀렉터이고,",
+    "   뒤의 것은 플레이어가 치유형을 지목해 먼저 끊는 카운터를 성립시킨다.",
+    "3) 인자값만 늘어난 것 — enemy_type_present 의 HEALER, self_cooldown_ready 의 HEAL,",
+    "   target_distance 의 새 셀렉터 둘. 인지 변수 개수는 18 그대로다.",
+    "",
+    "셀렉터에 faction, 대상을 받는 행동에 target_faction 을 붙였다. 둘이 어긋나는 조합",
+    "(`HEAL @NEAREST`·`ATTACK @ALLY_WOUNDED`)은 검증기가 거부한다. 진영을 셀렉터의",
+    "인자로 두지 않은 이유는 docs/04 H-2 에 있다 — 그러면 셀렉터 하나가 두 뜻을 갖고,",
+    "늘어난 칸의 대부분이 뜻 없는 조합이 되어 P3(제약이 재미다)가 먼저 무너진다.",
     "",
     "rhs_stats 는 조건 우변에 둘 수 있는 자기 스탯의 닫힌 목록이다 (F-2).",
     "우변 표현은 `\"rhs\": {\"stat\": \"attack_range\"}` 이며 리터럴과 섞어 쓸 수 있다.",
@@ -14,24 +28,26 @@
     "Phase 3 에서 TypeScript 코어가 이 파일을 그대로 읽는다 (TDD §1.2).",
     "id 표기 규약은 TDD §3.3 예시를 따른다 — 인지는 snake_case, 행동·셀렉터는 UPPER_SNAKE."
   ],
-  "block_list_version": 3,
+  "block_list_version": 4,
 
   "perceptions": [
     {"id": "self_hp_percent",          "category": "self",     "returns": "int",  "range": [0, 100], "label_ko": "내 HP%"},
     {"id": "self_potion_count",        "category": "self",     "returns": "int",  "label_ko": "내 포션 수"},
     {"id": "self_on_heal_tile",        "category": "self",     "returns": "bool", "label_ko": "내 위치가 회복타일인가"},
     {"id": "self_cooldown_ready",      "category": "self",     "returns": "bool", "label_ko": "내 쿨타임[스킬] 완료",
-     "param": {"name": "skill", "values": ["SKILL_1", "SKILL_2", "AREA_ATTACK", "SUMMON"]}},
+     "param": {"name": "skill", "values": ["SKILL_1", "SKILL_2", "AREA_ATTACK", "SUMMON", "HEAL"]},
+     "_note": "v4 에서 HEAL 을 더했다. 인자값만 늘어난 것이라 인지 개수는 18 그대로다 — SUMMON 이 v3 에서 들어온 것과 같은 방식이다."},
     {"id": "self_has_status",          "category": "self",     "returns": "bool", "label_ko": "내 상태이상",
      "param": {"name": "status", "values": ["POISON", "SLOW", "STUN"]}},
 
     {"id": "target_distance",          "category": "enemy",    "returns": "int",  "label_ko": "대상 거리",
-     "param": {"name": "selector", "values": ["NEAREST", "LOWEST_HP", "HIGHEST_THREAT", "TYPE_RANGED", "TYPE_SUMMONER", "CASTING", "BOSS"]},
-     "_note": "v2 일반화 (F-1 잔여). 셀렉터가 고를 대상까지의 거리. NEAREST 가 이전의 가장 가까운 적 거리다. 대상이 없으면 -1."},
+     "param": {"name": "selector", "values": ["NEAREST", "LOWEST_HP", "HIGHEST_THREAT", "TYPE_RANGED", "TYPE_SUMMONER", "TYPE_HEALER", "CASTING", "BOSS", "ALLY_WOUNDED"]},
+     "_note": "v2 일반화 (F-1 잔여). 셀렉터가 고를 대상까지의 거리. NEAREST 가 이전의 가장 가까운 적 거리다. 대상이 없으면 -1. v4 의 두 셀렉터도 여기 딸려 들어와, 치유형이 '부상한 아군이 사거리 안인가' 를 새 인지 변수 없이 물을 수 있다."},
     {"id": "visible_enemy_count",      "category": "enemy",    "returns": "int",  "label_ko": "시야 내 적 수"},
     {"id": "enemy_type_present",       "category": "enemy",    "returns": "bool", "label_ko": "적 유형 존재",
-     "param": {"name": "enemy_type", "values": ["MELEE", "RANGED", "SUMMONER", "BOMBER"]}},
-    {"id": "target_hp_percent",        "category": "enemy",    "returns": "int",  "range": [0, 100], "label_ko": "대상 HP%"},
+     "param": {"name": "enemy_type", "values": ["MELEE", "RANGED", "SUMMONER", "BOMBER", "HEALER"]}},
+    {"id": "target_hp_percent",        "category": "enemy",    "returns": "int",  "range": [0, 100], "label_ko": "대상 HP%",
+     "_note": "이 규칙의 TARGET 이 가리키는 대상의 HP% 다. 그 대상이 아군 셀렉터로 정해졌으면 아군의 HP% 를 읽는다 — GDD §5 의 '아군 HP% 낮으면' 이 새 인지 변수 없이 성립하는 이유다."},
     {"id": "target_is_casting",        "category": "enemy",    "returns": "bool", "label_ko": "대상이 시전 중인가"},
 
     {"id": "self_exposed_to_los",      "category": "terrain",  "returns": "bool", "label_ko": "내 위치가 시야에 노출됨"},
@@ -49,13 +65,13 @@
   ],
 
   "actions": [
-    {"id": "ATTACK",          "category": "attack",  "targeted": true,  "label_ko": "기본 공격"},
-    {"id": "SKILL_1",         "category": "attack",  "targeted": true,  "label_ko": "스킬 1"},
-    {"id": "SKILL_2",         "category": "attack",  "targeted": true,  "label_ko": "스킬 2"},
+    {"id": "ATTACK",          "category": "attack",  "targeted": true,  "target_faction": "enemy", "label_ko": "기본 공격"},
+    {"id": "SKILL_1",         "category": "attack",  "targeted": true,  "target_faction": "enemy", "label_ko": "스킬 1"},
+    {"id": "SKILL_2",         "category": "attack",  "targeted": true,  "target_faction": "enemy", "label_ko": "스킬 2"},
     {"id": "AREA_ATTACK",     "category": "attack",  "targeted": false, "label_ko": "범위 공격"},
 
-    {"id": "APPROACH",        "category": "move",    "targeted": true,  "label_ko": "대상에게 접근"},
-    {"id": "RETREAT",         "category": "move",    "targeted": true,  "label_ko": "후퇴"},
+    {"id": "APPROACH",        "category": "move",    "targeted": true,  "target_faction": "enemy", "label_ko": "대상에게 접근"},
+    {"id": "RETREAT",         "category": "move",    "targeted": true,  "target_faction": "enemy", "label_ko": "후퇴"},
     {"id": "MOVE_TO_COVER",   "category": "move",    "targeted": false, "label_ko": "엄폐물 뒤로 이동"},
     {"id": "MOVE_TO_EXIT",    "category": "move",    "targeted": false, "label_ko": "문/계단으로 이동"},
     {"id": "MOVE_TO_HEAL",    "category": "move",    "targeted": false, "label_ko": "회복타일로 이동"},
@@ -64,7 +80,9 @@
     {"id": "USE_POTION",      "category": "control", "targeted": false, "label_ko": "포션 사용"},
     {"id": "SET_FLAG",        "category": "control", "targeted": false, "label_ko": "플래그 설정"},
     {"id": "SUMMON",          "category": "control", "targeted": false, "label_ko": "소환",
-     "_note": "v3 추가. 소환형이 규칙표로 소환을 기술한다 (GDD §5). 주기는 쿨타임[SUMMON] 이 맡는다."}
+     "_note": "v3 추가. 소환형이 규칙표로 소환을 기술한다 (GDD §5). 주기는 쿨타임[SUMMON] 이 맡는다."},
+    {"id": "HEAL",            "category": "control", "targeted": true,  "target_faction": "ally", "label_ko": "아군 회복",
+     "_note": "v4 추가. 치유형이 규칙표로 회복을 기술한다 (GDD §5). 주기는 쿨타임[HEAL] 이 맡고, 회복량과 사거리는 balance.json 의 skills 절이 정한다. 직선 시야를 묻지 않는 이유는 대상별 시야를 묻는 인지 변수가 DSL 에 없어서다 — 요구하면 참인데 영영 실패하는 규칙이 만들어진다 (P1)."}
   ],
 
   "rhs_stats": [
@@ -77,12 +95,16 @@
   ],
 
   "selectors": [
-    {"id": "NEAREST",         "label_ko": "가장 가까운 적"},
-    {"id": "LOWEST_HP",       "label_ko": "HP 가 가장 낮은 적"},
-    {"id": "HIGHEST_THREAT",  "label_ko": "위협도가 가장 높은 적"},
-    {"id": "TYPE_RANGED",     "label_ko": "원거리 유형"},
-    {"id": "TYPE_SUMMONER",   "label_ko": "소환사 유형"},
-    {"id": "CASTING",         "label_ko": "시전 중인 적"},
-    {"id": "BOSS",            "label_ko": "보스"}
+    {"id": "NEAREST",         "faction": "enemy", "label_ko": "가장 가까운 적"},
+    {"id": "LOWEST_HP",       "faction": "enemy", "label_ko": "HP 가 가장 낮은 적"},
+    {"id": "HIGHEST_THREAT",  "faction": "enemy", "label_ko": "위협도가 가장 높은 적"},
+    {"id": "TYPE_RANGED",     "faction": "enemy", "label_ko": "원거리 유형"},
+    {"id": "TYPE_SUMMONER",   "faction": "enemy", "label_ko": "소환사 유형"},
+    {"id": "TYPE_HEALER",     "faction": "enemy", "label_ko": "치유 유형",
+     "_note": "v4 추가. 치유형을 먼저 끊는 카운터가 이것 없이는 규칙표로 적히지 않는다 — 소환형의 TYPE_SUMMONER 와 같은 자리다 (GDD §5)."},
+    {"id": "CASTING",         "faction": "enemy", "label_ko": "시전 중인 적"},
+    {"id": "BOSS",            "faction": "enemy", "label_ko": "보스"},
+    {"id": "ALLY_WOUNDED",    "faction": "ally",  "label_ko": "부상한 아군 (HP 최저)",
+     "_note": "v4 추가. DSL 최초의 아군 셀렉터다. HP 가 가득 찬 아군과 자기 자신은 후보가 아니다 — 이름이 그렇게 말하고 있고, 후보가 없으면 규칙이 발동하지 않는다는 F-1 규칙이 치유형을 회복 한 줄에 굳지 않게 한다. 자기 자신을 뺀 이유는 자기 회복이 이미 USE_POTION 의 자리이기 때문이다."}
   ]
 }

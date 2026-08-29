@@ -21,6 +21,7 @@ import type { ReactNode } from 'react'
 import { Button, GlyphState, Panel, SegmentedGauge, ValueExpr } from '../ds'
 import { validateRuleSet } from '../core/rules/validator'
 import type { BlockCatalog, Rule, RuleSet, Term } from '../core/schemas'
+import { writeClipboard } from './clipboard'
 import { PalettePanel } from './PalettePanel'
 import { RuleRowEditor, type RuleRowActions } from './RuleRowEditor'
 import { TextView } from './TextView'
@@ -62,6 +63,14 @@ export interface RuleEditorProps {
    * 과 같은 이름의 슬롯이라 세 화면의 상단 바가 같은 규약을 쓴다.
    */
   readonly controls?: ReactNode
+  /**
+   * 팔레트 아래에 세울 패널. 앱이 코드 라이브러리(프리셋 8슬롯·공유 코드)를 여기 끼운다.
+   *
+   * `controls` 와 같은 이유로 슬롯이다 — 규칙표를 **어디에 두는지**는 에디터의 일이 아니다.
+   * 저장 위치가 브라우저인지 서버인지 파일인지는 바깥이 정하고, 에디터는 규칙표 하나를
+   * 고치는 일만 안다.
+   */
+  readonly library?: ReactNode
 }
 
 /** 검증 메시지를 규칙별로 나눈 것. */
@@ -111,19 +120,6 @@ function buildOverBudgetFlags(ruleset: RuleSet, cpuBudget: number): readonly boo
     running += rule.cpuCost
     return running > cpuBudget
   })
-}
-
-/**
- * 텍스트를 클립보드에 넣는다. 클립보드가 없는 환경에서는 조용히 아무 일도 하지 않는다.
- *
- * @param text 넣을 문자열.
- */
-function copyToClipboard(text: string): void {
-  const clipboard: Clipboard | undefined = navigator.clipboard
-  if (clipboard === undefined) {
-    return
-  }
-  clipboard.writeText(text).catch(() => undefined)
 }
 
 /**
@@ -272,6 +268,7 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
               commit(updateRule(ruleset, selectedIndex, { target: selectorId }))
             }}
           />
+          {props.library}
         </div>
 
         <span className="editor__rule-line" aria-hidden="true" />
@@ -283,7 +280,7 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
               errors={textParse.errors}
               ruleCount={textParse.ruleset?.rules.length ?? 0}
               onTextChange={handleTextChange}
-              onCopy={() => { copyToClipboard(textDraft) }}
+              onCopy={() => { writeClipboard(textDraft) }}
             />
           ) : (
             <Panel
@@ -364,7 +361,7 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
 
       <footer className="editor__bottom">
         <ValueExpr
-          text="Alt+↑/↓ 순서 · Alt+Enter 추가 · Alt+D 복제 · Alt+T 조건 추가 · Alt+Backspace 삭제"
+          text="Alt+↑/↓ 순서 · Alt+Enter 추가 · Alt+D 복제 · Alt+T 조건 추가 · Alt+Backspace 삭제 · Ctrl+Z 되돌리기"
           size="sm"
           dim
         />

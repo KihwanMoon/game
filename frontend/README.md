@@ -736,10 +736,116 @@ mypy 가 막는다.
 
 ### 남은 것
 
-- **저장이 없다.** 새로고침하면 규칙표가 G0 예시로 돌아간다. `draft.ts` 가 전부 순수
-  함수라 localStorage 든 백엔드든 붙이는 쪽은 얇다.
-- **되돌리기가 없다.** 같은 이유로 규칙표 스택을 `App` 이 들면 된다.
 - **층 진행이 없다.** 방 하나를 골라 돌리는 것까지다. 상단 표기가 `1층` 으로 고정인 것도
   그래서다. 연쇄는 파이썬 `run_chain` 에 대응하는 이식이 필요하다.
 - 전투 화면의 규칙 줄을 눌러 에디터의 그 줄로 가는 길이 아직 없다(`RuleRow.onClick` 이
   비어 있다).
+
+## 저장 · 프리셋 · 공유 코드 (M3)
+
+`src/storage/` 와 `src/session.ts` 다. **짠 것이 탭을 닫는 순간 사라지면 "JSON 없이 플레이
+가능" 이라는 M3 의 정의를 만족하지 못한다.**
+
+```
+storage/base64.ts        urlsafe base64. btoa/atob 를 쓰지 않는다(latin1 왕복이 낀다)
+storage/deflateCodes.ts  DEFLATE 고정 표 — 굽는 쪽과 푸는 쪽이 한 파일을 본다
+storage/inflate.ts       DEFLATE 풀기. 저장·고정·동적 블록 셋 다 받는다
+storage/deflate.ts       DEFLATE 굽기. 고정 허프만 + 탐욕 LZ77
+storage/gzip.ts          gzip 컨테이너(RFC 1952) + CRC32
+storage/canonicalJson.ts 키를 정렬해 좁게 찍는 JSON — 파이썬 json.dumps 와 같은 글자
+storage/presetPayload.ts 규칙표·프리셋 ↔ JSON 절 (game/schemas/meta_save.py 이식)
+storage/presetCode.ts    `v2:` 공유 코드 (game/schemas/preset_code.py 이식)
+storage/editorSave.ts    `v1` 로컬 저장 형식. 첫 필드가 형식 태그다 (TDD §9)
+storage/saveStore.ts     Storage 접근과 디바운스 저장
+editor/history.ts        되돌리기 스택. 규칙표 한 벌을 통째로 쌓는다
+session.ts               세션 하나 = 저장 한 벌. 전이는 전부 순수 함수
+```
+
+### 저장 형식에 버전 접두어를 두는 이유
+
+`{"format":"v1", ...}` 이고, 공유 코드는 `v2:` 로 시작한다. 태그를 **본문을 풀기 전에**
+읽어 마이그레이션을 판정한다 (TDD §9). 풀어 보고서야 세대를 알면, 형식이 바뀐 값은 풀이
+자체가 예외로 끝나 판정할 기회가 없다. 이 코어보다 새 세대는 거부한다 — 모르는 필드를
+무시하고 다시 저장하면 그 필드가 사라져, 최신 탭에서 만든 프리셋이 옛 탭을 한 번 열었다는
+이유로 없어진다.
+
+읽기 실패는 **저장이 없는 것과 같이** 다룬다. 깨진 값 하나로 화면이 안 뜨면 사람은 저장이
+아니라 게임을 잃는다.
+
+### 공유 코드는 파이썬과 같은 형식이다 — 압축 바이트까지는 아니다
+
+`v2:` + gzip(정렬 JSON) + urlsafe base64. gzip 머리의 mtime 은 0 으로 박는다 — 시각이
+들어가면 같은 규칙표가 1초 뒤에 다른 코드가 되어, 코드 비교로 규칙표 비교를 대신할 수
+없다 (R5).
+
+zlib 의 탐색 방식(lazy 매칭·블록 분할·트리 생성)까지 옮기지는 않았다. 옮긴 사본은 원본이
+한 번 바뀌면 조용히 갈라진다. **지켜야 하는 것은 바이트가 같은 것이 아니라 형식이 같은
+것이다** — 한쪽이 구운 것을 다른 쪽이 푼다. 그래서 검사가 양방향으로 둘이다.
+
+| 방향 | 기준 파일 | 검사 |
+|:--|:--|:--|
+| 파이썬 → TS | `src/storage/__golden__/preset_code.json` | `src/storage/presetCode.test.ts` |
+| TS → 파이썬 | `src/storage/__golden__/ts_preset_code.json` | `tests/test_preset_code_interop.py` |
+
+파이썬 쪽 기준은 `uv run python -m scripts.export_preset_code_golden` 으로 다시 만든다.
+TS 쪽 기준은 압축 구현을 바꿨을 때만 다시 만든다.
+
+```bash
+UPDATE_TS_PRESET_GOLDEN=1 npx vitest run src/storage/presetCode.test.ts
+uv run pytest tests/test_preset_code_interop.py   # 파이썬이 그것을 푸는지 확인
+```
+
+절(payload)을 정렬해 찍은 글자까지 파이썬과 대조한다. 압축 이전 단계가 어긋나면 거기서
+먼저 드러나고, gzip 바이트를 비교하는 것보다 어긋난 자리를 짚기 쉽다.
+
+### 되돌리기는 규칙표만 되돌린다
+
+`draft.ts` 가 전부 순수 함수라 편집 결과가 새 규칙표 하나로 나온다. 스택은 그것을 통째로
+쌓기만 한다(`editor/history.ts`, 상한 50). 방·시드·직전 판 결과는 편집이 아니라 판의
+조건이므로 되돌리기 대상이 아니다 — `Ctrl+Z` 로 시드가 되돌아가면 사람은 자기가 무엇을
+되돌렸는지 알 수 없다.
+
+`Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+Y` 를 모두 받는다. 관례가 플랫폼마다 갈리므로 어느 쪽을
+눌러도 되게 두는 편이 낫다. 전투 화면에서는 듣지 않는다 — 도는 판의 입력은 되돌릴 수 없다.
+
+### 저장 시점
+
+편집이 있을 때마다 예약하고 400ms 디바운스한다. 숫자 칸에 `12` 를 치면 저장이 두 번 도는데
+그 사이 값(`1`)은 아무도 필요로 하지 않는다. 탭을 닫거나(`pagehide`) 화면을 떠날 때는
+예약을 버리지 않고 즉시 쓴다 — 마지막 편집이 400ms 안에 있었다는 이유로 사라지면 저장이
+없는 것과 같다.
+
+
+## 브라우저 e2e (Playwright)
+
+jsdom 렌더 테스트가 못 보는 것을 본다. 마크업이 맞는 것과 **플레이되는 것**은 다른
+사실이고, 이 층을 붙이기 전까지 후자는 한 번도 확인된 적이 없었다.
+
+```bash
+cd frontend
+npm i -D @playwright/test                    # 최초 1회
+npx playwright install --with-deps chromium  # 최초 1회 (브라우저는 ~/.cache 에 받는다)
+npm run e2e            # 개발 서버를 알아서 띄운다 (127.0.0.1:5199)
+npm run typecheck:e2e  # e2e 는 tsconfig 의 include 밖이라 따로 본다
+```
+
+**포트가 5199 인 이유**는 8090 을 배포 컨테이너(`game-frontend-1`)가 잡고 있고 Cloudflare
+Tunnel 이 거기로 직접 들어오기 때문이다. e2e 를 돌리려고 그것을 내리면 그동안
+`stock.nullmovie.com` 이 죽는다. `playwright.config.ts` 의 `reuseExistingServer` 가 이미 떠
+있는 개발 서버를 그대로 쓴다.
+
+| 파일 | 보는 것 |
+|:--|:--|
+| `e2e/coreLoop.spec.ts` | 규칙 추가 → 인자칸 → CPU 초과 → 출격 → 로그 실측값 → 사후 분석 → 재도전, 키보드 단축키 |
+| `e2e/authoring.spec.ts` | G3 관문 — 빈 판에서 카이팅 규칙표를 짜고 그것으로 `corridor` 를 이긴다 |
+| `e2e/persistence.spec.ts` | 새로고침 뒤 규칙표·방·시드, 프리셋 슬롯, 공유 코드 왕복 |
+| `e2e/viewport.spec.ts` | 1280×720 에서 무엇이 먼저 눌리는지의 실측 기록 |
+
+스크린샷은 `e2e/screenshots/` 에 덮어쓰기로 남는다. **커밋한다** — 화면이 그때 어떻게
+보였는지가 검증 기록의 일부다.
+
+세 시나리오 모두 **콘솔 에러·페이지 예외·실패한 요청을 수집해 끝에서 0 인지 본다**
+(`e2e/fixtures.ts`). 이 단언이 `hud/LogStream.tsx` 의 중복 key 결함을 잡았다 — 한 틱 안에
+같은 개체가 결정·행동 두 번 등장하는데 key 가 `틱-개체` 여서 React 가 줄을 겹쳤다.
+**프로덕션 빌드에서는 그 경고가 지워지므로** 개발 서버로 도는 이 층이 아니면 드러나지
+않는다.

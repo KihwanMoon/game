@@ -12,7 +12,7 @@ import type { KeyboardEvent } from 'react'
 
 import { GlyphState } from '../ds'
 import { MAX_TERMS, type BlockCatalog, type Rule, type Term } from '../core/schemas'
-import { listActionGroups, listFlagNames, listSelectors } from './blockOptions'
+import { listActionGroups, listFlagNames, listSelectorsForAction } from './blockOptions'
 import { TermEditor } from './TermEditor'
 
 /** SET 절이 없음을 고르는 값. 빈 문자열은 select 의 기본값과 섞이므로 따로 둔다. */
@@ -248,7 +248,7 @@ export function RuleRowEditor(props: RuleRowEditorProps): React.JSX.Element {
               aria-label={`규칙 ${String(rule.priority)} 대상`}
               onChange={(event) => { actions.update(index, { target: event.target.value }) }}
             >
-              {listSelectors(catalog).map((item) => (
+              {listSelectorsForAction(catalog, action).map((item) => (
                 <option value={item.blockId} key={item.blockId}>
                   {item.labelKo}
                 </option>
