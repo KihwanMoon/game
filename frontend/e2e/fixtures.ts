@@ -83,7 +83,7 @@ export async function saveShot(page: Page, name: string): Promise<void> {
  * 판 하나를 끝까지 돌리고 판정 문구를 읽는다.
  *
  * @param page 전투 화면이 떠 있는 페이지.
- * @returns `승리`·`패배`·`시간 초과` 중 하나.
+ * @returns `승리`·`쓰러짐`·`시간 초과` 중 하나. 문구는 battle/outcomeText.ts 가 정한다.
  */
 export async function runToOutcome(page: Page): Promise<string> {
   await page.getByRole('button', { name: '즉시' }).click()

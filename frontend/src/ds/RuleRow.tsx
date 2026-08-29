@@ -8,6 +8,7 @@
  *   05 CPU 초과    좌측 세로바만 --rust. **본문 명도는 그대로 둔다** — 초과 상태에서도
  *                  편집이 계속돼야 하므로 비활성처럼 보이면 안 된다
  *   06 키보드 포커스 outline 2px 황동. 배경은 변하지 않는다
+ *   07 꺼짐        모바일에서 줄을 눌러 끈 상태. 명도를 통째로 낮춘다
  *
  * 02 와 04 의 차이가 이 게임의 핵심 정보다. "조건은 참인데 실행되지 않았다" 를 UI 가
  * 구분해 보여주지 못하면 플레이어는 자기 규칙표의 우선순위를 영영 못 읽는다(P1).
@@ -77,6 +78,14 @@ export interface RuleRowProps {
   readonly cpu?: RuleCpu
   /** 이번 틱에 실제로 발동했는가. state='true' 인데 armed 가 거짓이면 02 상태다. */
   readonly armed?: boolean
+  /**
+   * 이 규칙이 켜져 있는가. 생략하면 켜진 것이다.
+   *
+   * 모바일 원본(`모바일 시뮬레이션.dc.html`)이 정한 상태다 — 세로 화면에서는 규칙 줄을
+   * 눌러 끄고 켜며 가설을 시험한다. 끈 줄은 판에 실리지 않으므로 조건도 평가되지 않고,
+   * 그래서 `state` 로는 표현할 수 없다("조건 거짓"과 "평가되지 않았다"는 다르다).
+   */
+  readonly enabled?: boolean
   readonly onClick?: () => void
 }
 
@@ -97,11 +106,12 @@ export function resolveGlyphKind(state: RuleRowState, armed: boolean): GlyphStat
 /**
  * 규칙표 한 줄을 그린다.
  *
- * @param props 우선순위·판정·조건문·행동·CPU·발동 여부·클릭 핸들러.
+ * @param props 우선순위·판정·조건문·행동·CPU·발동 여부·켜짐 여부·클릭 핸들러.
  * @returns 렌더 트리.
  */
 export function RuleRow(props: RuleRowProps): React.JSX.Element {
   const armed = props.armed === true
+  const isOff = props.enabled === false
   const isOver = checkCpuOver(props.cpu)
   const cpuText = formatCpu(props.cpu)
   const classNames = [
@@ -109,11 +119,17 @@ export function RuleRow(props: RuleRowProps): React.JSX.Element {
     `ds-rule-row--${props.state}`,
     armed ? 'ds-rule-row--armed' : '',
     isOver ? 'ds-rule-row--over' : '',
+    isOff ? 'ds-rule-row--off' : '',
   ].filter((name) => name !== '')
 
   return (
     <li className={classNames.join(' ')}>
-      <button type="button" className="ds-rule-row__hit" onClick={props.onClick}>
+      <button
+        type="button"
+        className="ds-rule-row__hit"
+        aria-pressed={props.enabled === undefined ? undefined : props.enabled}
+        onClick={props.onClick}
+      >
         <span className="ds-rule-row__index">
           {String(props.index).padStart(INDEX_PAD_WIDTH, '0')}
         </span>

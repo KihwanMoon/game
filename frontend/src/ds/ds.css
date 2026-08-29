@@ -56,7 +56,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--sp-2);
-  min-height: var(--sp-8);
+  min-height: var(--btn-tap-h);
   padding: var(--sp-2) var(--sp-4);
   font-family: var(--font-body);
   font-size: var(--fs-body-s);
@@ -74,7 +74,7 @@
 }
 
 .ds-button--sm {
-  min-height: var(--sp-6);
+  min-height: var(--btn-tap-sm-h);
   padding: var(--sp-1) var(--sp-3);
   font-size: var(--fs-label);
 }
@@ -518,10 +518,19 @@
   color: var(--text-dim);
 }
 
+/* 로그 줄은 **자르지 않는다.** 실측값 병기가 로그의 존재 이유이므로(GDD §8.2, P1)
+   `SKILL_1 @goblin_ru… -18` 처럼 끝이 사라지면 기능이 죽는다. 셋 중(열을 넓힌다 /
+   접는다 / title 로 보인다) 접는 쪽을 골랐다 — 열을 넓히면 도면 자리를 뺏고 모바일에는
+   열 자체가 없으며, title 은 마우스가 있어야 읽히므로 모바일에서 값이 사라진다.
+   좌우 컬럼(틱·글리프·규칙 번호·증감)은 그리드 열이라 본문이 접혀도 세로로 계속 맞는다 —
+   모노 컬럼 정렬은 미관이 아니라 디버깅 기능이다. 줄 높이는 --log-row-h 가 최소값이고
+   접힌 만큼 늘어난다.
+   한글은 `keep-all` 로 낱말 안에서 끊지 않되, 끊을 자리가 없는 긴 토큰
+   (`@goblin_runner` 같은 식별자)은 `anywhere` 로 넘치는 대신 접는다. */
 .ds-log-row__body {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: var(--sp-0);
+  overflow-wrap: anywhere;
+  word-break: keep-all;
 }
 
 .ds-log-row__outcome {
@@ -547,7 +556,20 @@
 }
 
 .ds-rule-row {
+  /* 토큰 집합에 불투명도 계단이 없다. 꺼진 줄의 명도 강하를 이 부품 안의 지역 상수로
+     둔다 — 색이 아니라 같은 그림의 밝기 차이다 (battle.css 의 --plan-swap-opacity 와
+     같은 규약). */
+  --rule-off-opacity: 0.4;
+
   list-style: none;
+}
+
+/* 07 꺼짐 — 세로 모바일에서 줄을 눌러 끈 상태. 줄 전체의 명도를 낮추고, 조건문 뒤의
+   `· 꺼짐` 표기가 같은 사실을 글자로 한 번 더 적는다(문구는 화면이 만든다). 명도만으로
+   알리면 흑백·저조도에서 사라지므로 두 채널을 함께 쓴다. 끈 줄도 여전히 눌러서 켤 수
+   있어야 하므로 `pointer-events` 는 건드리지 않는다. */
+.ds-rule-row--off {
+  opacity: var(--rule-off-opacity);
 }
 
 .ds-rule-row__hit {

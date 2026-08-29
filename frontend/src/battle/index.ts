@@ -47,6 +47,58 @@ export {
   resolveActorLabel,
 } from './actorKind'
 
+export {
+  OUTCOME_GLYPHS,
+  OUTCOME_LABELS,
+  OUTCOME_NOTICES,
+  OUTCOME_TONES,
+  formatOutcome,
+  formatOutcomeNotice,
+  resolveOutcomeTone,
+} from './outcomeText'
+export type { OutcomeTone } from './outcomeText'
+
+// 세로 모바일(390x844). 화면 하나가 아니라 `BattleView` 가 배치에 따라 고르는 트리다 —
+// 밖에서 직접 고르지 않는다. 배럴에 내는 것은 테스트와 확인용 페이지가 부품 하나만
+// 세워 볼 수 있어야 하기 때문이다.
+export { BattlePortrait } from './BattlePortrait'
+export type { BattlePortraitProps } from './BattlePortrait'
+
+// 가로 모바일(844x390). 세로와 같은 이유로 배럴에 낸다.
+export { BattleLandscape } from './BattleLandscape'
+export type { BattleLandscapeProps } from './BattleLandscape'
+
+// 두 모바일 배치가 함께 쓰는 부품. 시트(탭+본문+하단)와 배속 박스다 — 세로와 가로가
+// 다른 것은 치수와 배열뿐이고 그 둘은 토큰과 CSS 가 정하므로, 마크업은 한 벌이면 된다.
+export { BattleSheet, RuleSheet, SheetFoot, SheetTabs } from './BattleSheet'
+export type {
+  BattleSheetProps,
+  RuleSheetProps,
+  SheetFootProps,
+  SheetTabsProps,
+} from './BattleSheet'
+
+export { INSTANT_GLYPH, SpeedBox } from './SpeedBox'
+export type { SpeedBoxProps } from './SpeedBox'
+
+export {
+  RULE_OFF_SUFFIX,
+  SHEET_TABS,
+  SHEET_TAB_LABELS,
+  TICK_PAD_WIDTH,
+  buildRunRulesets,
+  checkRuleEnabled,
+  formatLogTabCount,
+  formatRuleCondition,
+  formatRulesTabCount,
+  formatTick,
+  toggleRulePriority,
+} from './portraitSheet'
+export type { SheetTab } from './portraitSheet'
+
+export { buildRuleRows } from './ruleRows'
+export type { RuleRowView, RuleRowsInput } from './ruleRows'
+
 export { buildPlanScene } from './planScene'
 export type { PlanActorView, PlanHazardView, PlanScene } from './planScene'
 
@@ -57,6 +109,7 @@ export {
   PLAN_COLOR_TOKENS,
   PLAN_FONT_TOKEN,
   PLAN_LENGTH_TOKENS,
+  checkPlanThemeSame,
   createTokenReader,
   readPlanTheme,
 } from './planTheme'

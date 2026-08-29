@@ -246,7 +246,7 @@ describe('PostMortem', () => {
   })
 
   it('승패와 틱을 머리에 적는다', () => {
-    expect(html).toContain('사후 분석 — 사망')
+    expect(html).toContain('사후 분석 — 쓰러짐')
     expect(html).toContain('hazard_field')
   })
 
@@ -285,6 +285,6 @@ describe('HudScreen', () => {
     // 정적 렌더는 첫 프레임에 멈춰 있으므로, 자동 표시는 마지막 프레임에서만 확인된다.
     const single = { ...DEFEAT, frames: DEFEAT.frames.slice(-1) }
     const dead = renderToStaticMarkup(<HudScreen recording={single} location="1층" />)
-    expect(dead).toContain('사후 분석 — 사망')
+    expect(dead).toContain('사후 분석 — 쓰러짐')
   })
 })

@@ -56,12 +56,14 @@
   border-radius: var(--radius-none);
 }
 
+/* 도면 둘레 여백은 `--plan-pad` 다. 데스크톱 값이 --sp-4 라 이 화면은 전과 같은 CSS 이고,
+   모바일에서만 14(세로)·8(가로)로 바뀐다 — 390 과 390 안에서 12x9 를 지키기 위한 값이다. */
 .battle__col--plan {
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: var(--sp-4);
-  padding: var(--sp-4);
+  padding: var(--plan-pad);
   overflow: auto;
 }
 
@@ -142,4 +144,415 @@
   gap: var(--sp-1);
   padding-left: var(--sp-2);
   border-left: var(--border);
+}
+
+/* ── 세로 모바일 (390×844) — 모바일 원본 명세 A ──────────────────────────
+   **미디어쿼리를 여기 적지 않는다.** 경계는 design/tokens/spacing.css 한 곳에 있고
+   이 절은 그 토큰만 읽는다(design/README.md 「규율 — 브레이크포인트는 한 곳에만 있다」).
+   DOM 이 갈리는 것은 CSS 가 아니라 `useViewportMode()` 가 가른다.
+
+   치수는 전부 명세 A 의 표에서 왔다. 토큰에 없는 두 값만 접었고 그 사유를 적어 둔다.
+     · 상단바·상태줄·시트의 좌우 여백 → `--plan-pad`(14). 명세는 세로 여백을 14 로 두며,
+       도면의 좌우 끝과 글자의 좌우 끝이 같은 선에 서야 한 장의 도면처럼 읽힌다.
+     · 시트 하단의 gap 10 → `--sp-3`(12). 10 은 4px 모듈에 없는 수다. */
+
+.battle--portrait {
+  grid-template-rows:
+    var(--bar-top) var(--bar-speed) auto var(--bar-status)
+    1fr var(--bar-bottom);
+}
+
+/* 위아래 바 — 데스크톱과 달리 TopBar·StatusBar 를 쓰지 않는다. 명세가 정한 것이
+   같은 부품의 축소가 아니라 다른 배열이기 때문이다(층·실 + 틱 / 체력 + 물약). */
+.battle__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  min-width: var(--sp-0);
+  padding: var(--sp-0) var(--plan-pad);
+  overflow: hidden;
+  background: var(--surface-panel);
+}
+
+.battle__bar--top {
+  height: var(--bar-top);
+  border-bottom: var(--border);
+}
+
+.battle__bar--bottom {
+  height: var(--bar-bottom);
+  border-top: var(--border);
+}
+
+/* 층·실은 줄바꿈하지 않는다. 44px 바에서 두 줄이 되면 바 높이가 무너지고, 무너진 바는
+   아래 다섯 줄을 전부 밀어 도면을 화면 밖으로 내보낸다. 자리가 모자라면 말줄임한다 —
+   방 이름은 상단 바 말고도 사후 분석과 로그가 다시 적어 준다. */
+.battle__location {
+  flex: 0 1 auto;
+  min-width: var(--sp-0);
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: var(--fs-num-l);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-display);
+  line-height: var(--lh-tight);
+  color: var(--text-display);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.battle__tick {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-display-s);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-tight);
+  color: var(--text-data);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 틱 앞의 ◆ 는 보조 명도다. 황동 예산 셋은 규칙 줄·도면 말·편집 화면이 가져간다. */
+.battle__tick-glyph {
+  color: var(--text-dim);
+}
+
+/* 앱이 끼워 넣는 조작부(사후 분석·다시·규칙 고치기). 명세 A 의 상단바에는 층·실과 틱만
+   있지만, 이것이 없으면 세로에서 에디터로 돌아갈 길이 사라진다 — 고쳐서 다시 보내는 것이
+   이 게임의 유일한 동사다(GDD §2.1). 넘치면 이 칸 안에서만 밀리게 해 층·실과 틱을 밀어
+   내지 않는다. */
+.battle__controls {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  min-width: var(--sp-0);
+  overflow-x: auto;
+}
+
+/* 조작부 안에서도 줄바꿈하지 않는다. 버튼 글자가 접히면 44px 바가 두 줄이 된다. */
+.battle__controls > * {
+  flex-wrap: nowrap;
+}
+
+.battle__controls .ds-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* 배속바 — 44px 줄 안에 32px 테두리 박스. 칸 사이 1px 괘선은 배경색과 gap 으로 낸다.
+   각 칸에 border 를 주면 양끝에서 2px 이 겹친다. */
+.battle__speed-bar {
+  display: flex;
+  align-items: center;
+  padding: var(--sp-0) var(--plan-pad);
+  background: var(--surface-panel);
+  border-bottom: var(--border);
+}
+
+/* 배속 박스(`SpeedBox`) — 세로·가로가 함께 쓴다. 낱개 버튼이 아니라 계기의 눈금이라
+   테두리 하나 안을 1px 괘선으로 나눈다. 괘선은 배경색과 gap 으로 낸다 — 칸마다 border
+   를 주면 양끝에서 2px 이 겹친다. 세로는 다섯 칸을 균등 분할하고(명세 A), 가로는 칸
+   폭을 44 로 고정한다(명세 B — 그 override 는 가로 절에 있다). */
+.battle__speed {
+  display: flex;
+  flex: 1;
+  gap: var(--bw);
+  height: var(--speed-box-h);
+  overflow: hidden;
+  background: var(--line);
+  border: var(--border);
+  border-radius: var(--radius);
+}
+
+.battle__speed .ds-button {
+  flex: 1;
+  justify-content: center;
+  min-width: var(--sp-0);
+  height: 100%;
+  padding: var(--sp-0);
+  color: var(--text-dim);
+  background: var(--surface-panel);
+  border: none;
+  border-radius: var(--radius-none);
+}
+
+/* 활성은 명도만으로 말한다 — 색을 쓰지 않는다. */
+.battle__speed .ds-button--active {
+  color: var(--text-body);
+  background: var(--surface-raised);
+}
+
+/* 도면 — **스크롤하지 않는다.** 데스크톱의 도면 열은 좁아지면 스크롤되지만(그쪽은
+   가운데 열이 가변이다), 세로에서는 도면이 고정이고 시트만 바뀐다. 규칙을 보면서도
+   유닛 위치를 계속 읽을 수 있어야 하므로 도면이 밀려 나가면 배치의 뜻이 사라진다. */
+.battle--portrait .battle__col--plan {
+  gap: var(--sp-0);
+  padding: var(--plan-pad);
+  overflow: hidden;
+  background: var(--surface-plan);
+}
+
+/* 상태줄 — 좌: 판정 한 줄, 우: 예고. 위아래 1px 괘선. */
+.battle__status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  height: var(--bar-status);
+  padding: var(--sp-0) var(--plan-pad);
+  overflow: hidden;
+  background: var(--surface-panel);
+  border-top: var(--border);
+  border-bottom: var(--border);
+}
+
+.battle__verdict {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-data);
+  white-space: nowrap;
+}
+
+.battle__verdict--dim {
+  color: var(--text-dim);
+}
+
+.battle__verdict--true {
+  color: var(--state-true);
+}
+
+.battle__verdict--danger {
+  color: var(--state-warn);
+}
+
+/* ── 시트(`BattleSheet`) — 세로·가로 공용 ──────────────────────────────
+   규칙표와 로그가 한 면을 탭으로 나눠 쓴다. 데스크톱은 두 열이 도면 양옆에 동시에 서
+   있지만 모바일에는 그 자리가 없다. **겹치는 것은 두 열뿐이고 도면은 겹치지 않는다** —
+   규칙을 읽는 동안에도 유닛 위치가 계속 보여야 한다.
+   배치별로 다른 것은 치수뿐이며 그 치수는 토큰이 정한다(`--sheet-tab-h` 44/36 ·
+   `--row-h` 54/50 · `--btn-h` 44/30). */
+
+.battle__sheet {
+  display: flex;
+  flex-direction: column;
+  min-height: var(--sp-0);
+  background: var(--surface-panel);
+}
+
+.battle__tabs {
+  display: flex;
+  flex: 0 0 auto;
+  height: var(--sheet-tab-h);
+  border-bottom: var(--border);
+}
+
+.battle__tab {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-width: var(--sp-0);
+  min-height: var(--tap-min);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-tight);
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-none);
+  cursor: pointer;
+  transition: var(--transition-hover);
+}
+
+/* 첫 칸 오른쪽의 1px 괘선. 칸마다 테두리를 주면 바깥 괘선과 겹친다. */
+.battle__tab + .battle__tab {
+  border-left: var(--border);
+}
+
+/* **탭 활성은 명도와 굵기로만 표시한다.** 황동을 아끼려는 것이며, 그래서 활성 탭에는
+   밑줄도 색도 없다 — 배경 한 단과 굵기 한 단이 전부다. */
+.battle__tab--on {
+  font-weight: var(--fw-semibold);
+  color: var(--text-body);
+  background: var(--surface-raised);
+}
+
+.battle__tab-count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  font-weight: var(--fw-regular);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 시트에서 스크롤하는 것은 여기 하나뿐이다. 도면도 바도 고정이다. */
+.battle__sheet-body {
+  flex: 1;
+  min-height: var(--sp-0);
+  overflow-y: auto;
+}
+
+.battle__sheet-foot {
+  display: grid;
+  flex: 0 0 auto;
+  row-gap: var(--sp-3);
+  padding: var(--sp-3) var(--plan-pad);
+  border-top: var(--border);
+}
+
+.battle__sheet-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+}
+
+/* 히트 영역은 44px 이상이다(--btn-h 는 세로에서 44). 손가락이 닿지 않는 버튼은
+   화면에 있어도 없는 것과 같다. */
+.battle__sheet-actions .ds-button {
+  justify-content: center;
+  height: var(--btn-h);
+}
+
+/* ── 가로 모바일 (844×390) — 모바일 원본 명세 B ──────────────────────────
+   **세로의 축소가 아니라 또 하나의 재배치다.** 데스크톱 3열(규칙표·도면·로그)이 여기서는
+   **2열**이 된다 — 좌측 규칙표 열이 사라진 것이 아니라 로그와 한 시트로 합쳐져 우측
+   340px 안으로 들어갔다. 도면은 12×9 전체를 유지하고 셀만 32px 로 줄어든다(`--plan-cell`).
+
+   **이 배치의 유일한 제약은 높이 390px 이다.** 상단 40 + 하단 40 을 빼면 본문이 310px
+   이고 도면이 288 + 여백 16 + 테두리 2 = 306px 를 쓴다. 남는 4px 안에서 무엇도 자라면
+   안 되므로 시트 본문만 스크롤하고 나머지는 전부 고정 높이다.
+
+   시트·탭·배속 박스의 모양은 세로와 **같은 클래스**를 쓴다. 배치별로 다른 것은 치수뿐이고
+   그 치수는 토큰이 정한다(`--sheet-tab-h` 44/36 · `--row-h` 54/50 · `--btn-h` 44/30).
+   여기 있는 것은 토큰으로 표현할 수 없는 두 가지 — 배속 칸의 고정 폭과 시트 하단의
+   **배열**(세로는 두 단, 가로는 한 줄)뿐이다. */
+
+.battle-ls__top {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: var(--sp-0);
+  padding: var(--sp-0) var(--sp-3);
+  background: var(--surface-panel);
+  border-bottom: var(--border);
+}
+
+
+
+.battle-ls__gap {
+  flex: 1;
+  min-width: var(--sp-0);
+}
+
+/* 앱이 끼워 넣는 조작부(사후 분석·규칙 고치기). 좁으면 이 안에서만 밀린다 — 바 전체가
+   밀리면 배속에 손이 닿지 않는다. */
+.battle-ls__controls {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  min-width: var(--sp-0);
+  overflow-x: auto;
+}
+
+/* 2열. 좌: 도면(가변) · 우: 시트(--col-sheet = 340). */
+.battle-ls__body {
+  display: grid;
+  grid-template-columns: minmax(var(--sp-0), 1fr) var(--col-sheet);
+  min-height: var(--sp-0);
+}
+
+.battle-ls__panel {
+  display: flex;
+  min-width: var(--sp-0);
+  min-height: var(--sp-0);
+  border-left: var(--border);
+}
+
+/* 세로에서 시트는 격자의 한 줄(1fr)이라 스스로 늘 필요가 없다. 가로에서는 우열 안의
+   유일한 자식이므로 그 열을 채워야 한다. */
+.battle--landscape .battle__sheet {
+  flex: 1;
+  min-width: var(--sp-0);
+}
+
+/* 도면은 세로와 같은 이유로 스크롤하지 않는다. 규칙을 읽는 동안에도 유닛 위치가 계속
+   보여야 하고, 310px 안에 306px 이 들어가므로 밀려 나갈 일도 없다. */
+.battle--landscape .battle__col--plan {
+  gap: var(--sp-0);
+  padding: var(--plan-pad);
+  overflow: hidden;
+  background: var(--surface-plan);
+}
+
+.battle-ls__bottom {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  min-width: var(--sp-0);
+  padding: var(--sp-0) var(--sp-3);
+  background: var(--surface-panel);
+  border-top: var(--border);
+}
+
+/* 체력과 물약 사이의 짧은 괘선. 명세의 1px × 18 이며, 18 은 4px 모듈에 없는 수라 같은
+   높이의 수치 활자 단(--fs-num-l)으로 적는다 — 두 수치를 가르는 선이므로 수치의 키를
+   따르는 것이 뜻에도 맞는다. */
+.battle-ls__rule-line {
+  flex: 0 0 auto;
+  width: var(--bw);
+  height: var(--fs-num-l);
+  background: var(--line);
+}
+
+/* 판정 한 줄. 가로에는 세로의 34px 상태줄이 없어(`--bar-status:0px`) 하단 바가 그 자리를
+   겸한다. 색 계열은 세로와 같은 `.battle__verdict--*` 를 쓴다. */
+.battle-ls__verdict {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-data);
+  white-space: nowrap;
+}
+
+/* 상단 바의 두 글자단만 세로와 다르다. 층·실은 16px(세로는 18), 틱은 명세가 15px 이라고
+   적지만 활자 계단에 그 단이 없어 한 단 위(16px)로 접어 두었다 — 계단 밖의 수를 지어내지
+   않는다. 정본이 모바일 계단을 정하면 맞춘다. */
+.battle--landscape .battle__location {
+  font-size: var(--fs-display-s);
+}
+
+.battle--landscape .battle__tick {
+  font-size: var(--fs-display-s);
+}
+
+/* 배속 박스는 상단 바 안에 있다. 칸 폭이 고정(44)이라 바를 채우지 않는다. */
+.battle--landscape .battle__speed {
+  flex: 0 0 auto;
+}
+
+.battle--landscape .battle__speed .ds-button {
+  flex: 0 0 var(--speed-cell-w);
+  font-size: var(--fs-mono-s);
+}
+
+/* 탭 줄이 36px 이므로 세로의 44px 히트 영역 하한을 여기서만 푼다. 손가락이 아니라
+   높이 예산이 이긴 자리다 — 390px 안에서 도면을 지키는 것이 먼저다. */
+.battle--landscape .battle__tab {
+  min-height: var(--sheet-tab-h);
+  font-size: var(--fs-mono);
+}
+
+/* 시트 하단 — 두 단을 쌓을 자리가 없어 한 줄로 눕힌다. 게이지 140 고정 + 남는 폭에 버튼
+   둘. 이것은 치수가 아니라 배열이라 토큰으로 표현할 수 없다. */
+.battle--landscape .battle__sheet-foot {
+  grid-template-columns: var(--sheet-gauge-w) minmax(var(--sp-0), 1fr);
+  align-items: center;
+  column-gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
 }

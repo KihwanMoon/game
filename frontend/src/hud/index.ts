@@ -31,6 +31,7 @@ export {
   describeRuleStat,
   formatHeatValue,
   formatOutcome,
+  formatOutcomeNotice,
   formatTickLabel,
   getHeatLevel,
 } from './analysisText'

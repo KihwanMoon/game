@@ -24,6 +24,9 @@ import {
   LOW_HP_PERCENT,
   LogPanel,
   Panel,
+  DEFAULT_LAYOUT_MODE,
+  LAYOUT_MODES,
+  LAYOUT_MODE_TOKEN,
   PlanActor,
   PlanGrid,
   ResourceCount,
@@ -42,6 +45,7 @@ import {
   checkCpuOver,
   formatCpu,
   formatDelta,
+  readLayoutMode,
   resolveGlyphKind,
   splitExprSegments,
 } from './index'
@@ -328,6 +332,26 @@ describe('레이아웃 부품', () => {
     expect(html).toContain('ds-plan-actor--charge')
   })
 
+  it('PlanGrid 는 cell 을 주지 않으면 토큰을 쓴다', () => {
+    expect(renderToStaticMarkup(<PlanGrid />)).not.toContain('style')
+  })
+
+  it('PlanGrid 는 cell 로 토큰을 이 격자 안에서만 덮어쓴다', () => {
+    // 모바일 도면이 넘기는 두 값이 계약이다 — 세로 30, 가로 32.
+    expect(renderToStaticMarkup(<PlanGrid cell={30} />)).toContain('--plan-cell:30px')
+    expect(renderToStaticMarkup(<PlanGrid cell={32} />)).toContain('--plan-cell:32px')
+  })
+
+  it('cell 을 덮어쓰면 자식 말의 좌표도 함께 따라온다 — 계산이 두 벌이 되지 않는다', () => {
+    const html = renderToStaticMarkup(
+      <PlanGrid cell={30}>
+        <PlanActor x={3} y={4} kind="self" />
+      </PlanGrid>,
+    )
+    expect(html).toContain('--plan-cell:30px')
+    expect(html).toContain('calc(var(--plan-cell) * 3)')
+  })
+
   it('RuleTable 은 목록이다', () => {
     const html = renderToStaticMarkup(
       <RuleTable>
@@ -364,5 +388,53 @@ describe('레이아웃 부품', () => {
   it('SpeedControl 은 고른 단계만 눌린 상태로 낸다', () => {
     const html = renderToStaticMarkup(<SpeedControl value={2} onChange={() => undefined} />)
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(1)
+  })
+})
+
+describe('로그 줄은 잘리지 않는다 (GDD §8.2, P1)', () => {
+  it('말줄임으로 끝을 지우지 않는다 — 실측값 병기가 로그의 존재 이유다', () => {
+    const css = readStrippedCss('ds.css')
+    const body = /\.ds-log-row__body \{([^}]*)\}/.exec(css)?.[1] ?? ''
+    expect(body, '.ds-log-row__body 규칙을 찾지 못했다').not.toBe('')
+    expect(body).not.toContain('text-overflow')
+    expect(body).not.toContain('nowrap')
+    expect(body).toContain('overflow-wrap: anywhere')
+  })
+
+  it('접혀도 컬럼은 그리드 열이라 계속 맞는다 — 모노 정렬은 디버깅 기능이다', () => {
+    const css = readStrippedCss('ds.css')
+    const row = /\.ds-log-row \{([^}]*)\}/.exec(css)?.[1] ?? ''
+    expect(row).toContain('display: grid')
+    expect(row).toContain('grid-template-columns')
+    // 높이는 고정이 아니라 최소값이다. 접힌 만큼 늘어난다.
+    expect(row).toContain('min-height: var(--log-row-h)')
+    expect(row).not.toContain('height: var(--log-row-h)\n')
+  })
+
+  it('긴 조건문도 글자를 잃지 않고 전부 마크업에 남는다', () => {
+    const expr = '적거리(2) <= 사거리(3) AND 내 HP%(41) < 임계(60)'
+    const html = renderToStaticMarkup(
+      <LogPanel entries={[{ tick: 27, rule: 1, expr, outcome: 'SKILL_1 @goblin_runner', delta: -18, fired: true }]} />,
+    )
+    expect(html).toContain('SKILL_1 @goblin_runner')
+    expect(html).toContain('-18')
+    expect(html).not.toContain('…')
+  })
+})
+
+describe('배치 이름 (반응형 기반)', () => {
+  it('토큰이 낸 이름을 그대로 읽는다', () => {
+    expect(readLayoutMode(() => 'portrait')).toBe('portrait')
+    expect(readLayoutMode(() => ' landscape ')).toBe('landscape')
+  })
+
+  it('토큰이 비었거나 모르는 값이면 데스크톱으로 접는다 — 화면이 사라지지 않는다', () => {
+    expect(readLayoutMode(() => '')).toBe(DEFAULT_LAYOUT_MODE)
+    expect(readLayoutMode(() => 'tablet')).toBe(DEFAULT_LAYOUT_MODE)
+  })
+
+  it('배치는 셋뿐이고 이름은 토큰에서 온다', () => {
+    expect(LAYOUT_MODES).toEqual(['desktop', 'portrait', 'landscape'])
+    expect(LAYOUT_MODE_TOKEN).toBe('--layout-mode')
   })
 })

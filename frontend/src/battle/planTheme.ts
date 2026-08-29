@@ -143,6 +143,26 @@ function findToken(tokens: ReadonlyMap<string, string>, field: string): string {
 }
 
 /**
+ * 두 테마가 같은 값인지 본다.
+ *
+ * 토큰은 창이 바뀔 때마다 다시 읽는다(`--plan-cell` 이 브레이크포인트마다 다르다).
+ * 읽을 때마다 새 객체가 나오므로 그대로 상태에 넣으면 참조가 매번 바뀌고, 그것을
+ * 의존성으로 쓰는 캔버스가 창 크기가 1px 흔들릴 때마다 도면을 다시 그린다.
+ *
+ * @param before 지금 들고 있는 값. 아직 없으면 undefined.
+ * @param after 방금 읽은 값.
+ * @returns 필드가 전부 같으면 참.
+ */
+export function checkPlanThemeSame(before: PlanTheme | undefined, after: PlanTheme): boolean {
+  if (before === undefined) {
+    return false
+  }
+  const left: Record<string, unknown> = { ...before }
+  const right: Record<string, unknown> = { ...after }
+  return Object.keys(right).every((key) => left[key] === right[key])
+}
+
+/**
  * 토큰을 읽어 렌더러가 쓸 값 묶음을 만든다.
  *
  * @param read 토큰 읽기 함수.

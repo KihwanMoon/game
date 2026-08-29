@@ -13,11 +13,36 @@
  *   1) 도면 위 플레이어 말        2) 발동한 규칙 줄의 좌측 세로바
  *   3) 그 줄에서 말로 잇는 지시선
  * 그래서 상단의 버튼들은 primary 를 쓰지 않는다.
+ *
+ * **모바일 세로는 이 골격의 축소가 아니라 재배치다** (design/README.md 「반응형」).
+ * 도면이 위에 고정되고 규칙표와 로그가 아래 시트 하나를 탭으로 나눠 쓴다. 그래서 폭을
+ * 가르는 수단이 CSS 가 아니라 스크립트다 — 컨테이너 쿼리로는 로그 열을 DOM 에서 **빼는**
+ * 일도, 탭 줄을 새로 만드는 일도 못 하고, 화면 CSS 에는 미디어쿼리를 적지 않기로 했다
+ * (그 경계는 토큰 한 곳에만 둔다). `useViewportMode()` 가 `--layout-mode` 를 읽으므로
+ * 경계는 여전히 토큰 하나다.
+ *
+ * **가르는 자리는 이 컴포넌트 안이다.** 배치별로 다른 화면 컴포넌트를 App 이 고르게 하면
+ * 기기를 돌릴 때 컴포넌트가 갈아 끼워지면서 엔진이 새로 조립되고, 보고 있던 판이 처음으로
+ * 돌아간다. 세션·시계·판정은 여기 한 곳에 두고 그리는 트리만 가른다.
+ *
+ * **가로 모바일은 세 번째 배치다** (명세 B). 세로가 여섯 줄로 쌓는 것을 가로는 2열로
+ * 세운다 — 도면(가변) + 우측 340px 시트. 세 배치가 같은 값 묶음을 받으므로, 기기를
+ * 돌리면 트리만 바뀌고 판은 그대로 이어진다.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
-import { Button, LogPanel, Panel, RuleRow, RuleTable, StatusBar, TopBar } from '../ds'
+import {
+  Button,
+  LogPanel,
+  Panel,
+  RuleRow,
+  RuleTable,
+  StatusBar,
+  TopBar,
+  useViewportMode,
+  watchViewport,
+} from '../ds'
 import { BLOCK_CATALOG } from '../core/resources'
 import { PLAYER_ENTITY_ID } from '../core/services/runBattle'
 import {
@@ -30,12 +55,21 @@ import { OUTCOME_ONGOING } from '../core/sim/phases'
 import { buildThreatNotice, getForesightTicks } from '../core/sim/telegraph'
 import type { RuleSet } from '../core/schemas'
 import { readBatchIntervalMs, useBattleClock } from './battleClock'
+import { BattleLandscape } from './BattleLandscape'
+import { BattlePortrait } from './BattlePortrait'
 import { buildBattleSession, checkOngoing, type BattleSetup } from './battleSession'
-import { formatActionText, formatPendingCondition } from './ruleTrace'
+import { buildRunRulesets, toggleRulePriority, type SheetTab } from './portraitSheet'
+import { buildRuleRows } from './ruleRows'
 import { LeaderLine, buildLeaderPath, type LeaderPath } from './leaderLine'
+import { formatOutcome } from './outcomeText'
 import { PlanCanvas } from './PlanCanvas'
 import { buildPlanScene } from './planScene'
-import { createTokenReader, readPlanTheme, type PlanTheme } from './planTheme'
+import {
+  checkPlanThemeSame,
+  createTokenReader,
+  readPlanTheme,
+  type PlanTheme,
+} from './planTheme'
 
 /** 로그 열에 남기는 줄 수. 전량을 DOM 에 두면 400틱짜리 판에서 수천 노드가 된다. */
 const LOG_TAIL = 200
@@ -54,13 +88,6 @@ const ARMED_ROW_SELECTOR = '.ds-rule-row--armed'
  */
 const LOG_SCROLL_SELECTOR = '.ds-panel__body--scroll'
 
-/** 판정 이름에서 화면 문구로. */
-const OUTCOME_LABELS: ReadonlyMap<string, string> = new Map([
-  ['PLAYER_WIN', '승리'],
-  ['PLAYER_LOSS', '패배'],
-  ['TIMEOUT', '시간 초과'],
-])
-
 /** 처음 열었을 때의 배속. 정지로 두면 화면이 죽은 것처럼 보인다. */
 const INITIAL_SPEED = 1
 
@@ -69,6 +96,12 @@ const SPEED_PAUSED = 0
 
 /** 셀 한가운데를 가리키는 비율. */
 const HALF = 0.5
+
+/** `한 틱` 버튼이 돌리는 틱 수. */
+const ONE_TICK = 1
+
+/** 세로 시트가 처음 여는 탭. 규칙표가 이 화면의 주어다. */
+const INITIAL_TAB: SheetTab = 'rules'
 
 /** BattleView 가 받는 props. */
 export interface BattleViewProps {
@@ -95,12 +128,12 @@ export interface BattleViewProps {
  * @returns 렌더 트리.
  */
 export function BattleView(props: BattleViewProps): React.JSX.Element {
-  const session = useMemo(
-    () => buildBattleSession(props.setup, props.rulesets),
-    [props.setup, props.rulesets],
-  )
+  const mode = useViewportMode()
   const [speed, setSpeed] = useState(INITIAL_SPEED)
   const [outcome, setOutcome] = useState(OUTCOME_ONGOING)
+  const [tab, setTab] = useState<SheetTab>(INITIAL_TAB)
+  const [disabled, setDisabled] = useState<readonly number[]>([])
+  const [runKey, setRunKey] = useState(0)
   const [frame, setFrame] = useState(0)
   const [theme, setTheme] = useState<PlanTheme | undefined>(undefined)
   const [module, setModule] = useState(0)
@@ -110,6 +143,20 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
   const planRef = useRef<HTMLDivElement>(null)
   const logRef = useRef<HTMLDivElement>(null)
   const rulesRef = useRef<HTMLDivElement>(null)
+  const sheetRef = useRef<HTMLDivElement>(null)
+
+  // 꺼진 규칙을 뺀 대응표로 판을 조립한다. 아무것도 끄지 않았으면 받은 대응표가 그대로
+  // 나오므로 참조가 흔들리지 않고, 데스크톱은 전과 같은 판을 얻는다.
+  const runRulesets = useMemo(
+    () => buildRunRulesets(props.rulesets, props.setup.rulesetId, disabled),
+    [props.rulesets, props.setup.rulesetId, disabled],
+  )
+  // `runKey` 는 「처음부터」다. 규칙을 켜고 끄면 대응표가 바뀌어 저절로 재조립되지만,
+  // 같은 규칙표로 다시 돌리는 데에는 바뀌는 값이 없다.
+  const session = useMemo(
+    () => buildBattleSession(props.setup, runRulesets),
+    [props.setup, runRulesets, runKey],
+  )
 
   // 판이 바뀌면 시계와 판정을 처음으로 되돌린다. 되돌리지 않으면 새 판이 끝난 판정을
   // 물려받아 첫 틱도 돌지 않는다.
@@ -120,11 +167,20 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
   }, [session])
 
   // 토큰은 :root 에 있다. 렌더 중에 읽으면 서버 렌더에서 document 가 없어 터진다.
+  // 창이 바뀌면 다시 읽는다 — `--plan-cell` 이 브레이크포인트마다 달라졌으므로 한 번만
+  // 읽으면 기기를 돌렸을 때 캔버스가 옛 셀 크기의 백버퍼로 남아 도면이 흐려진다.
   useEffect(() => {
-    const read = createTokenReader(document.documentElement)
-    setTheme(readPlanTheme(read))
-    setModule(Number.parseFloat(read(MODULE_TOKEN)))
-    setIntervalMs(readBatchIntervalMs(read))
+    const update = (): void => {
+      const read = createTokenReader(document.documentElement)
+      const next = readPlanTheme(read)
+      // 값이 같으면 상태를 그대로 둔다. 새 객체를 넣으면 창을 1px 끌 때마다 도면을
+      // 다시 그린다.
+      setTheme((prev) => (checkPlanThemeSame(prev, next) ? prev : next))
+      setModule(Number.parseFloat(read(MODULE_TOKEN)))
+      setIntervalMs(readBatchIntervalMs(read))
+    }
+    update()
+    return watchViewport(update)
   }, [])
 
   // 판정이 바뀔 때만 알린다. `handleBatch` 안에서 부르면 배치마다(즉 매 틱) 밖이 흔들린다.
@@ -164,6 +220,8 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
     const container = containerRef.current
     const plan = planRef.current
     const rules = rulesRef.current
+    // 세로 배치에는 지시선이 없다. 규칙 줄과 도면이 위아래로 떨어져 있어 선을 그으면
+    // 시트를 가로지르고, 황동 예산 셋도 그쪽에서는 다른 자리가 가져간다.
     if (container === null || plan === null || rules === null || theme === undefined) {
       setLeader(undefined)
       return
@@ -209,15 +267,125 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
     }
   }, [scene])
 
+  // 세로 시트도 같다. 로그 탭일 때만 내린다 — 규칙표 탭에서 내리면 방금 누른 줄이
+  // 화면 밖으로 밀려난다.
+  useEffect(() => {
+    const body = sheetRef.current
+    if (body !== null && tab === 'log') {
+      body.scrollTop = body.scrollHeight
+    }
+  }, [scene, tab])
+
+  // 한 틱만 민다. 배속을 세우는 이유는 이 버튼을 누른 사람이 틱 하나를 들여다보려는
+  // 것이기 때문이다 — 누르자마자 시계가 다음 틱을 덮어쓰면 아무것도 못 본다.
+  const runStep = useCallback(() => {
+    setSpeed(SPEED_PAUSED)
+    if (!checkOngoing(outcome)) {
+      return
+    }
+    handleBatch(runTickBatch(session.engine, ONE_TICK))
+  }, [session, handleBatch, outcome])
+
+  // 같은 방·같은 시드·지금 켜져 있는 규칙표로 판을 다시 조립한다 (R5 — 같은 입력은
+  // 같은 판을 낸다).
+  const runRestart = useCallback(() => {
+    setRunKey((value) => value + 1)
+  }, [])
+
+  // 규칙 줄을 눌러 켜고 끈다. 끈 줄은 판에 실리지 않으므로 판이 새로 조립되고 처음부터
+  // 다시 돈다 — 도는 판의 규칙표를 중간에 갈아 끼우면 시드가 결과를 특정하지 못한다.
+  const toggleRule = useCallback((priority: number) => {
+    setDisabled((current) => toggleRulePriority(current, priority))
+  }, [])
+
   const armedRow = trace?.rows.find((row) => row.armed)
   const cpuBudget = player?.cpuBudget ?? 0
+  // 누적 CPU 는 **판에 실린** 규칙만 센다. 끈 줄은 비용을 쓰지 않는다.
   const cpuUsed = session.ruleset.rules.reduce((sum, rule) => sum + rule.cpuCost, 0)
+  // 화면이 그리는 것은 규칙표 **전량**이다. 끈 줄까지 보여야 다시 켤 수 있다.
+  const allRules = props.rulesets.get(props.setup.rulesetId)?.rules ?? session.ruleset.rules
+  const rows = buildRuleRows({
+    rules: allRules,
+    trace,
+    catalog: BLOCK_CATALOG,
+    cpuBudget,
+    disabled,
+  })
   const foresight = player === undefined ? 0 : getForesightTicks(player)
   const threat =
     player === undefined
       ? undefined
       : buildThreatNotice(session.engine.telegraphs, player.position, foresight)
-  const outcomeLabel = OUTCOME_LABELS.get(outcome)
+  // 진행 중에는 판정을 적지 않는다. 라벨표는 `outcomeText` 한 곳이며 사후 분석과 같은
+  // 말을 쓴다 — 사후 분석이 이 화면을 덮으므로 두 말이 한 화면에 보이면 안 된다.
+  const outcomeLabel = checkOngoing(outcome) ? undefined : formatOutcome(outcome)
+  const threatText = threat === undefined ? undefined : `${threat.glyph} ${threat.text}`
+  const plan = theme === undefined ? null : <PlanCanvas scene={scene} theme={theme} />
+
+  // 세로 모바일은 같은 값들을 다른 배열로 그린다. 세션·시계·판정은 위에서 이미 다 나왔고
+  // 여기서 갈리는 것은 트리뿐이라, 기기를 돌려도 보고 있던 판이 그대로 이어진다.
+  if (mode === 'portrait') {
+    return (
+      <BattlePortrait
+        location={props.location}
+        controls={props.controls}
+        tick={scene.tick}
+        speed={speed}
+        onSpeedChange={setSpeed}
+        onInstant={runInstant}
+        onStep={runStep}
+        onRestart={runRestart}
+        outcome={outcome}
+        threat={threatText}
+        plan={plan}
+        rows={rows}
+        onToggleRule={toggleRule}
+        cpuUsed={cpuUsed}
+        cpuBudget={cpuBudget}
+        entries={session.engine.log.entries.slice(-LOG_TAIL)}
+        hp={player?.hp ?? 0}
+        hpMax={player?.hpMax ?? 1}
+        potions={player?.potions ?? 0}
+        potionsMax={session.balance.player.potions}
+        tab={tab}
+        onTabChange={setTab}
+        bodyRef={sheetRef}
+      />
+    )
+  }
+
+  // 가로 모바일은 2열이다 — 도면과 시트. 세로와 같은 값 묶음을 받고 배열만 다르다.
+  // 앱의 조작부(사후 분석·규칙 고치기)는 상단 바 안으로 들어간다. 세로와 달리 자리가
+  // 있고, 없으면 가로에서는 에디터로 돌아갈 길이 사라진다.
+  if (mode === 'landscape') {
+    return (
+      <BattleLandscape
+        location={props.location}
+        tick={scene.tick}
+        speed={speed}
+        onSpeedChange={setSpeed}
+        onInstant={runInstant}
+        onStep={runStep}
+        onRestart={runRestart}
+        controls={props.controls}
+        outcome={outcome}
+        threat={threatText}
+        plan={plan}
+        rows={rows}
+        onToggleRule={toggleRule}
+        cpuUsed={cpuUsed}
+        cpuBudget={cpuBudget}
+        entries={session.engine.log.entries.slice(-LOG_TAIL)}
+        hp={player?.hp ?? 0}
+        hpMax={player?.hpMax ?? 1}
+        potions={player?.potions ?? 0}
+        potionsMax={session.balance.player.potions}
+        tab={tab}
+        onTabChange={setTab}
+        bodyRef={sheetRef}
+      />
+    )
+  }
 
   return (
     <div className="battle" ref={containerRef}>
@@ -243,20 +411,17 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
             scroll
           >
             <RuleTable>
-              {session.ruleset.rules.map((rule) => {
-                const row = trace?.rows.find((one) => one.priority === rule.priority)
-                return (
-                  <RuleRow
-                    key={rule.priority}
-                    index={rule.priority}
-                    state={row?.state ?? 'pending'}
-                    condition={row?.condition ?? formatPendingCondition(rule, BLOCK_CATALOG)}
-                    action={row?.action ?? formatActionText(rule, BLOCK_CATALOG)}
-                    cpu={{ used: row?.cpuUsed ?? rule.cpuCost, budget: cpuBudget }}
-                    armed={row?.armed ?? false}
-                  />
-                )
-              })}
+              {rows.map((row) => (
+                <RuleRow
+                  key={row.priority}
+                  index={row.priority}
+                  state={row.state}
+                  condition={row.condition}
+                  action={row.action}
+                  cpu={row.cpu}
+                  armed={row.armed}
+                />
+              ))}
             </RuleTable>
           </Panel>
         </div>
@@ -265,7 +430,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
 
         <div className="battle__col battle__col--plan">
           <div className="battle__frame" ref={planRef}>
-            {theme === undefined ? null : <PlanCanvas scene={scene} theme={theme} />}
+            {plan}
           </div>
           <div className="battle__plan-foot">
             <span className="ds-label">{session.template.templateId}</span>
@@ -289,7 +454,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         hpMax={player?.hpMax ?? 1}
         potions={player?.potions ?? 0}
         potionsMax={session.balance.player.potions}
-        {...(threat === undefined ? {} : { threat: `${threat.glyph} ${threat.text}` })}
+        {...(threatText === undefined ? {} : { threat: threatText })}
       />
 
       <LeaderLine

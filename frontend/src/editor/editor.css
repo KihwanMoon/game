@@ -443,3 +443,585 @@
   border-top: var(--border);
   padding-top: var(--sp-3);
 }
+
+/* ── 모바일 규칙 편집 (명세 C) ────────────────────────────────────────────
+   세로에서 규칙 편집은 **전용 전체 화면**이다. 데스크톱 세 열을 좁힌 것이 아니라 화면을
+   둘로 나눈 것이고(규칙표 목록 → 규칙 하나), 그 뒤쪽이 명세 C 가 그린 카드 넷이다.
+
+   **미디어쿼리를 여기 적지 않는다.** 경계는 design/tokens/spacing.css 한 곳에 있고 이
+   절은 그 토큰만 읽는다(design/README.md 「규율 — 브레이크포인트는 한 곳에만 있다」).
+   DOM 이 갈리는 것은 CSS 가 아니라 `useViewportMode()` 가 가른다.
+
+   치수는 명세 C 의 표에서 왔다. 토큰에 없는 두 값만 접었고 사유를 적어 둔다.
+     · 본문 여백·카드 사이 14 / 가로 12 → `--plan-pad`(세로 14 · 가로 8). 도면과 같은
+       여백을 쓰면 두 화면을 오갈 때 글자의 좌우 끝이 같은 선에 선다.
+     · gap 10 → `--sp-3`(12). 10 은 4px 모듈에 없는 수다 (battle.css 와 같은 접기). */
+
+.edit-m {
+  display: grid;
+  height: 100vh;
+  min-height: var(--sp-0);
+  background: var(--surface-base);
+}
+
+/* 목록은 하단이 내용만큼이라 auto 다. 편집 화면의 하단바는 명세가 정한 고정 높이다. */
+.edit-m--list {
+  grid-template-rows: var(--bar-top) minmax(var(--sp-0), 1fr) auto;
+}
+
+.edit-m--edit {
+  grid-template-rows: var(--bar-top) minmax(var(--sp-0), 1fr) var(--bar-edit);
+}
+
+/* 가로는 높이가 390px 뿐이라 하단바를 한 줄 더 쌓을 자리가 없다. 취소·저장은 우열로
+   들어가고(`--bar-edit` 가 0), 격자도 두 줄이 된다. */
+.edit-m--landscape.edit-m--edit {
+  grid-template-rows: var(--bar-top) minmax(var(--sp-0), 1fr);
+}
+
+.edit-m__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  min-width: var(--sp-0);
+  padding: var(--sp-0) var(--plan-pad);
+  background: var(--surface-panel);
+}
+
+.edit-m__bar--top {
+  height: var(--bar-top);
+  border-bottom: var(--border);
+}
+
+.edit-m__bar--edit {
+  height: var(--bar-edit);
+  border-top: var(--border);
+}
+
+.edit-m__title,
+.edit-m__heading {
+  font-family: var(--font-display);
+  font-size: var(--fs-display-s);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+  color: var(--text-display);
+}
+
+/* 편집 화면의 황동 둘 중 하나 — 규칙 번호. 나머지 하나는 저장 버튼이다. 카드 안에는
+   황동이 없다. */
+.edit-m__heading-num {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  color: var(--text-accent);
+}
+
+.edit-m__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: var(--sp-0);
+  overflow: hidden;
+}
+
+.edit-m__back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--tap-min);
+  padding: var(--sp-0);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-hover);
+}
+
+.edit-m__back:hover {
+  color: var(--text-body);
+}
+
+.edit-m__back-arrow {
+  font-family: var(--font-mono);
+  font-size: var(--fs-display-s);
+}
+
+/* 이 화면에서 스크롤하는 것은 본문 하나뿐이다. 바는 위아래 모두 고정이다. */
+.edit-m__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-height: var(--sp-0);
+  padding: var(--plan-pad);
+  overflow-y: auto;
+}
+
+.edit-m__cards {
+  gap: var(--plan-pad);
+}
+
+/* 앱이 끼워 넣는 조작부(방·시드·출격·되돌리기). 이것이 없으면 모바일에서 규칙표 밖으로
+   나갈 길이 사라진다 — 고쳐서 다시 보내는 것이 이 게임의 유일한 동사다 (GDD §2.1).
+
+   **가로로 밀지 않고 접는다.** 전투 화면의 상단바는 높이가 고정이라 미는 수밖에 없지만,
+   여기는 본문 안이라 접을 자리가 있다. 밀면 스크롤 상자가 하나 더 생기고, 그 안에서 반쯤
+   잘린 버튼은 눌러도 눌리지 않는다(실측: 844×390 에서 출격 버튼이 상단바 뒤로 들어갔다). */
+.edit-m__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  min-width: var(--sp-0);
+}
+
+.edit-m__controls .launch {
+  flex-wrap: wrap;
+  row-gap: var(--sp-2);
+}
+
+.edit-m__rules {
+  list-style: none;
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  display: flex;
+  flex-direction: column;
+}
+
+.edit-m__rule {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-0);
+  border-bottom: var(--border);
+}
+
+/* 규칙 줄 전체가 편집 화면으로 가는 문이다. 히트 영역은 규칙표 행 높이(--row-h)와 같다. */
+.edit-m__hit {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  min-width: var(--sp-0);
+  min-height: var(--row-h);
+  padding: var(--sp-2) var(--sp-0);
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-hover);
+}
+
+.edit-m__hit:hover {
+  background: var(--surface-hover);
+}
+
+.edit-m__index {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  font-weight: var(--fw-semibold);
+  color: var(--text-data);
+}
+
+/* **조건문은 잘리지 않는다.** 실측값 병기가 이 줄의 존재 이유이므로(GDD §8.2, P1) 끝이
+   사라지면 줄이 있는 뜻이 없다 — 좁으면 자르지 않고 접는다. */
+.edit-m__lines {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: var(--sp-0);
+  overflow-wrap: anywhere;
+}
+
+.edit-m__act {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+
+.edit-m__ops {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.edit-m__op {
+  width: var(--tap-min);
+  height: var(--tap-min);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  color: var(--text-dim);
+  background: transparent;
+  border: var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition-hover);
+}
+
+.edit-m__op:hover {
+  color: var(--text-body);
+  background: var(--surface-raised);
+}
+
+/* 위반은 그 규칙 줄 **아래**에 붙는다. 목록만 따로 있으면 어느 줄인지 다시 찾아야 한다. */
+.edit-m__problems {
+  list-style: none;
+  margin: var(--sp-0);
+  padding: var(--sp-1) var(--sp-0) var(--sp-0);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  width: 100%;
+}
+
+.edit-m__add {
+  display: flex;
+}
+
+.edit-m__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--plan-pad);
+  background: var(--surface-panel);
+  border-top: var(--border);
+}
+
+.edit-m__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+  width: 100%;
+}
+
+.edit-m__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--edit-btn-h);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  letter-spacing: var(--ls-label);
+  color: var(--text-dim);
+  background: transparent;
+  border: var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition-hover);
+}
+
+/* 편집 화면의 황동 둘 중 나머지 하나 — 저장. 채우지 않고 테두리와 글자로만 쓴다. */
+.edit-m__btn--save {
+  color: var(--text-accent);
+  border: var(--border-accent);
+}
+
+/* ── 편집 카드 ──────────────────────────────────────────────────────────
+   층위는 명도차와 1px 괘선뿐이다. 그림자는 시스템에 없다. */
+
+.edit-card {
+  background: var(--surface-panel);
+  border: var(--border);
+  border-radius: var(--radius);
+}
+
+.edit-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  height: var(--card-head-h);
+  padding: var(--sp-0) var(--sp-3);
+  border-bottom: var(--border);
+}
+
+.edit-card__title {
+  font-family: var(--font-body);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* 값의 출처(`평가값 = 이번 틱`). 수를 읽는 줄이라 자간을 벌리지 않는다. */
+.edit-card__meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: var(--ls-mono);
+  color: var(--text-dim);
+}
+
+.edit-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+}
+
+/* ── 선택 칸 ────────────────────────────────────────────────────────────
+   네이티브 select 를 그대로 쓰고 `▽` 만 위에 얹는다. 표시는 클릭을 가로채지 않는다
+   (pointer-events: none) — 칸 어디를 눌러도 OS 의 선택 UI 가 뜬다. */
+
+.edit-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: var(--sp-0);
+  height: var(--field-h);
+  background: var(--surface-plan);
+  border: var(--border);
+  border-radius: var(--radius);
+  transition: var(--transition-hover);
+}
+
+.edit-field:hover {
+  border-color: var(--line-strong);
+}
+
+.edit-field--wide {
+  grid-column: 1 / -1;
+}
+
+.edit-field__input {
+  flex: 1;
+  min-width: var(--sp-0);
+  height: 100%;
+  padding: var(--sp-0) var(--sp-6) var(--sp-0) var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  line-height: var(--lh-data);
+  color: var(--text-body);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  appearance: none;
+  cursor: pointer;
+  /* 고른 값이 길면 `▽` 자리로 흘러들지 않게 줄인다. 값 전체는 눌러서 목록으로 읽고,
+     조건의 실제 내용은 바로 아래 실측 줄이 접히지 않고 그대로 적는다. */
+  text-overflow: ellipsis;
+}
+
+.edit-field__caret {
+  position: absolute;
+  top: var(--sp-0);
+  bottom: var(--sp-0);
+  right: var(--sp-3);
+  display: flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.edit-field--number .edit-field__input {
+  padding-right: var(--sp-3);
+  cursor: text;
+  appearance: textfield;
+}
+
+.edit-field--number .edit-field__input::-webkit-outer-spin-button,
+.edit-field--number .edit-field__input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: var(--sp-0);
+}
+
+/* ── 조건 카드 ──────────────────────────────────────────────────────────
+   좌변 / 비교 / 우변 세 조각. 비교 칸만 고정 폭이고 양변은 남는 자리를 나눈다. */
+
+.edit-cond__term {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.edit-cond__row {
+  display: grid;
+  grid-template-columns: minmax(var(--sp-0), 1fr) var(--edit-cmp-w) minmax(var(--sp-0), 1fr);
+  gap: var(--sp-2);
+}
+
+/* 우변은 값과 종류가 한 칸이다 — `적거리 <= 3` 이 왼쪽에서 오른쪽으로 읽히는 한 문장이라
+   종류를 값 앞에 두면 그 문장이 끊긴다. */
+.edit-cond__rhs {
+  display: grid;
+  grid-template-columns: minmax(var(--sp-0), 1fr) auto;
+  gap: var(--sp-1);
+  min-width: var(--sp-0);
+}
+
+/* 실측 줄 — 조건 바로 아래. 좌측 2px 세로바가 이 줄이 위 칸들에 딸린 것임을 적는다.
+   참/거짓은 색만으로 적지 않는다: GlyphState 가 글리프와 명도를 함께 낸다. */
+.edit-measure {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--tap-min);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-plan);
+  border-left: var(--bw-accent) solid var(--line);
+}
+
+.edit-measure .ds-expr {
+  flex: 1;
+  min-width: var(--sp-0);
+  overflow-wrap: anywhere;
+}
+
+.edit-measure__drop {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  color: var(--text-dim);
+  background: transparent;
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-1) var(--sp-2);
+  cursor: pointer;
+  transition: var(--transition-hover);
+}
+
+.edit-measure__drop:hover:not(:disabled) {
+  color: var(--text-body);
+  background: var(--surface-raised);
+}
+
+.edit-measure__drop:disabled {
+  color: var(--line);
+  cursor: default;
+}
+
+.edit-cond__ops {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.edit-op {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--edit-op-h);
+  padding: var(--sp-0) var(--sp-4);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  color: var(--text-dim);
+  background: transparent;
+  border: var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition-hover);
+}
+
+/* 고른 연산자는 테두리 한 단과 글자 한 단으로만 말한다. 황동은 예산 밖이다. */
+.edit-op--on {
+  color: var(--text-body);
+  border: var(--border-strong);
+}
+
+/* 「아직 없는 자리」라 점선이다. */
+.edit-op--add {
+  flex: 1;
+  border: var(--border-dashed);
+}
+
+.edit-op:disabled {
+  color: var(--line);
+  cursor: default;
+}
+
+/* ── 행동 카드 ─────────────────────────────────────────────────────────── */
+.edit-act {
+  display: grid;
+  grid-template-columns: minmax(var(--sp-0), 1fr) minmax(var(--sp-0), 1fr);
+  gap: var(--sp-2);
+}
+
+/* ── 우선순위 카드 ──────────────────────────────────────────────────────
+   칸 사이 1px 괘선은 배경색과 gap 으로 낸다 — 칸마다 border 를 주면 양끝에서 2px 이
+   겹친다 (battle.css 의 배속 박스와 같은 수법). */
+.edit-seg {
+  display: flex;
+  gap: var(--bw);
+  overflow: hidden;
+  background: var(--line);
+  border: var(--border);
+  border-radius: var(--radius);
+}
+
+.edit-seg__cell {
+  flex: 1;
+  min-width: var(--sp-0);
+  height: var(--field-h);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  font-weight: var(--fw-regular);
+  color: var(--text-dim);
+  background: var(--surface-panel);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-hover);
+}
+
+.edit-seg__cell--on {
+  font-weight: var(--fw-semibold);
+  color: var(--text-body);
+  background: var(--surface-raised);
+}
+
+.edit-note {
+  margin: var(--sp-0);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-s);
+  line-height: var(--lh-body);
+  color: var(--text-dim);
+}
+
+/* ── CPU 카드 ──────────────────────────────────────────────────────────── */
+.edit-cpu {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.edit-cpu__item {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+  color: var(--text-dim);
+}
+
+/* ── 가로 편집 (844×390) — `1fr 300px` ──────────────────────────────────
+   세로의 축소가 아니라 또 하나의 재배치다. 조건·행동은 좌열에서 넓게 펴지고, 우선순위·
+   CPU·취소·저장은 우열로 접힌다. 스크롤은 두 열이 각자 한다 — 높이가 390px 뿐이라 어느
+   한쪽이 자라면 다른 쪽이 화면 밖으로 밀린다. */
+
+.edit-ls__body {
+  display: grid;
+  grid-template-columns: minmax(var(--sp-0), 1fr) var(--edit-col);
+  min-height: var(--sp-0);
+}
+
+.edit-ls__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-height: var(--sp-0);
+  padding: var(--sp-3);
+  overflow-y: auto;
+}
+
+.edit-ls__col--main {
+  border-right: var(--border);
+}
+
+.edit-ls__col--side {
+  background: var(--surface-panel);
+}

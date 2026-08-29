@@ -123,7 +123,7 @@ test.describe('핵심 루프', () => {
     expect(joined, '양변에 실측값이 병기된 조건문').toMatch(MEASURED_BOTH_SIDES)
 
     // (f) 죽으면 사후 분석이 저절로 뜬다.
-    expect(await runToOutcome(page)).toBe('패배')
+    expect(await runToOutcome(page)).toBe('쓰러짐')
     const post = page.getByRole('dialog', { name: '사후 분석' })
     await expect(post).toBeVisible()
     await expect(post.getByText('규칙별 발동')).toBeVisible()
@@ -146,10 +146,9 @@ test.describe('핵심 루프', () => {
     // (g) 규칙을 고쳐 재도전하면 결과가 달라진다.
     await page.getByRole('button', { name: '규칙 고치기' }).click()
     await expect(page.getByRole('heading', { name: '규칙 에디터' })).toBeVisible()
-    // 같은 판정을 전투 화면은 `패배`, 에디터·사후 분석은 `사망` 이라 적는다. 라벨표가
-    // 두 벌이기 때문이다(BattleView.OUTCOME_LABELS ↔ analysisText.OUTCOME_LABELS).
-    // 여기서는 지금 화면에 실제로 적히는 말을 그대로 확인한다.
-    await expect(page.locator('.launch')).toContainText('직전 판 사망')
+    // 전투 화면·사후 분석·에디터가 **같은 말**을 쓴다. 라벨표는 battle/outcomeText.ts
+    // 한 벌이며, 전에는 두 벌이라 같은 PLAYER_LOSS 를 `패배` 와 `사망` 으로 갈라 적었다.
+    await expect(page.locator('.launch')).toContainText('직전 판 쓰러짐')
 
     const firstRun = (await page.locator('.launch').innerText()).split('\n')[0] ?? ''
     // 포션을 훨씬 일찍 쓰게 한다. 같은 방·같은 시드인데 판이 달라져야 한다.

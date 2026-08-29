@@ -14,6 +14,7 @@ import type {
   BlockCatalog,
   Comparison,
   PerceptionBlock,
+  Rule,
   SelectorBlock,
   StatBlock,
 } from '../core/schemas'
@@ -166,4 +167,25 @@ export function listComparisons(
   all: readonly Comparison[],
 ): readonly Comparison[] {
   return block !== undefined && block.returns === 'bool' ? BOOL_COMPARISONS : all
+}
+
+/**
+ * 규칙의 행동절을 사람이 읽는 한 줄로 적는다 — `사격 → 가장 가까운 적`.
+ *
+ * 도는 판에서는 `battle/ruleTrace.formatActionText` 가 같은 문자열을 만든다. 두 벌인
+ * 이유는 계층이다 — 에디터가 전투 화면을 import 하면 화면 둘이 서로를 알게 되고, 규칙표를
+ * 고치는 화면이 엔진·도면·캔버스를 함께 끌고 온다. 대신 **문자열 모양은 같아야 한다**:
+ * 규칙표를 편집할 때와 관전할 때 같은 규칙이 다른 말로 적히면 둘이 같은 줄인지 알 수 없다.
+ *
+ * @param rule 규칙 한 줄.
+ * @param catalog 라벨을 얻을 블록 카탈로그.
+ * @returns 행동절 한 줄.
+ */
+export function formatActionLabel(rule: Rule, catalog: BlockCatalog): string {
+  const action = catalog.actions.get(rule.action)?.labelKo ?? rule.action
+  if (rule.target === null) {
+    return action
+  }
+  const selector = catalog.selectors.get(rule.target)?.labelKo ?? rule.target
+  return `${action} → ${selector}`
 }

@@ -13,13 +13,8 @@ import type { KeyboardEvent } from 'react'
 import { GlyphState } from '../ds'
 import { MAX_TERMS, type BlockCatalog, type Rule, type Term } from '../core/schemas'
 import { listActionGroups, listFlagNames, listSelectorsForAction } from './blockOptions'
+import { FLAG_FALSE, FLAG_NONE, FLAG_TRUE, buildSetFlag, getFlagName, getFlagValue } from './flagClause'
 import { TermEditor } from './TermEditor'
-
-/** SET 절이 없음을 고르는 값. 빈 문자열은 select 의 기본값과 섞이므로 따로 둔다. */
-const FLAG_NONE = 'NONE'
-const FLAG_SEPARATOR = '='
-const FLAG_TRUE = 'true'
-const FLAG_FALSE = 'false'
 
 /** 부모가 규칙표를 고치는 통로. 한 조작이 한 함수다. */
 export interface RuleRowActions {
@@ -54,38 +49,6 @@ export interface RuleRowEditorProps {
 }
 
 /**
- * SET 절 문자열에서 플래그 이름을 읽는다.
- *
- * @param setFlag `A=true` 형태의 SET 절. 없으면 null.
- * @returns 플래그 이름, 또는 없음 표시.
- */
-function getFlagName(setFlag: string | null): string {
-  if (setFlag === null) {
-    return FLAG_NONE
-  }
-  const separator = setFlag.indexOf(FLAG_SEPARATOR)
-  return separator < 0 ? setFlag : setFlag.slice(0, separator)
-}
-
-/**
- * SET 절 문자열에서 넣을 값을 읽는다.
- *
- * 코어는 `=` 뒤가 `false` 가 아니면 전부 참으로 읽는다(actions.ts). 여기서도 같은 판정을
- * 쓴다 — 화면이 참이라 적은 것을 엔진이 거짓으로 읽으면 규칙표가 조용히 다르게 돈다.
- *
- * @param setFlag `A=true` 형태의 SET 절. 없으면 null.
- * @returns 'true' 또는 'false'.
- */
-function getFlagValue(setFlag: string | null): string {
-  if (setFlag === null) {
-    return FLAG_TRUE
-  }
-  const separator = setFlag.indexOf(FLAG_SEPARATOR)
-  const raw = separator < 0 ? '' : setFlag.slice(separator + 1)
-  return raw.trim().toLowerCase() === FLAG_FALSE ? FLAG_FALSE : FLAG_TRUE
-}
-
-/**
  * 규칙 한 줄을 그린다.
  *
  * @param props 규칙과 콜백들.
@@ -106,9 +69,7 @@ export function RuleRowEditor(props: RuleRowEditorProps): React.JSX.Element {
    * @param value 넣을 값.
    */
   function applyFlag(name: string, value: string): void {
-    actions.update(index, {
-      setFlag: name === FLAG_NONE ? null : `${name}${FLAG_SEPARATOR}${value}`,
-    })
+    actions.update(index, { setFlag: buildSetFlag(name, value) })
   }
 
   /**

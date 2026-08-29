@@ -18,11 +18,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
-import { Button, GlyphState, Panel, SegmentedGauge, ValueExpr } from '../ds'
+import { Button, GlyphState, Panel, SegmentedGauge, ValueExpr, useViewportMode } from '../ds'
 import { validateRuleSet } from '../core/rules/validator'
 import type { BlockCatalog, Rule, RuleSet, Term } from '../core/schemas'
 import { writeClipboard } from './clipboard'
 import { PalettePanel } from './PalettePanel'
+import { RuleEditMobile } from './RuleEditMobile'
 import { RuleRowEditor, type RuleRowActions } from './RuleRowEditor'
 import { TextView } from './TextView'
 import {
@@ -39,6 +40,7 @@ import {
   updateTerm,
 } from './draft'
 import { formatRuleText, parseRuleText } from './ruleText'
+import type { TermReadings } from './termMeasure'
 
 /** `[3] 목록에 없는 ...` 에서 규칙 번호를 떼어 낸다. */
 const PROBLEM_LABEL_PATTERN = /^\[(\d+)\]\s*(.*)$/
@@ -47,6 +49,12 @@ const DECIMAL_RADIX = 10
 
 /** 규칙 행 하나를 가리키는 선택자. 새로 만든 규칙으로 포커스를 옮길 때 쓴다. */
 const ROW_SELECTOR = '.rule-row'
+
+/** 측정값이 하나도 없는 표. 새 Map 을 렌더마다 만들지 않으려고 상수로 둔다. */
+const EMPTY_READINGS: TermReadings = new Map()
+
+/** 모바일 편집 화면에서 돌아갈 곳의 이름. 이 앱에서 편집 화면의 뒤는 규칙표 목록이다. */
+const BACK_LABEL = '규칙표'
 
 /** RuleEditor 의 props. */
 export interface RuleEditorProps {
@@ -71,6 +79,13 @@ export interface RuleEditorProps {
    * 고치는 일만 안다.
    */
   readonly library?: ReactNode
+  /**
+   * 직전 틱의 조건 항 측정값. 모바일 편집 화면의 실측 줄이 이것을 읽는다.
+   *
+   * 없으면 실측 줄이 `–` 와 pending 으로 선다 — 「아직 평가되지 않았다」이며 「값을 만들
+   * 수 없었다」가 아니다 (`termMeasure.ts`).
+   */
+  readonly readings?: TermReadings
 }
 
 /** 검증 메시지를 규칙별로 나눈 것. */
@@ -137,6 +152,12 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
   const [dropIndex, setDropIndex] = useState(-1)
   const [focusIndex, setFocusIndex] = useState(-1)
   const listRef = useRef<HTMLDivElement>(null)
+  // 모바일에서 편집 중인 규칙의 자리. 음수면 규칙표 목록이다.
+  const [editIndex, setEditIndex] = useState(-1)
+  // 편집 화면을 열었을 때의 규칙표. `취소` 가 이 지점으로 되돌린다. 상태가 아니라 ref 인
+  // 이유는 이 값이 화면을 다시 그리지 않기 때문이다 — 되돌릴 때 한 번 읽히고 만다.
+  const restoreRef = useRef<RuleSet | undefined>(undefined)
+  const mode = useViewportMode()
 
   const problems = useMemo(
     () => validateRuleSet(ruleset, catalog, cpuBudget, ruleSlots),
@@ -197,6 +218,55 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
     duplicate: (at: number) => { commit(duplicateRule(ruleset, at), at + 1, true) },
     remove: (at: number) => { commit(removeRule(ruleset, at), Math.max(at - 1, 0), true) },
     move: (from: number, to: number) => { commit(moveRule(ruleset, from, to), to, true) },
+  }
+
+  // 모바일은 데스크톱 세 열을 줄인 것이 아니라 **다른 화면**이다 (명세 C). 규칙표를 고치는
+  // 조작(`actions`)과 검증은 위에서 이미 다 나왔고, 여기서 갈리는 것은 트리뿐이라 기기를
+  // 돌려도 고치던 규칙이 그대로 이어진다.
+  if (mode !== 'desktop') {
+    return (
+      <RuleEditMobile
+        mode={mode}
+        ruleset={ruleset}
+        catalog={catalog}
+        cpuBudget={cpuBudget}
+        ruleSlots={ruleSlots}
+        problems={index.byPriority}
+        globalProblems={index.global}
+        editIndex={editIndex}
+        readings={props.readings ?? EMPTY_READINGS}
+        actions={actions}
+        backLabel={BACK_LABEL}
+        onOpen={(at) => {
+          restoreRef.current = ruleset
+          setSelectedIndex(at)
+          setEditIndex(at)
+        }}
+        onAdd={() => {
+          restoreRef.current = ruleset
+          actions.addRule(ruleset.rules.length - 1)
+          setEditIndex(ruleset.rules.length)
+        }}
+        onReorder={(to) => {
+          actions.move(editIndex, to)
+          setEditIndex(to)
+        }}
+        onCancel={() => {
+          const restore = restoreRef.current
+          if (restore !== undefined) {
+            onChange(restore)
+          }
+          restoreRef.current = undefined
+          setEditIndex(-1)
+        }}
+        onSave={() => {
+          restoreRef.current = undefined
+          setEditIndex(-1)
+        }}
+        {...(props.controls === undefined ? {} : { controls: props.controls })}
+        {...(props.library === undefined ? {} : { library: props.library })}
+      />
+    )
   }
 
   /**

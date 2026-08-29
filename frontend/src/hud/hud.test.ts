@@ -13,6 +13,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { BattleSetup } from '../battle'
+import { formatOutcome as battleFormatOutcome } from '../battle'
 import { createLogEntry } from '../core/eventLog'
 import type { LogEntry } from '../core/eventLog'
 import { BLOCK_CATALOG, G0_RULESETS } from '../core/resources'
@@ -27,7 +28,13 @@ import {
   getWastePercent,
 } from './analysis'
 import type { DamageHit } from './analysis'
-import { describeRuleStat, formatHeatValue, getHeatLevel, formatTickLabel } from './analysisText'
+import {
+  describeRuleStat,
+  formatHeatValue,
+  formatOutcome,
+  formatTickLabel,
+  getHeatLevel,
+} from './analysisText'
 import { recordBattle } from './battleRecorder'
 import type { BattleRecording } from './battleRecorder'
 import { filterRecentEntries, groupLogRows, selectLogWindow } from './logWindow'
@@ -457,5 +464,15 @@ describe('기록의 모양', () => {
     expect(second.frames.map((frame) => frame.scene)).toEqual(
       first.frames.map((frame) => frame.scene),
     )
+  })
+})
+
+describe('사후 분석과 전투 화면이 같은 판정 문구를 쓴다', () => {
+  it('두 화면의 formatOutcome 이 같은 함수다 — 라벨표가 한 벌이라는 뜻이다', () => {
+    expect(formatOutcome).toBe(battleFormatOutcome)
+  })
+
+  it('사후 분석도 쓰러짐이라 적는다', () => {
+    expect(formatOutcome('PLAYER_LOSS')).toBe('쓰러짐')
   })
 })

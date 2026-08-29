@@ -58,6 +58,12 @@ import {
   describeScene,
   getStepTicksByStep,
   parseDurationMs,
+  OUTCOME_GLYPHS,
+  OUTCOME_LABELS,
+  OUTCOME_NOTICES,
+  checkPlanThemeSame,
+  formatOutcome,
+  formatOutcomeNotice,
   readBatchIntervalMs,
   readPlanTheme,
   renderPlan,
@@ -112,6 +118,22 @@ function readDesignTokens(): string {
     'typography.css',
   ]
   return names.map((name) => readFileSync(`${DESIGN_DIR}tokens/${name}`, 'utf8')).join('\n')
+}
+
+/**
+ * 세로 배치 블록의 @media 머리를 찾는다.
+ *
+ * 폭 리터럴을 박지 않는 이유는 경계가 실측을 따르기 때문이다 — 599 로 뒀더니
+ * iPad 세로(768·810·834)가 desktop 배치를 받아 가로로 넘쳤고, 데스크톱 골격이
+ * 841px 부터 성립한다는 실측에 맞춰 840 으로 옮겼다. 이 블록의 정체는 폭이 아니라
+ * `--layout-mode:portrait` 다.
+ *
+ * @returns `@media (...)` 머리 문자열.
+ */
+function findPortraitMedia(): string {
+  const found = /@media[^{]*(?=\{[^}]*--layout-mode:\s*portrait)/.exec(readDesignTokens())
+  expect(found, '--layout-mode:portrait 를 정의하는 @media 블록이 없다').not.toBeNull()
+  return (found?.[0] ?? '').trimEnd()
 }
 
 /** 캔버스 호출 한 건. */
@@ -205,6 +227,7 @@ function readFakeToken(name: string): string {
 }
 
 const FAKE_THEME: PlanTheme = readPlanTheme(readFakeToken)
+
 
 describe('토큰 규율', () => {
   it('battle.css 에 생 hex 색이 없다', () => {
@@ -686,5 +709,109 @@ describe('전투 화면 골격', () => {
       <BattleView setup={CHECK_SETUP} rulesets={G0_RULESETS} location="1층 · pillars" />,
     )
     expect(html).not.toContain('ds-button--primary')
+  })
+})
+
+describe('반응형 토큰 (design/tokens/spacing.css)', () => {
+  /** 토큰 CSS 에서 미디어쿼리 블록 하나를 잘라 낸다. */
+  const cutMedia = (query: string): string => {
+    const tokens = readDesignTokens()
+    const start = tokens.indexOf(query)
+    expect(start, `${query} 가 토큰 CSS 에 없다`).toBeGreaterThan(-1)
+    return tokens.slice(start, tokens.indexOf('}\n}', start))
+  }
+
+  it('데스크톱 기본값은 그대로 64px 이다 — 기존 화면이 흔들리지 않는다', () => {
+    const root = readDesignTokens().split('@media')[0] ?? ''
+    expect(root).toContain('--plan-cell:64px')
+    expect(root).toContain('--bar-top:56px')
+    expect(root).toContain('--bar-bottom:48px')
+    expect(root).toContain('--col-rules:320px')
+    expect(root).toContain('--col-log:300px')
+  })
+
+  it('세로 모바일은 셀 30px 로 12x9 를 390px 안에 넣는다', () => {
+    // 폭 리터럴로 찾지 않는다. 경계는 실측에 따라 바뀌지만(599 → 840, 데스크톱
+    // 골격이 841px 부터 성립한다) 이 블록의 정체는 --layout-mode:portrait 다.
+    const block = cutMedia(findPortraitMedia())
+    expect(block).toContain('--layout-mode:portrait')
+    expect(block).toContain('--plan-cell:30px')
+    expect(block).toContain('--bar-top:44px')
+    expect(block).toContain('--bar-status:34px')
+    expect(block).toContain('--row-h:54px')
+    // 12x30 = 360 에 좌우 여백을 더해도 390 을 넘지 않아야 한다.
+    const cell = 30
+    const pad = 14
+    expect(cell * 12 + pad * 2).toBeLessThanOrEqual(390)
+    expect(cell * 9).toBe(270)
+  })
+
+  it('가로 모바일은 셀 32px 로 12x9 를 도면 열 안에 넣는다', () => {
+    const block = cutMedia('@media (max-width:1023px)')
+    expect(block).toContain('--layout-mode:landscape')
+    expect(block).toContain('--plan-cell:32px')
+    expect(block).toContain('--bar-top:40px')
+    expect(block).toContain('--col-sheet:340px')
+    expect(block).toContain('--row-h:50px')
+    // 844 에서 우측 시트 340 을 뺀 자리에 384x288 도면이 들어간다.
+    const cell = 32
+    expect(cell * 12 + 340).toBeLessThanOrEqual(844)
+    expect(cell * 9 + 40 * 2).toBeLessThanOrEqual(390)
+  })
+
+  it('브레이크포인트는 토큰 한 곳에만 있다 — 화면 CSS 는 미디어쿼리를 적지 않는다', () => {
+    expect(readStrippedCss('battle.css')).not.toContain('@media')
+  })
+})
+
+describe('판정 라벨은 한 벌이다', () => {
+  it('전투 화면에 라벨표가 따로 없다', () => {
+    const source = readFileSync(`${BATTLE_DIR}BattleView.tsx`, 'utf8')
+    expect(source).not.toContain('OUTCOME_LABELS')
+    expect(source).toContain('formatOutcome')
+  })
+
+  it('쓰러짐을 쓴다 — 명세의 판정 표시가 정본이다', () => {
+    expect(formatOutcome('PLAYER_LOSS')).toBe('쓰러짐')
+    expect(formatOutcome('PLAYER_WIN')).toBe('승리')
+    expect(formatOutcome('TIMEOUT')).toBe('시간 초과')
+    expect(formatOutcome('ONGOING')).toBe('진행 중')
+  })
+
+  it('모르는 판정은 원문 그대로 낸다 — 조용히 빈 칸이 되지 않는다', () => {
+    expect(formatOutcome('NOPE')).toBe('NOPE')
+    expect(formatOutcomeNotice('NOPE')).toBe('NOPE')
+  })
+
+  it('판정 한 줄은 글리프와 다음에 할 일을 함께 적는다', () => {
+    expect(formatOutcomeNotice('PLAYER_LOSS')).toBe('✕ 쓰러짐 · 규칙을 고쳐 다시')
+    expect(formatOutcomeNotice('PLAYER_WIN')).toBe('✓ 방 클리어 · 다음 실로')
+    expect(formatOutcomeNotice('ONGOING')).toBe('◆ 전투 중')
+    expect(formatOutcomeNotice('TIMEOUT')).toBe('◈ 추격자 도착')
+  })
+
+  it('세 표가 같은 판정 집합을 덮는다', () => {
+    const keys = [...OUTCOME_LABELS.keys()]
+    expect([...OUTCOME_GLYPHS.keys()]).toEqual(keys)
+    expect([...OUTCOME_NOTICES.keys()]).toEqual(keys)
+  })
+
+  it('진행 중에는 판정을 적지 않는다', () => {
+    const html = renderToStaticMarkup(
+      <BattleView setup={CHECK_SETUP} rulesets={G0_RULESETS} location="1층 · pillars" />,
+    )
+    expect(html).not.toContain('battle__outcome')
+  })
+})
+
+describe('토큰을 다시 읽어도 같은 값이면 도면을 다시 그리지 않는다', () => {
+  it('같은 값이면 참, 셀 크기가 달라지면 거짓', () => {
+    expect(checkPlanThemeSame(FAKE_THEME, { ...FAKE_THEME })).toBe(true)
+    expect(checkPlanThemeSame(FAKE_THEME, { ...FAKE_THEME, cell: 30 })).toBe(false)
+    expect(checkPlanThemeSame(FAKE_THEME, { ...FAKE_THEME, surface: '#000' })).toBe(false)
+  })
+
+  it('아직 읽은 적이 없으면 거짓이다 — 첫 값은 반드시 들어간다', () => {
+    expect(checkPlanThemeSame(undefined, FAKE_THEME)).toBe(false)
   })
 })

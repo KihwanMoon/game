@@ -22,9 +22,98 @@
   --hatch-gap:4px;       /* 45도 해칭 간격 */
 
   /* 밀도: 표준 */
-  --row-h:44px;          /* 규칙표 행(2줄) */
-  --log-row-h:22px;
+  --row-h:44px;          /* 규칙표 행(2줄). 모바일 세로 54 / 가로 50 */
+  --log-row-h:22px;      /* 로그 줄의 **최소** 높이. 접히면 그만큼 늘어난다 */
   --pad-panel:var(--sp-4);
   --pad-cell:var(--sp-3);
   --gap-col:1px;         /* 열 사이는 괘선 하나로만 */
+
+  /* ── 반응형 재배치 ────────────────────────────────────────────────
+     데스크톱 3열을 **축소하지 않고 재배치한다.** 도면은 12x9 전체를 유지하고 셀만
+     줄인다(세로 30 / 가로 32). 아래 값들은 파일 끝의 미디어쿼리가 다시 정의하며,
+     화면 CSS 는 미디어쿼리를 스스로 적지 않고 이 토큰만 읽는다 — 브레이크포인트가
+     한 곳에만 있어야 세 화면이 같은 경계에서 함께 바뀐다.
+     근거와 출처는 design/README.md 「반응형」 절. */
+  --layout-mode:desktop; /* @kind other — 스크립트가 읽는 현재 배치 이름 */
+  --plan-pad:var(--sp-4);/* 도면 둘레 여백 */
+  --bar-speed:0px;       /* 배속 전용 줄. 데스크톱은 TopBar 안이라 줄이 없다 */
+  --bar-status:0px;      /* 판정 줄. 데스크톱은 하단 StatusBar 가 겸한다 */
+  --col-sheet:0px;       /* 규칙표+로그가 합쳐진 시트 폭. 데스크톱엔 시트가 없다 */
+  --sheet-tab-h:0px;     /* 시트 탭 줄. 데스크톱엔 탭이 없다 */
+  --tap-min:44px;
+
+  /* 버튼 히트 높이. 데스크톱은 지금 값(sp-8 / sp-6)을 그대로 둬 시각이 바뀌지 않는다.
+     터치 배치에서만 --tap-min 까지 키운다 — 실측에서 세로 모바일 버튼이 25px 였다. */
+  --btn-tap-h:var(--sp-8);
+  --btn-tap-sm-h:var(--sp-6);        /* 최소 히트 영역 */
+  --btn-h:36px;          /* 시트·편집 화면 버튼 높이 */
+  --speed-box-h:32px;    /* 배속 박스 높이 */
+  --speed-cell-w:44px;   /* 배속 칸 하나의 폭 */
+  --sheet-gauge-w:140px; /* 가로 시트 하단의 CPU 게이지 폭. 세로는 폭 전체를 쓴다 */
+
+  /* 규칙 편집 화면 (모바일에서 전용 전체 화면이 된다) */
+  --bar-edit:var(--bar-bottom); /* 편집 화면 하단바 */
+  --edit-col:300px;      /* 가로 모바일 편집 화면의 우열 */
+  --field-h:40px;        /* 조건·행동 칸 높이 */
+  --card-head-h:32px;    /* 편집 카드 헤더 높이 */
+  --edit-cmp-w:78px;     /* 조건 카드의 비교 칸. 좌·우변은 가변이고 이 칸만 고정이다 */
+  --edit-op-h:36px;      /* 연산자 줄(AND·OR·조건 추가). 배치와 무관하게 같다 */
+  --edit-btn-h:36px;     /* 편집 화면의 취소·저장. 세로에서만 44 로 커진다 */
+}
+
+/* ── 모바일 세로 = 쌓기 배치 (기준 390x844) ────────────────────────────
+   경계는 599 가 아니라 840 이다. "600 부터는 태블릿이라 3열이 다시 성립한다" 는
+   처음 가정이 틀렸다 — 실측하면 데스크톱 골격(320+300+도면 768)은 **841px 부터**
+   성립하고, 834px 에서 7px · 768px 에서 73px 가로로 넘친다. 그 구간을 desktop 으로
+   두면 iPad 세로(768·810·834)가 전부 넘친다.
+   orientation 조건을 뺀 것은 800x700 같은 '가로지만 좁은' 창도 3열을 세울 수 없기
+   때문이다. 폰 가로(844x390)는 폭이 840 을 넘으므로 아래 landscape 규칙이 잡는다. */
+@media (max-width:840px){
+  :root{
+    --layout-mode:portrait;
+    --plan-cell:30px;    /* 12x9 = 360x270 */
+    --plan-pad:14px;     /* 390 - 360 = 30. 4px 모듈의 예외이며 명세가 정한 값이다 */
+    --bar-top:44px;
+    --bar-speed:44px;
+    --bar-status:34px;
+    --bar-bottom:48px;
+    --col-rules:100%;    /* 세로에는 열이 없다. 시트가 화면 폭 전체를 쓴다 */
+    --col-log:100%;
+    --col-sheet:100%;
+    --sheet-tab-h:44px;
+    --row-h:54px;
+    --btn-h:44px;
+    --speed-box-h:32px;
+    --bar-edit:60px;
+    --edit-btn-h:44px;   /* 취소·저장은 손가락이 닿아야 한다 (--tap-min) */
+      --btn-tap-h:var(--tap-min);
+    --btn-tap-sm-h:var(--tap-min);
+}
+}
+
+/* ── 모바일 가로 (기준 844x390) ─────────────────────────────────────────
+   높이로 가른다. 가로 폰의 짧은 변은 가장 큰 것이 430(iPhone Pro Max)이라 559 면
+   전부 들어오고, 노트북 최소 높이 720 은 들어오지 않는다. max-width 1023 은 가로
+   태블릿(1024 이상)이 이 배치로 떨어지는 것을 막는다. */
+@media (max-width:1023px) and (max-height:559px) and (orientation:landscape){
+  :root{
+    --layout-mode:landscape;
+    --plan-cell:32px;    /* 12x9 = 384x288 */
+    --plan-pad:8px;
+    --bar-top:40px;
+    --bar-speed:0px;     /* 배속 박스는 상단바 안에 있다 */
+    --bar-status:0px;    /* 판정은 하단바가 겸한다 */
+    --bar-bottom:40px;
+    --col-rules:340px;   /* 규칙표와 로그가 한 시트로 합쳐진다 */
+    --col-log:340px;
+    --col-sheet:340px;
+    --sheet-tab-h:36px;
+    --row-h:50px;
+    --btn-h:30px;
+    --speed-box-h:28px;
+    --speed-cell-w:44px;
+    --bar-edit:0px;      /* 편집 화면의 취소/저장은 우열 안으로 들어간다 */
+      --btn-tap-h:var(--btn-h);
+    --btn-tap-sm-h:28px;
+}
 }

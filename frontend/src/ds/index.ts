@@ -36,7 +36,7 @@ export type { PanelProps, PanelTone } from './Panel'
 export { ACTOR_GLYPHS, ACTOR_NAMES, PlanActor } from './PlanActor'
 export type { PlanActorKind, PlanActorProps } from './PlanActor'
 
-export { PlanGrid } from './PlanGrid'
+export { PLAN_CELL_TOKEN, PlanGrid, buildCellStyle } from './PlanGrid'
 export type { PlanGridProps } from './PlanGrid'
 
 export { PIP_LIMIT, ResourceCount } from './ResourceCount'
@@ -65,3 +65,13 @@ export type { TopBarProps } from './TopBar'
 
 export { ValueExpr, splitExprSegments } from './ValueExpr'
 export type { ExprSegment, ValueExprProps } from './ValueExpr'
+
+export {
+  DEFAULT_LAYOUT_MODE,
+  LAYOUT_MODES,
+  LAYOUT_MODE_TOKEN,
+  readLayoutMode,
+  useViewportMode,
+  watchViewport,
+} from './viewport'
+export type { LayoutMode, TokenRead } from './viewport'

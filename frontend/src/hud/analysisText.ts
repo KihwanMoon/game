@@ -9,16 +9,18 @@
  * 다르게 진단하면 둘 중 어느 쪽을 믿어야 할지 알 수 없다.
  */
 
+import { formatOutcome, formatOutcomeNotice } from '../battle'
 import { divideFloor } from '../core/combat/damage'
-import {
-  OUTCOME_ONGOING,
-  OUTCOME_PLAYER_LOSS,
-  OUTCOME_PLAYER_WIN,
-  OUTCOME_TIMEOUT,
-} from '../core/sim/phases'
 
 import { SUSPICIOUS_WASTE_PCT, getWastePercent } from './analysis'
 import type { RuleStat } from './analysis'
+
+/**
+ * 판정 문구는 **전투 화면과 같은 표**를 쓴다. 사후 분석이 전투 화면을 덮으며 뜨므로
+ * 라벨표가 두 벌이면 한 화면에 `패배` 와 `사망` 이 함께 보인다 — 실제로 그랬다.
+ * 정본은 `battle/outcomeText.ts` 이고 여기서는 다시 내보내기만 한다.
+ */
+export { formatOutcome, formatOutcomeNotice }
 
 /** 틱 번호를 0 으로 채울 자릿수. 코어 `formatLines` 의 `{tick:03d}` 와 같다. */
 const TICK_PAD_WIDTH = 3
@@ -29,14 +31,6 @@ export const HEAT_EMPTY_GLYPH = '·'
 /** 히트맵 강도 단계 수. 0(피해 없음)을 빼고 넷이다. */
 export const HEAT_LEVELS = 4
 
-/** 승패 표기. 코어의 OUTCOME_* 를 화면 문구로 바꾼다. */
-const OUTCOME_LABELS: ReadonlyMap<string, string> = new Map([
-  [OUTCOME_ONGOING, '진행 중'],
-  [OUTCOME_PLAYER_WIN, '승리'],
-  [OUTCOME_PLAYER_LOSS, '사망'],
-  [OUTCOME_TIMEOUT, '시간 초과'],
-])
-
 /**
  * 틱 번호 표기.
  *
@@ -45,16 +39,6 @@ const OUTCOME_LABELS: ReadonlyMap<string, string> = new Map([
  */
 export function formatTickLabel(tick: number): string {
   return `T${String(tick).padStart(TICK_PAD_WIDTH, '0')}`
-}
-
-/**
- * 승패 문구.
- *
- * @param outcome 코어가 낸 OUTCOME_* 값.
- * @returns 화면에 적을 문구. 모르는 값이면 원문 그대로.
- */
-export function formatOutcome(outcome: string): string {
-  return OUTCOME_LABELS.get(outcome) ?? outcome
 }
 
 /**
