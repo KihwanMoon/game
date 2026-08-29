@@ -2,15 +2,45 @@
    그림자 없음, border-radius 는 2px 고정, 움직임은 명도 전환(90ms, 등속)뿐이다. */
 
 #root {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--surface-base);
+}
+
+/* ── 터치 거동 ───────────────────────────────────────────────────────────
+   손가락으로 쓰는 화면에서 브라우저 기본값이 이 UI 와 싸운다.
+
+   tap-highlight  안드로이드 기본값이 파란 섬광(rgba(51,181,229,.4))이다. 황동 하나만
+                  광원으로 쓰는 도면 팔레트에 없는 색이라, 누를 때마다 팔레트가 깨진다.
+                  대신 :active 명도 전환이 눌림을 알린다.
+   touch-action   manipulation 은 더블탭 확대를 끈다. 확대를 열어 두면 브라우저가
+                  두 번째 탭을 기다리느라 클릭이 약 300ms 늦고, 규칙 행을 연타하는
+                  조작에서 그 지연이 그대로 느껴진다.
+   overscroll     시트를 끝까지 스크롤한 뒤 더 당기면 당겨서 새로고침이 뜬다.
+                  판이 도는 중에 새로고침되면 진행이 사라진다.
+   text-size-adjust  모바일 브라우저가 본문을 임의로 키우면 모노 컬럼 정렬이 깨진다 —
+                  로그의 컬럼 정렬은 미관이 아니라 디버깅 기능이다. */
+body {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
 /* 사후 분석 패널이 `position: absolute; inset: 0` 으로 화면을 덮는다. 그 기준이 되는
    상자가 여기다 — 없으면 뷰포트가 아니라 문서 전체를 기준으로 잡혀 스크롤과 함께 밀린다. */
+/* 높이는 dvh 다. 100vh 는 모바일에서 주소창을 뺀 높이가 아니라 포함한 높이라,
+   하단 바가 브라우저 UI 뒤로 들어가 손이 닿지 않는다.
+   안전 영역 여백은 펀치홀·둥근 모서리·제스처 바를 피한다. 데스크톱에서는 env() 가
+   0 이라 아무 변화가 없다. */
 .app {
   position: relative;
-  height: 100vh;
+  box-sizing: border-box;
+  height: 100dvh;
+  padding-top: env(safe-area-inset-top, var(--sp-0));
+  padding-right: env(safe-area-inset-right, var(--sp-0));
+  padding-bottom: env(safe-area-inset-bottom, var(--sp-0));
+  padding-left: env(safe-area-inset-left, var(--sp-0));
 }
 
 /* ── 출격 조작부 ─────────────────────────────────────────────────────────
@@ -39,6 +69,8 @@
   border: var(--border);
   border-radius: var(--radius);
   padding: var(--sp-1);
+  /* 손가락으로 누를 수 있어야 한다. 데스크톱에서는 토큰이 지금 높이를 유지한다. */
+  min-height: var(--btn-tap-h);
   transition: var(--transition-hover);
 }
 
@@ -63,7 +95,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  height: 100dvh;
   padding: var(--sp-8);
   background: var(--surface-base);
 }
