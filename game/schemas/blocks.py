@@ -1,18 +1,25 @@
-"""블록 카탈로그 — 동결된 인지 변수·행동·셀렉터 목록 (GDD §3.2·§3.3·§3.4).
+"""블록 카탈로그 — 인지 변수·행동·셀렉터 목록 (GDD §3.2·§3.3·§3.4).
 
-로드맵 Phase 0 에서 동결했고 이후 변경 금지다. 개수는 GDD §9 가 정한
-인지 18 / 행동 12 / 셀렉터 7 이며, 이 모듈이 로드 시점에 그것을 검사한다.
+개수는 인지 18 / 행동 13 / 셀렉터 7 이며, 이 모듈이 로드 시점에 그것을 검사한다.
 숫자가 어긋난 채로 조용히 로드되면 규칙표가 참조하는 블록이 사라져도 알 수 없다.
+
+행동이 12 에서 13 이 된 것은 v3 의 SUMMON 추가다. GDD §5 가 "몬스터도 플레이어와
+완전히 동일한 DSL 로 기술한다" 고 못박았는데 소환만 밸런스 속성으로 빠져 있어,
+도감이 소환 주기를 규칙표 밖에서 따로 보여줘야 하는 모순이 있었다.
+
+rhs_stats 는 조건 우변에 둘 수 있는 자기 스탯의 닫힌 목록이다 (F-2). 열어 두면
+오타 난 스탯 이름이 조용히 거짓이 되어 규칙이 영영 발동하지 않는다.
 """
 
 import json
 from dataclasses import dataclass
 from pathlib import Path
 
-# GDD §9 가 정한 콘텐츠 범위. 동결 대상이므로 상수로 박아 로드 때마다 대조한다.
+# 콘텐츠 범위. 동결 대상이므로 상수로 박아 로드 때마다 대조한다.
 PERCEPTION_COUNT = 18
-ACTION_COUNT = 12
+ACTION_COUNT = 13
 SELECTOR_COUNT = 7
+RHS_STAT_COUNT = 6
 
 
 @dataclass(frozen=True)
@@ -54,13 +61,22 @@ class SelectorBlock:
 
 
 @dataclass(frozen=True)
+class StatBlock:
+    """조건 우변에 둘 수 있는 자기 스탯 하나 (F-2)."""
+
+    block_id: str
+    label_ko: str
+
+
+@dataclass(frozen=True)
 class BlockCatalog:
-    """동결된 블록 목록 전체."""
+    """블록 목록 전체."""
 
     version: int
     perceptions: dict[str, PerceptionBlock]
     actions: dict[str, ActionBlock]
     selectors: dict[str, SelectorBlock]
+    rhs_stats: dict[str, StatBlock]
 
 
 def _build_param(raw: dict | None) -> BlockParam | None:
@@ -90,6 +106,7 @@ def _check_catalog_counts(catalog: BlockCatalog) -> list[str]:
         ("perceptions", len(catalog.perceptions), PERCEPTION_COUNT),
         ("actions", len(catalog.actions), ACTION_COUNT),
         ("selectors", len(catalog.selectors), SELECTOR_COUNT),
+        ("rhs_stats", len(catalog.rhs_stats), RHS_STAT_COUNT),
     )
     return [
         f"{name} 개수가 동결값과 다르다: {got} != {want}"
@@ -136,10 +153,15 @@ def load_block_catalog(source_path: Path) -> BlockCatalog:
         item["id"]: SelectorBlock(block_id=item["id"], label_ko=item["label_ko"])
         for item in raw["selectors"]
     }
+    rhs_stats = {
+        item["id"]: StatBlock(block_id=item["id"], label_ko=item["label_ko"])
+        for item in raw["rhs_stats"]
+    }
 
     # dict 로 모으면 중복 id 가 조용히 덮어써진다. 원본 길이와 대조해 잡는다.
-    raw_totals = len(raw["perceptions"]) + len(raw["actions"]) + len(raw["selectors"])
-    if len(perceptions) + len(actions) + len(selectors) != raw_totals:
+    sections = ("perceptions", "actions", "selectors", "rhs_stats")
+    raw_totals = sum(len(raw[section]) for section in sections)
+    if len(perceptions) + len(actions) + len(selectors) + len(rhs_stats) != raw_totals:
         raise ValueError("블록 id 가 중복됐다")
 
     catalog = BlockCatalog(
@@ -147,6 +169,7 @@ def load_block_catalog(source_path: Path) -> BlockCatalog:
         perceptions=perceptions,
         actions=actions,
         selectors=selectors,
+        rhs_stats=rhs_stats,
     )
     problems = _check_catalog_counts(catalog)
     if problems:

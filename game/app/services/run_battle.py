@@ -12,11 +12,64 @@ from game.app.core.rng import DeterministicRng
 from game.app.rules.fallback_policy import FallbackPolicy
 from game.app.rules.rule_vm import build_rule_vm
 from game.app.simulation.engine import TickEngine
-from game.app.simulation.plan import OUTCOME_ONGOING, EngineConfig
+from game.app.simulation.plan import OUTCOME_ONGOING, DecisionPolicy, EngineConfig
+from game.app.simulation.pressure import PressureTracker, build_pressure_rules, init_spring_pools
 from game.app.simulation.state import FACTION_ENEMY, FACTION_PLAYER, Entity, WorldState
 from game.schemas.blocks import BlockCatalog
 from game.schemas.room import RoomTemplate
 from game.schemas.ruleset import RuleSet
+
+
+@dataclass(frozen=True)
+class EnemyPolicyFactory:
+    """kind_id 로 규칙표를 찾아 결정기를 만든다 (plan.PolicyFactory).
+
+    전투 도중 등장하는 소환물·추격자에 규칙표를 붙이는 자리다. 조립 시점의 일괄
+    배정은 그때 없던 개체에 닿지 못한다.
+    """
+
+    catalog: BlockCatalog
+    kind_types: dict[str, str]
+    ruleset_by_kind: dict[str, RuleSet]
+
+    def build_policy(self, entity: Entity) -> DecisionPolicy | None:
+        """그 엔티티의 결정기를 만든다.
+
+        Args:
+            entity: 대상 엔티티.
+
+        Returns:
+            규칙표가 있으면 RuleVM, 없으면 None.
+        """
+        ruleset = self.ruleset_by_kind.get(entity.kind_id)
+        if ruleset is None:
+            return None
+        return build_rule_vm(ruleset, self.catalog, self.kind_types)
+
+
+def build_enemy_policy_factory(
+    balance: dict, catalog: BlockCatalog, enemy_rulesets: dict[str, RuleSet]
+) -> EnemyPolicyFactory:
+    """적 종류에서 규칙표로 가는 표를 미리 풀어 공장을 만든다.
+
+    Args:
+        balance: 밸런스 딕셔너리.
+        catalog: 동결된 블록 카탈로그.
+        enemy_rulesets: ruleset_id 에서 규칙표로의 대응표.
+
+    Returns:
+        엔티티마다 결정기를 만들어 주는 공장.
+    """
+    by_kind = {
+        kind["id"]: enemy_rulesets[kind["ruleset_id"]]
+        for kind in balance["enemies"]
+        if kind.get("ruleset_id") in enemy_rulesets
+    }
+    return EnemyPolicyFactory(
+        catalog=catalog,
+        kind_types={kind["id"]: kind["type"] for kind in balance["enemies"]},
+        ruleset_by_kind=by_kind,
+    )
 
 
 @dataclass(frozen=True)
@@ -30,7 +83,12 @@ class BattleResult:
 
 
 def build_engine(
-    template: RoomTemplate, balance: dict, seed: int, max_ticks: int = 400
+    template: RoomTemplate,
+    balance: dict,
+    seed: int,
+    max_ticks: int = 400,
+    floor: int = 1,
+    pressure: PressureTracker | None = None,
 ) -> TickEngine:
     """방 템플릿과 밸런스 값으로 엔진을 조립한다.
 
@@ -39,12 +97,18 @@ def build_engine(
         balance: balance.json 을 읽은 딕셔너리.
         seed: 난수 시드.
         max_ticks: 이 틱을 넘기면 시간 초과로 끝낸다.
+        floor: 현재 층. 피해 공식의 방어 감쇠와 층 스케일이 이 값을 본다.
+        pressure: 층 단위 압력 추적기. 방마다 새로 만들면 층 체류 스케일이
+            매 방 0 으로 돌아가므로 연쇄 실행은 하나를 만들어 계속 넘긴다.
 
     Returns:
         첫 틱을 돌릴 준비가 된 엔진.
     """
     rng = DeterministicRng(seed)
     state = WorldState(room=template, rng=rng)
+    rules = build_pressure_rules(balance["anti_abuse"])
+    # 채우지 않으면 생명의 샘이 회복을 한 점도 내지 못한다 (잔여량 0 = 마른 샘).
+    init_spring_pools(state, rules.spring_pool_default)
 
     player_stats = balance["player"]
     state.entities["player"] = Entity(
@@ -79,6 +143,8 @@ def build_engine(
             attack_range=kind["attack_range"],
             initiative=kind["initiative"],
             regen_base=kind["regen_base"],
+            cpu_budget=kind.get("cpu_budget", 0),
+            potions=kind.get("potions", 0),
         )
 
     config = EngineConfig(
@@ -86,12 +152,15 @@ def build_engine(
         kind_types={kind["id"]: kind["type"] for kind in kinds},
         skill_coef_pct={skill["id"]: skill["coef_pct"] for skill in balance["skills"]},
         skill_range={skill["id"]: skill.get("range") for skill in balance["skills"]},
+        skill_cooldowns={skill["id"]: skill["cooldown"] for skill in balance["skills"]},
         summon_rules={k["id"]: k["summon"] for k in kinds if "summon" in k},
         enemy_stats={k["id"]: k for k in kinds},
+        floor=floor,
         max_ticks=max_ticks,
-        combat_regen_pct=balance["anti_abuse"]["combat_regen_pct"],
+        combat_regen_pct=rules.combat_regen_pct,
     )
-    return TickEngine(state=state, policy=FallbackPolicy(), config=config)
+    tracker = pressure or PressureTracker(rules=rules, enemy_stats={k["id"]: k for k in kinds})
+    return TickEngine(state=state, policy=FallbackPolicy(), config=config, pressure=tracker)
 
 
 def assign_enemy_policies(
@@ -108,15 +177,10 @@ def assign_enemy_policies(
         catalog: 동결된 블록 카탈로그.
         enemy_rulesets: ruleset_id 에서 규칙표로의 대응표.
     """
-    kind_types = engine.config.kind_types
-    by_kind = {k["id"]: k.get("ruleset_id") for k in balance["enemies"]}
-    for entity in engine.state.entities.values():
-        ruleset_id = by_kind.get(entity.kind_id)
-        if ruleset_id is None or ruleset_id not in enemy_rulesets:
-            continue
-        engine.policies[entity.entity_id] = build_rule_vm(
-            enemy_rulesets[ruleset_id], catalog, kind_types
-        )
+    # 공장을 함께 걸어 둔다. 소환물·추격자는 여기 없는 개체이므로 이것이 없으면
+    # 그들만 폴백 정책으로 싸운다.
+    engine.policy_factory = build_enemy_policy_factory(balance, catalog, enemy_rulesets)
+    engine.register_newcomers()
 
 
 def run_battle(engine: TickEngine) -> BattleResult:

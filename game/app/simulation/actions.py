@@ -1,27 +1,38 @@
 """행동 실행 — ACT 페이즈가 계획을 실제 변경으로 옮긴다 (TDD §4.1).
 
-**동결된 행동 12개를 전부 다룬다.** 처리하지 않는 행동을 조용히 넘기면 규칙이 발동했는데
+**행동 13개를 전부 다룬다.** 처리하지 않는 행동을 조용히 넘기면 규칙이 발동했는데
 아무 일도 일어나지 않고, 플레이어는 자기 논리가 틀렸다고 오해한다 — 그것이 P1(실패는
 정보다)을 가장 직접적으로 깨뜨리는 방식이다. 아직 만들 수 없는 행동은 그 사실을
 로그에 남긴다.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from game.app.combat.damage import calculate_damage
 from game.app.core.event_log import EventLog, LogEntry
 from game.app.grid.geometry import get_manhattan_distance, iter_neighbors
+from game.app.grid.vision import VisionGrid, check_line_of_sight, find_cover_positions
 from game.app.pathfinding.distance_field import build_distance_field, find_next_step
+from game.app.simulation.abilities import register_blast, resolve_summon
 from game.app.simulation.plan import PHASE_ACT, EngineConfig, PlannedAction
 from game.app.simulation.state import Entity, WorldState
+from game.app.simulation.telegraph import TelegraphBoard
 from game.schemas.room import TILE_DOOR, TILE_SPRING, TILE_STAIRS, WALKABLE_TILES
 
 MOVE_ACTIONS = frozenset({"APPROACH", "RETREAT", "MOVE_TO_EXIT", "MOVE_TO_HEAL", "MOVE_TO_COVER"})
 ATTACK_ACTIONS = frozenset({"ATTACK", "SKILL_1", "SKILL_2"})
 AREA_ATTACK_RADIUS = 2
 
+# 이 사거리까지는 시야를 묻지 않는다. 인접한 적은 벽 너머에 있을 수 없다.
+MELEE_REACH = 1
+
 # 아직 만들 수 없는 행동과 그 사유. 조용히 무시하지 않고 로그로 알린다.
-DEFERRED_ACTIONS = {"MOVE_TO_COVER": "Phase 2 W6 — 엄폐·LOS 미구현"}
+#
+# **W6 통합으로 비었다.** MOVE_TO_COVER 는 vision.py 가, SUMMON 은 summoning.py 가
+# 받았다. 목록과 record_deferred 를 남겨 두는 것은 다음에 같은 상황이 올 때 —
+# 규칙표가 부를 수는 있으나 아직 실행할 수 없는 행동이 생길 때 — 그것을 조용히
+# 무시하지 않기 위해서다. 도감(record_bestiary)도 이 표를 그대로 읽어 경고한다.
+DEFERRED_ACTIONS: dict[str, str] = {}
 
 
 @dataclass
@@ -31,6 +42,8 @@ class ActionExecutor:
     state: WorldState
     log: EventLog
     config: EngineConfig
+    # 예고를 등록할 판. 없으면 예고형 광역기가 즉발로 떨어진다 (단독 테스트용).
+    telegraphs: TelegraphBoard = field(default_factory=TelegraphBoard)
 
     def _record(self, actor_id: str, plan: PlannedAction, outcome: str, delta: int | None) -> None:
         """실행 결과를 남긴다.
@@ -68,6 +81,31 @@ class ActionExecutor:
             other.position for other in self.state.list_actors() if other is not entity
         )
 
+    def _build_grid(self) -> VisionGrid:
+        """시야 판정용 격자를 만든다.
+
+        WorldState 를 감싸는 이유는 파괴된 벽(tile_overrides)을 반영하기 위해서다.
+        RoomTemplate 을 넘기면 부수기 전 지형으로 판정한다.
+
+        Returns:
+            이번 순간의 지형을 읽는 격자.
+        """
+        return VisionGrid(self.state, self.state.room.width, self.state.room.height)
+
+    def _apply_cooldown(self, entity: Entity, action_id: str) -> None:
+        """성공한 행동에 쿨타임을 건다.
+
+        실패한 틱(사거리 밖·대상 없음)에는 걸지 않는다. 헛친 것까지 세면 규칙표를
+        고쳐도 발동 간격이 그대로여서 원인을 특정할 수 없다 (P1).
+
+        Args:
+            entity: 행위자.
+            action_id: 사용한 행동 id.
+        """
+        ticks = self.config.skill_cooldowns.get(action_id, 0)
+        if ticks > 0:
+            entity.cooldowns[action_id] = ticks
+
     def _find_tiles(self, kinds: set[int]) -> tuple[tuple[int, int], ...]:
         """방에서 해당 종류의 타일 좌표를 모은다.
 
@@ -103,8 +141,24 @@ class ActionExecutor:
         if step is None:
             self._record(entity.entity_id, plan, "길 막힘 — 틱 낭비", None)
             return
+        if step in occupied:
+            # 거리장은 목표 칸을 점유 여부와 무관하게 0 으로 깐다(APPROACH 의 목표가
+            # 곧 적이 선 칸이므로 그래야 길이 이어진다). 그 마지막 한 걸음까지 허용하면
+            # 두 개체가 한 칸에 겹쳐 적거리 0 이 나오고 RETREAT 이 영영 막힌다.
+            self._record(entity.entity_id, plan, f"다음 칸 점유 {step} — 제자리", None)
+            return
         entity.position = step
         self._record(entity.entity_id, plan, f"이동 {step}", None)
+
+    def record_deferred(self, entity: Entity, plan: PlannedAction) -> None:
+        """아직 실행할 수 없는 행동이라는 사실을 로그에 남긴다.
+
+        Args:
+            entity: 행위자.
+            plan: 실행하려던 계획.
+        """
+        reason = DEFERRED_ACTIONS.get(plan.action_id, "사유 미상")
+        self._record(entity.entity_id, plan, f"미구현 — {reason}", None)
 
     def apply_move(self, entity: Entity, plan: PlannedAction) -> None:
         """이동 계열 행동을 실행한다.
@@ -113,15 +167,17 @@ class ActionExecutor:
             entity: 이동할 엔티티.
             plan: 실행할 계획.
         """
-        reason = DEFERRED_ACTIONS.get(plan.action_id)
-        if reason is not None:
-            self._record(entity.entity_id, plan, f"미구현 — {reason}", None)
+        if plan.action_id in DEFERRED_ACTIONS:
+            self.record_deferred(entity, plan)
             return
         if plan.action_id == "MOVE_TO_EXIT":
             self._apply_step(entity, self._find_tiles({TILE_DOOR, TILE_STAIRS}), plan)
             return
         if plan.action_id == "MOVE_TO_HEAL":
             self._apply_step(entity, self._find_tiles({TILE_SPRING}), plan)
+            return
+        if plan.action_id == "MOVE_TO_COVER":
+            self._apply_cover_move(entity, plan)
             return
 
         target = self.state.entities.get(plan.target_id or "")
@@ -142,6 +198,26 @@ class ActionExecutor:
         )
         self._apply_step(entity, away, plan)
 
+    def _apply_cover_move(self, entity: Entity, plan: PlannedAction) -> None:
+        """모든 적의 시야에서 벗어나는 칸으로 한 칸 간다 (GDD §4.4).
+
+        목표는 벽 자체가 아니라 **그 뒤에 서면 시야가 끊기는 칸**이다. 벽으로 가면
+        등을 붙인 채 그대로 노출된다.
+
+        Args:
+            entity: 이동할 엔티티.
+            plan: 실행 중인 계획.
+        """
+        # list_hostiles 는 list_actors 순서라 이미 결정론적이다. 집합으로 만들지 않는다 (R5).
+        threats = tuple(other.position for other in self.state.list_hostiles(entity))
+        goals = find_cover_positions(self._build_grid(), threats, self._list_occupied(entity))
+        if entity.position in goals:
+            # 목표 거리가 0 이면 find_next_step 이 None 을 돌려줘 "길 막힘" 으로 찍힌다.
+            # 이미 숨어 있는 것과 갈 수 없는 것은 다른 사실이다 (P1).
+            self._record(entity.entity_id, plan, "이미 엄폐 중", None)
+            return
+        self._apply_step(entity, goals, plan)
+
     def apply_attack(self, entity: Entity, plan: PlannedAction) -> None:
         """단일 대상 공격을 실행한다.
 
@@ -158,7 +234,15 @@ class ActionExecutor:
         if distance > reach:
             self._record(entity.entity_id, plan, f"사거리 밖({distance} > {reach}) — 틱 낭비", None)
             return
+        # GDD §4.1 — 원거리 공격은 직선 시야가 통할 때만 닿는다. 이것이 없으면
+        # 엄폐가 아무것도 막지 못해 MOVE_TO_COVER 가 순손실이 된다.
+        if reach > MELEE_REACH and not check_line_of_sight(
+            self._build_grid(), entity.position, target.position
+        ):
+            self._record(entity.entity_id, plan, "시야 없음 — 틱 낭비", None)
+            return
         self._apply_strike(entity, target, plan)
+        self._apply_cooldown(entity, plan.action_id)
 
     def apply_area_attack(self, entity: Entity, plan: PlannedAction) -> None:
         """반경 안의 적 전체를 친다.
@@ -167,6 +251,10 @@ class ActionExecutor:
             entity: 공격자.
             plan: 실행할 계획.
         """
+        telegraph = self.config.enemy_stats.get(entity.kind_id, {}).get("telegraph")
+        if telegraph is not None:
+            self._register_telegraph(entity, plan, telegraph)
+            return
         victims = [
             other
             for other in self.state.list_hostiles(entity)
@@ -177,6 +265,29 @@ class ActionExecutor:
             return
         for victim in victims:
             self._apply_strike(entity, victim, plan)
+        self._apply_cooldown(entity, plan.action_id)
+
+    def _register_telegraph(self, entity: Entity, plan: PlannedAction, telegraph: dict) -> None:
+        """즉발 대신 예고를 건다 (GDD §4.2).
+
+        Args:
+            entity: 시전자.
+            plan: 실행 중인 계획.
+            telegraph: balance.json 의 그 종류 telegraph 절.
+        """
+        outcome = register_blast(self.state, self.telegraphs, entity, telegraph)
+        self._apply_cooldown(entity, plan.action_id)
+        self._record(entity.entity_id, plan, outcome, None)
+
+    def apply_summon(self, entity: Entity, plan: PlannedAction) -> None:
+        """잡몹을 부른다 (GDD §5). 주기는 쿨타임[SUMMON] 이 맡는다.
+
+        Args:
+            entity: 소환사.
+            plan: 실행할 계획.
+        """
+        _, outcome = resolve_summon(self.state, self.config, entity)
+        self._record(entity.entity_id, plan, outcome, None)
 
     def apply_potion(self, entity: Entity, plan: PlannedAction) -> None:
         """포션을 쓴다.
@@ -215,7 +326,13 @@ class ActionExecutor:
         entity.flags[name.strip()] = raw.strip().lower() != "false"
 
     def apply_damage(
-        self, target: Entity, amount: int, phase: str, expr: str, actor_id: str
+        self,
+        target: Entity,
+        amount: int,
+        phase: str,
+        expr: str,
+        actor_id: str,
+        rule: int | None = None,
     ) -> None:
         """피해를 입히고 로그를 남긴다.
 
@@ -225,6 +342,9 @@ class ActionExecutor:
             phase: 발생한 페이즈.
             expr: 로그에 남길 문자열.
             actor_id: 피해를 일으킨 주체. 지형 피해면 피격자 자신이다.
+            rule: 이 피해를 일으킨 규칙의 우선순위. 지형 피해처럼 규칙이 없으면 None.
+                이것을 빠뜨리면 규칙이 죽인 적이 DEFAULT 의 공으로 집계되어,
+                사후 분석이 "어느 규칙이 통했는가" 를 거짓으로 말한다 (P1).
         """
         target.hp = max(0, target.hp - amount)
         self.log.record(
@@ -239,6 +359,8 @@ class ActionExecutor:
                 ),
                 delta=-amount,
                 fired=True,
+                target_id=target.entity_id,
+                rule=rule,
             )
         )
 
@@ -269,4 +391,5 @@ class ActionExecutor:
             PHASE_ACT,
             f"{plan.action_id} @{target.entity_id}",
             actor_id=entity.entity_id,
+            rule=plan.rule_index,
         )

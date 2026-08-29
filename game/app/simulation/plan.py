@@ -9,30 +9,42 @@ from typing import Protocol
 
 from game.app.combat.damage import DamageRules
 from game.app.simulation.perception import PerceptionSnapshot
+from game.app.simulation.phases import (
+    OUTCOME_ONGOING,
+    OUTCOME_PLAYER_LOSS,
+    OUTCOME_PLAYER_WIN,
+    OUTCOME_TIMEOUT,
+    PHASE_ACT,
+    PHASE_CLEANUP,
+    PHASE_DECIDE,
+    PHASE_ORDER,
+    PHASE_PERCEPTION,
+    PHASE_RESOLVE,
+    PHASE_TELEGRAPH,
+    PHASE_UPKEEP,
+)
 from game.app.simulation.state import Entity, WorldState
 
-PHASE_UPKEEP = "UPKEEP"
-PHASE_TELEGRAPH = "TELEGRAPH"
-PHASE_PERCEPTION = "PERCEPTION"
-PHASE_DECIDE = "DECIDE"
-PHASE_ACT = "ACT"
-PHASE_RESOLVE = "RESOLVE"
-PHASE_CLEANUP = "CLEANUP"
-
-PHASE_ORDER = (
-    PHASE_UPKEEP,
-    PHASE_TELEGRAPH,
-    PHASE_PERCEPTION,
-    PHASE_DECIDE,
-    PHASE_ACT,
-    PHASE_RESOLVE,
-    PHASE_CLEANUP,
-)
-
-OUTCOME_ONGOING = "ONGOING"
-OUTCOME_PLAYER_WIN = "PLAYER_WIN"
-OUTCOME_PLAYER_LOSS = "PLAYER_LOSS"
-OUTCOME_TIMEOUT = "TIMEOUT"
+# 페이즈·판정 이름은 phases.py 가 정본이다. 여기서 다시 내보내는 것은 엔진 쪽
+# 호출자가 계획 타입과 페이즈 이름을 한 곳에서 받게 하기 위한 것이다.
+__all__ = [
+    "OUTCOME_ONGOING",
+    "OUTCOME_PLAYER_LOSS",
+    "OUTCOME_PLAYER_WIN",
+    "OUTCOME_TIMEOUT",
+    "PHASE_ACT",
+    "PHASE_CLEANUP",
+    "PHASE_DECIDE",
+    "PHASE_ORDER",
+    "PHASE_PERCEPTION",
+    "PHASE_RESOLVE",
+    "PHASE_TELEGRAPH",
+    "PHASE_UPKEEP",
+    "DecisionPolicy",
+    "EngineConfig",
+    "PlannedAction",
+    "PolicyFactory",
+]
 
 
 @dataclass(frozen=True)
@@ -58,6 +70,19 @@ class DecisionPolicy(Protocol):
         ...
 
 
+class PolicyFactory(Protocol):
+    """전투 도중 등장한 엔티티에 규칙표를 붙이는 것.
+
+    소환물과 추격자는 방을 세운 뒤에 생기므로 조립 시점의 일괄 배정이 닿지 않는다.
+    붙이지 않으면 그들만 폴백 정책(접근만 하고 공격하지 않음)으로 싸워, 도감이
+    보여주는 규칙표와 실제 행동이 갈린다 (GDD §5).
+    """
+
+    def build_policy(self, entity: Entity) -> DecisionPolicy | None:
+        """그 엔티티에 맞는 결정기를 만든다. 규칙표가 없으면 None."""
+        ...
+
+
 @dataclass(frozen=True)
 class EngineConfig:
     """엔진이 balance.json 에서 받아 쓰는 값들."""
@@ -69,9 +94,13 @@ class EngineConfig:
     # 이것이 없으면 balance.json 이 선언한 사거리가 조용히 무시되어, 원거리 스킬을
     # 전제한 규칙표(GDD §3.5 카이팅)가 매 틱 '사거리 밖'으로 헛돈다.
     skill_range: dict[str, int | None]
-    # kind_id -> 소환 규칙. 동결된 행동 12개에 SUMMON 이 없어 DSL 로 기술할 수
-    # 없으므로 엔티티 종류의 속성으로 다룬다. GDD §5 의 '완전히 동일한 DSL' 과
-    # 어긋나는 지점이며 도감이 이것을 따로 보여줘야 한다.
+    # 스킬 id -> 사용 후 걸리는 쿨타임(틱). ACT 가 성공한 행동에만 걸고 UPKEEP 이
+    # 매 틱 1씩 깎는다. 이것이 비어 있으면 `내 쿨타임[스킬] 완료` 가 영구히 참이 되어
+    # 그 항을 쓴 규칙이 사실상 한 항 짧아진다 — 조용히 틀리는 조건이 된다.
+    skill_cooldowns: dict[str, int] = field(default_factory=dict)
+    # kind_id -> 소환 규칙(주기·상한·소환물). 블록 목록 v3 이 SUMMON 을 행동으로
+    # 올린 뒤로 '언제 소환하는가' 는 규칙표가 정한다 — 여기 남는 것은 '무엇을 몇 마리
+    # 까지' 와, 쿨타임[SUMMON] 의 초기값이 되는 주기(every_ticks)다.
     summon_rules: dict[str, dict] = field(default_factory=dict)
     enemy_stats: dict[str, dict] = field(default_factory=dict)
     floor: int = 1

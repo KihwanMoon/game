@@ -6,10 +6,16 @@
 """
 
 import json
+import re
 
 import pytest
 
-from game.app.rules.rule_vm import build_rule_vm, count_cpu_usage, evaluate_condition
+from game.app.rules.rule_vm import (
+    RHS_STAT_READERS,
+    build_rule_vm,
+    count_cpu_usage,
+    evaluate_condition,
+)
 from game.app.rules.validator import validate_ruleset
 from game.app.services.run_battle import (
     assign_enemy_policies,
@@ -27,7 +33,16 @@ from game.config import (
 )
 from game.schemas.blocks import load_block_catalog
 from game.schemas.room import load_room_templates
-from game.schemas.ruleset import Condition, Rule, RuleSet, Term, load_rulesets
+from game.schemas.ruleset import (
+    Condition,
+    Rule,
+    RuleSet,
+    StatRef,
+    Term,
+    load_rulesets,
+    parse_rhs,
+    parse_term,
+)
 
 G0_COUNT = 3
 # 이 횟수 이상 시도하고도 전부 실패하면 우연이 아니라 구조 문제다.
@@ -87,6 +102,22 @@ def test_rules_are_sorted_by_priority(rulesets):
 
 def test_all_g0_rulesets_load(rulesets):
     assert len(rulesets) == G0_COUNT
+
+
+def test_enemy_rulesets_pass_validation(catalog, balance):
+    # 적도 플레이어와 같은 검증을 통과해야 한다 (GDD §5). 통과하지 못하는 규칙표를
+    # 도감이 보여주면 플레이어가 읽고 세운 카운터가 통하지 않는다.
+    by_ruleset = {kind["ruleset_id"]: kind for kind in balance["enemies"]}
+    for ruleset_id, ruleset in load_rulesets(ENEMY_RULESETS_PATH).items():
+        kind = by_ruleset[ruleset_id]
+        problems = validate_ruleset(ruleset, catalog, kind["cpu_budget"], kind["rule_slots"])
+        assert problems == [], f"{ruleset_id}: {problems}"
+
+
+def test_summoner_ruleset_plans_a_summon():
+    # v3 — 소환이 엔진 속성이 아니라 규칙표의 한 줄이어야 한다.
+    summoner = load_rulesets(ENEMY_RULESETS_PATH)["ai_summoner"]
+    assert "SUMMON" in {rule.action for rule in summoner.rules}
 
 
 def test_term_key_includes_the_parameter():
@@ -253,14 +284,32 @@ def test_expression_carries_measured_values(engine, catalog, balance):
 
 
 def test_deferred_block_evaluates_false_not_true(engine, catalog, balance):
-    # LOS 는 아직 없다. 0 으로 채워 참이 되면 구현되지 않은 기능이 동작하는 척한다.
+    # 값을 만들 수 없는 항은 거짓이다. 0 으로 채워 참이 되면 구현되지 않은 기능이
+    # 동작하는 척한다. W6 통합으로 LOS 는 값을 갖게 됐으므로, 지형 격자를 넘기지
+    # 않아 값이 만들어지지 않은 스냅샷으로 그 계약을 확인한다.
+    from game.app.simulation.perception import build_snapshot
+
+    kinds = {k["id"]: k["type"] for k in balance["enemies"]}
+    rules = (make_rule(1, "self_exposed_to_los", "==", True, "HOLD"),)
+    vm = build_rule_vm(RuleSet("x", 1, rules), catalog, kinds)
+    engine.state.tick = 1
+    player = engine.state.entities["player"]
+    blind = build_snapshot(engine.state, player, kinds)
+    assert blind.read("self_exposed_to_los") is None
+    plan = vm.plan_action(player, blind, engine.state)
+    assert plan.action_id == "APPROACH"
+
+
+def test_los_block_has_a_value_after_integration(engine, catalog, balance):
+    # 엔진이 격자를 넘기면 같은 항이 실제 값을 갖는다 (W6).
     kinds = {k["id"]: k["type"] for k in balance["enemies"]}
     rules = (make_rule(1, "self_exposed_to_los", "==", True, "HOLD"),)
     vm = build_rule_vm(RuleSet("x", 1, rules), catalog, kinds)
     engine.state.tick = 1
     snapshot = engine.build_perceptions()["player"]
+    assert isinstance(snapshot.read("self_exposed_to_los"), bool)
     plan = vm.plan_action(engine.state.entities["player"], snapshot, engine.state)
-    assert plan.action_id == "APPROACH"
+    assert plan.action_id == ("HOLD" if snapshot.read("self_exposed_to_los") else "APPROACH")
 
 
 def test_and_condition_needs_every_term(catalog):
@@ -427,3 +476,116 @@ def test_g0_rulesets_waste_no_ticks(rulesets, catalog, balance, rooms, target_ro
         if len(results) >= MIN_ATTEMPTS_TO_JUDGE and not any(results)
     ]
     assert dead_rules == [], f"{ruleset_id}: 규칙 {dead_rules} 가 한 번도 성공하지 못했다"
+
+
+# ── 블록 목록 v3 / F-2 (조건 우변에 스탯) ────────────────────────────────────
+
+
+def test_literal_rhs_still_parses_as_a_literal():
+    # 하위 호환 — 기존 규칙표 JSON 은 손대지 않고 그대로 돌아야 한다.
+    assert parse_rhs(3) == 3
+    assert parse_rhs(True) is True
+    assert parse_term({"lhs": "self_hp_percent", "cmp": "<", "rhs": 20}).rhs == 20
+
+
+def test_stat_rhs_parses_into_a_reference():
+    term = parse_term(
+        {
+            "lhs": "target_distance",
+            "lhs_param": "NEAREST",
+            "cmp": "<=",
+            "rhs": {"stat": "attack_range"},
+        }
+    )
+    assert term.rhs == StatRef("attack_range")
+
+
+def test_malformed_stat_rhs_is_rejected_at_parse_time():
+    # 조용히 통과시키면 그 항은 영영 거짓이 되고, 플레이어는 자기 논리를 의심한다 (P1).
+    with pytest.raises(ValueError, match="stat"):
+        parse_rhs({"stats": "attack_range"})
+    with pytest.raises(ValueError, match="우변"):
+        parse_rhs("attack_range")
+
+
+def test_stat_rhs_reads_the_actors_own_value(engine, catalog, balance):
+    # 플레이어 사거리는 1 이고 적은 멀리 있다. 우변이 스탯이어도 판정은 그대로다.
+    kinds = {k["id"]: k["type"] for k in balance["enemies"]}
+    rules = (
+        make_rule(
+            1, "target_distance", "<=", StatRef("attack_range"), "ATTACK", "NEAREST", "NEAREST"
+        ),
+        make_rule(2, "self_hp_percent", "<=", 100, "HOLD"),
+    )
+    vm = build_rule_vm(RuleSet("x", 1, rules), catalog, kinds)
+    engine.state.tick = 1
+    snapshot = engine.build_perceptions()["player"]
+    plan = vm.plan_action(engine.state.entities["player"], snapshot, engine.state)
+    assert plan.action_id == "HOLD"
+
+
+def test_stat_rhs_follows_the_stat_not_the_literal(engine, catalog, balance):
+    # F-2 의 요지 — 장비가 사거리를 바꾸면 규칙도 함께 바뀌어야 한다.
+    kinds = {k["id"]: k["type"] for k in balance["enemies"]}
+    rules = (
+        make_rule(
+            1, "target_distance", "<=", StatRef("attack_range"), "ATTACK", "NEAREST", "NEAREST"
+        ),
+    )
+    vm = build_rule_vm(RuleSet("x", 1, rules), catalog, kinds)
+    player = engine.state.entities["player"]
+    player.attack_range = 99
+    engine.state.tick = 1
+    snapshot = engine.build_perceptions()["player"]
+    plan = vm.plan_action(player, snapshot, engine.state)
+    assert plan.action_id == "ATTACK"
+    assert "사거리(99)" in plan.expr
+
+
+def test_stat_rhs_renders_both_measured_values(engine, catalog, balance):
+    # GDD §8.2 — `적거리(2) <= 사거리(3)` 형태여야 고칠 곳이 특정된다.
+    engine.state.tick = 1
+    snapshot = engine.build_perceptions()["player"]
+    condition = Condition(
+        op="SINGLE",
+        terms=(Term("target_distance", "<=", StatRef("attack_range"), "NEAREST"),),
+    )
+    _, expr = evaluate_condition(
+        condition, snapshot, None, catalog, actor=engine.state.entities["player"]
+    )
+    assert re.fullmatch(r"대상 거리\[NEAREST\]\(\d+\) <= 사거리\(1\)", expr)
+
+
+def test_unknown_stat_evaluates_false_not_true(engine, catalog, balance):
+    # 값을 만들 수 없는 우변은 거짓이다. 0 으로 채우면 없는 스탯이 동작하는 척한다.
+    kinds = {k["id"]: k["type"] for k in balance["enemies"]}
+    rules = (
+        make_rule(
+            1, "target_distance", "<=", StatRef("no_such_stat"), "ATTACK", "NEAREST", "NEAREST"
+        ),
+        make_rule(2, "self_hp_percent", "<=", 100, "HOLD"),
+    )
+    vm = build_rule_vm(RuleSet("x", 1, rules), catalog, kinds)
+    engine.state.tick = 1
+    snapshot = engine.build_perceptions()["player"]
+    plan = vm.plan_action(engine.state.entities["player"], snapshot, engine.state)
+    assert plan.action_id == "HOLD"
+
+
+def test_validator_rejects_an_unknown_stat(catalog):
+    rule = make_rule(1, "target_distance", "<=", StatRef("no_such_stat"), "HOLD", param="NEAREST")
+    problems = validate_ruleset(RuleSet("x", 1, (rule,)), catalog, 99, 5)
+    assert any("목록에 없는 스탯" in p for p in problems)
+
+
+def test_validator_rejects_a_stat_compared_with_a_boolean_block(catalog):
+    # `내 위치가 회복타일인가 == 사거리` 는 값이 나와도 뜻이 없다.
+    rule = make_rule(1, "self_on_heal_tile", "==", StatRef("attack_range"), "HOLD")
+    problems = validate_ruleset(RuleSet("x", 1, (rule,)), catalog, 99, 5)
+    assert any("비교할 수 없다" in p for p in problems)
+
+
+def test_stat_readers_cover_the_declared_list(catalog):
+    # blocks.json 이 허용 목록의 정본이다. VM 이 읽지 못하는 스탯이 목록에 있으면
+    # 그 스탯을 쓴 규칙이 검증은 통과하고 실행에서 조용히 거짓이 된다.
+    assert set(RHS_STAT_READERS) == set(catalog.rhs_stats)

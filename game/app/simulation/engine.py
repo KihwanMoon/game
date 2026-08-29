@@ -7,12 +7,16 @@ PERCEPTION 과 DECIDE 를 나누는 이유는 동시성 공정성이다. 모든 
 DECIDE 는 부작용을 내지 않고 계획만 돌려주며, 실제 변경은 ACT 부터다.
 
 행동을 실제로 옮기는 일은 actions.ActionExecutor 가 맡는다. 이 모듈은 순서만 책임진다.
+
+방 하나가 살아 있는 동안 유지되는 것 셋을 함께 든다 — 가시성 캐시(vision), 예고판
+(telegraphs), 압력 추적기(pressure). 앞의 둘은 방 단위이고 압력 추적기만 층 단위라
+바깥에서 받는다. 방마다 새로 만들면 GDD §7 의 '층 지연' 압력이 매 방 0 으로 돌아간다.
 """
 
 from dataclasses import dataclass, field
 
 from game.app.core.event_log import EventLog, LogEntry
-from game.app.grid.geometry import iter_steps
+from game.app.grid.vision import VisionCache, VisionGrid
 from game.app.simulation.actions import ATTACK_ACTIONS, MOVE_ACTIONS, ActionExecutor
 from game.app.simulation.perception import PerceptionSnapshot, build_snapshot
 from game.app.simulation.plan import (
@@ -21,13 +25,17 @@ from game.app.simulation.plan import (
     OUTCOME_PLAYER_WIN,
     OUTCOME_TIMEOUT,
     PHASE_DECIDE,
+    PHASE_TELEGRAPH,
     PHASE_UPKEEP,
     DecisionPolicy,
     EngineConfig,
     PlannedAction,
+    PolicyFactory,
 )
+from game.app.simulation.pressure import PressureTracker, apply_spring_drain, remove_drained_springs
 from game.app.simulation.state import FACTION_PLAYER, Entity, WorldState
-from game.schemas.room import TILE_LAVA, TILE_SPRING, WALKABLE_TILES
+from game.app.simulation.telegraph import Telegraph, TelegraphBoard
+from game.schemas.room import TILE_LAVA, TILE_SPRING
 
 LAVA_DAMAGE = 3
 SPRING_REGEN_PER_TICK = 2
@@ -45,11 +53,38 @@ class TickEngine:
     # 하나의 정책을 전 엔티티에 공유하면 적이 플레이어의 규칙표로 싸우게 되고,
     # 그 상태로 잰 승률은 아무 의미가 없다.
     policies: dict[str, DecisionPolicy] = field(default_factory=dict)
+    # 진행 중인 예고. 방 단위다 — 방을 나가면 남은 예고도 함께 사라진다.
+    telegraphs: TelegraphBoard = field(default_factory=TelegraphBoard)
+    # 어뷰징 차단 (GDD §7). **층 단위 객체라 바깥에서 받는다.**
+    pressure: PressureTracker = field(default_factory=PressureTracker)
+    # 전투 도중 등장한 엔티티(소환물·추격자)에 규칙표를 붙이는 공장.
+    policy_factory: PolicyFactory | None = None
+    vision: VisionCache = field(init=False)
+    actions: ActionExecutor = field(init=False)
 
-    @property
-    def actions(self) -> ActionExecutor:
-        """행동 실행기."""
-        return ActionExecutor(state=self.state, log=self.log, config=self.config)
+    def __post_init__(self) -> None:
+        """방 진입 시 한 번 하는 준비 — 가시성 맵 사전 계산 (TDD §5.4)."""
+        grid = VisionGrid(self.state, self.state.room.width, self.state.room.height)
+        self.vision = VisionCache(grid=grid)
+        self.actions = ActionExecutor(
+            state=self.state, log=self.log, config=self.config, telegraphs=self.telegraphs
+        )
+        self.register_newcomers()
+
+    def register_newcomers(self) -> None:
+        """아직 준비되지 않은 엔티티에 가시성 맵과 규칙표를 붙인다.
+
+        소환물과 추격자는 방을 세운 뒤에 생기므로 조립 시점의 일괄 배정이 닿지 않는다.
+        붙이지 않으면 그들만 폴백 정책으로 싸워 아무 압력도 되지 못한다.
+        """
+        for actor in self.state.list_actors():
+            if self.vision.read(actor.entity_id) is None:
+                self.vision.register(actor.entity_id, actor.position)
+            if actor.entity_id in self.policies or self.policy_factory is None:
+                continue
+            policy = self.policy_factory.build_policy(actor)
+            if policy is not None:
+                self.policies[actor.entity_id] = policy
 
     def get_policy(self, entity_id: str) -> DecisionPolicy:
         """그 엔티티의 결정기를 돌려준다.
@@ -63,7 +98,13 @@ class TickEngine:
         return self.policies.get(entity_id, self.policy)
 
     def run_upkeep(self) -> None:
-        """쿨타임·상태이상 감소, 회복, 타일 피해를 처리한다 (페이즈 1)."""
+        """압력·쿨타임·상태이상·회복·타일 피해를 처리한다 (페이즈 1).
+
+        압력을 엔티티 순회보다 **먼저** 건다. 그래야 그 틱에 등장한 추격자가
+        전투 중 판정(회복 감쇠)에 들어가고, 자신도 같은 틱의 층 보너스를 받는다.
+        """
+        self.pressure.run_upkeep(self.state, self.log)
+        self.register_newcomers()
         executor = self.actions
         in_combat = any(e.faction != FACTION_PLAYER for e in self.state.list_actors())
         for entity in self.state.list_actors():
@@ -77,84 +118,59 @@ class TickEngine:
                 )
             self._apply_regen(entity, in_combat=in_combat)
 
-    def run_summons(self) -> None:
-        """소환형이 주기마다 잡몹을 부른다 (GDD §5).
+    def run_telegraph(self) -> None:
+        """예고를 1틱 진행하고 만기된 것을 터뜨린다 (페이즈 2).
 
-        동결된 행동 12개에 SUMMON 이 없어 규칙표로 기술할 수 없다. 엔티티 종류의
-        속성으로 다루며, 그래서 도감이 이 주기를 따로 보여줘야 한다.
+        PERCEPTION 보다 앞이어야 한다. 카운트다운이 끝난 남은 틱을 그 틱의 인지
+        변수가 읽고 규칙표가 회피를 결정한다 — 뒤집으면 항상 1틱 늦게 인지한다.
         """
-        for summoner in self.state.list_actors():
-            rule = self.config.summon_rules.get(summoner.kind_id)
-            if rule is None or self.state.tick % rule["every_ticks"] != 0:
-                continue
-            alive = sum(
-                1 for other in self.state.list_actors() if other.summoner_id == summoner.entity_id
-            )
-            if alive >= rule["max_alive"]:
-                continue
-            self._create_minion(summoner, rule["spawns"])
+        for telegraph in self.telegraphs.run_countdown(self.state, self.log):
+            self._apply_self_destruct(telegraph)
+        # 셀렉터 CASTING 과 `대상이 시전 중인가` 가 읽는다. 정렬해 내려야
+        # 같은 시드가 같은 대상을 고른다 (R5).
+        self.state.casting_ids = tuple(
+            sorted({pending.caster_id for pending in self.telegraphs.list_active()})
+        )
 
-    def _create_minion(self, summoner: Entity, kind_id: str) -> None:
-        """소환사 옆 빈 칸에 잡몹을 놓는다.
+    def _apply_self_destruct(self, telegraph: Telegraph) -> None:
+        """자폭형 예고가 터졌으면 시전자도 함께 죽인다 (GDD §5).
+
+        예고판은 (WorldState, EventLog) 만 계약으로 갖고 종류 데이터를 모른다.
+        그래서 '누가 자폭형인가' 는 여기서 본다.
 
         Args:
-            summoner: 부른 쪽.
-            kind_id: 불러낼 종류 id.
+            telegraph: 이번 틱에 발동한 예고.
         """
-        occupied = {other.position for other in self.state.list_actors()}
-        free = [
-            pos
-            for pos in iter_steps(summoner.position)
-            if self.state.get_tile(*pos) in WALKABLE_TILES and pos not in occupied
-        ]
-        if not free:
+        caster = self.state.entities.get(telegraph.caster_id)
+        if caster is None or not caster.is_alive:
             return
-        stats = self.config.enemy_stats.get(kind_id)
-        if stats is None:
+        setting = self.config.enemy_stats.get(caster.kind_id, {}).get("telegraph") or {}
+        if not setting.get("self_destruct"):
             return
-        self.state.spawn_counter += 1
-        minion_id = f"{kind_id}_s{self.state.spawn_counter}"
-        self.state.entities[minion_id] = Entity(
-            entity_id=minion_id,
-            kind_id=kind_id,
-            faction=summoner.faction,
-            position=free[0],
-            hp=stats["hp_max"],
-            hp_max=stats["hp_max"],
-            attack=stats["attack"],
-            defense=stats["defense"],
-            attack_range=stats["attack_range"],
-            initiative=stats["initiative"],
-            regen_base=stats["regen_base"],
-            cpu_budget=stats["cpu_budget"],
-            summoner_id=summoner.entity_id,
+        self.actions.apply_damage(
+            caster, caster.hp, PHASE_TELEGRAPH, f"{telegraph.skill_id} 자폭", caster.entity_id
         )
-        self.log.record(
-            LogEntry(
-                tick=self.state.tick,
-                entity_id=summoner.entity_id,
-                phase=PHASE_UPKEEP,
-                expr=f"소환 주기 ({self.state.tick})",
-                outcome=f"{minion_id} 등장 {free[0]}",
-                fired=True,
-            )
-        )
-
-    def run_telegraph(self) -> None:
-        """예고 공격을 진행한다 (페이즈 2).
-
-        Phase 2 W6 산출물이다. 지금은 아무것도 하지 않지만 페이즈 자리는 비워 둔다 —
-        나중에 끼워 넣으면 그 앞뒤 페이즈의 순서 전제가 바뀐다.
-        """
 
     def build_perceptions(self) -> dict[str, PerceptionSnapshot]:
         """전 엔티티의 인지 변수를 이 시점에 고정한다 (페이즈 3).
 
+        가시성 맵을 먼저 갱신한다. refresh 는 좌표가 그대로면 이전 맵을 그대로
+        돌려주므로 실제 재계산은 이번 틱에 움직인 엔티티분만 일어난다 (TDD §5.4).
+
         Returns:
             entity_id 에서 스냅샷으로의 대응표.
         """
+        self.register_newcomers()
+        for actor in self.state.list_actors():
+            self.vision.refresh(actor.entity_id, actor.position)
         return {
-            entity.entity_id: build_snapshot(self.state, entity, self.config.kind_types)
+            entity.entity_id: build_snapshot(
+                self.state,
+                entity,
+                self.config.kind_types,
+                grid=self.vision.grid,
+                board=self.telegraphs,
+            )
             for entity in self.state.list_actors()
         }
 
@@ -206,21 +222,41 @@ class TickEngine:
             entity = self._get_live_entity(plan)
             if entity is None:
                 continue
-            if plan.action_id in ATTACK_ACTIONS:
-                executor.apply_attack(entity, plan)
-            elif plan.action_id == "AREA_ATTACK":
-                executor.apply_area_attack(entity, plan)
-            elif plan.action_id == "USE_POTION":
-                executor.apply_potion(entity, plan)
-            elif plan.action_id in {"HOLD", "SET_FLAG"}:
-                executor.apply_hold(entity, plan)
+            self._apply_settled(executor, entity, plan)
             executor.apply_flag(entity, plan)
 
+    def _apply_settled(self, executor: ActionExecutor, entity: Entity, plan: PlannedAction) -> None:
+        """이동이 끝난 뒤 하는 행동을 실행기에 넘긴다.
+
+        Args:
+            executor: 행동 실행기.
+            entity: 행위자.
+            plan: 실행할 계획.
+        """
+        if plan.action_id in ATTACK_ACTIONS:
+            executor.apply_attack(entity, plan)
+        elif plan.action_id == "AREA_ATTACK":
+            executor.apply_area_attack(entity, plan)
+        elif plan.action_id == "USE_POTION":
+            executor.apply_potion(entity, plan)
+        elif plan.action_id in {"HOLD", "SET_FLAG"}:
+            executor.apply_hold(entity, plan)
+        elif plan.action_id == "SUMMON":
+            # 이동 루프보다 뒤여야 소환 위치가 이번 틱의 이동 결과를 반영한다.
+            executor.apply_summon(entity, plan)
+
     def resolve_effects(self) -> None:
-        """사망 처리와 타일 상태 갱신 (페이즈 6)."""
-        for position, pool in list(self.state.spring_pools.items()):
-            if pool <= 0:
-                self.state.tile_overrides[position] = 0
+        """사망 정리와 타일 상태 갱신 (페이즈 6).
+
+        여기서 바뀌는 타일은 샘 → 바닥뿐이고 둘 다 시야를 막지 않으므로 가시성 맵을
+        다시 만들지 않는다. **파괴 가능 벽을 부수는 기능이 붙으면 그렇지 않다** —
+        refresh 는 좌표만 보므로, 그 틱에는 전원 register 를 다시 불러야 한다.
+        """
+        remove_drained_springs(self.state, self.log)
+        alive = {actor.entity_id for actor in self.state.list_actors()}
+        # 죽은 관측자의 낡은 맵이 남으면 노출 판정에 섞여 원인 추적이 어려워진다.
+        for entity_id in sorted(set(self.vision.maps) - alive):
+            self.vision.drop(entity_id)
 
     def run_cleanup(self) -> str:
         """승패를 판정한다 (페이즈 7).
@@ -245,7 +281,6 @@ class TickEngine:
         """
         self.state.tick += 1
         self.run_upkeep()
-        self.run_summons()
         self.run_telegraph()
         snapshots = self.build_perceptions()
         plans = self.plan_actions(snapshots)
@@ -296,9 +331,9 @@ class TickEngine:
         tile_regen = 0
         position = entity.position
         if self.state.get_tile(*position) == TILE_SPRING:
-            pool = self.state.spring_pools.get(position, 0)
-            tile_regen = min(SPRING_REGEN_PER_TICK, pool)
-            self.state.spring_pools[position] = pool - tile_regen
+            # 잔여량 항목이 없는 좌표에 0 을 써 넣지 않는다 — 써 넣으면 그 샘이
+            # 초기화되기도 전에 RESOLVE 의 소멸 대상이 된다.
+            tile_regen = apply_spring_drain(self.state, position, SPRING_REGEN_PER_TICK)
         # 전투 중 감쇠는 GDD §7 의 어뷰징 차단이다. 정수 연산이라 regen_base 1 은
         # 전투 중 0 이 된다 — 문서의 0.5 를 내림한 값이며 의도된 결과다.
         regen_pct = self.config.combat_regen_pct if in_combat else 100

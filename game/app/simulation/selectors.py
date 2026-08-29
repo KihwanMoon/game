@@ -62,8 +62,9 @@ def resolve_target(
     elif selector_id == SELECTOR_BOSS:
         hostiles = tuple(e for e in hostiles if kind_types.get(e.kind_id) == "BOSS")
     elif selector_id == SELECTOR_CASTING:
-        # 시전 판정은 텔레그래프에 딸려 있다 (Phase 2 W6). 그때까지 아무도 고르지 못한다.
-        hostiles = ()
+        # 시전 판정은 예고판이 답한다. 예고판은 엔진이 들고 있으므로 TELEGRAPH
+        # 페이즈가 정렬해 내려 준 WorldState.casting_ids 를 읽는다 (W6 통합).
+        hostiles = tuple(e for e in hostiles if e.entity_id in state.casting_ids)
 
     if not hostiles:
         return None

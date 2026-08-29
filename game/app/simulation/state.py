@@ -60,6 +60,10 @@ class WorldState:
     spawn_counter: int = 0
     tile_overrides: dict[tuple[int, int], int] = field(default_factory=dict)
     spring_pools: dict[tuple[int, int], int] = field(default_factory=dict)
+    # 이번 틱에 예고를 걸어 둔 시전자들. TELEGRAPH 페이즈가 정렬해 채운다.
+    # 셀렉터 CASTING 과 인지 변수 `대상이 시전 중인가` 가 이 값을 읽는다 — 예고판을
+    # 엔진이 들고 있어 selectors·rule_vm 이 닿지 못하므로 세계 상태로 내린다.
+    casting_ids: tuple[str, ...] = ()
 
     def get_tile(self, x: int, y: int) -> int:
         """좌표의 현재 타일 ID. 파괴된 벽 등 변경분을 반영한다.

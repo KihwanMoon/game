@@ -207,3 +207,43 @@ def test_rule_stats_expose_the_broken_rule(parts):
 
     stats = {s.label: s for s in build_rule_stats(engine.log, "player")}
     assert stats["[2]"].fired > stats["[3]"].fired * 5, "후퇴 편중이 드러나야 한다"
+
+
+def test_damage_is_attributed_to_the_rule_that_caused_it(parts):
+    # 규칙이 죽인 적이 DEFAULT 의 공으로 집계되면 사후 분석이 "어느 규칙이 통했는가" 를
+    # 거짓으로 말한다. 디버깅 화면이 이 게임의 메인 UI 이므로(GDD §8) 치명적이다.
+    from game.app.rules.rule_vm import build_rule_vm
+    from game.app.services.run_battle import assign_enemy_policies, build_engine, run_battle
+
+    engine = build_engine(parts["chain"][2], parts["balance"], seed=12345)
+    engine.policies["player"] = build_rule_vm(
+        parts["player"]["g0_kite"], parts["catalog"], engine.config.kind_types
+    )
+    assign_enemy_policies(engine, parts["balance"], parts["catalog"], parts["enemy"])
+    run_battle(engine)
+
+    strikes = [
+        entry
+        for entry in engine.log.entries
+        if entry.entity_id == "player" and entry.delta is not None and entry.delta < 0
+    ]
+    assert strikes, "플레이어가 한 번도 때리지 않았다"
+    attributed = [entry for entry in strikes if entry.rule is not None]
+    assert attributed, "모든 피해가 DEFAULT 로 집계됐다 — 규칙 귀속이 끊겼다"
+
+
+def test_rule_stats_do_not_credit_default_for_rule_work(parts):
+    # 발동보다 성공이 많으면 다른 규칙의 성과가 흘러들어온 것이다.
+    from game.app.rules.rule_vm import build_rule_vm
+    from game.app.services.analyze_battle import build_rule_stats
+    from game.app.services.run_battle import assign_enemy_policies, build_engine, run_battle
+
+    engine = build_engine(parts["chain"][2], parts["balance"], seed=12345)
+    engine.policies["player"] = build_rule_vm(
+        parts["player"]["g0_kite"], parts["catalog"], engine.config.kind_types
+    )
+    assign_enemy_policies(engine, parts["balance"], parts["catalog"], parts["enemy"])
+    run_battle(engine)
+
+    for stat in build_rule_stats(engine.log, "player"):
+        assert stat.acted + stat.wasted <= stat.fired, f"{stat.label} 성적이 발동 횟수를 넘는다"

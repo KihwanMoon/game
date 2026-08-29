@@ -24,6 +24,10 @@ class LogEntry:
     rule: int | None = None
     delta: int | None = None
     fired: bool = False
+    # 피해를 **받은** 쪽. entity_id 는 행위자라 지형 피해가 아닌 한 둘이 다르다.
+    # 피해 히트맵(GDD §8.3)이 "어느 칸에서 맞았는가"를 세려면 피격자를 알아야 하는데,
+    # outcome 문자열에서 되뽑으면 표시 문구를 고칠 때마다 집계가 조용히 틀린다.
+    target_id: str | None = None
 
 
 @dataclass

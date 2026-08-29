@@ -4,20 +4,80 @@
 오해한다. 무엇이 왜 거부됐는지 문자열로 돌려주는 이유가 그것이다 (P1).
 """
 
-from game.schemas.blocks import BlockCatalog
+from game.schemas.blocks import BlockCatalog, PerceptionBlock
 from game.schemas.ruleset import (
     COMPARISONS,
     CONDITION_OPS,
     MAX_TERMS,
     Rule,
     RuleSet,
+    StatRef,
+    Term,
 )
 
 CPU_COST_BY_TERM_COUNT = {1: 1, 2: 2, 3: 4}
 
+# 스탯 우변은 수치 비교다. bool 인지 변수와 견주면 `내 상태이상 == 사거리` 같은 항이
+# 되어 뜻이 없다 — 값이 나오는데도 영영 거짓인 규칙이 만들어진다.
+NUMERIC_RETURN = "int"
+
+
+def _check_term_rhs(term: Term, block: PerceptionBlock, catalog: BlockCatalog, label: str) -> str:
+    """조건 항의 우변이 성립하는지 본다 (F-2).
+
+    Args:
+        term: 검사할 항.
+        block: 좌변 인지 변수.
+        catalog: 블록 카탈로그. 허용 스탯의 정본이다.
+        label: 메시지에 붙일 규칙 표시.
+
+    Returns:
+        위반 메시지. 성립하면 빈 문자열.
+    """
+    if not isinstance(term.rhs, StatRef):
+        return ""
+    if term.rhs.stat not in catalog.rhs_stats:
+        return f"{label} 목록에 없는 스탯 {term.rhs.stat}"
+    if block.returns != NUMERIC_RETURN:
+        return f"{label} {term.lhs} 는 {block.returns} 라서 스탯과 비교할 수 없다"
+    return ""
+
+
+def _check_term(
+    term: Term, catalog: BlockCatalog, unlocked: frozenset[str], label: str
+) -> list[str]:
+    """조건 항 하나가 목록 안에 있고 인자·우변이 맞는지 본다.
+
+    Args:
+        term: 검사할 항.
+        catalog: 동결된 블록 카탈로그.
+        unlocked: 해금된 블록 id 집합.
+        label: 메시지에 붙일 규칙 표시.
+
+    Returns:
+        위반 메시지 목록.
+    """
+    problems: list[str] = []
+    if term.comparison not in COMPARISONS:
+        problems.append(f"{label} 알 수 없는 비교 연산자 {term.comparison}")
+    block = catalog.perceptions.get(term.lhs)
+    if block is None:
+        problems.append(f"{label} 목록에 없는 인지 변수 {term.lhs}")
+        return problems
+    if term.lhs not in unlocked:
+        problems.append(f"{label} 아직 해금되지 않은 인지 변수 {term.lhs}")
+    if block.param is None and term.lhs_param is not None:
+        problems.append(f"{label} {term.lhs} 는 인자를 받지 않는다")
+    elif block.param is not None and term.lhs_param not in block.param.values:
+        problems.append(f"{label} {term.lhs} 의 인자 {term.lhs_param} 는 허용되지 않는다")
+    rhs_problem = _check_term_rhs(term, block, catalog, label)
+    if rhs_problem:
+        problems.append(rhs_problem)
+    return problems
+
 
 def _check_terms(rule: Rule, catalog: BlockCatalog, unlocked: frozenset[str]) -> list[str]:
-    """조건 항들이 동결 목록 안에 있고 인자가 맞는지 본다.
+    """조건식 전체가 동결 목록 안에 있는지 본다.
 
     Args:
         rule: 검사할 규칙.
@@ -35,18 +95,7 @@ def _check_terms(rule: Rule, catalog: BlockCatalog, unlocked: frozenset[str]) ->
         problems.append(f"{label} 조건 항이 1~{MAX_TERMS}개를 벗어났다")
 
     for term in rule.conditions.terms:
-        if term.comparison not in COMPARISONS:
-            problems.append(f"{label} 알 수 없는 비교 연산자 {term.comparison}")
-        block = catalog.perceptions.get(term.lhs)
-        if block is None:
-            problems.append(f"{label} 목록에 없는 인지 변수 {term.lhs}")
-            continue
-        if term.lhs not in unlocked:
-            problems.append(f"{label} 아직 해금되지 않은 인지 변수 {term.lhs}")
-        if block.param is None and term.lhs_param is not None:
-            problems.append(f"{label} {term.lhs} 는 인자를 받지 않는다")
-        elif block.param is not None and term.lhs_param not in block.param.values:
-            problems.append(f"{label} {term.lhs} 의 인자 {term.lhs_param} 는 허용되지 않는다")
+        problems.extend(_check_term(term, catalog, unlocked, label))
     return problems
 
 

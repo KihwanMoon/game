@@ -4,6 +4,11 @@
 
 인자를 받는 인지 변수(쿨타임[스킬]·플래그[A~D]·적유형존재[유형])를 담을 자리가
 TDD §3.3 의 term 형식에 없어 `lhs_param` 을 더했다. Phase 0 F-6 으로 보고된 확장이다.
+
+우변(`rhs`)은 리터럴이거나 자기 스탯 참조다 (F-2). 스탯 참조의 표현은
+`{"rhs": {"stat": "attack_range"}}` 이며, 객체 한 겹으로 감싼 이유는 언어 중립성이다 —
+Phase 3 의 TypeScript 코어가 `typeof rhs === "object"` 만으로 분기할 수 있고,
+문자열 우변("attack_range")과 달리 뒷날 문자열 리터럴을 더해도 뜻이 겹치지 않는다.
 """
 
 import json
@@ -20,6 +25,17 @@ COMPARISONS = frozenset({"<", "<=", ">", ">=", "==", "!="})
 # GDD §3.1 — 조건식은 최대 3항이다. §3.6 의 CPU 비용표도 3항까지만 값을 갖는다.
 MAX_TERMS = 3
 
+# 스탯 참조 우변을 알아보는 키. 허용 스탯의 닫힌 목록은 blocks.json 의 rhs_stats 이며,
+# 여기서는 형식만 정한다 — 목록은 데이터, 형식은 계약이다.
+RHS_STAT_KEY = "stat"
+
+
+@dataclass(frozen=True)
+class StatRef:
+    """조건 우변이 가리키는 자기 스탯 (F-2). `사거리` 처럼 값이 런타임에 정해진다."""
+
+    stat: str
+
 
 @dataclass(frozen=True)
 class Term:
@@ -27,7 +43,7 @@ class Term:
 
     lhs: str
     comparison: str
-    rhs: int | bool
+    rhs: int | bool | StatRef
     lhs_param: str | None = None
 
     @property
@@ -65,6 +81,29 @@ class RuleSet:
     rules: tuple[Rule, ...]
 
 
+def parse_rhs(raw: object) -> int | bool | StatRef:
+    """조건 항의 우변을 읽는다. 리터럴이거나 스탯 참조다 (F-2).
+
+    Args:
+        raw: term 의 rhs 절. 정수·불리언 리터럴이거나 `{"stat": ...}` 객체.
+
+    Returns:
+        리터럴 그대로, 또는 스탯 참조.
+
+    Raises:
+        ValueError: 객체 우변에 stat 문자열이 없거나 우변 형식을 알 수 없는 경우.
+    """
+    if isinstance(raw, dict):
+        stat = raw.get(RHS_STAT_KEY)
+        if not isinstance(stat, str):
+            raise ValueError(f"우변 객체에는 {RHS_STAT_KEY} 문자열이 있어야 한다: {raw}")
+        return StatRef(stat=stat)
+    # bool 은 int 의 하위형이라 이 검사 하나로 둘 다 걸린다.
+    if isinstance(raw, int):
+        return raw
+    raise ValueError(f"우변은 정수·불리언이거나 스탯 참조여야 한다: {raw}")
+
+
 def parse_term(raw: dict) -> Term:
     """원시 딕셔너리에서 조건 항을 만든다.
 
@@ -77,7 +116,7 @@ def parse_term(raw: dict) -> Term:
     return Term(
         lhs=raw["lhs"],
         comparison=raw["cmp"],
-        rhs=raw["rhs"],
+        rhs=parse_rhs(raw["rhs"]),
         lhs_param=raw.get("lhs_param"),
     )
 

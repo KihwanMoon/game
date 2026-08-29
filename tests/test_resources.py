@@ -8,15 +8,18 @@ import json
 
 import pytest
 
+from game.app.rules.validator import validate_ruleset
 from game.config import (
     BALANCE_PATH,
     BLOCKS_PATH,
+    ENEMY_RULESETS_PATH,
     G0_RULESETS_PATH,
     ROOM_TEMPLATES_PATH,
 )
 from game.schemas.blocks import (
     ACTION_COUNT,
     PERCEPTION_COUNT,
+    RHS_STAT_COUNT,
     SELECTOR_COUNT,
     load_block_catalog,
 )
@@ -27,11 +30,15 @@ from game.schemas.room import (
     check_room_reachability,
     load_room_templates,
 )
+from game.schemas.ruleset import load_rulesets
 
 ROOM_TEMPLATE_COUNT = 5
 ROOM_WIDTH = 12
 ROOM_HEIGHT = 9
-ENEMY_KIND_COUNT = 3
+ENEMY_KIND_COUNT = 8
+ENEMY_CPU_BUDGET = 4
+ENEMY_RULE_SLOTS = 3
+BOMBER_LEAD_TICKS = 2
 
 
 @pytest.fixture(scope="module")
@@ -53,10 +60,38 @@ def balance():
 
 
 def test_block_counts_match_gdd_scope(catalog):
-    # GDD §9 가 정한 인지 18 / 행동 12 / 셀렉터 7. 이후 변경 금지 대상이다.
+    # 인지 18 / 행동 13 / 셀렉터 7. 행동이 13 인 것은 v3 의 SUMMON 추가다.
     assert len(catalog.perceptions) == PERCEPTION_COUNT
     assert len(catalog.actions) == ACTION_COUNT
     assert len(catalog.selectors) == SELECTOR_COUNT
+    assert len(catalog.rhs_stats) == RHS_STAT_COUNT
+
+
+def test_summon_is_a_first_class_action(catalog):
+    # GDD §5 — 몬스터도 플레이어와 완전히 동일한 DSL 로 기술한다. 소환만 밸런스
+    # 속성으로 빠져 있으면 도감이 소환 주기를 규칙표 밖에서 따로 보여줘야 한다.
+    summon = catalog.actions["SUMMON"]
+    assert summon.category == "control"
+    assert summon.targeted is False
+
+
+def test_cooldown_block_can_address_summon(catalog):
+    # 소환 주기를 규칙표가 물을 수 없으면 SUMMON 규칙이 매 틱 참이 된다.
+    assert "SUMMON" in catalog.perceptions["self_cooldown_ready"].param.values
+
+
+def test_rhs_stats_are_a_closed_list(catalog):
+    # F-2 — 열어 두면 오타 난 스탯 이름이 조용히 거짓이 되어 규칙이 영영 안 뜬다.
+    assert set(catalog.rhs_stats) == {
+        "attack_range",
+        "attack",
+        "defense",
+        "hp_max",
+        "cpu_budget",
+        "potions",
+    }
+    for stat in catalog.rhs_stats.values():
+        assert stat.label_ko, f"{stat.block_id} 의 한글 라벨이 비어 있다"
 
 
 def test_perception_categories_cover_four_groups(catalog):
@@ -92,6 +127,24 @@ def test_parameterized_perceptions_declare_values(catalog):
 def test_flag_block_offers_exactly_four_slots(catalog):
     # GDD §3.5 — FLAG_A ~ FLAG_D 네 개.
     assert catalog.perceptions["flag_state"].param.values == ("A", "B", "C", "D")
+
+
+def test_summoner_ruleset_declares_the_summon_action():
+    # 소환이 규칙표 밖(balance.json 의 kind 속성)에 있으면 도감이 그것만 따로
+    # 보여줘야 한다 — GDD §5 가 없애려던 바로 그 예외다.
+    raw = json.loads(ENEMY_RULESETS_PATH.read_text(encoding="utf-8"))
+    summoner = next(rs for rs in raw["rulesets"] if rs["ruleset_id"] == "ai_summoner")
+    assert "SUMMON" in {rule["action"] for rule in summoner["rules"]}
+
+
+def test_summon_rule_is_not_unconditionally_true():
+    # 무조건 참인 SUMMON 규칙은 아래 규칙과 DEFAULT 를 모두 가려 소환사를 제자리에
+    # 굳힌다. 조건에 상황 항이 하나는 있어야 한다.
+    raw = json.loads(ENEMY_RULESETS_PATH.read_text(encoding="utf-8"))
+    summoner = next(rs for rs in raw["rulesets"] if rs["ruleset_id"] == "ai_summoner")
+    rule = next(r for r in summoner["rules"] if r["action"] == "SUMMON")
+    lhs_set = {term["lhs"] for term in rule["conditions"]["terms"]}
+    assert lhs_set - {"self_cooldown_ready"}, "쿨타임만으로는 상황을 가리지 못한다"
 
 
 def test_targeted_actions_are_attack_or_move(catalog):
@@ -169,10 +222,23 @@ def test_template_ids_are_unique(templates):
 # ── 밸런스 ───────────────────────────────────────────────────────────────────
 
 
-def test_phase1_ships_three_enemy_kinds(balance):
-    # 로드맵 Phase 1 W3 — 적 3종(돌진/사격/소환).
+def test_w7_ships_eight_enemy_kinds(balance):
+    # GDD §9 콘텐츠 범위 — 적 8종. Phase 1 W3 의 3종에 W7 이 5종을
+    # 더했다. 보스 3종은 페이즈별 규칙표 교체가 필요해 Phase 4 다.
     assert len(balance["enemies"]) == ENEMY_KIND_COUNT
-    assert {e["type"] for e in balance["enemies"]} == {"MELEE", "RANGED", "SUMMONER"}
+    ids = [e["id"] for e in balance["enemies"]]
+    assert len(ids) == len(set(ids))
+
+
+def test_enemy_types_cover_the_gdd_roster(balance):
+    # GDD §5 의 6유형에서 보스를 뺀 다섯이 전부 있어야 한다.
+    assert {e["type"] for e in balance["enemies"]} == {
+        "MELEE",
+        "RANGED",
+        "SUMMONER",
+        "BOMBER",
+        "HEALER",
+    }
 
 
 def test_cpu_cost_table_matches_gdd(balance):
@@ -303,3 +369,168 @@ def test_every_spawn_kind_exists_in_balance(templates, balance):
     for template in templates:
         for spawn in template.enemy_spawns:
             assert spawn.kind in known, f"{template.template_id}: {spawn.kind}"
+
+
+# ── 적 규칙표 (W7 적 5종) ────────────────────────────────────────────────────
+
+
+@pytest.fixture(scope="module")
+def enemy_raw():
+    return json.loads(ENEMY_RULESETS_PATH.read_text(encoding="utf-8"))["rulesets"]
+
+
+@pytest.fixture(scope="module")
+def enemy_rulesets():
+    return load_rulesets(ENEMY_RULESETS_PATH)
+
+
+def test_every_enemy_declares_a_ruleset(balance, enemy_rulesets):
+    # 규칙표가 없는 적은 폴백 정책으로 싸운다. 그러면 도감이 보여줄
+    # 표와 실제 행동이 달라져 카운터 설계가 통하지 않는다 (GDD §5).
+    assert {e["ruleset_id"] for e in balance["enemies"]} == set(enemy_rulesets)
+
+
+def test_enemy_rulesets_pass_validation(balance, catalog, enemy_rulesets):
+    # W7 의 다섯도 기존 셋과 같은 검증을 통과해야 한다.
+    for kind in balance["enemies"]:
+        ruleset = enemy_rulesets[kind["ruleset_id"]]
+        problems = validate_ruleset(ruleset, catalog, kind["cpu_budget"], kind["rule_slots"])
+        assert problems == [], f"{kind['id']}: {problems}"
+
+
+def test_enemy_budgets_are_uniform(balance):
+    # 적의 제약은 CPU 4 / 슬롯 3 이다. 종류마다 다르면 도감의 예산
+    # 표시가 같은 자리에서 다른 뜻을 갖는다.
+    for kind in balance["enemies"]:
+        assert kind["cpu_budget"] == ENEMY_CPU_BUDGET, kind["id"]
+        assert kind["rule_slots"] == ENEMY_RULE_SLOTS, kind["id"]
+
+
+def test_enemy_cpu_totals_match_the_rules(enemy_raw):
+    # 손으로 적은 cpu_total 이 어긋나면 예산 표시가 거짓말이 된다.
+    for item in enemy_raw:
+        got = sum(rule["cpu_cost"] for rule in item["rules"])
+        assert got == item["cpu_total"], item["ruleset_id"]
+
+
+def test_enemy_rule_costs_follow_the_term_table(enemy_raw):
+    # GDD §3.6 — 비용은 조건 항 수로 정해진다.
+    for item in enemy_raw:
+        for rule in item["rules"]:
+            want = CPU_COST_BY_TERMS[len(rule["conditions"]["terms"])]
+            assert rule["cpu_cost"] == want, f"{item['ruleset_id']}[{rule['priority']}]"
+
+
+def test_enemy_priorities_are_dense_and_ordered(enemy_raw):
+    # 우선순위는 위에서부터 평가된다. 비거나 뒤섞이면 도감을 읽는
+    # 사람이 순서를 오해한다.
+    for item in enemy_raw:
+        got = [rule["priority"] for rule in item["rules"]]
+        assert got == list(range(1, len(got) + 1)), item["ruleset_id"]
+
+
+def test_enemy_rules_only_use_frozen_blocks(enemy_raw, catalog):
+    # 동결 목록 밖의 블록을 쓰면 그 규칙표는 실행할 수 없다.
+    for item in enemy_raw:
+        for rule in item["rules"]:
+            assert rule["action"] in catalog.actions
+            if rule["target"] is not None:
+                assert rule["target"] in catalog.selectors
+            for term in rule["conditions"]["terms"]:
+                block = catalog.perceptions[term["lhs"]]
+                if block.param is None:
+                    assert "lhs_param" not in term
+                else:
+                    assert term["lhs_param"] in block.param.values
+
+
+def test_enemy_head_rules_are_situational(enemy_raw):
+    # 첫 규칙이 상황과 무관하게 참이면 아래 규칙도 DEFAULT 도 영영
+    # 평가되지 않아 그 적이 한 행동에 굳는다 (ai_summoner 의 교훈).
+    situational = {"target_distance", "self_hp_percent", "visible_enemy_count"}
+    for item in enemy_raw:
+        head = item["rules"][0]
+        lhs = {term["lhs"] for term in head["conditions"]["terms"]}
+        assert lhs & situational, item["ruleset_id"]
+
+
+def test_bomber_declares_a_two_tick_telegraph(balance):
+    # GDD §5 자폭형 — 접근 후 2틱 예고 뒤 폭발. 예고가 없으면
+    # `위험 예고 타일 위에 있는가` 는 영영 거짓인 죽은 블록이 된다.
+    bomber = next(e for e in balance["enemies"] if e["type"] == "BOMBER")
+    telegraph = bomber["telegraph"]
+    assert telegraph["lead_ticks"] == BOMBER_LEAD_TICKS
+    assert telegraph["damage"] > 0
+    assert telegraph["radius"] >= 1
+
+
+def test_bomber_telegraph_is_cancelled_by_killing_it(balance):
+    # GDD §5 는 자폭형의 답을 둘로 적었다 — 예고 타일 회피와 사거리
+    # 밖 처리. 취소되지 않으면 두 번째 답이 사라진다.
+    bomber = next(e for e in balance["enemies"] if e["type"] == "BOMBER")
+    assert bomber["telegraph"]["cancel_on_death"] is True
+
+
+def test_bomber_telegraph_skill_is_a_frozen_action(balance, catalog):
+    # 예고가 부르는 스킬도 동결 목록 안이어야 도감이 그것을 보여준다.
+    bomber = next(e for e in balance["enemies"] if e["type"] == "BOMBER")
+    assert bomber["telegraph"]["skill"] in catalog.actions
+
+
+def test_healer_can_spend_what_its_rules_use(balance, enemy_rulesets):
+    # 규칙표가 USE_POTION 을 쓰는데 포션이 0 이면 매 틱 헛돈다.
+    healer = next(e for e in balance["enemies"] if e["type"] == "HEALER")
+    actions = {rule.action for rule in enemy_rulesets[healer["ruleset_id"]].rules}
+    assert "USE_POTION" in actions
+    assert healer["potions"] > 0
+
+
+def test_healer_heal_rule_checks_remaining_potions(enemy_raw):
+    # 남은 포션을 묻지 않으면 다 쓴 뒤에도 규칙이 참이라 사제가
+    # 제자리에 굳는다 — SUMMON 이 이미 겪은 함정이다.
+    mender = next(rs for rs in enemy_raw if rs["ruleset_id"] == "ai_mender")
+    rule = next(r for r in mender["rules"] if r["action"] == "USE_POTION")
+    lhs = {term["lhs"] for term in rule["conditions"]["terms"]}
+    assert "self_potion_count" in lhs
+
+
+def test_healer_type_is_not_addressable_by_frozen_blocks(catalog, balance):
+    # 알려진 공백을 못박는다. 동결된 `적 유형 존재` 의 값에 HEALER 가
+    # 없고 TYPE_HEALER 셀렉터도 없다 — 치유형을 유형으로 지목할 방법이
+    # DSL 에 없다. 블록 목록 v4 가 열리면 이 테스트를 지운다.
+    declared = {e["type"] for e in balance["enemies"]}
+    assert declared - set(catalog.perceptions["enemy_type_present"].param.values) == {"HEALER"}
+    assert "TYPE_HEALER" not in catalog.selectors
+
+
+def test_summoners_call_kinds_that_exist(balance):
+    # 없는 종류를 부르면 소환이 조용히 실패한다.
+    known = {e["id"] for e in balance["enemies"]}
+    summoners = [e for e in balance["enemies"] if "summon" in e]
+    assert len(summoners) == 2
+    for kind in summoners:
+        assert kind["summon"]["spawns"] in known, kind["id"]
+        assert kind["summon"]["max_alive"] > 0, kind["id"]
+        assert kind["summon"]["every_ticks"] > 0, kind["id"]
+
+
+def test_elite_variants_outclass_their_base(balance):
+    # 층 2~3 강화판이 원본보다 약하면 층 진행이 난이도가 아니라
+    # 이름만 바뀌는 일이 된다.
+    by_id = {e["id"]: e for e in balance["enemies"]}
+    pairs = (
+        ("veteran_rusher", "goblin_rusher"),
+        ("longbow_archer", "goblin_archer"),
+        ("arch_summoner", "goblin_summoner"),
+    )
+    for elite, base in pairs:
+        assert by_id[elite]["hp_max"] > by_id[base]["hp_max"], elite
+        assert by_id[elite]["attack"] > by_id[base]["attack"], elite
+
+
+def test_longbow_outranges_the_player_ranged_skill(balance):
+    # 장궁병의 사거리가 플레이어의 사격(SKILL_2)보다 길어야 '같은
+    # 사거리 싸움' 이 아니라 엄폐·급속 접근을 요구하게 된다.
+    longbow = next(e for e in balance["enemies"] if e["id"] == "longbow_archer")
+    skill_2 = next(s for s in balance["skills"] if s["id"] == "SKILL_2")
+    assert longbow["attack_range"] > skill_2["range"]

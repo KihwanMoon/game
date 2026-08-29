@@ -133,10 +133,24 @@ def test_perception_snapshot_is_shared_within_a_tick(templates, balance):
 
 def test_deferred_blocks_read_as_none(templates, balance):
     # 아직 만들 수 없는 값은 0 이 아니라 None 이어야 "없음"과 "0"이 구분된다.
+    # CPU 여유는 규칙표를 알아야 계산되므로 스냅샷이 아니라 RuleVM 이 답한다.
     engine = build_engine(templates["open_field"], balance, seed=7)
     snapshot = engine.build_perceptions()["player"]
-    assert snapshot.read("self_exposed_to_los") is None
     assert snapshot.read("self_cpu_headroom") is None
+
+
+def test_vision_blocks_have_values_after_integration(templates, balance):
+    # W6 통합 — LOS·엄폐·예고가 실제 값을 갖는다. 값이 생겼으면 미구현 표에서도
+    # 빠져야 두 곳이 갈라지지 않는다.
+    from game.app.simulation.perception import DEFERRED_BLOCKS
+
+    engine = build_engine(templates["pillars"], balance, seed=7)
+    snapshot = engine.build_perceptions()["player"]
+    assert isinstance(snapshot.read("self_exposed_to_los"), bool)
+    assert isinstance(snapshot.read("cover_wall_distance"), int)
+    assert snapshot.read("self_on_hazard_telegraph") is False
+    assert "self_exposed_to_los" not in DEFERRED_BLOCKS
+    assert "self_on_hazard_telegraph" not in DEFERRED_BLOCKS
 
 
 def test_parameterized_perceptions_are_addressable(templates, balance):

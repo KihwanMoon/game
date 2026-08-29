@@ -1,0 +1,28 @@
+"""틱의 페이즈 이름과 승패 판정 이름.
+
+의존성이 없는 어휘만 둔다. 계획 타입(plan.py)에 함께 두면 로그를 남길 뿐인 모듈까지
+인지 스냅샷을 끌어오게 되어 perception → telegraph → plan → perception 의 순환이 난다.
+"""
+
+PHASE_UPKEEP = "UPKEEP"
+PHASE_TELEGRAPH = "TELEGRAPH"
+PHASE_PERCEPTION = "PERCEPTION"
+PHASE_DECIDE = "DECIDE"
+PHASE_ACT = "ACT"
+PHASE_RESOLVE = "RESOLVE"
+PHASE_CLEANUP = "CLEANUP"
+
+PHASE_ORDER = (
+    PHASE_UPKEEP,
+    PHASE_TELEGRAPH,
+    PHASE_PERCEPTION,
+    PHASE_DECIDE,
+    PHASE_ACT,
+    PHASE_RESOLVE,
+    PHASE_CLEANUP,
+)
+
+OUTCOME_ONGOING = "ONGOING"
+OUTCOME_PLAYER_WIN = "PLAYER_WIN"
+OUTCOME_PLAYER_LOSS = "PLAYER_LOSS"
+OUTCOME_TIMEOUT = "TIMEOUT"

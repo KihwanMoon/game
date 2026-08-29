@@ -1,19 +1,27 @@
 {
   "_comment": [
-    "블록 목록 동결 (로드맵 Phase 0). 이후 변경 금지.",
+    "블록 목록 (로드맵 Phase 0 동결, v3 개정).",
     "정본은 GDD §3.2·§3.3·§3.4 이며 이 파일은 그것을 기계가 읽는 형태로 옮긴 것이다.",
-    "개수는 GDD §9 가 정한 인지 18 / 행동 12 / 셀렉터 7 이고 테스트가 이를 고정한다.",
+    "개수는 인지 18 / 행동 13 / 셀렉터 7 이고 테스트가 이를 고정한다.",
+    "v3 에서 행동이 12 -> 13 이 됐다. SUMMON 을 더한 것이며, GDD §5 의 '몬스터도",
+    "플레이어와 완전히 동일한 DSL 로 기술한다' 를 지키려면 소환이 규칙표 안에",
+    "있어야 하기 때문이다. 밸런스 속성으로 두면 도감이 소환 주기만 따로 보여줘야 한다.",
+    "",
+    "rhs_stats 는 조건 우변에 둘 수 있는 자기 스탯의 닫힌 목록이다 (F-2).",
+    "우변 표현은 `\"rhs\": {\"stat\": \"attack_range\"}` 이며 리터럴과 섞어 쓸 수 있다.",
+    "리터럴로 박으면 장비가 사거리를 바꿀 때 규칙이 조용히 틀린다 (GDD §6.2).",
+    "",
     "Phase 3 에서 TypeScript 코어가 이 파일을 그대로 읽는다 (TDD §1.2).",
     "id 표기 규약은 TDD §3.3 예시를 따른다 — 인지는 snake_case, 행동·셀렉터는 UPPER_SNAKE."
   ],
-  "block_list_version": 2,
+  "block_list_version": 3,
 
   "perceptions": [
     {"id": "self_hp_percent",          "category": "self",     "returns": "int",  "range": [0, 100], "label_ko": "내 HP%"},
     {"id": "self_potion_count",        "category": "self",     "returns": "int",  "label_ko": "내 포션 수"},
     {"id": "self_on_heal_tile",        "category": "self",     "returns": "bool", "label_ko": "내 위치가 회복타일인가"},
     {"id": "self_cooldown_ready",      "category": "self",     "returns": "bool", "label_ko": "내 쿨타임[스킬] 완료",
-     "param": {"name": "skill", "values": ["SKILL_1", "SKILL_2", "AREA_ATTACK"]}},
+     "param": {"name": "skill", "values": ["SKILL_1", "SKILL_2", "AREA_ATTACK", "SUMMON"]}},
     {"id": "self_has_status",          "category": "self",     "returns": "bool", "label_ko": "내 상태이상",
      "param": {"name": "status", "values": ["POISON", "SLOW", "STUN"]}},
 
@@ -54,7 +62,18 @@
 
     {"id": "HOLD",            "category": "control", "targeted": false, "label_ko": "대기"},
     {"id": "USE_POTION",      "category": "control", "targeted": false, "label_ko": "포션 사용"},
-    {"id": "SET_FLAG",        "category": "control", "targeted": false, "label_ko": "플래그 설정"}
+    {"id": "SET_FLAG",        "category": "control", "targeted": false, "label_ko": "플래그 설정"},
+    {"id": "SUMMON",          "category": "control", "targeted": false, "label_ko": "소환",
+     "_note": "v3 추가. 소환형이 규칙표로 소환을 기술한다 (GDD §5). 주기는 쿨타임[SUMMON] 이 맡는다."}
+  ],
+
+  "rhs_stats": [
+    {"id": "attack_range", "label_ko": "사거리"},
+    {"id": "attack",       "label_ko": "공격력"},
+    {"id": "defense",      "label_ko": "방어력"},
+    {"id": "hp_max",       "label_ko": "최대 HP"},
+    {"id": "cpu_budget",   "label_ko": "CPU 예산"},
+    {"id": "potions",      "label_ko": "포션 수"}
   ],
 
   "selectors": [
