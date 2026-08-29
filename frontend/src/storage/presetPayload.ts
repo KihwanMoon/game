@@ -12,14 +12,13 @@ import type { Rhs, Rule, RuleSet, RawRuleSet, Term } from '../core/schemas'
 import { isStatRef, parseRuleSet, RHS_STAT_KEY } from '../core/schemas'
 import type { JsonObject, JsonValue } from './canonicalJson'
 
-/** GDD §2.3 — 코드 라이브러리는 8슬롯이다. `meta_save.py` 의 MAX_PRESET_SLOTS 와 같은 값. */
-export const MAX_PRESET_SLOTS = 8
+// 계약은 core 에 있다. 저장 층은 그것을 JSON 으로 옮기는 일만 한다 — 파이썬에서 둘이
+// meta_save.py 한 파일에 있는 것과 같은 배치이며, 여기서는 층 방향(storage → core)을
+// 지키기 위해 파일만 갈랐다.
+import { MAX_PRESET_SLOTS, type RulePreset } from '../core/schemas/metaSave'
 
-/** 코드 라이브러리 한 슬롯. 이름 붙인 규칙표 하나다. */
-export interface RulePreset {
-  readonly name: string
-  readonly ruleset: RuleSet
-}
+export { MAX_PRESET_SLOTS }
+export type { RulePreset }
 
 /**
  * 조건 우변을 JSON 값으로 되돌린다.

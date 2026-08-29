@@ -50,3 +50,14 @@ export {
   writeSave,
 } from './saveStore'
 export type { SaveScheduler, StorageLike } from './saveStore'
+export {
+  META_FORMAT_TAG,
+  META_STORAGE_KEY,
+  buildMetaPayload,
+  buildMetaText,
+  getMetaVersion,
+  parseMetaPayload,
+  parseMetaText,
+  readMeta,
+  writeMeta,
+} from './metaSave'

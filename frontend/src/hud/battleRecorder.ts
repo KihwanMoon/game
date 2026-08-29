@@ -22,6 +22,8 @@ import type { Position } from '../core/grid/geometry'
 import type { RoomTemplate, RuleSet } from '../core/schemas'
 import { PLAYER_ENTITY_ID } from '../core/services/runBattle'
 import { runTickBatch } from '../core/services/runSteppedBattle'
+import { countEnemyKinds } from '../core/services/runSummary'
+import type { EnemyTally } from '../core/services/runSummary'
 import type { TickEngine } from '../core/sim/engine'
 import { OUTCOME_ONGOING } from '../core/sim/phases'
 import type { WorldState } from '../core/sim/state'
@@ -67,6 +69,8 @@ export interface BattleRecording {
   /** 첫 원소는 첫 틱을 돌리기 전(tick 0)이다. 그래서 길이가 틱 수보다 하나 많다. */
   readonly frames: readonly RecordedFrame[]
   readonly hits: readonly DamageHit[]
+  /** 이 판에서 만난 적과 잡은 적. 결산(GDD §2.3)이 도감에 누적하는 입력이다. */
+  readonly tally: EnemyTally
 }
 
 /**
@@ -161,5 +165,6 @@ export function recordBattle(
     entries: engine.log.entries,
     frames,
     hits,
+    tally: countEnemyKinds(engine.state),
   }
 }

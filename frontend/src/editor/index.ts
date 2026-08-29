@@ -6,6 +6,8 @@
  */
 export { RuleEditor } from './RuleEditor'
 export type { RuleEditorProps } from './RuleEditor'
+export { MetaPanel } from './MetaPanel'
+export type { MetaPanelProps } from './MetaPanel'
 export { RuleLibrary } from './RuleLibrary'
 export type { RuleLibraryProps } from './RuleLibrary'
 export { writeClipboard } from './clipboard'

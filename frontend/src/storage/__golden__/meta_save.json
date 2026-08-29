@@ -1,0 +1,180 @@
+{
+  "_comment": "파이썬 정본이 만든 메타 세이브 결산 기준값. scripts/export_meta_golden.py",
+  "cases": [
+    {
+      "label": "첫 런 — 빈 세이브에 쌓인다",
+      "before": {
+        "format": "v1",
+        "best_floor": 0,
+        "unlocked_perceptions": [],
+        "unlocked_actions": [],
+        "bestiary": [],
+        "presets": []
+      },
+      "summary": {
+        "floor_reached": 1,
+        "is_cleared": true,
+        "seen_perceptions": [
+          "target_distance",
+          "self_hp_percent"
+        ],
+        "seen_actions": [
+          "ATTACK",
+          "RETREAT"
+        ],
+        "encountered_kinds": [
+          "goblin_rusher",
+          "goblin_archer",
+          "goblin_rusher"
+        ],
+        "defeated_kinds": [
+          "goblin_rusher"
+        ]
+      },
+      "after": {
+        "format": "v1",
+        "best_floor": 1,
+        "unlocked_perceptions": [
+          "self_hp_percent",
+          "target_distance"
+        ],
+        "unlocked_actions": [
+          "ATTACK",
+          "RETREAT"
+        ],
+        "bestiary": [
+          {
+            "kind_id": "goblin_archer",
+            "encounters": 1,
+            "defeats": 0
+          },
+          {
+            "kind_id": "goblin_rusher",
+            "encounters": 2,
+            "defeats": 1
+          }
+        ],
+        "presets": []
+      }
+    },
+    {
+      "label": "재도전 — 더 얕게 죽어도 최고 층은 줄지 않는다",
+      "before": {
+        "format": "v1",
+        "best_floor": 4,
+        "unlocked_perceptions": [],
+        "unlocked_actions": [
+          "ATTACK"
+        ],
+        "bestiary": [],
+        "presets": []
+      },
+      "summary": {
+        "floor_reached": 2,
+        "is_cleared": false,
+        "seen_perceptions": [],
+        "seen_actions": [
+          "SKILL_1"
+        ],
+        "encountered_kinds": [],
+        "defeated_kinds": []
+      },
+      "after": {
+        "format": "v1",
+        "best_floor": 4,
+        "unlocked_perceptions": [],
+        "unlocked_actions": [
+          "ATTACK",
+          "SKILL_1"
+        ],
+        "bestiary": [],
+        "presets": []
+      }
+    },
+    {
+      "label": "카탈로그에 없는 블록은 해금되지 않는다",
+      "before": {
+        "format": "v1",
+        "best_floor": 0,
+        "unlocked_perceptions": [],
+        "unlocked_actions": [],
+        "bestiary": [],
+        "presets": []
+      },
+      "summary": {
+        "floor_reached": 0,
+        "is_cleared": false,
+        "seen_perceptions": [
+          "nope"
+        ],
+        "seen_actions": [
+          "ATTACK",
+          "HOMEBREW"
+        ],
+        "encountered_kinds": [],
+        "defeated_kinds": []
+      },
+      "after": {
+        "format": "v1",
+        "best_floor": 0,
+        "unlocked_perceptions": [],
+        "unlocked_actions": [
+          "ATTACK"
+        ],
+        "bestiary": [],
+        "presets": []
+      }
+    },
+    {
+      "label": "도감이 누적되고 kind_id 순으로 정렬된다",
+      "before": {
+        "format": "v1",
+        "best_floor": 0,
+        "unlocked_perceptions": [],
+        "unlocked_actions": [],
+        "bestiary": [],
+        "presets": []
+      },
+      "summary": {
+        "floor_reached": 0,
+        "is_cleared": false,
+        "seen_perceptions": [],
+        "seen_actions": [],
+        "encountered_kinds": [
+          "mender_acolyte",
+          "bomb_slime",
+          "arch_summoner",
+          "bomb_slime"
+        ],
+        "defeated_kinds": [
+          "bomb_slime",
+          "arch_summoner"
+        ]
+      },
+      "after": {
+        "format": "v1",
+        "best_floor": 0,
+        "unlocked_perceptions": [],
+        "unlocked_actions": [],
+        "bestiary": [
+          {
+            "kind_id": "arch_summoner",
+            "encounters": 1,
+            "defeats": 1
+          },
+          {
+            "kind_id": "bomb_slime",
+            "encounters": 2,
+            "defeats": 1
+          },
+          {
+            "kind_id": "mender_acolyte",
+            "encounters": 1,
+            "defeats": 0
+          }
+        ],
+        "presets": []
+      }
+    }
+  ]
+}

@@ -31,7 +31,13 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { BattleView, checkOngoing, type BattleSetup } from './battle'
-import { BALANCE, BLOCK_CATALOG, G0_RULESETS, ROOM_TEMPLATES } from './core/resources'
+import {
+  BALANCE,
+  BLOCK_CATALOG,
+  ENEMY_RULESETS,
+  G0_RULESETS,
+  ROOM_TEMPLATES,
+} from './core/resources'
 import type { RawBalanceFile } from './core/resources'
 import { validateRuleSet } from './core/rules/validator'
 import type { RuleSet } from './core/schemas'
@@ -39,6 +45,7 @@ import { OUTCOME_ONGOING, OUTCOME_PLAYER_WIN } from './core/sim/phases'
 import { Button, ValueExpr } from './ds'
 import {
   RuleEditor,
+  MetaPanel,
   RuleLibrary,
   checkCanRedo,
   checkCanUndo,
@@ -47,6 +54,7 @@ import {
 } from './editor'
 import { ErrorBoundary, formatCrash } from './ErrorBoundary'
 import { PostMortem, formatOutcome, recordBattle, usePlanTheme } from './hud'
+import type { BattleRecording } from './hud'
 import {
   applyPresetImport,
   applyPresetLoad,
@@ -65,7 +73,18 @@ import {
   getSessionRuleSet,
   type EditorSession,
 } from './session'
-import { createSaveScheduler, getLocalStorage, readSave, type RunResult } from './storage'
+import {
+  createSaveScheduler,
+  getLocalStorage,
+  readMeta,
+  readSave,
+  writeMeta,
+  type RunResult,
+} from './storage'
+import { createEmptyMeta, type MetaSave } from './core/schemas'
+import { applyRunSummary } from './core/services/manageMeta'
+import { buildRunSummary, listEncounteredRulesets } from './core/services/runSummary'
+import { parseBalance } from './core/services/runBattle'
 
 /** 에디터가 알아야 하는 플레이어 제약. */
 interface PlayerLimits {
@@ -191,6 +210,9 @@ export function App(): React.JSX.Element {
       seed: INITIAL_SEED,
     }),
   )
+  // 메타 세이브는 편집 세이브와 수명이 다르다 — 규칙표는 고치면 덮어쓰지만 해금과
+  // 도감은 누적이다. 그래서 저장 열쇠도 디바운스 저장기도 따로 둔다.
+  const [meta, setMeta] = useState<MetaSave>(() => readMeta(getLocalStorage()) ?? createEmptyMeta())
   const [run, setRun] = useState<RunSpec | undefined>(undefined)
   const [outcome, setOutcome] = useState(OUTCOME_ONGOING)
   const [postState, setPostState] = useState<PostState>('auto')
@@ -198,6 +220,9 @@ export function App(): React.JSX.Element {
 
   const ruleset = getSessionRuleSet(session)
   const limits = useMemo(() => readPlayerLimits(BALANCE), [])
+  // 결산이 적 종류에서 규칙표를 찾는 데 쓴다. parseBalance 는 절 형식을 검사하므로
+  // 렌더마다 돌리지 않는다.
+  const balanceData = useMemo(() => parseBalance(BALANCE), [])
   const problems = useMemo(
     () => validateRuleSet(ruleset, BLOCK_CATALOG, limits.cpuBudget, limits.ruleSlots),
     [ruleset, limits],
@@ -273,6 +298,36 @@ export function App(): React.JSX.Element {
   }
 
   /**
+   * 판 하나를 영구 기록에 반영한다 (GDD §2.3).
+   *
+   * **진 판도 남긴다.** 해금과 도감은 이겼는지가 아니라 무엇을 접했는지로 쌓이며,
+   * 그것이 "실패는 정보다" 를 저장 층에서 지키는 방식이다 (P1).
+   *
+   * 저장은 즉시 쓴다. 편집과 달리 결산은 한 판에 한 번뿐이라 디바운스할 것이 없고,
+   * 여기서 미루면 탭을 닫는 순간 그 판의 기록이 통째로 사라진다.
+   *
+   * @param finishedRun 끝난 판의 기록.
+   */
+  function applyRunSettlement(finishedRun: BattleRecording): void {
+    const enemyRulesets = listEncounteredRulesets(
+      finishedRun.tally.encountered,
+      balanceData.enemies,
+      ENEMY_RULESETS,
+    )
+    const summary = buildRunSummary(
+      finishedRun.tally,
+      finishedRun.ruleset,
+      finishedRun.outcome === OUTCOME_PLAYER_WIN,
+      enemyRulesets,
+    )
+    setMeta((current) => {
+      const next = applyRunSummary(current, summary, BLOCK_CATALOG)
+      writeMeta(getLocalStorage(), next)
+      return next
+    })
+  }
+
+  /**
    * 에디터로 돌아간다. 판을 버리고 결과만 들고 나온다.
    */
   function goToEditor(): void {
@@ -283,6 +338,7 @@ export function App(): React.JSX.Element {
         playerHp: recording.playerHp,
       }
       setSession((current) => applyRunResult(current, result))
+      applyRunSettlement(recording)
     }
     setRun(undefined)
     setOutcome(OUTCOME_ONGOING)
@@ -399,7 +455,9 @@ export function App(): React.JSX.Element {
           }}
           controls={launchControls}
           library={
-            <RuleLibrary
+            <>
+              <MetaPanel meta={meta} baseSlots={limits.ruleSlots} />
+              <RuleLibrary
               presets={session.presets}
               onSave={(name) => {
                 setSession((current) => applyPresetSave(current, name))
@@ -412,8 +470,9 @@ export function App(): React.JSX.Element {
               }}
               onImport={readSharedCode}
               onExport={(name) => exportSessionCode(session, name)}
-              onExportSlot={(index) => exportSlotCode(session, index)}
-            />
+                onExportSlot={(index) => exportSlotCode(session, index)}
+              />
+            </>
           }
         />
       </div>

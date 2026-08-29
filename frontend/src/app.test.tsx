@@ -86,6 +86,19 @@ describe('첫 화면', () => {
     expect(markup).toContain('id="library-code"')
   })
 
+  it('영구 기록이 팔레트 아래에 함께 뜬다 — 죽어도 남는 것이 화면에 있다', () => {
+    // GDD §2.3 의 "실패한 런도 자산을 남긴다" 가 화면에 없으면 성립하지 않는다 (P1).
+    expect(markup).toContain('영구 기록')
+    expect(markup).toContain('사망해도 남는다')
+    expect(markup).toContain('최고 층')
+    expect(markup).toContain('도감')
+  })
+
+  it('처음에는 도감이 비어 있고, 비어 있다고 말한다', () => {
+    // 빈 패널은 고장으로 읽힌다.
+    expect(markup).toContain('아직 없다')
+  })
+
   it('되돌리기 조작이 상단 바에 있고, 되돌릴 것이 없으면 잠겨 있다', () => {
     expect(markup).toContain('되돌리기 (Ctrl+Z)')
     expect(markup).toContain('다시 실행 (Ctrl+Shift+Z)')
