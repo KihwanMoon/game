@@ -1,0 +1,2043 @@
+{
+  "_comment": [
+    "파이썬의 analyze_battle 집계 기준이다. 손으로 고치지 않는다.",
+    "재생성: uv run python -m scripts.export_analysis_golden",
+    "hits 는 한 틱씩 끊어 돌며 받아 적은 피격 좌표다 (replay_battle.BattleRecorder).",
+    "heatmap_* 의 한 줄은 격자 한 행이며 값은 쉼표로 잇는다."
+  ],
+  "max_ticks": 400,
+  "floor": 1,
+  "player_id": "player",
+  "case_count": 6,
+  "cases": [
+    {
+      "case_id": "open_field__g0_pressure__1",
+      "room_id": "open_field",
+      "ruleset_id": "g0_pressure",
+      "seed": 1,
+      "extra_enemies": [],
+      "max_ticks": 400,
+      "floor": 1,
+      "outcome": "PLAYER_WIN",
+      "ticks": 11,
+      "player_hp": 51,
+      "width": 12,
+      "height": 9,
+      "log_count": 61,
+      "rule_stats": {
+        "goblin_rusher_0": [
+          {
+            "label": "[1]",
+            "fired": 3,
+            "acted": 3,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 5,
+            "acted": 5,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_1": [
+          {
+            "label": "[1]",
+            "fired": 4,
+            "acted": 4,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 7,
+            "acted": 7,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "player": [
+          {
+            "label": "[2]",
+            "fired": 2,
+            "acted": 2,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "[3]",
+            "fired": 4,
+            "acted": 4,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 5,
+            "acted": 5,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "world": []
+      },
+      "hits": [
+        {
+          "tick": 6,
+          "target_id": "player",
+          "x": 4,
+          "y": 3,
+          "amount": 7
+        },
+        {
+          "tick": 6,
+          "target_id": "goblin_rusher_0",
+          "x": 5,
+          "y": 3,
+          "amount": 18
+        },
+        {
+          "tick": 7,
+          "target_id": "player",
+          "x": 4,
+          "y": 3,
+          "amount": 7
+        },
+        {
+          "tick": 7,
+          "target_id": "goblin_rusher_0",
+          "x": 5,
+          "y": 3,
+          "amount": 11
+        },
+        {
+          "tick": 8,
+          "target_id": "player",
+          "x": 4,
+          "y": 3,
+          "amount": 7
+        },
+        {
+          "tick": 8,
+          "target_id": "player",
+          "x": 4,
+          "y": 3,
+          "amount": 7
+        },
+        {
+          "tick": 8,
+          "target_id": "goblin_rusher_0",
+          "x": 5,
+          "y": 3,
+          "amount": 11
+        },
+        {
+          "tick": 9,
+          "target_id": "player",
+          "x": 4,
+          "y": 3,
+          "amount": 7
+        },
+        {
+          "tick": 9,
+          "target_id": "goblin_rusher_1",
+          "x": 4,
+          "y": 4,
+          "amount": 18
+        },
+        {
+          "tick": 10,
+          "target_id": "player",
+          "x": 4,
+          "y": 3,
+          "amount": 7
+        },
+        {
+          "tick": 10,
+          "target_id": "goblin_rusher_1",
+          "x": 4,
+          "y": 4,
+          "amount": 11
+        },
+        {
+          "tick": 11,
+          "target_id": "player",
+          "x": 4,
+          "y": 3,
+          "amount": 7
+        },
+        {
+          "tick": 11,
+          "target_id": "goblin_rusher_1",
+          "x": 4,
+          "y": 4,
+          "amount": 11
+        }
+      ],
+      "heatmap_player": [
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,49,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0"
+      ],
+      "heatmap_all": [
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,49,40,0,0,0,0,0,0",
+        "0,0,0,0,40,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0"
+      ],
+      "recent_ticks": 15,
+      "recent_count": 61,
+      "recent_first_tick": 1
+    },
+    {
+      "case_id": "corridor__g0_kite__12345",
+      "room_id": "corridor",
+      "ruleset_id": "g0_kite",
+      "seed": 12345,
+      "extra_enemies": [],
+      "max_ticks": 400,
+      "floor": 1,
+      "outcome": "PLAYER_WIN",
+      "ticks": 14,
+      "player_hp": 82,
+      "width": 12,
+      "height": 9,
+      "log_count": 76,
+      "rule_stats": {
+        "goblin_archer_1": [
+          {
+            "label": "[2]",
+            "fired": 4,
+            "acted": 2,
+            "wasted": 1,
+            "waste_pct": 33
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 10,
+            "acted": 5,
+            "wasted": 5,
+            "waste_pct": 50
+          }
+        ],
+        "goblin_rusher_0": [
+          {
+            "label": "[1]",
+            "fired": 2,
+            "acted": 0,
+            "wasted": 2,
+            "waste_pct": 100
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 8,
+            "acted": 8,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "player": [
+          {
+            "label": "[2]",
+            "fired": 2,
+            "acted": 2,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "[3]",
+            "fired": 2,
+            "acted": 2,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "[4]",
+            "fired": 3,
+            "acted": 3,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 7,
+            "acted": 6,
+            "wasted": 1,
+            "waste_pct": 14
+          }
+        ],
+        "world": []
+      },
+      "hits": [
+        {
+          "tick": 5,
+          "target_id": "goblin_rusher_0",
+          "x": 6,
+          "y": 4,
+          "amount": 17
+        },
+        {
+          "tick": 8,
+          "target_id": "goblin_rusher_0",
+          "x": 4,
+          "y": 4,
+          "amount": 17
+        },
+        {
+          "tick": 10,
+          "target_id": "goblin_rusher_0",
+          "x": 4,
+          "y": 3,
+          "amount": 17
+        },
+        {
+          "tick": 12,
+          "target_id": "goblin_archer_1",
+          "x": 6,
+          "y": 4,
+          "amount": 17
+        },
+        {
+          "tick": 12,
+          "target_id": "player",
+          "x": 4,
+          "y": 3,
+          "amount": 9
+        },
+        {
+          "tick": 13,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 14,
+          "target_id": "goblin_archer_1",
+          "x": 6,
+          "y": 4,
+          "amount": 17
+        }
+      ],
+      "heatmap_player": [
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,9,0,0,0,0,0,0,0",
+        "0,0,0,0,9,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0"
+      ],
+      "heatmap_all": [
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,26,0,0,0,0,0,0,0",
+        "0,0,0,0,26,0,51,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0"
+      ],
+      "recent_ticks": 15,
+      "recent_count": 76,
+      "recent_first_tick": 1
+    },
+    {
+      "case_id": "hazard_field__g0_cover__99",
+      "room_id": "hazard_field",
+      "ruleset_id": "g0_cover",
+      "seed": 99,
+      "extra_enemies": [],
+      "max_ticks": 400,
+      "floor": 1,
+      "outcome": "PLAYER_LOSS",
+      "ticks": 21,
+      "player_hp": 0,
+      "width": 12,
+      "height": 9,
+      "log_count": 132,
+      "rule_stats": {
+        "goblin_archer_1": [
+          {
+            "label": "[2]",
+            "fired": 14,
+            "acted": 14,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 7,
+            "acted": 7,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_0": [
+          {
+            "label": "[1]",
+            "fired": 11,
+            "acted": 11,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 10,
+            "acted": 10,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_h1": [
+          {
+            "label": "DEFAULT",
+            "fired": 1,
+            "acted": 1,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "player": [
+          {
+            "label": "[1]",
+            "fired": 2,
+            "acted": 2,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "[3]",
+            "fired": 19,
+            "acted": 0,
+            "wasted": 19,
+            "waste_pct": 100
+          }
+        ],
+        "world": []
+      },
+      "hits": [
+        {
+          "tick": 3,
+          "target_id": "goblin_archer_1",
+          "x": 9,
+          "y": 5,
+          "amount": 3
+        },
+        {
+          "tick": 8,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 9,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 10,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 11,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 11,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 12,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 12,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 13,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 13,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 14,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 14,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 15,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 15,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 16,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 16,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 17,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 17,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 18,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 18,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 19,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 19,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 20,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 20,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 21,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 21,
+          "target_id": "player",
+          "x": 1,
+          "y": 4,
+          "amount": 9
+        }
+      ],
+      "heatmap_player": [
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,203,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0"
+      ],
+      "heatmap_all": [
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,203,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,3,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0"
+      ],
+      "recent_ticks": 15,
+      "recent_count": 95,
+      "recent_first_tick": 7
+    },
+    {
+      "case_id": "spring_bait__g0_pressure__2024",
+      "room_id": "spring_bait",
+      "ruleset_id": "g0_pressure",
+      "seed": 2024,
+      "extra_enemies": [],
+      "max_ticks": 400,
+      "floor": 1,
+      "outcome": "PLAYER_LOSS",
+      "ticks": 17,
+      "player_hp": 0,
+      "width": 12,
+      "height": 9,
+      "log_count": 148,
+      "rule_stats": {
+        "goblin_archer_0": [
+          {
+            "label": "[2]",
+            "fired": 12,
+            "acted": 11,
+            "wasted": 1,
+            "waste_pct": 8
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 5,
+            "acted": 5,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_2": [
+          {
+            "label": "[1]",
+            "fired": 3,
+            "acted": 3,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 4,
+            "acted": 4,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_s1": [
+          {
+            "label": "[1]",
+            "fired": 4,
+            "acted": 4,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 1,
+            "acted": 1,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_s2": [
+          {
+            "label": "[1]",
+            "fired": 3,
+            "acted": 3,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 3,
+            "acted": 3,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_s3": [
+          {
+            "label": "[1]",
+            "fired": 1,
+            "acted": 1,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 3,
+            "acted": 3,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_s4": [
+          {
+            "label": "DEFAULT",
+            "fired": 1,
+            "acted": 1,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_summoner_1": [
+          {
+            "label": "[2]",
+            "fired": 4,
+            "acted": 4,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "[3]",
+            "fired": 7,
+            "acted": 6,
+            "wasted": 1,
+            "waste_pct": 14
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 6,
+            "acted": 6,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "player": [
+          {
+            "label": "[1]",
+            "fired": 2,
+            "acted": 2,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "[2]",
+            "fired": 4,
+            "acted": 4,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "[3]",
+            "fired": 6,
+            "acted": 5,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 5,
+            "acted": 5,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "world": []
+      },
+      "hits": [
+        {
+          "tick": 5,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 5,
+          "target_id": "goblin_rusher_2",
+          "x": 5,
+          "y": 4,
+          "amount": 18
+        },
+        {
+          "tick": 6,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 6,
+          "target_id": "goblin_rusher_2",
+          "x": 5,
+          "y": 4,
+          "amount": 11
+        },
+        {
+          "tick": 6,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 7,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 7,
+          "target_id": "goblin_rusher_2",
+          "x": 5,
+          "y": 4,
+          "amount": 11
+        },
+        {
+          "tick": 7,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 8,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 8,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 4
+        },
+        {
+          "tick": 9,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 9,
+          "target_id": "goblin_rusher_s1",
+          "x": 5,
+          "y": 4,
+          "amount": 18
+        },
+        {
+          "tick": 9,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 9,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 4
+        },
+        {
+          "tick": 10,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 10,
+          "target_id": "goblin_rusher_s1",
+          "x": 5,
+          "y": 4,
+          "amount": 11
+        },
+        {
+          "tick": 10,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 11,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 11,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 11,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 4
+        },
+        {
+          "tick": 12,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 12,
+          "target_id": "goblin_rusher_s1",
+          "x": 5,
+          "y": 4,
+          "amount": 18
+        },
+        {
+          "tick": 12,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 12,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 4
+        },
+        {
+          "tick": 13,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 14,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 14,
+          "target_id": "goblin_rusher_s2",
+          "x": 5,
+          "y": 4,
+          "amount": 11
+        },
+        {
+          "tick": 14,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 14,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 4
+        },
+        {
+          "tick": 15,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 15,
+          "target_id": "goblin_rusher_s2",
+          "x": 5,
+          "y": 4,
+          "amount": 18
+        },
+        {
+          "tick": 15,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 15,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 4
+        },
+        {
+          "tick": 16,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 7
+        },
+        {
+          "tick": 16,
+          "target_id": "goblin_rusher_s2",
+          "x": 5,
+          "y": 4,
+          "amount": 11
+        },
+        {
+          "tick": 16,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 9
+        },
+        {
+          "tick": 17,
+          "target_id": "player",
+          "x": 4,
+          "y": 4,
+          "amount": 7
+        }
+      ],
+      "heatmap_player": [
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,200,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0"
+      ],
+      "heatmap_all": [
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,200,127,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0"
+      ],
+      "recent_ticks": 15,
+      "recent_count": 132,
+      "recent_first_tick": 3
+    },
+    {
+      "case_id": "open_field__g0_kite__4242",
+      "room_id": "open_field",
+      "ruleset_id": "g0_kite",
+      "seed": 4242,
+      "extra_enemies": [
+        {
+          "kind": "bomb_slime",
+          "x": 5,
+          "y": 4
+        },
+        {
+          "kind": "mender_acolyte",
+          "x": 6,
+          "y": 2
+        }
+      ],
+      "max_ticks": 400,
+      "floor": 1,
+      "outcome": "PLAYER_LOSS",
+      "ticks": 78,
+      "player_hp": 0,
+      "width": 12,
+      "height": 9,
+      "log_count": 568,
+      "rule_stats": {
+        "bomb_slime_x0": [
+          {
+            "label": "[1]",
+            "fired": 1,
+            "acted": 1,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "[2]",
+            "fired": 3,
+            "acted": 3,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_0": [
+          {
+            "label": "[1]",
+            "fired": 2,
+            "acted": 0,
+            "wasted": 2,
+            "waste_pct": 100
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 16,
+            "acted": 16,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_1": [
+          {
+            "label": "[1]",
+            "fired": 6,
+            "acted": 0,
+            "wasted": 6,
+            "waste_pct": 100
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 17,
+            "acted": 17,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_h1": [
+          {
+            "label": "[1]",
+            "fired": 2,
+            "acted": 0,
+            "wasted": 2,
+            "waste_pct": 100
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 10,
+            "acted": 10,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_h2": [
+          {
+            "label": "[1]",
+            "fired": 2,
+            "acted": 0,
+            "wasted": 2,
+            "waste_pct": 100
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 13,
+            "acted": 13,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_h3": [
+          {
+            "label": "[1]",
+            "fired": 4,
+            "acted": 0,
+            "wasted": 4,
+            "waste_pct": 100
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 9,
+            "acted": 9,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_h4": [
+          {
+            "label": "[1]",
+            "fired": 16,
+            "acted": 15,
+            "wasted": 1,
+            "waste_pct": 6
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 12,
+            "acted": 12,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_h5": [
+          {
+            "label": "[1]",
+            "fired": 15,
+            "acted": 14,
+            "wasted": 1,
+            "waste_pct": 6
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 3,
+            "acted": 3,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_h6": [
+          {
+            "label": "DEFAULT",
+            "fired": 8,
+            "acted": 0,
+            "wasted": 8,
+            "waste_pct": 100
+          }
+        ],
+        "mender_acolyte_x1": [
+          {
+            "label": "[1]",
+            "fired": 3,
+            "acted": 3,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "[2]",
+            "fired": 28,
+            "acted": 26,
+            "wasted": 2,
+            "waste_pct": 7
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 29,
+            "acted": 29,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "player": [
+          {
+            "label": "[1]",
+            "fired": 2,
+            "acted": 2,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "[2]",
+            "fired": 41,
+            "acted": 28,
+            "wasted": 13,
+            "waste_pct": 31
+          },
+          {
+            "label": "[3]",
+            "fired": 20,
+            "acted": 20,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "[4]",
+            "fired": 3,
+            "acted": 3,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 12,
+            "acted": 12,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "world": []
+      },
+      "hits": [
+        {
+          "tick": 1,
+          "target_id": "bomb_slime_x0",
+          "x": 4,
+          "y": 4,
+          "amount": 18
+        },
+        {
+          "tick": 4,
+          "target_id": "bomb_slime_x0",
+          "x": 3,
+          "y": 3,
+          "amount": 18
+        },
+        {
+          "tick": 7,
+          "target_id": "mender_acolyte_x1",
+          "x": 4,
+          "y": 1,
+          "amount": 17
+        },
+        {
+          "tick": 12,
+          "target_id": "goblin_rusher_1",
+          "x": 3,
+          "y": 1,
+          "amount": 17
+        },
+        {
+          "tick": 14,
+          "target_id": "goblin_rusher_0",
+          "x": 3,
+          "y": 2,
+          "amount": 17
+        },
+        {
+          "tick": 16,
+          "target_id": "goblin_rusher_0",
+          "x": 3,
+          "y": 3,
+          "amount": 17
+        },
+        {
+          "tick": 18,
+          "target_id": "goblin_rusher_0",
+          "x": 3,
+          "y": 4,
+          "amount": 17
+        },
+        {
+          "tick": 21,
+          "target_id": "goblin_rusher_1",
+          "x": 3,
+          "y": 4,
+          "amount": 17
+        },
+        {
+          "tick": 23,
+          "target_id": "goblin_rusher_1",
+          "x": 4,
+          "y": 4,
+          "amount": 17
+        },
+        {
+          "tick": 26,
+          "target_id": "goblin_rusher_h1",
+          "x": 7,
+          "y": 4,
+          "amount": 17
+        },
+        {
+          "tick": 30,
+          "target_id": "goblin_rusher_h1",
+          "x": 6,
+          "y": 4,
+          "amount": 17
+        },
+        {
+          "tick": 32,
+          "target_id": "goblin_rusher_h1",
+          "x": 6,
+          "y": 3,
+          "amount": 17
+        },
+        {
+          "tick": 35,
+          "target_id": "mender_acolyte_x1",
+          "x": 7,
+          "y": 1,
+          "amount": 17
+        },
+        {
+          "tick": 38,
+          "target_id": "goblin_rusher_h2",
+          "x": 5,
+          "y": 1,
+          "amount": 17
+        },
+        {
+          "tick": 42,
+          "target_id": "goblin_rusher_h2",
+          "x": 7,
+          "y": 2,
+          "amount": 17
+        },
+        {
+          "tick": 45,
+          "target_id": "goblin_rusher_h2",
+          "x": 8,
+          "y": 3,
+          "amount": 17
+        },
+        {
+          "tick": 48,
+          "target_id": "goblin_rusher_h3",
+          "x": 8,
+          "y": 3,
+          "amount": 17
+        },
+        {
+          "tick": 50,
+          "target_id": "goblin_rusher_h3",
+          "x": 8,
+          "y": 2,
+          "amount": 17
+        },
+        {
+          "tick": 53,
+          "target_id": "goblin_rusher_h3",
+          "x": 9,
+          "y": 1,
+          "amount": 17
+        },
+        {
+          "tick": 55,
+          "target_id": "mender_acolyte_x1",
+          "x": 10,
+          "y": 3,
+          "amount": 17
+        },
+        {
+          "tick": 57,
+          "target_id": "mender_acolyte_x1",
+          "x": 10,
+          "y": 4,
+          "amount": 17
+        },
+        {
+          "tick": 60,
+          "target_id": "mender_acolyte_x1",
+          "x": 10,
+          "y": 3,
+          "amount": 17
+        },
+        {
+          "tick": 63,
+          "target_id": "goblin_rusher_h4",
+          "x": 9,
+          "y": 1,
+          "amount": 17
+        },
+        {
+          "tick": 64,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 64,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 65,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 65,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 66,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 66,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 67,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 67,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 68,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 68,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 69,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 69,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 70,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 70,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 71,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 71,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 72,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 72,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 73,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 73,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 74,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 74,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 75,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 75,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 76,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 76,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 77,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 77,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        },
+        {
+          "tick": 78,
+          "target_id": "player",
+          "x": 10,
+          "y": 1,
+          "amount": 7
+        }
+      ],
+      "heatmap_player": [
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,203,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0"
+      ],
+      "heatmap_all": [
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,17,17,17,0,17,0,34,203,0",
+        "0,0,0,17,0,0,0,17,17,0,0,0",
+        "0,0,0,35,0,0,17,0,34,0,34,0",
+        "0,0,0,34,35,0,17,17,0,0,17,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0"
+      ],
+      "recent_ticks": 15,
+      "recent_count": 108,
+      "recent_first_tick": 64
+    },
+    {
+      "case_id": "pillars__g0_cover__555",
+      "room_id": "pillars",
+      "ruleset_id": "g0_cover",
+      "seed": 555,
+      "extra_enemies": [
+        {
+          "kind": "arch_summoner",
+          "x": 7,
+          "y": 4
+        },
+        {
+          "kind": "veteran_rusher",
+          "x": 4,
+          "y": 6
+        }
+      ],
+      "max_ticks": 400,
+      "floor": 1,
+      "outcome": "PLAYER_LOSS",
+      "ticks": 12,
+      "player_hp": 0,
+      "width": 12,
+      "height": 9,
+      "log_count": 155,
+      "rule_stats": {
+        "arch_summoner_x0": [
+          {
+            "label": "[2]",
+            "fired": 3,
+            "acted": 3,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "[3]",
+            "fired": 5,
+            "acted": 4,
+            "wasted": 1,
+            "waste_pct": 20
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 4,
+            "acted": 4,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_archer_0": [
+          {
+            "label": "DEFAULT",
+            "fired": 12,
+            "acted": 12,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_archer_s1": [
+          {
+            "label": "[2]",
+            "fired": 4,
+            "acted": 3,
+            "wasted": 1,
+            "waste_pct": 25
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 3,
+            "acted": 3,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_archer_s3": [
+          {
+            "label": "DEFAULT",
+            "fired": 4,
+            "acted": 3,
+            "wasted": 1,
+            "waste_pct": 25
+          }
+        ],
+        "goblin_archer_s5": [
+          {
+            "label": "DEFAULT",
+            "fired": 1,
+            "acted": 0,
+            "wasted": 1,
+            "waste_pct": 100
+          }
+        ],
+        "goblin_rusher_s2": [
+          {
+            "label": "DEFAULT",
+            "fired": 4,
+            "acted": 4,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_rusher_s4": [
+          {
+            "label": "DEFAULT",
+            "fired": 1,
+            "acted": 1,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "goblin_summoner_1": [
+          {
+            "label": "[2]",
+            "fired": 2,
+            "acted": 2,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "[3]",
+            "fired": 3,
+            "acted": 2,
+            "wasted": 1,
+            "waste_pct": 33
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 7,
+            "acted": 7,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "player": [
+          {
+            "label": "[1]",
+            "fired": 2,
+            "acted": 2,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "[3]",
+            "fired": 10,
+            "acted": 2,
+            "wasted": 8,
+            "waste_pct": 80
+          }
+        ],
+        "veteran_rusher_x1": [
+          {
+            "label": "[1]",
+            "fired": 4,
+            "acted": 4,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "[2]",
+            "fired": 6,
+            "acted": 6,
+            "wasted": 0,
+            "waste_pct": 0
+          },
+          {
+            "label": "DEFAULT",
+            "fired": 2,
+            "acted": 2,
+            "wasted": 0,
+            "waste_pct": 0
+          }
+        ],
+        "world": []
+      },
+      "hits": [
+        {
+          "tick": 3,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 19
+        },
+        {
+          "tick": 4,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 12
+        },
+        {
+          "tick": 5,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 12
+        },
+        {
+          "tick": 6,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 19
+        },
+        {
+          "tick": 6,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 6
+        },
+        {
+          "tick": 7,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 12
+        },
+        {
+          "tick": 7,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 6
+        },
+        {
+          "tick": 8,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 12
+        },
+        {
+          "tick": 9,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 19
+        },
+        {
+          "tick": 9,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 9
+        },
+        {
+          "tick": 9,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 4
+        },
+        {
+          "tick": 9,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 6
+        },
+        {
+          "tick": 10,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 12
+        },
+        {
+          "tick": 10,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 9
+        },
+        {
+          "tick": 10,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 4
+        },
+        {
+          "tick": 10,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 6
+        },
+        {
+          "tick": 11,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 12
+        },
+        {
+          "tick": 11,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 9
+        },
+        {
+          "tick": 12,
+          "target_id": "player",
+          "x": 2,
+          "y": 5,
+          "amount": 19
+        }
+      ],
+      "heatmap_player": [
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,207,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0"
+      ],
+      "heatmap_all": [
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,207,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0",
+        "0,0,0,0,0,0,0,0,0,0,0,0"
+      ],
+      "recent_ticks": 15,
+      "recent_count": 155,
+      "recent_first_tick": 1
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+/*
+ * 컴포넌트 확인용 페이지 스타일. 값은 전부 토큰이다 — 생 hex·생 px 금지.
+ * 이 파일은 카탈로그 페이지 전용이며 제품 화면이 import 하지 않는다.
+ */
+
+.gal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  padding: var(--sp-8);
+}
+
+.gal__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-display-l);
+  color: var(--text-display);
+}
+
+.gal__note {
+  max-width: calc(var(--col-rules) * 2);
+  font-size: var(--fs-body-s);
+  color: var(--text-dim);
+}
+
+.gal__stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.gal__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  align-items: center;
+}
+
+.gal__cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: var(--col-log);
+}
+
+.gal__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--col-log), 1fr));
+  gap: var(--sp-4);
+}
+
+/* ── 전투 화면 골격 — 56 / 320 / 가변 / 300 / 48, 열 사이 1px 괘선 하나 ── */
+
+.gal__battle {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: calc(var(--bar-top) + var(--bar-bottom) + var(--plan-cell) * var(--plan-rows) + var(--sp-10));
+  background: var(--surface-base);
+  border: var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.gal__cols {
+  display: grid;
+  grid-template-columns:
+    var(--col-rules) var(--gap-col) minmax(0, 1fr) var(--gap-col) var(--col-log);
+  min-height: 0;
+}
+
+.gal__gap {
+  background: var(--line);
+}
+
+.gal__col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--surface-panel);
+}
+
+.gal__plan {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: var(--sp-4);
+  overflow: auto;
+  background: var(--surface-plan);
+}

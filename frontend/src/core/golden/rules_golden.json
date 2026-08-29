@@ -1,0 +1,2757 @@
+{
+  "_comment": [
+    "파이썬 코어(rules·selectors)에서 생성한 기준값이다. 손으로 고치지 않는다.",
+    "재생성: uv run python -m scripts.export_rules_golden",
+    "위반 메시지와 조건 문자열은 순서와 글자까지 기준이다 — 규칙 에디터와 로그가",
+    "이것을 그대로 띄우기 때문이다 (GDD §8.2, P1)."
+  ],
+  "kind_types": [
+    [
+      "hero",
+      "PLAYER"
+    ],
+    [
+      "goblin_rusher",
+      "MELEE"
+    ],
+    [
+      "goblin_archer",
+      "RANGED"
+    ],
+    [
+      "goblin_summoner",
+      "SUMMONER"
+    ],
+    [
+      "bomb_slime",
+      "BOMBER"
+    ],
+    [
+      "throne_wraith",
+      "BOSS"
+    ]
+  ],
+  "balance_path": "balance.json",
+  "worlds": [
+    {
+      "world_id": "field_mixed",
+      "room_id": "open_field",
+      "tick": 3,
+      "casting_ids": [
+        "e_delta"
+      ],
+      "entities": [
+        {
+          "entity_id": "player",
+          "kind_id": "hero",
+          "faction": "player",
+          "position": [
+            1,
+            4
+          ],
+          "hp": 100,
+          "hp_max": 100,
+          "attack": 12,
+          "defense": 5,
+          "attack_range": 1,
+          "initiative": 50,
+          "regen_base": 1,
+          "cpu_budget": 8,
+          "potions": 2
+        },
+        {
+          "entity_id": "e_alpha",
+          "kind_id": "goblin_rusher",
+          "faction": "enemy",
+          "position": [
+            3,
+            4
+          ],
+          "hp": 20,
+          "hp_max": 24,
+          "attack": 7,
+          "defense": 2,
+          "attack_range": 1,
+          "initiative": 40,
+          "regen_base": 0,
+          "cpu_budget": 4,
+          "potions": 0
+        },
+        {
+          "entity_id": "e_bravo",
+          "kind_id": "goblin_rusher",
+          "faction": "enemy",
+          "position": [
+            1,
+            6
+          ],
+          "hp": 24,
+          "hp_max": 24,
+          "attack": 7,
+          "defense": 2,
+          "attack_range": 1,
+          "initiative": 40,
+          "regen_base": 0,
+          "cpu_budget": 4,
+          "potions": 0
+        },
+        {
+          "entity_id": "e_charlie",
+          "kind_id": "goblin_archer",
+          "faction": "enemy",
+          "position": [
+            8,
+            4
+          ],
+          "hp": 20,
+          "hp_max": 20,
+          "attack": 9,
+          "defense": 2,
+          "attack_range": 1,
+          "initiative": 40,
+          "regen_base": 0,
+          "cpu_budget": 4,
+          "potions": 0
+        },
+        {
+          "entity_id": "e_delta",
+          "kind_id": "goblin_summoner",
+          "faction": "enemy",
+          "position": [
+            9,
+            6
+          ],
+          "hp": 30,
+          "hp_max": 30,
+          "attack": 5,
+          "defense": 2,
+          "attack_range": 1,
+          "initiative": 40,
+          "regen_base": 0,
+          "cpu_budget": 4,
+          "potions": 0
+        },
+        {
+          "entity_id": "e_echo",
+          "kind_id": "goblin_summoner",
+          "faction": "enemy",
+          "position": [
+            10,
+            2
+          ],
+          "hp": 20,
+          "hp_max": 30,
+          "attack": 9,
+          "defense": 2,
+          "attack_range": 1,
+          "initiative": 40,
+          "regen_base": 0,
+          "cpu_budget": 4,
+          "potions": 0
+        }
+      ]
+    },
+    {
+      "world_id": "throne",
+      "room_id": "open_field",
+      "tick": 12,
+      "casting_ids": [],
+      "entities": [
+        {
+          "entity_id": "player",
+          "kind_id": "hero",
+          "faction": "player",
+          "position": [
+            1,
+            4
+          ],
+          "hp": 64,
+          "hp_max": 100,
+          "attack": 12,
+          "defense": 5,
+          "attack_range": 1,
+          "initiative": 50,
+          "regen_base": 1,
+          "cpu_budget": 8,
+          "potions": 2
+        },
+        {
+          "entity_id": "e_minion",
+          "kind_id": "goblin_rusher",
+          "faction": "enemy",
+          "position": [
+            2,
+            4
+          ],
+          "hp": 20,
+          "hp_max": 24,
+          "attack": 7,
+          "defense": 2,
+          "attack_range": 1,
+          "initiative": 40,
+          "regen_base": 0,
+          "cpu_budget": 4,
+          "potions": 0
+        },
+        {
+          "entity_id": "e_boss",
+          "kind_id": "throne_wraith",
+          "faction": "enemy",
+          "position": [
+            6,
+            4
+          ],
+          "hp": 80,
+          "hp_max": 80,
+          "attack": 20,
+          "defense": 2,
+          "attack_range": 1,
+          "initiative": 40,
+          "regen_base": 0,
+          "cpu_budget": 4,
+          "potions": 0
+        }
+      ]
+    },
+    {
+      "world_id": "spring",
+      "room_id": "spring_bait",
+      "tick": 5,
+      "casting_ids": [],
+      "entities": [
+        {
+          "entity_id": "player",
+          "kind_id": "hero",
+          "faction": "player",
+          "position": [
+            6,
+            4
+          ],
+          "hp": 20,
+          "hp_max": 100,
+          "attack": 12,
+          "defense": 5,
+          "attack_range": 1,
+          "initiative": 50,
+          "regen_base": 1,
+          "cpu_budget": 8,
+          "potions": 2
+        },
+        {
+          "entity_id": "e_archer",
+          "kind_id": "goblin_archer",
+          "faction": "enemy",
+          "position": [
+            10,
+            3
+          ],
+          "hp": 20,
+          "hp_max": 24,
+          "attack": 7,
+          "defense": 2,
+          "attack_range": 4,
+          "initiative": 40,
+          "regen_base": 0,
+          "cpu_budget": 4,
+          "potions": 0
+        }
+      ]
+    },
+    {
+      "world_id": "solitude",
+      "room_id": "open_field",
+      "tick": 0,
+      "casting_ids": [],
+      "entities": [
+        {
+          "entity_id": "player",
+          "kind_id": "hero",
+          "faction": "player",
+          "position": [
+            1,
+            4
+          ],
+          "hp": 100,
+          "hp_max": 100,
+          "attack": 12,
+          "defense": 5,
+          "attack_range": 1,
+          "initiative": 50,
+          "regen_base": 1,
+          "cpu_budget": 8,
+          "potions": 2
+        }
+      ]
+    },
+    {
+      "world_id": "wounded",
+      "room_id": "open_field",
+      "tick": 7,
+      "casting_ids": [],
+      "entities": [
+        {
+          "entity_id": "player",
+          "kind_id": "hero",
+          "faction": "player",
+          "position": [
+            1,
+            4
+          ],
+          "hp": 80,
+          "hp_max": 100,
+          "attack": 12,
+          "defense": 5,
+          "attack_range": 1,
+          "initiative": 50,
+          "regen_base": 1,
+          "cpu_budget": 8,
+          "potions": 2
+        },
+        {
+          "entity_id": "e_alpha",
+          "kind_id": "goblin_rusher",
+          "faction": "enemy",
+          "position": [
+            4,
+            4
+          ],
+          "hp": 20,
+          "hp_max": 24,
+          "attack": 7,
+          "defense": 2,
+          "attack_range": 1,
+          "initiative": 40,
+          "regen_base": 0,
+          "cpu_budget": 4,
+          "potions": 0
+        }
+      ]
+    }
+  ],
+  "snapshots": [
+    {
+      "world_id": "field_mixed",
+      "entity_id": "player",
+      "values": [
+        [
+          "self_hp_percent",
+          100
+        ],
+        [
+          "self_potion_count",
+          2
+        ],
+        [
+          "self_on_heal_tile",
+          false
+        ],
+        [
+          "visible_enemy_count",
+          5
+        ],
+        [
+          "open_neighbor_count",
+          6
+        ],
+        [
+          "room_elapsed_ticks",
+          3
+        ],
+        [
+          "target_distance[NEAREST]",
+          2
+        ],
+        [
+          "target_distance[LOWEST_HP]",
+          2
+        ],
+        [
+          "target_distance[HIGHEST_THREAT]",
+          11
+        ],
+        [
+          "target_distance[TYPE_RANGED]",
+          7
+        ],
+        [
+          "target_distance[TYPE_SUMMONER]",
+          10
+        ],
+        [
+          "target_distance[CASTING]",
+          10
+        ],
+        [
+          "target_distance[BOSS]",
+          -1
+        ],
+        [
+          "nearest_tile_distance[DOOR]",
+          1
+        ],
+        [
+          "nearest_tile_distance[STAIRS]",
+          -1
+        ],
+        [
+          "nearest_tile_distance[SPRING]",
+          -1
+        ],
+        [
+          "enemy_type_present[MELEE]",
+          true
+        ],
+        [
+          "enemy_type_present[RANGED]",
+          true
+        ],
+        [
+          "enemy_type_present[SUMMONER]",
+          true
+        ],
+        [
+          "enemy_type_present[BOMBER]",
+          false
+        ],
+        [
+          "self_cooldown_ready[SKILL_1]",
+          true
+        ],
+        [
+          "self_cooldown_ready[SKILL_2]",
+          true
+        ],
+        [
+          "self_cooldown_ready[AREA_ATTACK]",
+          true
+        ],
+        [
+          "self_cooldown_ready[SUMMON]",
+          true
+        ],
+        [
+          "self_has_status[POISON]",
+          false
+        ],
+        [
+          "self_has_status[SLOW]",
+          false
+        ],
+        [
+          "self_has_status[STUN]",
+          false
+        ],
+        [
+          "flag_state[A]",
+          false
+        ],
+        [
+          "flag_state[B]",
+          false
+        ],
+        [
+          "flag_state[C]",
+          false
+        ],
+        [
+          "flag_state[D]",
+          false
+        ]
+      ]
+    },
+    {
+      "world_id": "throne",
+      "entity_id": "player",
+      "values": [
+        [
+          "self_hp_percent",
+          64
+        ],
+        [
+          "self_potion_count",
+          2
+        ],
+        [
+          "self_on_heal_tile",
+          false
+        ],
+        [
+          "visible_enemy_count",
+          2
+        ],
+        [
+          "open_neighbor_count",
+          5
+        ],
+        [
+          "room_elapsed_ticks",
+          12
+        ],
+        [
+          "target_distance[NEAREST]",
+          1
+        ],
+        [
+          "target_distance[LOWEST_HP]",
+          1
+        ],
+        [
+          "target_distance[HIGHEST_THREAT]",
+          5
+        ],
+        [
+          "target_distance[TYPE_RANGED]",
+          -1
+        ],
+        [
+          "target_distance[TYPE_SUMMONER]",
+          -1
+        ],
+        [
+          "target_distance[CASTING]",
+          -1
+        ],
+        [
+          "target_distance[BOSS]",
+          5
+        ],
+        [
+          "nearest_tile_distance[DOOR]",
+          1
+        ],
+        [
+          "nearest_tile_distance[STAIRS]",
+          -1
+        ],
+        [
+          "nearest_tile_distance[SPRING]",
+          -1
+        ],
+        [
+          "enemy_type_present[MELEE]",
+          true
+        ],
+        [
+          "enemy_type_present[RANGED]",
+          false
+        ],
+        [
+          "enemy_type_present[SUMMONER]",
+          false
+        ],
+        [
+          "enemy_type_present[BOMBER]",
+          false
+        ],
+        [
+          "self_cooldown_ready[SKILL_1]",
+          true
+        ],
+        [
+          "self_cooldown_ready[SKILL_2]",
+          true
+        ],
+        [
+          "self_cooldown_ready[AREA_ATTACK]",
+          true
+        ],
+        [
+          "self_cooldown_ready[SUMMON]",
+          true
+        ],
+        [
+          "self_has_status[POISON]",
+          false
+        ],
+        [
+          "self_has_status[SLOW]",
+          false
+        ],
+        [
+          "self_has_status[STUN]",
+          false
+        ],
+        [
+          "flag_state[A]",
+          false
+        ],
+        [
+          "flag_state[B]",
+          false
+        ],
+        [
+          "flag_state[C]",
+          false
+        ],
+        [
+          "flag_state[D]",
+          false
+        ]
+      ]
+    },
+    {
+      "world_id": "spring",
+      "entity_id": "player",
+      "values": [
+        [
+          "self_hp_percent",
+          20
+        ],
+        [
+          "self_potion_count",
+          2
+        ],
+        [
+          "self_on_heal_tile",
+          true
+        ],
+        [
+          "visible_enemy_count",
+          1
+        ],
+        [
+          "open_neighbor_count",
+          8
+        ],
+        [
+          "room_elapsed_ticks",
+          5
+        ],
+        [
+          "target_distance[NEAREST]",
+          5
+        ],
+        [
+          "target_distance[LOWEST_HP]",
+          5
+        ],
+        [
+          "target_distance[HIGHEST_THREAT]",
+          5
+        ],
+        [
+          "target_distance[TYPE_RANGED]",
+          5
+        ],
+        [
+          "target_distance[TYPE_SUMMONER]",
+          -1
+        ],
+        [
+          "target_distance[CASTING]",
+          -1
+        ],
+        [
+          "target_distance[BOSS]",
+          -1
+        ],
+        [
+          "nearest_tile_distance[DOOR]",
+          5
+        ],
+        [
+          "nearest_tile_distance[STAIRS]",
+          -1
+        ],
+        [
+          "nearest_tile_distance[SPRING]",
+          0
+        ],
+        [
+          "enemy_type_present[MELEE]",
+          false
+        ],
+        [
+          "enemy_type_present[RANGED]",
+          true
+        ],
+        [
+          "enemy_type_present[SUMMONER]",
+          false
+        ],
+        [
+          "enemy_type_present[BOMBER]",
+          false
+        ],
+        [
+          "self_cooldown_ready[SKILL_1]",
+          true
+        ],
+        [
+          "self_cooldown_ready[SKILL_2]",
+          true
+        ],
+        [
+          "self_cooldown_ready[AREA_ATTACK]",
+          true
+        ],
+        [
+          "self_cooldown_ready[SUMMON]",
+          true
+        ],
+        [
+          "self_has_status[POISON]",
+          false
+        ],
+        [
+          "self_has_status[SLOW]",
+          false
+        ],
+        [
+          "self_has_status[STUN]",
+          false
+        ],
+        [
+          "flag_state[A]",
+          false
+        ],
+        [
+          "flag_state[B]",
+          false
+        ],
+        [
+          "flag_state[C]",
+          false
+        ],
+        [
+          "flag_state[D]",
+          false
+        ]
+      ]
+    },
+    {
+      "world_id": "solitude",
+      "entity_id": "player",
+      "values": [
+        [
+          "self_hp_percent",
+          100
+        ],
+        [
+          "self_potion_count",
+          2
+        ],
+        [
+          "self_on_heal_tile",
+          false
+        ],
+        [
+          "visible_enemy_count",
+          0
+        ],
+        [
+          "open_neighbor_count",
+          6
+        ],
+        [
+          "room_elapsed_ticks",
+          0
+        ],
+        [
+          "target_distance[NEAREST]",
+          -1
+        ],
+        [
+          "target_distance[LOWEST_HP]",
+          -1
+        ],
+        [
+          "target_distance[HIGHEST_THREAT]",
+          -1
+        ],
+        [
+          "target_distance[TYPE_RANGED]",
+          -1
+        ],
+        [
+          "target_distance[TYPE_SUMMONER]",
+          -1
+        ],
+        [
+          "target_distance[CASTING]",
+          -1
+        ],
+        [
+          "target_distance[BOSS]",
+          -1
+        ],
+        [
+          "nearest_tile_distance[DOOR]",
+          1
+        ],
+        [
+          "nearest_tile_distance[STAIRS]",
+          -1
+        ],
+        [
+          "nearest_tile_distance[SPRING]",
+          -1
+        ],
+        [
+          "enemy_type_present[MELEE]",
+          false
+        ],
+        [
+          "enemy_type_present[RANGED]",
+          false
+        ],
+        [
+          "enemy_type_present[SUMMONER]",
+          false
+        ],
+        [
+          "enemy_type_present[BOMBER]",
+          false
+        ],
+        [
+          "self_cooldown_ready[SKILL_1]",
+          true
+        ],
+        [
+          "self_cooldown_ready[SKILL_2]",
+          true
+        ],
+        [
+          "self_cooldown_ready[AREA_ATTACK]",
+          true
+        ],
+        [
+          "self_cooldown_ready[SUMMON]",
+          true
+        ],
+        [
+          "self_has_status[POISON]",
+          false
+        ],
+        [
+          "self_has_status[SLOW]",
+          false
+        ],
+        [
+          "self_has_status[STUN]",
+          false
+        ],
+        [
+          "flag_state[A]",
+          false
+        ],
+        [
+          "flag_state[B]",
+          false
+        ],
+        [
+          "flag_state[C]",
+          false
+        ],
+        [
+          "flag_state[D]",
+          false
+        ]
+      ]
+    },
+    {
+      "world_id": "wounded",
+      "entity_id": "player",
+      "values": [
+        [
+          "self_hp_percent",
+          80
+        ],
+        [
+          "self_potion_count",
+          2
+        ],
+        [
+          "self_on_heal_tile",
+          false
+        ],
+        [
+          "visible_enemy_count",
+          1
+        ],
+        [
+          "open_neighbor_count",
+          6
+        ],
+        [
+          "room_elapsed_ticks",
+          7
+        ],
+        [
+          "target_distance[NEAREST]",
+          3
+        ],
+        [
+          "target_distance[LOWEST_HP]",
+          3
+        ],
+        [
+          "target_distance[HIGHEST_THREAT]",
+          3
+        ],
+        [
+          "target_distance[TYPE_RANGED]",
+          -1
+        ],
+        [
+          "target_distance[TYPE_SUMMONER]",
+          -1
+        ],
+        [
+          "target_distance[CASTING]",
+          -1
+        ],
+        [
+          "target_distance[BOSS]",
+          -1
+        ],
+        [
+          "nearest_tile_distance[DOOR]",
+          1
+        ],
+        [
+          "nearest_tile_distance[STAIRS]",
+          -1
+        ],
+        [
+          "nearest_tile_distance[SPRING]",
+          -1
+        ],
+        [
+          "enemy_type_present[MELEE]",
+          true
+        ],
+        [
+          "enemy_type_present[RANGED]",
+          false
+        ],
+        [
+          "enemy_type_present[SUMMONER]",
+          false
+        ],
+        [
+          "enemy_type_present[BOMBER]",
+          false
+        ],
+        [
+          "self_cooldown_ready[SKILL_1]",
+          true
+        ],
+        [
+          "self_cooldown_ready[SKILL_2]",
+          true
+        ],
+        [
+          "self_cooldown_ready[AREA_ATTACK]",
+          true
+        ],
+        [
+          "self_cooldown_ready[SUMMON]",
+          true
+        ],
+        [
+          "self_has_status[POISON]",
+          false
+        ],
+        [
+          "self_has_status[SLOW]",
+          false
+        ],
+        [
+          "self_has_status[STUN]",
+          false
+        ],
+        [
+          "flag_state[A]",
+          false
+        ],
+        [
+          "flag_state[B]",
+          false
+        ],
+        [
+          "flag_state[C]",
+          false
+        ],
+        [
+          "flag_state[D]",
+          false
+        ]
+      ]
+    }
+  ],
+  "selectors": [
+    {
+      "world_id": "field_mixed",
+      "actor_id": "player",
+      "selector": "NEAREST",
+      "picked_id": "e_alpha"
+    },
+    {
+      "world_id": "field_mixed",
+      "actor_id": "player",
+      "selector": "LOWEST_HP",
+      "picked_id": "e_alpha"
+    },
+    {
+      "world_id": "field_mixed",
+      "actor_id": "player",
+      "selector": "HIGHEST_THREAT",
+      "picked_id": "e_echo"
+    },
+    {
+      "world_id": "field_mixed",
+      "actor_id": "player",
+      "selector": "TYPE_RANGED",
+      "picked_id": "e_charlie"
+    },
+    {
+      "world_id": "field_mixed",
+      "actor_id": "player",
+      "selector": "TYPE_SUMMONER",
+      "picked_id": "e_delta"
+    },
+    {
+      "world_id": "field_mixed",
+      "actor_id": "player",
+      "selector": "CASTING",
+      "picked_id": "e_delta"
+    },
+    {
+      "world_id": "field_mixed",
+      "actor_id": "player",
+      "selector": "BOSS",
+      "picked_id": null
+    },
+    {
+      "world_id": "throne",
+      "actor_id": "player",
+      "selector": "NEAREST",
+      "picked_id": "e_minion"
+    },
+    {
+      "world_id": "throne",
+      "actor_id": "player",
+      "selector": "LOWEST_HP",
+      "picked_id": "e_minion"
+    },
+    {
+      "world_id": "throne",
+      "actor_id": "player",
+      "selector": "HIGHEST_THREAT",
+      "picked_id": "e_boss"
+    },
+    {
+      "world_id": "throne",
+      "actor_id": "player",
+      "selector": "TYPE_RANGED",
+      "picked_id": null
+    },
+    {
+      "world_id": "throne",
+      "actor_id": "player",
+      "selector": "TYPE_SUMMONER",
+      "picked_id": null
+    },
+    {
+      "world_id": "throne",
+      "actor_id": "player",
+      "selector": "CASTING",
+      "picked_id": null
+    },
+    {
+      "world_id": "throne",
+      "actor_id": "player",
+      "selector": "BOSS",
+      "picked_id": "e_boss"
+    },
+    {
+      "world_id": "spring",
+      "actor_id": "player",
+      "selector": "NEAREST",
+      "picked_id": "e_archer"
+    },
+    {
+      "world_id": "spring",
+      "actor_id": "player",
+      "selector": "LOWEST_HP",
+      "picked_id": "e_archer"
+    },
+    {
+      "world_id": "spring",
+      "actor_id": "player",
+      "selector": "HIGHEST_THREAT",
+      "picked_id": "e_archer"
+    },
+    {
+      "world_id": "spring",
+      "actor_id": "player",
+      "selector": "TYPE_RANGED",
+      "picked_id": "e_archer"
+    },
+    {
+      "world_id": "spring",
+      "actor_id": "player",
+      "selector": "TYPE_SUMMONER",
+      "picked_id": null
+    },
+    {
+      "world_id": "spring",
+      "actor_id": "player",
+      "selector": "CASTING",
+      "picked_id": null
+    },
+    {
+      "world_id": "spring",
+      "actor_id": "player",
+      "selector": "BOSS",
+      "picked_id": null
+    },
+    {
+      "world_id": "solitude",
+      "actor_id": "player",
+      "selector": "NEAREST",
+      "picked_id": null
+    },
+    {
+      "world_id": "solitude",
+      "actor_id": "player",
+      "selector": "LOWEST_HP",
+      "picked_id": null
+    },
+    {
+      "world_id": "solitude",
+      "actor_id": "player",
+      "selector": "HIGHEST_THREAT",
+      "picked_id": null
+    },
+    {
+      "world_id": "solitude",
+      "actor_id": "player",
+      "selector": "TYPE_RANGED",
+      "picked_id": null
+    },
+    {
+      "world_id": "solitude",
+      "actor_id": "player",
+      "selector": "TYPE_SUMMONER",
+      "picked_id": null
+    },
+    {
+      "world_id": "solitude",
+      "actor_id": "player",
+      "selector": "CASTING",
+      "picked_id": null
+    },
+    {
+      "world_id": "solitude",
+      "actor_id": "player",
+      "selector": "BOSS",
+      "picked_id": null
+    },
+    {
+      "world_id": "wounded",
+      "actor_id": "player",
+      "selector": "NEAREST",
+      "picked_id": "e_alpha"
+    },
+    {
+      "world_id": "wounded",
+      "actor_id": "player",
+      "selector": "LOWEST_HP",
+      "picked_id": "e_alpha"
+    },
+    {
+      "world_id": "wounded",
+      "actor_id": "player",
+      "selector": "HIGHEST_THREAT",
+      "picked_id": "e_alpha"
+    },
+    {
+      "world_id": "wounded",
+      "actor_id": "player",
+      "selector": "TYPE_RANGED",
+      "picked_id": null
+    },
+    {
+      "world_id": "wounded",
+      "actor_id": "player",
+      "selector": "TYPE_SUMMONER",
+      "picked_id": null
+    },
+    {
+      "world_id": "wounded",
+      "actor_id": "player",
+      "selector": "CASTING",
+      "picked_id": null
+    },
+    {
+      "world_id": "wounded",
+      "actor_id": "player",
+      "selector": "BOSS",
+      "picked_id": null
+    }
+  ],
+  "validator": [
+    {
+      "name": "슬롯 초과",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          },
+          {
+            "priority": 2,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          },
+          {
+            "priority": 3,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          },
+          {
+            "priority": 4,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          },
+          {
+            "priority": 5,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          },
+          {
+            "priority": 6,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "rule_slots": 5,
+      "cpu_budget": 99,
+      "unlocked": null,
+      "problems": [
+        "규칙 6개가 슬롯 5개를 넘는다"
+      ]
+    },
+    {
+      "name": "CPU 초과",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          },
+          {
+            "priority": 2,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          },
+          {
+            "priority": 3,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          },
+          {
+            "priority": 4,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_budget": 2,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": [
+        "CPU 4 가 예산 2 을 넘는다"
+      ]
+    },
+    {
+      "name": "목록에 없는 인지 변수",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "does_not_exist",
+                  "cmp": "<",
+                  "rhs": 1
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": [
+        "[1] 목록에 없는 인지 변수 does_not_exist"
+      ]
+    },
+    {
+      "name": "허용되지 않는 인자",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "flag_state",
+                  "cmp": "==",
+                  "rhs": true,
+                  "lhs_param": "Z"
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": [
+        "[1] flag_state 의 인자 Z 는 허용되지 않는다"
+      ]
+    },
+    {
+      "name": "인자를 빠뜨린 인지 변수",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "flag_state",
+                  "cmp": "==",
+                  "rhs": true
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": [
+        "[1] flag_state 의 인자 None 는 허용되지 않는다"
+      ]
+    },
+    {
+      "name": "인자를 받지 않는 인지 변수에 인자를 줬다",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50,
+                  "lhs_param": "A"
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": [
+        "[1] self_hp_percent 는 인자를 받지 않는다"
+      ]
+    },
+    {
+      "name": "TARGET 이 필요한 행동",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "ATTACK",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": [
+        "[1] ATTACK 는 TARGET 셀렉터가 필요하다"
+      ]
+    },
+    {
+      "name": "TARGET 을 받지 않는 행동",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": "NEAREST",
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": [
+        "[1] HOLD 는 TARGET 을 받지 않는다"
+      ]
+    },
+    {
+      "name": "우선순위 중복",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          },
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_potion_count",
+                  "cmp": ">",
+                  "rhs": 0
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": [
+        "우선순위가 중복된다 — 평가 순서가 정해지지 않는다"
+      ]
+    },
+    {
+      "name": "CPU 비용 불일치",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 4
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": [
+        "[1] CPU 비용 4 가 항 수 기준 1 와 다르다"
+      ]
+    },
+    {
+      "name": "해금되지 않은 블록",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "unlocked": [
+        "HOLD"
+      ],
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "problems": [
+        "[1] 아직 해금되지 않은 인지 변수 self_hp_percent"
+      ]
+    },
+    {
+      "name": "목록에 없는 스탯",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "target_distance",
+                  "cmp": "<=",
+                  "rhs": {
+                    "stat": "no_such_stat"
+                  },
+                  "lhs_param": "NEAREST"
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": [
+        "[1] 목록에 없는 스탯 no_such_stat"
+      ]
+    },
+    {
+      "name": "불리언 블록과 스탯 비교",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_on_heal_tile",
+                  "cmp": "==",
+                  "rhs": {
+                    "stat": "attack_range"
+                  }
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": [
+        "[1] self_on_heal_tile 는 bool 라서 스탯과 비교할 수 없다"
+      ]
+    },
+    {
+      "name": "목록에 없는 행동",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "NO_SUCH_ACTION",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": [
+        "[1] 목록에 없는 행동 NO_SUCH_ACTION"
+      ]
+    },
+    {
+      "name": "목록에 없는 셀렉터",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                }
+              ]
+            },
+            "action": "ATTACK",
+            "target": "NO_SUCH_SELECTOR",
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": [
+        "[1] 목록에 없는 셀렉터 NO_SUCH_SELECTOR"
+      ]
+    },
+    {
+      "name": "항 수 초과",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "AND",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                },
+                {
+                  "lhs": "self_potion_count",
+                  "cmp": ">",
+                  "rhs": 0
+                },
+                {
+                  "lhs": "visible_enemy_count",
+                  "cmp": ">",
+                  "rhs": 0
+                },
+                {
+                  "lhs": "room_elapsed_ticks",
+                  "cmp": ">",
+                  "rhs": 0
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 4
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": [
+        "[1] 조건 항이 1~3개를 벗어났다"
+      ]
+    },
+    {
+      "name": "세 항 AND 는 통과한다",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "AND",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 50
+                },
+                {
+                  "lhs": "self_potion_count",
+                  "cmp": ">",
+                  "rhs": 0
+                },
+                {
+                  "lhs": "visible_enemy_count",
+                  "cmp": ">",
+                  "rhs": 0
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 4
+          }
+        ]
+      },
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": []
+    },
+    {
+      "name": "g0 압박형은 통과한다",
+      "ruleset_ref": [
+        "g0",
+        "g0_pressure"
+      ],
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": []
+    },
+    {
+      "name": "g0 카이팅은 통과한다",
+      "ruleset_ref": [
+        "g0",
+        "g0_kite"
+      ],
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": []
+    },
+    {
+      "name": "g0 엄폐형은 통과한다",
+      "ruleset_ref": [
+        "g0",
+        "g0_cover"
+      ],
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": []
+    },
+    {
+      "name": "적 소환사 규칙표는 통과한다",
+      "ruleset_ref": [
+        "enemies",
+        "ai_summoner"
+      ],
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": []
+    },
+    {
+      "name": "벤치마크 규칙표는 통과한다",
+      "ruleset_ref": [
+        "benchmark",
+        "focus_summoner"
+      ],
+      "cpu_budget": 99,
+      "rule_slots": 5,
+      "unlocked": null,
+      "problems": []
+    }
+  ],
+  "conditions": [
+    {
+      "name": "AND 는 모든 항을 요구한다",
+      "world_id": "wounded",
+      "condition": {
+        "op": "AND",
+        "terms": [
+          {
+            "lhs": "self_hp_percent",
+            "cmp": "<",
+            "rhs": 50
+          },
+          {
+            "lhs": "self_potion_count",
+            "cmp": ">",
+            "rhs": 0
+          }
+        ]
+      },
+      "target_id": null,
+      "cpu_headroom": null,
+      "fired": false,
+      "expr": "내 HP%(80) < 50 AND 내 포션 수(2) > 0"
+    },
+    {
+      "name": "OR 는 한 항이면 된다",
+      "world_id": "wounded",
+      "condition": {
+        "op": "OR",
+        "terms": [
+          {
+            "lhs": "self_hp_percent",
+            "cmp": "<",
+            "rhs": 50
+          },
+          {
+            "lhs": "self_potion_count",
+            "cmp": ">",
+            "rhs": 0
+          }
+        ]
+      },
+      "target_id": null,
+      "cpu_headroom": null,
+      "fired": true,
+      "expr": "내 HP%(80) < 50 OR 내 포션 수(2) > 0"
+    },
+    {
+      "name": "스탯 우변은 양변에 실측값이 붙는다",
+      "world_id": "field_mixed",
+      "condition": {
+        "op": "SINGLE",
+        "terms": [
+          {
+            "lhs": "target_distance",
+            "cmp": "<=",
+            "rhs": {
+              "stat": "attack_range"
+            },
+            "lhs_param": "NEAREST"
+          }
+        ]
+      },
+      "target_id": null,
+      "cpu_headroom": null,
+      "fired": false,
+      "expr": "대상 거리[NEAREST](2) <= 사거리(1)"
+    },
+    {
+      "name": "모르는 스탯은 거짓이다",
+      "world_id": "field_mixed",
+      "condition": {
+        "op": "SINGLE",
+        "terms": [
+          {
+            "lhs": "target_distance",
+            "cmp": "<=",
+            "rhs": {
+              "stat": "no_such_stat"
+            },
+            "lhs_param": "NEAREST"
+          }
+        ]
+      },
+      "target_id": null,
+      "cpu_headroom": null,
+      "fired": false,
+      "expr": "대상 거리[NEAREST](2) <= no_such_stat(없음)"
+    },
+    {
+      "name": "값이 없는 항은 거짓이다",
+      "world_id": "field_mixed",
+      "condition": {
+        "op": "SINGLE",
+        "terms": [
+          {
+            "lhs": "self_exposed_to_los",
+            "cmp": "==",
+            "rhs": true
+          }
+        ]
+      },
+      "target_id": null,
+      "cpu_headroom": null,
+      "fired": false,
+      "expr": "내 위치가 시야에 노출됨(없음) == 참"
+    },
+    {
+      "name": "대상이 없으면 대상 계열도 거짓이다",
+      "world_id": "field_mixed",
+      "condition": {
+        "op": "SINGLE",
+        "terms": [
+          {
+            "lhs": "target_hp_percent",
+            "cmp": "<",
+            "rhs": 50
+          }
+        ]
+      },
+      "target_id": null,
+      "cpu_headroom": null,
+      "fired": false,
+      "expr": "대상 HP%(없음) < 50"
+    },
+    {
+      "name": "대상 HP% 는 셀렉터가 고른 적을 가리킨다",
+      "world_id": "field_mixed",
+      "target_id": "e_echo",
+      "condition": {
+        "op": "SINGLE",
+        "terms": [
+          {
+            "lhs": "target_hp_percent",
+            "cmp": "<",
+            "rhs": 90
+          }
+        ]
+      },
+      "cpu_headroom": null,
+      "fired": true,
+      "expr": "대상 HP%(66) < 90"
+    },
+    {
+      "name": "대상 시전 여부는 예고판을 읽는다",
+      "world_id": "field_mixed",
+      "target_id": "e_delta",
+      "condition": {
+        "op": "SINGLE",
+        "terms": [
+          {
+            "lhs": "target_is_casting",
+            "cmp": "==",
+            "rhs": true
+          }
+        ]
+      },
+      "cpu_headroom": null,
+      "fired": true,
+      "expr": "대상이 시전 중인가(참) == 참"
+    },
+    {
+      "name": "CPU 여유는 VM 이 답한다",
+      "world_id": "field_mixed",
+      "cpu_headroom": 7,
+      "condition": {
+        "op": "SINGLE",
+        "terms": [
+          {
+            "lhs": "self_cpu_headroom",
+            "cmp": ">=",
+            "rhs": 7
+          }
+        ]
+      },
+      "target_id": null,
+      "fired": true,
+      "expr": "내 CPU 여유(7) >= 7"
+    },
+    {
+      "name": "불리언 리터럴은 참거짓으로 적힌다",
+      "world_id": "spring",
+      "condition": {
+        "op": "SINGLE",
+        "terms": [
+          {
+            "lhs": "self_on_heal_tile",
+            "cmp": "==",
+            "rhs": true
+          }
+        ]
+      },
+      "target_id": null,
+      "cpu_headroom": null,
+      "fired": true,
+      "expr": "내 위치가 회복타일인가(참) == 참"
+    }
+  ],
+  "rule_vm": [
+    {
+      "name": "최초로 참인 규칙 하나만 실행한다",
+      "world_id": "field_mixed",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_potion_count",
+                  "cmp": ">",
+                  "rhs": 0
+                }
+              ]
+            },
+            "action": "USE_POTION",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          },
+          {
+            "priority": 2,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<=",
+                  "rhs": 100
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_usage": 2,
+      "plan": {
+        "entity_id": "player",
+        "action_id": "USE_POTION",
+        "target_id": null,
+        "rule_index": 1,
+        "expr": "내 포션 수(2) > 0",
+        "set_flag": null
+      }
+    },
+    {
+      "name": "전부 거짓이면 DEFAULT 가 나간다",
+      "world_id": "field_mixed",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 0
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_usage": 1,
+      "plan": {
+        "entity_id": "player",
+        "action_id": "APPROACH",
+        "target_id": "e_alpha",
+        "rule_index": null,
+        "expr": "모든 규칙 거짓 → DEFAULT (적거리 2)",
+        "set_flag": null
+      }
+    },
+    {
+      "name": "셀렉터가 빈손이면 그 규칙은 건너뛴다",
+      "world_id": "field_mixed",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<=",
+                  "rhs": 100
+                }
+              ]
+            },
+            "action": "ATTACK",
+            "target": "BOSS",
+            "set_flag": null,
+            "cpu_cost": 1
+          },
+          {
+            "priority": 2,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<=",
+                  "rhs": 100
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_usage": 2,
+      "plan": {
+        "entity_id": "player",
+        "action_id": "HOLD",
+        "target_id": null,
+        "rule_index": 2,
+        "expr": "내 HP%(100) <= 100",
+        "set_flag": null
+      }
+    },
+    {
+      "name": "조건 문자열에 실측값이 붙는다",
+      "world_id": "field_mixed",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<=",
+                  "rhs": 100
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_usage": 1,
+      "plan": {
+        "entity_id": "player",
+        "action_id": "HOLD",
+        "target_id": null,
+        "rule_index": 1,
+        "expr": "내 HP%(100) <= 100",
+        "set_flag": null
+      }
+    },
+    {
+      "name": "플래그 기록은 계획에 담긴다",
+      "world_id": "field_mixed",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<=",
+                  "rhs": 100
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": "A=true",
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_usage": 1,
+      "plan": {
+        "entity_id": "player",
+        "action_id": "HOLD",
+        "target_id": null,
+        "rule_index": 1,
+        "expr": "내 HP%(100) <= 100",
+        "set_flag": "A=true"
+      }
+    },
+    {
+      "name": "스탯 우변은 주인의 값을 따른다",
+      "world_id": "throne",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "target_distance",
+                  "cmp": "<=",
+                  "rhs": {
+                    "stat": "attack_range"
+                  },
+                  "lhs_param": "NEAREST"
+                }
+              ]
+            },
+            "action": "ATTACK",
+            "target": "NEAREST",
+            "set_flag": null,
+            "cpu_cost": 1
+          },
+          {
+            "priority": 2,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<=",
+                  "rhs": 100
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_usage": 2,
+      "plan": {
+        "entity_id": "player",
+        "action_id": "ATTACK",
+        "target_id": "e_minion",
+        "rule_index": 1,
+        "expr": "대상 거리[NEAREST](1) <= 사거리(1)",
+        "set_flag": null
+      }
+    },
+    {
+      "name": "모르는 스탯은 거짓이라 다음 규칙으로 넘어간다",
+      "world_id": "field_mixed",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "target_distance",
+                  "cmp": "<=",
+                  "rhs": {
+                    "stat": "no_such_stat"
+                  },
+                  "lhs_param": "NEAREST"
+                }
+              ]
+            },
+            "action": "ATTACK",
+            "target": "NEAREST",
+            "set_flag": null,
+            "cpu_cost": 1
+          },
+          {
+            "priority": 2,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<=",
+                  "rhs": 100
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_usage": 2,
+      "plan": {
+        "entity_id": "player",
+        "action_id": "HOLD",
+        "target_id": null,
+        "rule_index": 2,
+        "expr": "내 HP%(100) <= 100",
+        "set_flag": null
+      }
+    },
+    {
+      "name": "적이 없으면 DEFAULT 도 대기가 된다",
+      "world_id": "solitude",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<",
+                  "rhs": 0
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_usage": 1,
+      "plan": {
+        "entity_id": "player",
+        "action_id": "HOLD",
+        "target_id": null,
+        "rule_index": null,
+        "expr": "적 없음",
+        "set_flag": null
+      }
+    },
+    {
+      "name": "CPU 여유는 규칙표 크기를 반영한다",
+      "world_id": "field_mixed",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_cpu_headroom",
+                  "cmp": ">=",
+                  "rhs": 7
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          },
+          {
+            "priority": 2,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<=",
+                  "rhs": 100
+                }
+              ]
+            },
+            "action": "APPROACH",
+            "target": "NEAREST",
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_usage": 2,
+      "plan": {
+        "entity_id": "player",
+        "action_id": "APPROACH",
+        "target_id": "e_alpha",
+        "rule_index": 2,
+        "expr": "내 HP%(100) <= 100",
+        "set_flag": null
+      }
+    },
+    {
+      "name": "시전 중인 적을 고르는 규칙",
+      "world_id": "field_mixed",
+      "ruleset": {
+        "ruleset_id": "x",
+        "version": 1,
+        "rules": [
+          {
+            "priority": 1,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<=",
+                  "rhs": 100
+                }
+              ]
+            },
+            "action": "ATTACK",
+            "target": "CASTING",
+            "set_flag": null,
+            "cpu_cost": 1
+          },
+          {
+            "priority": 2,
+            "conditions": {
+              "op": "SINGLE",
+              "terms": [
+                {
+                  "lhs": "self_hp_percent",
+                  "cmp": "<=",
+                  "rhs": 100
+                }
+              ]
+            },
+            "action": "HOLD",
+            "target": null,
+            "set_flag": null,
+            "cpu_cost": 1
+          }
+        ]
+      },
+      "cpu_usage": 2,
+      "plan": {
+        "entity_id": "player",
+        "action_id": "ATTACK",
+        "target_id": "e_delta",
+        "rule_index": 1,
+        "expr": "내 HP%(100) <= 100",
+        "set_flag": null
+      }
+    },
+    {
+      "name": "g0 압박형 규칙표",
+      "world_id": "field_mixed",
+      "ruleset_ref": [
+        "g0",
+        "g0_pressure"
+      ],
+      "cpu_usage": 6,
+      "plan": {
+        "entity_id": "player",
+        "action_id": "APPROACH",
+        "target_id": "e_alpha",
+        "rule_index": null,
+        "expr": "모든 규칙 거짓 → DEFAULT (적거리 2)",
+        "set_flag": null
+      }
+    },
+    {
+      "name": "g0 카이팅 규칙표",
+      "world_id": "spring",
+      "ruleset_ref": [
+        "g0",
+        "g0_kite"
+      ],
+      "cpu_usage": 7,
+      "plan": {
+        "entity_id": "player",
+        "action_id": "USE_POTION",
+        "target_id": null,
+        "rule_index": 1,
+        "expr": "내 HP%(20) < 30 AND 내 포션 수(2) > 0",
+        "set_flag": null
+      }
+    },
+    {
+      "name": "g0 엄폐형 규칙표",
+      "world_id": "throne",
+      "ruleset_ref": [
+        "g0",
+        "g0_cover"
+      ],
+      "cpu_usage": 8,
+      "plan": {
+        "entity_id": "player",
+        "action_id": "ATTACK",
+        "target_id": "e_minion",
+        "rule_index": 4,
+        "expr": "대상 거리[NEAREST](1) <= 1",
+        "set_flag": null
+      }
+    }
+  ],
+  "fallback": [
+    {
+      "world_id": "field_mixed",
+      "plan": {
+        "entity_id": "player",
+        "action_id": "APPROACH",
+        "target_id": "e_alpha",
+        "rule_index": null,
+        "expr": "적거리(2) > 사거리(1)",
+        "set_flag": null
+      }
+    },
+    {
+      "world_id": "throne",
+      "plan": {
+        "entity_id": "player",
+        "action_id": "ATTACK",
+        "target_id": "e_minion",
+        "rule_index": null,
+        "expr": "적거리(1) <= 사거리(1)",
+        "set_flag": null
+      }
+    },
+    {
+      "world_id": "spring",
+      "plan": {
+        "entity_id": "player",
+        "action_id": "USE_POTION",
+        "target_id": null,
+        "rule_index": null,
+        "expr": "HP%(20) < 30",
+        "set_flag": null
+      }
+    },
+    {
+      "world_id": "solitude",
+      "plan": {
+        "entity_id": "player",
+        "action_id": "HOLD",
+        "target_id": null,
+        "rule_index": null,
+        "expr": "적 없음",
+        "set_flag": null
+      }
+    },
+    {
+      "world_id": "wounded",
+      "plan": {
+        "entity_id": "player",
+        "action_id": "APPROACH",
+        "target_id": "e_alpha",
+        "rule_index": null,
+        "expr": "적거리(3) > 사거리(1)",
+        "set_flag": null
+      }
+    }
+  ]
+}

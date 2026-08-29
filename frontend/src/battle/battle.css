@@ -1,0 +1,145 @@
+/* 전투 화면 스타일 (W13).
+
+   색·간격·활자는 전부 토큰이다 — 생 hex·생 px 금지. 그림자 없음, 층위는 명도차와 1px
+   괘선, border-radius 는 2px 고정. 움직임은 명도 전환 90ms 와 틱 교체 140ms 뿐이고
+   등속이다. 이동·스케일 애니메이션은 쓰지 않는다 — 도면은 흔들리지 않는다. */
+
+.battle {
+  /* 토큰 집합에 불투명도 계단이 없다. 틱 교체를 명도로만 표현해야 하므로 이 화면 안에서
+     쓰는 지역 상수로 둔다 — 색이 아니라 같은 그림의 밝기 차이다. */
+  --plan-swap-opacity: 0.72;
+
+  position: relative;
+  display: grid;
+  grid-template-rows: var(--bar-top) 1fr var(--bar-bottom);
+  height: 100vh;
+  background: var(--surface-base);
+}
+
+.battle__top {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-0) var(--sp-4) var(--sp-0) var(--sp-0);
+  background: var(--surface-panel);
+  border-bottom: var(--border);
+}
+
+/* 상단 바 자체는 자기 테두리를 쓰지 않는다. 열 사이 괘선은 바깥이 한 번만 긋는다. */
+.battle__top > .ds-topbar {
+  flex: 1;
+  min-width: var(--sp-0);
+  border-bottom: none;
+}
+
+.battle__body {
+  display: grid;
+  grid-template-columns:
+    var(--col-rules) var(--gap-col) minmax(var(--sp-0), 1fr)
+    var(--gap-col) var(--col-log);
+  min-height: var(--sp-0);
+}
+
+.battle__rule-line {
+  background: var(--line);
+}
+
+.battle__col {
+  display: flex;
+  min-width: var(--sp-0);
+  min-height: var(--sp-0);
+}
+
+.battle__col > .ds-panel {
+  flex: 1;
+  border: none;
+  border-radius: var(--radius-none);
+}
+
+.battle__col--plan {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-4);
+  padding: var(--sp-4);
+  overflow: auto;
+}
+
+/* 도면 틀의 크기는 캔버스가 인라인 스타일로 셀 토큰의 배수를 준다. 여기서 폭을 다시
+   못박으면 방이 커졌을 때 두 값이 갈린다. */
+.battle__frame {
+  display: block;
+  border: var(--border);
+  border-radius: var(--radius);
+}
+
+.battle-plan {
+  display: block;
+  line-height: var(--lh-tight);
+}
+
+.battle-plan__canvas {
+  display: block;
+}
+
+/* 틱 경계의 값 교체. 캔버스 내용은 보간할 수 없으므로 캔버스 자체의 명도를 한 단
+   올린다. 등속이며 이동·스케일이 없다. */
+@keyframes battle-plan-swap {
+  from {
+    opacity: var(--plan-swap-opacity);
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.battle-plan__canvas--swap {
+  animation: battle-plan-swap var(--dur-tick) var(--ease);
+}
+
+.battle__plan-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.battle__outcome {
+  font-family: var(--font-display);
+  font-size: var(--fs-display-s);
+  color: var(--text-body);
+}
+
+/* 지시선 — 발동한 규칙 줄에서 도면 위 그 말까지. 화면의 황동 예산 셋 중 하나다. */
+.battle__leader {
+  position: absolute;
+  inset: var(--sp-0);
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.battle__leader-line,
+.battle__leader-ring {
+  fill: none;
+  stroke: var(--line-accent);
+  stroke-width: var(--bw);
+}
+
+/* 확인용 페이지의 조작부. 전투 화면의 일부가 아니라 W13 검증을 위한 자리다. */
+.battle-check {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: var(--sp-1);
+  min-width: var(--sp-0);
+  overflow-x: auto;
+}
+
+.battle-check__group {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding-left: var(--sp-2);
+  border-left: var(--border);
+}

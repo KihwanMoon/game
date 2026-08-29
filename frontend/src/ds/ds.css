@@ -1,0 +1,686 @@
+/*
+ * 디자인 시스템 컴포넌트 스타일 (design/README.md).
+ *
+ * 성격은 기계 도면이다. 그림자 없음, 층위는 명도차 + 1px 괘선, 4px 모듈,
+ * border-radius 2px 고정, 움직임은 명도 전환 90ms 등속뿐.
+ *
+ * **여기에 생 hex 나 생 px 를 적지 않는다.** 색·간격·활자는 전부 `var(--토큰)` 이며
+ * 토큰의 정본은 Claude Design 프로젝트다(CLAUDE.md). 값을 바꿔야 하면 이 파일이 아니라
+ * 정본을 고치고 design/ 을 다시 가져온다.
+ *
+ * 황동 예산 — `--brass` 계열을 쓰는 자리는 아래 셋뿐이다. 한 화면에 셋을 넘기지 마라.
+ *   1) Button variant="primary"
+ *   2) armed 상태 (GlyphState state="armed", RuleRow armed 좌측 세로바)
+ *   3) PlanActor kind="self"
+ * `:focus-visible` 외곽선도 황동이지만 한 번에 하나만 보이고 조작 중에만 나타나므로
+ * 예산에서 뺀다.
+ */
+
+/* ── 공통 ───────────────────────────────────────────────────────────── */
+
+/* 화면에서 감추고 보조 기술에만 읽히는 텍스트. 색이 유일한 채널이 되지 않게 상태
+   이름을 함께 싣는 자리다. */
+.ds-sr {
+  position: absolute;
+  width: var(--bw);
+  height: var(--bw);
+  padding: var(--sp-0);
+  margin: var(--sp-0);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.ds-label {
+  font-family: var(--font-body);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-label);
+  line-height: var(--lh-tight);
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.ds-readout {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+  color: var(--text-data);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Button ─────────────────────────────────────────────────────────── */
+
+.ds-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--sp-8);
+  padding: var(--sp-2) var(--sp-4);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-s);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-label);
+  line-height: var(--lh-tight);
+  text-transform: uppercase;
+  color: var(--text-body);
+  background: var(--surface-panel);
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-none);
+  cursor: pointer;
+  transition: var(--transition-hover);
+}
+
+.ds-button--sm {
+  min-height: var(--sp-6);
+  padding: var(--sp-1) var(--sp-3);
+  font-size: var(--fs-label);
+}
+
+.ds-button--block {
+  display: flex;
+  width: 100%;
+}
+
+.ds-button--primary {
+  color: var(--text-accent);
+  border-color: var(--line-accent);
+}
+
+.ds-button--ghost {
+  color: var(--text-dim);
+  background: transparent;
+  border-color: transparent;
+}
+
+.ds-button:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.ds-button--ghost:hover:not(:disabled) {
+  color: var(--text-body);
+}
+
+.ds-button--active {
+  color: var(--text-body);
+  background: var(--surface-raised);
+  border-color: var(--line-strong);
+}
+
+.ds-button--primary.ds-button--active {
+  color: var(--brass-glow);
+  border-color: var(--line-accent);
+}
+
+.ds-button:disabled {
+  color: var(--text-dim);
+  background: var(--surface-base);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+
+.ds-button__glyph {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  line-height: var(--lh-tight);
+}
+
+/* ── Panel ──────────────────────────────────────────────────────────── */
+
+.ds-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  color: var(--text-body);
+  background: var(--surface-panel);
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-none);
+}
+
+.ds-panel--raised {
+  background: var(--surface-raised);
+}
+
+.ds-panel--plan {
+  background: var(--surface-plan);
+}
+
+.ds-panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: var(--border);
+}
+
+.ds-panel__meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.ds-panel__body {
+  min-height: 0;
+}
+
+.ds-panel__body--padded {
+  padding: var(--pad-panel);
+}
+
+.ds-panel__body--scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+/* ── GlyphState ─────────────────────────────────────────────────────── */
+
+.ds-glyph {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  line-height: var(--lh-data);
+  color: var(--text-body);
+}
+
+.ds-glyph--sm {
+  font-size: var(--fs-mono-s);
+}
+
+.ds-glyph__mark {
+  font-weight: var(--fw-semibold);
+}
+
+.ds-glyph--true .ds-glyph__mark {
+  color: var(--state-true);
+}
+
+/* 거짓과 대기는 명도를 한 단 낮춘다 — 글리프만이 아니라 라벨까지. */
+.ds-glyph--false,
+.ds-glyph--pending {
+  color: var(--text-dim);
+}
+
+.ds-glyph--false .ds-glyph__mark {
+  color: var(--state-false);
+}
+
+.ds-glyph--pending .ds-glyph__mark {
+  color: var(--text-dim);
+}
+
+.ds-glyph--armed .ds-glyph__mark {
+  color: var(--state-armed);
+}
+
+.ds-glyph--danger .ds-glyph__mark {
+  color: var(--state-warn);
+}
+
+/* ── SegmentedGauge ─────────────────────────────────────────────────── */
+
+.ds-gauge {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.ds-gauge__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.ds-gauge__track {
+  display: flex;
+  gap: var(--sp-1);
+  align-items: stretch;
+  min-height: var(--sp-2);
+}
+
+.ds-gauge__seg {
+  flex: 1 1 var(--sp-1);
+  min-width: var(--sp-1);
+  background: var(--gauge-track);
+  border-radius: var(--radius-none);
+}
+
+.ds-gauge--cpu .ds-gauge__seg--on {
+  background: var(--gauge-cpu);
+}
+
+.ds-gauge--hp .ds-gauge__seg--on {
+  background: var(--gauge-hp);
+}
+
+.ds-gauge--danger .ds-gauge__seg--on {
+  background: var(--state-damage);
+}
+
+.ds-gauge--dim .ds-gauge__seg--on {
+  background: var(--text-dim);
+}
+
+/* 예산 초과분. tone 과 무관하게 위험색으로 넘어간다 — 오류가 아니라 수치다. */
+.ds-gauge__seg--over {
+  background: var(--state-damage);
+}
+
+.ds-gauge__readout--over {
+  color: var(--text-danger);
+}
+
+/* ── ValueExpr ──────────────────────────────────────────────────────── */
+
+.ds-expr {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  line-height: var(--lh-data);
+  letter-spacing: var(--ls-mono);
+  color: var(--text-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.ds-expr--sm {
+  font-size: var(--fs-mono-s);
+}
+
+.ds-expr--dim {
+  color: var(--text-dim);
+}
+
+/* 괄호 안 실측값. 항 이름보다 한 단 밝고 굵다 — 조건이 왜 그렇게 판정됐는지가
+   먼저 읽혀야 한다 (GDD §8.2, P1). */
+.ds-expr__value {
+  color: var(--text-value);
+  font-weight: var(--fw-semibold);
+}
+
+.ds-expr--dim .ds-expr__value {
+  color: var(--text-body);
+}
+
+/* ── HpGauge ────────────────────────────────────────────────────────── */
+
+.ds-hp {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.ds-hp__track {
+  height: var(--sp-2);
+  background: var(--gauge-track);
+  border-radius: var(--radius-none);
+  overflow: hidden;
+}
+
+.ds-hp__fill {
+  height: 100%;
+  background: var(--gauge-hp);
+  transition: background-color var(--dur-fast) var(--ease);
+}
+
+.ds-hp--low .ds-hp__fill {
+  background: var(--gauge-hp-low);
+}
+
+.ds-hp--low .ds-hp__readout {
+  color: var(--text-danger);
+}
+
+.ds-hp__glyph {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-tight);
+  color: var(--text-dim);
+}
+
+.ds-hp--low .ds-hp__glyph {
+  color: var(--text-danger);
+}
+
+/* ── ResourceCount ──────────────────────────────────────────────────── */
+
+.ds-resource {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+
+.ds-resource__pips {
+  display: inline-flex;
+  gap: var(--sp-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  line-height: var(--lh-tight);
+  color: var(--text-body);
+}
+
+.ds-resource__pip--empty {
+  color: var(--text-dim);
+}
+
+/* ── SpeedControl ───────────────────────────────────────────────────── */
+
+.ds-speed {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+/* ── ThreatNotice ───────────────────────────────────────────────────── */
+
+.ds-threat {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  line-height: var(--lh-data);
+  color: var(--text-body);
+  background: var(--surface-panel);
+  border: var(--border);
+  border-left: var(--bw-accent) solid var(--line);
+  border-radius: var(--radius);
+}
+
+.ds-threat--danger {
+  border-left-color: var(--line-danger);
+}
+
+.ds-threat--danger .ds-threat__glyph {
+  color: var(--state-warn);
+}
+
+.ds-threat--neutral {
+  color: var(--text-dim);
+}
+
+.ds-threat--neutral .ds-threat__glyph {
+  color: var(--text-dim);
+}
+
+.ds-threat__ticks {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-value);
+}
+
+.ds-threat--neutral .ds-threat__ticks {
+  color: var(--text-dim);
+}
+
+/* ── TopBar ─────────────────────────────────────────────────────────── */
+
+.ds-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  height: var(--bar-top);
+  padding: var(--sp-0) var(--sp-4);
+  background: var(--surface-panel);
+  border-bottom: var(--border);
+}
+
+.ds-topbar__location {
+  font-family: var(--font-display);
+  font-size: var(--type-room);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-display);
+  line-height: var(--lh-tight);
+  color: var(--text-display);
+}
+
+.ds-topbar__tick {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+
+.ds-topbar__tick-value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-num-l);
+  line-height: var(--lh-tight);
+  color: var(--text-data);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── StatusBar ──────────────────────────────────────────────────────── */
+
+.ds-statusbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+  height: var(--bar-bottom);
+  padding: var(--sp-0) var(--sp-4);
+  background: var(--surface-panel);
+  border-top: var(--border);
+}
+
+.ds-statusbar__threat {
+  margin-left: auto;
+}
+
+/* ── LogPanel / LogRow ──────────────────────────────────────────────── */
+
+.ds-log {
+  display: flex;
+  flex-direction: column;
+}
+
+.ds-log__empty {
+  padding: var(--sp-3);
+}
+
+.ds-log-row {
+  display: grid;
+  grid-template-columns: auto auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--log-row-h);
+  padding: var(--sp-0) var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: var(--type-log);
+  line-height: var(--lh-data);
+  color: var(--text-body);
+  border-bottom: var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 미발동 행은 명도를 한 단 낮춘다. 글리프(·)와 함께 두 채널이다. */
+.ds-log-row--idle {
+  color: var(--text-dim);
+}
+
+.ds-log-row__tick {
+  color: var(--text-dim);
+}
+
+.ds-log-row__fired {
+  color: var(--text-body);
+}
+
+.ds-log-row--idle .ds-log-row__fired {
+  color: var(--text-dim);
+}
+
+.ds-log-row__rule {
+  color: var(--text-dim);
+}
+
+.ds-log-row__body {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-log-row__outcome {
+  color: inherit;
+}
+
+.ds-log-row__delta--up {
+  color: var(--state-heal);
+}
+
+.ds-log-row__delta--down {
+  color: var(--state-damage);
+}
+
+/* ── RuleTable / RuleRow ────────────────────────────────────────────── */
+
+.ds-rule-table {
+  display: flex;
+  flex-direction: column;
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  list-style: none;
+}
+
+.ds-rule-row {
+  list-style: none;
+}
+
+.ds-rule-row__hit {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  min-height: var(--row-h);
+  padding: var(--sp-2) var(--pad-cell);
+  color: var(--text-body);
+  text-align: left;
+  background: transparent;
+  border: var(--bw) solid transparent;
+  border-bottom: var(--border);
+  border-left: var(--bw-accent) solid transparent;
+  border-radius: var(--radius-none);
+  box-shadow: var(--shadow-none);
+  cursor: pointer;
+  transition: var(--transition-hover);
+}
+
+.ds-rule-row__hit:hover {
+  background: var(--surface-hover);
+}
+
+/* 02 조건 참·미발동 — 글리프만 녹청이고 배경은 칠하지 않는다. */
+
+/* 03 조건 거짓 — 본문 명도를 한 단 낮춘다. */
+.ds-rule-row--false .ds-rule-row__hit {
+  color: var(--text-dim);
+}
+
+/* 04 이번 틱 발동 — 배경 --plate-high, 좌측 2px 황동 세로바. */
+.ds-rule-row--armed .ds-rule-row__hit {
+  background: var(--surface-row-active);
+  border-left-color: var(--line-accent);
+}
+
+/* 05 CPU 예산 초과 — 좌측 세로바만 위험색. 본문 명도는 건드리지 않는다.
+   초과 상태에서도 편집이 계속돼야 하므로 비활성처럼 보이면 안 된다.
+   armed 와 겹치면 세로바는 초과가 가져간다 — 발동 사실은 배경이 계속 말한다. */
+.ds-rule-row--over .ds-rule-row__hit {
+  border-left-color: var(--line-danger);
+}
+
+/* 06 키보드 포커스 — 외곽선만. 배경은 변하지 않는다. */
+.ds-rule-row__hit:focus-visible {
+  outline: var(--bw-accent) solid var(--brass);
+  outline-offset: calc(var(--bw) * -1);
+}
+
+.ds-rule-row__index {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.ds-rule-row__lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.ds-rule-row__action {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+  color: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-rule-row__cpu {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ds-rule-row__cpu--over {
+  color: var(--text-danger);
+}
+
+/* ── PlanGrid / PlanActor ───────────────────────────────────────────── */
+
+.ds-plan {
+  position: relative;
+  width: calc(var(--plan-cell) * var(--plan-cols));
+  height: calc(var(--plan-cell) * var(--plan-rows));
+  background-color: var(--surface-plan);
+  background-image:
+    linear-gradient(to right, var(--line-grid) 0 var(--bw), transparent var(--bw)),
+    linear-gradient(to bottom, var(--line-grid) 0 var(--bw), transparent var(--bw));
+  background-size: var(--plan-cell) var(--plan-cell);
+  border: var(--border);
+  border-radius: var(--radius);
+}
+
+.ds-plan-actor {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  width: var(--plan-cell);
+  height: var(--plan-cell);
+}
+
+.ds-plan-actor__glyph {
+  font-family: var(--font-mono);
+  font-size: var(--fs-num-l);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-tight);
+  color: var(--plan-actor-enemy);
+}
+
+.ds-plan-actor--self .ds-plan-actor__glyph {
+  color: var(--plan-actor-self);
+}
+
+.ds-plan-actor__label {
+  font-family: var(--font-body);
+  font-size: var(--fs-label);
+  letter-spacing: var(--ls-label);
+  line-height: var(--lh-tight);
+  color: var(--text-dim);
+  text-transform: uppercase;
+}

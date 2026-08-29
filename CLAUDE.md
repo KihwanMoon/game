@@ -73,8 +73,8 @@ uv run python -m game.main --seed 12345
 ## 디렉터리 구조
 
 표준 문서 §12 는 웹 백엔드 기준이라, 헤드리스 시뮬레이션 코어인 이 프로젝트에 맞게
-변형했다 — §12 가 허용하는 범위다. `api/`·`deploy/` 는 두지 않았고(Phase 1 에 서버가
-없다), 계층 경계 원칙은 그대로 지켰다.
+변형했다 — §12 가 허용하는 범위다. `api/` 는 두지 않았고(아직 서버 API 가 없다),
+계층 경계 원칙은 그대로 지켰다.
 
 ```
 game/
@@ -91,8 +91,35 @@ game/
 │  └─ services/       유스케이스. 파일 하나가 시나리오 하나
 └─ resources/         밸런스 JSON, 룸 템플릿
 tests/                골든 리플레이·회귀
-scripts/              헤드리스 배치 러너 등
+scripts/              골든 내보내기 등 헤드리스 러너
+frontend/             브라우저 앱 (Phase 3). 아래 절 참조
+design/               디자인 토큰 사본
+deploy/               Docker·Compose·nginx
 ```
+
+## 프런트엔드 (Phase 3)
+
+`frontend/` 는 Vite + React + TypeScript(strict) 앱이고, `frontend/src/core/` 는
+**파이썬 코어를 그대로 이식한 것**이다. 두 코어가 같은 시드에서 비트 단위로 같은 결과를
+내야 한다(게이트 G3). 상세와 이식 규약은 `frontend/README.md` 에 있다.
+
+- 파이썬이 정본이다. 어긋나면 TS 쪽이 틀린 것이며, 골든 JSON 을 손으로 고치지 않는다.
+- 64비트 값은 `BigInt` 다. `Number` 는 53비트라 SplitMix64 가 깨진다.
+- 부동소수를 쓰지 않고, 객체 키 순회로 게임 상태를 만들지 않으며(정렬된 배열·Map),
+  `Math.random`·`Date.now` 를 쓰지 않는다. 파이썬 쪽 불변 조건과 같은 이유다 (R5).
+- 디자인 토큰과 밸런스 JSON 은 **복사하지 않고** vite 별칭 `@design`·`@resources` 로
+  원본을 직접 읽는다. 사본을 두면 두 코어가 다른 데이터로 돌게 된다.
+
+```bash
+cd frontend
+npm ci
+npm run dev        # http://localhost:8090 (컨테이너를 먼저 내려야 한다)
+npm run build      # tsc --noEmit && vite build
+npm test           # vitest — 골든 대조 포함
+```
+
+화면은 넷이다. `/` 가 제품 화면(규칙 에디터 ↔ 전투 관전 ↔ 사후 분석)이고, `/ds.html`·
+`/battle.html`·`/hud.html` 은 부품·렌더러·되감기 확인용 페이지다.
 
 어디에 둘지 헷갈리면 **"이것이 우리 도메인을 아는가"** 를 묻는다(§12). 모르면 `core/`,
 하나만 알면 도메인 모듈, 여러 개를 엮으면 `services/` 다. 의존은 한 방향으로만 흐른다.
@@ -151,8 +178,13 @@ docker compose run --rm dev      # 개발 셸
 고칠 때 세 도메인이 함께 걸린다. **`container_name`(`game-frontend-1`·`game-backend-1`)
 과 네트워크명 `game_net` 은 edge-proxy 와의 계약이므로 바꾸지 않는다.**
 
-프런트·백엔드는 지금 nginx 자리표시자다. 실제 앱은 Phase 3 (W9~W13) 이고, 그때
-`image` 만 바꾸면 edge-proxy 는 손대지 않아도 된다. 상세는 `deploy/README.md`.
+`frontend` 는 실제 앱이다(W13). `deploy/Dockerfile.frontend` 가 vite 로 굽고 nginx 가
+정적 산출물을 서빙한다 — **개발 서버가 아니라 프로덕션 빌드다.** 공개 도메인에 dev
+서버를 두면 HMR 웹소켓이 터널을 건너야 하고, 타입 오류가 런타임까지 미뤄지며, 파일
+하나가 깨지면 프로세스가 죽는다. `backend` 는 아직 자리표시자이고(없는 API 는 501),
+프런트가 코어를 브라우저 안에서 직접 돌리므로 지금 단계의 게임은 API 없이 완결된다.
+컨테이너명·포트·네트워크가 그대로라 edge-proxy 는 손대지 않았다. 상세는
+`deploy/README.md`.
 
 컨테이너는 도구 버전을 맞춰야 하는 **네 번째 계층**이다(§7.1). Python 3.11 · uv 0.12.7 ·
 ruff 0.16.3 이 `.python-version`·`pyproject.toml`·`.pre-commit-config.yaml`·Dockerfile 에

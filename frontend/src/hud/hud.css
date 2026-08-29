@@ -1,0 +1,445 @@
+/*
+ * 관전 화면 스타일 (design/README.md).
+ *
+ * **생 hex 와 생 px 를 적지 않는다.** 색·간격·활자는 전부 `var(--토큰)` 이고, 토큰의
+ * 정본은 Claude Design 프로젝트다(CLAUDE.md). 값을 바꿔야 하면 이 파일이 아니라 정본을
+ * 고치고 design/ 을 다시 가져온다. 테스트가 이 규율을 기계로 막는다(hudRender.test.tsx).
+ *
+ * 층위는 그림자가 아니라 배경 명도차 + 1px 괘선이다. 움직임은 명도 전환 90ms 등속뿐이며
+ * 도면과 로그는 틱 경계에서 값이 교체될 뿐 움직이지 않는다.
+ *
+ * 황동 예산 셋 — armed 규칙 줄(ds), 도면의 플레이어 말(ds), 현재 틱의 발동 로그 세로바
+ * (`.hud-log__row--armed`). 이 파일에서 `--brass` 계열을 쓰는 자리는 마지막 하나뿐이다.
+ * 슬라이더 손잡이에 황동을 쓰지 않은 것도 예산 때문이다.
+ */
+
+/* ── 화면 골격 — 56 / 320 / 가변 / 300 / 48 ─────────────────────────── */
+
+.hud {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  /* 높이는 바깥이 정한다. 화면 하나가 통째로 이 골격이면 부모가 뷰포트를 준다. */
+  height: 100%;
+  min-height: 0;
+  background: var(--surface-base);
+  overflow: hidden;
+}
+
+/* 상단 줄: TopBar 와 확인용 조작부가 같은 56px 줄을 나눠 쓴다. 괘선은 TopBar 것 하나뿐이며
+   그것을 아래 줄로 넘겨 받는다 — 두 겹이 되면 1px 규칙이 깨진다. */
+.hud__top {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  background: var(--surface-panel);
+  border-bottom: var(--border);
+}
+
+.hud__top > :first-child {
+  flex: 1;
+  min-width: 0;
+  border-bottom-width: var(--sp-0);
+}
+
+.hud-check {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  flex-wrap: wrap;
+  padding-right: var(--sp-4);
+}
+
+.hud-check__note {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  color: var(--text-dim);
+}
+
+.hud__cols {
+  display: grid;
+  grid-template-columns:
+    var(--col-rules) var(--gap-col) minmax(0, 1fr) var(--gap-col) var(--col-log);
+  min-height: 0;
+}
+
+/* 열 사이는 괘선 하나다. 여백으로 벌리지 않는다. */
+.hud__gap {
+  background: var(--line);
+}
+
+.hud__col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--surface-panel);
+}
+
+.hud__plan {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+  padding: var(--sp-4);
+  overflow: auto;
+  background: var(--surface-plan);
+}
+
+.hud__plan-head,
+.hud__plan-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  width: 100%;
+  min-height: var(--sp-8);
+}
+
+.hud__plan-foot {
+  justify-content: space-between;
+}
+
+/* ── 도면 위의 지형 ─────────────────────────────────────────────────── */
+
+.hud-tile {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--plan-cell);
+  height: var(--plan-cell);
+}
+
+.hud-tile__glyph {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  line-height: var(--lh-tight);
+  color: var(--text-dim);
+}
+
+/* 벽은 45도 해칭이다. 기계 도면에서 벽 단면을 그리는 방식이며 장식이 아니다. */
+.hud-tile--wall {
+  background: var(--hatch-45);
+  border: var(--border);
+}
+
+.hud-tile--hazard .hud-tile__glyph {
+  color: var(--plan-hazard);
+}
+
+.hud-tile--heal .hud-tile__glyph {
+  color: var(--state-heal);
+}
+
+.hud-tile--way .hud-tile__glyph {
+  color: var(--plan-door);
+}
+
+.hud-tile--cover .hud-tile__glyph {
+  color: var(--text-body);
+}
+
+/* ── 로그 열 ────────────────────────────────────────────────────────── */
+
+.hud-log {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.hud-log__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2) var(--sp-1) var(--sp-3);
+  border-bottom: var(--border);
+}
+
+.hud-log__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* 잘라 낸 줄이 있다는 사실을 숨기지 않는다. 숨기면 로그가 거짓말을 한다. */
+.hud-log__cut {
+  margin: var(--sp-0);
+  padding: var(--sp-2) var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+  color: var(--text-dim);
+}
+
+.hud-log__tick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  background: var(--surface-raised);
+  border-top: var(--border);
+  border-bottom: var(--border);
+}
+
+.hud-log__tick-label,
+.hud-log__tick-count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-log__tick-label {
+  color: var(--text-body);
+}
+
+.hud-log__actor {
+  margin: var(--sp-0);
+  padding: var(--sp-1) var(--sp-3) var(--sp-0);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: var(--ls-label);
+  line-height: var(--lh-data);
+  color: var(--text-dim);
+}
+
+/* 발동한 줄은 왼쪽 세로바로 표시한다. 지난 틱은 명도 한 단, 지금 보고 있는 틱만 황동. */
+.hud-log__row {
+  border-left: var(--bw-accent) solid transparent;
+  transition: var(--transition-hover);
+}
+
+.hud-log__row--fired {
+  border-left-color: var(--line-strong);
+}
+
+.hud-log__row--armed {
+  border-left-color: var(--line-accent);
+  background: var(--surface-raised);
+}
+
+/* ── 되감기 슬라이더 ────────────────────────────────────────────────── */
+
+.hud-scrub {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+  flex: 1;
+}
+
+/*
+ * 손잡이 색은 황동이 아니라 본문 명도다. 황동은 화면에 셋뿐이고, 그 셋은 armed 규칙 ·
+ * 플레이어 말 · 현재 틱 로그가 이미 가져갔다.
+ */
+.hud-scrub__range {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--gauge-cpu);
+}
+
+.hud-scrub__readout {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+  color: var(--text-data);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 규칙 성적표 ────────────────────────────────────────────────────── */
+
+/* 컬럼 정렬은 미관이 아니라 디버깅 기능이다 — 자리가 맞아야 눈이 세로로 훑는다. */
+.hud-stats {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+  color: var(--text-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-stats th,
+.hud-stats td {
+  padding: var(--sp-1) var(--sp-2);
+  text-align: right;
+  border-bottom: var(--border);
+}
+
+.hud-stats thead th {
+  font-family: var(--font-body);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.hud-stats th[scope='row'],
+.hud-stats__note {
+  text-align: left;
+}
+
+.hud-stats__note {
+  width: 100%;
+}
+
+.hud-stats__row--warn th[scope='row'] {
+  color: var(--text-danger);
+}
+
+.hud-stats__empty {
+  margin: var(--sp-0);
+  padding: var(--sp-3);
+}
+
+/* ── 피해 히트맵 ────────────────────────────────────────────────────── */
+
+.hud-heat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.hud-heat__caption {
+  margin: var(--sp-0);
+  font-size: var(--fs-body-s);
+  line-height: var(--lh-data);
+  color: var(--text-dim);
+}
+
+.hud-heat__peak {
+  font-family: var(--font-mono);
+  color: var(--text-body);
+}
+
+.hud-heat__grid {
+  display: grid;
+  gap: var(--bw);
+  background: var(--line-grid);
+  border: var(--border);
+  width: max-content;
+}
+
+/*
+ * 칸에는 수치가 적힌다. 배경 명도는 보조 채널이고 색만으로 읽게 하지 않는다
+ * (design/README.md). 단계 색은 rust 를 바탕에 섞어 만든다 — 새 색을 들이지 않는다.
+ */
+.hud-heat__cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--sp-5);
+  height: var(--sp-5);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  line-height: var(--lh-tight);
+  color: var(--text-dim);
+  background: var(--surface-plan);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-heat__cell--l1 {
+  color: var(--text-body);
+  background: color-mix(in srgb, var(--rust) 20%, var(--surface-plan));
+}
+
+.hud-heat__cell--l2 {
+  color: var(--text-body);
+  background: color-mix(in srgb, var(--rust) 40%, var(--surface-plan));
+}
+
+.hud-heat__cell--l3 {
+  color: var(--chalk);
+  background: color-mix(in srgb, var(--rust) 65%, var(--surface-plan));
+}
+
+.hud-heat__cell--l4 {
+  color: var(--chalk);
+  background: color-mix(in srgb, var(--rust) 90%, var(--surface-plan));
+}
+
+/* ── 사후 분석 ──────────────────────────────────────────────────────── */
+
+.hud-post {
+  position: absolute;
+  inset: var(--sp-0);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--surface-base);
+}
+
+.hud-post__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: var(--bar-top);
+  padding: var(--sp-0) var(--sp-4);
+  border-bottom: var(--border);
+}
+
+.hud-post__title {
+  font-size: var(--fs-display-m);
+  color: var(--text-display);
+}
+
+.hud-post__meta {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  color: var(--text-dim);
+}
+
+/* 왼쪽은 규칙표 열과 같은 320px 다. 비율(1fr 2fr)로 나누면 오른쪽 리플레이의 로그가
+   눌린다 — 도면이 768px 로 고정이라(design/README.md D-2) 남는 폭이 곧 로그 폭이고,
+   비율로 두면 그 폭이 화면 크기에 따라 0 까지 줄어 로그가 가로로 넘친다. */
+.hud-post__body {
+  display: grid;
+  grid-template-columns: var(--col-rules) minmax(0, 1fr);
+  gap: var(--sp-4);
+  min-height: 0;
+  padding: var(--sp-4);
+  overflow: auto;
+}
+
+.hud-post__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+  min-height: 0;
+}
+
+.hud-post__replay {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--gap-col);
+  min-height: 0;
+  background: var(--line);
+}
+
+.hud-post__plan {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--sp-3);
+  background: var(--surface-plan);
+}
+
+.hud-post__log {
+  display: flex;
+  min-width: 0;
+  max-height: calc(var(--plan-cell) * var(--plan-rows));
+  background: var(--surface-panel);
+}
+
+.hud-post__scrub {
+  display: flex;
+  padding: var(--sp-3);
+  border-top: var(--border);
+}

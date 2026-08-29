@@ -21,7 +21,7 @@ docker compose run --rm check     # 게이트
 
 | 서비스 | 종류 | 하는 일 |
 |:--|:--|:--|
-| `frontend` | 상주 | `game-frontend-1:8090`. **자리표시자** — 정적 안내 페이지 |
+| `frontend` | 상주 | `game-frontend-1:8090`. **실제 앱** — 규칙 에디터·전투 관전·사후 분석 |
 | `backend` | 상주 | `game-backend-1:8000`. **자리표시자** — `/api/health` 만 200 |
 | `sim` | 일회성 | 헤드리스 실행. 결과는 `volume/` 로 |
 | `check` | 일회성 | 저장소 전량 게이트 (`tools/check_all.sh`) |
@@ -43,7 +43,10 @@ stock.nullmovie.com ─┬─ /api/ ─→ game-backend-1:8000
 프로젝트명이 바뀌는 순간 프록시가 깨진다. 네트워크 이름 `game_net` 도 같은 이유로
 고정돼 있다(`networks.game_net.name`). edge-proxy 가 external 로 조인한다.
 
-호스트 포트를 열지 않는다. 외부 접근 경로는 edge-proxy 하나뿐이다.
+입구가 둘이다. **edge-proxy(:80)** 와 **호스트 8090 직결**이며, 후자는 Cloudflare
+Tunnel 의 ingress 가 `stock.nullmovie.com` 전체를 host:8090 으로 보내기 때문에 열어
+둔다. 터널에는 경로별 분기가 없으므로 `/api/` 를 백엔드로 나누는 일을 프런트 컨테이너의
+nginx 가 함께 한다(`deploy/nginx/frontend.conf`). 두 입구가 같은 결과를 내야 한다.
 
 ### 주의 — 이 도메인은 원래 주가 예측 대시보드 것이었다
 
@@ -60,16 +63,65 @@ docker compose -f /data/workspace/stock/docker-compose.yml up -d
 edge-proxy 는 git 저장소가 아니다. 이력이 남지 않으므로 `.bak.*` 파일이 유일한
 되돌림 수단이다. 지우지 말 것.
 
-### Phase 3 에서 할 일
+### Phase 3 에서 한 일
 
-`frontend`·`backend` 의 `image` 를 실제 앱 빌드로 바꾸면 끝난다. **컨테이너명·포트·
-네트워크가 그대로면 edge-proxy 는 손대지 않는다.** 지금 배관을 깔아 둔 이유가 이것이다.
+`frontend` 를 자리표시자에서 실제 앱으로 바꿨다(W13). **컨테이너명·포트·네트워크가
+그대로라 edge-proxy 는 한 줄도 고치지 않았다** — 배관을 미리 깔아 둔 값을 여기서 받았다.
+`backend` 는 아직 자리표시자다. 프런트가 파이썬 코어를 TS 로 이식해 브라우저 안에서
+직접 돌리므로(게이트 G3) 지금 단계의 게임은 API 없이 완결된다.
+
+## 프런트엔드 이미지
+
+`deploy/Dockerfile.frontend` 다. 파이썬 쪽 `deploy/Dockerfile` 과 파일을 나눈 이유는
+겹치는 계층이 하나도 없기 때문이다 — 한 파일에 두면 어느 쪽을 고쳐도 상대편 빌드 캐시가
+깨지고, 게이트를 도는 `ci` 계층이 node 를 끌고 다니게 된다.
+
+```
+node:22-alpine ── build ──▶ nginx:alpine ── serve
+   npm ci                     dist/ 를 /usr/share/nginx/html 로
+   npm run build              deploy/nginx/frontend.conf 를 default.conf 로
+```
+
+빌드 컨텍스트는 **저장소 루트**다. 프런트가 디자인 토큰(`design/`)과 밸런스 JSON
+(`game/resources/`)을 사본이 아니라 vite 별칭 `@design`·`@resources` 로 **원본을 직접**
+읽기 때문이다. 사본을 두면 파이썬 코어가 읽는 값과 조용히 갈라지고, 그 순간 게이트 G3
+가 대조하는 두 코어가 서로 다른 데이터로 돈다. 그래서 `.dockerignore` 는 `design/` 을
+빼지 않는다(`docs/` 는 뺀다 — 2.8MB PDF 이고 실행에 필요 없다).
+
+`npm run build` 가 `tsc --noEmit && vite build` 이므로 **타입 오류는 이미지가 만들어지기
+전에 걸린다.** `npm ci` 는 `package-lock.json` 과 어긋나면 실패한다 — 파이썬 쪽
+`uv sync --frozen` 과 같은 규약이다.
+
+### 왜 개발 서버(vite dev)가 아니라 프로덕션 빌드인가
+
+이 컨테이너가 서는 자리가 공개 도메인(`stock.nullmovie.com`)이기 때문이다.
+
+- dev 서버는 HMR 웹소켓을 요구하고 그 경로가 Cloudflare Tunnel 을 건너야 한다. 끊기면
+  화면이 조용히 낡은 채로 남는다.
+- dev 서버는 소스와 소스맵을 그대로 내보내고, 타입 오류를 런타임까지 미룬다.
+- dev 서버는 파일 하나가 깨지면 프로세스가 죽는다. 정적 산출물에는 그런 자리가 없다.
+
+**개발 중에는 컨테이너를 내리고 호스트에서 dev 서버를 쓴다.** 포트가 같으므로(8090,
+`strictPort`) 둘을 동시에 띄울 수 없다 — 조용히 다른 포트로 옮겨 가면 터널이 빈 포트를
+보게 되므로 일부러 실패하게 두었다.
+
+```bash
+docker compose -f deploy/docker-compose.yml stop frontend
+cd frontend && npm run dev          # http://localhost:8090
+# 끝나면
+docker compose -f deploy/docker-compose.yml up -d frontend
+```
+
+빌드한 화면을 눈으로 확인하는 지점은 넷이다. `/` 가 제품 화면이고 나머지 셋은 확인용
+페이지다 — `/ds.html` 디자인 시스템 부품 카탈로그, `/battle.html` 전투 렌더러,
+`/hud.html` 되감기·사후 분석.
 
 ## 이미지 구성
 
 ```
-base ── deps ─────── runtime    시뮬레이션 코어만. 187MB
-          └ deps-dev ─ ci ── dev   개발 도구 + git. 684MB
+base ── deps ─────── runtime    시뮬레이션 코어만. 187MB      (Dockerfile)
+          └ deps-dev ─ ci ── dev   개발 도구 + git. 684MB      (Dockerfile)
+build ──────────────── serve      프런트 정적 산출물 + nginx  (Dockerfile.frontend)
 ```
 
 **`runtime` 에는 uv·ruff·pytest·git 이 들어가지 않는다.** Phase 1 의 런타임 의존성이
@@ -112,11 +164,12 @@ docker compose -f deploy/docker-compose.yml run --rm -e GAME_SEED=424242 sim | g
 
 ## 아직 안 된 것
 
-- **`frontend`·`backend` 는 nginx 자리표시자다.** 실제 규칙 에디터·전투 렌더러·API 는
-  로드맵 Phase 3 (W9~W13) 산출물이다. 지금 만들지 않는 이유는 로드맵 원칙 1 이다 —
-  재미 검증이 끝나기 전에는 자산을 만들지 않는다.
-  없는 API 는 200 이 아니라 **501** 을 준다. 200 으로 위장하면 프런트가 그것을 붙잡고
-  개발되기 시작한다.
+- **`backend` 는 여전히 nginx 자리표시자다.** 없는 API 는 200 이 아니라 **501** 을 준다.
+  200 으로 위장하면 프런트가 그것을 붙잡고 개발되기 시작한다. 프런트는 파이썬 코어를
+  TS 로 이식해 브라우저 안에서 직접 돌리므로 지금은 API 가 없어도 게임이 완결된다 —
+  서버가 필요해지는 시점은 저장·랭킹·데일리 챌린지(Phase 4)다.
+- **메타 진행이 브라우저 메모리에만 있다.** 새로고침하면 규칙표가 초기값으로 돌아간다.
+  저장(localStorage 또는 백엔드)은 다음 단계다.
 - **`sim` 이 도는 것은 결정론 자체 점검뿐이다.** 진짜 배치 러너(표준 규칙표 × 1,000런)는
   Phase 1 W3 산출물이다. 생기면 compose 의 `command` 를 `scripts/` 의 러너로 바꾼다.
 - 레지스트리 푸시는 하지 않는다. 로컬·사내 서버에서 `compose up` 까지가 현재 범위다.

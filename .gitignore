@@ -13,3 +13,10 @@ volume/
 
 # 실제 .env 는 커밋하지 않는다 (§12). .env.example 만 커밋한다.
 .env
+
+# 프런트엔드 (Phase 3). 설치물과 빌드 산출물은 커밋하지 않는다.
+# 산출물은 `deploy/Dockerfile.frontend` 가 이미지 안에서 다시 굽는다.
+node_modules/
+dist/
+frontend/.vite/
+*.tsbuildinfo

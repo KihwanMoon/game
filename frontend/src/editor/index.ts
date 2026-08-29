@@ -1,0 +1,27 @@
+/**
+ * 규칙 에디터 배럴 (W11~W12).
+ *
+ * 화면은 `RuleEditor` 하나이고, 나머지는 그 안쪽 조각이다. 텍스트 뷰의 직렬화
+ * (`formatRuleText`·`parseRuleText`)만 밖으로 낸다 — 프리셋 공유 코드가 이것을 쓴다.
+ */
+export { RuleEditor } from './RuleEditor'
+export type { RuleEditorProps } from './RuleEditor'
+export { formatRuleText, formatRuleLine, formatTermText, parseRuleText, STAT_PREFIX } from './ruleText'
+export type { RuleTextParse } from './ruleText'
+export {
+  addRule,
+  addTerm,
+  applyActionChoice,
+  applyLhsChoice,
+  calculateCpuCost,
+  calculateTotalCpu,
+  createRule,
+  createTerm,
+  duplicateRule,
+  moveRule,
+  removeRule,
+  removeTerm,
+  renumberRules,
+  updateRule,
+  updateTerm,
+} from './draft'

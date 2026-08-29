@@ -1,0 +1,142 @@
+/**
+ * 규칙 에디터의 렌더 계약과 토큰 규율.
+ *
+ * jsdom 없이 `renderToStaticMarkup` 으로 마크업 문자열만 본다(`ds/ds.test.tsx` 와 같은
+ * 방식). 여기서 확인하는 것은 상호작용이 아니라 **화면에 무엇이 나가는가** 다 —
+ * 골격 세 열, 팔레트가 카탈로그 전량을 싣는가, 검증 메시지가 그 규칙 줄에 붙는가,
+ * 예산 초과가 편집을 막지 않고 rust 세로바로만 나가는가.
+ *
+ * 토큰 규율 검사가 함께 있는 이유는 생 hex·생 px 가 리뷰에서 잘 안 보이기 때문이다.
+ * 한 번 새면 화면마다 다른 값이 자란다.
+ */
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
+import { renderToStaticMarkup } from 'react-dom/server'
+import { describe, expect, it } from 'vitest'
+
+import { BLOCK_CATALOG, G0_RULESETS } from '../core/resources'
+import type { RuleSet } from '../core/schemas'
+import { RuleEditor } from './RuleEditor'
+
+const CPU_BUDGET = 8
+const RULE_SLOTS = 5
+
+/**
+ * 에디터를 마크업 문자열로 굽는다.
+ *
+ * @param ruleset 실을 규칙표.
+ * @returns 정적 마크업.
+ */
+function renderEditor(ruleset: RuleSet): string {
+  return renderToStaticMarkup(
+    <RuleEditor
+      ruleset={ruleset}
+      catalog={BLOCK_CATALOG}
+      cpuBudget={CPU_BUDGET}
+      ruleSlots={RULE_SLOTS}
+      onChange={() => undefined}
+    />,
+  )
+}
+
+/**
+ * 주석을 걷어 낸 스타일 시트를 읽는다.
+ *
+ * @param name 파일 이름.
+ * @returns 주석이 빠진 내용.
+ */
+function readStrippedCss(name: string): string {
+  const path = fileURLToPath(new URL(name, import.meta.url))
+  return readFileSync(path, 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '')
+}
+
+const PRESSURE = G0_RULESETS.get('g0_pressure') as RuleSet
+
+describe('규칙 에디터 렌더', () => {
+  it('팔레트·리스트·검증 세 열을 낸다', () => {
+    const markup = renderEditor(PRESSURE)
+    expect(markup).toContain('editor__col--palette')
+    expect(markup).toContain('editor__col--main')
+    expect(markup).toContain('editor__col--check')
+    expect(markup).toContain('editor__rule-line')
+  })
+
+  it('팔레트가 카탈로그 전량을 싣는다', () => {
+    const markup = renderEditor(PRESSURE)
+    for (const block of BLOCK_CATALOG.perceptions.values()) {
+      expect(markup).toContain(block.labelKo)
+    }
+    for (const block of BLOCK_CATALOG.selectors.values()) {
+      expect(markup).toContain(block.labelKo)
+    }
+  })
+
+  it('규칙 줄마다 우선순위와 CPU 비용을 적는다', () => {
+    const markup = renderEditor(PRESSURE)
+    for (const rule of PRESSURE.rules) {
+      expect(markup).toContain(`[${String(rule.priority)}]`)
+    }
+    expect(markup).toContain('cpu 2')
+  })
+
+  it('인자를 받는 인지 변수는 인자 선택칸이 함께 뜬다', () => {
+    const markup = renderEditor(PRESSURE)
+    expect(markup).toContain('term__field--param')
+  })
+
+  it('CPU 예산 안이면 세로바가 rust 가 아니다', () => {
+    const markup = renderEditor(PRESSURE)
+    expect(markup).not.toContain('rule-row__bar--over')
+  })
+
+  it('예산을 넘기면 넘긴 줄부터 세로바가 rust 로 바뀌고 편집은 계속된다', () => {
+    const heavy: RuleSet = {
+      ...PRESSURE,
+      rules: PRESSURE.rules.map((rule) => ({ ...rule, cpuCost: CPU_BUDGET })),
+    }
+    const markup = renderEditor(heavy)
+    expect(markup).toContain('rule-row__bar--over')
+    // 초과해도 입력칸은 그대로 살아 있다 — 초과는 오류가 아니라 수치다 (GDD §3.6).
+    expect(markup).not.toContain('disabled=""><select')
+    expect(markup).toContain('term__field--lhs')
+  })
+
+  it('검증 위반을 그 규칙 줄 아래에 적는다', () => {
+    const broken: RuleSet = {
+      ...PRESSURE,
+      rules: [
+        {
+          priority: 1,
+          conditions: { op: 'SINGLE', terms: [{ lhs: 'self_hp_percent', comparison: '<', rhs: 20, lhsParam: null }] },
+          action: 'ATTACK',
+          target: null,
+          setFlag: null,
+          cpuCost: 1,
+        },
+      ],
+    }
+    const markup = renderEditor(broken)
+    expect(markup).toContain('rule-row__problems')
+    expect(markup).toContain('TARGET 셀렉터가 필요하다')
+  })
+
+  it('빈 규칙표에서도 화면이 선다', () => {
+    const markup = renderEditor({ rulesetId: 'draft', version: 1, rules: [] })
+    expect(markup).toContain('규칙 추가')
+  })
+})
+
+describe('토큰 규율', () => {
+  it('editor.css 에 생 hex 색이 없다', () => {
+    expect(readStrippedCss('editor.css').match(/#[0-9a-fA-F]{3,8}\b/g)).toBeNull()
+  })
+
+  it('editor.css 에 생 px 값이 없다', () => {
+    expect(readStrippedCss('editor.css').match(/\d+px/g)).toBeNull()
+  })
+
+  it('editor.css 에 그림자가 없다', () => {
+    expect(readStrippedCss('editor.css').match(/box-shadow/g)).toBeNull()
+  })
+})

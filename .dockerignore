@@ -9,8 +9,14 @@ __pycache__/
 .mypy_cache/
 .pytest_cache/
 
+# 프런트 설치물과 산출물. 컨테이너 안에서 npm ci 로 다시 깔고 다시 굽는다 —
+# 호스트의 node_modules 가 딸려 들어오면 아키텍처가 다른 바이너리를 실행하게 된다.
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
 # 문서는 실행에 필요 없다. PDF 가 2.8MB 라 컨텍스트만 무거워진다.
+# design/ 은 뺄 수 없다 — 프런트 빌드가 `@design` 별칭으로 토큰 CSS 를 읽는다.
 docs/
-design/
 
 .env

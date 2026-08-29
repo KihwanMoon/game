@@ -1,0 +1,334 @@
+/* 규칙 에디터 스타일. 색·간격·활자는 전부 토큰이다 — 생 hex·생 px 금지.
+   움직임은 명도 전환(90ms, 등속)뿐이다. 이동·스케일 애니메이션은 쓰지 않는다. */
+
+.editor {
+  display: grid;
+  grid-template-rows: var(--bar-top) 1fr var(--bar-bottom);
+  height: 100vh;
+  background: var(--surface-base);
+}
+
+.editor__top,
+.editor__bottom {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-0) var(--sp-4);
+  background: var(--surface-panel);
+}
+
+.editor__top {
+  border-bottom: var(--border);
+}
+
+.editor__bottom {
+  border-top: var(--border);
+}
+
+.editor__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-display-m);
+  color: var(--text-display);
+}
+
+.editor__spacer {
+  flex: 1;
+}
+
+.editor__body {
+  display: grid;
+  grid-template-columns:
+    var(--col-rules) var(--gap-col) minmax(var(--sp-0), 1fr)
+    var(--gap-col) var(--col-log);
+  min-height: var(--sp-0);
+}
+
+/* 열 사이는 1px 괘선 하나. 그래서 열 안의 패널은 자기 테두리를 쓰지 않는다. */
+.editor__rule-line {
+  background: var(--line);
+}
+
+.editor__col {
+  display: flex;
+  min-width: var(--sp-0);
+  min-height: var(--sp-0);
+}
+
+.editor__col > .ds-panel {
+  flex: 1;
+  border: none;
+  border-radius: var(--radius-none);
+}
+
+/* ── 팔레트 ──────────────────────────────────────────────────────────── */
+.palette {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-3);
+}
+
+.palette__hint {
+  margin: var(--sp-0);
+  font-size: var(--fs-body-s);
+  line-height: var(--lh-body);
+  color: var(--text-dim);
+}
+
+.palette__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.palette__kind {
+  font-family: var(--font-body);
+  font-size: var(--fs-label);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--text-accent);
+  border-bottom: var(--border);
+  padding-bottom: var(--sp-1);
+}
+
+.palette__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bw);
+}
+
+.palette__group-name {
+  font-size: var(--fs-label);
+  letter-spacing: var(--ls-label);
+  color: var(--text-dim);
+  padding: var(--sp-1) var(--sp-2);
+}
+
+/* ── 우선순위 리스트 ─────────────────────────────────────────────────── */
+.rule-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.rule-list__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+}
+
+.rule-row {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-4);
+  border-bottom: var(--border);
+  transition: var(--transition-hover);
+}
+
+.rule-row:hover {
+  background: var(--surface-hover);
+}
+
+.rule-row.is-selected {
+  background: var(--surface-row-active);
+}
+
+.rule-row__bar {
+  position: absolute;
+  left: var(--sp-0);
+  top: var(--sp-0);
+  bottom: var(--sp-0);
+  width: var(--bw-accent);
+  background: var(--line);
+  transition: var(--transition-hover);
+}
+
+.rule-row__bar--selected {
+  background: var(--line-accent);
+}
+
+/* CPU 예산을 넘긴 지점부터. 초과는 오류가 아니라 수치다 — 편집을 막지 않는다. */
+.rule-row__bar--over {
+  background: var(--line-danger);
+}
+
+/* 검증 위반. 색만으로 적지 않는다 — 행 아래에 글리프와 사유가 함께 나간다. */
+.rule-row.is-invalid .rule-row__index {
+  color: var(--text-danger);
+}
+
+.rule-row__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.rule-row__index {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  font-weight: var(--fw-semibold);
+  color: var(--text-data);
+}
+
+.rule-row__spacer {
+  flex: 1;
+}
+
+.rule-row__handle {
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  cursor: grab;
+  user-select: none;
+  padding: var(--sp-0) var(--sp-1);
+}
+
+.rule-row__op,
+.rule-row__add-term,
+.term__drop {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  color: var(--text-dim);
+  background: transparent;
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-0) var(--sp-1);
+  cursor: pointer;
+  transition: var(--transition-hover);
+}
+
+.rule-row__op:hover:not(:disabled),
+.rule-row__add-term:hover:not(:disabled),
+.term__drop:hover:not(:disabled) {
+  color: var(--text-body);
+  background: var(--surface-raised);
+}
+
+.rule-row__op:disabled,
+.rule-row__add-term:disabled,
+.term__drop:disabled {
+  color: var(--line);
+  cursor: default;
+}
+
+.rule-row__terms,
+.rule-row__act {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.rule-row__terms {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp-1);
+}
+
+.rule-row__term {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.rule-row__joiner {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: var(--ls-label);
+  color: var(--text-dim);
+  text-align: right;
+  min-width: var(--sp-10);
+}
+
+.rule-row__act .rule-row__joiner {
+  min-width: var(--sp-0);
+}
+
+.rule-row__problems {
+  list-style: none;
+  margin: var(--sp-0);
+  padding: var(--sp-1) var(--sp-0) var(--sp-0) var(--sp-10);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+/* ── 조건 항 ─────────────────────────────────────────────────────────── */
+.term {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  flex-wrap: wrap;
+}
+
+.term__field {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+  color: var(--text-body);
+  background: var(--surface-panel);
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-1);
+  transition: var(--transition-hover);
+}
+
+.term__field:hover {
+  border-color: var(--line-strong);
+}
+
+.term__field--number {
+  width: var(--sp-12);
+  appearance: textfield;
+}
+
+.term__field--number::-webkit-outer-spin-button,
+.term__field--number::-webkit-inner-spin-button {
+  appearance: none;
+  margin: var(--sp-0);
+}
+
+/* ── 검증 패널 ───────────────────────────────────────────────────────── */
+.check-list,
+.textview__errors {
+  list-style: none;
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+/* ── 텍스트 뷰 ───────────────────────────────────────────────────────── */
+.textview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: var(--sp-0);
+}
+
+.textview__area {
+  flex: 1;
+  min-height: var(--sp-0);
+  resize: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  line-height: var(--lh-data);
+  color: var(--text-data);
+  background: var(--surface-plan);
+  border: none;
+  border-bottom: var(--border);
+  padding: var(--pad-panel);
+  white-space: pre;
+  overflow: auto;
+}
+
+.textview__status {
+  padding: var(--sp-3) var(--pad-panel);
+}
+
+/* 드래그 중 놓일 자리. 황동은 예산이 있으므로 여기에는 쓰지 않고 명도로만 적는다. */
+.rule-row.is-drop-target {
+  border-top: var(--bw-accent) solid var(--line-strong);
+}

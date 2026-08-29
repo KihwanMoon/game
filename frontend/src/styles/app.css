@@ -1,0 +1,77 @@
+/* 앱 껍데기와 화면 사이를 잇는 조작부. 색·간격·활자는 전부 토큰이다 — 생 hex·생 px 금지.
+   그림자 없음, border-radius 는 2px 고정, 움직임은 명도 전환(90ms, 등속)뿐이다. */
+
+#root {
+  min-height: 100vh;
+  background: var(--surface-base);
+}
+
+/* 사후 분석 패널이 `position: absolute; inset: 0` 으로 화면을 덮는다. 그 기준이 되는
+   상자가 여기다 — 없으면 뷰포트가 아니라 문서 전체를 기준으로 잡혀 스크롤과 함께 밀린다. */
+.app {
+  position: relative;
+  height: 100vh;
+}
+
+/* ── 출격 조작부 ─────────────────────────────────────────────────────────
+   에디터와 전투 화면의 상단 바 오른쪽에 같은 모양으로 붙는다. 두 화면이 같은 자리에
+   같은 폭으로 조작부를 두어야 화면을 오갈 때 눈이 자리를 다시 잡지 않는다. */
+.launch {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.launch__label {
+  font-family: var(--font-body);
+  font-size: var(--fs-body-s);
+  color: var(--text-dim);
+}
+
+/* 네이티브 select·input 을 쓴다. 키보드 조작과 스크린리더 지원이 이미 붙어 있고,
+   디자인 시스템에 대응 부품이 없다(design/README.md D-4). 표면은 토큰으로 맞춘다. */
+.launch__field {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+  color: var(--text-body);
+  background: var(--surface-panel);
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-1);
+  transition: var(--transition-hover);
+}
+
+.launch__field:hover {
+  border-color: var(--line-strong);
+}
+
+.launch__field--number {
+  width: var(--sp-12);
+  appearance: textfield;
+}
+
+.launch__field--number::-webkit-outer-spin-button,
+.launch__field--number::-webkit-inner-spin-button {
+  appearance: none;
+  margin: var(--sp-0);
+}
+
+/* ── 중단 패널 ───────────────────────────────────────────────────────────
+   규칙표가 렌더 도중에 터졌을 때만 보인다. 하얀 화면 대신 사유와 돌아갈 문을 남긴다. */
+.app-crash {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: var(--sp-8);
+  background: var(--surface-base);
+}
+
+.app-crash__text {
+  margin: var(--sp-0) var(--sp-0) var(--sp-4);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+  color: var(--text-danger);
+}

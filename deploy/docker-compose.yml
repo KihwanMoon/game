@@ -26,18 +26,26 @@ services:
   # host:8090 으로 직접 보내기 때문이다 — edge-proxy(:80)를 거치지 않는다.
   # 기존 stock 스택이 8090 을 열었던 이유도 같다.
 
-  # ── 프런트 (자리표시자) ───────────────────────────────────────────────────
-  # 실제 규칙 에디터·전투 렌더러는 Phase 3 (W11~W13) 산출물이다. 지금은
-  # 라우팅이 살아 있는지 보여주는 정적 페이지만 서빙한다.
+  # ── 프런트 (실제 앱) ──────────────────────────────────────────────────────
+  # 규칙 에디터 · 전투 관전 · 사후 분석 (Phase 3 W11~W13). `frontend/` 를 vite 로 굽고
+  # nginx 가 정적 산출물을 서빙한다.
+  #
+  # **개발 서버(vite dev)가 아니라 프로덕션 빌드를 서빙한다.** 이 컨테이너가 서는 자리가
+  # 공개 도메인(stock.nullmovie.com)이기 때문이다.
+  #   - dev 서버는 HMR 웹소켓을 요구하는데 그 경로가 Cloudflare Tunnel 을 건너야 한다.
+  #     끊기면 화면이 조용히 낡은 채로 남는다.
+  #   - dev 서버는 소스와 소스맵을 그대로 내보내고 타입 오류를 런타임까지 미룬다.
+  #     빌드는 `tsc --noEmit` 를 먼저 도므로 타입 오류가 이미지 생성 전에 걸린다.
+  #   - dev 서버는 파일이 하나 깨지면 프로세스가 죽는다. 정적 산출물은 그런 자리가 없다.
+  # 개발 중에는 이 서비스를 내리고 호스트에서 `npm run dev` 를 쓴다 (deploy/README.md).
   frontend:
-    image: nginx:alpine
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.frontend
+      target: serve
+    image: game-frontend:local
     container_name: game-frontend-1
     restart: unless-stopped
-    volumes:
-      - ./placeholder/frontend/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./placeholder/frontend/index.html:/usr/share/nginx/html/index.html:ro
-      # 디자인 토큰을 그대로 읽힌다. 자리표시자가 토큰 로드까지 함께 확인해 준다.
-      - ../design:/usr/share/nginx/html/design:ro
     ports:
       # 터널이 여기로 온다. 포트를 바꾸면 Cloudflare 대시보드의 ingress 도 함께 고쳐야 한다.
       - "8090:8090"
