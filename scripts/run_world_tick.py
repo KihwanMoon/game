@@ -15,18 +15,30 @@
 
 import os
 import sys
+from dataclasses import dataclass
 
 from psycopg_pool import ConnectionPool
 
-from game.app.core.rng import DeterministicRng
 from game.app.monsters.growth import get_level_cap
+from game.app.services.run_battle import load_balance
+from game.app.services.run_duel import run_monster_duel
 from game.app.store.connection import DATABASE_URL_ENV, create_pool
 from game.app.store.monsters import (
     MonsterRecord,
     add_monster_xp,
     apply_monster_defeat,
+    build_monster_snapshot,
     list_monsters,
 )
+from game.config import (
+    BALANCE_PATH,
+    BLOCKS_PATH,
+    ENEMY_RULESETS_PATH,
+    ROOM_TEMPLATES_PATH,
+)
+from game.schemas.blocks import BlockCatalog, load_block_catalog
+from game.schemas.room import RoomTemplate, load_room_templates
+from game.schemas.ruleset import RuleSet, load_rulesets, parse_ruleset
 
 # 훑을 층 범위. 층 사슬이 붙으면 여기가 늘어난다.
 MIN_FLOOR = 1
@@ -39,37 +51,89 @@ XP_PER_MONSTER = 25
 # 한 판에 필요한 개체 수. 하나뿐이면 붙일 상대가 없다.
 PAIR_SIZE = 2
 
+# 결투장으로 쓸 방. 엄폐가 없어 규칙표의 차이가 지형에 가려지지 않는다.
+ARENA_ROOM_ID = "open_field"
 
-def check_winner(left: MonsterRecord, right: MonsterRecord, rng: DeterministicRng) -> int:
-    """둘 중 누가 이기는지 정한다.
+# 시드를 층·쌍마다 가르는 간격. 한 수열을 공유하면 앞 쌍의 전투 길이가 뒤 쌍을 흔든다.
+FLOOR_STRIDE = 1000
+PAIR_STRIDE = 100000
 
-    전면 시뮬레이션을 돌리지 않는다. 규칙표 대 규칙표를 제대로 돌리려면 방과 배치가
-    필요한데, 몬스터끼리는 그것이 정의돼 있지 않다 — **지금은 레벨 차이에 확률을 얹은
-    판정이고, 그 사실을 숨기지 않는다.** 방이 정의되면 여기를 전투로 바꾼다.
 
-    확률은 정수 비교다 (R5).
+@dataclass(frozen=True)
+class WorldParts:
+    """결투에 필요한 자원 묶음. 층마다 다시 읽지 않으려고 한 번만 만든다."""
 
-    Args:
-        left: 한쪽.
-        right: 다른 쪽.
-        rng: 난수원.
+    balance: dict
+    catalog: BlockCatalog
+    rulesets: dict[str, RuleSet]
+    arena: RoomTemplate
+
+
+def build_world_parts() -> WorldParts:
+    """결투에 필요한 자원을 읽는다.
 
     Returns:
-        이긴 쪽의 record_id.
+        자원 묶음.
+
+    Raises:
+        KeyError: 결투장 방이 템플릿에 없는 경우. 설정이 잘못된 것이라 조용히 넘기지 않는다.
     """
-    # 레벨이 높을수록 유리하되 확정은 아니다. 확정이면 상위 개체가 영원히 이겨
-    # 하위가 존재할 이유가 사라진다.
-    total = max(1, left.level + right.level)
-    return left.record_id if rng.get_below(total) < left.level else right.record_id
+    templates = {t.template_id: t for t in load_room_templates(ROOM_TEMPLATES_PATH)}
+    return WorldParts(
+        balance=load_balance(BALANCE_PATH),
+        catalog=load_block_catalog(BLOCKS_PATH),
+        rulesets=dict(load_rulesets(ENEMY_RULESETS_PATH)),
+        arena=templates[ARENA_ROOM_ID],
+    )
 
 
-def run_floor(pool: ConnectionPool, floor: int, rng: DeterministicRng) -> list[str]:
+def build_duel_seed(base_seed: int, floor: int, left_id: int, right_id: int) -> int:
+    """이 쌍의 결투 시드를 만든다.
+
+    쌍마다 갈라 두는 이유는 R5 다. 한 수열을 층 전체가 공유하면 앞 쌍의 전투 길이가
+    바뀔 때 뒤 쌍의 결과까지 흔들려, 개체 하나를 고쳤을 뿐인데 층 전체가 달라진다.
+
+    Args:
+        base_seed: 이번 세계 틱의 시드.
+        floor: 층.
+        left_id: 한쪽 record_id.
+        right_id: 다른 쪽 record_id.
+
+    Returns:
+        이 쌍만의 시드.
+    """
+    return (base_seed * FLOOR_STRIDE + floor) * PAIR_STRIDE + left_id * PAIR_SIZE + right_id
+
+
+def find_monster_ruleset(
+    record: MonsterRecord, base: dict, rulesets: dict[str, RuleSet]
+) -> RuleSet:
+    """이 개체가 쓸 규칙표를 고른다.
+
+    개체 전용 규칙표가 있으면 그것을 쓴다 (레벨별 규칙표 #36 의 자리). 없으면 카탈로그
+    기본표다.
+
+    Args:
+        record: 몬스터 레코드.
+        base: balance.json 의 그 적 절.
+        rulesets: ruleset_id 에서 규칙표로의 대응표.
+
+    Returns:
+        쓸 규칙표.
+    """
+    if record.ruleset_json:
+        return parse_ruleset(record.ruleset_json)
+    return rulesets[base["ruleset_id"]]
+
+
+def run_floor(pool: ConnectionPool, floor: int, world: WorldParts, base_seed: int) -> list[str]:
     """한 층의 몬스터끼리 한 번 붙인다.
 
     Args:
         pool: 연결 풀.
         floor: 대상 층.
-        rng: 난수원.
+        world: 결투에 필요한 자원 묶음.
+        base_seed: 이번 세계 틱의 시드.
 
     Returns:
         무슨 일이 있었는지 적은 줄들.
@@ -78,17 +142,30 @@ def run_floor(pool: ConnectionPool, floor: int, rng: DeterministicRng) -> list[s
     if len(records) < PAIR_SIZE:
         return []
     notes: list[str] = []
+    by_id = {kind["id"]: kind for kind in world.balance["enemies"]}
     # 정렬된 목록을 둘씩 짝짓는다. 순서가 실행마다 다르면 같은 시드가 다른 결과를 낸다.
     for index in range(0, len(records) - 1, PAIR_SIZE):
         left, right = records[index], records[index + 1]
-        winner_id = check_winner(left, right, rng)
-        loser = right if winner_id == left.record_id else left
-        winner = left if winner_id == left.record_id else right
+        duel = run_monster_duel(
+            build_monster_snapshot(left, by_id[left.catalog_id]),
+            build_monster_snapshot(right, by_id[right.catalog_id]),
+            (
+                find_monster_ruleset(left, by_id[left.catalog_id], world.rulesets),
+                find_monster_ruleset(right, by_id[right.catalog_id], world.rulesets),
+            ),
+            world.arena,
+            world.balance,
+            world.catalog,
+            build_duel_seed(base_seed, floor, left.record_id, right.record_id),
+        )
+        winner = left if duel.winner_record_id == left.record_id else right
+        loser = right if duel.winner_record_id == left.record_id else left
         level = add_monster_xp(pool, winner.record_id, floor, "MONSTER", None, XP_PER_MONSTER)
         dropped = apply_monster_defeat(pool, loser.record_id, floor)
+        verdict = "시간 초과로" if duel.is_timeout else f"{duel.ticks}틱에"
         notes.append(
             f"층{floor} {winner.catalog_id}(→lv{level}/{get_level_cap(floor)})"
-            f" 이 {loser.catalog_id}(→lv{dropped}) 를 눌렀다"
+            f" 이 {loser.catalog_id}(→lv{dropped}) 를 {verdict} 눌렀다"
         )
     return notes
 
@@ -105,10 +182,10 @@ def main() -> int:
     pool = create_pool()
     # 시드를 인자로 받는다. 같은 시드로 다시 돌리면 같은 결과가 나와야 조사에 쓸 수 있다.
     seed = int(sys.argv[1]) if len(sys.argv) > 1 else 0
-    rng = DeterministicRng(seed)
+    world = build_world_parts()
     lines: list[str] = []
     for floor in range(MIN_FLOOR, MAX_FLOOR + 1):
-        lines.extend(run_floor(pool, floor, rng))
+        lines.extend(run_floor(pool, floor, world, seed))
     print("\n".join(lines) if lines else "붙일 몬스터가 없다")
     return 0
 
