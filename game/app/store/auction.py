@@ -66,6 +66,41 @@ def compute_fee(price: int) -> int:
     return max(1, price * LISTING_FEE_PERCENT // PERCENT_BASE)
 
 
+def check_is_listed(pool: ConnectionPool, item_id: int) -> bool:
+    """이 아이템이 지금 열린 매물로 걸려 있는가.
+
+    Args:
+        pool: 연결 풀.
+        item_id: 볼 아이템.
+
+    Returns:
+        열린 매물이 있으면 True.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT 1 FROM auction_listing WHERE item_id = %s AND state = %s",
+            (item_id, STATE_OPEN),
+        ).fetchone()
+    return row is not None
+
+
+def check_is_bound(pool: ConnectionPool, item_id: int) -> bool:
+    """이 아이템이 귀속됐는가 (결정 #07).
+
+    Args:
+        pool: 연결 풀.
+        item_id: 볼 아이템.
+
+    Returns:
+        귀속됐으면 True. 없는 아이템도 True 로 본다 — 팔 수 없는 것은 같다.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT is_bound FROM item_instance WHERE id = %s", (item_id,)
+        ).fetchone()
+    return True if row is None else bool(row[0])
+
+
 def create_listing(
     pool: ConnectionPool, account_id: int, entity_id: int, item_id: int, price: int
 ) -> int:
@@ -86,6 +121,12 @@ def create_listing(
     """
     if not 0 < price <= MAX_PRICE:
         raise ValueError(f"호가가 범위를 벗어났다: {price}")
+    if check_is_bound(pool, item_id):
+        raise ValueError("귀속된 아이템은 팔 수 없다 — 산 물건은 다시 팔지 못한다")
+    if check_is_listed(pool, item_id):
+        # 소유자는 그대로이므로 소유 검사로는 걸리지 않는다. 막지 않으면 하나를 두
+        # 사람에게 팔 수 있다. DB 의 부분 인덱스가 경쟁 상태를 마저 막는다.
+        raise ValueError("이미 걸려 있는 아이템이다")
     add_currency(pool, account_id, -compute_fee(price))
     expires_at = datetime.now(UTC) + LISTING_TTL
     with pool.connection() as connection:
@@ -222,8 +263,10 @@ def apply_purchase(
         )
         if cursor.rowcount != 1:
             raise ValueError("이미 팔린 매물이다")
+        # **여기서 귀속된다** (결정 #07). 주운 것은 한 번 팔 수 있고, 산 사람에게 묶인다 —
+        # 자유 거래로 두면 같은 아이템을 A→B→A 로 돌려 계정 사이에 화폐를 씻을 수 있다.
         connection.execute(
-            "UPDATE item_instance SET owner_entity_id = %s WHERE id = %s",
+            "UPDATE item_instance SET owner_entity_id = %s, is_bound = TRUE WHERE id = %s",
             (buyer_entity_id, item_id),
         )
         connection.execute(

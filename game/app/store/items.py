@@ -35,6 +35,8 @@ class StoredItem:
     catalog_id: str
     affixes: tuple[Affix, ...]
     is_broken: bool
+    # 거래 후 귀속 (결정 #07). 한 번 팔린 아이템은 산 사람에게 묶여 다시 팔 수 없다.
+    is_bound: bool = False
 
 
 @dataclass(frozen=True)
@@ -181,7 +183,7 @@ def list_inventory(pool: ConnectionPool, entity_id: int) -> tuple[InventoryEntry
     with pool.connection() as connection:
         rows = connection.execute(
             "SELECT s.slot_index, s.item_id, s.stack_catalog_id, s.stack_count,"
-            " i.catalog_id, i.affixes, i.is_broken"
+            " i.catalog_id, i.affixes, i.is_broken, i.is_bound"
             " FROM inventory_slot s LEFT JOIN item_instance i ON i.id = s.item_id"
             " WHERE s.entity_id = %s ORDER BY s.slot_index",
             (entity_id,),
@@ -196,6 +198,7 @@ def list_inventory(pool: ConnectionPool, entity_id: int) -> tuple[InventoryEntry
                 catalog_id=str(row[4]),
                 affixes=read_affixes(row[5]),
                 is_broken=bool(row[6]),
+                is_bound=bool(row[7]),
             ),
             stack_catalog_id=None if row[2] is None else str(row[2]),
             stack_count=int(row[3] or 0),
@@ -216,7 +219,7 @@ def list_equipment(pool: ConnectionPool, entity_id: int) -> dict[EquipSlot, Stor
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT e.slot, i.id, i.catalog_id, i.affixes, i.is_broken"
+            "SELECT e.slot, i.id, i.catalog_id, i.affixes, i.is_broken, i.is_bound"
             " FROM equipment_slot e JOIN item_instance i ON i.id = e.item_id"
             " WHERE e.entity_id = %s ORDER BY e.slot",
             (entity_id,),
@@ -227,6 +230,7 @@ def list_equipment(pool: ConnectionPool, entity_id: int) -> dict[EquipSlot, Stor
             catalog_id=str(row[2]),
             affixes=read_affixes(row[3]),
             is_broken=bool(row[4]),
+            is_bound=bool(row[5]),
         )
         for row in rows
     }
@@ -245,7 +249,7 @@ def find_item(pool: ConnectionPool, entity_id: int, item_id: int) -> StoredItem 
     """
     with pool.connection() as connection:
         row = connection.execute(
-            "SELECT id, catalog_id, affixes, is_broken FROM item_instance"
+            "SELECT id, catalog_id, affixes, is_broken, is_bound FROM item_instance"
             " WHERE id = %s AND owner_entity_id = %s",
             (item_id, entity_id),
         ).fetchone()
@@ -256,4 +260,5 @@ def find_item(pool: ConnectionPool, entity_id: int, item_id: int) -> StoredItem 
         catalog_id=str(row[1]),
         affixes=read_affixes(row[2]),
         is_broken=bool(row[3]),
+        is_bound=bool(row[4]),
     )

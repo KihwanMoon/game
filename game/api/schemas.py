@@ -133,6 +133,9 @@ class ItemView(BaseModel):
     hands: str | None = None
     equipped_slot: str | None = None
     is_broken: bool = False
+    # 거래 후 귀속 (결정 #07). **팔기 전에 보여야 한다** — 모르면 걸다가 거절당하고,
+    # 그때는 이미 "왜 안 되지" 를 겪은 뒤다.
+    is_bound: bool = False
     affixes: list[dict] = Field(default_factory=list)
     requirements: list[RequirementView] = Field(default_factory=list)
     can_equip: bool = False

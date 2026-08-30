@@ -84,6 +84,7 @@ def build_item_view(
         hands=str(entry.hands) if entry.hands else None,
         equipped_slot=slot,
         is_broken=stored.is_broken,
+        is_bound=stored.is_bound,
         affixes=[
             {"stat": a.stat, "flat": a.flat, "percent": a.percent, "label_ko": a.label_ko}
             for a in stored.affixes

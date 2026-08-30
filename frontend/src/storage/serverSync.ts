@@ -446,6 +446,13 @@ export interface ItemView {
   readonly hands: string | null
   readonly equippedSlot: string | null
   readonly isBroken: boolean
+  /**
+   * 거래 후 귀속 (결정 #07). 산 물건은 다시 팔 수 없다.
+   *
+   * **팔기 전에 보여야 한다** — 모르면 걸다가 거절당하고, 그때는 이미 "왜 안 되지" 를
+   * 겪은 뒤다.
+   */
+  readonly isBound: boolean
   readonly requirements: readonly RequirementView[]
   readonly canEquip: boolean
 }
@@ -483,6 +490,7 @@ interface RawItem {
   hands: string | null
   equipped_slot: string | null
   is_broken: boolean
+  is_bound?: boolean
   requirements: RawRequirement[]
   can_equip: boolean
 }
@@ -517,6 +525,7 @@ function readSlot(raw: RawSlot): SlotView {
             hands: raw.item.hands,
             equippedSlot: raw.item.equipped_slot,
             isBroken: raw.item.is_broken,
+            isBound: raw.item.is_bound ?? false,
             canEquip: raw.item.can_equip,
             requirements: raw.item.requirements.map((item) => ({
               stat: item.stat,

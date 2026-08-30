@@ -21,6 +21,20 @@ import type { InventoryView } from '../storage'
 
 const noop = () => undefined
 
+/**
+ * 가방에 장비 하나만 있는 인벤토리를 만든다.
+ *
+ * @param overrides 그 아이템에 덮어쓸 값들.
+ * @returns 인벤토리 뷰.
+ */
+function buildInventory(overrides: Partial<InventoryView['slots'][number]['item'] & object>) {
+  const base = INVENTORY.slots[0]
+  return {
+    ...INVENTORY,
+    slots: [{ ...base, item: { ...base?.item, ...overrides } }],
+  } as InventoryView
+}
+
 /** 요구조건을 못 채운 장갑 하나가 가방에 있다. */
 const INVENTORY: InventoryView = {
   slots: [
@@ -37,6 +51,7 @@ const INVENTORY: InventoryView = {
         hands: null,
         equippedSlot: null,
         isBroken: false,
+        isBound: false,
         canEquip: false,
         requirements: [{ stat: 'cpu_budget', actual: 4, minimum: 6, isMet: false }],
       },
@@ -135,5 +150,39 @@ describe('인벤토리 스타일', () => {
 
   it('터치 높이 토큰을 쓴다', () => {
     expect(block).toContain('var(--btn-tap-sm-h)')
+  })
+})
+
+describe('귀속 표시 (결정 #07)', () => {
+  it('★ 귀속된 아이템은 가방에서 그것이 보인다', () => {
+    // 걸기 전에 보여야 한다 — 모르면 걸다가 거절당하고, 그때는 이미 "왜 안 되지" 를
+    // 겪은 뒤다.
+    const html = renderToStaticMarkup(
+      <InventoryPanel
+        inventory={buildInventory({ isBound: true })}
+        isOnline
+        detail=""
+        onEquip={() => undefined}
+        onUnequip={() => undefined}
+        onDiscard={() => undefined}
+        onRepair={() => undefined}
+      />,
+    )
+    expect(html).toContain('귀속')
+  })
+
+  it('주운 아이템에는 안 붙는다 — 붙으면 팔 수 있는 것까지 못 팔 것처럼 보인다', () => {
+    const html = renderToStaticMarkup(
+      <InventoryPanel
+        inventory={buildInventory({ isBound: false })}
+        isOnline
+        detail=""
+        onEquip={() => undefined}
+        onUnequip={() => undefined}
+        onDiscard={() => undefined}
+        onRepair={() => undefined}
+      />,
+    )
+    expect(html).not.toContain('귀속')
   })
 })

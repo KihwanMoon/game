@@ -309,3 +309,22 @@ ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS loadout JSONB;
 -- 상수를 고치는 순간 이미 발급한 티켓이 소급해 달라지고, 그 티켓으로 돈 판은 서버가
 -- 다시 계산할 수 없다.
 ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS room_ids JSONB;
+
+-- 아이템 귀속 (결정 #07). **거래 후 귀속**이다 — 주운 것은 한 번 팔 수 있고, 산 사람에게
+-- 묶인다. 자유 거래로 두면 같은 아이템을 A→B→A 로 돌려 계정 사이에 화폐를 씻을 수 있고,
+-- 봇이 파밍해 파는 것이 최적 전략이 된다. 완전 귀속으로 두면 경매장이 죽고 그와 함께
+-- 유일한 화폐 배출구가 사라진다.
+--
+-- **기존 아이템은 전부 미귀속으로 시작한다** (기본값 FALSE). 지금 유통량이 거의 없어
+-- 실질 차이가 없고, "언제 얻었나" 를 따지는 예외를 만들지 않는 편이 규칙을 단순하게 한다.
+ALTER TABLE item_instance ADD COLUMN IF NOT EXISTS is_bound BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- 매물의 UNIQUE(item_id) 를 **열린 매물에만** 거는 부분 인덱스로 바꾼다.
+--
+-- 원래 제약은 "같은 아이템이 두 번 걸리는 것" 을 막으려던 것인데, 상태를 보지 않아
+-- **한 번 걸었다 내린 아이템이 영원히 다시 걸리지 않았다.** 취소는 거래가 아니므로
+-- 그러면 걸어 보는 것 자체가 벌이 된다. 팔린 뒤에는 귀속(#07)이 막으므로 이 인덱스가
+-- 느슨해져도 재판매가 열리지 않는다.
+ALTER TABLE auction_listing DROP CONSTRAINT IF EXISTS auction_listing_item_id_key;
+CREATE UNIQUE INDEX IF NOT EXISTS auction_open_item_idx
+    ON auction_listing (item_id) WHERE state = 'OPEN';
