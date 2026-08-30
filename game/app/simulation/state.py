@@ -32,9 +32,23 @@ class Entity:
     potions: int = 0
     # 누가 불러냈는가. 소환 상한을 소환사별로 세기 위해 필요하다.
     summoner_id: str | None = None
+    # 장착된 스킬 (블록 v5). None 은 "장착 개념이 아직 배선되지 않음" 이라 전부 허용한다 —
+    # 빈 튜플(아무것도 장착 안 함)과 구분해야 한다. 아이템·장비가 붙으면 그쪽이 채운다.
+    skills: tuple[str, ...] | None = None
     cooldowns: dict[str, int] = field(default_factory=dict)
     flags: dict[str, bool] = field(default_factory=dict)
     statuses: dict[str, int] = field(default_factory=dict)
+
+    def check_has_skill(self, skill_id: str) -> bool:
+        """이 스킬을 장착하고 있는가.
+
+        Args:
+            skill_id: 볼 스킬.
+
+        Returns:
+            장착돼 있으면 True. 장착 개념이 배선되기 전이면 언제나 True 다.
+        """
+        return self.skills is None or skill_id in self.skills
 
     @property
     def is_alive(self) -> bool:

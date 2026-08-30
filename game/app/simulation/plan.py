@@ -48,6 +48,20 @@ __all__ = [
 ]
 
 
+# 규칙 상태 네 번째 (블록 v5, 결정 #04). 참·발동 / 참·미발동 / 거짓 / **불가**.
+# 거짓과 다르다 — 조건은 참인데 실행할 수단이 없다.
+OUTCOME_BLOCKED = "불가"
+
+
+@dataclass(frozen=True)
+class BlockedRule:
+    """조건은 참이었으나 실행할 수단이 없어 건너뛴 규칙 하나."""
+
+    rule_index: int
+    expr: str
+    reason: str
+
+
 @dataclass(frozen=True)
 class PlannedAction:
     """DECIDE 가 내놓는 계획. 아직 세계를 바꾸지 않았다."""
@@ -59,6 +73,14 @@ class PlannedAction:
     expr: str = ""
     # 플래그 기록은 상태 변경이므로 DECIDE 가 아니라 ACT 에서 적용한다 (TDD §5.2).
     set_flag: str | None = None
+    # 실행할 스킬 (블록 v5). USE_SKILL 이 아니면 None 이다.
+    skill_id: str | None = None
+    # 조건은 참인데 수단이 없어 건너뛴 규칙들 (블록 v5, 결정 #04).
+    #
+    # **거짓과 다르다.** 거짓은 "조건이 안 맞았다", 불가는 "조건은 맞는데 스킬이 없다" 이고
+    # 플레이어가 고쳐야 할 곳이 완전히 다르다 — 앞은 조건을, 뒤는 장비를 본다. 구분하지
+    # 않으면 P1(실패는 정보다)이 깨진다.
+    blocked: tuple[BlockedRule, ...] = ()
 
 
 class DecisionPolicy(Protocol):

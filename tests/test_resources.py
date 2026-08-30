@@ -119,6 +119,9 @@ def test_parameterized_perceptions_declare_values(catalog):
         # 블록 목록 v2 일반화. 개수는 18 그대로다 — 두 블록을 인자화했을 뿐이다.
         "target_distance",  # F-1 잔여: 선택된 대상까지의 거리
         "nearest_tile_distance",  # F-3: 회복타일 존재를 물을 방법
+        # v5. 규칙표가 스킬을 자리 번호가 아니라 정체로 가리킨다 (결정 #04).
+        "self_skill_ready",
+        "self_has_skill",
     }
     for block in parameterized:
         assert block.param.values, f"{block.block_id} 의 허용값이 비어 있다"
@@ -151,7 +154,16 @@ def test_targeted_actions_declare_a_faction(catalog):
     # v4 부터 대상을 받는 행동은 자기가 요구하는 진영을 선언한다. 빠뜨리면
     # 검증기가 `HEAL @NEAREST`(적을 회복)를 통과시킨다.
     targeted = {a.block_id for a in catalog.actions.values() if a.targeted}
-    assert targeted == {"ATTACK", "SKILL_1", "SKILL_2", "APPROACH", "RETREAT", "HEAL"}
+    assert targeted == {
+        "ATTACK",
+        "SKILL_1",
+        "SKILL_2",
+        "APPROACH",
+        "RETREAT",
+        "HEAL",
+        # v5. 대상 진영은 스킬 정의가 덮지만, 기본값이 없으면 검증기가 셀렉터를 못 본다.
+        "USE_SKILL",
+    }
     for block in catalog.actions.values():
         assert (block.target_faction is not None) is block.targeted, block.block_id
     assert catalog.actions["HEAL"].target_faction == FACTION_ALLY

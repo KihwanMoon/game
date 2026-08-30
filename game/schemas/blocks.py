@@ -23,8 +23,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 # 콘텐츠 범위. 동결 대상이므로 상수로 박아 로드 때마다 대조한다.
-PERCEPTION_COUNT = 18
-ACTION_COUNT = 14
+PERCEPTION_COUNT = 20
+ACTION_COUNT = 15
 SELECTOR_COUNT = 9
 RHS_STAT_COUNT = 6
 
@@ -63,6 +63,9 @@ class ActionBlock:
     label_ko: str
     # 이 행동이 요구하는 대상 진영. 대상을 받지 않는 행동은 None 이다.
     target_faction: str | None = None
+    # 이 행동이 받는 인자 (v5). USE_SKILL[skill] 이 이것을 쓴다 — 스킬마다 액션을
+    # 더하면 블록 목록 버전이 계속 올라 랭킹 시즌이 갈린다 (docs/설계/5_스킬 §4).
+    param: BlockParam | None = None
 
 
 @dataclass(frozen=True)
@@ -162,6 +165,7 @@ def load_block_catalog(source_path: Path) -> BlockCatalog:
             targeted=item["targeted"],
             label_ko=item["label_ko"],
             target_faction=item.get("target_faction"),
+            param=_build_param(item.get("param")),
         )
         for item in raw["actions"]
     }

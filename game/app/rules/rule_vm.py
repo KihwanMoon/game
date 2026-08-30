@@ -12,15 +12,19 @@ DEFAULT 인 '가장 가까운 적에게 접근' 이 나간다 (TDD §5.2).
 """
 
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from game.app.grid.geometry import get_manhattan_distance
 from game.app.simulation.perception import PerceptionSnapshot
-from game.app.simulation.plan import PlannedAction
+from game.app.simulation.plan import BlockedRule, PlannedAction
 from game.app.simulation.selectors import resolve_target
 from game.app.simulation.state import Entity, WorldState
 from game.schemas.blocks import BlockCatalog
 from game.schemas.ruleset import OP_OR, Condition, Rule, RuleSet, StatRef, Term
+
+# 스킬을 정체로 가리키는 행동 (블록 v5, 결정 #04). 자리 번호가 아니라 스킬 이름을 쓰므로
+# 1번 자리를 갈아끼워도 같은 규칙표가 다른 뜻이 되지 않는다.
+USE_SKILL_ACTION = "USE_SKILL"
 
 # 대상이 정해져야 값이 나오는 인지 변수. 스냅샷이 아니라 해석된 대상에서 읽는다.
 TARGET_BLOCKS = frozenset({"target_hp_percent", "target_is_casting"})
@@ -244,6 +248,7 @@ class RuleVm:
         Returns:
             최초로 참이 된 규칙의 계획. 전부 거짓이면 DEFAULT 계획.
         """
+        blocked: list[BlockedRule] = []
         for rule in self.ruleset.rules:
             target, usable = self._resolve_rule_target(rule, entity, state)
             if not usable:
@@ -259,6 +264,19 @@ class RuleVm:
             )
             if not fired:
                 continue
+            # 조건이 참이어도 수단이 없으면 넘어간다. 그리고 **그 사실을 들고 나온다** —
+            # 조용히 다음 규칙으로 가면 플레이어는 왜 안 떴는지 알 수 없다 (P1).
+            if rule.action == USE_SKILL_ACTION and not entity.check_has_skill(
+                rule.action_param or ""
+            ):
+                blocked.append(
+                    BlockedRule(
+                        rule_index=rule.priority,
+                        expr=expr,
+                        reason=f"{rule.action_param} 미장착",
+                    )
+                )
+                continue
             return PlannedAction(
                 entity_id=entity.entity_id,
                 action_id=rule.action,
@@ -266,8 +284,10 @@ class RuleVm:
                 rule_index=rule.priority,
                 expr=expr,
                 set_flag=rule.set_flag,
+                skill_id=rule.action_param if rule.action == USE_SKILL_ACTION else None,
+                blocked=tuple(blocked),
             )
-        return self._build_default_action(entity, state)
+        return replace(self._build_default_action(entity, state), blocked=tuple(blocked))
 
     def _get_headroom(self, entity: Entity) -> int:
         """남은 CPU 예산 (GDD §3.6).

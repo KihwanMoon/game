@@ -70,6 +70,9 @@ class Rule:
     target: str | None = None
     set_flag: str | None = None
     cpu_cost: int = 1
+    # 행동의 인자 (블록 v5). `USE_SKILL` 이 어느 스킬인지를 여기 담는다.
+    # 없으면 생략한다 — 절에 키가 늘면 저장된 규칙표·공유 코드·골든이 전부 갈린다.
+    action_param: str | None = None
 
 
 @dataclass(frozen=True)
@@ -143,6 +146,7 @@ def parse_ruleset(raw: dict) -> RuleSet:
                         terms=tuple(parse_term(t) for t in item["conditions"]["terms"]),
                     ),
                     action=item["action"],
+                    action_param=item.get("action_param"),
                     target=item.get("target"),
                     set_flag=item.get("set_flag"),
                     cpu_cost=item["cpu_cost"],

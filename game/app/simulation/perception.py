@@ -129,6 +129,11 @@ def _add_vision_values(
     )
 
 
+# 인지 변수를 만드는 스킬 목록. 카탈로그의 USE_SKILL 파라미터와 같아야 한다 —
+# 갈리면 규칙표가 쓰는 스킬의 인지값이 조용히 비고, 그 규칙은 언제나 거짓이 된다.
+SKILL_IDS: tuple[str, ...] = ("ATTACK", "SKILL_1", "SKILL_2", "AREA_ATTACK", "SUMMON", "HEAL")
+
+
 def build_snapshot(
     state: WorldState,
     entity: Entity,
@@ -191,8 +196,15 @@ def build_snapshot(
         values[f"enemy_type_present[{enemy_type}]"] = enemy_type in present_types
     # SUMMON 이 여기 끼는 것은 v3, HEAL 은 v4 부터다. 주기를 규칙표가 물을 수 있어야
     # `쿨타임[SUMMON] 완료 → 소환`·`쿨타임[HEAL] 완료 → 회복` 이 성립한다 (GDD §5).
-    for skill in ("SKILL_1", "SKILL_2", "AREA_ATTACK", "SUMMON", "HEAL"):
-        values[f"self_cooldown_ready[{skill}]"] = entity.cooldowns.get(skill, 0) <= 0
+    for skill in SKILL_IDS:
+        is_ready = entity.cooldowns.get(skill, 0) <= 0
+        values[f"self_cooldown_ready[{skill}]"] = is_ready
+        # v5. 장착 여부와 쿨타임을 가른다 (결정 #04). self_cooldown_ready 는 쿨타임만
+        # 보므로 미장착 스킬에도 참을 낸다 — 그 값으로 규칙을 짜면 실행되지 않는 규칙이
+        # 참으로 보인다. self_skill_ready 는 둘을 함께 본다.
+        has_skill = entity.check_has_skill(skill)
+        values[f"self_has_skill[{skill}]"] = has_skill
+        values[f"self_skill_ready[{skill}]"] = has_skill and is_ready
     for status in ("POISON", "SLOW", "STUN"):
         values[f"self_has_status[{status}]"] = entity.statuses.get(status, 0) > 0
     for flag in ("A", "B", "C", "D"):

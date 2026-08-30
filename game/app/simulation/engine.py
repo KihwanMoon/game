@@ -20,6 +20,7 @@ from game.app.grid.vision import VisionCache, VisionGrid
 from game.app.simulation.actions import ATTACK_ACTIONS, MOVE_ACTIONS, ActionExecutor
 from game.app.simulation.perception import PerceptionSnapshot, build_snapshot
 from game.app.simulation.plan import (
+    OUTCOME_BLOCKED,
     OUTCOME_ONGOING,
     OUTCOME_PLAYER_LOSS,
     OUTCOME_PLAYER_WIN,
@@ -193,6 +194,21 @@ class TickEngine:
         # 결정을 매 틱 남긴다. 피해가 난 틱만 기록하면 "왜 그 규칙이 안 떴는지"를
         # 되짚을 수 없고, 그것이 P1(실패는 정보다)의 실현을 막는다.
         for plan in plans:
+            # 조건은 참인데 수단이 없어 건너뛴 규칙을 **먼저** 남긴다. 발동한 규칙보다
+            # 위에 있던 것들이라 순서가 그렇고, 순서가 뒤집히면 "무엇이 무엇을 막았는가"
+            # 를 로그에서 읽을 수 없다.
+            for skipped in plan.blocked:
+                self.log.record(
+                    LogEntry(
+                        tick=self.state.tick,
+                        entity_id=plan.entity_id,
+                        phase=PHASE_DECIDE,
+                        expr=skipped.expr,
+                        outcome=f"{OUTCOME_BLOCKED} — {skipped.reason}",
+                        rule=skipped.rule_index,
+                        fired=False,
+                    )
+                )
             target = f" @{plan.target_id}" if plan.target_id else ""
             self.log.record(
                 LogEntry(
