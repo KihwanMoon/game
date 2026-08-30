@@ -12,7 +12,7 @@
  * 저절로 44px 가 된다.
  */
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
-import type { InventoryView, ItemView, SlotView } from '../storage'
+import type { AffixView, InventoryView, ItemView, SlotView } from '../storage'
 
 export interface InventoryPanelProps {
   readonly inventory: InventoryView | undefined
@@ -65,6 +65,51 @@ function renderRequirements(item: ItemView): React.JSX.Element | null {
             size="sm"
             label={`${need.stat}(${String(need.actual)}) >= 요구(${String(need.minimum)})`}
           />
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/**
+ * 접사 하나를 사람이 읽는 한 줄로 만든다.
+ *
+ * **부호를 붙여 적는다.** 저주 접사는 음수이고(`설계/4_아이템` §9), 「방어 -3」과
+ * 「방어 3」이 같아 보이면 저주가 장점으로 읽힌다.
+ *
+ * @param affix 볼 접사.
+ * @returns 화면에 적을 문자열.
+ */
+export function formatAffix(affix: AffixView): string {
+  const parts: string[] = []
+  if (affix.flat !== 0) {
+    parts.push(`${affix.flat > 0 ? '+' : ''}${String(affix.flat)}`)
+  }
+  if (affix.percent !== 0) {
+    parts.push(`${affix.percent > 0 ? '+' : ''}${String(affix.percent)}%`)
+  }
+  const name = affix.labelKo || affix.stat
+  return parts.length === 0 ? name : `${name} ${parts.join(' ')}`
+}
+
+/**
+ * 이 아이템이 주는 것을 그린다.
+ *
+ * **끼기 전에 보여야 한다** — 무엇을 주는지 모르고 끼우면 캐릭터 시트를 보고 나서야
+ * 알게 되고, 그때는 이미 다른 것을 벗은 뒤다.
+ *
+ * @param item 볼 아이템.
+ * @returns 요소. 접사가 없으면 null.
+ */
+function renderAffixes(item: ItemView): React.JSX.Element | null {
+  if (item.affixes.length === 0) {
+    return null
+  }
+  return (
+    <ul className="inv__affixes">
+      {item.affixes.map((affix) => (
+        <li className="inv__affix" key={`${affix.stat}:${affix.labelKo}`}>
+          <ValueExpr text={formatAffix(affix)} size="sm" dim />
         </li>
       ))}
     </ul>
@@ -184,6 +229,7 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
                           }}
                         />
                       </div>
+                      {renderAffixes(entry.item)}
                       {renderRequirements(entry.item)}
                     </li>
                   ),

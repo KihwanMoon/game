@@ -93,6 +93,7 @@ export type {
   ListingView,
   ProgressView,
   RankEntry,
+  AffixView,
   ItemView,
   RequirementView,
   RunVerdict,

@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { InventoryPanel } from './InventoryPanel'
+import { InventoryPanel, formatAffix } from './InventoryPanel'
 import type { InventoryView } from '../storage'
 
 const noop = () => undefined
@@ -52,6 +52,7 @@ const INVENTORY: InventoryView = {
         equippedSlot: null,
         isBroken: false,
         isBound: false,
+        affixes: [{ stat: 'hp_max', flat: 8, percent: 0, labelKo: '튼튼함' }],
         canEquip: false,
         requirements: [{ stat: 'cpu_budget', actual: 4, minimum: 6, isMet: false }],
       },
@@ -184,5 +185,35 @@ describe('귀속 표시 (결정 #07)', () => {
       />,
     )
     expect(html).not.toContain('귀속')
+  })
+})
+
+describe('아이템이 주는 것 (기존 화면 보완)', () => {
+  it('★ 끼기 전에 무엇을 주는지 보인다', () => {
+    // 모르고 끼우면 캐릭터 시트를 보고 나서야 알게 되고, 그때는 이미 다른 것을 벗은 뒤다.
+    const html = renderToStaticMarkup(
+      <InventoryPanel
+        inventory={INVENTORY}
+        isOnline
+        detail=""
+        onEquip={() => undefined}
+        onUnequip={() => undefined}
+        onDiscard={() => undefined}
+        onRepair={() => undefined}
+      />,
+    )
+    expect(html).toContain('튼튼함')
+    expect(html).toContain('+8')
+  })
+
+  it('★ 저주 접사는 부호가 붙는다 — 「방어 -3」과 「방어 3」이 같아 보이면 안 된다', () => {
+    expect(formatAffix({ stat: 'defense', flat: -3, percent: 0, labelKo: '저주' })).toBe('저주 -3')
+    expect(formatAffix({ stat: 'attack', flat: 0, percent: 12, labelKo: '예리함' })).toBe(
+      '예리함 +12%',
+    )
+  })
+
+  it('접사 이름이 없으면 스탯 이름을 쓴다 — 빈 줄을 그리지 않는다', () => {
+    expect(formatAffix({ stat: 'hp_max', flat: 5, percent: 0, labelKo: '' })).toBe('hp_max +5')
   })
 })

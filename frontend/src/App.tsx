@@ -36,6 +36,7 @@ import {
   BLOCK_CATALOG,
   ENEMY_RULESETS,
   G0_RULESETS,
+  ALL_SKILL_IDS,
   ROOM_TEMPLATES,
   TUTORIAL_STAGES,
 } from './core/resources'
@@ -48,6 +49,7 @@ import {
   RuleEditor,
   AccountPanel,
   BestiaryPanel,
+  CharacterPanel,
   TutorialPanel,
   WorldPanel,
   InventoryPanel,
@@ -941,6 +943,12 @@ export function App(): React.JSX.Element {
                 hasLocalProgress={meta.bestFloor > 0 || meta.bestiary.length > 0}
                 onRegister={applyRegister}
                 onLogin={applyLogin}
+              />
+              <CharacterPanel
+                progress={progress}
+                baseStats={BALANCE.player as Record<string, number>}
+                allSkills={ALL_SKILL_IDS}
+                isOnline={isOnline}
               />
               <InventoryPanel
                 inventory={inventory}

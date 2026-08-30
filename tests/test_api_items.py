@@ -323,3 +323,28 @@ def test_instance_affixes_beat_catalog_defaults(client, token):
     rolled_id = grant_item(client, token, "helm_iron", (Affix(stat="hp_max", flat=40),))
     apply_equip_via_api(client, token, rolled_id, "HEAD")
     assert request_loadout(client, token)["hp_max"] > plain["hp_max"]
+
+
+def test_the_item_view_shows_what_it_actually_gives(client, token):
+    """★ 카탈로그 기본 접사를 가진 아이템도 효과가 보여야 한다.
+
+    인스턴스가 굴린 접사만 보내면, 기본 접사로만 이루어진 아이템이 화면에서 "아무 효과
+    없음" 으로 보인다 — 로드아웃 계산은 카탈로그 것을 쓰는데 화면만 모르는 상태가 된다.
+    """
+    item_id = grant_item(client, token, "helm_iron")
+    slots = client.get("/api/inventory", headers=build_headers(token)).json()["slots"]
+    view = next(s["item"] for s in slots if (s["item"] or {}).get("item_id") == item_id)
+    assert view["affixes"] != []
+    assert any(a["stat"] == "hp_max" for a in view["affixes"])
+
+
+def test_rolled_affixes_replace_the_catalog_ones_in_the_view(client, token):
+    """★ 화면이 로드아웃 계산과 같은 규칙을 보여야 한다.
+
+    인스턴스가 굴린 접사가 카탈로그 기본값을 **대체한다** — 화면만 둘을 합쳐 보여주면
+    유저가 본 것과 전투가 쓰는 것이 달라진다.
+    """
+    item_id = grant_item(client, token, "helm_iron", (Affix(stat="hp_max", flat=40),))
+    slots = client.get("/api/inventory", headers=build_headers(token)).json()["slots"]
+    view = next(s["item"] for s in slots if (s["item"] or {}).get("item_id") == item_id)
+    assert [a["flat"] for a in view["affixes"]] == [40]

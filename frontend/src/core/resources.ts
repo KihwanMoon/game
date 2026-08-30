@@ -96,3 +96,13 @@ export const BALANCE: RawBalanceFile = {
 export const TUTORIAL_STAGES: readonly TutorialStage[] = (
   tutorialRaw as unknown as { readonly stages: readonly RawTutorialStage[] }
 ).stages.map(parseTutorialStage)
+
+/**
+ * 이 코어가 아는 스킬 id 전부, 정렬해서.
+ *
+ * 캐릭터 시트가 **장착하지 않은 것을 「불가」로** 보여주는 데 쓴다 — 규칙 에디터에서
+ * 「불가」가 왜 떴는지는 그 목록에서만 답할 수 있다.
+ */
+export const ALL_SKILL_IDS: readonly string[] = SKILLS.skills
+  .map((skill) => (skill as { readonly id: string }).id)
+  .sort()

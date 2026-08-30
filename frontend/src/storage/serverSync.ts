@@ -453,8 +453,23 @@ export interface ItemView {
    * 겪은 뒤다.
    */
   readonly isBound: boolean
+  /**
+   * 이 아이템이 실제로 주는 것.
+   *
+   * **끼기 전에 보여야 한다** — 무엇을 주는지 모르고 끼우면 캐릭터 시트를 보고 나서야
+   * 알게 되고, 그때는 이미 다른 것을 벗은 뒤다.
+   */
+  readonly affixes: readonly AffixView[]
   readonly requirements: readonly RequirementView[]
   readonly canEquip: boolean
+}
+
+/** 접사 하나. 고정 합계에 붙거나 퍼센트에 붙는다. */
+export interface AffixView {
+  readonly stat: string
+  readonly flat: number
+  readonly percent: number
+  readonly labelKo: string
 }
 
 /** 인벤토리 한 칸 또는 장비 한 자리. */
@@ -491,6 +506,7 @@ interface RawItem {
   equipped_slot: string | null
   is_broken: boolean
   is_bound?: boolean
+  affixes?: { stat: string; flat: number; percent: number; label_ko: string }[]
   requirements: RawRequirement[]
   can_equip: boolean
 }
@@ -526,6 +542,12 @@ function readSlot(raw: RawSlot): SlotView {
             equippedSlot: raw.item.equipped_slot,
             isBroken: raw.item.is_broken,
             isBound: raw.item.is_bound ?? false,
+            affixes: (raw.item.affixes ?? []).map((affix) => ({
+              stat: affix.stat,
+              flat: affix.flat,
+              percent: affix.percent,
+              labelKo: affix.label_ko,
+            })),
             canEquip: raw.item.can_equip,
             requirements: raw.item.requirements.map((item) => ({
               stat: item.stat,

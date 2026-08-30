@@ -85,9 +85,13 @@ def build_item_view(
         equipped_slot=slot,
         is_broken=stored.is_broken,
         is_bound=stored.is_bound,
+        # **실제로 붙어 있는 접사를 보낸다.** 인스턴스가 굴린 것이 있으면 그것이
+        # 카탈로그 기본값을 대체하고(로드아웃 계산과 같은 규칙), 없으면 카탈로그
+        # 것이 그대로 붙어 있다 — 인스턴스 것만 보내면 기본 접사를 가진 아이템이
+        # 화면에서 "아무 효과 없음" 으로 보인다.
         affixes=[
             {"stat": a.stat, "flat": a.flat, "percent": a.percent, "label_ko": a.label_ko}
-            for a in stored.affixes
+            for a in (stored.affixes or entry.affixes)
         ],
         requirements=[
             RequirementView(stat=c.stat, actual=c.actual, minimum=c.minimum, is_met=c.is_met)
