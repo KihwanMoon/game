@@ -96,6 +96,7 @@ import {
   readAuction,
   readBestiary,
   readLeaderboard,
+  applyAdminAction,
   applyMonsterLevel,
   readAdminOverview,
   readProgress,
@@ -1122,6 +1123,18 @@ export function App(): React.JSX.Element {
               <AdminPanel
                 overview={admin}
                 detail={adminDetail}
+                onIntervene={(path, targetId, reason) => {
+                  if (account === undefined) {
+                    return
+                  }
+                  setAdminDetail('')
+                  void applyAdminAction(account, path, targetId, reason).then((outcome) => {
+                    setAdminDetail(outcome.detail)
+                    if (outcome.overview !== undefined) {
+                      setAdmin(outcome.overview)
+                    }
+                  })
+                }}
                 onSetMonsterLevel={(recordId, level) => {
                   if (account === undefined) {
                     return

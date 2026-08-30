@@ -25,21 +25,28 @@ from game.api.deps import (
 )
 from game.api.schemas import (
     AdminActionView,
+    AdminHeldItemView,
     AdminMonsterView,
     AdminOverviewResponse,
+    AdminReasonRequest,
     MonsterLevelRequest,
 )
 from game.app.monsters.growth import get_level_cap
 from game.app.store.admin import list_admin_actions, record_admin_action
+from game.app.store.admin_actions import apply_item_recall, apply_listing_cancel
 from game.app.store.monsters import find_monster, set_monster_level
 from game.app.store.world_view import (
     MonsterRow,
     count_levels,
+    list_held_items,
     list_world_monsters,
     read_world_summary,
 )
 
 router = APIRouter()
+
+# 개입 사유의 최소 길이. 한두 글자로 때우면 원장이 기록이 아니라 알리바이가 된다.
+MIN_REASON_LENGTH = 4
 
 
 @router.get("/api/admin/overview", response_model=AdminOverviewResponse)
@@ -62,6 +69,18 @@ def read_admin_overview(account: CurrentAdmin) -> AdminOverviewResponse:
         core_version=get_core_version(),
         level_counts=[{"level": level, "count": count} for level, count in count_levels(pool)],
         monsters=[build_monster_view(row) for row in list_world_monsters(pool)],
+        held_items=[
+            AdminHeldItemView(
+                item_id=row.item_id,
+                record_id=row.record_id,
+                monster_id=row.monster_id,
+                catalog_id=row.catalog_id,
+                taken_from_handle=row.taken_from_handle,
+                is_broken=row.is_broken,
+                is_bound=row.is_bound,
+            )
+            for row in list_held_items(pool)
+        ],
         recent_actions=[
             AdminActionView(
                 handle=item.handle,
@@ -131,5 +150,91 @@ def save_monster_level(
         "monster.level",
         f"#{request.record_id} {record.catalog_id}",
         f"{record.level} → {request.level}",
+    )
+    return read_admin_overview(account)
+
+
+def check_reason(reason: str) -> str:
+    """개입 사유를 확인한다.
+
+    **비면 거절한다.** 무엇을 했는지만 남으면 "왜 그랬지" 를 나중에 아무도 답할 수 없고,
+    그때 원장은 기록이 아니라 알리바이가 된다.
+
+    Args:
+        reason: 받은 사유.
+
+    Returns:
+        다듬은 사유.
+
+    Raises:
+        HTTPException: 사유가 비었거나 너무 짧은 경우.
+    """
+    text = reason.strip()
+    if len(text) < MIN_REASON_LENGTH:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"사유를 {MIN_REASON_LENGTH}자 이상 적는다 — 되돌릴 수 없는 조작이다",
+        )
+    return text
+
+
+@router.post("/api/admin/auction/cancel", response_model=AdminOverviewResponse)
+def create_listing_cancel(
+    request: AdminReasonRequest, account: CurrentAdmin
+) -> AdminOverviewResponse:
+    """열린 매물을 강제로 내린다.
+
+    수수료는 돌려주지 않는다 — 일반 취소와 같다. 관리자가 내렸다고 되돌리면 "관리자에게
+    부탁하면 수수료가 없다" 가 되고, 그 순간 유일한 화폐 배출구가 샌다.
+
+    Args:
+        request: 매물 id 와 사유.
+        account: 관리자 계정.
+
+    Returns:
+        갱신된 현황.
+
+    Raises:
+        HTTPException: 사유가 없거나 내릴 수 없는 매물인 경우.
+    """
+    reason = check_reason(request.reason)
+    detail = apply_listing_cancel(get_pool(), request.target_id)
+    if not detail:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "내릴 수 없는 매물이다")
+    record_admin_action(get_pool(), account.account_id, "auction.cancel", detail, reason)
+    return read_admin_overview(account)
+
+
+@router.post("/api/admin/item/recall", response_model=AdminOverviewResponse)
+def create_item_recall(request: AdminReasonRequest, account: CurrentAdmin) -> AdminOverviewResponse:
+    """아이템 하나를 세계에서 거둔다.
+
+    **지우지 않고 파손으로 둔다.** 원장이 이 id 를 가리키므로, 지우면 "이 아이템이 어디로
+    갔나" 를 추적할 수 없다.
+
+    발급하는 짝은 만들지 않았다 — 서버가 검증된 런의 결과로만 아이템을 만든다는
+    결정 #02 가 관리자 경로 하나로 뚫리면, 그 뒤로는 어떤 아이템도 "정상적으로 나온
+    것" 이라고 말할 수 없다.
+
+    Args:
+        request: 아이템 id 와 사유.
+        account: 관리자 계정.
+
+    Returns:
+        갱신된 현황.
+
+    Raises:
+        HTTPException: 사유가 없거나 없는 아이템인 경우.
+    """
+    reason = check_reason(request.reason)
+    outcome = apply_item_recall(get_pool(), request.target_id)
+    if outcome is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "없는 아이템이다")
+    record_admin_action(
+        get_pool(),
+        account.account_id,
+        "item.recall",
+        f"#{outcome.item_id} {outcome.catalog_id} (개체 {outcome.owner_entity_id})",
+        reason,
     )
     return read_admin_overview(account)

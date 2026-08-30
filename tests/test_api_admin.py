@@ -94,7 +94,11 @@ def test_there_is_no_route_that_grants_admin(client):
     paths = [route.path for route in create_app().routes]
     assert not [path for path in paths if "grant" in path or "promote" in path]
     # 관리자 경로는 조회와 개입뿐이다.
+    # 관리자 경로는 **조회와 개입뿐**이다. 늘어나면 이 목록을 함께 고치게 해서,
+    # 새 경로가 붙는 순간 그것이 얼마나 위험한지 한 번 더 보게 한다.
     assert sorted(path for path in paths if "/admin/" in path) == [
+        "/api/admin/auction/cancel",
+        "/api/admin/item/recall",
         "/api/admin/monster/level",
         "/api/admin/overview",
     ]
@@ -193,3 +197,109 @@ def test_a_missing_monster_is_a_404(client):
         headers=build_headers(build_admin(client)),
     )
     assert response.status_code == 404
+
+
+# ── 개입 2단계 — 사유가 없으면 아무것도 못 한다 ──────────────────────────
+
+
+def build_listing(client, admin):
+    """관리자 계정으로 매물 하나를 건다. 강제 취소 대상이다."""
+    from game.api.deps import get_pool
+    from game.app.store.accounts import find_player_entity
+    from game.app.store.auction import create_listing
+    from game.app.store.equipment import add_currency
+    from game.app.store.items import create_item
+
+    account_id = client.get("/api/account", headers=build_headers(admin)).json()["account_id"]
+    entity_id = find_player_entity(get_pool(), account_id)
+    add_currency(get_pool(), account_id, 5000)
+    item_id = create_item(get_pool(), entity_id, "sword_short", ())
+    listing_id = create_listing(get_pool(), account_id, entity_id, item_id, 100)
+    return listing_id, item_id
+
+
+def test_an_intervention_without_a_reason_is_rejected(client):
+    """★ **사유가 비면 거절한다.**
+
+    무엇을 했는지만 남으면 "왜 그랬지" 를 나중에 아무도 답할 수 없고, 그때 원장은
+    기록이 아니라 알리바이가 된다.
+    """
+    admin = build_admin(client)
+    listing_id, item_id = build_listing(client, admin)
+    for path, target in (
+        ("/api/admin/auction/cancel", listing_id),
+        ("/api/admin/item/recall", item_id),
+    ):
+        response = client.post(
+            path, json={"target_id": target, "reason": "  "}, headers=build_headers(admin)
+        )
+        assert response.status_code == 400, path
+
+
+def test_a_normal_account_cannot_intervene(client, token):
+    """★ 조회만 막고 개입을 열어 두면 막은 뜻이 없다."""
+    for path in ("/api/admin/auction/cancel", "/api/admin/item/recall"):
+        response = client.post(
+            path, json={"target_id": 1, "reason": "정상 사유"}, headers=build_headers(token)
+        )
+        assert response.status_code == 404, path
+
+
+def test_cancelling_a_listing_records_the_reason(client):
+    """★ 개입과 사유가 함께 남는다."""
+    admin = build_admin(client)
+    listing_id, _ = build_listing(client, admin)
+    body = client.post(
+        "/api/admin/auction/cancel",
+        json={"target_id": listing_id, "reason": "가격 오기입 신고"},
+        headers=build_headers(admin),
+    ).json()
+    logged = [row for row in body["recent_actions"] if row["action"] == "auction.cancel"]
+    assert logged
+    assert logged[0]["detail"] == "가격 오기입 신고"
+
+
+def test_recalling_an_item_keeps_the_row(client):
+    """★ **지우지 않는다.**
+
+    원장이 이 id 를 가리키므로 지우면 "이 아이템이 어디로 갔나" 를 추적할 수 없다.
+    """
+    from game.api.deps import get_pool
+
+    admin = build_admin(client)
+    _, item_id = build_listing(client, admin)
+    client.post(
+        "/api/admin/item/recall",
+        json={"target_id": item_id, "reason": "복제 버그로 나온 것"},
+        headers=build_headers(admin),
+    )
+    with get_pool().connection() as connection:
+        row = connection.execute(
+            "SELECT is_broken FROM item_instance WHERE id = %s", (item_id,)
+        ).fetchone()
+    assert row is not None, "행이 지워졌다 — 원장이 가리키는 것이 사라지면 조사가 끊긴다"
+    assert bool(row[0])
+
+
+def test_there_is_no_item_grant_route(client):
+    """★ **발급하는 짝을 만들지 않았다.**
+
+    서버가 검증된 런의 결과로만 아이템을 만든다는 결정 #02 가 관리자 경로 하나로
+    뚫리면, 그 뒤로는 어떤 아이템도 "정상적으로 나온 것" 이라고 말할 수 없다.
+    """
+    from game.api.main import create_app
+
+    paths = [route.path for route in create_app().routes]
+    assert not [path for path in paths if "/admin/" in path and ("grant" in path or "give" in path)]
+
+
+def test_held_items_show_who_they_were_taken_from(client):
+    """★ 되찾으러 갈 동기가 World Loop 의 전부다 (`설계/6_몬스터` §5).
+
+    원주인을 모르면 이 표가 무엇을 설명하는지 알 수 없다.
+    """
+    body = client.get("/api/admin/overview", headers=build_headers(build_admin(client))).json()
+    assert "held_items" in body
+    for row in body["held_items"]:
+        assert "taken_from_handle" in row
+        assert row["catalog_id"]

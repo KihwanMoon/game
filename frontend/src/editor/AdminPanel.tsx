@@ -21,6 +21,8 @@ export interface AdminPanelProps {
   readonly overview: AdminOverview | undefined
   readonly detail: string
   readonly onSetMonsterLevel: (recordId: number, level: number) => void
+  /** 되돌릴 수 없는 개입. 사유를 함께 넘긴다. */
+  readonly onIntervene: (path: string, targetId: number, reason: string) => void
 }
 
 /** 요약에 적을 항목. 순서가 곧 화면 순서다. */
@@ -139,6 +141,44 @@ export function AdminPanel(props: AdminPanelProps): React.JSX.Element | null {
                     레벨 고침
                   </Button>
                 </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="adm__head">몬스터가 들고 있는 것 · 원주인</div>
+        {overview.heldItems.length === 0 ? (
+          <ValueExpr text="아직 빼앗긴 장비가 없다" size="sm" dim />
+        ) : (
+          <ul className="adm__list">
+            {overview.heldItems.map((row) => (
+              <li className="adm__row" key={row.itemId}>
+                <span className="adm__label">{row.monsterId}</span>
+                <ValueExpr
+                  text={`${row.catalogId}${row.takenFromHandle === '' ? '' : ` ← ${row.takenFromHandle}`}`}
+                  size="sm"
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  glyph="✕"
+                  title="세계에서 거둔다. 되돌릴 수 없고 사유가 남는다"
+                  onClick={() => {
+                    const reason = draft[-row.itemId] ?? ''
+                    props.onIntervene('/admin/item/recall', row.itemId, reason)
+                  }}
+                >
+                  회수
+                </Button>
+                <input
+                  className="adm__field adm__field--reason"
+                  type="text"
+                  placeholder="사유"
+                  value={draft[-row.itemId] ?? ''}
+                  onChange={(event) => {
+                    setDraft((current) => ({ ...current, [-row.itemId]: event.target.value }))
+                  }}
+                />
               </li>
             ))}
           </ul>

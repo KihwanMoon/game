@@ -891,6 +891,18 @@ export interface AdminActionRow {
   readonly createdAt: string
 }
 
+/** 몬스터가 들고 있는 아이템 한 줄. */
+export interface AdminHeldItem {
+  readonly itemId: number
+  readonly recordId: number
+  readonly monsterId: string
+  readonly catalogId: string
+  /** 누구에게서 빼앗았는가. 되찾으러 갈 동기가 World Loop 의 전부다. */
+  readonly takenFromHandle: string
+  readonly isBroken: boolean
+  readonly isBound: boolean
+}
+
 /** 세계 현황 한 화면. */
 export interface AdminOverview {
   readonly accounts: number
@@ -907,6 +919,7 @@ export interface AdminOverview {
   readonly coreVersion: string
   readonly levelCounts: readonly { readonly level: number; readonly count: number }[]
   readonly monsters: readonly AdminMonsterRow[]
+  readonly heldItems: readonly AdminHeldItem[]
   readonly recentActions: readonly AdminActionRow[]
 }
 
@@ -946,6 +959,18 @@ export function parseAdminOverview(body: Record<string, never>): AdminOverview {
         levelCap: Number(item.level_cap),
         alive: Boolean(item.alive),
         heldItems: Number(item.held_items),
+      }
+    }),
+    heldItems: ((raw.held_items ?? []) as unknown as Record<string, never>[]).map((row) => {
+      const item = row as unknown as Record<string, number & string & boolean>
+      return {
+        itemId: Number(item.item_id),
+        recordId: Number(item.record_id),
+        monsterId: String(item.monster_id),
+        catalogId: String(item.catalog_id),
+        takenFromHandle: String(item.taken_from_handle),
+        isBroken: Boolean(item.is_broken),
+        isBound: Boolean(item.is_bound),
       }
     }),
     recentActions: (raw.recent_actions as unknown as Record<string, string>[]).map((row) => ({
@@ -992,6 +1017,39 @@ export async function applyMonsterLevel(
     method: 'PUT',
     headers: { [TOKEN_HEADER]: token, 'content-type': 'application/json' },
     body: JSON.stringify({ record_id: recordId, level }),
+  })
+  if (response === undefined) {
+    return { overview: undefined, detail: '서버에 닿지 못했다' }
+  }
+  const body = (await response.json()) as Record<string, never> & { detail?: string }
+  if (!response.ok) {
+    return { overview: undefined, detail: String(body.detail ?? '거절당했다') }
+  }
+  return { overview: parseAdminOverview(body), detail: '' }
+}
+
+/**
+ * 되돌릴 수 없는 관리자 개입을 보낸다.
+ *
+ * **사유를 함께 보낸다.** 서버가 빈 사유를 거절한다 — 무엇을 했는지만 남으면 "왜
+ * 그랬지" 를 나중에 아무도 답할 수 없다.
+ *
+ * @param token 기기 토큰.
+ * @param path `/admin/item/recall` 같은 경로.
+ * @param targetId 대상 id.
+ * @param reason 사유.
+ * @returns 갱신된 현황과 실패 사유.
+ */
+export async function applyAdminAction(
+  token: string,
+  path: string,
+  targetId: number,
+  reason: string,
+): Promise<{ overview: AdminOverview | undefined; detail: string }> {
+  const response = await sendRequest(path, {
+    method: 'POST',
+    headers: { [TOKEN_HEADER]: token, 'content-type': 'application/json' },
+    body: JSON.stringify({ target_id: targetId, reason }),
   })
   if (response === undefined) {
     return { overview: undefined, detail: '서버에 닿지 못했다' }

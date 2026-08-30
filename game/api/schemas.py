@@ -303,6 +303,19 @@ class AdminActionView(BaseModel):
     created_at: str
 
 
+class AdminHeldItemView(BaseModel):
+    """몬스터가 들고 있는 아이템 한 줄."""
+
+    item_id: int
+    record_id: int
+    monster_id: str
+    catalog_id: str
+    # 누구에게서 빼앗았는가. 되찾으러 갈 동기가 World Loop 의 전부다.
+    taken_from_handle: str
+    is_broken: bool
+    is_bound: bool
+
+
 class AdminOverviewResponse(BaseModel):
     """세계 현황 한 화면.
 
@@ -326,6 +339,7 @@ class AdminOverviewResponse(BaseModel):
     core_version: str
     level_counts: list[dict] = Field(default_factory=list)
     monsters: list[AdminMonsterView] = Field(default_factory=list)
+    held_items: list[AdminHeldItemView] = Field(default_factory=list)
     recent_actions: list[AdminActionView] = Field(default_factory=list)
 
 
@@ -334,3 +348,14 @@ class MonsterLevelRequest(BaseModel):
 
     record_id: int
     level: int
+
+
+class AdminReasonRequest(BaseModel):
+    """되돌릴 수 없는 개입.
+
+    **사유가 비면 거절한다.** 무엇을 했는지만 남으면 "왜 그랬지" 를 나중에 아무도 답할
+    수 없고, 그때 원장은 기록이 아니라 알리바이가 된다.
+    """
+
+    target_id: int
+    reason: str

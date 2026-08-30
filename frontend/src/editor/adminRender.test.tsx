@@ -41,6 +41,17 @@ const OVERVIEW: AdminOverview = {
       heldItems: 2,
     },
   ],
+  heldItems: [
+    {
+      itemId: 5,
+      recordId: 7,
+      monsterId: 'goblin_archer',
+      catalogId: 'sword_short',
+      takenFromHandle: '떠돌이',
+      isBroken: false,
+      isBound: false,
+    },
+  ],
   recentActions: [
     {
       handle: '관리자',
@@ -54,7 +65,12 @@ const OVERVIEW: AdminOverview = {
 
 function render(overview: AdminOverview | undefined, detail = '') {
   return renderToStaticMarkup(
-    <AdminPanel overview={overview} detail={detail} onSetMonsterLevel={() => undefined} />,
+    <AdminPanel
+      overview={overview}
+      detail={detail}
+      onSetMonsterLevel={() => undefined}
+      onIntervene={() => undefined}
+    />,
   )
 }
 
@@ -102,5 +118,23 @@ describe('세계 현황', () => {
 
   it('거절 사유를 그대로 띄운다', () => {
     expect(render(OVERVIEW, '레벨은 1 이상 5 이하다')).toContain('레벨은 1 이상 5 이하다')
+  })
+})
+
+describe('개입 2단계', () => {
+  it('★ 몬스터가 든 것과 원주인이 보인다 — 되찾으러 갈 동기가 그것이다', () => {
+    const html = render(OVERVIEW)
+    expect(html).toContain('sword_short')
+    expect(html).toContain('떠돌이')
+  })
+
+  it('★ 회수는 사유 칸과 함께 있다 — 사유 없이 누를 수 있으면 원장이 알리바이가 된다', () => {
+    const html = render(OVERVIEW)
+    expect(html).toContain('회수')
+    expect(html).toContain('placeholder="사유"')
+  })
+
+  it('빼앗긴 것이 없으면 그렇게 적는다 — 빈 목록은 고장으로 읽힌다', () => {
+    expect(render({ ...OVERVIEW, heldItems: [] })).toContain('아직 빼앗긴 장비가 없다')
   })
 })

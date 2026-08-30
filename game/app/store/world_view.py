@@ -113,6 +113,58 @@ def list_world_monsters(pool: ConnectionPool, limit: int = 200) -> tuple[Monster
     )
 
 
+@dataclass(frozen=True)
+class HeldItemRow:
+    """몬스터가 들고 있는 아이템 한 줄.
+
+    **누구에게서 빼앗았는지 함께 본다.** 되찾으러 갈 동기가 World Loop 의 전부이므로
+    (`설계/6_몬스터` §5), 원주인을 모르면 이 표가 무엇을 설명하는지 알 수 없다.
+    """
+
+    item_id: int
+    record_id: int
+    monster_id: str
+    catalog_id: str
+    taken_from_handle: str
+    is_broken: bool
+    is_bound: bool
+
+
+def list_held_items(pool: ConnectionPool, limit: int = 200) -> tuple[HeldItemRow, ...]:
+    """몬스터가 들고 있는 아이템을 전부 읽는다.
+
+    Args:
+        pool: 연결 풀.
+        limit: 최대 줄 수.
+
+    Returns:
+        개체·아이템 순으로 정렬된 줄들.
+    """
+    with pool.connection() as connection:
+        rows = connection.execute(
+            "SELECT i.id, e.id, e.catalog_id, i.catalog_id,"
+            " coalesce(a.handle, ''), i.is_broken, i.is_bound"
+            " FROM item_instance i"
+            " JOIN entity_record e ON e.id = i.owner_entity_id"
+            " LEFT JOIN account a ON a.id = i.taken_from"
+            " WHERE e.kind = 'MONSTER'"
+            " ORDER BY e.id ASC, i.id ASC LIMIT %s",
+            (limit,),
+        ).fetchall()
+    return tuple(
+        HeldItemRow(
+            item_id=int(row[0]),
+            record_id=int(row[1]),
+            monster_id=str(row[2]),
+            catalog_id=str(row[3]),
+            taken_from_handle=str(row[4]),
+            is_broken=bool(row[5]),
+            is_bound=bool(row[6]),
+        )
+        for row in rows
+    )
+
+
 def count_levels(pool: ConnectionPool) -> tuple[tuple[int, int], ...]:
     """플레이어 레벨 분포를 센다.
 

@@ -1562,3 +1562,9 @@
 .drw__body > .ds-panel + .ds-panel {
   border-top: var(--border);
 }
+
+/* 사유 칸은 넓다 — 좁으면 "버그" 두 글자로 때우게 되고, 그러면 원장이 기록이 아니라
+   알리바이가 된다. */
+.adm__field--reason {
+  width: 10rem;
+}
