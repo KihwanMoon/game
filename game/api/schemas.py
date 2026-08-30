@@ -13,11 +13,27 @@ MAX_RULES = 64
 
 
 class AccountResponse(BaseModel):
-    """계정 응답. 토큰은 **만들 때 한 번만** 나온다."""
+    """계정 응답. 토큰은 **만들 때와 로그인할 때만** 나온다.
+
+    `login_id` 가 None 이면 익명 계정이다 — 화면이 "가입하면 지킬 수 있다" 를 그것으로
+    판단한다.
+    """
 
     account_id: int
     handle: str
     token: str | None = None
+    login_id: str | None = None
+
+
+class CredentialRequest(BaseModel):
+    """가입·로그인 요청.
+
+    길이 상한을 여기서도 건다. 서버가 scrypt 로 늘리므로, 상한이 없으면 긴 문자열
+    하나로 CPU 를 묶어 둘 수 있다.
+    """
+
+    login_id: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=256)
 
 
 class TicketRequest(BaseModel):

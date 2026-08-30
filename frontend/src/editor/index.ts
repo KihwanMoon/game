@@ -6,6 +6,8 @@
  */
 export { RuleEditor } from './RuleEditor'
 export type { RuleEditorProps } from './RuleEditor'
+export { AccountPanel } from './AccountPanel'
+export type { AccountPanelProps } from './AccountPanel'
 export { MetaPanel } from './MetaPanel'
 export type { MetaPanelProps } from './MetaPanel'
 export { RuleLibrary } from './RuleLibrary'

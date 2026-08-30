@@ -24,6 +24,20 @@ export const API_ROOT = '/api'
 /** 요청 제한 시간. 서버가 느리다고 화면이 멈추면 안 된다. */
 export const REQUEST_TIMEOUT_MS = 5000
 
+/** 계정 상태. `loginId` 가 undefined 면 익명이다. */
+export interface AccountState {
+  readonly accountId: number
+  readonly handle: string
+  readonly loginId: string | undefined
+}
+
+/** 가입·로그인 결과. 실패 사유를 그대로 화면에 띄운다. */
+export interface AuthOutcome {
+  readonly account: AccountState | undefined
+  readonly token: string | undefined
+  readonly detail: string
+}
+
 /** 동기화 결과. 화면이 상태를 말해 줄 수 있게 사유를 함께 낸다. */
 export interface SyncOutcome {
   readonly meta: MetaSave | undefined
@@ -138,4 +152,139 @@ export async function writeServerMeta(token: string, meta: MetaSave): Promise<bo
     body: JSON.stringify({ payload: buildMetaPayload(meta) }),
   })
   return response !== undefined && response.ok
+}
+
+/**
+ * 응답 절에서 계정 상태를 읽는다.
+ *
+ * @param body 서버가 준 절.
+ * @returns 계정 상태.
+ */
+function readAccountState(body: {
+  account_id: number
+  handle: string
+  login_id?: string | null
+}): AccountState {
+  return {
+    accountId: body.account_id,
+    handle: body.handle,
+    loginId: body.login_id ?? undefined,
+  }
+}
+
+/**
+ * 서버가 준 오류 사유를 꺼낸다.
+ *
+ * @param response 실패한 응답.
+ * @returns 사람이 읽을 사유.
+ */
+async function readErrorDetail(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as { detail?: unknown }
+    return typeof body.detail === 'string' ? body.detail : `서버가 거절했다 (${response.status})`
+  } catch {
+    return `서버가 거절했다 (${response.status})`
+  }
+}
+
+/**
+ * 지금 토큰이 가리키는 계정을 읽는다.
+ *
+ * @param token 기기 토큰.
+ * @returns 계정 상태. 읽지 못하면 undefined.
+ */
+export async function readAccount(token: string): Promise<AccountState | undefined> {
+  const response = await sendRequest('/account', { headers: { [TOKEN_HEADER]: token } })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  return readAccountState(
+    (await response.json()) as { account_id: number; handle: string; login_id?: string | null },
+  )
+}
+
+/**
+ * 가입한다. 토큰을 함께 보내면 그 익명 계정이 **승격**된다.
+ *
+ * 승격이면 계정 id 가 바뀌지 않으므로 지금까지의 진행이 전부 따라온다. 그래서 화면은
+ * "가입하면 잃지 않는다" 를 약속할 수 있다.
+ *
+ * @param loginId 아이디.
+ * @param password 비밀번호.
+ * @param token 지금 쓰는 기기 토큰. 없으면 새 계정이 생긴다.
+ * @returns 계정과 토큰, 또는 실패 사유.
+ */
+export async function registerAccount(
+  loginId: string,
+  password: string,
+  token: string | undefined,
+): Promise<AuthOutcome> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token !== undefined) {
+    headers[TOKEN_HEADER] = token
+  }
+  const response = await sendRequest('/register', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ login_id: loginId, password }),
+  })
+  if (response === undefined) {
+    return { account: undefined, token: undefined, detail: '서버에 닿지 못했다' }
+  }
+  if (!response.ok) {
+    return { account: undefined, token: undefined, detail: await readErrorDetail(response) }
+  }
+  const body = (await response.json()) as {
+    account_id: number
+    handle: string
+    login_id?: string | null
+    token?: string
+  }
+  return { account: readAccountState(body), token: body.token, detail: '' }
+}
+
+/**
+ * 로그인해서 이 기기용 토큰을 받는다.
+ *
+ * **기존 기기는 튕기지 않는다.** 서버가 토큰을 지우지 않고 새로 하나 더 붙인다.
+ *
+ * @param loginId 아이디.
+ * @param password 비밀번호.
+ * @returns 계정과 새 토큰, 또는 실패 사유.
+ */
+export async function createLogin(loginId: string, password: string): Promise<AuthOutcome> {
+  const response = await sendRequest('/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login_id: loginId, password }),
+  })
+  if (response === undefined) {
+    return { account: undefined, token: undefined, detail: '서버에 닿지 못했다' }
+  }
+  if (!response.ok) {
+    return { account: undefined, token: undefined, detail: await readErrorDetail(response) }
+  }
+  const body = (await response.json()) as {
+    account_id: number
+    handle: string
+    login_id?: string | null
+    token?: string
+  }
+  return { account: readAccountState(body), token: body.token, detail: '' }
+}
+
+/**
+ * 기기 토큰을 갈아 끼운다. 로그인 뒤에 부른다.
+ *
+ * @param storage 저장소.
+ * @param token 새 토큰.
+ * @returns 실제로 저장했으면 true.
+ */
+export function writeToken(storage: StorageLike | undefined, token: string): boolean {
+  try {
+    storage?.setItem(TOKEN_STORAGE_KEY, token)
+    return true
+  } catch {
+    return false
+  }
 }

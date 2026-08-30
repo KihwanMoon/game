@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from game.api.deps import init_state
-from game.api.routes import account, health, meta, run, ticket
+from game.api.routes import account, auth, health, meta, run, ticket
 from game.app.store.connection import apply_schema, create_pool
 
 
@@ -49,7 +49,7 @@ def create_app() -> FastAPI:
     server = FastAPI(
         title="game 검증 서버", docs_url=None, redoc_url=None, lifespan=manage_lifespan
     )
-    for module in (health, account, ticket, run, meta):
+    for module in (health, account, auth, ticket, run, meta):
         server.include_router(module.router)
     return server
 

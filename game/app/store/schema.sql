@@ -12,6 +12,18 @@ CREATE TABLE IF NOT EXISTS account (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- 로그인 자격증명. **NULL 이면 익명 계정이다.**
+-- 계정 자체를 가르지 않고 컬럼을 비워 두는 이유는 승격 때문이다 — 익명으로 놀다 가입하면
+-- 같은 행에 자격증명이 붙고, 계정 id 가 그대로라 세이브·티켓·제출이 전부 따라온다.
+-- 계정을 새로 만들어 옮기는 구조였다면 그 이관이 매번 필요했을 것이다.
+ALTER TABLE account ADD COLUMN IF NOT EXISTS login_id      TEXT;
+ALTER TABLE account ADD COLUMN IF NOT EXISTS password_hash TEXT;
+ALTER TABLE account ADD COLUMN IF NOT EXISTS password_salt TEXT;
+
+-- 소문자로 정규화한 값에 유일성을 건다. Alice 와 alice 가 다른 계정이면 사람은 자기
+-- 계정에 못 들어가고, 그것을 노린 사칭이 열린다.
+CREATE UNIQUE INDEX IF NOT EXISTS account_login_id_key ON account (lower(login_id));
+
 -- 기기 토큰. **평문을 저장하지 않는다** — 저장소가 새면 계정이 통째로 넘어간다.
 -- 익명 계정이라 복구 수단이 없으므로, 토큰을 잃으면 계정을 잃는다. 아이템·거래가
 -- 붙기 전에 승격 경로(이메일·OAuth)가 필요하다 (docs/결정/1_결정대기목록).

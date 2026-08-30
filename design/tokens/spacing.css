@@ -48,6 +48,12 @@
      한 열로 쌓는다. 화면 CSS 가 미디어쿼리를 쓸 수 없으므로 형태 자체를 토큰에 둔다. */
   --post-cols:var(--col-rules) minmax(0, 1fr);
   --btn-tap-h:var(--sp-8);
+
+  /* 입력 칸 글자 크기. 데스크톱은 규칙표와 같은 13px 를 쓰고, 터치 배치에서만 16px 로
+     올린다 — iOS 사파리는 16px 미만인 칸을 누르면 화면을 확대하고, 확대된 화면은
+     사람이 손으로 되돌려야 한다. 시각 문제가 아니라 조작 문제다.
+     브레이크포인트를 여기 한 곳에만 두는 규율 때문에 글자 크기지만 이 파일에 있다. */
+  --fs-input:var(--fs-mono);
   --btn-tap-sm-h:var(--sp-6);        /* 최소 히트 영역 */
   --btn-h:36px;          /* 시트·편집 화면 버튼 높이 */
   --speed-box-h:32px;    /* 배속 박스 높이 */
@@ -90,6 +96,7 @@
     --bar-edit:60px;
     --edit-btn-h:44px;   /* 취소·저장은 손가락이 닿아야 한다 (--tap-min) */
       --btn-tap-h:var(--tap-min);
+    --fs-input:16px;
     --btn-tap-sm-h:var(--tap-min);
     --post-cols:minmax(0, 1fr);
 }
@@ -119,6 +126,9 @@
     --bar-edit:0px;      /* 편집 화면의 취소/저장은 우열 안으로 들어간다 */
       --btn-tap-h:var(--btn-h);
     --btn-tap-sm-h:28px;
+    /* 가로 모바일도 터치다. 세로 높이가 빠듯해 버튼은 30px 로 줄이지만, 입력 칸 글자는
+       줄이지 않는다 — 확대는 높이가 아니라 글자 크기가 부른다. */
+    --fs-input:16px;
     --post-cols:minmax(0, 1fr);
 }
 }

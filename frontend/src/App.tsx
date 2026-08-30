@@ -45,6 +45,7 @@ import { OUTCOME_ONGOING, OUTCOME_PLAYER_WIN } from './core/sim/phases'
 import { Button, ValueExpr } from './ds'
 import {
   RuleEditor,
+  AccountPanel,
   MetaPanel,
   RuleLibrary,
   checkCanRedo,
@@ -74,14 +75,19 @@ import {
   type EditorSession,
 } from './session'
 import {
+  createLogin,
   createSaveScheduler,
   ensureToken,
   getLocalStorage,
   readMeta,
   readSave,
+  readAccount,
   readServerMeta,
+  registerAccount,
   writeMeta,
   writeServerMeta,
+  writeToken,
+  type AccountState,
   type RunResult,
 } from './storage'
 import { createEmptyMeta, type MetaSave } from './core/schemas'
@@ -230,6 +236,8 @@ export function App(): React.JSX.Element {
   // 서버 연결 상태. 오프라인이어도 게임은 돈다 — 코어가 브라우저 안에서 직접 돌기
   // 때문이며, 서버는 보관과 검증을 맡을 뿐이다.
   const [account, setAccount] = useState<string | undefined>(undefined)
+  const [profile, setProfile] = useState<AccountState | undefined>(undefined)
+  const [isOnline, setOnline] = useState(false)
   const [run, setRun] = useState<RunSpec | undefined>(undefined)
   const [outcome, setOutcome] = useState(OUTCOME_ONGOING)
   const [postState, setPostState] = useState<PostState>('auto')
@@ -273,6 +281,8 @@ export function App(): React.JSX.Element {
         return
       }
       setAccount(token)
+      setOnline(true)
+      setProfile(await readAccount(token))
       const outcome = await readServerMeta(token)
       if (!isCurrent) {
         return
@@ -335,6 +345,53 @@ export function App(): React.JSX.Element {
     () => (run === undefined || !finished ? undefined : recordBattle(run.setup, run.rulesets)),
     [run, finished],
   )
+
+  /**
+   * 가입한다. 지금 토큰을 함께 보내므로 **익명 계정이 승격된다** — 계정 id 가 그대로라
+   * 지금까지의 기록이 전부 따라온다.
+   *
+   * @param loginId 아이디.
+   * @param password 비밀번호.
+   * @returns 실패 사유. 성공이면 빈 문자열.
+   */
+  async function applyRegister(loginId: string, password: string): Promise<string> {
+    const outcome = await registerAccount(loginId, password, account)
+    if (outcome.account === undefined) {
+      return outcome.detail
+    }
+    if (outcome.token !== undefined && outcome.token !== account) {
+      writeToken(getLocalStorage(), outcome.token)
+      setAccount(outcome.token)
+    }
+    setProfile(outcome.account)
+    return ''
+  }
+
+  /**
+   * 로그인해서 그 계정의 기록을 불러온다.
+   *
+   * **이 기기의 익명 기록은 따라오지 않는다.** 서버 세이브로 갈아 끼우며, 화면이 그것을
+   * 먼저 경고한다. 합치면 남의 계정에 이 기기의 진행이 섞이므로 그렇게 하지 않는다.
+   *
+   * @param loginId 아이디.
+   * @param password 비밀번호.
+   * @returns 실패 사유. 성공이면 빈 문자열.
+   */
+  async function applyLogin(loginId: string, password: string): Promise<string> {
+    const outcome = await createLogin(loginId, password)
+    if (outcome.account === undefined || outcome.token === undefined) {
+      return outcome.detail
+    }
+    const storage = getLocalStorage()
+    writeToken(storage, outcome.token)
+    setAccount(outcome.token)
+    setProfile(outcome.account)
+    const server = await readServerMeta(outcome.token)
+    const next = server.meta ?? createEmptyMeta()
+    writeMeta(storage, next)
+    setMeta(next)
+    return ''
+  }
 
   /**
    * 지금 규칙표로 판을 시작한다. 방·시드·규칙표를 이 순간의 값으로 얼린다.
@@ -518,6 +575,13 @@ export function App(): React.JSX.Element {
           controls={launchControls}
           library={
             <>
+              <AccountPanel
+                account={profile}
+                isOnline={isOnline}
+                hasLocalProgress={meta.bestFloor > 0 || meta.bestiary.length > 0}
+                onRegister={applyRegister}
+                onLogin={applyLogin}
+              />
               <MetaPanel meta={meta} baseSlots={limits.ruleSlots} />
               <RuleLibrary
               presets={session.presets}

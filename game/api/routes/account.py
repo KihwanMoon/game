@@ -9,6 +9,7 @@ from fastapi import APIRouter
 from game.api.deps import CurrentAccount, get_pool
 from game.api.schemas import AccountResponse
 from game.app.store.accounts import create_account
+from game.app.store.credentials import read_login_id
 
 router = APIRouter()
 
@@ -34,4 +35,8 @@ def read_account(account: CurrentAccount) -> AccountResponse:
     Returns:
         계정. 토큰은 다시 내주지 않는다.
     """
-    return AccountResponse(account_id=account.account_id, handle=account.handle)
+    return AccountResponse(
+        account_id=account.account_id,
+        handle=account.handle,
+        login_id=read_login_id(get_pool(), account.account_id),
+    )
