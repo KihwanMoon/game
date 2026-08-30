@@ -79,10 +79,12 @@ const CYCLE_SELECTORS: ReadonlyMap<string, string> = new Map(
   (golden.cycle_selectors as readonly string[][]).map((pair) => [pair[0] ?? '', pair[1] ?? '']),
 )
 const CYCLE_FLAG: string = golden.cycle_flag
+/** USE_SKILL 이 실행할 스킬. 골든에서 읽는다 — 하드코딩하면 두 곳이 갈린다. */
+const CYCLE_SKILL: string = golden.cycle_skill
 const BATTLES = golden.battles as readonly GoldenBattle[]
 
 /**
- * 틱과 엔티티 id 만 보고 행동 14개를 차례로 내는 대조 전용 결정기.
+ * 틱과 엔티티 id 만 보고 동결된 행동을 차례로 내는 대조 전용 결정기.
  *
  * `scripts/export_sim_golden.py` 의 `CyclingPolicy` 와 같은 것이어야 한다. 폴백 정책은
  * 접근·공격·포션·대기 넷만 내므로 나머지 행동 아홉 개 — 소환·예고·엄폐 이동·플래그 —
@@ -120,6 +122,7 @@ class CyclingPolicy implements DecisionPolicy {
       ruleIndex: index,
       expr: `틱(${snapshot.tick}) + 오프셋(${offset}) % ${ACTION_CYCLE.length} = ${index}`,
       setFlag: actionId === 'SET_FLAG' ? CYCLE_FLAG : null,
+      skillId: actionId === 'USE_SKILL' ? CYCLE_SKILL : null,
     })
   }
 }

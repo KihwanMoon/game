@@ -70,7 +70,14 @@ const SAMPLE_CPU_OVER = 10
 const SAMPLE_THREAT_TICKS = 3
 
 /** GlyphState 다섯 상태. */
-const GLYPH_KINDS: readonly GlyphStateKind[] = ['true', 'false', 'armed', 'danger', 'pending']
+const GLYPH_KINDS: readonly GlyphStateKind[] = [
+  'true',
+  'false',
+  'armed',
+  'danger',
+  'pending',
+  'blocked',
+]
 
 /**
  * 로그 예시.

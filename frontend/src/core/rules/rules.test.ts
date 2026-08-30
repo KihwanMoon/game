@@ -98,6 +98,12 @@ interface GoldenCondition {
   readonly expr: string
 }
 
+interface GoldenBlockedRule {
+  readonly rule_index: number
+  readonly expr: string
+  readonly reason: string
+}
+
 interface GoldenPlan {
   readonly entity_id: string
   readonly action_id: string
@@ -105,6 +111,10 @@ interface GoldenPlan {
   readonly rule_index: number | null
   readonly expr: string
   readonly set_flag: string | null
+  /** 실행할 스킬 (v5). */
+  readonly skill_id: string | null
+  /** 조건은 참인데 수단이 없어 건너뛴 규칙들 (v5). */
+  readonly blocked: readonly GoldenBlockedRule[]
 }
 
 interface GoldenRuleVm {
@@ -112,6 +122,8 @@ interface GoldenRuleVm {
   readonly world_id: string
   readonly ruleset?: RawRuleSet
   readonly ruleset_ref?: readonly string[]
+  /** 이 케이스가 거는 장착 스킬. 없으면 장착 개념을 안 쓰는 것이다 (v5). */
+  readonly skills?: readonly string[]
   readonly cpu_usage: number
   readonly plan: GoldenPlan
 }
@@ -290,6 +302,13 @@ function renderPlanDocument(plan: PlannedAction): GoldenPlan {
     rule_index: plan.ruleIndex,
     expr: plan.expr,
     set_flag: plan.setFlag,
+    // v5. 이것을 싣지 않으면 두 코어가 불가 판정에서 갈려도 골든이 침묵한다.
+    skill_id: plan.skillId,
+    blocked: plan.blocked.map((item) => ({
+      rule_index: item.ruleIndex,
+      expr: item.expr,
+      reason: item.reason,
+    })),
   }
 }
 
@@ -429,8 +448,14 @@ describe('RuleVM', () => {
     const state = getWorld(expected.world_id)
     const ruleset = resolveCaseRuleSet(expected)
     const vm = buildRuleVm(ruleset, BLOCK_CATALOG, KIND_TYPES)
+    // 빈 배열과 미선언을 가른다 — `[]` 는 "아무것도 장착 안 함", 미선언은 "장착 개념을
+    // 안 씀" 이다. 접으면 케이스 하나가 조용히 다른 것을 검사하게 된다.
+    const actor = {
+      ...getEntity(expected.world_id, 'player'),
+      skills: expected.skills === undefined ? null : [...expected.skills],
+    }
     const plan = vm.planAction(
-      getEntity(expected.world_id, 'player'),
+      actor,
       getSnapshot(expected.world_id),
       state,
     )

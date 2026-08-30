@@ -234,6 +234,7 @@ def build_rule_document(
     target: str | None = None,
     set_flag: str | None = None,
     cpu_cost: int | None = None,
+    action_param: str | None = None,
 ) -> dict[str, Any]:
     """규칙 한 줄의 원시 절을 만든다.
 
@@ -245,6 +246,7 @@ def build_rule_document(
         target: 셀렉터 id.
         set_flag: `A=true` 형태의 플래그 기록.
         cpu_cost: CPU 비용. None 이면 항 수 기준값을 쓴다.
+        action_param: 행동의 인자. USE_SKILL 이 어느 스킬인지를 담는다 (블록 v5).
 
     Returns:
         parse_ruleset 이 읽을 수 있는 절.
@@ -253,6 +255,8 @@ def build_rule_document(
         "priority": priority,
         "conditions": {"op": op, "terms": terms},
         "action": action,
+        # 없으면 키를 넣지 않는다 — 넣으면 기존 기준 절이 전부 갈린다.
+        **({} if action_param is None else {"action_param": action_param}),
         "target": target,
         "set_flag": set_flag,
         "cpu_cost": CPU_COST_BY_TERM_COUNT.get(len(terms), 1) if cpu_cost is None else cpu_cost,
@@ -282,6 +286,7 @@ def build_single_rule_document(
     lhs_param: str | None = None,
     set_flag: str | None = None,
     cpu_cost: int | None = None,
+    action_param: str | None = None,
 ) -> dict[str, Any]:
     """한 항짜리 규칙 절을 만든다. 파이썬 테스트의 `make_rule` 에 대응한다.
 
@@ -295,6 +300,7 @@ def build_single_rule_document(
         lhs_param: 인지 변수의 인자.
         set_flag: 플래그 기록.
         cpu_cost: CPU 비용. None 이면 1.
+        action_param: 행동의 인자. USE_SKILL 이 어느 스킬인지를 담는다 (블록 v5).
 
     Returns:
         parse_ruleset 이 읽을 수 있는 절.
@@ -306,6 +312,7 @@ def build_single_rule_document(
         target=target,
         set_flag=set_flag,
         cpu_cost=cpu_cost,
+        action_param=action_param,
     )
 
 
@@ -346,4 +353,11 @@ def render_plan_document(plan: PlannedAction) -> dict[str, Any]:
         "rule_index": plan.rule_index,
         "expr": plan.expr,
         "set_flag": plan.set_flag,
+        # v5. 실행할 스킬과 "조건은 참인데 수단이 없어 건너뛴" 규칙들. 이것을 싣지 않으면
+        # 두 코어가 불가 판정에서 갈려도 골든이 침묵한다.
+        "skill_id": plan.skill_id,
+        "blocked": [
+            {"rule_index": item.rule_index, "expr": item.expr, "reason": item.reason}
+            for item in plan.blocked
+        ],
     }

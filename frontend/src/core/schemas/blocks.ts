@@ -54,6 +54,13 @@ export interface ActionBlock {
   readonly labelKo: string
   /** 이 행동이 요구하는 대상 진영. 대상을 받지 않는 행동은 null 이다. */
   readonly targetFaction: string | null
+  /**
+   * 이 행동이 받는 인자 (v5). `USE_SKILL[skill]` 이 이것을 쓴다.
+   *
+   * 스킬마다 액션을 더하면 `block_list_version` 이 계속 올라 랭킹 시즌이 갈린다
+   * (docs/설계/5_스킬 §4).
+   */
+  readonly param: BlockParam | null
 }
 
 /** 타겟 셀렉터 하나. targeted 행동이 대상을 고르는 방식. */
@@ -100,6 +107,7 @@ export interface RawAction {
   readonly targeted: boolean
   readonly label_ko: string
   readonly target_faction?: string
+  readonly param?: RawBlockParam
 }
 
 export interface RawNamedBlock {
@@ -245,6 +253,7 @@ export function loadBlockCatalog(raw: RawBlockCatalog): BlockCatalog {
         targeted: item.targeted,
         labelKo: item.label_ko,
         targetFaction: item.target_faction ?? null,
+        param: buildBlockParam(item.param),
       }),
     ),
     (item) => item.blockId,

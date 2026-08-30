@@ -29,9 +29,15 @@ import {
   isStatRef,
 } from '../schemas'
 import { type PerceptionSnapshot, readSnapshot } from '../sim/perception'
-import { type DecisionPolicy, type PlannedAction, createPlannedAction } from '../sim/plan'
+import {
+  USE_SKILL_ACTION,
+  type BlockedRule,
+  type DecisionPolicy,
+  type PlannedAction,
+  createPlannedAction,
+} from '../sim/plan'
 import { resolveTarget } from '../sim/selectors'
-import { type Entity, type WorldState, getHpPercent } from '../sim/state'
+import { type Entity, type WorldState, checkHasSkill, getHpPercent } from '../sim/state'
 
 /** 측정된 값. `undefined` 는 "아직 값을 만들 수 없다" 는 뜻이며 0·false 와 다르다. */
 export type MeasuredValue = number | boolean | undefined
@@ -334,6 +340,7 @@ export class RuleVm implements DecisionPolicy {
    * @returns 최초로 참이 된 규칙의 계획. 전부 거짓이면 DEFAULT 계획.
    */
   planAction(entity: Entity, snapshot: PerceptionSnapshot, state: WorldState): PlannedAction {
+    const blocked: BlockedRule[] = []
     for (const rule of this.ruleset.rules) {
       const { target, isUsable } = this.resolveRuleTarget(rule, entity, state)
       if (!isUsable) {
@@ -350,6 +357,16 @@ export class RuleVm implements DecisionPolicy {
       if (!fired) {
         continue
       }
+      // 조건이 참이어도 수단이 없으면 넘어간다. 그리고 **그 사실을 들고 나온다** —
+      // 조용히 다음 규칙으로 가면 플레이어는 왜 안 떴는지 알 수 없다 (P1).
+      if (rule.action === USE_SKILL_ACTION && !checkHasSkill(entity, rule.actionParam ?? '')) {
+        blocked.push({
+          ruleIndex: rule.priority,
+          expr,
+          reason: `${String(rule.actionParam)} 미장착`,
+        })
+        continue
+      }
       return createPlannedAction({
         entityId: entity.entityId,
         actionId: rule.action,
@@ -357,9 +374,11 @@ export class RuleVm implements DecisionPolicy {
         ruleIndex: rule.priority,
         expr,
         setFlag: rule.setFlag,
+        skillId: rule.action === USE_SKILL_ACTION ? rule.actionParam : null,
+        blocked,
       })
     }
-    return this.buildDefaultAction(entity, state)
+    return { ...this.buildDefaultAction(entity, state), blocked }
   }
 
   /**

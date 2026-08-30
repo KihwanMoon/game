@@ -9,7 +9,14 @@
  */
 
 /** 규칙 한 줄이 가질 수 있는 판정 상태. */
-export type GlyphStateKind = 'true' | 'false' | 'armed' | 'danger' | 'pending'
+/**
+ * 규칙 상태와 그 밖의 참/거짓 표기.
+ *
+ * `blocked` 는 블록 v5 에서 들어왔다 (결정 #04). **거짓과 다르다** — 조건은 참인데
+ * 실행할 수단이 없다. 의미색 셋(녹청·녹·황동)이 이미 배정돼 색을 더 쓸 수 없으므로,
+ * 기계 도면의 관용 표기인 **해칭**으로 가른다. 색약과 흑백에서도 셋과 구분된다.
+ */
+export type GlyphStateKind = 'true' | 'false' | 'armed' | 'danger' | 'pending' | 'blocked'
 
 /** 상태별 글리프. 전부 유니코드 도형이며 이모지가 아니다. */
 export const STATE_GLYPHS: ReadonlyMap<GlyphStateKind, string> = new Map([
@@ -18,6 +25,8 @@ export const STATE_GLYPHS: ReadonlyMap<GlyphStateKind, string> = new Map([
   ['armed', '◆'],
   ['danger', '◈'],
   ['pending', '◇'],
+  // 해칭. 기계 도면에서 "해당 없음" 의 관용 표기이며 황동 예산을 건드리지 않는다.
+  ['blocked', '⧅'],
 ])
 
 /** 보조 기술이 읽을 상태 이름. 색을 못 보는 경로의 마지막 채널이다. */
@@ -27,6 +36,7 @@ export const STATE_NAMES: ReadonlyMap<GlyphStateKind, string> = new Map([
   ['armed', '이번 틱 발동'],
   ['danger', '위험'],
   ['pending', '평가 대기'],
+  ['blocked', '수단 없음'],
 ])
 
 /** GlyphState 가 받는 props. */

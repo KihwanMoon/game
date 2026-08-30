@@ -59,6 +59,9 @@ export function buildRulePayload(rule: Rule): JsonObject {
     priority: rule.priority,
     cpu_cost: rule.cpuCost,
     action: rule.action,
+    // 없으면 키를 넣지 않는다. `lhs_param` 과 같은 규약이며, 넣으면 저장된 규칙표·공유
+    // 코드·골든 절이 전부 갈린다 — 형식이 어긋나는 것보다 나쁘다.
+    ...(rule.actionParam === null ? {} : { action_param: rule.actionParam }),
     target: rule.target,
     set_flag: rule.setFlag,
     conditions: {

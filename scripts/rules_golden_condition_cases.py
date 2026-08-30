@@ -4,6 +4,7 @@
 실측값이 붙는가다 (GDD §8.2). 참/거짓만 맞고 문자열이 갈리면 로그가 쓸모없어진다.
 """
 
+from dataclasses import replace
 from typing import Any
 
 from game.app.rules.rule_vm import build_rule_vm, count_cpu_usage, evaluate_condition
@@ -291,6 +292,49 @@ def build_rule_vm_specs() -> list[dict[str, Any]]:
         },
         {"name": "g0 카이팅 규칙표", "world_id": "spring", "ruleset_ref": ["g0", "g0_kite"]},
         {"name": "g0 엄폐형 규칙표", "world_id": "throne", "ruleset_ref": ["g0", "g0_cover"]},
+        # ── 블록 v5. 스킬을 정체로 가리킨다 (결정 #04) ──────────────────────
+        {
+            "name": "v5 장착한 스킬은 발동한다",
+            "world_id": "field_mixed",
+            "skills": ["SKILL_2"],
+            "ruleset": build_ruleset_document(
+                [
+                    build_single_rule_document(
+                        1, *hp_true, "USE_SKILL", target="NEAREST", action_param="SKILL_2"
+                    ),
+                    build_single_rule_document(2, *hp_true, hold),
+                ]
+            ),
+        },
+        {
+            "name": "v5 미장착 스킬은 불가다 — 거짓이 아니다",
+            "world_id": "field_mixed",
+            "skills": ["SKILL_1"],
+            "ruleset": build_ruleset_document(
+                [
+                    build_single_rule_document(
+                        1, *hp_true, "USE_SKILL", target="NEAREST", action_param="SKILL_2"
+                    ),
+                    build_single_rule_document(2, *hp_true, hold),
+                ]
+            ),
+        },
+        {
+            "name": "v5 불가가 여러 개 쌓인다",
+            "world_id": "field_mixed",
+            "skills": [],
+            "ruleset": build_ruleset_document(
+                [
+                    build_single_rule_document(
+                        1, *hp_true, "USE_SKILL", target="NEAREST", action_param="SKILL_1"
+                    ),
+                    build_single_rule_document(
+                        2, *hp_true, "USE_SKILL", target="NEAREST", action_param="SKILL_2"
+                    ),
+                    build_single_rule_document(3, *hp_true, hold),
+                ]
+            ),
+        },
     ]
 
 
@@ -313,7 +357,20 @@ def build_rule_vm_cases(
         state = worlds[case["world_id"]]
         ruleset = resolve_case_ruleset(case)
         vm = build_rule_vm(ruleset, catalog, KIND_TYPES)
-        plan = vm.plan_action(state.entities["player"], snapshots[case["world_id"]], state)
+        # v5. 케이스가 장착 스킬을 선언하면 그것을 걸고 돌린다 — 불가 경로가 골든에
+        # 실려야 두 코어가 그 판정에서 갈리는 것을 잡을 수 있다.
+        #
+        # **빈 목록과 미선언을 가른다.** `[]` 는 "아무것도 장착 안 함"(전부 불가),
+        # 미선언은 "장착 개념을 안 씀"(전부 허용)이다. 접으면 케이스 하나가 조용히
+        # 다른 것을 검사하게 된다 — 실제로 한 번 접혔다.
+        declared = case.get("skills")
+        actor = replace(
+            state.entities["player"],
+            skills=None if declared is None else tuple(declared),
+        )
+        # 세계는 케이스 사이에 공유된다. 매번 덮어써야 앞 케이스의 장착이 새지 않는다.
+        state.entities["player"] = actor
+        plan = vm.plan_action(actor, snapshots[case["world_id"]], state)
         case["cpu_usage"] = count_cpu_usage(ruleset)
         case["plan"] = render_plan_document(plan)
         cases.append(case)

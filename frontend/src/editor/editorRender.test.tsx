@@ -112,6 +112,7 @@ describe('규칙 에디터 렌더', () => {
           priority: 1,
           conditions: { op: 'SINGLE', terms: [{ lhs: 'self_hp_percent', comparison: '<', rhs: 20, lhsParam: null }] },
           action: 'ATTACK',
+          actionParam: null,
           target: null,
           setFlag: null,
           cpuCost: 1,

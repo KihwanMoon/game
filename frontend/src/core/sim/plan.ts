@@ -28,6 +28,24 @@ export {
 } from './phases'
 
 /** DECIDE 가 내놓는 계획. 아직 세계를 바꾸지 않았다. */
+/**
+ * 규칙 상태 네 번째 (블록 v5, 결정 #04). 참·발동 / 참·미발동 / 거짓 / **불가**.
+ *
+ * 거짓과 다르다 — 조건은 참인데 실행할 수단이 없다. 파이썬 `OUTCOME_BLOCKED` 와 같은
+ * 글자여야 한다: 로그 문자열이 골든 대조 대상이다.
+ */
+export const OUTCOME_BLOCKED = '불가'
+
+/** 스킬을 정체로 가리키는 행동 (블록 v5, 결정 #04). 파이썬과 같은 값이어야 한다. */
+export const USE_SKILL_ACTION = 'USE_SKILL'
+
+/** 조건은 참이었으나 실행할 수단이 없어 건너뛴 규칙 하나. */
+export interface BlockedRule {
+  readonly ruleIndex: number
+  readonly expr: string
+  readonly reason: string
+}
+
 export interface PlannedAction {
   readonly entityId: string
   readonly actionId: string
@@ -36,6 +54,14 @@ export interface PlannedAction {
   readonly expr: string
   /** 플래그 기록은 상태 변경이므로 DECIDE 가 아니라 ACT 에서 적용한다 (TDD §5.2). */
   readonly setFlag: string | null
+  /** 실행할 스킬 (블록 v5). `USE_SKILL` 이 아니면 null 이다. */
+  readonly skillId: string | null
+  /**
+   * 조건은 참인데 수단이 없어 건너뛴 규칙들 (블록 v5, 결정 #04).
+   *
+   * 조용히 다음 규칙으로 가면 플레이어는 왜 안 떴는지 알 수 없다 (P1).
+   */
+  readonly blocked: readonly BlockedRule[]
 }
 
 /** `createPlannedAction` 이 받는 값들. 생략한 항목은 파이썬 dataclass 의 기본값과 같다. */
@@ -46,6 +72,8 @@ export interface PlannedActionInput {
   readonly ruleIndex?: number | null
   readonly expr?: string
   readonly setFlag?: string | null
+  readonly skillId?: string | null
+  readonly blocked?: readonly BlockedRule[]
 }
 
 /**
@@ -62,6 +90,8 @@ export function createPlannedAction(input: PlannedActionInput): PlannedAction {
     ruleIndex: input.ruleIndex ?? null,
     expr: input.expr ?? '',
     setFlag: input.setFlag ?? null,
+    skillId: input.skillId ?? null,
+    blocked: input.blocked ?? [],
   }
 }
 
@@ -172,4 +202,21 @@ export interface EngineConfig {
   readonly floor: number
   readonly maxTicks: number
   readonly combatRegenPct: number
+}
+
+/**
+ * `USE_SKILL` 계획을 그 스킬의 계획으로 바꾼다.
+ *
+ * v5 의 `USE_SKILL[id]` 는 한 겹의 지시다. 실행 직전에 풀어 주면 실행기는 예전 행동
+ * 이름만 알면 되고, 스킬이 늘어도 실행기가 늘지 않는다 — 블록을 파라미터화한 이유와
+ * 같은 방향이다.
+ *
+ * @param plan 실행할 계획.
+ * @returns `USE_SKILL` 이면 skillId 로 바꾼 계획, 아니면 그대로.
+ */
+export function resolveSkillPlan(plan: PlannedAction): PlannedAction {
+  if (plan.actionId !== USE_SKILL_ACTION || plan.skillId === null) {
+    return plan
+  }
+  return { ...plan, actionId: plan.skillId }
 }

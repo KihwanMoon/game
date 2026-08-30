@@ -268,6 +268,7 @@ function parseRuleLine(
     conditions: condition,
     action,
     target: target ?? null,
+    actionParam: null,
     setFlag: setFlag ?? null,
     cpuCost: calculateCpuCost(condition.terms.length),
   }

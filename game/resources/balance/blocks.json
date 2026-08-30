@@ -36,7 +36,9 @@
           "SKILL_2",
           "AREA_ATTACK",
           "SUMMON",
-          "HEAL"
+          "HEAL",
+          "ATTACK",
+          "GUARD_BRACE"
         ]
       },
       "_note": "v5 부터 self_skill_ready[skill] 의 별칭이다. 지우지 않는다 — 저장된 규칙표가 이것을 쓴다."
@@ -193,11 +195,13 @@
       "param": {
         "name": "skill",
         "values": [
-          "ATTACK",
           "SKILL_1",
           "SKILL_2",
           "AREA_ATTACK",
-          "HEAL"
+          "SUMMON",
+          "HEAL",
+          "ATTACK",
+          "GUARD_BRACE"
         ]
       },
       "_note": "v5. 장착돼 있고 쿨타임이 끝났는가. 미장착이면 거짓이다."
@@ -210,11 +214,13 @@
       "param": {
         "name": "skill",
         "values": [
-          "ATTACK",
           "SKILL_1",
           "SKILL_2",
           "AREA_ATTACK",
-          "HEAL"
+          "SUMMON",
+          "HEAL",
+          "ATTACK",
+          "GUARD_BRACE"
         ]
       },
       "_note": "v5. 쿨타임과 무관하게 장착 여부만 본다. 규칙을 스킬 유무로 가르는 자리다."
@@ -327,11 +333,13 @@
       "param": {
         "name": "skill",
         "values": [
-          "ATTACK",
           "SKILL_1",
           "SKILL_2",
           "AREA_ATTACK",
-          "HEAL"
+          "SUMMON",
+          "HEAL",
+          "ATTACK",
+          "GUARD_BRACE"
         ]
       },
       "_note": "v5. 규칙표는 자리 번호가 아니라 **스킬 정체**를 가리킨다 (결정 #04). 1번 자리를 사격에서 강타로 바꿔도 같은 규칙표가 자살하지 않는다. 대신 미장착이면 그 규칙은 '불가' 로 표시되고 발동하지 않는다 — 거짓과 다르다: 조건은 참인데 수단이 없다. target_faction 은 스킬 정의(skills.json)의 값으로 덮인다."

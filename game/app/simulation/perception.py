@@ -131,7 +131,15 @@ def _add_vision_values(
 
 # 인지 변수를 만드는 스킬 목록. 카탈로그의 USE_SKILL 파라미터와 같아야 한다 —
 # 갈리면 규칙표가 쓰는 스킬의 인지값이 조용히 비고, 그 규칙은 언제나 거짓이 된다.
-SKILL_IDS: tuple[str, ...] = ("ATTACK", "SKILL_1", "SKILL_2", "AREA_ATTACK", "SUMMON", "HEAL")
+SKILL_IDS: tuple[str, ...] = (
+    "SKILL_1",
+    "SKILL_2",
+    "AREA_ATTACK",
+    "SUMMON",
+    "HEAL",
+    "ATTACK",
+    "GUARD_BRACE",
+)
 
 
 def build_snapshot(

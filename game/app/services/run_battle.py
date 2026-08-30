@@ -160,6 +160,14 @@ def build_engine(
         skill_coef_pct={skill["id"]: skill["coef_pct"] for skill in balance["skills"]},
         skill_range={skill["id"]: skill.get("range") for skill in balance["skills"]},
         skill_cooldowns={skill["id"]: skill["cooldown"] for skill in balance["skills"]},
+        skill_guard_pct={
+            skill["id"]: skill["guard_pct"] for skill in balance["skills"] if "guard_pct" in skill
+        },
+        skill_guard_ticks={
+            skill["id"]: skill["guard_ticks"]
+            for skill in balance["skills"]
+            if "guard_ticks" in skill
+        },
         skill_heal_pct={
             skill["id"]: skill["heal_pct"] for skill in balance["skills"] if "heal_pct" in skill
         },

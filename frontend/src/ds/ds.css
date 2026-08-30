@@ -706,3 +706,20 @@
   color: var(--text-dim);
   text-transform: uppercase;
 }
+
+/* ── 규칙 상태 네 번째: 불가 (블록 v5, 결정 #04) ──────────────────────────
+   조건은 참인데 실행할 수단이 없다. 의미색 셋이 이미 배정돼 색을 더 쓸 수 없으므로
+   해칭과 취소선으로 가른다 — 색약·흑백에서도 나머지 셋과 구분된다. 황동 예산도
+   건드리지 않는다. */
+.ds-glyph--blocked {
+  color: var(--text-dim);
+  /* 취소선이 세 번째 채널이다. 색(회색) + 글리프(⧅) + 취소선. */
+  text-decoration: line-through;
+  text-decoration-thickness: var(--line-1);
+}
+
+.ds-glyph--blocked .ds-glyph__mark {
+  color: var(--text-dim);
+  /* 글리프 자체는 긋지 않는다 — 해칭 기호가 뭉개진다. */
+  text-decoration: none;
+}

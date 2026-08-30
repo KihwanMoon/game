@@ -34,6 +34,7 @@ import {
   RuleTable,
   SEGMENT_LIMIT,
   STATE_GLYPHS,
+  STATE_NAMES,
   SegmentedGauge,
   SpeedControl,
   StatusBar,
@@ -436,5 +437,41 @@ describe('배치 이름 (반응형 기반)', () => {
   it('배치는 셋뿐이고 이름은 토큰에서 온다', () => {
     expect(LAYOUT_MODES).toEqual(['desktop', 'portrait', 'landscape'])
     expect(LAYOUT_MODE_TOKEN).toBe('--layout-mode')
+  })
+})
+
+describe('규칙 상태 네 번째 — 불가 (블록 v5, 결정 #04)', () => {
+  it('거짓과 다른 글리프를 쓴다', () => {
+    // 같은 글리프면 화면이 "조건이 안 맞았다" 와 "수단이 없다" 를 구분할 수 없고,
+    // 플레이어가 고쳐야 할 곳이 완전히 다르다 (P1).
+    expect(STATE_GLYPHS.get('blocked')).not.toBe(STATE_GLYPHS.get('false'))
+    expect(STATE_GLYPHS.get('blocked')).toBeTruthy()
+  })
+
+  it('보조 기술이 읽을 이름이 따로 있다', () => {
+    expect(STATE_NAMES.get('blocked')).toBe('수단 없음')
+    expect(STATE_NAMES.get('blocked')).not.toBe(STATE_NAMES.get('false'))
+  })
+
+  it('★ 색을 새로 쓰지 않는다 — 의미색 셋은 이미 배정됐다', () => {
+    const markup = renderToStaticMarkup(<GlyphState state="blocked" label="SKILL_2 미장착" />)
+    expect(markup).toContain('ds-glyph--blocked')
+    // 황동은 화면당 3곳까지다. 네 번째 상태가 그 예산을 먹으면 규율이 깨진다.
+    expect(markup).not.toContain('brass')
+  })
+
+  it('★ 세 채널을 모두 쓴다 — 색·글리프·취소선', () => {
+    // 색이 정보의 유일한 채널이 될 수 없다 (design/README.md §성격).
+    const block = readStrippedCss('ds.css')
+    const rule = block.slice(block.indexOf('.ds-glyph--blocked'))
+    const body = rule.slice(0, rule.indexOf('}'))
+    expect(body).toContain('color:')
+    expect(body).toContain('line-through')
+  })
+
+  it('불가 스타일에 생 hex 색이 없다', () => {
+    const block = readStrippedCss('ds.css')
+    const tail = block.slice(block.indexOf('.ds-glyph--blocked'))
+    expect(tail).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
   })
 })

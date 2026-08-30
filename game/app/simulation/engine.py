@@ -17,7 +17,12 @@ from dataclasses import dataclass, field
 
 from game.app.core.event_log import EventLog, LogEntry
 from game.app.grid.vision import VisionCache, VisionGrid
-from game.app.simulation.actions import ATTACK_ACTIONS, MOVE_ACTIONS, ActionExecutor
+from game.app.simulation.actions import (
+    ATTACK_ACTIONS,
+    GUARD_SKILL_ID,
+    MOVE_ACTIONS,
+    ActionExecutor,
+)
 from game.app.simulation.perception import PerceptionSnapshot, build_snapshot
 from game.app.simulation.plan import (
     OUTCOME_BLOCKED,
@@ -32,6 +37,7 @@ from game.app.simulation.plan import (
     EngineConfig,
     PlannedAction,
     PolicyFactory,
+    resolve_skill_plan,
 )
 from game.app.simulation.pressure import PressureTracker
 from game.app.simulation.springs import apply_spring_drain, remove_drained_springs
@@ -245,11 +251,17 @@ class TickEngine:
     def _apply_settled(self, executor: ActionExecutor, entity: Entity, plan: PlannedAction) -> None:
         """이동이 끝난 뒤 하는 행동을 실행기에 넘긴다.
 
+        `USE_SKILL` 은 **한 겹의 지시**다 — 어느 스킬인지는 plan.skill_id 에 있다.
+        여기서 그 스킬로 풀어 주면 실행기는 v5 를 몰라도 된다. 실행기마다 USE_SKILL 을
+        알게 하면 스킬을 더할 때마다 실행기가 늘어나고, 그것이 블록을 파라미터화한 이유와
+        정면으로 어긋난다 (docs/설계/5_스킬 §4).
+
         Args:
             executor: 행동 실행기.
             entity: 행위자.
             plan: 실행할 계획.
         """
+        plan = resolve_skill_plan(plan)
         if plan.action_id in ATTACK_ACTIONS:
             executor.apply_attack(entity, plan)
         elif plan.action_id == "AREA_ATTACK":
@@ -258,6 +270,8 @@ class TickEngine:
             executor.apply_potion(entity, plan)
         elif plan.action_id == "HEAL":
             executor.apply_heal(entity, plan)
+        elif plan.action_id == GUARD_SKILL_ID:
+            executor.apply_guard(entity, plan)
         elif plan.action_id in {"HOLD", "SET_FLAG"}:
             executor.apply_hold(entity, plan)
         elif plan.action_id == "SUMMON":

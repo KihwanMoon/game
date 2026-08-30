@@ -33,6 +33,7 @@ import {
   PHASE_TELEGRAPH,
   PHASE_UPKEEP,
 } from './phases'
+import { OUTCOME_BLOCKED, resolveSkillPlan } from './plan'
 import type { DecisionPolicy, EngineConfig, PlannedAction, PolicyFactory } from './plan'
 import { PressureTracker, applySpringDrain, removeDrainedSprings } from './pressure'
 import { FACTION_PLAYER, type Entity, type WorldState, isAlive } from './state'
@@ -236,6 +237,22 @@ export class TickEngine {
     // 결정을 매 틱 남긴다. 피해가 난 틱만 기록하면 "왜 그 규칙이 안 떴는지" 를 되짚을
     // 수 없고, 그것이 P1(실패는 정보다)의 실현을 막는다.
     for (const plan of plans) {
+      // 조건은 참인데 수단이 없어 건너뛴 규칙을 **먼저** 남긴다. 발동한 규칙보다 위에
+      // 있던 것들이라 순서가 그렇고, 순서가 뒤집히면 "무엇이 무엇을 막았는가" 를
+      // 로그에서 읽을 수 없다.
+      for (const skipped of plan.blocked) {
+        this.log.record(
+          createLogEntry({
+            tick: this.state.tick,
+            entityId: plan.entityId,
+            phase: PHASE_DECIDE,
+            expr: skipped.expr,
+            outcome: `${OUTCOME_BLOCKED} — ${skipped.reason}`,
+            rule: skipped.ruleIndex,
+            fired: false,
+          }),
+        )
+      }
       const target = plan.targetId ? ` @${plan.targetId}` : ''
       this.log.record(
         createLogEntry({
@@ -359,15 +376,20 @@ export class TickEngine {
   /**
    * 이동이 끝난 뒤 하는 행동을 실행기에 넘긴다.
    *
+   * `USE_SKILL` 은 **한 겹의 지시**다 — 어느 스킬인지는 `plan.skillId` 에 있다. 여기서
+   * 그 스킬로 풀어 주면 실행기는 v5 를 몰라도 된다. 실행기마다 USE_SKILL 을 알게 하면
+   * 스킬을 더할 때마다 실행기가 늘고, 블록을 파라미터화한 이유와 어긋난다.
+   *
    * @param executor 행동 실행기.
    * @param entity 행위자.
-   * @param plan 실행할 계획.
+   * @param rawPlan 실행할 계획.
    */
   private applySettled(
     executor: ActionExecutor,
     entity: Entity,
-    plan: PlannedAction,
+    rawPlan: PlannedAction,
   ): void {
+    const plan = resolveSkillPlan(rawPlan)
     if (ATTACK_ACTIONS.has(plan.actionId)) {
       executor.applyAttack(entity, plan)
     } else if (plan.actionId === 'AREA_ATTACK') {

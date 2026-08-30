@@ -283,9 +283,11 @@ def test_damage_formula_uses_integers_only(balance):
 
 
 def test_skill_ids_exist_in_block_catalog(balance, catalog):
-    # 밸런스가 참조하는 스킬이 동결된 행동 목록에 실제로 있어야 한다.
+    # 밸런스가 참조하는 스킬에 규칙표가 닿을 수 있어야 한다. v5 부터는 자기 액션을
+    # 갖지 않아도 USE_SKILL[id] 로 닿으므로 둘 중 하나면 된다.
+    reachable = set(catalog.actions) | set(catalog.actions["USE_SKILL"].param.values)
     for skill in balance["skills"]:
-        assert skill["id"] in catalog.actions
+        assert skill["id"] in reachable
 
 
 def test_summoner_cannot_spawn_without_limit(balance):

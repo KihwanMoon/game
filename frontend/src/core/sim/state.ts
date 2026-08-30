@@ -35,6 +35,14 @@ export interface Entity {
   potions: number
   /** 누가 불러냈는가. 소환 상한을 소환사별로 세기 위해 필요하다. */
   summonerId: string | null
+  /**
+   * 장착된 스킬 (블록 v5).
+   *
+   * `null` 은 "장착 개념이 아직 배선되지 않음" 이라 전부 허용한다 — 빈 배열(아무것도
+   * 장착 안 함)과 구분해야 한다. 구분하지 않으면 아이템이 붙기 전까지 모든 스킬 규칙이
+   * 불가가 된다.
+   */
+  skills: readonly string[] | null
   readonly cooldowns: Map<string, number>
   readonly flags: Map<string, boolean>
   readonly statuses: Map<string, number>
@@ -56,6 +64,7 @@ export interface EntityInput {
   readonly cpuBudget?: number
   readonly potions?: number
   readonly summonerId?: string | null
+  readonly skills?: readonly string[] | null
   readonly cooldowns?: ReadonlyMap<string, number>
   readonly flags?: ReadonlyMap<string, boolean>
   readonly statuses?: ReadonlyMap<string, number>
@@ -83,6 +92,7 @@ export function createEntity(input: EntityInput): Entity {
     cpuBudget: input.cpuBudget ?? 0,
     potions: input.potions ?? 0,
     summonerId: input.summonerId ?? null,
+    skills: input.skills ?? null,
     cooldowns: new Map(input.cooldowns ?? []),
     flags: new Map(input.flags ?? []),
     statuses: new Map(input.statuses ?? []),
@@ -207,4 +217,18 @@ export class WorldState implements TileReader {
       (entity) => entity.faction === viewer.faction && entity !== viewer,
     )
   }
+}
+
+/**
+ * 이 엔티티가 그 스킬을 장착하고 있는가.
+ *
+ * `skills` 가 null 이면 장착 개념이 배선되기 전이므로 언제나 참이다 — 빈 배열과
+ * 구분해야 하며, 구분하지 않으면 아이템이 붙기 전까지 모든 스킬 규칙이 불가가 된다.
+ *
+ * @param entity 볼 엔티티.
+ * @param skillId 볼 스킬.
+ * @returns 장착돼 있으면 true.
+ */
+export function checkHasSkill(entity: Entity, skillId: string): boolean {
+  return entity.skills === null || entity.skills.includes(skillId)
 }

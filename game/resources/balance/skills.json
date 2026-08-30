@@ -1,6 +1,6 @@
 {
-  "_comment": "스킬 정의. balance.json 에서 갈라 나왔다 — 스킬은 종류가 늘어나는 것이고 밸런스 수치는 조정되는 것이라 수명이 다르다 (docs/설계/5_스킬 §9). family·shape·target_faction·telegraph·tags 는 아직 아무도 읽지 않는 서술 필드이며, 블록 v5 의 USE_SKILL[skill_id] 와 계열별 실행기가 이것을 읽는다. coef_pct·cooldown·range·heal_pct 는 값이 그대로이므로 골든 리플레이가 바뀌지 않는다.",
-  "skill_list_version": 1,
+  "_comment": "스킬 정의. balance.json 에서 갈라 나왔다 — 스킬은 종류가 늘어나는 것이고 밸런스 수치는 조정되는 것이라 수명이 다르다 (docs/설계/5_스킬 §9). family·shape·target_faction·telegraph·tags 는 아직 아무도 읽지 않는 서술 필드이며, 블록 v5 의 USE_SKILL[skill_id] 와 계열별 실행기가 이것을 읽는다. coef_pct·cooldown·range·heal_pct 는 값이 그대로이므로 골든 리플레이가 바뀌지 않는다. v2: GUARD 계열을 더했다(결정 #16) — 방패를 들었는데 막는 행동이 없으면 방패는 그냥 방어력 숫자이고 '양손무기 vs 한손+방패' 선택이 성립하지 않는다 (P3).",
+  "skill_list_version": 2,
   "skills": [
     {
       "id": "ATTACK",
@@ -84,6 +84,25 @@
         "SUPPORT"
       ],
       "_note": "블록 목록 v4. 회복량은 대상 최대 HP 의 30% 이며 정수 퍼센트다 (R5). 고정값이 아니라 비율인 이유는 회복이 대상의 덩치에 비례해야 하기 때문이다 — 돌격병(40)은 12, 사제 자신 같은 중형(30)은 9 를 받는다. coef_pct 0 은 이 행동이 피해를 내지 않는다는 뜻이다. range null 이라 시전자의 attack_range 를 쓴다 — 사제는 2 이므로 아군 곁에 붙어 있어야 하고, 그것이 '흩어 놓으면 회복이 끊긴다' 는 두 번째 카운터가 된다. 쿨타임 3 은 플레이어 화력(틱당 약 11)이 회복(3틱당 12)을 앞서도록 잡은 값이다."
+    },
+    {
+      "id": "GUARD_BRACE",
+      "label_ko": "방벽",
+      "family": "GUARD",
+      "shape": {
+        "kind": "SELF"
+      },
+      "target_faction": "self",
+      "coef_pct": 0,
+      "cooldown": 4,
+      "range": null,
+      "guard_pct": 50,
+      "guard_ticks": 2,
+      "telegraph": 0,
+      "tags": [
+        "SHIELD"
+      ],
+      "_note": "다음 guard_ticks 동안 받는 피해를 guard_pct 만큼 줄인다. 정수 퍼센트다 (R5). 쿨타임 4 는 '상시 유지'가 안 되게 잡은 값이다 — 유지되면 방어가 선택이 아니라 기본값이 되고, 규칙표에 쓸 이유가 사라진다."
     }
   ]
 }

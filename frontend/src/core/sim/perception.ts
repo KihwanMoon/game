@@ -24,7 +24,7 @@ import {
 } from '../grid/vision'
 import { TILE_DOOR, TILE_SPRING, TILE_STAIRS, WALKABLE_TILES } from '../schemas'
 import { ALL_SELECTORS, resolveTarget } from './selectors'
-import { type Entity, type WorldState, getHpPercent } from './state'
+import { type Entity, type WorldState, checkHasSkill, getHpPercent } from './state'
 import { type TelegraphBoard, getForesightTicks } from './telegraph'
 
 /** 인지 변수 nearest_tile_distance 의 인자에서 타일 ID 로. 파이썬 dict 의 순서를 지킨다. */
@@ -48,6 +48,8 @@ const COOLDOWN_SKILLS: readonly string[] = [
   'AREA_ATTACK',
   'SUMMON',
   'HEAL',
+  'ATTACK',
+  'GUARD_BRACE',
 ]
 
 /** 인지 변수 self_has_status 가 묻는 상태이상들. */
@@ -252,7 +254,14 @@ export function buildSnapshot(input: SnapshotInput): PerceptionSnapshot {
     values.set(`enemy_type_present[${enemyType}]`, presentTypes.has(enemyType))
   }
   for (const skill of COOLDOWN_SKILLS) {
-    values.set(`self_cooldown_ready[${skill}]`, (entity.cooldowns.get(skill) ?? 0) <= 0)
+    const isReady = (entity.cooldowns.get(skill) ?? 0) <= 0
+    values.set(`self_cooldown_ready[${skill}]`, isReady)
+    // v5. 장착 여부와 쿨타임을 가른다 (결정 #04). self_cooldown_ready 는 쿨타임만 보므로
+    // 미장착 스킬에도 참을 낸다 — 그 값으로 규칙을 짜면 실행되지 않는 규칙이 참으로
+    // 보인다. self_skill_ready 는 둘을 함께 본다.
+    const hasSkill = checkHasSkill(entity, skill)
+    values.set(`self_has_skill[${skill}]`, hasSkill)
+    values.set(`self_skill_ready[${skill}]`, hasSkill && isReady)
   }
   for (const status of STATUS_NAMES) {
     values.set(`self_has_status[${status}]`, (entity.statuses.get(status) ?? 0) > 0)

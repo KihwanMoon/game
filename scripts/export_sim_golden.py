@@ -46,8 +46,8 @@ MAX_TICKS = 400
 # 기본 층. 케이스마다 다를 수 있으므로 각 레코드가 자기 층을 함께 싣는다.
 FLOOR = 1
 
-# 동결된 행동 14개 전부. 순서를 바꾸면 기준 로그가 통째로 달라진다. HEAL 은 v4 에서
-# 뒤에 붙였다 — 사이에 끼우면 그 뒤의 모든 기준 로그가 이유 없이 밀린다.
+# 동결된 행동 전부. 순서를 바꾸면 기준 로그가 통째로 달라진다. HEAL 은 v4, USE_SKILL 은
+# v5 에서 **뒤에** 붙였다 — 사이에 끼우면 그 뒤의 모든 기준 로그가 이유 없이 밀린다.
 ACTION_CYCLE = (
     "APPROACH",
     "ATTACK",
@@ -63,7 +63,12 @@ ACTION_CYCLE = (
     "HOLD",
     "SKILL_1",
     "HEAL",
+    "USE_SKILL",
 )
+
+# USE_SKILL 이 실행할 스킬. 이 정책은 규칙표를 타지 않으므로 여기서 정한다.
+# 사거리 4 인 사격을 고른 이유는 근접 스킬과 결과가 갈려야 대조에 뜻이 있기 때문이다.
+CYCLE_SKILL = "SKILL_2"
 
 # 행동별 대상 셀렉터. 이 정책은 규칙표를 타지 않으므로 진영을 여기서 맞춘다 —
 # 전부 NEAREST 로 두면 HEAL 이 적을 회복해 기준 로그가 뜻 없는 것을 고정한다.
@@ -142,6 +147,7 @@ class CyclingPolicy:
             rule_index=index,
             expr=f"틱({snapshot.tick}) + 오프셋({offset}) % {len(ACTION_CYCLE)} = {index}",
             set_flag=CYCLE_FLAG if action_id == "SET_FLAG" else None,
+            skill_id=CYCLE_SKILL if action_id == "USE_SKILL" else None,
         )
 
 
@@ -301,13 +307,14 @@ def build_golden_document() -> dict[str, Any]:
         "_comment": [
             "파이썬 코어(game/app/simulation)에서 생성한 기준 전투다. 손으로 고치지 않는다.",
             "재생성: uv run python -m scripts.export_sim_golden",
-            "policy=cycle 은 대조 전용 결정기다 — 행동 14개를 틱마다 차례로 돌린다.",
+            "policy=cycle 은 대조 전용 결정기다 — 동결된 행동을 틱마다 차례로 돌린다.",
         ],
         "max_ticks": MAX_TICKS,
         "floor": FLOOR,
         "action_cycle": list(ACTION_CYCLE),
         "cycle_selectors": [[action, selector] for action, selector in CYCLE_SELECTORS.items()],
         "cycle_flag": CYCLE_FLAG,
+        "cycle_skill": CYCLE_SKILL,
         "battles": build_battle_cases(),
     }
 

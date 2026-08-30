@@ -170,7 +170,7 @@ DOM 구조가 달라져야 하는 곳(세로의 탭 시트, 전용 편집 화면
 |:--|:--|:--|
 | `Button` | variant, size, active, disabled, glyph, block | variant: primary·secondary·ghost / size: md·sm |
 | `Panel` | title, meta, tone, padded, scroll | tone: panel·raised·plan |
-| `GlyphState` | state, label, size | state: true·false·armed·danger·pending |
+| `GlyphState` | state, label, size | state: true·false·armed·danger·pending·**blocked** |
 | `SegmentedGauge` | value, max, tone, label, readout | tone: cpu·hp·danger·dim |
 | `ValueExpr` | text, size, dim | — |
 | `HpGauge` | value, max, width | — |
@@ -194,7 +194,12 @@ DOM 구조가 달라져야 하는 곳(세로의 탭 시트, 전용 편집 화면
    `적거리(2) <= 사거리(3)` 형태다. 즉 RuleVM 은 참/거짓만이 아니라 **각 항이 실제로
    무슨 값이었는지**를 함께 내보내야 한다. GDD §8.2 가 요구하는 것과 같고, P1(실패는
    정보다)의 실현 수단이다.
-2. **규칙 하나의 상태가 3종이다** — 참·발동(`armed`), 참·미발동, 거짓. "더 높은
+2. **규칙 하나의 상태가 4종이다** (블록 v5, 결정 #04) — 참·발동(`armed`), 참·미발동,
+   거짓, **불가(`blocked`)**. 넷째는 "조건은 참인데 실행할 수단이 없다" 이고 거짓과
+   다르다 — 플레이어가 고쳐야 할 곳이 앞은 조건, 뒤는 장비다. 의미색 셋이 이미
+   배정돼 색을 더 쓸 수 없으므로 **해칭(⧅) + 취소선**으로 가른다: 색약과 흑백에서도
+   나머지 셋과 구분되고 황동 예산을 건드리지 않는다.
+   ~~2. 규칙 하나의 상태가 3종이다~~ "더 높은
    우선순위가 이미 발동해서 실행되지 않았다"를 UI 가 구분해 보여주므로, 코어도
    그 구분을 내보내야 한다.
 3. **CPU 예산 초과 상태를 값으로 낸다.** `cpu 10 / 8` 처럼 초과분을 그대로 표시하고

@@ -67,6 +67,12 @@ export interface Rule {
   readonly priority: number
   readonly conditions: Condition
   readonly action: string
+  /**
+   * 행동의 인자 (블록 v5). `USE_SKILL` 이 어느 스킬인지를 여기 담는다.
+   *
+   * 없으면 절에서 생략한다 — 키가 늘면 저장된 규칙표·공유 코드·골든이 전부 갈린다.
+   */
+  readonly actionParam: string | null
   readonly target: string | null
   readonly setFlag: string | null
   readonly cpuCost: number
@@ -96,6 +102,7 @@ export interface RawRule {
   readonly priority: number
   readonly cpu_cost: number
   readonly action: string
+  readonly action_param?: string | null
   readonly target?: string | null
   readonly set_flag?: string | null
   readonly conditions: RawCondition
@@ -214,6 +221,7 @@ export function parseRuleSet(raw: RawRuleSet): RuleSet {
           terms: item.conditions.terms.map(parseTerm),
         },
         action: item.action,
+        actionParam: item.action_param ?? null,
         target: item.target ?? null,
         setFlag: item.set_flag ?? null,
         cpuCost: item.cpu_cost,

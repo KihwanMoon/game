@@ -134,6 +134,7 @@ export function createRule(catalog: BlockCatalog, priority: number, blockId?: st
     conditions: { op: OP_SINGLE, terms },
     action: DEFAULT_ACTION_ID,
     target: targeted ? DEFAULT_SELECTOR_ID : null,
+    actionParam: null,
     setFlag: null,
     cpuCost: calculateCpuCost(terms.length),
   }

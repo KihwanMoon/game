@@ -4,7 +4,7 @@
 순환 참조가 생긴다.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Protocol
 
 from game.app.combat.damage import DamageRules
@@ -51,6 +51,12 @@ __all__ = [
 # 규칙 상태 네 번째 (블록 v5, 결정 #04). 참·발동 / 참·미발동 / 거짓 / **불가**.
 # 거짓과 다르다 — 조건은 참인데 실행할 수단이 없다.
 OUTCOME_BLOCKED = "불가"
+
+# 방어 태세 상태 이름 (블록 v5). statuses 에 남은 틱 수로 들어가며, UPKEEP 이 줄인다.
+STATUS_GUARD = "GUARD"
+
+# 스킬을 정체로 가리키는 행동 (블록 v5, 결정 #04).
+USE_SKILL_ACTION = "USE_SKILL"
 
 
 @dataclass(frozen=True)
@@ -125,6 +131,9 @@ class EngineConfig:
     # 고정값이 아니라 비율인 이유는 회복이 대상의 덩치에 비례해야 하기 때문이고,
     # 퍼센트 정수인 이유는 R5 다 — 부동소수를 쓰면 플랫폼마다 결과가 갈린다.
     skill_heal_pct: dict[str, int] = field(default_factory=dict)
+    # GUARD 계열 (블록 v5, 결정 #16). 받는 피해를 몇 % 줄이고 몇 틱 유지하는가.
+    skill_guard_pct: dict[str, int] = field(default_factory=dict)
+    skill_guard_ticks: dict[str, int] = field(default_factory=dict)
     # kind_id -> 소환 규칙(주기·상한·소환물). 블록 목록 v3 이 SUMMON 을 행동으로
     # 올린 뒤로 '언제 소환하는가' 는 규칙표가 정한다 — 여기 남는 것은 '무엇을 몇 마리
     # 까지' 와, 쿨타임[SUMMON] 의 초기값이 되는 주기(every_ticks)다.
@@ -136,3 +145,20 @@ class EngineConfig:
     floor: int = 1
     max_ticks: int = 400
     combat_regen_pct: int = 50
+
+
+def resolve_skill_plan(plan: PlannedAction) -> PlannedAction:
+    """`USE_SKILL` 계획을 그 스킬의 계획으로 바꾼다.
+
+    v5 의 `USE_SKILL[id]` 는 한 겹의 지시다. 실행 직전에 풀어 주면 실행기는 예전 행동
+    이름만 알면 되고, 스킬이 늘어도 실행기가 늘지 않는다.
+
+    Args:
+        plan: 실행할 계획.
+
+    Returns:
+        `USE_SKILL` 이면 skill_id 로 바꾼 계획, 아니면 그대로.
+    """
+    if plan.action_id != USE_SKILL_ACTION or plan.skill_id is None:
+        return plan
+    return replace(plan, action_id=plan.skill_id)

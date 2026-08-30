@@ -14,10 +14,18 @@ from game.app.grid.geometry import get_manhattan_distance, iter_neighbors
 from game.app.grid.vision import VisionGrid, check_line_of_sight, find_cover_positions
 from game.app.pathfinding.distance_field import build_distance_field, find_next_step
 from game.app.simulation import abilities
-from game.app.simulation.plan import PHASE_ACT, EngineConfig, PlannedAction
+from game.app.simulation.plan import PHASE_ACT, STATUS_GUARD, EngineConfig, PlannedAction
 from game.app.simulation.state import Entity, WorldState
+from game.app.simulation.support_actions import SupportActionMixin
 from game.app.simulation.telegraph import TelegraphBoard
 from game.schemas.room import TILE_DOOR, TILE_SPRING, TILE_STAIRS, WALKABLE_TILES
+
+# 퍼센트 기준. 100 이 1.0배다.
+PERCENT_BASE = 100
+
+# 방어 감소율을 읽을 스킬 id. 지금 GUARD 계열이 하나뿐이라 상수로 둔다 — 늘어나면
+# 어느 방어가 걸렸는지를 상태에 함께 실어야 한다 (지금은 그럴 필요가 없다).
+GUARD_SKILL_ID = "GUARD_BRACE"
 
 MOVE_ACTIONS = frozenset({"APPROACH", "RETREAT", "MOVE_TO_EXIT", "MOVE_TO_HEAL", "MOVE_TO_COVER"})
 ATTACK_ACTIONS = frozenset({"ATTACK", "SKILL_1", "SKILL_2"})
@@ -33,7 +41,7 @@ DEFERRED_ACTIONS: dict[str, str] = {}
 
 
 @dataclass
-class ActionExecutor:
+class ActionExecutor(SupportActionMixin):
     """계획을 실행하고 결과를 로그에 남긴다."""
 
     state: WorldState
@@ -276,59 +284,6 @@ class ActionExecutor:
         self._apply_cooldown(entity, plan.action_id)
         self._record(entity.entity_id, plan, outcome, None)
 
-    def apply_summon(self, entity: Entity, plan: PlannedAction) -> None:
-        """잡몹을 부른다 (GDD §5). 주기는 쿨타임[SUMMON] 이 맡는다.
-
-        Args:
-            entity: 소환사.
-            plan: 실행할 계획.
-        """
-        _, outcome = abilities.resolve_summon(self.state, self.config, entity)
-        self._record(entity.entity_id, plan, outcome, None)
-
-    def apply_heal(self, entity: Entity, plan: PlannedAction) -> None:
-        """아군 하나를 회복한다 (GDD §5). 대상은 셀렉터가 이미 골랐다.
-
-        Args:
-            entity: 시전자.
-            plan: 실행할 계획.
-        """
-        healed, outcome = abilities.resolve_heal(self.state, self.config, entity, plan)
-        if healed > 0:
-            self._apply_cooldown(entity, plan.action_id)
-        self._record(entity.entity_id, plan, outcome, healed or None)
-
-    def apply_potion(self, entity: Entity, plan: PlannedAction) -> None:
-        """포션을 쓴다.
-
-        Args:
-            entity: 사용자.
-            plan: 실행할 계획.
-        """
-        healed, outcome = abilities.resolve_potion(entity)
-        self._record(entity.entity_id, plan, outcome, healed)
-
-    def apply_hold(self, entity: Entity, plan: PlannedAction) -> None:
-        """의도적으로 아무것도 하지 않는다. 무시와 구분하기 위해 로그는 남긴다.
-
-        Args:
-            entity: 대상.
-            plan: 실행할 계획.
-        """
-        self._record(entity.entity_id, plan, "대기", None)
-
-    def apply_flag(self, entity: Entity, plan: PlannedAction) -> None:
-        """규칙이 지정한 플래그를 세우거나 내린다 (GDD §3.5).
-
-        Args:
-            entity: 대상 엔티티.
-            plan: 실행 중인 계획.
-        """
-        if plan.set_flag is None:
-            return
-        name, _, raw = plan.set_flag.partition("=")
-        entity.flags[name.strip()] = raw.strip().lower() != "false"
-
     def apply_damage(
         self,
         target: Entity,
@@ -350,6 +305,11 @@ class ActionExecutor:
                 이것을 빠뜨리면 규칙이 죽인 적이 DEFAULT 의 공으로 집계되어,
                 사후 분석이 "어느 규칙이 통했는가" 를 거짓으로 말한다 (P1).
         """
+        # 방어 태세는 여기서 본다. 정수 나눗셈이며 내림이다 (R5) — 부동소수를 쓰면
+        # 두 코어가 같은 피해에서 갈린다.
+        if target.statuses.get(STATUS_GUARD, 0) > 0:
+            reduction = self.config.skill_guard_pct.get(GUARD_SKILL_ID, 0)
+            amount = amount * (PERCENT_BASE - reduction) // PERCENT_BASE
         target.hp = max(0, target.hp - amount)
         self.log.record(
             LogEntry(
