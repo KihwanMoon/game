@@ -160,19 +160,67 @@ def test_broken_ruleset_is_rejected(client, token):
     assert body["verdict"] == "rejected"
 
 
-def test_meta_round_trips(client, token):
-    headers = build_headers(token)
-    assert client.get("/api/meta", headers=headers).json()["payload"] is None
+def build_meta_payload(**overrides):
+    """메타 세이브 절 하나. 덮어쓸 것만 넘긴다."""
     payload = {
         "format": "v1",
-        "best_floor": 3,
-        "unlocked_perceptions": ["target_distance"],
-        "unlocked_actions": ["ATTACK"],
+        "best_floor": 0,
+        "unlocked_perceptions": [],
+        "unlocked_actions": [],
         "bestiary": [],
         "presets": [],
     }
+    payload.update(overrides)
+    return payload
+
+
+def test_presets_round_trip(client, token):
+    """★ 프리셋은 유저가 지은 것이라 그대로 오간다.
+
+    판정할 것이 없으므로 서버가 내용을 볼 이유도 없다.
+    """
+    headers = build_headers(token)
+    assert client.get("/api/meta", headers=headers).json()["payload"] is None
+    preset = {"name": "내 것", "ruleset": {"ruleset_id": "mine", "version": 1, "rules": []}}
+    payload = build_meta_payload(presets=[preset])
     assert client.put("/api/meta", json={"payload": payload}, headers=headers).status_code == 200
-    assert client.get("/api/meta", headers=headers).json()["payload"]["best_floor"] == 3
+    stored = client.get("/api/meta", headers=headers).json()["payload"]
+    assert [item["name"] for item in stored["presets"]] == ["내 것"]
+
+
+def test_the_client_cannot_write_achievements(client, token):
+    """★ **해금·도감·최고 층은 클라이언트가 쓸 수 없다.**
+
+    이것이 열려 있으면 도감을 다 채우고 층 기록을 올려 규칙 슬롯 상한까지 늘릴 수 있고,
+    그러면 이 세이브는 순위의 근거가 될 수 없다. 성취는 `/api/run` 의 재시뮬이 뽑는다.
+    """
+    headers = build_headers(token)
+    payload = build_meta_payload(
+        best_floor=99,
+        unlocked_actions=["ATTACK", "SUMMON"],
+        unlocked_perceptions=["target_distance"],
+        bestiary=[{"kind_id": "goblin_rusher", "encounters": 50, "defeats": 50}],
+    )
+    client.put("/api/meta", json={"payload": payload}, headers=headers)
+    stored = client.get("/api/meta", headers=headers).json()["payload"]
+    assert stored["best_floor"] == 0
+    assert stored["unlocked_actions"] == []
+    assert stored["unlocked_perceptions"] == []
+    assert stored["bestiary"] == []
+
+
+def test_rejecting_achievements_does_not_lose_presets(client, token):
+    """★ 성취를 버리면서 프리셋까지 버리면 그 사람은 규칙표를 잃는다.
+
+    구버전 클라이언트는 둘을 함께 보낸다 — 400 으로 거절하지 않는 이유가 이것이다.
+    """
+    headers = build_headers(token)
+    preset = {"name": "함께", "ruleset": {"ruleset_id": "mine", "version": 1, "rules": []}}
+    payload = build_meta_payload(best_floor=99, presets=[preset])
+    client.put("/api/meta", json={"payload": payload}, headers=headers)
+    stored = client.get("/api/meta", headers=headers).json()["payload"]
+    assert stored["best_floor"] == 0
+    assert [item["name"] for item in stored["presets"]] == ["함께"]
 
 
 def test_broken_meta_is_rejected(client, token):

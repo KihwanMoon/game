@@ -19,7 +19,16 @@ from dataclasses import dataclass
 from typing import Any
 
 from game.app.rules.validator import validate_ruleset
+from game.app.services.manage_meta import RunSummary
+from game.app.services.run_battle import BattleResult, run_battle
 from game.app.services.run_chain import run_room_chain
+from game.app.services.run_summary import (
+    build_run_summary,
+    count_enemy_kinds,
+    list_encountered_rulesets,
+)
+from game.app.simulation.engine import TickEngine
+from game.app.simulation.plan import OUTCOME_PLAYER_WIN
 from game.app.store.runs import VERDICT_REJECTED, VERDICT_VERIFIED
 from game.schemas.blocks import BlockCatalog
 from game.schemas.loadout import PlayerLoadout
@@ -54,6 +63,9 @@ class VerifiedRun:
     player_hp: int
     verdict: str
     detail: str = ""
+    # 이 재시뮬이 뽑아낸 결산. **메타 세이브는 이것으로만 갱신된다** — 클라이언트가
+    # 보낸 요약을 받으면 해금과 도감을 마음대로 채울 수 있다. 반려된 제출은 None 이다.
+    summary: RunSummary | None = None
 
 
 def check_submission_version(claimed: str, server: str) -> str:
@@ -117,6 +129,23 @@ def evaluate_submission(
     if problems:
         return VerifiedRun("", 0, 0, VERDICT_REJECTED, f"규칙표 위반: {problems[0]}")
 
+    # 결산은 **서버의 재시뮬에서 뽑는다.** 클라이언트가 보낸 요약을 받으면 해금과
+    # 도감을 마음대로 채울 수 있다 (T-계열).
+    tallies: list[tuple[tuple[str, ...], tuple[str, ...]]] = []
+
+    def run_and_tally(engine: TickEngine) -> BattleResult:
+        """방 하나를 돌리고 그 방의 전과를 적어 둔다.
+
+        Args:
+            engine: 조립된 엔진.
+
+        Returns:
+            그 방의 결과.
+        """
+        outcome = run_battle(engine)
+        tallies.append(count_enemy_kinds(engine.state))
+        return outcome
+
     rooms = room_ids or (room_id,)
     missing = [name for name in rooms if name not in context.rooms]
     if missing:
@@ -134,10 +163,22 @@ def evaluate_submission(
         seed,
         snapshots=snapshots,
         loadout=loadout,
+        run_room=run_and_tally,
     )
+    encountered = tuple(sorted(kind for tally in tallies for kind in tally[0]))
+    defeated = tuple(sorted(kind for tally in tallies for kind in tally[1]))
     return VerifiedRun(
         outcome=result.outcome,
         ticks=result.total_ticks,
         player_hp=result.player_hp,
         verdict=VERDICT_VERIFIED,
+        summary=build_run_summary(
+            encountered,
+            defeated,
+            ruleset,
+            result.outcome == OUTCOME_PLAYER_WIN,
+            list_encountered_rulesets(
+                encountered, context.balance["enemies"], dict(context.enemy_rulesets)
+            ),
+        ),
     )

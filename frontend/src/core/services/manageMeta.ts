@@ -166,38 +166,25 @@ export function applyRunSummary(
 }
 
 /**
- * 두 메타 세이브를 합친다. 서버 것과 기기 것이 갈렸을 때 쓴다.
+ * 서버 세이브를 정본으로 받아들인다.
  *
- * **덧셈이 아니라 최대값·합집합이다.** 도감 횟수를 더하면 동기화를 두 번 할 때마다
- * 숫자가 불어난다 — 양쪽이 같은 런을 이미 세었을 수 있기 때문이다. 최대값은 몇 번을
- * 합쳐도 같은 결과를 내므로(멱등), 재시도가 안전해진다.
+ * **성취는 서버 것이 이긴다.** 해금·도감·최고 층은 서버가 재시뮬에서 뽑는 것이고, 기기에
+ * 쌓인 값은 오프라인 연습이 만든 낙관적 표시일 뿐이다 — 서버가 뒷받침하지 않는 해금을
+ * 화면이 계속 보여 주면, 그것이 순위에 반영되지 않는다는 사실이 나중에 드러난다.
  *
- * 프리셋은 기기 것을 쓴다. 편집 중인 것이 기기에 있고, 서버 것으로 덮으면 방금 짠
+ * 오프라인 런은 원래 보상을 주지 않으므로(티켓이 없으면 제출도 없다) 여기서 잃는 것은
+ * 표시뿐이다.
+ *
+ * **프리셋은 기기 것을 지킨다.** 편집 중인 것이 기기에 있고, 서버 것으로 덮으면 방금 짠
  * 규칙표가 사라진다.
  *
- * @param server 서버에 있던 세이브.
+ * @param server 서버가 준 세이브.
  * @param local 이 기기의 세이브.
- * @returns 합쳐진 세이브.
+ * @returns 서버 성취 + 기기 프리셋.
  */
-export function mergeMeta(server: MetaSave, local: MetaSave): MetaSave {
-  const bestiary = new Map<string, BestiaryRecord>()
-  for (const record of [...server.bestiary, ...local.bestiary]) {
-    const current = bestiary.get(record.kindId)
-    bestiary.set(record.kindId, {
-      kindId: record.kindId,
-      encounters: Math.max(current?.encounters ?? 0, record.encounters),
-      defeats: Math.max(current?.defeats ?? 0, record.defeats),
-    })
-  }
+export function adoptServerMeta(server: MetaSave, local: MetaSave): MetaSave {
   return {
-    formatVersion: Math.max(server.formatVersion, local.formatVersion),
-    bestFloor: Math.max(server.bestFloor, local.bestFloor),
-    unlockedPerceptions: [
-      ...new Set([...server.unlockedPerceptions, ...local.unlockedPerceptions]),
-    ].sort(),
-    unlockedActions: [...new Set([...server.unlockedActions, ...local.unlockedActions])].sort(),
-    // 정렬해서 꺼낸다. Map 순회 순서가 세이브에 새어 나가면 안 된다 (R5).
-    bestiary: [...bestiary.values()].sort((left, right) => (left.kindId < right.kindId ? -1 : 1)),
+    ...server,
     presets: local.presets.length > 0 ? local.presets : server.presets,
   }
 }

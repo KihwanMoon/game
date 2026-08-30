@@ -8,15 +8,23 @@ import secrets
 
 from fastapi import APIRouter, HTTPException, status
 
-from game.api.deps import CurrentAccount, get_context, get_item_catalog, get_pool
+from game.api.deps import (
+    CurrentAccount,
+    get_context,
+    get_core_version,
+    get_item_catalog,
+    get_pool,
+)
 from game.api.schemas import SubmissionRequest, SubmissionResponse
 from game.app.items.catalog import find_item as find_catalog_item
 from game.app.items.loot import create_loot_roll
 from game.app.progression.levels import add_run_xp
+from game.app.services.manage_meta import apply_run_result
 from game.app.services.verify_run import VerifiedRun, check_submission_version, evaluate_submission
 from game.app.store.accounts import find_player_entity
 from game.app.store.equipment import add_currency, mark_item_broken, remove_item
 from game.app.store.items import create_item, list_equipment, list_inventory
+from game.app.store.meta import load_meta_payload, save_meta_payload
 from game.app.store.monsters import (
     add_monster_xp,
     apply_monster_defeat,
@@ -33,6 +41,7 @@ from game.app.store.runs import (
 )
 from game.app.store.tickets import IssuedTicket, find_open_ticket, mark_ticket_consumed
 from game.schemas.loadout import parse_loadout
+from game.schemas.meta_save import MetaSave, build_meta_payload, parse_meta_save
 
 router = APIRouter()
 
@@ -303,4 +312,31 @@ def create_run_submission(
     world = apply_monster_outcome(ticket, submission_id, verified, account.account_id)
     if world:
         reward = f"{reward} · {world}" if reward else world
-    return SubmissionResponse(submission_id=submission_id, reward=reward, **vars(verified))
+    apply_verified_meta(account.account_id, verified)
+    # `summary` 는 응답에 싣지 않는다 — 서버가 무엇으로 세이브를 갱신했는지는 클라이언트가
+    # 알 필요가 없고, 실으면 그것을 되보내려는 경로가 생긴다.
+    fields = {key: value for key, value in vars(verified).items() if key != "summary"}
+    return SubmissionResponse(submission_id=submission_id, reward=reward, **fields)
+
+
+def apply_verified_meta(account_id: int, verified: VerifiedRun) -> None:
+    """검증된 런의 결산을 메타 세이브에 반영한다 (GDD §2.3).
+
+    **이것이 메타 세이브를 갱신하는 유일한 경로다.** 예전에는 브라우저가 계산한 세이브를
+    통째로 받아 저장했는데, 그러면 해금·도감·최고 층이 전부 클라이언트가 쓴 값이 되어
+    순위의 근거가 될 수 없다.
+
+    반려된 제출은 아무것도 바꾸지 않는다 — 규칙표가 예산을 넘겨도 도감이 차면
+    "제출만 하면 채워지는" 경로가 열린다.
+
+    Args:
+        account_id: 대상 계정.
+        verified: 재시뮬 결과.
+    """
+    if verified.summary is None or verified.verdict != VERDICT_VERIFIED:
+        return
+    pool = get_pool()
+    stored = load_meta_payload(pool, account_id)
+    meta = parse_meta_save(stored) if stored else MetaSave()
+    updated = apply_run_result(meta, verified.summary, get_context().catalog)
+    save_meta_payload(pool, account_id, build_meta_payload(updated), get_core_version())

@@ -121,7 +121,7 @@ import {
   type TutorialStage,
 } from './core/schemas'
 import { MAX_SEED, buildCoreVersion, createLocalTicket, type RunTicket } from './core/schemas'
-import { applyRunSummary, mergeMeta } from './core/services/manageMeta'
+import { adoptServerMeta, applyRunSummary } from './core/services/manageMeta'
 import { buildRunSummary, listEncounteredRulesets } from './core/services/runSummary'
 import { parseBalance } from './core/services/runBattle'
 
@@ -475,7 +475,8 @@ export function App(): React.JSX.Element {
         return
       }
       setMeta((current) => {
-        const merged = outcome.meta === undefined ? current : mergeMeta(outcome.meta, current)
+        const merged =
+          outcome.meta === undefined ? current : adoptServerMeta(outcome.meta, current)
         writeMeta(storage, merged)
         void writeServerMeta(token, merged)
         return merged
@@ -717,6 +718,19 @@ export function App(): React.JSX.Element {
         // 판이 끝나면 경험치와 순위가 올랐다.
         void readProgress(account).then(setProgress)
         void readLeaderboard(account).then(setLeaderboard)
+        // **서버가 확정한 성취를 받아 온다.** 아래에서 기기가 낙관적으로 먼저 반영하지만
+        // 정본은 서버의 재시뮬이다 — 둘이 갈리면 화면에 뜬 해금이 다음 접속에 사라진다.
+        void readServerMeta(account).then((outcome) => {
+          const server = outcome.meta
+          if (server === undefined) {
+            return
+          }
+          setMeta((current) => {
+            const adopted = adoptServerMeta(server, current)
+            writeMeta(getLocalStorage(), adopted)
+            return adopted
+          })
+        })
       })
     }
 

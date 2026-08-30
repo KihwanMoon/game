@@ -68,13 +68,15 @@ def test_progress_survives_registration(client):
     """★ 승격 전에 쌓은 세이브가 가입 뒤에도 있다."""
     anonymous = client.post("/api/account").json()
     headers = build_headers(anonymous["token"])
+    # 성취가 아니라 **프리셋**으로 잰다. 성취는 서버가 재시뮬에서 뽑으므로 PUT 으로
+    # 심을 수 없다 — 승계가 되는지는 유저가 지은 것으로 확인해야 한다.
     payload = {
         "format": "v1",
-        "best_floor": 7,
+        "best_floor": 0,
         "unlocked_perceptions": [],
-        "unlocked_actions": ["ATTACK"],
+        "unlocked_actions": [],
         "bestiary": [],
-        "presets": [],
+        "presets": [{"name": "승계", "ruleset": {"ruleset_id": "mine", "version": 1, "rules": []}}],
     }
     client.put("/api/meta", json={"payload": payload}, headers=headers)
 
@@ -83,7 +85,8 @@ def test_progress_survives_registration(client):
         json={"login_id": f"keep{anonymous['account_id']}", "password": PASSWORD},
         headers=headers,
     )
-    assert client.get("/api/meta", headers=headers).json()["payload"]["best_floor"] == 7
+    kept = client.get("/api/meta", headers=headers).json()["payload"]["presets"]
+    assert [item["name"] for item in kept] == ["승계"]
 
 
 def test_registering_twice_is_rejected(client):
@@ -148,13 +151,16 @@ def test_login_from_another_device_loads_the_account(client):
         json={"login_id": login_id, "password": PASSWORD},
         headers=build_headers(first["token"]),
     )
+    # 성취가 아니라 프리셋으로 잰다 — 성취는 PUT 으로 심을 수 없다.
     payload = {
         "format": "v1",
-        "best_floor": 5,
+        "best_floor": 0,
         "unlocked_perceptions": [],
         "unlocked_actions": [],
         "bestiary": [],
-        "presets": [],
+        "presets": [
+            {"name": "다른기기", "ruleset": {"ruleset_id": "mine", "version": 1, "rules": []}}
+        ],
     }
     client.put("/api/meta", json={"payload": payload}, headers=build_headers(first["token"]))
 
@@ -162,12 +168,8 @@ def test_login_from_another_device_loads_the_account(client):
     assert second["account_id"] == first["account_id"]
     # 새 기기 토큰이 나온다.
     assert second["token"] != first["token"]
-    assert (
-        client.get("/api/meta", headers=build_headers(second["token"])).json()["payload"][
-            "best_floor"
-        ]
-        == 5
-    )
+    loaded = client.get("/api/meta", headers=build_headers(second["token"])).json()["payload"]
+    assert [item["name"] for item in loaded["presets"]] == ["다른기기"]
 
 
 def test_the_first_device_keeps_working_after_a_second_login(client):

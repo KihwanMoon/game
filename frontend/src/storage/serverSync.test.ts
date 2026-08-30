@@ -10,7 +10,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createEmptyMeta } from '../core/schemas'
-import { mergeMeta } from '../core/services/manageMeta'
+import { adoptServerMeta } from '../core/services/manageMeta'
 import {
   TOKEN_STORAGE_KEY,
   ensureToken,
@@ -117,7 +117,7 @@ describe('서버 세이브 읽기', () => {
   })
 })
 
-describe('세이브 합치기', () => {
+describe('세이브 정본은 서버다', () => {
   const server = {
     ...createEmptyMeta(),
     bestFloor: 4,
@@ -126,34 +126,34 @@ describe('세이브 합치기', () => {
   }
   const local = {
     ...createEmptyMeta(),
-    bestFloor: 2,
-    unlockedActions: ['RETREAT'],
-    bestiary: [{ kindId: 'goblin_rusher', encounters: 3, defeats: 3 }],
+    bestFloor: 99,
+    unlockedActions: ['RETREAT', 'SUMMON'],
+    bestiary: [{ kindId: 'goblin_rusher', encounters: 300, defeats: 300 }],
   }
 
-  it('최고 층은 최대값이다', () => {
-    expect(mergeMeta(server, local).bestFloor).toBe(4)
+  it('★ 성취는 서버 것이 이긴다 — 기기 값이 더 커도 버린다', () => {
+    // 기기 값은 오프라인 연습이 만든 낙관적 표시다. 합집합·최대값으로 두면 서버가
+    // 뒷받침하지 않는 해금이 화면에 영영 남고, 그것이 순위에 안 잡힌다는 사실이
+    // 나중에 드러난다.
+    const adopted = adoptServerMeta(server, local)
+    expect(adopted.bestFloor).toBe(4)
+    expect(adopted.unlockedActions).toEqual(['ATTACK'])
+    expect(adopted.bestiary[0]?.encounters).toBe(5)
   })
 
-  it('해금은 합집합이고 정렬된다', () => {
-    expect(mergeMeta(server, local).unlockedActions).toEqual(['ATTACK', 'RETREAT'])
-  })
-
-  it('★ 도감은 더하지 않고 최대값을 쓴다', () => {
-    // 더하면 동기화를 두 번 할 때마다 숫자가 불어난다 — 양쪽이 같은 런을 이미 세었다.
-    const merged = mergeMeta(server, local).bestiary[0]
-    expect(merged).toEqual({ kindId: 'goblin_rusher', encounters: 5, defeats: 3 })
-  })
-
-  it('★ 여러 번 합쳐도 같다 (멱등)', () => {
-    const once = mergeMeta(server, local)
-    expect(mergeMeta(server, once)).toEqual(once)
-    expect(mergeMeta(once, once)).toEqual(once)
+  it('★ 여러 번 받아들여도 같다 (멱등)', () => {
+    const once = adoptServerMeta(server, local)
+    expect(adoptServerMeta(server, once)).toEqual(once)
   })
 
   it('프리셋은 기기 것을 지킨다 — 편집 중인 것이 사라지면 안 된다', () => {
     const withPreset = { ...local, presets: [{ name: '내 것', ruleset: local.presets[0]?.ruleset }] }
-    expect(mergeMeta(server, withPreset as typeof local).presets).toHaveLength(1)
+    expect(adoptServerMeta(server, withPreset as typeof local).presets).toHaveLength(1)
+  })
+
+  it('기기에 프리셋이 없으면 서버 것을 받는다 — 새 기기가 이 경우다', () => {
+    const withPreset = { ...server, presets: [{ name: '서버', ruleset: local.presets[0]?.ruleset }] }
+    expect(adoptServerMeta(withPreset as typeof server, local).presets).toHaveLength(1)
   })
 })
 

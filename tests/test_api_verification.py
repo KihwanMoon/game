@@ -148,3 +148,68 @@ def test_verification_falls_back_to_one_room(client, token):
         int(player["rule_slots"]),
     )
     assert evaluate_submission(*args) == evaluate_submission(*args, room_ids=(ROOM_ID,))
+
+
+# ── 메타 세이브는 재시뮬의 부산물이다 ────────────────────────────────────
+
+
+def submit_once(client, token, ruleset):
+    """티켓을 받아 그 규칙표로 한 판 제출한다."""
+    headers = build_headers(token)
+    ticket = client.post("/api/ticket", json={"room_id": ROOM_ID}, headers=headers).json()
+    return client.post(
+        "/api/run",
+        json={
+            "ticket_id": ticket["ticket_id"],
+            "ruleset": ruleset,
+            "core_version": ticket["core_version"],
+        },
+        headers=headers,
+    ).json()
+
+
+def read_meta(client, token):
+    return client.get("/api/meta", headers=build_headers(token)).json()["payload"]
+
+
+def test_a_verified_run_fills_the_bestiary(client, token):
+    """★ **도감은 서버의 재시뮬이 채운다.**
+
+    이것이 없으면 도감은 클라이언트가 쓴 값이고, 그 위에 얹힌 해금과 슬롯 상한도 전부
+    자기 신고다.
+    """
+    assert read_meta(client, token) is None
+    submit_once(client, token, build_winning_ruleset())
+    meta = read_meta(client, token)
+    assert meta is not None
+    assert [row["kind_id"] for row in meta["bestiary"]] != []
+
+
+def test_a_verified_run_unlocks_the_blocks_it_used(client, token):
+    """★ 해금도 재시뮬이 뽑는다 — 쓴 블록과 만난 적의 규칙표가 근거다 (GDD §2.3)."""
+    submit_once(client, token, build_winning_ruleset())
+    meta = read_meta(client, token)
+    assert meta["unlocked_actions"] != []
+    assert meta["unlocked_perceptions"] != []
+
+
+def test_a_win_records_the_floor(client, token):
+    """★ 최고 층이 슬롯 상한의 근거다. 이겨야 오른다."""
+    submit_once(client, token, build_winning_ruleset())
+    assert read_meta(client, token)["best_floor"] >= 1
+
+
+def test_a_loss_does_not_record_a_floor(client, token):
+    """★ 지고도 층이 오르면 "제출만 하면 오르는" 경로가 열린다."""
+    submit_once(client, token, build_ruleset())
+    meta = read_meta(client, token)
+    assert meta["best_floor"] == 0
+    # 다만 도감은 찬다 — 조우만으로도 규칙표가 열리는 것이 P1 이다.
+    assert [row["kind_id"] for row in meta["bestiary"]] != []
+
+
+def test_the_bestiary_counts_defeats_separately(client, token):
+    """★ "만났다" 와 "통했다" 를 가르는 것이 도감의 쓸모다."""
+    submit_once(client, token, build_winning_ruleset())
+    rows = read_meta(client, token)["bestiary"]
+    assert any(row["defeats"] > 0 for row in rows)
