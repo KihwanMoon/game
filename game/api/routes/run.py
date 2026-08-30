@@ -15,6 +15,12 @@ from game.app.items.loot import create_loot_roll
 from game.app.services.verify_run import VerifiedRun, check_submission_version, evaluate_submission
 from game.app.store.equipment import add_currency, mark_item_broken, remove_item
 from game.app.store.items import create_item, list_equipment, list_inventory
+from game.app.store.monsters import (
+    add_monster_xp,
+    apply_monster_defeat,
+    create_trophy,
+    load_snapshots,
+)
 from game.app.store.runs import (
     VERDICT_REJECTED,
     VERDICT_VERIFIED,
@@ -112,6 +118,83 @@ def build_rejection(detail: str) -> VerifiedRun:
     return VerifiedRun("", 0, 0, VERDICT_REJECTED, detail)
 
 
+def apply_monster_outcome(
+    ticket: IssuedTicket, submission_id: int, verified: VerifiedRun, account_id: int
+) -> str:
+    """이 런의 결과를 지속 몬스터에 반영한다 (docs/설계/6_몬스터 §3·§4, 결정 #34·#35).
+
+    **검증된 런에서만 반영한다.** 클라이언트가 "내가 졌다" 고 보고해서 몬스터가 크는
+    구조면, 자기 몬스터를 키우려고 일부러 지는 어뷰징이 열린다 (T9).
+
+    Args:
+        ticket: 이 런의 티켓.
+        submission_id: 제출 id.
+        verified: 서버가 확정한 결과.
+        account_id: 플레이어 계정.
+
+    Returns:
+        플레이어에게 보여줄 한 줄. 없으면 빈 문자열.
+    """
+    if verified.verdict != VERDICT_VERIFIED:
+        return ""
+    pool = get_pool()
+    snapshots = load_snapshots(pool, ticket.ticket_id)
+    if not snapshots:
+        return ""
+    notes: list[str] = []
+    if verified.outcome == OUTCOME_WIN:
+        # 이겼으면 그 층의 지속 몬스터가 전부 감쇠한다 — 플레이어의 승리가 세계에
+        # 흔적을 남긴다 (결정 #35).
+        for item in snapshots:
+            level = apply_monster_defeat(pool, item.record_id, ticket.floor)
+            notes.append(f"{item.kind_id} 레벨 {item.level}→{level}")
+        return " · ".join(notes)
+
+    # 졌으면 그 층의 몬스터가 경험치를 얻고, 하나가 장비 사본을 가져간다 (결정 #34).
+    for item in snapshots:
+        level = add_monster_xp(pool, item.record_id, ticket.floor, "PLAYER", submission_id)
+        if level > item.level:
+            notes.append(f"{item.kind_id} 레벨 {item.level}→{level}")
+    taken = apply_trophy_transfer(account_id, snapshots[0].record_id)
+    if taken:
+        notes.append(taken)
+    return " · ".join(notes)
+
+
+def apply_trophy_transfer(account_id: int, record_id: int) -> str:
+    """뽑힌 장비의 **사본**을 몬스터에게 넘긴다 (결정 #34).
+
+    원본은 `apply_death_penalty` 가 처리한다 — 장착 중이었으면 파손, 가방이었으면 삭제.
+    사본이라 아이템 총량이 늘지만, 몬스터의 것은 거래 대상이 아니므로 경제에 흘러들지
+    않는다. 도감이 "내 아이템을 들고 있다" 를 말할 수 있게 하는 것이 이 사본의 목적이다.
+
+    Args:
+        account_id: 죽은 계정.
+        record_id: 가져갈 몬스터.
+
+    Returns:
+        무슨 일이 있었는지. 가져갈 것이 없으면 빈 문자열.
+    """
+    pool = get_pool()
+    equipped = list(list_equipment(pool, account_id).values())
+    carried = [entry.item for entry in list_inventory(pool, account_id) if entry.item is not None]
+    candidates = equipped + carried
+    if not candidates:
+        return ""
+    picked = candidates[secrets.randbelow(len(candidates))]
+    create_trophy(
+        pool,
+        record_id,
+        picked.catalog_id,
+        [
+            {"stat": a.stat, "flat": a.flat, "percent": a.percent, "label_ko": a.label_ko}
+            for a in picked.affixes
+        ],
+        account_id,
+    )
+    return f"{picked.catalog_id} 를 빼앗겼다"
+
+
 def check_run_submission(request: SubmissionRequest, ticket: IssuedTicket) -> VerifiedRun:
     """제출 하나를 판정한다.
 
@@ -136,6 +219,8 @@ def check_run_submission(request: SubmissionRequest, ticket: IssuedTicket) -> Ve
         ticket.seed,
         int(player["cpu_budget"]),
         int(player["rule_slots"]),
+        # **서버가 조회한다.** 제출이 스냅샷을 실어 오면 약한 것으로 바꿀 수 있다 (T8).
+        load_snapshots(get_pool(), ticket.ticket_id),
     )
 
 
@@ -177,4 +262,7 @@ def create_run_submission(
         ),
     )
     reward = apply_run_rewards(account.account_id, submission_id, verified)
+    world = apply_monster_outcome(ticket, submission_id, verified, account.account_id)
+    if world:
+        reward = f"{reward} · {world}" if reward else world
     return SubmissionResponse(submission_id=submission_id, reward=reward, **vars(verified))

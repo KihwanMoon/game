@@ -166,3 +166,60 @@ CREATE TABLE IF NOT EXISTS item_event (
     detail      TEXT        NOT NULL DEFAULT '',
     at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ── 몬스터 (E단계) ───────────────────────────────────────────────────────
+-- **플레이어와 같은 형태다** (docs/설계/6_몬스터 §7). 장비·인벤토리가 이 표를 참조하므로
+-- "몬스터가 내 장비를 들고 있다" 가 특수 케이스가 아니다.
+--
+-- ruleset_json 이 여기 있는 것이 이 설계의 중심이다 — 몬스터의 정체는 스탯이 아니라
+-- 규칙표이고, 도감이 공개하는 것도 성장이 바꾸는 것도 그것이다.
+CREATE TABLE IF NOT EXISTS monster_record (
+    id            BIGSERIAL   PRIMARY KEY,
+    catalog_id    TEXT        NOT NULL,
+    tier          TEXT        NOT NULL,
+    persistence   TEXT        NOT NULL DEFAULT 'PERSISTENT',
+    zone_floor    INTEGER     NOT NULL DEFAULT 1,
+    entity_slot   TEXT        NOT NULL,
+    total_xp      BIGINT      NOT NULL DEFAULT 0,
+    level         INTEGER     NOT NULL DEFAULT 1,
+    alive         BOOLEAN     NOT NULL DEFAULT true,
+    last_seen_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- 한 층의 한 자리에 개체 하나. 없으면 같은 자리에 여럿이 겹쳐 스냅샷이 어느 것을
+    -- 가리키는지 알 수 없다.
+    UNIQUE (zone_floor, entity_slot)
+);
+
+-- 티켓이 얼려 둔 상태 (§5). **클라이언트가 되보내지 않는다** — 서버가 ticket_id 로
+-- 자기가 발급한 것을 조회한다. 받으면 약한 스냅샷으로 바꿔 제출할 수 있다 (T8).
+CREATE TABLE IF NOT EXISTS monster_snapshot (
+    ticket_id  TEXT   NOT NULL REFERENCES run_ticket(id) ON DELETE CASCADE,
+    record_id  BIGINT NOT NULL REFERENCES monster_record(id) ON DELETE CASCADE,
+    state      JSONB  NOT NULL,
+    PRIMARY KEY (ticket_id, record_id)
+);
+
+-- 경험치 원장. **검증된 런에서만 들어온다** — 클라이언트가 "내가 졌다" 고 보고해서
+-- 몬스터가 크는 구조면, 자기 몬스터를 키우려고 일부러 지는 어뷰징이 열린다.
+CREATE TABLE IF NOT EXISTS monster_kill (
+    id             BIGSERIAL   PRIMARY KEY,
+    record_id      BIGINT      NOT NULL REFERENCES monster_record(id) ON DELETE CASCADE,
+    victim_kind    TEXT        NOT NULL,
+    victim_id      BIGINT,
+    run_result_id  BIGINT      REFERENCES run_result(submission_id) ON DELETE SET NULL,
+    xp_gained      INTEGER     NOT NULL,
+    at             TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 몬스터가 가져간 장비 사본 (결정 #34). 원본은 플레이어 쪽에서 파손되거나 삭제된다.
+CREATE TABLE IF NOT EXISTS monster_trophy (
+    id           BIGSERIAL   PRIMARY KEY,
+    record_id    BIGINT      NOT NULL REFERENCES monster_record(id) ON DELETE CASCADE,
+    catalog_id   TEXT        NOT NULL,
+    affixes      JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    -- 누구에게서 가져왔는가. 도감이 "내 아이템을 들고 있다" 를 말하려면 필요하다.
+    taken_from   BIGINT      REFERENCES account(id) ON DELETE SET NULL,
+    taken_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS monster_trophy_owner_idx ON monster_trophy (taken_from, record_id);

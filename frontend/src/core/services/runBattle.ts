@@ -29,6 +29,7 @@ import type { RawAntiAbuse } from '../sim/pressure'
 import type { RawDamageFormula } from '../combat/damage'
 import { FACTION_ENEMY, FACTION_PLAYER, WorldState, createEntity } from '../sim/state'
 import type { Entity } from '../sim/state'
+import { buildEntityId, type MonsterSnapshot } from '../schemas/monsterSnapshot'
 
 /** 이 틱을 넘기면 시간 초과로 끝낸다. */
 export const DEFAULT_MAX_TICKS = 400
@@ -148,6 +149,12 @@ export interface EngineSetup {
    * 연쇄 실행은 하나를 만들어 계속 넘긴다.
    */
   readonly pressure?: PressureTracker
+  /**
+   * 티켓이 얼려 둔 지속 몬스터 상태. 해당 자리의 층 스케일을 **대체한다**.
+   *
+   * 얹으면 같은 개체가 층마다 다른 값을 갖게 되어 스냅샷의 뜻이 사라진다.
+   */
+  readonly snapshots?: readonly MonsterSnapshot[]
 }
 
 /**
@@ -191,13 +198,17 @@ export function buildEngine(setup: EngineSetup): TickEngine {
   const byId = new Map(balance.enemies.map((kind) => [kind.id, kind]))
   const floor = setup.floor ?? DEFAULT_FLOOR
   const scale = buildFloorScale(balance.floorScale)
+  // 스냅샷은 entityId 로 겹친다. 방 배치가 `{kind}_{index}` 로 붙이므로 그 이름을
+  // 겨냥하며, 이름이 갈리면 스냅샷이 아무에게도 적용되지 않고 조용히 넘어간다.
+  const overrides = new Map((setup.snapshots ?? []).map((item) => [item.entityId, item]))
   template.enemySpawns.forEach((spawn, index) => {
     const kind = byId.get(spawn.kind)
     if (kind === undefined) {
       throw new Error(`balance.json 에 없는 적 종류다: ${spawn.kind}`)
     }
     const scaled = getScaledEnemyStats(kind, scale, floor)
-    const entityId = `${kind.id}_${index}`
+    const entityId = buildEntityId(kind.id, index)
+    const found = overrides.get(entityId)
     state.entities.set(
       entityId,
       createEntity({
@@ -205,14 +216,14 @@ export function buildEngine(setup: EngineSetup): TickEngine {
         kindId: kind.id,
         faction: FACTION_ENEMY,
         position: spawn.position,
-        hp: scaled.hpMax,
-        hpMax: scaled.hpMax,
-        attack: scaled.attack,
-        defense: kind.defense,
+        hp: found?.hpMax ?? scaled.hpMax,
+        hpMax: found?.hpMax ?? scaled.hpMax,
+        attack: found?.attack ?? scaled.attack,
+        defense: found?.defense ?? kind.defense,
         attackRange: kind.attack_range,
         initiative: kind.initiative,
         regenBase: kind.regen_base ?? 0,
-        cpuBudget: kind.cpu_budget ?? 0,
+        cpuBudget: found?.cpuBudget ?? kind.cpu_budget ?? 0,
         potions: kind.potions ?? 0,
       }),
     )

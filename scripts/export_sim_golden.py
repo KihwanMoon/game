@@ -33,6 +33,7 @@ from game.app.simulation.selectors import (
 )
 from game.app.simulation.state import FACTION_ENEMY, Entity, WorldState
 from game.config import BALANCE_PATH, ROOM_TEMPLATES_PATH
+from game.schemas.monster_snapshot import MonsterSnapshot, build_snapshot_payload
 from game.schemas.room import RoomTemplate, load_room_templates
 
 GOLDEN_PATH = Path(__file__).resolve().parents[1] / "frontend/src/core/golden/sim_golden.json"
@@ -64,6 +65,46 @@ ACTION_CYCLE = (
     "SKILL_1",
     "HEAL",
     "USE_SKILL",
+)
+
+# 지속 몬스터 케이스. 스냅샷이 층 스케일을 **대체하는지**(얹는 것이 아니라) 가 여기서
+# 드러난다 — 얹으면 같은 개체가 층마다 다른 값을 갖게 되어 스냅샷의 뜻이 사라진다.
+SNAPSHOT_CASES: tuple[tuple[tuple[str, int, int], tuple[MonsterSnapshot, ...]], ...] = (
+    (
+        ("corridor", 31337, 1),
+        (
+            MonsterSnapshot(
+                entity_id="goblin_rusher_0",
+                record_id=1,
+                kind_id="goblin_rusher",
+                tier="ELITE",
+                level=7,
+                hp_max=96,
+                attack=17,
+                defense=5,
+                rule_slots=4,
+                cpu_budget=7,
+            ),
+        ),
+    ),
+    (
+        # 층 5 인데도 스냅샷 값이 그대로 쓰이는지 본다. 층 스케일이 얹히면 여기서 갈린다.
+        ("corridor", 31337, 5),
+        (
+            MonsterSnapshot(
+                entity_id="goblin_archer_1",
+                record_id=2,
+                kind_id="goblin_archer",
+                tier="BOSS",
+                level=12,
+                hp_max=140,
+                attack=24,
+                defense=9,
+                rule_slots=6,
+                cpu_budget=10,
+            ),
+        ),
+    ),
 )
 
 # USE_SKILL 이 실행할 스킬. 이 정책은 규칙표를 타지 않으므로 여기서 정한다.
@@ -213,6 +254,7 @@ def build_case(
     case: tuple[str, int, int],
     policy_name: str,
     extras: tuple[tuple[str, int, int], ...] = (),
+    snapshots: tuple[MonsterSnapshot, ...] = (),
 ) -> dict[str, Any]:
     """전투 한 판을 돌리고 대조용 레코드를 만든다.
 
@@ -222,13 +264,16 @@ def build_case(
         case: (템플릿 id, 시드, 층).
         policy_name: POLICY_FALLBACK 또는 POLICY_CYCLE.
         extras: 덧붙일 적 목록.
+        snapshots: 티켓이 얼려 둔 지속 몬스터 상태.
 
     Returns:
         JSON 에 넣을 레코드.
     """
     template_id, seed, floor = case
     template = find_template(templates, template_id)
-    engine = build_engine(template, balance, seed=seed, max_ticks=MAX_TICKS, floor=floor)
+    engine = build_engine(
+        template, balance, seed=seed, max_ticks=MAX_TICKS, floor=floor, snapshots=snapshots
+    )
     if policy_name == POLICY_CYCLE:
         engine.policy = CyclingPolicy({k["id"]: k["type"] for k in balance["enemies"]})
     if extras:
@@ -238,6 +283,7 @@ def build_case(
         "template_id": template_id,
         "seed": seed,
         "policy": policy_name,
+        "snapshots": [build_snapshot_payload(item) for item in snapshots],
         "max_ticks": MAX_TICKS,
         "floor": floor,
         "extra_enemies": [{"kind": kind, "x": x, "y": y} for kind, x, y in extras],
@@ -293,6 +339,12 @@ def build_battle_cases() -> list[dict[str, Any]]:
     cases.extend(
         build_case(balance, templates, (template_id, seed, floor), POLICY_CYCLE, extras)
         for template_id, seed, floor, extras in CYCLE_CASES
+    )
+    # 지속 몬스터 케이스. **이것이 없으면 두 코어가 스냅샷 겹치기에서 갈려도 골든이
+    # 침묵한다** — 지속 몬스터가 성립하는지가 여기 걸려 있다 (docs/설계/6_몬스터 §5).
+    cases.extend(
+        build_case(balance, templates, case, POLICY_FALLBACK, snapshots=snapshots)
+        for case, snapshots in SNAPSHOT_CASES
     )
     return cases
 

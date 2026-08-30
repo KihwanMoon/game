@@ -61,6 +61,9 @@ class TicketResponse(BaseModel):
     floor: int
     mode: str
     core_version: str
+    # 이 런이 만날 지속 몬스터의 얼어붙은 상태 (docs/설계/6_몬스터 §5).
+    # **제출 때 되보내지 않는다** — 서버가 ticket_id 로 자기 것을 조회한다 (T8).
+    monster_snapshot: list[dict] = Field(default_factory=list)
 
 
 class SubmissionRequest(BaseModel):
@@ -169,3 +172,26 @@ class WalletResponse(BaseModel):
 
     balance: int
     repair_cost: int
+
+
+class BestiaryEntry(BaseModel):
+    """도감 한 줄. **규칙표를 그대로 낸다** — 요약하면 카운터를 설계할 수 없다."""
+
+    record_id: int
+    catalog_id: str
+    label_ko: str
+    tier: str
+    level: int
+    level_cap: int
+    zone_floor: int
+    entity_slot: str
+    ruleset: dict | None = None
+    trophies: list[str] = Field(default_factory=list)
+    # 이 개체가 내 아이템을 들고 있는가. 되찾으러 가는 동기가 여기서 나온다.
+    holds_mine: bool = False
+
+
+class BestiaryResponse(BaseModel):
+    """도감 전체."""
+
+    entries: list[BestiaryEntry] = Field(default_factory=list)

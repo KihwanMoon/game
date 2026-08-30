@@ -19,6 +19,7 @@ from game.app.simulation.springs import init_spring_pools
 from game.app.simulation.state import FACTION_ENEMY, FACTION_PLAYER, Entity, WorldState
 from game.config import SKILLS_PATH
 from game.schemas.blocks import BlockCatalog
+from game.schemas.monster_snapshot import MonsterSnapshot, build_entity_id
 from game.schemas.room import RoomTemplate
 from game.schemas.ruleset import RuleSet
 
@@ -92,6 +93,7 @@ def build_engine(
     max_ticks: int = 400,
     floor: int = 1,
     pressure: PressureTracker | None = None,
+    snapshots: tuple[MonsterSnapshot, ...] = (),
 ) -> TickEngine:
     """방 템플릿과 밸런스 값으로 엔진을 조립한다.
 
@@ -105,6 +107,7 @@ def build_engine(
             HP 와 공격력에 floor_scale 의 퍼센트가 얹힌다.
         pressure: 층 단위 압력 추적기. 방마다 새로 만들면 층 체류 스케일이
             매 방 0 으로 돌아가므로 연쇄 실행은 하나를 만들어 계속 넘긴다.
+        snapshots: 티켓이 얼려 둔 지속 몬스터 상태. 해당 자리의 층 스케일을 대체한다.
 
     Returns:
         첫 틱을 돌릴 준비가 된 엔진.
@@ -135,22 +138,38 @@ def build_engine(
     kinds = balance["enemies"]
     by_id = {kind["id"]: kind for kind in kinds}
     scale = build_floor_scale(balance.get("floor_scale", {}))
+    # 스냅샷은 entity_id 로 겹친다. 방 배치가 `{kind}_{index}` 로 붙이므로 그 이름을
+    # 겨냥하며, 이름이 갈리면 스냅샷이 아무에게도 적용되지 않고 그 사실이 조용히 넘어간다.
+    overrides = {item.entity_id: item for item in snapshots}
     for index, spawn in enumerate(template.enemy_spawns):
         kind = by_id[spawn.kind]
+        entity_id = build_entity_id(kind["id"], index)
         hp_max, attack = get_scaled_enemy_stats(kind, scale, floor)
-        state.entities[f"{kind['id']}_{index}"] = Entity(
-            entity_id=f"{kind['id']}_{index}",
+        defense = kind["defense"]
+        cpu_budget = kind.get("cpu_budget", 0)
+        # 지속 몬스터가 이 자리에 있으면 얼려 둔 상태가 층 스케일을 **대체한다**.
+        # 얹으면 같은 개체가 층마다 다른 값을 갖게 되어 스냅샷의 뜻이 사라진다.
+        found = overrides.get(entity_id)
+        if found is not None:
+            hp_max, attack, defense, cpu_budget = (
+                found.hp_max,
+                found.attack,
+                found.defense,
+                found.cpu_budget,
+            )
+        state.entities[entity_id] = Entity(
+            entity_id=entity_id,
             kind_id=kind["id"],
             faction=FACTION_ENEMY,
             position=spawn.position,
             hp=hp_max,
             hp_max=hp_max,
             attack=attack,
-            defense=kind["defense"],
+            defense=defense,
             attack_range=kind["attack_range"],
             initiative=kind["initiative"],
             regen_base=kind["regen_base"],
-            cpu_budget=kind.get("cpu_budget", 0),
+            cpu_budget=cpu_budget,
             potions=kind.get("potions", 0),
         )
 

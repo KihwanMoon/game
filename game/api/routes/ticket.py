@@ -8,7 +8,9 @@ from fastapi import APIRouter, HTTPException, status
 
 from game.api.deps import CurrentAccount, get_context, get_core_version, get_pool
 from game.api.schemas import TicketRequest, TicketResponse
+from game.app.store.monsters import build_monster_snapshot, list_monsters, save_snapshots
 from game.app.store.tickets import create_ticket
+from game.schemas.monster_snapshot import build_snapshot_payload, sort_snapshots
 
 router = APIRouter()
 
@@ -27,7 +29,8 @@ def create_run_ticket(request: TicketRequest, account: CurrentAccount) -> Ticket
     Raises:
         HTTPException: 없는 방인 경우.
     """
-    if request.room_id not in get_context().rooms:
+    context = get_context()
+    if request.room_id not in context.rooms:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"없는 방이다: {request.room_id}")
     ticket = create_ticket(
         get_pool(),
@@ -37,4 +40,19 @@ def create_run_ticket(request: TicketRequest, account: CurrentAccount) -> Ticket
         floor=request.floor,
         wanted_seed=request.seed,
     )
-    return TicketResponse(**vars(ticket))
+    # 지속 몬스터를 **얼려 넣는다** (docs/설계/6_몬스터 §5). 이것이 있어야 런 등식이
+    # f(시드, 규칙표, 코어버전, 스냅샷) 으로 유지되고, 서버가 같은 상태로 재시뮬할 수 있다.
+    pool = get_pool()
+    balance_by_id = {kind["id"]: kind for kind in context.balance["enemies"]}
+    snapshots = sort_snapshots(
+        tuple(
+            build_monster_snapshot(record, balance_by_id[record.catalog_id])
+            for record in list_monsters(pool, request.floor)
+            if record.catalog_id in balance_by_id
+        )
+    )
+    save_snapshots(pool, ticket.ticket_id, snapshots)
+    return TicketResponse(
+        **vars(ticket),
+        monster_snapshot=[build_snapshot_payload(item) for item in snapshots],
+    )
