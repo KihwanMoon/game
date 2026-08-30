@@ -9,30 +9,59 @@
  *
  * 경매장은 **수수료율을 먼저 보여준다.** 걸기 전에 얼마가 나가는지 알아야 한다.
  */
-import { useState } from 'react'
+import { useState } from "react";
 
-import { Button, GlyphState, Panel, ValueExpr } from '../ds'
-import type { AuctionView, LeaderboardView, ProgressView } from '../storage'
+import { buildAttributeBonus } from "../core/progression/attributes";
+import { Button, GlyphState, Panel, ValueExpr } from "../ds";
+import type { AuctionView, LeaderboardView, ProgressView } from "../storage";
 
 export interface WorldPanelProps {
-  readonly progress: ProgressView | undefined
-  readonly leaderboard: LeaderboardView | undefined
-  readonly auction: AuctionView | undefined
-  readonly accountId: number | undefined
-  readonly isOnline: boolean
-  readonly detail: string
-  readonly onAllocate: (stats: Record<string, number>) => void
-  readonly onBuy: (listingId: number) => void
-  readonly onCancel: (listingId: number) => void
-  readonly onDaily: () => void
+  readonly progress: ProgressView | undefined;
+  readonly leaderboard: LeaderboardView | undefined;
+  readonly auction: AuctionView | undefined;
+  readonly accountId: number | undefined;
+  readonly isOnline: boolean;
+  readonly detail: string;
+  readonly onAllocate: (stats: Record<string, number>) => void;
+  readonly onBuy: (listingId: number) => void;
+  readonly onCancel: (listingId: number) => void;
+  readonly onDaily: () => void;
 }
 
-const OFFLINE_HINT = '서버에 닿지 못했다 — 순위와 경매는 서버가 안다'
+const OFFLINE_HINT = "서버에 닿지 못했다 — 순위와 경매는 서버가 안다";
+
+/**
+ * 이 배분이 지금 여는 것을 실측값으로 적는다 (결정 #51).
+ *
+ * **찍기 전에 보여야 한다.** 배분은 되돌릴 수 없고, "힘 +1" 만 적으면 그것이 공격력을
+ * 얼마나 올리는지 유저가 알 수 없다. 디자인 §8.2 가 조건문에 각 항의 실측값을 병기하라고
+ * 한 것과 같은 이유다.
+ *
+ * @param key 능력치 열쇠.
+ * @param points 그 축에 찍힌 점수(확정분 + 대기분).
+ * @returns 화면에 적을 문구. 0점이면 빈 문자열.
+ */
+export function formatAttributeEffect(key: string, points: number): string {
+  if (points <= 0) {
+    return "";
+  }
+  const bonus = buildAttributeBonus({ [key]: points });
+  if (key === "str") {
+    return `공격 +${String(bonus.attack)} · 체력 +${String(bonus.hpMax)}`;
+  }
+  if (key === "dex") {
+    return `선공 +${String(bonus.initiative)} · 방어 +${String(bonus.defense)}`;
+  }
+  if (key === "int") {
+    return `CPU +${String(bonus.cpuBudget)} · 스킬위력 ${String(bonus.skillPowerPct)}%`;
+  }
+  return "";
+}
 const STAT_LABELS: ReadonlyMap<string, string> = new Map([
-  ['str', '힘'],
-  ['dex', '민첩'],
-  ['int', '지능'],
-])
+  ["str", "힘"],
+  ["dex", "민첩"],
+  ["int", "지능"],
+]);
 
 /**
  * 세계 패널을 그린다.
@@ -41,10 +70,10 @@ const STAT_LABELS: ReadonlyMap<string, string> = new Map([
  * @returns 패널 요소.
  */
 export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
-  const { progress, leaderboard, auction, isOnline } = props
-  const [pending, setPending] = useState<Record<string, number>>({})
-  const left = (progress?.statPoints ?? 0) - (progress?.spentPoints ?? 0)
-  const staged = Object.values(pending).reduce((sum, value) => sum + value, 0)
+  const { progress, leaderboard, auction, isOnline } = props;
+  const [pending, setPending] = useState<Record<string, number>>({});
+  const left = (progress?.statPoints ?? 0) - (progress?.spentPoints ?? 0);
+  const staged = Object.values(pending).reduce((sum, value) => sum + value, 0);
 
   /**
    * 능력치 하나를 한 점 올린다. 남은 포인트를 넘기지 않는다.
@@ -53,15 +82,15 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
    */
   function addPoint(key: string): void {
     if (staged >= left) {
-      return
+      return;
     }
-    setPending((current) => ({ ...current, [key]: (current[key] ?? 0) + 1 }))
+    setPending((current) => ({ ...current, [key]: (current[key] ?? 0) + 1 }));
   }
 
   return (
     <Panel
       title="세계"
-      meta={leaderboard === undefined ? '' : `시즌 ${leaderboard.coreVersion}`}
+      meta={leaderboard === undefined ? "" : `시즌 ${leaderboard.coreVersion}`}
       tone="panel"
       padded
       scroll
@@ -87,14 +116,26 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
               />
             </div>
 
-            <div className="wld__head">능력치 · 남은 포인트 {String(left - staged)}</div>
+            <div className="wld__head">
+              능력치 · 남은 포인트 {String(left - staged)}
+            </div>
             <ul className="wld__list">
               {progress.statKeys.map((key) => (
                 <li className="wld__row" key={key}>
-                  <span className="wld__label">{STAT_LABELS.get(key) ?? key}</span>
+                  <span className="wld__label">
+                    {STAT_LABELS.get(key) ?? key}
+                  </span>
                   <ValueExpr
                     text={`${String((progress.stats[key] ?? 0) + (pending[key] ?? 0))}`}
                     size="sm"
+                  />
+                  <ValueExpr
+                    text={formatAttributeEffect(
+                      key,
+                      (progress.stats[key] ?? 0) + (pending[key] ?? 0),
+                    )}
+                    size="sm"
+                    dim
                   />
                   <Button
                     size="sm"
@@ -102,7 +143,7 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
                     glyph="＋"
                     disabled={staged >= left}
                     onClick={() => {
-                      addPoint(key)
+                      addPoint(key);
                     }}
                   />
                 </li>
@@ -114,12 +155,12 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
                   size="sm"
                   variant="primary"
                   onClick={() => {
-                    const next: Record<string, number> = { ...progress.stats }
+                    const next: Record<string, number> = { ...progress.stats };
                     for (const [key, value] of Object.entries(pending)) {
-                      next[key] = (next[key] ?? 0) + value
+                      next[key] = (next[key] ?? 0) + value;
                     }
-                    props.onAllocate(next)
-                    setPending({})
+                    props.onAllocate(next);
+                    setPending({});
                   }}
                 >
                   배분 확정
@@ -128,7 +169,7 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
                   size="sm"
                   variant="ghost"
                   onClick={() => {
-                    setPending({})
+                    setPending({});
                   }}
                 >
                   취소
@@ -176,7 +217,7 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
                         glyph="↰"
                         title="내린다 (수수료는 안 돌려준다)"
                         onClick={() => {
-                          props.onCancel(item.listingId)
+                          props.onCancel(item.listingId);
                         }}
                       />
                     ) : (
@@ -186,7 +227,7 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
                         glyph="↧"
                         disabled={(auction.balance ?? 0) < item.price}
                         onClick={() => {
-                          props.onBuy(item.listingId)
+                          props.onBuy(item.listingId);
                         }}
                       >
                         구매
@@ -198,18 +239,23 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
             )}
 
             <div className="wld__actions">
-              <Button size="sm" variant="secondary" glyph="◷" onClick={props.onDaily}>
+              <Button
+                size="sm"
+                variant="secondary"
+                glyph="◷"
+                onClick={props.onDaily}
+              >
                 오늘의 도전
               </Button>
             </div>
           </>
         )}
-        {props.detail === '' ? null : (
+        {props.detail === "" ? null : (
           <div className="wld__warn">
             <GlyphState state="danger" size="sm" label={props.detail} />
           </div>
         )}
       </div>
     </Panel>
-  )
+  );
 }

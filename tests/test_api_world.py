@@ -26,6 +26,9 @@ pytestmark = pytest.mark.skipif(
 
 ROOM_ID = "corridor"
 
+# 매물 조회 상한. 화면은 50줄만 보여주지만 검사는 "걸렸는가" 를 봐야 하므로 넉넉히 둔다.
+LISTING_PROBE_LIMIT = 10000
+
 
 @pytest.fixture
 def client():
@@ -38,6 +41,11 @@ def client():
 @pytest.fixture
 def token(client):
     return client.post("/api/account").json()["token"]
+
+
+def account_id_of(client, token):
+    """토큰으로 계정 id 를 얻는다."""
+    return client.get("/api/account", headers=build_headers(token)).json()["account_id"]
 
 
 def build_headers(token):
@@ -178,7 +186,7 @@ def test_daily_seed_is_derived_from_the_day():
 
 def test_listing_burns_a_fee(client, token):
     """★ 수수료가 이 게임의 유일한 화폐 배출구다."""
-    from game.app.store.auction import compute_fee
+    from game.app.store.auction import compute_fee, list_open
 
     headers = build_headers(token)
     grant_currency(client, token, 1000)
@@ -188,7 +196,13 @@ def test_listing_burns_a_fee(client, token):
         "/api/auction/list", json={"item_id": item_id, "price": 500}, headers=headers
     ).json()
     assert body["balance"] == before - compute_fee(500)
-    assert any(item["item_id"] == item_id for item in body["listings"])
+    # 응답의 `listings` 는 **싼 것부터 50줄**만 보여주는 화면용 목록이라, 매물이 쌓이면
+    # 방금 건 것이 페이지 밖으로 밀린다. 그것은 화면의 사정이지 "매물이 안 걸렸다" 가
+    # 아니므로, 걸렸는지는 저장 층에 직접 묻는다.
+    from game.api.deps import get_pool
+
+    listed = list_open(get_pool(), account_id_of(client, token), limit=LISTING_PROBE_LIMIT)
+    assert any(row.item_id == item_id for row in listed)
 
 
 def test_listing_removes_it_from_the_bag(client, token):

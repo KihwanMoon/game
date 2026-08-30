@@ -22,6 +22,9 @@ from dataclasses import dataclass
 # 장비의 것이 아니다 — 여기서 빼면 맨몸 플레이어가 아무 행동도 못 한다.
 BASE_SKILLS: tuple[str, ...] = ("ATTACK", "SKILL_1", "SKILL_2")
 
+# 스킬위력의 기준값. 100 이 "계수 그대로" 다.
+BASE_SKILL_POWER_PCT = 100
+
 
 @dataclass(frozen=True)
 class PlayerLoadout:
@@ -34,6 +37,9 @@ class PlayerLoadout:
     initiative: int
     cpu_budget: int
     rule_slots: int
+    # 이 캐릭터가 내는 스킬의 위력. 정수 퍼센트로 100 이 "계수 그대로" 다 (결정 #51).
+    # 지능이 여기를 올린다.
+    skill_power_pct: int
     skills: tuple[str, ...]
 
 
@@ -54,6 +60,9 @@ def parse_loadout(raw: dict) -> PlayerLoadout:
         initiative=int(raw["initiative"]),
         cpu_budget=int(raw["cpu_budget"]),
         rule_slots=int(raw["rule_slots"]),
+        # 없으면 기준값이다. 구버전 티켓이 남아 있어도 그것이 "위력 0" 이 되면
+        # 그 티켓으로 돌린 판이 전부 최소피해로 끝난다.
+        skill_power_pct=int(raw.get("skill_power_pct", BASE_SKILL_POWER_PCT)),
         # 정렬해서 담는다. 순서가 실행마다 다르면 같은 티켓이 다른 글자로 저장된다 (R5).
         skills=tuple(sorted(raw.get("skills", []))),
     )
@@ -76,5 +85,6 @@ def build_loadout_payload(loadout: PlayerLoadout) -> dict:
         "initiative": loadout.initiative,
         "cpu_budget": loadout.cpu_budget,
         "rule_slots": loadout.rule_slots,
+        "skill_power_pct": loadout.skill_power_pct,
         "skills": list(loadout.skills),
     }

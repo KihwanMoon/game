@@ -879,6 +879,7 @@ describe('로드아웃 배선 (결정 #13)', () => {
     initiative: 56,
     cpuBudget: 11,
     ruleSlots: 6,
+    skillPowerPct: 100,
     skills: ['ATTACK', 'SKILL_2'],
   }
 

@@ -85,8 +85,8 @@ def read_player_progress(account: CurrentAccount) -> ProgressResponse:
 def save_player_stats(request: AllocationRequest, account: CurrentAccount) -> ProgressResponse:
     """능력치를 배분한다.
 
-    **무엇을 여는지는 아직 정해지지 않았다** (미결 #51). 배분은 받아 두고, 변환표가
-    정해지면 그것을 읽는 쪽이 생긴다.
+    **되돌릴 수 없다.** 무엇을 여는지는 `progression/attributes.py` 가 정하며 (결정 #51),
+    다음 런의 티켓 로드아웃에 반영된다 — 이미 발급한 티켓은 바뀌지 않는다.
 
     Args:
         request: 배분표.

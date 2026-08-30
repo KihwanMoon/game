@@ -341,9 +341,13 @@ class ActionExecutor(SupportActionMixin):
             for other in self.state.list_hostiles(target)
             if get_manhattan_distance(other.position, target.position) <= MELEE_REACH
         )
+        # 스킬 계수(스킬이 정한다)와 스킬위력(개체가 정한다)은 다른 것이다. 곱해서
+        # 넘기는 이유는 수식이 계수 하나만 받기 때문이며, 정수 곱 뒤 내림 나눗셈이라
+        # 기본값 100 에서는 결과가 한 톨도 바뀌지 않는다 (결정 #51).
+        coef_pct = self.config.skill_coef_pct.get(plan.action_id, PERCENT_BASE)
         amount = calculate_damage(
             attack=entity.attack,
-            skill_coef_pct=self.config.skill_coef_pct.get(plan.action_id, 100),
+            skill_coef_pct=coef_pct * entity.skill_power_pct // PERCENT_BASE,
             defense=target.defense,
             floor=self.config.floor,
             adjacent_enemies=adjacent,

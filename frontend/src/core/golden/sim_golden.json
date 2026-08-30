@@ -31,6 +31,76 @@
   ],
   "cycle_flag": "A=true",
   "cycle_skill": "SKILL_2",
+  "attributes": [
+    {
+      "stats": {},
+      "attack": 0,
+      "hp_max": 0,
+      "initiative": 0,
+      "defense": 0,
+      "cpu_budget": 0,
+      "skill_power_pct": 100
+    },
+    {
+      "stats": {
+        "str": 10
+      },
+      "attack": 10,
+      "hp_max": 40,
+      "initiative": 0,
+      "defense": 0,
+      "cpu_budget": 0,
+      "skill_power_pct": 100
+    },
+    {
+      "stats": {
+        "dex": 7
+      },
+      "attack": 0,
+      "hp_max": 0,
+      "initiative": 14,
+      "defense": 7,
+      "cpu_budget": 0,
+      "skill_power_pct": 100
+    },
+    {
+      "stats": {
+        "int": 40
+      },
+      "attack": 0,
+      "hp_max": 0,
+      "initiative": 0,
+      "defense": 0,
+      "cpu_budget": 8,
+      "skill_power_pct": 180
+    },
+    {
+      "stats": {
+        "dex": 5,
+        "int": 5,
+        "str": 5
+      },
+      "attack": 5,
+      "hp_max": 20,
+      "initiative": 10,
+      "defense": 5,
+      "cpu_budget": 1,
+      "skill_power_pct": 110
+    },
+    {
+      "stats": {
+        "dex": 0,
+        "int": 2,
+        "str": -3
+      },
+      "attack": 0,
+      "hp_max": 0,
+      "initiative": 0,
+      "defense": 0,
+      "cpu_budget": 0,
+      "skill_power_pct": 104
+    }
+  ],
   "battles": [
     {
       "template_id": "open_field",
@@ -6618,6 +6688,7 @@
         "initiative": 56,
         "cpu_budget": 11,
         "rule_slots": 6,
+        "skill_power_pct": 100,
         "skills": [
           "ATTACK",
           "GUARD_BRACE",
@@ -6755,6 +6826,7 @@
         "initiative": 50,
         "cpu_budget": 8,
         "rule_slots": 5,
+        "skill_power_pct": 100,
         "skills": [
           "ATTACK",
           "SKILL_2"
@@ -6865,6 +6937,122 @@
         "T012 | player                 적거리(3) <= 사거리(4) → ATTACK @goblin_archer_1",
         "T012 | goblin_archer_1        적거리(3) <= 사거리(4) → ATTACK @player",
         "T012 | player                 ATTACK @goblin_archer_1 → goblin_archer_1 HP 0/26 사망 (-10)"
+      ]
+    },
+    {
+      "template_id": "corridor",
+      "seed": 8080,
+      "policy": "fallback",
+      "snapshots": [],
+      "loadout": {
+        "hp_max": 96,
+        "attack": 11,
+        "defense": 4,
+        "attack_range": 4,
+        "initiative": 50,
+        "cpu_budget": 8,
+        "rule_slots": 5,
+        "skill_power_pct": 160,
+        "skills": [
+          "ATTACK",
+          "SKILL_2"
+        ]
+      },
+      "max_ticks": 400,
+      "floor": 1,
+      "extra_enemies": [],
+      "outcome": "PLAYER_WIN",
+      "ticks": 10,
+      "player_hp": 87,
+      "spawn_counter": 0,
+      "entities": [
+        {
+          "entity_id": "goblin_archer_1",
+          "hp": 0,
+          "x": 7,
+          "y": 4,
+          "attack": 10,
+          "potions": 0,
+          "cooldowns": {},
+          "flags": {}
+        },
+        {
+          "entity_id": "goblin_rusher_0",
+          "hp": 0,
+          "x": 4,
+          "y": 4,
+          "attack": 8,
+          "potions": 0,
+          "cooldowns": {},
+          "flags": {}
+        },
+        {
+          "entity_id": "player",
+          "hp": 87,
+          "x": 4,
+          "y": 4,
+          "attack": 11,
+          "potions": 2,
+          "cooldowns": {},
+          "flags": {}
+        }
+      ],
+      "log_line_count": 54,
+      "log_lines": [
+        "T001 | goblin_rusher_0        적거리(9) > 사거리(1) → APPROACH @player",
+        "T001 | player                 적거리(9) > 사거리(4) → APPROACH @goblin_rusher_0",
+        "T001 | goblin_archer_1        적거리(11) > 사거리(4) → APPROACH @player",
+        "T001 | goblin_rusher_0        APPROACH @player → 이동 (9, 3)",
+        "T001 | player                 APPROACH @goblin_rusher_0 → 이동 (2, 3)",
+        "T001 | goblin_archer_1        APPROACH @player → 이동 (9, 5)",
+        "T002 | goblin_rusher_0        적거리(7) > 사거리(1) → APPROACH @player",
+        "T002 | player                 적거리(7) > 사거리(4) → APPROACH @goblin_rusher_0",
+        "T002 | goblin_archer_1        적거리(9) > 사거리(4) → APPROACH @player",
+        "T002 | goblin_rusher_0        APPROACH @player → 이동 (9, 4)",
+        "T002 | player                 APPROACH @goblin_rusher_0 → 이동 (3, 3)",
+        "T002 | goblin_archer_1        APPROACH @player → 이동 (8, 5)",
+        "T003 | goblin_rusher_0        적거리(7) > 사거리(1) → APPROACH @player",
+        "T003 | player                 적거리(7) > 사거리(4) → APPROACH @goblin_archer_1",
+        "T003 | goblin_archer_1        적거리(7) > 사거리(4) → APPROACH @player",
+        "T003 | goblin_rusher_0        APPROACH @player → 이동 (8, 4)",
+        "T003 | player                 APPROACH @goblin_archer_1 → 이동 (4, 3)",
+        "T003 | goblin_archer_1        APPROACH @player → 이동 (7, 5)",
+        "T004 | goblin_rusher_0        적거리(5) > 사거리(1) → APPROACH @player",
+        "T004 | player                 적거리(5) > 사거리(4) → APPROACH @goblin_archer_1",
+        "T004 | goblin_archer_1        적거리(5) > 사거리(4) → APPROACH @player",
+        "T004 | goblin_rusher_0        APPROACH @player → 이동 (7, 4)",
+        "T004 | player                 APPROACH @goblin_archer_1 → 길 막힘 — 틱 낭비",
+        "T004 | goblin_archer_1        APPROACH @player → 길 막힘 — 틱 낭비",
+        "T005 | goblin_rusher_0        적거리(4) > 사거리(1) → APPROACH @player",
+        "T005 | player                 적거리(4) <= 사거리(4) → ATTACK @goblin_rusher_0",
+        "T005 | goblin_archer_1        적거리(5) > 사거리(4) → APPROACH @player",
+        "T005 | goblin_rusher_0        APPROACH @player → 이동 (6, 4)",
+        "T005 | goblin_archer_1        APPROACH @player → 길 막힘 — 틱 낭비",
+        "T005 | player                 ATTACK @goblin_rusher_0 → goblin_rusher_0 HP 23/40 (-17)",
+        "T006 | goblin_rusher_0        적거리(3) > 사거리(1) → APPROACH @player",
+        "T006 | player                 적거리(3) <= 사거리(4) → ATTACK @goblin_rusher_0",
+        "T006 | goblin_archer_1        적거리(5) > 사거리(4) → APPROACH @player",
+        "T006 | goblin_rusher_0        APPROACH @player → 이동 (5, 4)",
+        "T006 | goblin_archer_1        APPROACH @player → 길 막힘 — 틱 낭비",
+        "T006 | player                 ATTACK @goblin_rusher_0 → goblin_rusher_0 HP 6/40 (-17)",
+        "T007 | goblin_rusher_0        적거리(2) > 사거리(1) → APPROACH @player",
+        "T007 | player                 적거리(2) <= 사거리(4) → ATTACK @goblin_rusher_0",
+        "T007 | goblin_archer_1        적거리(5) > 사거리(4) → APPROACH @player",
+        "T007 | goblin_rusher_0        APPROACH @player → 이동 (4, 4)",
+        "T007 | goblin_archer_1        APPROACH @player → 길 막힘 — 틱 낭비",
+        "T007 | player                 ATTACK @goblin_rusher_0 → goblin_rusher_0 HP 0/40 사망 (-17)",
+        "T008 | player                 적거리(5) > 사거리(4) → APPROACH @goblin_archer_1",
+        "T008 | goblin_archer_1        적거리(5) > 사거리(4) → APPROACH @player",
+        "T008 | player                 APPROACH @goblin_archer_1 → 이동 (4, 4)",
+        "T008 | goblin_archer_1        APPROACH @player → 이동 (7, 4)",
+        "T009 | player                 적거리(3) <= 사거리(4) → ATTACK @goblin_archer_1",
+        "T009 | goblin_archer_1        적거리(3) <= 사거리(4) → ATTACK @player",
+        "T009 | player                 ATTACK @goblin_archer_1 → goblin_archer_1 HP 9/26 (-17)",
+        "T009 | goblin_archer_1        ATTACK @player → player HP 87/96 (-9)",
+        "T010 | world                  층 체류(10) / 단위(10) → 적 공격력 +1%",
+        "T010 | player                 적거리(3) <= 사거리(4) → ATTACK @goblin_archer_1",
+        "T010 | goblin_archer_1        적거리(3) <= 사거리(4) → ATTACK @player",
+        "T010 | player                 ATTACK @goblin_archer_1 → goblin_archer_1 HP 0/26 사망 (-17)"
       ]
     }
   ]

@@ -15,6 +15,9 @@ import { type RoomTemplate, getRoomTile } from '../schemas'
 import type { TileReader } from '../grid/vision'
 import { sortByKey } from '../ordering'
 
+/** 정수 퍼센트의 기준. 100 이 "계수 그대로" 다. */
+export const PERCENT_BASE = 100
+
 export const FACTION_PLAYER = 'player'
 export const FACTION_ENEMY = 'enemy'
 
@@ -33,6 +36,12 @@ export interface Entity {
   regenBase: number
   cpuBudget: number
   potions: number
+  /**
+   * 이 개체가 내는 스킬의 위력. 정수 퍼센트로 100 이 "계수 그대로" 다 (결정 #51).
+   *
+   * 지능이 여기를 올린다. 개체마다 다르므로 스킬 카탈로그가 아니라 개체가 갖는다.
+   */
+  skillPowerPct: number
   /** 누가 불러냈는가. 소환 상한을 소환사별로 세기 위해 필요하다. */
   summonerId: string | null
   /**
@@ -63,6 +72,7 @@ export interface EntityInput {
   readonly regenBase?: number
   readonly cpuBudget?: number
   readonly potions?: number
+  readonly skillPowerPct?: number
   readonly summonerId?: string | null
   readonly skills?: readonly string[] | null
   readonly cooldowns?: ReadonlyMap<string, number>
@@ -91,6 +101,7 @@ export function createEntity(input: EntityInput): Entity {
     regenBase: input.regenBase ?? 0,
     cpuBudget: input.cpuBudget ?? 0,
     potions: input.potions ?? 0,
+    skillPowerPct: input.skillPowerPct ?? PERCENT_BASE,
     summonerId: input.summonerId ?? null,
     skills: input.skills ?? null,
     cooldowns: new Map(input.cooldowns ?? []),

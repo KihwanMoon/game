@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { WorldPanel } from './WorldPanel'
+import { WorldPanel, formatAttributeEffect } from './WorldPanel'
 import type { AuctionView, LeaderboardView, ProgressView } from '../storage'
 
 const noop = () => undefined
@@ -126,5 +126,23 @@ describe('세계 패널 스타일', () => {
 
   it('자체 미디어쿼리를 두지 않는다', () => {
     expect(block).not.toContain('@media')
+  })
+})
+
+describe('능력치 미리보기 (결정 #51)', () => {
+  it('★ 찍기 전에 무엇이 오르는지 실측값으로 보인다', () => {
+    // "힘 +1" 만 적으면 그것이 공격력을 얼마나 올리는지 알 수 없다. 배분은 되돌릴 수
+    // 없으므로 찍기 전에 값이 보여야 한다 (디자인 §8.2 와 같은 이유).
+    expect(formatAttributeEffect('str', 10)).toBe('공격 +10 · 체력 +40')
+    expect(formatAttributeEffect('dex', 7)).toBe('선공 +14 · 방어 +7')
+  })
+
+  it('★ 지능의 CPU 상한이 화면에도 보인다', () => {
+    // 상한을 화면이 숨기면 유저는 안 오르는 축에 계속 찍는다.
+    expect(formatAttributeEffect('int', 40)).toBe('CPU +8 · 스킬위력 180%')
+  })
+
+  it('0점이면 아무것도 적지 않는다 — 빈 줄이 세 개 늘면 목록이 읽히지 않는다', () => {
+    expect(formatAttributeEffect('str', 0)).toBe('')
   })
 })

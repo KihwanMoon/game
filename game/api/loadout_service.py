@@ -48,6 +48,7 @@ def build_ticket_loadout(account_id: int) -> dict:
         equipped,
         progress.level,
         int(player["rule_slots"]),
+        progress.stats,
     )
     return build_loadout_payload(loadout)
 

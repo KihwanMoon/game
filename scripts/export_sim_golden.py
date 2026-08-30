@@ -21,6 +21,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from game.app.progression.attributes import build_attribute_bonus
 from game.app.services.run_battle import build_engine, load_balance, run_battle
 from game.app.simulation.engine import TickEngine
 from game.app.simulation.perception import PerceptionSnapshot
@@ -34,6 +35,7 @@ from game.schemas.monster_snapshot import MonsterSnapshot, build_snapshot_payloa
 from game.schemas.room import RoomTemplate, load_room_templates
 from scripts.sim_golden_cases import (
     ACTION_CYCLE,
+    ATTRIBUTE_CASES,
     CYCLE_CASES,
     CYCLE_FLAG,
     CYCLE_SELECTORS,
@@ -266,6 +268,29 @@ def build_battle_cases() -> list[dict[str, Any]]:
     return cases
 
 
+def build_attribute_rows() -> list[dict[str, Any]]:
+    """능력치 변환 대조 사례를 만든다 (결정 #51).
+
+    Returns:
+        배분표와 그것이 만드는 가산분의 쌍들.
+    """
+    rows: list[dict[str, Any]] = []
+    for stats in ATTRIBUTE_CASES:
+        bonus = build_attribute_bonus(stats)
+        rows.append(
+            {
+                "stats": dict(sorted(stats.items())),
+                "attack": bonus.attack,
+                "hp_max": bonus.hp_max,
+                "initiative": bonus.initiative,
+                "defense": bonus.defense,
+                "cpu_budget": bonus.cpu_budget,
+                "skill_power_pct": bonus.skill_power_pct,
+            }
+        )
+    return rows
+
+
 def build_golden_document() -> dict[str, Any]:
     """기준 문서 전체를 만든다.
 
@@ -284,6 +309,7 @@ def build_golden_document() -> dict[str, Any]:
         "cycle_selectors": [[action, selector] for action, selector in CYCLE_SELECTORS.items()],
         "cycle_flag": CYCLE_FLAG,
         "cycle_skill": CYCLE_SKILL,
+        "attributes": build_attribute_rows(),
         "battles": build_battle_cases(),
     }
 

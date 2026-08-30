@@ -15,6 +15,9 @@
 export const BASE_SKILLS: readonly string[] = ['ATTACK', 'SKILL_1', 'SKILL_2']
 
 /** 런 하나의 플레이어 전투 입력. 티켓이 얼려 둔 값이다. */
+/** 스킬위력의 기준값. 100 이 "계수 그대로" 다. */
+export const BASE_SKILL_POWER_PCT = 100
+
 export interface PlayerLoadout {
   readonly hpMax: number
   readonly attack: number
@@ -23,6 +26,11 @@ export interface PlayerLoadout {
   readonly initiative: number
   readonly cpuBudget: number
   readonly ruleSlots: number
+  /**
+   * 이 캐릭터가 내는 스킬의 위력. 정수 퍼센트로 100 이 "계수 그대로" 다 (결정 #51).
+   * 지능이 여기를 올린다.
+   */
+  readonly skillPowerPct: number
   readonly skills: readonly string[]
 }
 
@@ -35,6 +43,7 @@ export interface RawPlayerLoadout {
   readonly initiative: number
   readonly cpu_budget: number
   readonly rule_slots: number
+  readonly skill_power_pct?: number
   readonly skills: readonly string[]
 }
 
@@ -53,6 +62,9 @@ export function parseLoadout(raw: RawPlayerLoadout): PlayerLoadout {
     initiative: raw.initiative,
     cpuBudget: raw.cpu_budget,
     ruleSlots: raw.rule_slots,
+    // 없으면 기준값이다. 구버전 티켓이 "위력 0" 으로 읽히면 그 티켓으로 돌린 판이
+    // 전부 최소피해로 끝난다.
+    skillPowerPct: raw.skill_power_pct ?? BASE_SKILL_POWER_PCT,
     // 정렬해서 담는다. 순서가 실행마다 다르면 같은 티켓이 다른 글자로 저장된다 (R5).
     skills: [...raw.skills].sort(),
   }

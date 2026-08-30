@@ -308,3 +308,32 @@ def test_heal_on_a_full_ally_wastes_the_tick(templates, balance):
     engine.actions.apply_heal(healer, plan)
     assert ally.hp == ally.hp_max
     assert "HEAL" not in healer.cooldowns
+
+
+def test_skill_power_reaches_the_damage_formula():
+    """★ 지능이 전투에 닿는 유일한 경로다 (결정 #51).
+
+    같은 공격력에서 스킬위력만 다르면 피해가 달라져야 한다. 안 달라지면 지능의 절반이
+    죽은 값이다.
+    """
+    from game.app.combat.damage import DamageRules, calculate_damage
+
+    rules = DamageRules(
+        soft_cap_base=40,
+        soft_cap_per_floor=6,
+        surround_step_pct=15,
+        surround_cap_pct=145,
+        min_damage=1,
+    )
+    plain = calculate_damage(
+        attack=20, skill_coef_pct=100, defense=5, floor=1, adjacent_enemies=1, rules=rules
+    )
+    boosted = calculate_damage(
+        attack=20,
+        skill_coef_pct=100 * 160 // 100,
+        defense=5,
+        floor=1,
+        adjacent_enemies=1,
+        rules=rules,
+    )
+    assert boosted > plain

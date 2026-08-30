@@ -23,7 +23,7 @@ import { TILE_DOOR, TILE_SPRING, TILE_STAIRS, WALKABLE_TILES } from '../schemas'
 import { registerBlast, resolveHeal, resolvePotion, resolveSummon } from './abilities'
 import { PHASE_ACT } from './phases'
 import type { EngineConfig, PlannedAction, RawTelegraphSetting } from './plan'
-import { type Entity, type WorldState, isAlive } from './state'
+import { PERCENT_BASE, type Entity, type WorldState, isAlive } from './state'
 import { TelegraphBoard } from './telegraph'
 
 /** 이동 계열 행동. ACT 는 이 다섯을 먼저 처리한다. */
@@ -476,7 +476,14 @@ export class ActionExecutor {
       ).length
     const amount = calculateDamage({
       attack: entity.attack,
-      skillCoefPct: this.config.skillCoefPct.get(plan.actionId) ?? DEFAULT_SKILL_COEF_PCT,
+      // 스킬 계수(스킬이 정한다)와 스킬위력(개체가 정한다)은 다른 것이다. 곱해서
+      // 넘기는 이유는 수식이 계수 하나만 받기 때문이며, 정수 곱 뒤 내림 나눗셈이라
+      // 기본값 100 에서는 결과가 한 톨도 바뀌지 않는다 (결정 #51).
+      skillCoefPct: Math.floor(
+        ((this.config.skillCoefPct.get(plan.actionId) ?? DEFAULT_SKILL_COEF_PCT) *
+          entity.skillPowerPct) /
+          PERCENT_BASE,
+      ),
       defense: target.defense,
       floor: this.config.floor,
       adjacentEnemies: adjacent,

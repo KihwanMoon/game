@@ -9,6 +9,9 @@ from dataclasses import dataclass, field
 from game.app.core.rng import DeterministicRng
 from game.schemas.room import RoomTemplate
 
+# 정수 퍼센트의 기준. 100 이 "계수 그대로" 다. 저장소의 다른 모듈들과 같이 지역 선언한다.
+PERCENT_BASE = 100
+
 FACTION_PLAYER = "player"
 FACTION_ENEMY = "enemy"
 
@@ -29,6 +32,9 @@ class Entity:
     initiative: int
     regen_base: int = 0
     cpu_budget: int = 0
+    # 이 개체가 내는 스킬의 위력. 정수 퍼센트이며 100 이 "계수 그대로" 다 (결정 #51).
+    # 지능이 여기를 올린다. 개체마다 다르므로 스킬 카탈로그가 아니라 개체가 갖는다.
+    skill_power_pct: int = PERCENT_BASE
     potions: int = 0
     # 누가 불러냈는가. 소환 상한을 소환사별로 세기 위해 필요하다.
     summoner_id: str | None = None

@@ -30,7 +30,7 @@ import type { RawDamageFormula } from '../combat/damage'
 import { FACTION_ENEMY, FACTION_PLAYER, WorldState, createEntity } from '../sim/state'
 import type { Entity } from '../sim/state'
 import { buildEntityId, type MonsterSnapshot } from '../schemas/monsterSnapshot'
-import type { PlayerLoadout } from '../schemas/loadout'
+import { BASE_SKILL_POWER_PCT, type PlayerLoadout } from '../schemas/loadout'
 
 /** 이 틱을 넘기면 시간 초과로 끝낸다. */
 export const DEFAULT_MAX_TICKS = 400
@@ -202,6 +202,8 @@ export function buildEngine(setup: EngineSetup): TickEngine {
       initiative: loadout?.initiative ?? playerStats.initiative,
       regenBase: playerStats.regen_base,
       cpuBudget: loadout?.cpuBudget ?? playerStats.cpu_budget,
+      // 지능이 올린 스킬위력. 로드아웃이 없으면 기준값이라 기존 판이 그대로다.
+      skillPowerPct: loadout?.skillPowerPct ?? BASE_SKILL_POWER_PCT,
       potions: playerStats.potions,
       // null 은 "장착 개념이 배선되지 않음" 이라 전부 허용한다 — 오프라인 연습이
       // 그 경우다. 로드아웃이 있으면 그 목록만 쓴다.

@@ -9,7 +9,7 @@
 """
 
 from game.app.simulation.selectors import SELECTOR_ALLY_WOUNDED
-from game.schemas.loadout import PlayerLoadout
+from game.schemas.loadout import BASE_SKILL_POWER_PCT, PlayerLoadout
 from game.schemas.monster_snapshot import MonsterSnapshot
 
 POLICY_FALLBACK = "fallback"
@@ -94,6 +94,7 @@ LOADOUT_CASES: tuple[tuple[tuple[str, int, int], PlayerLoadout], ...] = (
             initiative=56,
             cpu_budget=11,
             rule_slots=6,
+            skill_power_pct=BASE_SKILL_POWER_PCT,
             skills=("ATTACK", "GUARD_BRACE", "SKILL_1", "SKILL_2"),
         ),
     ),
@@ -108,6 +109,23 @@ LOADOUT_CASES: tuple[tuple[tuple[str, int, int], PlayerLoadout], ...] = (
             initiative=50,
             cpu_budget=8,
             rule_slots=5,
+            skill_power_pct=BASE_SKILL_POWER_PCT,
+            skills=("ATTACK", "SKILL_2"),
+        ),
+    ),
+    (
+        # 지능이 올린 스킬위력. 앞의 두 사례와 **공격력이 같은데** 피해가 달라야
+        # 한다 — 그것이 지능이 실제로 전투에 닿는다는 증거다 (결정 #51).
+        ("corridor", 8080, 1),
+        PlayerLoadout(
+            hp_max=96,
+            attack=11,
+            defense=4,
+            attack_range=4,
+            initiative=50,
+            cpu_budget=8,
+            rule_slots=5,
+            skill_power_pct=160,
             skills=("ATTACK", "SKILL_2"),
         ),
     ),
@@ -151,4 +169,19 @@ CYCLE_CASES = (
     # 층 깊이 스케일이 걸린 채로 행동 14개를 다 돌린다. 방 배치·소환·덧붙인 적이 모두
     # 같은 기준으로 서는지 여기서 고정된다 (docs/04 P-1).
     ("pillars", 3131, 3, (("arch_summoner", 7, 4), ("veteran_rusher", 4, 6))),
+)
+
+
+# 능력치 변환 대조 사례 (결정 #51). 브라우저는 배분 결과를 **미리보기**로 보여 주므로
+# 변환표 사본을 갖는데, 두 사본이 갈라지면 화면이 거짓말을 한다. 실제 전투는 서버가
+# 계산하므로 갈라져도 판정은 맞지만, 유저는 찍기 전에 본 숫자를 믿고 찍는다.
+ATTRIBUTE_CASES: tuple[dict[str, int], ...] = (
+    {},
+    {"str": 10},
+    {"dex": 7},
+    # CPU 상한을 넘긴다 — 상한이 양쪽에 같이 있는지 본다.
+    {"int": 40},
+    {"str": 5, "dex": 5, "int": 5},
+    # 손상된 값. 음수 배분이 스탯을 깎으면 안 된다.
+    {"str": -3, "dex": 0, "int": 2},
 )

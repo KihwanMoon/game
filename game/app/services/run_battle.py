@@ -19,7 +19,7 @@ from game.app.simulation.springs import init_spring_pools
 from game.app.simulation.state import FACTION_ENEMY, FACTION_PLAYER, Entity, WorldState
 from game.config import SKILLS_PATH
 from game.schemas.blocks import BlockCatalog
-from game.schemas.loadout import PlayerLoadout
+from game.schemas.loadout import BASE_SKILL_POWER_PCT, PlayerLoadout
 from game.schemas.monster_snapshot import MonsterSnapshot, build_entity_id
 from game.schemas.room import RoomTemplate
 from game.schemas.ruleset import RuleSet
@@ -139,6 +139,8 @@ def build_engine(
         initiative=loadout.initiative if loadout else player_stats["initiative"],
         regen_base=player_stats["regen_base"],
         cpu_budget=loadout.cpu_budget if loadout else player_stats["cpu_budget"],
+        # 지능이 올린 스킬위력. 로드아웃이 없으면 기준값이라 기존 판이 그대로다.
+        skill_power_pct=loadout.skill_power_pct if loadout else BASE_SKILL_POWER_PCT,
         potions=player_stats["potions"],
         # None 은 "장착 개념이 배선되지 않음" 이라 전부 허용한다 — 오프라인 연습이
         # 그 경우다. 로드아웃이 있으면 그 목록만 쓴다.
