@@ -16,6 +16,12 @@
 
 from fastapi import APIRouter, HTTPException, status
 
+from game.api.catalog_view import (
+    build_curve_caps,
+    build_enemy_rows,
+    build_item_rows,
+    build_level_curve,
+)
 from game.api.deps import (
     CurrentAdmin,
     get_context,
@@ -25,6 +31,7 @@ from game.api.deps import (
 )
 from game.api.schemas import (
     AdminActionView,
+    AdminCatalogResponse,
     AdminHeldItemView,
     AdminMonsterView,
     AdminOverviewResponse,
@@ -238,3 +245,25 @@ def create_item_recall(request: AdminReasonRequest, account: CurrentAdmin) -> Ad
         reason,
     )
     return read_admin_overview(account)
+
+
+@router.get("/api/admin/catalog", response_model=AdminCatalogResponse)
+def read_admin_catalog(account: CurrentAdmin) -> AdminCatalogResponse:
+    """콘텐츠 카탈로그와 레벨 곡선을 본다.
+
+    **게임이 읽는 그대로 보여 준다.** 별도 표를 만들어 두면 화면에 적힌 값과 전투가
+    쓰는 값이 갈라지고, 그때 이 뷰어는 도움이 아니라 오해의 근원이 된다.
+
+    Args:
+        account: 관리자 계정.
+
+    Returns:
+        아이템·적·레벨 곡선.
+    """
+    return AdminCatalogResponse(
+        core_version=get_core_version(),
+        items=build_item_rows(get_item_catalog()),
+        enemies=build_enemy_rows(get_context().balance),
+        level_curve=build_level_curve(count_levels(get_pool())),
+        caps=build_curve_caps(),
+    )

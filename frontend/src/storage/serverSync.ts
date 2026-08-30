@@ -1060,3 +1060,120 @@ export async function applyAdminAction(
   }
   return { overview: parseAdminOverview(body), detail: '' }
 }
+
+/** 카탈로그 한 줄 — 아이템. */
+export interface CatalogItemRow {
+  readonly catalogId: string
+  readonly labelKo: string
+  readonly kind: string
+  readonly slot: string
+  readonly hands: string
+  readonly grantsSkill: string
+  readonly affixes: readonly string[]
+  readonly requirements: readonly string[]
+}
+
+/** 카탈로그 한 줄 — 적. */
+export interface CatalogEnemyRow {
+  readonly kindId: string
+  readonly labelKo: string
+  readonly type: string
+  readonly rulesetId: string
+  readonly hpMax: number
+  readonly attack: number
+  readonly defense: number
+  readonly attackRange: number
+}
+
+/** 레벨 곡선 한 줄. **실제 인원이 함께 온다** — 곡선만 보면 튜닝할 수 없다. */
+export interface LevelCurveRow {
+  readonly level: number
+  readonly requiredXp: number
+  readonly totalXp: number
+  readonly bonusRuleSlots: number
+  readonly bonusCpu: number
+  readonly bonusFlags: number
+  readonly statPoints: number
+  readonly attackIfAllStr: number
+  readonly players: number
+}
+
+/** 콘텐츠 카탈로그. 읽기 전용이다. */
+export interface AdminCatalog {
+  readonly coreVersion: string
+  readonly items: readonly CatalogItemRow[]
+  readonly enemies: readonly CatalogEnemyRow[]
+  readonly levelCurve: readonly LevelCurveRow[]
+  readonly caps: {
+    readonly maxBonusRuleSlots: number
+    readonly maxBonusCpu: number
+    readonly maxBonusFlags: number
+  }
+}
+
+/**
+ * 콘텐츠 카탈로그를 읽는다.
+ *
+ * **관리자가 아니면 404 다** — 그때는 undefined 를 돌려주고 화면이 아무것도 그리지 않는다.
+ *
+ * @param token 기기 토큰.
+ * @returns 카탈로그. 관리자가 아니거나 서버에 못 닿으면 undefined.
+ */
+export async function readAdminCatalog(token: string): Promise<AdminCatalog | undefined> {
+  const response = await sendRequest('/admin/catalog', { headers: { [TOKEN_HEADER]: token } })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  const body = (await response.json()) as {
+    core_version: string
+    items: Record<string, unknown>[]
+    enemies: Record<string, unknown>[]
+    level_curve: Record<string, number>[]
+    caps: Record<string, number>
+  }
+  return {
+    coreVersion: body.core_version,
+    items: body.items.map((row) => {
+      const item = row as { affixes: string[]; requirements: string[] } & Record<string, string>
+      return {
+        catalogId: String(item.catalog_id),
+        labelKo: String(item.label_ko),
+        kind: String(item.kind),
+        slot: String(item.slot),
+        hands: String(item.hands),
+        grantsSkill: String(item.grants_skill),
+        affixes: [...item.affixes],
+        requirements: [...item.requirements],
+      }
+    }),
+    enemies: body.enemies.map((row) => {
+      const item = row as Record<string, string & number>
+      return {
+        kindId: String(item.kind_id),
+        labelKo: String(item.label_ko),
+        type: String(item.type),
+        rulesetId: String(item.ruleset_id),
+        hpMax: Number(item.hp_max),
+        attack: Number(item.attack),
+        defense: Number(item.defense),
+        attackRange: Number(item.attack_range),
+      }
+    }),
+    levelCurve: body.level_curve.map((row) => ({
+      level: Number(row.level),
+      requiredXp: Number(row.required_xp),
+      totalXp: Number(row.total_xp),
+      bonusRuleSlots: Number(row.bonus_rule_slots),
+      bonusCpu: Number(row.bonus_cpu),
+      bonusFlags: Number(row.bonus_flags),
+      statPoints: Number(row.stat_points),
+      attackIfAllStr: Number(row.attack_if_all_str),
+      players: Number(row.players),
+    })),
+    caps: {
+      maxBonusRuleSlots: Number(body.caps.max_bonus_rule_slots ?? 0),
+      maxBonusCpu: Number(body.caps.max_bonus_cpu ?? 0),
+      maxBonusFlags: Number(body.caps.max_bonus_flags ?? 0),
+    },
+  }
+}

@@ -50,6 +50,7 @@ import {
   AccountPanel,
   AdminPanel,
   BestiaryPanel,
+  CatalogPanel,
   DrawerPanel,
   type DrawerTab,
   CharacterPanel,
@@ -98,6 +99,7 @@ import {
   readLeaderboard,
   applyAdminAction,
   applyMonsterLevel,
+  readAdminCatalog,
   readAdminOverview,
   readProgress,
   readServerMeta,
@@ -119,6 +121,7 @@ import {
   type InventoryView,
   type RunResult,
   type RunVerdict,
+  type AdminCatalog,
   type AdminOverview,
   type ServerTicket,
   type StorageLike,
@@ -424,6 +427,8 @@ export function App(): React.JSX.Element {
   // 서버가 404 로 답하므로 그 사실 자체가 화면에 드러나지 않는다.
   const [admin, setAdmin] = useState<AdminOverview | undefined>(undefined)
   const [adminDetail, setAdminDetail] = useState('')
+  // 콘텐츠 카탈로그. 세계 현황과 달리 정적이라 접속할 때 한 번만 읽는다.
+  const [catalog, setCatalog] = useState<AdminCatalog | undefined>(undefined)
   const [run, setRun] = useState<RunSpec | undefined>(undefined)
   const [outcome, setOutcome] = useState(OUTCOME_ONGOING)
   const [postState, setPostState] = useState<PostState>('auto')
@@ -587,6 +592,7 @@ export function App(): React.JSX.Element {
     // **관리자가 아니면 undefined 로 남는다.** 서버가 404 로 답하므로 관리자 경로가
     // 있다는 사실 자체가 일반 계정 화면에 드러나지 않는다.
     void readAdminOverview(account).then(setAdmin)
+    void readAdminCatalog(account).then(setCatalog)
   }
 
   /**
@@ -1148,6 +1154,7 @@ export function App(): React.JSX.Element {
                   })
                 }}
               />
+            <CatalogPanel catalog={catalog} />
           </>
         ),
       })

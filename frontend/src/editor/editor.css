@@ -1568,3 +1568,55 @@
 .adm__field--reason {
   width: 10rem;
 }
+
+/* ── 카탈로그 (관리자, 읽기 전용) ────────────────────────────────────────
+   서랍과 같은 탭 모양을 쓴다. 관리자라고 다른 언어를 주면 같은 도면 위에서 둘을
+   읽게 된다. */
+.cat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.cat__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  flex: 0 0 auto;
+}
+
+.cat__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  list-style: none;
+}
+
+.cat__entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding-bottom: var(--sp-2);
+  border-bottom: var(--line-1) solid var(--line);
+}
+
+.cat__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+
+.cat__name {
+  color: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  min-width: 4rem;
+}
+
+/* 인원 막대를 오른쪽 끝에 세로로 정렬한다 — 줄마다 자리가 같아야 분포가 눈에 잡힌다. */
+.cat__row > :last-child {
+  margin-left: auto;
+}

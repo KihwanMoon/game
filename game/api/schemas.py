@@ -359,3 +359,18 @@ class AdminReasonRequest(BaseModel):
 
     target_id: int
     reason: str
+
+
+class AdminCatalogResponse(BaseModel):
+    """콘텐츠 카탈로그 — 읽기 전용이다.
+
+    아이템·적·레벨 곡선은 `resources/*.json` 과 코어 상수이고 `core_version` 에 묶여
+    있다 — 런타임에 바꾸면 이미 발급된 티켓이 다른 게임을 가리킨다 (결정 #06, R5).
+    """
+
+    core_version: str
+    items: list[dict] = Field(default_factory=list)
+    enemies: list[dict] = Field(default_factory=list)
+    # 레벨 곡선. **실제 인원 분포와 겹쳐서 온다** — 곡선만 보면 튜닝할 수 없다.
+    level_curve: list[dict] = Field(default_factory=list)
+    caps: dict = Field(default_factory=dict)

@@ -98,6 +98,7 @@ def test_there_is_no_route_that_grants_admin(client):
     # 새 경로가 붙는 순간 그것이 얼마나 위험한지 한 번 더 보게 한다.
     assert sorted(path for path in paths if "/admin/" in path) == [
         "/api/admin/auction/cancel",
+        "/api/admin/catalog",
         "/api/admin/item/recall",
         "/api/admin/monster/level",
         "/api/admin/overview",
@@ -303,3 +304,65 @@ def test_held_items_show_who_they_were_taken_from(client):
     for row in body["held_items"]:
         assert "taken_from_handle" in row
         assert row["catalog_id"]
+
+
+# ── 카탈로그 (읽기 전용) ─────────────────────────────────────────────────
+
+
+def test_a_normal_account_cannot_read_the_catalog(client, token):
+    """★ 카탈로그도 관리자 경로다 — 404 여야 한다."""
+    assert client.get("/api/admin/catalog", headers=build_headers(token)).status_code == 404
+
+
+def test_the_catalog_shows_what_the_game_reads(client):
+    """★ **게임이 읽는 그대로 보여준다.**
+
+    별도 표를 만들어 두면 화면에 적힌 값과 전투가 쓰는 값이 갈라지고, 그때 이 뷰어는
+    도움이 아니라 오해의 근원이 된다.
+    """
+    from game.api.deps import get_context, get_item_catalog
+
+    body = client.get("/api/admin/catalog", headers=build_headers(build_admin(client))).json()
+    assert len(body["items"]) == len(get_item_catalog())
+    assert len(body["enemies"]) == len(get_context().balance["enemies"])
+
+
+def test_the_catalog_has_no_write_route(client):
+    """★ 콘텐츠를 런타임에 고칠 길이 있으면 안 된다.
+
+    resources/*.json 은 core_version 에 묶여 있다 — 바꾸는 순간 이미 발급된 티켓이 다른
+    게임을 가리키고, 브라우저(빌드에 박힌 JSON)와 서버가 다른 값을 본다 (결정 #06, R5).
+    """
+    from game.api.main import create_app
+
+    for route in create_app().routes:
+        if "/admin/catalog" in getattr(route, "path", ""):
+            assert set(getattr(route, "methods", set())) <= {"GET", "HEAD"}
+
+
+def test_the_level_curve_carries_the_real_distribution(client):
+    """★ **곡선만 보면 튜닝할 수 없다.**
+
+    사람들이 실제로 어디서 멈추는지가 보여야 "이 구간이 너무 긴가" 를 물을 수 있다.
+    """
+    # **실제 값을 본다.** 열쇠가 있는지만 보면 늘 0 을 보내도 통과한다 — 처음 쓴 검사가
+    # 그랬고, 반증에서 드러났다.
+    admin = build_admin(client)
+    body = client.get("/api/admin/catalog", headers=build_headers(admin)).json()
+    curve = body["level_curve"]
+    assert curve
+    # 방금 만든 관리자 계정이 레벨 1 개체를 하나 갖는다. 그것이 안 세어지면 이 곡선은
+    # 세계를 보고 있지 않다.
+    first = next(row for row in curve if row["level"] == 1)
+    assert first["players"] >= 1, curve[:3]
+    # 누적 경험치는 단조 증가한다 — 아니면 곡선이 곡선이 아니다.
+    totals = [row["total_xp"] for row in curve]
+    assert totals == sorted(totals)
+
+
+def test_the_curve_shows_where_expressiveness_stops(client):
+    """★ 표현력 상한을 함께 보낸다 — 없으면 그 값이 계속 오르는지 알 수 없다."""
+    body = client.get("/api/admin/catalog", headers=build_headers(build_admin(client))).json()
+    caps = body["caps"]
+    assert caps["max_bonus_cpu"] > 0
+    assert max(row["bonus_cpu"] for row in body["level_curve"]) <= caps["max_bonus_cpu"]
