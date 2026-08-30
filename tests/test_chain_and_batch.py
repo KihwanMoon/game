@@ -298,3 +298,92 @@ def test_the_margin_separates_two_kinds_of_loss(parts):
     assert idle.win_rate_pct == close.win_rate_pct == 0, "둘 다 져야 이 검사가 뜻을 갖는다"
     assert idle.enemy_hp_left_pct == 100, idle
     assert close.enemy_hp_left_pct < idle.enemy_hp_left_pct, (close, idle)
+
+
+# ── 폴백 한 줄 (전략 공간) ───────────────────────────────────────────────────
+
+
+def test_guarded_variants_exist_for_every_selector_strategy():
+    """★ 선택자 전략마다 폴백 있는 짝이 있다.
+
+    없으면 배치가 "선택자 전략은 약하다" 로 읽히는데, 실제로는 **규칙표에 한 줄이
+    빠진 것**이다. 짝이 있어야 그 둘이 구별된다.
+    """
+    from game.config import BENCHMARK_RULESETS_PATH
+
+    bench = load_rulesets(BENCHMARK_RULESETS_PATH)
+    for base in ("focus_lowest", "focus_threat", "focus_summoner", "focus_ranged"):
+        assert f"{base}_guard" in bench, base
+
+
+def test_the_guard_differs_by_exactly_one_rule():
+    """★ **한 줄만 달라야 한다.**
+
+    여러 줄이 다르면 결과 차이가 무엇 때문인지 말할 수 없고, 그러면 이 짝은 아무것도
+    가르치지 못한다 — 튜토리얼이 sniper/g0_kite 를 쓰는 것과 같은 이유다.
+    """
+    from game.config import BENCHMARK_RULESETS_PATH
+
+    bench = load_rulesets(BENCHMARK_RULESETS_PATH)
+    for base_id in ("focus_lowest", "focus_threat", "focus_summoner", "focus_ranged"):
+        base = bench[base_id]
+        guard = bench[f"{base_id}_guard"]
+        assert len(guard.rules) == len(base.rules) + 1, base_id
+        # 끼운 줄을 빼면 나머지는 순서까지 같아야 한다.
+        kept = [r for r in guard.rules if not (r.action == "ATTACK" and r.target == "NEAREST")]
+        base_kept = [r for r in base.rules if not (r.action == "ATTACK" and r.target == "NEAREST")]
+        assert [r.action for r in kept] == [r.action for r in base_kept], base_id
+
+
+def test_the_guard_must_sit_above_the_approach():
+    """★ 폴백이 접근 규칙 **아래**면 아무 일도 안 일어난다.
+
+    접근 조건(`목표 거리 > 1`)이 먼저 참이라 차례가 오지 않는다 — 실제로 아래에 넣어
+    재봤을 때 결과가 한 톨도 바뀌지 않았다. 튜토리얼 2단계가 가르치는 그것이다.
+    """
+    from game.config import BENCHMARK_RULESETS_PATH
+
+    bench = load_rulesets(BENCHMARK_RULESETS_PATH)
+    for base_id in ("focus_lowest", "focus_threat", "focus_summoner", "focus_ranged"):
+        rules = bench[f"{base_id}_guard"].rules
+        guard_at = next(
+            i for i, r in enumerate(rules) if r.action == "ATTACK" and r.target == "NEAREST"
+        )
+        approach_at = next(i for i, r in enumerate(rules) if r.action == "APPROACH")
+        assert guard_at < approach_at, base_id
+
+
+def test_the_guard_actually_lands_hits(parts):
+    """★ **여기가 이 짝의 전부다.**
+
+    폴백이 없으면 좁은 복도에서 목표를 쫓다 길이 막히고, 바로 옆의 적을 한 번도 때리지
+    못한 채 죽는다 — 로그가 「길 막힘 — 틱 낭비」로 그것을 말한다.
+    """
+    from game.config import BENCHMARK_RULESETS_PATH
+
+    bench = load_rulesets(BENCHMARK_RULESETS_PATH)
+    common = dict(
+        templates=parts["chain"],
+        balance=parts["balance"],
+        catalog=parts["catalog"],
+        enemy_rulesets=parts["enemy"],
+        runs=BATCH_RUNS,
+        base_seed=1,
+    )
+    bare = run_batch("focus_lowest", player_ruleset=bench["focus_lowest"], **common)
+    guarded = run_batch("focus_lowest_guard", player_ruleset=bench["focus_lowest_guard"], **common)
+    assert bare.enemy_hp_left_pct == 100, "폴백 없는 쪽이 한 대도 못 때려야 대비가 성립한다"
+    assert guarded.enemy_hp_left_pct < bare.enemy_hp_left_pct, (guarded, bare)
+    assert guarded.average_cleared > bare.average_cleared
+
+
+def test_the_guard_fits_the_default_budget(parts):
+    """★ 예산을 넘으면 플레이어가 이 규칙표를 쓸 수 없다."""
+    from game.app.rules.validator import validate_ruleset
+    from game.config import BENCHMARK_RULESETS_PATH
+
+    bench = load_rulesets(BENCHMARK_RULESETS_PATH)
+    budget = parts["balance"]["player"]["cpu_budget"]
+    slots = parts["balance"]["player"]["rule_slots"]
+    for base_id in ("focus_lowest", "focus_threat", "focus_summoner", "focus_ranged"):
+        assert validate_ruleset(bench[f"{base_id}_guard"], parts["catalog"], budget, slots) == []

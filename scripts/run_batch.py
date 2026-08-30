@@ -133,14 +133,17 @@ def format_report(rows: list) -> str:
     Returns:
         출력할 문자열.
     """
+    # 이름 칸은 **가장 긴 id 에 맞춘다.** 고정 폭이면 긴 이름이 칸을 밀어 그 줄만
+    # 어긋나고, 표를 세로로 훑을 수 없다.
+    width = max([len(stats.ruleset_id) for stats in rows] + [len("규칙표")])
     header = (
-        f"{'규칙표':<14} {'런':>5} {'승률':>6} {'적HP':>6} {'평균틱':>7} "
+        f"{'규칙표':<{width}} {'런':>5} {'승률':>6} {'적HP':>6} {'평균틱':>7} "
         f"{'평균HP':>7} {'클리어':>8}  최악시드"
     )
-    lines = [header, "-" * 76]
+    lines = [header, "-" * (width + 62)]
     for stats in rows:
         lines.append(
-            f"{stats.ruleset_id:<14} {stats.runs:>5} {stats.win_rate_pct:>5}% "
+            f"{stats.ruleset_id:<{width}} {stats.runs:>5} {stats.win_rate_pct:>5}% "
             f"{stats.enemy_hp_left_pct:>5}% "
             f"{stats.average_ticks:>7} {stats.average_hp:>7} "
             f"{stats.average_cleared / 100:>9.2f}  {stats.worst_seed}"
