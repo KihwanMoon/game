@@ -27,11 +27,20 @@ from game.app.store.credentials import (
     read_login_id,
     register_login,
 )
+from game.app.store.throttle import (
+    FAILURE_WINDOW,
+    check_login_allowed,
+    record_login_attempt,
+)
 
 router = APIRouter()
 
 # 로그인 실패에 쓰는 단일 문구. 어느 쪽이 틀렸는지 말하지 않는다.
 LOGIN_FAILED = "아이디나 비밀번호가 맞지 않는다"
+
+# 잠겼을 때의 문구. 남은 시간을 초 단위로 말하지 않는다 — 정확한 창을 알려 주면 그
+# 주기에 맞춰 시도하는 것이 쉬워진다.
+LOGIN_LOCKED = f"시도가 너무 잦다. {int(FAILURE_WINDOW.total_seconds()) // 60}분 뒤에 다시 시도한다"
 
 
 @router.post("/api/register", response_model=AccountResponse)
@@ -93,10 +102,17 @@ def create_login_session(request: CredentialRequest) -> AccountResponse:
         계정과 새 기기 토큰.
 
     Raises:
-        HTTPException: 아이디나 비밀번호가 맞지 않는 경우.
+        HTTPException: 아이디나 비밀번호가 맞지 않거나, 시도가 너무 잦은 경우.
     """
     pool = get_pool()
+    folded = normalize_login_id(request.login_id)
+    # 세는 것을 비밀번호 확인보다 **먼저** 한다. 뒤에 두면 잠긴 뒤에도 scrypt 가 매번
+    # 돌아, 제한이 있는데도 CPU 는 그대로 태워진다.
+    if check_login_allowed(pool, folded).is_locked:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, LOGIN_LOCKED)
+
     account = find_account_by_login(pool, request.login_id, request.password)
+    record_login_attempt(pool, folded, account is not None)
     if account is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, LOGIN_FAILED)
     return AccountResponse(

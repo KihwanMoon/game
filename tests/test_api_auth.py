@@ -221,3 +221,60 @@ def test_password_is_not_stored_in_plaintext(client):
     assert row is not None
     assert PASSWORD not in str(row[0])
     assert row[1] and row[0] != row[1]
+
+
+# ── 시도 제한 ────────────────────────────────────────────────────────────
+
+
+def test_repeated_failures_lock_the_account(client):
+    """★ scrypt 만으로는 대량 시도를 못 막는다. 세어서 끊는다."""
+    from game.app.store.throttle import MAX_FAILURES
+
+    login_id = create_login_id(client)
+    client.post("/api/register", json={"login_id": login_id, "password": PASSWORD})
+
+    for _ in range(MAX_FAILURES):
+        response = client.post(
+            "/api/login", json={"login_id": login_id, "password": OTHER_PASSWORD}
+        )
+        assert response.status_code == 401
+    # 상한을 넘기면 비밀번호가 맞아도 통과시키지 않는다.
+    locked = client.post("/api/login", json={"login_id": login_id, "password": PASSWORD})
+    assert locked.status_code == 429
+
+
+def test_success_clears_the_failure_count(client):
+    """오타를 한 번 냈다가 맞춘 사람이 다음에 막히면 안 된다."""
+    from game.api.deps import get_pool
+    from game.app.store.credentials import normalize_login_id
+    from game.app.store.throttle import MAX_FAILURES, count_recent_failures
+
+    login_id = create_login_id(client)
+    client.post("/api/register", json={"login_id": login_id, "password": PASSWORD})
+    for _ in range(MAX_FAILURES - 1):
+        client.post("/api/login", json={"login_id": login_id, "password": OTHER_PASSWORD})
+    assert (
+        client.post("/api/login", json={"login_id": login_id, "password": PASSWORD}).status_code
+        == 200
+    )
+    assert count_recent_failures(get_pool(), normalize_login_id(login_id)) == 0
+
+
+def test_locking_one_account_does_not_lock_another(client):
+    """한 계정을 잠근다고 다른 계정이 막히면 그것은 서비스 거부 수단이 된다."""
+    from game.app.store.throttle import MAX_FAILURES
+
+    victim = create_login_id(client)
+    bystander = create_login_id(client)
+    for name in (victim, bystander):
+        client.post("/api/register", json={"login_id": name, "password": PASSWORD})
+    for _ in range(MAX_FAILURES):
+        client.post("/api/login", json={"login_id": victim, "password": OTHER_PASSWORD})
+    assert (
+        client.post("/api/login", json={"login_id": victim, "password": PASSWORD}).status_code
+        == 429
+    )
+    assert (
+        client.post("/api/login", json={"login_id": bystander, "password": PASSWORD}).status_code
+        == 200
+    )

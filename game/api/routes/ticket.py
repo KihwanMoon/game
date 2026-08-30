@@ -18,7 +18,7 @@ def create_run_ticket(request: TicketRequest, account: CurrentAccount) -> Ticket
     """런 티켓을 발급한다.
 
     Args:
-        request: 방과 층. 시드는 받지 않는다.
+        request: 방·층과 (연습 모드에 한해) 제안 시드.
         account: 토큰으로 푼 계정.
 
     Returns:
@@ -35,5 +35,6 @@ def create_run_ticket(request: TicketRequest, account: CurrentAccount) -> Ticket
         request.room_id,
         get_core_version(),
         floor=request.floor,
+        wanted_seed=request.seed,
     )
     return TicketResponse(**vars(ticket))

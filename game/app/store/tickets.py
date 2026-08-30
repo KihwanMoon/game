@@ -55,6 +55,7 @@ def create_ticket(
     core_version: str,
     floor: int = 1,
     mode: RunMode = RunMode.PRACTICE,
+    wanted_seed: int | None = None,
 ) -> IssuedTicket:
     """티켓을 발급한다.
 
@@ -65,6 +66,8 @@ def create_ticket(
         core_version: 이 서버가 도는 코어 버전.
         floor: 층.
         mode: 런 모드.
+        wanted_seed: 클라이언트가 제안한 시드. **연습 모드에서만 반영한다** — 순위에
+            반영되는 판에서 받으면 유리한 시드를 골라 담을 수 있다 (T2).
 
     Returns:
         발급된 티켓.
@@ -73,7 +76,10 @@ def create_ticket(
         RuntimeError: 삽입이 실패한 경우.
     """
     ticket_id = secrets.token_urlsafe(TICKET_ID_BYTES)
-    seed = create_seed()
+    is_practice = mode is RunMode.PRACTICE
+    seed = wanted_seed if is_practice and wanted_seed is not None else create_seed()
+    if not 0 <= seed <= MAX_SEED:
+        raise ValueError(f"시드가 이식 범위를 벗어났다: {seed}")
     expires_at = datetime.now(UTC) + TICKET_TTL
     with pool.connection() as connection:
         connection.execute(

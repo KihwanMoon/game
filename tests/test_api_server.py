@@ -178,3 +178,24 @@ def test_meta_round_trips(client, token):
 def test_broken_meta_is_rejected(client, token):
     response = client.put("/api/meta", json={"payload": {"nope": 1}}, headers=build_headers(token))
     assert response.status_code == 400
+
+
+def test_practice_ticket_honours_the_requested_seed(client, token):
+    """연습 티켓은 시드를 제안받는다 — "이 시드 다시" 가 성립해야 한다."""
+    body = client.post(
+        "/api/ticket",
+        json={"room_id": ROOM_ID, "seed": 4242},
+        headers=build_headers(token),
+    ).json()
+    assert body["seed"] == 4242
+
+
+def test_ticket_without_a_seed_gets_a_server_one(client, token):
+    seeds = {
+        client.post("/api/ticket", json={"room_id": ROOM_ID}, headers=build_headers(token)).json()[
+            "seed"
+        ]
+        for _ in range(5)
+    }
+    # 서버가 정하면 매번 같을 수 없다.
+    assert len(seeds) > 1

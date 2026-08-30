@@ -288,3 +288,106 @@ export function writeToken(storage: StorageLike | undefined, token: string): boo
     return false
   }
 }
+
+/** 서버가 발급한 티켓. 로컬 연습 티켓과 같은 모양이다. */
+export interface ServerTicket {
+  readonly ticketId: string
+  readonly seed: number
+  readonly roomId: string
+  readonly floor: number
+  readonly mode: string
+  readonly coreVersion: string
+}
+
+/**
+ * 서버에 티켓을 청한다.
+ *
+ * 연습 모드라 시드를 제안할 수 있다 — "이 시드 다시" 가 성립해야 하기 때문이며,
+ * 순위에 반영되는 판이 생기면 그때는 서버가 정한 시드만 쓴다.
+ *
+ * @param token 기기 토큰.
+ * @param roomId 방 id.
+ * @param seed 제안할 시드. 서버가 연습 모드에서만 받아들인다.
+ * @returns 발급된 티켓. 서버에 닿지 못했으면 undefined.
+ */
+export async function requestTicket(
+  token: string,
+  roomId: string,
+  seed: number,
+): Promise<ServerTicket | undefined> {
+  const response = await sendRequest('/ticket', {
+    method: 'POST',
+    headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ room_id: roomId, seed }),
+  })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  const body = (await response.json()) as {
+    ticket_id: string
+    seed: number
+    room_id: string
+    floor: number
+    mode: string
+    core_version: string
+  }
+  return {
+    ticketId: body.ticket_id,
+    seed: body.seed,
+    roomId: body.room_id,
+    floor: body.floor,
+    mode: body.mode,
+    coreVersion: body.core_version,
+  }
+}
+
+/** 서버가 확정한 판정. 브라우저가 낸 결과와 다르면 두 코어가 갈린 것이다. */
+export interface RunVerdict {
+  readonly verdict: string
+  readonly outcome: string
+  readonly ticks: number
+  readonly playerHp: number
+  readonly detail: string
+}
+
+/**
+ * 판을 제출한다. **결과를 보내지 않는다** — 서버가 다시 계산한다.
+ *
+ * 실패는 무시한다. 제출이 안 됐다고 판이 무효가 되면, 네트워크가 끊긴 사람은 게임을
+ * 할 수 없다. 다만 그 판은 서버 기록에 남지 않으므로 G1 계측에서도 빠진다.
+ *
+ * @param token 기기 토큰.
+ * @param ticketId 이 판의 티켓.
+ * @param ruleset 이 판에 쓴 규칙표 절.
+ * @param coreVersion 이 클라이언트의 코어 버전.
+ * @returns 서버가 확정한 판정. 닿지 못했으면 undefined.
+ */
+export async function submitRun(
+  token: string,
+  ticketId: string,
+  ruleset: unknown,
+  coreVersion: string,
+): Promise<RunVerdict | undefined> {
+  const response = await sendRequest('/run', {
+    method: 'POST',
+    headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ticket_id: ticketId, ruleset, core_version: coreVersion }),
+  })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  const body = (await response.json()) as {
+    verdict: string
+    outcome: string
+    ticks: number
+    player_hp: number
+    detail?: string
+  }
+  return {
+    verdict: body.verdict,
+    outcome: body.outcome,
+    ticks: body.ticks,
+    playerHp: body.player_hp,
+    detail: body.detail ?? '',
+  }
+}

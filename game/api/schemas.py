@@ -7,6 +7,8 @@
 
 from pydantic import BaseModel, Field
 
+from game.schemas.run_ticket import MAX_SEED
+
 # 규칙표 절의 크기 상한. 슬롯 상한이 있으므로 정상 규칙표는 훨씬 작다 — 상한이 없으면
 # 거대한 절 하나로 검증기를 묶어 둘 수 있다.
 MAX_RULES = 64
@@ -37,10 +39,17 @@ class CredentialRequest(BaseModel):
 
 
 class TicketRequest(BaseModel):
-    """티켓 발급 요청. **시드를 받지 않는다** — 시드는 서버가 정한다 (T2)."""
+    """티켓 발급 요청.
+
+    `seed` 는 **연습 모드에서만** 반영된다. 순위·데일리는 서버가 정한 시드만 쓰며,
+    그것이 T2(유리한 시드 골라 담기)를 막는 지점이다. 연습에서까지 막으면 "이 시드
+    다시 해 보기" 와 리플레이 공유가 불가능해지는데, 순위에 반영되지 않는 판에서
+    그것을 막을 이유가 없다.
+    """
 
     room_id: str = Field(min_length=1, max_length=64)
     floor: int = Field(default=1, ge=1, le=99)
+    seed: int | None = Field(default=None, ge=0, le=MAX_SEED)
 
 
 class TicketResponse(BaseModel):

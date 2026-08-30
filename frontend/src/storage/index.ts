@@ -71,7 +71,9 @@ export {
   readServerMeta,
   readToken,
   registerAccount,
+  requestTicket,
+  submitRun,
   writeServerMeta,
   writeToken,
 } from './serverSync'
-export type { AccountState, AuthOutcome, SyncOutcome } from './serverSync'
+export type { AccountState, AuthOutcome, RunVerdict, ServerTicket, SyncOutcome } from './serverSync'

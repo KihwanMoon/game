@@ -26,12 +26,16 @@ def test_submission_request_takes_no_result():
     assert set(SubmissionRequest.model_fields) == {"ticket_id", "ruleset", "core_version"}
 
 
-def test_ticket_request_takes_no_seed():
-    """★ 티켓 요청은 시드를 받지 않는다.
+def test_ticket_request_seed_is_optional_and_bounded():
+    """티켓 요청의 시드는 선택이고 이식 범위 안이다.
 
-    받으면 유리한 시드가 나올 때까지 돌려 보고 그것만 제출할 수 있다 (T2).
+    **연습 모드에서만 반영된다** (T2 는 순위에 반영되는 판의 문제다). 상한을 모델에서
+    거는 이유는 서버가 발급한 시드와 같은 규칙을 받는 쪽에도 걸기 위해서다.
     """
-    assert set(TicketRequest.model_fields) == {"room_id", "floor"}
+    assert set(TicketRequest.model_fields) == {"room_id", "floor", "seed"}
+    assert TicketRequest(room_id="r").seed is None
+    with pytest.raises(ValueError, match="less than or equal"):
+        TicketRequest(room_id="r", seed=MAX_SEED + 1)
 
 
 def test_extra_fields_do_not_smuggle_a_result():

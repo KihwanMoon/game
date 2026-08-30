@@ -83,12 +83,16 @@ import {
   readSave,
   readAccount,
   readServerMeta,
+  buildRuleSetPayload,
   registerAccount,
+  requestTicket,
+  submitRun,
   writeMeta,
   writeServerMeta,
   writeToken,
   type AccountState,
   type RunResult,
+  type RunVerdict,
 } from './storage'
 import { createEmptyMeta, type MetaSave } from './core/schemas'
 import { MAX_SEED, buildCoreVersion, createLocalTicket, type RunTicket } from './core/schemas'
@@ -238,6 +242,8 @@ export function App(): React.JSX.Element {
   const [account, setAccount] = useState<string | undefined>(undefined)
   const [profile, setProfile] = useState<AccountState | undefined>(undefined)
   const [isOnline, setOnline] = useState(false)
+  // 서버가 확정한 판정. 브라우저가 낸 결과와 다르면 두 코어가 갈린 것이다 (G3).
+  const [verdict, setVerdict] = useState<RunVerdict | undefined>(undefined)
   const [run, setRun] = useState<RunSpec | undefined>(undefined)
   const [outcome, setOutcome] = useState(OUTCOME_ONGOING)
   const [postState, setPostState] = useState<PostState>('auto')
@@ -397,18 +403,40 @@ export function App(): React.JSX.Element {
    * 지금 규칙표로 판을 시작한다. 방·시드·규칙표를 이 순간의 값으로 얼린다.
    */
   function startRun(): void {
-    // 시드는 티켓을 거쳐서만 전투로 들어간다. 지금은 로컬이 연습 티켓을 발급하지만,
-    // 서버가 붙으면 이 한 줄의 발급처만 바뀐다 — 순위·데일리는 로컬이 만들 수 없다
-    // (core/schemas/runTicket). 이음매를 지금 두는 이유는 나중에 두면 그때까지의
-    // 기록이 전부 무효가 되기 때문이다 (결정/1_결정대기목록 #01).
-    const ticket = createLocalTicket(session.seed, session.roomId, coreVersion)
-    setRun({
-      setup: { roomId: ticket.roomId, rulesetId: ruleset.rulesetId, seed: ticket.seed },
-      rulesets: new Map([[ruleset.rulesetId, ruleset]]),
-      ticket,
-    })
+    // 시드는 티켓을 거쳐서만 전투로 들어간다. 서버가 있으면 서버가 발급하고, 없으면
+    // 로컬 연습 티켓으로 계속한다 — **서버가 없다고 게임이 멈추지 않는다.** 다만 로컬
+    // 티켓으로 돈 판은 서버에 남지 않으므로 G1 계측에서도 빠진다.
+    setVerdict(undefined)
     setOutcome(OUTCOME_ONGOING)
     setPostState('auto')
+    const local = createLocalTicket(session.seed, session.roomId, coreVersion)
+    setRun({
+      setup: { roomId: local.roomId, rulesetId: ruleset.rulesetId, seed: local.seed },
+      rulesets: new Map([[ruleset.rulesetId, ruleset]]),
+      ticket: local,
+    })
+    if (account === undefined) {
+      return
+    }
+    void requestTicket(account, session.roomId, session.seed).then((issued) => {
+      if (issued === undefined) {
+        return
+      }
+      // 서버가 준 시드로 판을 다시 건다. 연습 모드라 제안한 시드가 그대로 오지만,
+      // 순위 모드가 생기면 여기서 값이 갈리고 그때는 서버 것이 정본이다.
+      setRun({
+        setup: { roomId: issued.roomId, rulesetId: ruleset.rulesetId, seed: issued.seed },
+        rulesets: new Map([[ruleset.rulesetId, ruleset]]),
+        ticket: {
+          ticketId: issued.ticketId,
+          seed: issued.seed,
+          roomId: issued.roomId,
+          floor: issued.floor,
+          mode: 'PRACTICE',
+          coreVersion: issued.coreVersion,
+        },
+      })
+    })
   }
 
   /**
@@ -423,6 +451,19 @@ export function App(): React.JSX.Element {
    * @param finishedRun 끝난 판의 기록.
    */
   function applyRunSettlement(finishedRun: BattleRecording): void {
+    // 서버에 제출한다. **결과는 보내지 않는다** — 서버가 티켓의 시드로 다시 계산한다.
+    // 실패는 무시한다: 제출이 안 됐다고 판이 무효가 되면 네트워크가 끊긴 사람은
+    // 게임을 할 수 없다.
+    const ticket = run?.ticket
+    if (account !== undefined && ticket !== undefined && !ticket.ticketId.startsWith('local:')) {
+      void submitRun(
+        account,
+        ticket.ticketId,
+        buildRuleSetPayload(finishedRun.ruleset),
+        ticket.coreVersion,
+      ).then(setVerdict)
+    }
+
     const enemyRulesets = listEncounteredRulesets(
       finishedRun.tally.encountered,
       balanceData.enemies,
@@ -479,10 +520,17 @@ export function App(): React.JSX.Element {
 
   const blocker = findLaunchBlocker(problems)
   const resultText = describeRunResult(session.lastResult)
+  // 서버 판정이 다르면 그것을 숨기지 않는다. mismatch 는 치트의 증거가 아니라
+  // 두 코어가 갈렸다는 신호이고, 대개 우리 쪽 버그다 (docs/설계/7_변조방지 §8).
+  const verdictText =
+    verdict === undefined || verdict.verdict === 'verified'
+      ? ''
+      : `서버 판정 ${verdict.verdict}${verdict.detail === '' ? '' : ` — ${verdict.detail}`}`
 
   const launchControls = (
     <div className="launch">
       {resultText === '' ? null : <ValueExpr text={resultText} size="sm" dim />}
+      {verdictText === '' ? null : <ValueExpr text={verdictText} size="sm" />}
       <Button
         size="sm"
         variant="ghost"

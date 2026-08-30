@@ -81,3 +81,19 @@ CREATE TABLE IF NOT EXISTS run_result (
     detail         TEXT        NOT NULL DEFAULT '',
     verified_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- 로그인 시도 기록. **비밀번호 대량 시도를 막는 유일한 수단이다.**
+-- scrypt 가 시도당 수십 ms 를 쓰게 하지만 그것만으로는 못 막는다 — 병렬로 보내면
+-- 서버 CPU 만 태우고 시도는 계속된다.
+--
+-- 아이디로 세는 이유는 그것이 지켜야 할 대상이기 때문이다. 주소로만 세면 프록시 뒤의
+-- 정상 사용자가 함께 막히고, 주소를 바꾸는 쪽은 안 막힌다.
+CREATE TABLE IF NOT EXISTS login_attempt (
+    id            BIGSERIAL   PRIMARY KEY,
+    login_id      TEXT        NOT NULL,
+    attempted_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    is_ok         BOOLEAN     NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS login_attempt_lookup_idx
+    ON login_attempt (login_id, attempted_at DESC);
