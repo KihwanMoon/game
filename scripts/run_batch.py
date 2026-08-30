@@ -134,15 +134,26 @@ def format_report(rows: list) -> str:
         출력할 문자열.
     """
     header = (
-        f"{'규칙표':<14} {'런':>5} {'승률':>6} {'평균틱':>7} {'평균HP':>7} {'클리어':>8}  최악시드"
+        f"{'규칙표':<14} {'런':>5} {'승률':>6} {'적HP':>6} {'평균틱':>7} "
+        f"{'평균HP':>7} {'클리어':>8}  최악시드"
     )
-    lines = [header, "-" * 68]
+    lines = [header, "-" * 76]
     for stats in rows:
         lines.append(
             f"{stats.ruleset_id:<14} {stats.runs:>5} {stats.win_rate_pct:>5}% "
+            f"{stats.enemy_hp_left_pct:>5}% "
             f"{stats.average_ticks:>7} {stats.average_hp:>7} "
             f"{stats.average_cleared / 100:>9.2f}  {stats.worst_seed}"
         )
+    lines.append("")
+    lines.append(
+        "적HP = 런이 끝난 방에 남은 적 체력. 0% 는 전멸시킨 것이고 100% 는 **한 대도"
+        " 못 때린 것**이다 —"
+    )
+    lines.append(
+        "  후자는 밸런스가 아니라 그 방에서 규칙표가 아예 작동하지 않는다는 신호다"
+        " (조건이 영영 거짓)."
+    )
     return "\n".join(lines)
 
 

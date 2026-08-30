@@ -17,9 +17,12 @@
 from dataclasses import dataclass
 
 from game.app.services.build_floor import build_floor_map
+from game.app.services.run_battle import BattleResult, run_battle
 from game.app.services.run_chain import run_room_chain
 from game.app.services.run_room_loop import RoomLoopContext, run_room_loop
+from game.app.simulation.engine import TickEngine
 from game.app.simulation.plan import OUTCOME_PLAYER_WIN
+from game.app.simulation.state import FACTION_ENEMY, WorldState
 from game.schemas.blocks import BlockCatalog
 from game.schemas.room import FIRST_FLOOR, RoomTemplate
 from game.schemas.ruleset import RuleSet
@@ -38,6 +41,15 @@ class BatchStats:
     average_hp: int
     average_cleared: int
     worst_seed: int
+    # 끝난 방에 남은 적 HP 비율 (평균). **승률로는 안 보이는 기울기다.**
+    #
+    # 이 게임은 시드가 틱과 HP 만 흔들고 승패는 거의 바꾸지 않아, 승률이 0% 아니면
+    # 100% 로만 나온다. 그러면 "적 HP 4% 남기고 진 것" 과 "한 대도 못 때리고 진 것" 이
+    # 같은 0% 로 적히고, 튜닝할 곳을 고를 수 없다.
+    #
+    # 100% 는 손도 못 댔다는 뜻이다 — 밸런스가 아니라 그 방에서 규칙표가 아예 작동하지
+    # 않는 것이며(조건이 영영 거짓), 그 둘은 고치는 방법이 다르다.
+    enemy_hp_left_pct: int = 0
 
     @property
     def win_rate_pct(self) -> int:
@@ -75,12 +87,39 @@ def run_batch(
     total_ticks = 0
     total_hp = 0
     total_cleared = 0
+    total_left = 0
     worst_seed = base_seed
     worst_cleared = len(templates) + 1
 
     for index in range(runs):
         seed = base_seed + index
-        result = run_room_chain(templates, balance, catalog, player_ruleset, enemy_rulesets, seed)
+        # 방마다 남은 적 HP 를 적어 둔다. 런이 끝난 방의 값이 그 런의 여유분이다.
+        margins: list[int] = []
+
+        def run_and_measure(engine: TickEngine, sink: list[int] = margins) -> BattleResult:
+            """방 하나를 돌리고 남은 적 HP 비율을 적어 둔다.
+
+            Args:
+                engine: 조립된 엔진.
+                sink: 적어 둘 목록. 기본 인자로 묶어 늦은 바인딩을 피한다.
+
+            Returns:
+                그 방의 결과.
+            """
+            outcome = run_battle(engine)
+            sink.append(compute_enemy_hp_left_pct(engine.state))
+            return outcome
+
+        result = run_room_chain(
+            templates,
+            balance,
+            catalog,
+            player_ruleset,
+            enemy_rulesets,
+            seed,
+            run_room=run_and_measure,
+        )
+        total_left += margins[-1] if margins else PERCENT
         total_ticks += result.total_ticks
         total_hp += result.player_hp
         total_cleared += result.cleared_rooms
@@ -91,7 +130,12 @@ def run_batch(
             worst_seed = seed
 
     return build_batch_stats(
-        ruleset_id, runs, wins, (total_ticks, total_hp, total_cleared), worst_seed
+        ruleset_id,
+        runs,
+        wins,
+        (total_ticks, total_hp, total_cleared),
+        worst_seed,
+        total_left // runs if runs else 0,
     )
 
 
@@ -157,8 +201,33 @@ def run_floor_batch(
     )
 
 
+def compute_enemy_hp_left_pct(state: WorldState) -> int:
+    """살아남은 적의 HP 가 전체의 몇 퍼센트인지 센다.
+
+    **승률이 못 보여주는 기울기를 여기서 만든다.** 0 이면 전멸시킨 것이고, 100 이면
+    한 대도 못 때린 것이다 — 뒤쪽은 밸런스가 아니라 그 방에서 규칙표가 아예 작동하지
+    않는다는 신호다(조건이 영영 거짓).
+
+    Args:
+        state: 전투가 끝난 세계 상태.
+
+    Returns:
+        0 이상 100 이하의 정수 퍼센트. 적이 없었으면 0.
+    """
+    foes = [item for item in state.entities.values() if item.faction == FACTION_ENEMY]
+    total = sum(item.hp_max for item in foes)
+    if total <= 0:
+        return 0
+    return sum(max(0, item.hp) for item in foes) * PERCENT // total
+
+
 def build_batch_stats(
-    ruleset_id: str, runs: int, wins: int, totals: tuple[int, int, int], worst_seed: int
+    ruleset_id: str,
+    runs: int,
+    wins: int,
+    totals: tuple[int, int, int],
+    worst_seed: int,
+    enemy_hp_left_pct: int = 0,
 ) -> BatchStats:
     """누적값을 통계로 접는다. 두 실행 방식이 같은 표를 내도록 여기 하나만 둔다.
 
@@ -168,6 +237,7 @@ def build_batch_stats(
         wins: 이긴 런 수.
         totals: 틱·HP·클리어 수의 합계.
         worst_seed: 가장 얕게 죽은 런의 시드.
+        enemy_hp_left_pct: 끝난 방에 남은 적 HP 비율의 평균.
 
     Returns:
         평균까지 낸 통계. 클리어 수만 100 을 곱해 소수 둘째 자리를 정수로 나른다.
@@ -180,5 +250,6 @@ def build_batch_stats(
         average_ticks=total_ticks // runs if runs else 0,
         average_hp=total_hp // runs if runs else 0,
         average_cleared=total_cleared * PERCENT // runs if runs else 0,
+        enemy_hp_left_pct=enemy_hp_left_pct,
         worst_seed=worst_seed,
     )

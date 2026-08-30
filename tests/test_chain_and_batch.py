@@ -247,3 +247,54 @@ def test_rule_stats_do_not_credit_default_for_rule_work(parts):
 
     for stat in build_rule_stats(engine.log, "player"):
         assert stat.acted + stat.wasted <= stat.fired, f"{stat.label} 성적이 발동 횟수를 넘는다"
+
+
+# ── 패배의 기울기 (W18) ──────────────────────────────────────────────────────
+
+
+def test_a_win_leaves_no_enemy_hp(parts):
+    """★ 이겼으면 적이 다 죽은 것이다 — 0 이 아니면 이 지표를 못 믿는다."""
+    stats = run_batch(
+        "g0_kite",
+        templates=parts["chain"],
+        balance=parts["balance"],
+        catalog=parts["catalog"],
+        player_ruleset=parts["player"]["g0_kite"],
+        enemy_rulesets=parts["enemy"],
+        runs=BATCH_RUNS,
+        base_seed=1,
+    )
+    assert stats.win_rate_pct == 100
+    assert stats.enemy_hp_left_pct == 0
+
+
+def test_the_margin_separates_two_kinds_of_loss(parts):
+    """★ **승률이 감추던 것을 여기서 가른다.**
+
+    시드는 틱과 HP 만 흔들고 승패는 거의 바꾸지 않아, 승률이 0% 아니면 100% 로만 나온다.
+    그러면 「적 HP 를 거의 다 깎고 진 것」과 「한 대도 못 때리고 진 것」이 같은 0% 로
+    적히고, 튜닝할 곳을 고를 수 없다.
+
+    앞은 수치를 만지면 되고, 뒤는 **그 방에서 규칙표가 아예 작동하지 않는 것**이라
+    고치는 방법이 다르다.
+    """
+    from game.config import BENCHMARK_RULESETS_PATH
+
+    bench = load_rulesets(BENCHMARK_RULESETS_PATH)
+    common = dict(
+        templates=parts["chain"],
+        balance=parts["balance"],
+        catalog=parts["catalog"],
+        enemy_rulesets=parts["enemy"],
+        runs=BATCH_RUNS,
+        base_seed=1,
+    )
+    # 소환사를 노리는 규칙표인데 첫 방에는 소환사가 없다 — 네 규칙이 전부 거짓이라
+    # 가만히 서서 죽는다.
+    idle = run_batch("focus_summoner", player_ruleset=bench["focus_summoner"], **common)
+    # 끝까지 싸우고 아깝게 진다.
+    close = run_batch("spring_camp", player_ruleset=bench["spring_camp"], **common)
+
+    assert idle.win_rate_pct == close.win_rate_pct == 0, "둘 다 져야 이 검사가 뜻을 갖는다"
+    assert idle.enemy_hp_left_pct == 100, idle
+    assert close.enemy_hp_left_pct < idle.enemy_hp_left_pct, (close, idle)
