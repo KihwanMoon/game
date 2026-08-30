@@ -59,7 +59,7 @@ code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time "${TIMEOUT}" \
 check "공개 도메인" "${code}" "200"
 
 # 5. 컨테이너 상태 (헬스체크 결과를 함께 본다)
-for name in game-frontend-1 game-backend-1 edge-proxy; do
+for name in game-frontend-1 game-backend-1 game-postgres-1 edge-proxy; do
     state=$(docker inspect -f '{{.State.Status}}/{{if .State.Health}}{{.State.Health.Status}}{{else}}-{{end}}' \
         "${name}" 2>/dev/null || echo "없음")
     case "${state}" in
