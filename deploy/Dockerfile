@@ -49,6 +49,11 @@ RUN uv sync --frozen --no-dev --no-install-project
 FROM deps AS deps-dev
 RUN uv sync --frozen --no-install-project
 
+# 검증 서버용 (B단계). **시뮬레이션 코어는 여전히 의존성이 0개다** — 코어를 부르는
+# 껍데기에만 붙는다. runtime 계층과 갈라 두어, 헤드리스 배치는 fastapi 없이 돈다.
+FROM deps AS deps-api
+RUN uv sync --frozen --no-dev --group api --no-install-project
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 배치 실행용. 시뮬레이션 코어만 담는다. uv 도 개발 도구도 들어가지 않는다.
@@ -65,6 +70,24 @@ ENV PYTHONHASHSEED=0
 
 USER app
 CMD ["python", "-m", "game.main"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 검증 서버. 코어를 부르는 껍데기이며, 여기만 fastapi·psycopg 를 갖는다.
+FROM base AS api
+
+COPY --from=deps-api --chown=app:app /opt/venv /opt/venv
+COPY --chown=app:app pyproject.toml ./
+COPY --chown=app:app game/ ./game/
+
+# 서버도 재현되어야 한다. 재시뮬 결과가 프로세스마다 달라지면 검증이 성립하지 않는다.
+ENV PYTHONHASHSEED=0
+
+USER app
+EXPOSE 8000
+# 워커 하나다. 재시뮬이 CPU 를 쓰므로 프로세스를 늘리는 것은 코어 수를 보고 정한다 —
+# 지금 규모(초당 40건)에서는 하나로 충분하고, 늘릴 때 연결 풀 상한도 함께 본다.
+CMD ["uvicorn", "game.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

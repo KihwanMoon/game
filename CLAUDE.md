@@ -98,6 +98,8 @@ uv run python -m game.main --seed 12345
 ```
 game/
 ├─ main.py            컴포지션 루트. 코어를 조립하는 유일한 지점
+├─ api/               검증 서버 (B단계). FastAPI. 얇게 유지한다 — 판정은 services/,
+│                     저장은 app/store/ 가 한다
 ├─ config.py          설정 로드
 ├─ schemas/           I/O 계약 (TDD §3) — TS 로 이식되는 유일한 코드 자산
 ├─ app/
@@ -107,6 +109,8 @@ game/
 │  ├─ rules/          RuleVM
 │  ├─ combat/         전투 수식
 │  ├─ simulation/     틱 엔진 7페이즈
+│  ├─ items/          아이템 카탈로그·요구조건·스탯 합산
+│  ├─ store/          서버 저장소 (PostgreSQL). 코어는 이것을 모른다
 │  └─ services/       유스케이스. 파일 하나가 시나리오 하나
 └─ resources/         밸런스 JSON, 룸 템플릿
 tests/                골든 리플레이·회귀
@@ -185,7 +189,7 @@ Docker + Compose. 파일은 표준 §12 가 정한 `deploy/` 에 있고, 상세�
 
 ```bash
 export COMPOSE_FILE=deploy/docker-compose.yml
-docker compose up -d             # 서빙 스택 (frontend + backend)
+docker compose up -d             # 서빙 스택 (frontend + backend + postgres)
 docker compose run --rm check    # 게이트
 docker compose run --rm test     # pytest
 docker compose run --rm sim      # 헤드리스 실행
@@ -200,10 +204,15 @@ docker compose run --rm dev      # 개발 셸
 `frontend` 는 실제 앱이다(W13). `deploy/Dockerfile.frontend` 가 vite 로 굽고 nginx 가
 정적 산출물을 서빙한다 — **개발 서버가 아니라 프로덕션 빌드다.** 공개 도메인에 dev
 서버를 두면 HMR 웹소켓이 터널을 건너야 하고, 타입 오류가 런타임까지 미뤄지며, 파일
-하나가 깨지면 프로세스가 죽는다. `backend` 는 아직 자리표시자이고(없는 API 는 501),
-프런트가 코어를 브라우저 안에서 직접 돌리므로 지금 단계의 게임은 API 없이 완결된다.
+하나가 깨지면 프로세스가 죽는다. `backend` 는 이제 실제 검증 서버다(FastAPI + PostgreSQL). **서버는 결과를 받지 않고
+재시뮬해서 확정한다** — 시드는 서버가 발급하고, 티켓은 1회용이며, 제출에는 결과를 받을
+자리가 없다. 그래도 **서버가 없어도 게임은 돈다**: 코어가 브라우저 안에서 직접 돌고
+서버는 보관과 검증만 맡는다.
 컨테이너명·포트·네트워크가 그대로라 edge-proxy 는 손대지 않았다. 상세는
 `deploy/README.md`.
+
+`POSTGRES_PASSWORD` 는 `deploy/.env` 에 있고 커밋되지 않는다. 기본값을 두지 않았으므로
+없으면 스택이 뜨지 않는다 — 개발용 비밀번호가 배포까지 따라가는 사고는 기본값에서 시작한다.
 
 컨테이너는 도구 버전을 맞춰야 하는 **네 번째 계층**이다(§7.1). Python 3.11 · uv 0.12.7 ·
 ruff 0.16.3 이 `.python-version`·`pyproject.toml`·`.pre-commit-config.yaml`·Dockerfile 에

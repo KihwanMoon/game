@@ -61,3 +61,13 @@ export {
   readMeta,
   writeMeta,
 } from './metaSave'
+export {
+  API_ROOT,
+  TOKEN_HEADER,
+  TOKEN_STORAGE_KEY,
+  ensureToken,
+  readServerMeta,
+  readToken,
+  writeServerMeta,
+} from './serverSync'
+export type { SyncOutcome } from './serverSync'

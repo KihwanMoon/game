@@ -75,15 +75,18 @@ import {
 } from './session'
 import {
   createSaveScheduler,
+  ensureToken,
   getLocalStorage,
   readMeta,
   readSave,
+  readServerMeta,
   writeMeta,
+  writeServerMeta,
   type RunResult,
 } from './storage'
 import { createEmptyMeta, type MetaSave } from './core/schemas'
 import { MAX_SEED, buildCoreVersion, createLocalTicket, type RunTicket } from './core/schemas'
-import { applyRunSummary } from './core/services/manageMeta'
+import { applyRunSummary, mergeMeta } from './core/services/manageMeta'
 import { buildRunSummary, listEncounteredRulesets } from './core/services/runSummary'
 import { parseBalance } from './core/services/runBattle'
 
@@ -224,6 +227,9 @@ export function App(): React.JSX.Element {
   // 메타 세이브는 편집 세이브와 수명이 다르다 — 규칙표는 고치면 덮어쓰지만 해금과
   // 도감은 누적이다. 그래서 저장 열쇠도 디바운스 저장기도 따로 둔다.
   const [meta, setMeta] = useState<MetaSave>(() => readMeta(getLocalStorage()) ?? createEmptyMeta())
+  // 서버 연결 상태. 오프라인이어도 게임은 돈다 — 코어가 브라우저 안에서 직접 돌기
+  // 때문이며, 서버는 보관과 검증을 맡을 뿐이다.
+  const [account, setAccount] = useState<string | undefined>(undefined)
   const [run, setRun] = useState<RunSpec | undefined>(undefined)
   const [outcome, setOutcome] = useState(OUTCOME_ONGOING)
   const [postState, setPostState] = useState<PostState>('auto')
@@ -254,6 +260,34 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     scheduler.schedule(buildSessionSave(session))
   }, [scheduler, session])
+
+  // 계정을 확보하고 서버 세이브를 합친다. **실패해도 아무 일도 일어나지 않는다** —
+  // 서버가 없어도 게임은 돌아야 한다. 합치기는 최대값·합집합이라 몇 번을 해도 같은
+  // 결과가 나온다(멱등).
+  useEffect(() => {
+    let isCurrent = true
+    void (async () => {
+      const storage = getLocalStorage()
+      const token = await ensureToken(storage)
+      if (!isCurrent || token === undefined) {
+        return
+      }
+      setAccount(token)
+      const outcome = await readServerMeta(token)
+      if (!isCurrent) {
+        return
+      }
+      setMeta((current) => {
+        const merged = outcome.meta === undefined ? current : mergeMeta(outcome.meta, current)
+        writeMeta(storage, merged)
+        void writeServerMeta(token, merged)
+        return merged
+      })
+    })()
+    return () => {
+      isCurrent = false
+    }
+  }, [])
 
   useEffect(() => {
     const target = globalThis.window as Window | undefined
@@ -346,6 +380,10 @@ export function App(): React.JSX.Element {
     setMeta((current) => {
       const next = applyRunSummary(current, summary, BLOCK_CATALOG)
       writeMeta(getLocalStorage(), next)
+      // 서버에도 민다. 실패는 무시한다 — 기기에는 이미 남았고, 다음 접속에 합쳐진다.
+      if (account !== undefined) {
+        void writeServerMeta(account, next)
+      }
       return next
     })
   }

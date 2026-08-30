@@ -9,12 +9,8 @@
  * 규칙표를 더 잘 쓰게 하는 것**이지 캐릭터를 세게 만드는 것이 아니다. 스탯이 아니라
  * 정보가 누적되므로, 진 런도 "적을 카운터하는 규칙" 이라는 자산을 남긴다 (P1).
  */
-import {
-  FIRST_FLOOR,
-  MAX_SLOT_BONUS,
-  type BestiaryRecord,
-  type MetaSave,
-} from '../schemas/metaSave'
+import { FIRST_FLOOR, MAX_SLOT_BONUS } from '../schemas/metaSave'
+import type { BestiaryRecord, MetaSave } from '../schemas/metaSave'
 import type { BlockCatalog } from '../schemas/blocks'
 import type { RuleSet } from '../schemas/ruleset'
 
@@ -166,5 +162,42 @@ export function applyRunSummary(
     ),
     unlockedActions: mergeUnlocked(meta.unlockedActions, summary.seenActions, actionIds),
     bestiary: mergeBestiary(meta.bestiary, summary.encounteredKinds, summary.defeatedKinds),
+  }
+}
+
+/**
+ * 두 메타 세이브를 합친다. 서버 것과 기기 것이 갈렸을 때 쓴다.
+ *
+ * **덧셈이 아니라 최대값·합집합이다.** 도감 횟수를 더하면 동기화를 두 번 할 때마다
+ * 숫자가 불어난다 — 양쪽이 같은 런을 이미 세었을 수 있기 때문이다. 최대값은 몇 번을
+ * 합쳐도 같은 결과를 내므로(멱등), 재시도가 안전해진다.
+ *
+ * 프리셋은 기기 것을 쓴다. 편집 중인 것이 기기에 있고, 서버 것으로 덮으면 방금 짠
+ * 규칙표가 사라진다.
+ *
+ * @param server 서버에 있던 세이브.
+ * @param local 이 기기의 세이브.
+ * @returns 합쳐진 세이브.
+ */
+export function mergeMeta(server: MetaSave, local: MetaSave): MetaSave {
+  const bestiary = new Map<string, BestiaryRecord>()
+  for (const record of [...server.bestiary, ...local.bestiary]) {
+    const current = bestiary.get(record.kindId)
+    bestiary.set(record.kindId, {
+      kindId: record.kindId,
+      encounters: Math.max(current?.encounters ?? 0, record.encounters),
+      defeats: Math.max(current?.defeats ?? 0, record.defeats),
+    })
+  }
+  return {
+    formatVersion: Math.max(server.formatVersion, local.formatVersion),
+    bestFloor: Math.max(server.bestFloor, local.bestFloor),
+    unlockedPerceptions: [
+      ...new Set([...server.unlockedPerceptions, ...local.unlockedPerceptions]),
+    ].sort(),
+    unlockedActions: [...new Set([...server.unlockedActions, ...local.unlockedActions])].sort(),
+    // 정렬해서 꺼낸다. Map 순회 순서가 세이브에 새어 나가면 안 된다 (R5).
+    bestiary: [...bestiary.values()].sort((left, right) => (left.kindId < right.kindId ? -1 : 1)),
+    presets: local.presets.length > 0 ? local.presets : server.presets,
   }
 }

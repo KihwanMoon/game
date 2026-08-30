@@ -11,6 +11,16 @@ requires-python = ">=3.11"
 dependencies = []
 
 [dependency-groups]
+# 검증 서버 (B단계). **시뮬레이션 코어는 여전히 의존성이 0개다** — 코어를 부르는 쪽에만
+# 붙는다. TDD §1.2 가 '버릴 코드' 로 규정했던 파이썬 코어는 이제 검증 서버로 살아남으며
+# (docs/설계/3_저장과_멀티플레이 §1), 그 껍데기만 여기 의존한다.
+#
+# 버전을 고정하는 이유는 §7.1 이다 — 로컬과 컨테이너가 같은 것을 봐야 한다.
+api = [
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.34.0",
+    "psycopg[binary,pool]==3.2.3",
+]
 dev = [
     # §7.1 — 훅·pre-commit·게이트가 같은 ruff 를 봐야 한다. 핀은 §8.5.2 기준.
     "ruff==0.16.3",
@@ -19,6 +29,9 @@ dev = [
     "pre-commit",
     # TDD §10 — 골든 리플레이·룸 생성 검증을 CI 매 커밋으로 돌린다.
     "pytest",
+    # 검증 서버 검사에 필요하다. TestClient 가 httpx 를 쓴다.
+    "httpx",
+    {include-group = "api"},
 ]
 
 # [tool.ruff] 를 여기에 두지 않는다. ruff 는 ruff.toml 을 pyproject.toml 보다
