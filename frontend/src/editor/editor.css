@@ -381,6 +381,16 @@
   border-top: var(--border);
 }
 
+/* **높이 사슬을 여기서 잇는다.** `Panel` 의 기본 body 는 flex 를 걸지 않아
+   `flex: 0 1 auto` 로 남는다. 그대로 두면 서랍 안쪽의 `flex: 1 …` 이 잡을 높이가 없어
+   0 으로 접히고, **탭 줄만 남고 내용이 사라진다** — 실제로 그렇게 나갔다.
+   패널은 위 규칙으로 높이가 정해져 있으므로, 그 높이를 body 가 그대로 쓰게 한다. */
+.editor__col--palette > .ds-panel + .ds-panel > .ds-panel__body {
+  display: flex;
+  flex: 1 1 var(--sp-0);
+  min-height: var(--sp-0);
+}
+
 .library {
   display: flex;
   flex-direction: column;
@@ -1517,7 +1527,7 @@
 .drw {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1 1 auto;
   min-height: var(--sp-0);
 }
 
@@ -1531,8 +1541,11 @@
   flex: 0 0 auto;
 }
 
+/* **basis 는 auto 다.** 0 으로 두면 높이가 정해지지 않은 컨테이너(세로 배치가 그렇다)
+   안에서 자기 높이를 0 으로 신고해, 몸통이 통째로 사라진다. auto 면 내용만큼 신고하고,
+   높이가 정해진 곳에서는 grow 로 채우고 넘치면 shrink 뒤 스크롤한다. */
 .drw__body {
-  flex: 1 1 var(--sp-0);
+  flex: 1 1 auto;
   min-height: var(--sp-0);
   overflow-y: auto;
   display: flex;

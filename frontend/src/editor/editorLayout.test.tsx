@@ -133,3 +133,30 @@ describe('바가 넘칠 때 무엇을 버리는가', () => {
     expect(readRule('.editor__title')).toContain('text-overflow: ellipsis')
   })
 })
+
+describe('높이 사슬 — 서랍 몸통이 0 으로 접히지 않는가', () => {
+  it('★ **패널 body 가 사슬을 잇는다**', () => {
+    // `Panel` 의 기본 body 는 flex 를 걸지 않아 `flex: 0 1 auto` 로 남는다. 그대로 두면
+    // 서랍 안쪽의 `flex: 1 …` 이 잡을 높이가 없어 0 으로 접히고, **탭 줄만 남고 내용이
+    // 사라진다** — 실제로 그렇게 배포됐다.
+    const rule = readRule('.editor__col--palette > .ds-panel + .ds-panel > .ds-panel__body')
+    expect(rule).toContain('display: flex')
+    expect(rule).toContain('flex: 1 1 var(--sp-0)')
+  })
+
+  it('★ 서랍 몸통의 basis 는 auto 다 — 0 이면 자기 높이를 0 으로 신고한다', () => {
+    // 세로 배치에서는 열 높이가 정해지지 않는다. 그때 basis 0 이면 몸통이 통째로
+    // 사라진다. auto 면 내용만큼 신고하고, 높이가 정해진 곳에서는 grow 로 채운다.
+    const rule = readRule('.drw__body')
+    expect(rule).toContain('flex: 1 1 auto')
+    expect(rule).not.toContain('flex: 1 1 var(--sp-0)')
+  })
+
+  it('★ 탭 줄은 줄지 않는다 — 줄면 버튼이 서로 겹친다', () => {
+    expect(readRule('.drw__tabs')).toContain('flex: 0 0 auto')
+  })
+
+  it('서랍 자신도 자라고 줄어든다 — 고정 100% 는 부모 높이가 없으면 auto 가 된다', () => {
+    expect(readRule('.drw')).toContain('flex: 1 1 auto')
+  })
+})
