@@ -14,9 +14,9 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { App, buildInitialRuleSet, buildRunSetup, describeRunResult, findLaunchBlocker, formatLocation, readPlayerLimits } from './App'
+import { App, buildInitialRuleSet, buildChainPosition, buildNextRoomSetup, buildRunSetup, resolvePlayerLimits, describeRunResult, findLaunchBlocker, formatLocation, readPlayerLimits } from './App'
 import { buildBattleSession, checkOngoing, type BattleSetup } from './battle'
-import { BALANCE, BLOCK_CATALOG } from './core/resources'
+import { BALANCE, BLOCK_CATALOG, G0_RULESETS } from './core/resources'
 import type { LogEntry } from './core/eventLog'
 import { validateRuleSet } from './core/rules/validator'
 import { runTickBatch } from './core/services/runSteppedBattle'
@@ -171,6 +171,7 @@ describe('티켓 → 전투 조립 (E4, 결정 #13)', () => {
     floor: 1,
     coreVersion: 'b5.v2.e1',
     mode: 'PRACTICE' as const,
+    roomIds: ['corridor', 'corridor', 'corridor'],
     snapshots: [
       {
         entityId: 'goblin_archer_1',
@@ -216,5 +217,115 @@ describe('티켓 → 전투 조립 (E4, 결정 #13)', () => {
   it('로드아웃 없는 티켓은 필드 자체가 없다 — 구버전 서버가 이 경우다', () => {
     const { loadout: _omitted, ...bare } = ISSUED
     expect(buildRunSetup({ ...bare, loadout: undefined }, 'g0_pressure').loadout).toBeUndefined()
+  })
+})
+
+describe('규칙 한도 (결정 #51, #13)', () => {
+  const BASE = { cpuBudget: 8, ruleSlots: 5 }
+  const PROGRESS = {
+    level: 9,
+    totalXp: 0,
+    remainingXp: 0,
+    nextXp: 1,
+    stats: {},
+    statKeys: [],
+    statPoints: 0,
+    spentPoints: 0,
+    bonusRuleSlots: 1,
+    bonusCpu: 3,
+  }
+
+  it('★ 서버가 아는 한도를 쓴다 — 성장이 에디터에 닿는 유일한 경로다', () => {
+    // 기본값으로 두면 늘어난 CPU 가 에디터에 안 보이고, 서버는 로드아웃 한도로
+    // 검증하므로 화면에서 통과한 규칙표가 제출에서 반려된다.
+    const limits = resolvePlayerLimits(BASE, {
+      ...PROGRESS,
+      loadout: {
+        hpMax: 100,
+        attack: 12,
+        defense: 5,
+        attackRange: 1,
+        initiative: 50,
+        cpuBudget: 12,
+        ruleSlots: 7,
+        skillPowerPct: 100,
+        skills: ['ATTACK'],
+      },
+    })
+    expect(limits.cpuBudget).toBe(12)
+    expect(limits.ruleSlots).toBe(7)
+  })
+
+  it('서버에 못 닿으면 기본값으로 선다 — 오프라인 연습이 이 경우다', () => {
+    expect(resolvePlayerLimits(BASE, undefined)).toEqual(BASE)
+    expect(resolvePlayerLimits(BASE, { ...PROGRESS, loadout: undefined })).toEqual(BASE)
+  })
+})
+
+describe('층 사슬 진행 (W3)', () => {
+  const SETUP: BattleSetup = {
+    roomId: 'corridor',
+    rulesetId: 'g0_kite',
+    seed: 4242,
+    chain: buildChainPosition('corridor'),
+  }
+
+  it('★ 이기면 다음 방으로 넘어간다 — 이게 없으면 한 판이 방 하나로 끝난다', () => {
+    const next = buildNextRoomSetup(SETUP, 'PLAYER_WIN')
+    expect(next?.chain?.index).toBe(1)
+    expect(next?.seed).toBe(SETUP.seed)
+  })
+
+  it('★ 지면 넘어가지 않는다 — 죽은 캐릭터가 다음 방을 돌면 안 된다', () => {
+    expect(buildNextRoomSetup(SETUP, 'PLAYER_LOSS')).toBeUndefined()
+  })
+
+  it('★ 마지막 방을 이기면 거기서 끝이다', () => {
+    const last = { ...SETUP, chain: { roomIds: ['corridor', 'corridor'], index: 1 } }
+    expect(buildNextRoomSetup(last, 'PLAYER_WIN')).toBeUndefined()
+  })
+
+  it('★ HP 를 setup 에 적어 나르지 않는다 — 적으면 손으로 고쳐 강한 판을 만든다', () => {
+    // 인계는 ChainCursor 가 앞 방을 다시 돌려 계산한다. 그래야 "같은 setup 이면 같은
+    // 판"(R5)이 유지되고 사후 분석이 관전한 것과 같은 판을 본다.
+    const next = buildNextRoomSetup(SETUP, 'PLAYER_WIN')
+    expect(JSON.stringify(next)).not.toMatch(/hp/i)
+  })
+
+  it('★ 연쇄가 실제로 체력을 이어 받는다 — 조립까지 닿는지 본다', () => {
+    const first = buildBattleSession(SETUP, G0_RULESETS)
+    const second = buildBattleSession(
+      buildNextRoomSetup(SETUP, 'PLAYER_WIN') as BattleSetup,
+      G0_RULESETS,
+    )
+    const before = first.engine.state.entities.get('player')
+    const after = second.engine.state.entities.get('player')
+    expect(after?.hp).toBeLessThan(before?.hp ?? 0)
+  })
+
+  it('연쇄가 없는 판은 넘어갈 곳이 없다 — 부품 확인 페이지가 이 경우다', () => {
+    const bare: BattleSetup = { roomId: 'corridor', rulesetId: 'g0_kite', seed: 1 }
+    expect(buildNextRoomSetup(bare, 'PLAYER_WIN')).toBeUndefined()
+  })
+})
+
+describe('서버가 정한 방 목록 (W3)', () => {
+  it('★ 티켓의 방 목록을 그대로 쓴다 — 기기가 정하면 서버가 다른 방을 재시뮬한다', () => {
+    const setup = buildRunSetup(
+      {
+        ticketId: 't9',
+        seed: 1,
+        roomId: 'corridor',
+        floor: 1,
+        coreVersion: 'x',
+        mode: 'PRACTICE',
+        snapshots: [],
+        loadout: undefined,
+        roomIds: ['corridor', 'pillars', 'open_field'],
+      },
+      'g0_kite',
+    )
+    expect(setup.chain?.roomIds).toEqual(['corridor', 'pillars', 'open_field'])
+    expect(setup.chain?.index).toBe(0)
   })
 })

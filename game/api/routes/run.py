@@ -241,17 +241,22 @@ def check_run_submission(request: SubmissionRequest, ticket: IssuedTicket) -> Ve
     if mismatch:
         return build_rejection(mismatch)
     player = get_context().balance["player"]
+    loadout = parse_loadout(ticket.loadout) if ticket.loadout else None
+    # **한도도 티켓에서 온다.** 기본값으로 검증하면 레벨·장비로 늘어난 CPU·슬롯이
+    # 에디터에서는 쓰이는데 제출에서 반려된다 — 성장이 벌이 된다.
     return evaluate_submission(
         get_context(),
         request.ruleset,
         ticket.room_id,
         ticket.seed,
-        int(player["cpu_budget"]),
-        int(player["rule_slots"]),
+        loadout.cpu_budget if loadout else int(player["cpu_budget"]),
+        loadout.rule_slots if loadout else int(player["rule_slots"]),
         # **서버가 조회한다.** 제출이 스냅샷을 실어 오면 약한 것으로 바꿀 수 있다 (T8).
         load_snapshots(get_pool(), ticket.ticket_id),
         # 로드아웃도 티켓에서 온다. 제출이 실어 오면 강한 캐릭터로 바꿔 보낼 수 있다.
-        parse_loadout(ticket.loadout) if ticket.loadout else None,
+        loadout,
+        # 방 목록도 티켓에서 온다. 제출이 실어 오면 쉬운 방만 골라 담을 수 있다 (T2).
+        ticket.room_ids,
     )
 
 

@@ -43,6 +43,20 @@ def token(client):
     return client.post("/api/account").json()["token"]
 
 
+def find_listing_id(client, token, item_id):
+    """방금 건 매물의 id 를 찾는다.
+
+    **응답의 `listings` 를 뒤지지 않는다.** 그것은 싼 것부터 50줄만 보여주는 화면용
+    목록이라, 매물이 쌓이면 방금 건 것이 페이지 밖으로 밀린다 — 그것은 화면의 사정이지
+    "매물이 안 걸렸다" 가 아니다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.auction import list_open
+
+    rows = list_open(get_pool(), account_id_of(client, token), limit=LISTING_PROBE_LIMIT)
+    return next(row.listing_id for row in rows if row.item_id == item_id)
+
+
 def account_id_of(client, token):
     """토큰으로 계정 id 를 얻는다."""
     return client.get("/api/account", headers=build_headers(token)).json()["account_id"]
@@ -220,10 +234,8 @@ def test_cannot_buy_my_own_listing(client, token):
     headers = build_headers(token)
     grant_currency(client, token, 5000)
     item_id = grant_item(client, token)
-    listed = client.post(
-        "/api/auction/list", json={"item_id": item_id, "price": 100}, headers=headers
-    ).json()
-    listing_id = next(i["listing_id"] for i in listed["listings"] if i["item_id"] == item_id)
+    client.post("/api/auction/list", json={"item_id": item_id, "price": 100}, headers=headers)
+    listing_id = find_listing_id(client, token, item_id)
     response = client.post("/api/auction/buy", json={"listing_id": listing_id}, headers=headers)
     assert response.status_code == 409
 
@@ -232,10 +244,8 @@ def test_buying_moves_money_and_ownership(client, token):
     headers = build_headers(token)
     grant_currency(client, token, 5000)
     item_id = grant_item(client, token)
-    listed = client.post(
-        "/api/auction/list", json={"item_id": item_id, "price": 300}, headers=headers
-    ).json()
-    listing_id = next(i["listing_id"] for i in listed["listings"] if i["item_id"] == item_id)
+    client.post("/api/auction/list", json={"item_id": item_id, "price": 300}, headers=headers)
+    listing_id = find_listing_id(client, token, item_id)
 
     buyer = client.post("/api/account").json()["token"]
     grant_currency(client, buyer, 1000)
@@ -275,7 +285,7 @@ def test_cancel_returns_it_but_not_the_fee(client, token):
     listed = client.post(
         "/api/auction/list", json={"item_id": item_id, "price": 400}, headers=headers
     ).json()
-    listing_id = next(i["listing_id"] for i in listed["listings"] if i["item_id"] == item_id)
+    listing_id = find_listing_id(client, token, item_id)
     after_list = listed["balance"]
     body = client.post(
         "/api/auction/cancel", json={"listing_id": listing_id}, headers=headers
@@ -284,3 +294,29 @@ def test_cancel_returns_it_but_not_the_fee(client, token):
     assert compute_fee(400) > 0
     slots = client.get("/api/inventory", headers=headers).json()["slots"]
     assert any((slot["item"] or {}).get("item_id") == item_id for slot in slots)
+
+
+def test_progress_carries_the_current_loadout(client, token):
+    """★ 에디터가 CPU·슬롯 한도를 여기서 읽는다 (결정 #13, #51).
+
+    이 절이 없으면 에디터는 balance.json 기본값으로 서고, 서버는 로드아웃 한도로
+    검증한다 — 화면에서 통과한 규칙표가 제출에서 반려된다. **성장이 벌이 된다.**
+    """
+    body = client.get("/api/progress", headers=build_headers(token)).json()
+    assert body["loadout"]["cpu_budget"] >= 1
+    assert body["loadout"]["rule_slots"] >= 1
+
+
+def test_progress_loadout_follows_the_level(client, token):
+    """★ 레벨이 오르면 한도도 오른다 — 안 오르면 표현력 성장이 죽은 값이다."""
+    from game.api.deps import get_pool
+    from game.app.store.accounts import find_player_entity
+    from game.app.store.progress import add_player_xp
+
+    headers = build_headers(token)
+    before = client.get("/api/progress", headers=headers).json()["loadout"]
+    account_id = client.get("/api/account", headers=headers).json()["account_id"]
+    add_player_xp(get_pool(), find_player_entity(get_pool(), account_id), 20000)
+    after = client.get("/api/progress", headers=headers).json()["loadout"]
+    assert after["cpu_budget"] > before["cpu_budget"]
+    assert after["rule_slots"] > before["rule_slots"]

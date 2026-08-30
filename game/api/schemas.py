@@ -67,6 +67,9 @@ class TicketResponse(BaseModel):
     # 장비·레벨이 확정한 플레이어 전투 입력 (결정 #13). **제출 때 되보내지 않는다** —
     # 서버가 ticket_id 로 자기 것을 조회한다.
     loadout: dict | None = None
+    # 이 런이 도는 방들 (로드맵 W3). 브라우저가 이 목록대로 이어 돌고 서버가 같은
+    # 목록으로 재시뮬한다 — 여기가 비면 브라우저는 세 방, 서버는 한 방을 돈다.
+    room_ids: list[str] = Field(default_factory=list)
 
 
 class SubmissionRequest(BaseModel):
@@ -216,8 +219,12 @@ class ProgressResponse(BaseModel):
     bonus_flags: int = 0
     stat_points: int = 0
     spent_points: int = 0
-    # 배분할 수 있는 능력치. 무엇을 여는지는 미결 #51 이 정한다.
+    # 배분할 수 있는 능력치. 무엇을 여는지는 `progression/attributes.py` 가 정한다 (#51).
     stat_keys: list[str] = Field(default_factory=list)
+    # **지금 이 캐릭터의 확정 전투 입력.** 에디터가 CPU·슬롯 한도를 여기서 읽는다 —
+    # 기본값으로 두면 레벨·장비로 늘어난 한도가 에디터에 안 보이고, 보이더라도 제출이
+    # 반려된다. 규칙 검증은 클라이언트와 서버가 **같은 한도**를 봐야 한다.
+    loadout: dict = Field(default_factory=dict)
 
 
 class AllocationRequest(BaseModel):

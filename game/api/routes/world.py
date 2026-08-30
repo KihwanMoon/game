@@ -78,7 +78,11 @@ def read_player_progress(account: CurrentAccount) -> ProgressResponse:
     """
     pool = get_pool()
     progress = read_progress(pool, find_player_entity(pool, account.account_id))
-    return ProgressResponse(**vars(progress), stat_keys=list(STAT_KEYS))
+    return ProgressResponse(
+        **vars(progress),
+        stat_keys=list(STAT_KEYS),
+        loadout=build_ticket_loadout(account.account_id),
+    )
 
 
 @router.put("/api/progress/stats", response_model=ProgressResponse)

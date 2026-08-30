@@ -61,6 +61,16 @@ def build_ruleset():
     return {"ruleset_id": "probe", "version": 1, "rules": []}
 
 
+def build_winning_ruleset():
+    """방을 실제로 이기는 규칙표. 연쇄 검사는 이것이라야 뒷 방까지 돈다."""
+    import json
+
+    from game.config import G0_RULESETS_PATH
+
+    raw = json.loads(G0_RULESETS_PATH.read_text(encoding="utf-8"))
+    return next(item for item in raw["rulesets"] if item["ruleset_id"] == "g0_kite")
+
+
 def run_once(client, token, floor=1):
     headers = build_headers(token)
     ticket = client.post(

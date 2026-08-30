@@ -25,6 +25,7 @@ const PROGRESS: ProgressView = {
   spentPoints: 6,
   bonusRuleSlots: 1,
   bonusCpu: 1,
+  loadout: undefined,
 }
 
 const LEADERBOARD: LeaderboardView = {

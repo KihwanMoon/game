@@ -304,3 +304,8 @@ CREATE INDEX IF NOT EXISTS auction_seller_idx ON auction_listing (seller_id, lis
 -- 장비를 서버가 알고 전투를 브라우저가 도므로, 얼려 두지 않으면 화면은 맨몸으로 싸우고
 -- 서버는 장비를 낀 채로 재시뮬한다 (결정 #13).
 ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS loadout JSONB;
+
+-- 이 티켓이 도는 방들 (로드맵 W3). **목록을 저장한다** — 길이를 서버 상수로 두면
+-- 상수를 고치는 순간 이미 발급한 티켓이 소급해 달라지고, 그 티켓으로 돈 판은 서버가
+-- 다시 계산할 수 없다.
+ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS room_ids JSONB;

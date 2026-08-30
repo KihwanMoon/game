@@ -22,6 +22,10 @@ from game.schemas.run_ticket import MAX_SEED, RunMode
 # 런 목표 시간이 15~25분이므로(GDD §1) 그 두 배로 잡았다 (결정/1_결정대기목록 #46).
 TICKET_TTL = timedelta(minutes=50)
 
+# 한 티켓이 도는 방 수 (로드맵 W3). 발급 시점의 값을 티켓에 **적어 둔다** — 여기를
+# 고쳐도 이미 발급한 티켓은 그대로여야 서버가 그 판을 다시 계산할 수 있다.
+CHAIN_LENGTH = 3
+
 # 티켓 id 의 무작위 길이. 서버 발급 티켓은 로컬 것(`local:` 접두어)과 구분된다.
 TICKET_ID_BYTES = 12
 
@@ -38,6 +42,9 @@ class IssuedTicket:
     core_version: str
     # 장비·레벨이 확정한 전투 입력. 없으면 기본 스탯으로 선다.
     loadout: dict | None = None
+    # 이 티켓이 도는 방들 (로드맵 W3). 비어 있으면 `room_id` 한 방짜리다 — 구버전
+    # 티켓이 그 경우다.
+    room_ids: tuple[str, ...] = ()
 
 
 def create_seed() -> int:
@@ -63,6 +70,7 @@ def create_ticket(
     forced_seed: int | None = None,
     ttl: timedelta = TICKET_TTL,
     loadout: dict | None = None,
+    room_ids: tuple[str, ...] = (),
 ) -> IssuedTicket:
     """티켓을 발급한다.
 
@@ -82,6 +90,7 @@ def create_ticket(
         ttl: 유효 기간. 데일리는 짧게 잡는다 — "받아 두고 연습한 뒤 제출" 을 좁힌다.
         loadout: 장비·레벨이 확정한 전투 입력. 얼려 두지 않으면 화면과 서버가 다른
             캐릭터로 싸운다.
+        room_ids: 이 티켓이 도는 방들. 비우면 `room_id` 를 `CHAIN_LENGTH` 번 잇는다.
 
     Returns:
         발급된 티켓.
@@ -98,12 +107,16 @@ def create_ticket(
         seed = create_seed()
     if not 0 <= seed <= MAX_SEED:
         raise ValueError(f"시드가 이식 범위를 벗어났다: {seed}")
+    # **방 목록을 저장한다.** 길이를 서버 상수로 두면 상수를 고치는 순간 이미 발급한
+    # 티켓이 소급해 달라지고, 그 티켓으로 돈 판을 서버가 다시 계산할 수 없다.
+    rooms = tuple(room_ids) if room_ids else (room_id,) * CHAIN_LENGTH
     expires_at = datetime.now(UTC) + ttl
     with pool.connection() as connection:
         connection.execute(
             "INSERT INTO run_ticket"
-            " (id, account_id, seed, room_id, floor, mode, core_version, expires_at, loadout)"
-            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            " (id, account_id, seed, room_id, floor, mode, core_version, expires_at,"
+            " loadout, room_ids)"
+            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             (
                 ticket_id,
                 account_id,
@@ -114,6 +127,7 @@ def create_ticket(
                 core_version,
                 expires_at,
                 Jsonb(loadout) if loadout is not None else None,
+                Jsonb(list(rooms)),
             ),
         )
     return IssuedTicket(
@@ -124,7 +138,23 @@ def create_ticket(
         mode=str(mode),
         core_version=core_version,
         loadout=loadout,
+        room_ids=rooms,
     )
+
+
+def read_room_ids(raw: object) -> tuple[str, ...]:
+    """티켓의 방 목록 절을 읽는다.
+
+    Args:
+        raw: JSONB 컬럼 값. 문자열이거나 리스트이거나 None 이다.
+
+    Returns:
+        방 id 들. 비어 있으면 빈 튜플.
+    """
+    if raw is None:
+        return ()
+    parsed = json.loads(raw) if isinstance(raw, str) else raw
+    return tuple(str(item) for item in parsed) if isinstance(parsed, list) else ()
 
 
 def find_open_ticket(pool: ConnectionPool, ticket_id: str, account_id: int) -> IssuedTicket | None:
@@ -142,7 +172,8 @@ def find_open_ticket(pool: ConnectionPool, ticket_id: str, account_id: int) -> I
     """
     with pool.connection() as connection:
         row = connection.execute(
-            "SELECT id, seed, room_id, floor, mode, core_version, loadout FROM run_ticket"
+            "SELECT id, seed, room_id, floor, mode, core_version, loadout, room_ids"
+            " FROM run_ticket"
             " WHERE id = %s AND account_id = %s"
             " AND consumed_at IS NULL AND expires_at > now()",
             (ticket_id, account_id),
@@ -157,6 +188,9 @@ def find_open_ticket(pool: ConnectionPool, ticket_id: str, account_id: int) -> I
         mode=str(row[4]),
         core_version=str(row[5]),
         loadout=(json.loads(row[6]) if isinstance(row[6], str) else row[6]),
+        # 구버전 티켓에는 목록이 없다. 그때는 방 하나짜리로 본다 — 없는 것을 길이 3으로
+        # 채우면 그 티켓으로 돈 판과 서버 재시뮬이 갈린다.
+        room_ids=tuple(read_room_ids(row[7]) or (str(row[2]),)),
     )
 
 

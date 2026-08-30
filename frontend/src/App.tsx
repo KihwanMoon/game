@@ -30,7 +30,7 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 
-import { BattleView, checkOngoing, type BattleSetup } from './battle'
+import { BattleView, checkOngoing, type BattleSetup, type ChainPosition } from './battle'
 import {
   BALANCE,
   BLOCK_CATALOG,
@@ -261,9 +261,79 @@ export function buildRunSetup(issued: ServerTicket, rulesetId: string): BattleSe
     seed: issued.seed,
     // 지속 몬스터 (docs/설계/6_몬스터 §5).
     snapshots: issued.snapshots,
+    // **서버가 정한 방 목록을 쓴다.** 기기가 정하면 서버는 다른 방들을 재시뮬한다.
+    chain: { roomIds: issued.roomIds, index: 0 },
     ...(issued.loadout === undefined ? {} : { loadout: issued.loadout }),
     // 장비·레벨이 확정한 플레이어 전투 입력 (결정 #13).
   }
+}
+
+/** 한 런이 도는 방 수 (로드맵 W3). */
+export const CHAIN_LENGTH = 3
+
+/**
+ * 고른 방에서 시작하는 연쇄를 만든다.
+ *
+ * 지금은 같은 방을 이어 붙인다 — 층 DAG(W14)가 정해지면 그쪽이 방 목록을 정한다.
+ * 그때까지도 **여러 방을 잇는 것 자체는 돌아야 한다**: 층 압력과 HP 인계가 난이도를
+ * 만드는 유일한 장치이고, 방 하나로 끝나면 그 둘이 한 번도 작동하지 않는다.
+ *
+ * @param roomId 시작 방.
+ * @returns 연쇄 위치.
+ */
+export function buildChainPosition(roomId: string): ChainPosition {
+  return { roomIds: Array.from({ length: CHAIN_LENGTH }, () => roomId), index: 0 }
+}
+
+/**
+ * 방을 이겼을 때 다음 방으로 넘어가는 setup 을 만든다.
+ *
+ * **여기서 HP 를 적어 나르지 않는다.** 연쇄 위치(방 목록 + 몇 번째)만 적고 인계는
+ * `ChainCursor` 가 앞 방을 다시 돌려 계산한다. HP 를 setup 에 적으면 그 숫자를 손으로
+ * 고쳐 강한 판을 만들 수 있고, "같은 setup 이면 같은 판" (R5) 도 깨진다.
+ *
+ * @param setup 방금 끝난 방의 setup.
+ * @param outcome 그 방의 판정.
+ * @returns 다음 방의 setup. 졌거나 마지막 방이었으면 undefined.
+ */
+export function buildNextRoomSetup(
+  setup: BattleSetup,
+  outcome: string,
+): BattleSetup | undefined {
+  const chain = setup.chain
+  if (chain === undefined || outcome !== OUTCOME_PLAYER_WIN) {
+    return undefined
+  }
+  const next = chain.index + 1
+  const roomId = chain.roomIds[next]
+  if (roomId === undefined) {
+    return undefined
+  }
+  return { ...setup, roomId, chain: { roomIds: chain.roomIds, index: next } }
+}
+
+/**
+ * 이 판에 적용할 CPU·슬롯 한도를 고른다.
+ *
+ * **서버가 아는 한도를 쓴다.** 레벨과 장비가 CPU·슬롯을 올리는데 기본값으로 두면 늘어난
+ * 한도가 에디터에 안 보이고, 서버는 로드아웃 한도로 검증하므로 화면에서 통과한 규칙표가
+ * 제출에서 반려된다 — 성장이 벌이 된다.
+ *
+ * 서버에 못 닿으면 기본값으로 선다. 오프라인 연습이 그 경우다.
+ *
+ * @param base balance.json 이 정한 기본 한도.
+ * @param progress 서버가 준 성장 상태. 없거나 로드아웃이 없으면 기본값을 쓴다.
+ * @returns 적용할 한도.
+ */
+export function resolvePlayerLimits(
+  base: PlayerLimits,
+  progress: ProgressView | undefined,
+): PlayerLimits {
+  const loadout = progress?.loadout
+  if (loadout === undefined) {
+    return base
+  }
+  return { cpuBudget: loadout.cpuBudget, ruleSlots: loadout.ruleSlots }
 }
 
 export function App(): React.JSX.Element {
@@ -300,7 +370,11 @@ export function App(): React.JSX.Element {
   const { theme } = usePlanTheme()
 
   const ruleset = getSessionRuleSet(session)
-  const limits = useMemo(() => readPlayerLimits(BALANCE), [])
+  const baseLimits = useMemo(() => readPlayerLimits(BALANCE), [])
+  // **서버가 아는 한도를 쓴다.** 레벨과 장비가 CPU·슬롯을 올리는데 기본값으로 두면
+  // 늘어난 한도가 에디터에 안 보이고, 서버는 그 한도로 검증하므로 성장이 벌이 된다.
+  // 서버에 못 닿으면 기본값으로 선다 — 오프라인 연습이 그 경우다.
+  const limits = useMemo(() => resolvePlayerLimits(baseLimits, progress), [baseLimits, progress])
   // 결산이 적 종류에서 규칙표를 찾는 데 쓴다. parseBalance 는 절 형식을 검사하므로
   // 렌더마다 돌리지 않는다.
   const balanceData = useMemo(() => parseBalance(BALANCE), [])
@@ -527,7 +601,12 @@ export function App(): React.JSX.Element {
     const local = createLocalTicket(session.seed, session.roomId, coreVersion)
     setRun({
       // 로컬 티켓에는 스냅샷이 없다 — 지속 몬스터는 서버가 아는 것이다.
-      setup: { roomId: local.roomId, rulesetId: ruleset.rulesetId, seed: local.seed },
+      setup: {
+        roomId: local.roomId,
+        rulesetId: ruleset.rulesetId,
+        seed: local.seed,
+        chain: buildChainPosition(session.roomId),
+      },
       rulesets: new Map([[ruleset.rulesetId, ruleset]]),
       ticket: local,
     })
@@ -609,6 +688,26 @@ export function App(): React.JSX.Element {
       }
       return next
     })
+  }
+
+  /**
+   * 이긴 방 다음으로 넘어간다.
+   *
+   * **규칙 편집은 방 사이에서만 가능하다** (GDD §2.2). 그래서 여기서 규칙표를 다시 읽지
+   * 않고 시작할 때 얼린 것을 그대로 쓴다 — 방 중간에 규칙이 바뀌면 관전한 판과 서버가
+   * 재시뮬한 판이 갈린다.
+   */
+  function goToNextRoom(): void {
+    if (run === undefined) {
+      return
+    }
+    const next = buildNextRoomSetup(run.setup, outcome)
+    if (next === undefined) {
+      return
+    }
+    setOutcome(OUTCOME_ONGOING)
+    setPostState('auto')
+    setRun({ ...run, setup: next })
   }
 
   /**
@@ -834,6 +933,7 @@ export function App(): React.JSX.Element {
     )
   }
 
+  const nextRoom = run === undefined ? undefined : buildNextRoomSetup(run.setup, outcome)
   const battleControls = (
     <div className="launch">
       <ValueExpr text={`seed ${String(run.setup.seed)}`} size="sm" dim />
@@ -859,6 +959,18 @@ export function App(): React.JSX.Element {
       >
         다시
       </Button>
+      {nextRoom === undefined ? null : (
+        <Button
+          size="sm"
+          variant="primary"
+          glyph="→"
+          title="체력과 포션을 그대로 들고 다음 방으로 넘어간다"
+          onClick={goToNextRoom}
+        >
+          다음 방 {String((run.setup.chain?.index ?? 0) + 2)}/
+          {String(run.setup.chain?.roomIds.length ?? 1)}
+        </Button>
+      )}
       <Button size="sm" variant="ghost" glyph="↰" onClick={goToEditor}>
         규칙 고치기
       </Button>

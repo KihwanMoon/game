@@ -27,7 +27,7 @@ export {
   checkOngoing,
   findRoomTemplate,
 } from './battleSession'
-export type { BattleSession, BattleSetup, ExtraEnemy } from './battleSession'
+export type { BattleSession, BattleSetup, ChainPosition, ExtraEnemy } from './battleSession'
 
 export {
   BATCH_INTERVAL_TICK_UNITS,

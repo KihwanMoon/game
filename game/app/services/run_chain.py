@@ -22,8 +22,14 @@ from game.app.simulation.engine import TickEngine
 from game.app.simulation.plan import OUTCOME_PLAYER_WIN
 from game.app.simulation.pressure import PressureTracker, build_pressure_rules
 from game.schemas.blocks import BlockCatalog
+from game.schemas.loadout import PlayerLoadout
+from game.schemas.monster_snapshot import MonsterSnapshot
 from game.schemas.room import RoomTemplate
 from game.schemas.ruleset import RuleSet
+
+# 방마다 시드를 가르는 간격. TS 이식본과 **같은 값이어야 한다** — 다르면 두 코어가
+# 두 번째 방부터 다른 판을 돈다.
+SEED_STRIDE = 1000
 
 # 방 하나를 끝까지 돌리는 것. 기본값은 run_battle 이고, 리플레이는 틱을 끊어 돌며
 # 좌표를 함께 받아 적는 것을 넣는다 — 연쇄 진행 규칙(시드 분기·HP 인계·층 압력)을
@@ -51,6 +57,8 @@ def run_room_chain(
     seed: int,
     max_ticks: int = 400,
     run_room: RoomRunner = run_battle,
+    snapshots: tuple[MonsterSnapshot, ...] = (),
+    loadout: PlayerLoadout | None = None,
 ) -> ChainResult:
     """방들을 순서대로 돌고 결과를 모은다.
 
@@ -66,6 +74,9 @@ def run_room_chain(
         seed: 런 시드.
         max_ticks: 방 하나의 틱 상한.
         run_room: 방 하나를 돌리는 것. 기본값은 끝까지 한 번에 돌린다.
+        snapshots: 티켓이 얼려 둔 지속 몬스터 상태.
+        loadout: 티켓이 얼려 둔 플레이어 전투 입력. **첫 방에만 선다** — 이후는 인계된
+            HP 로 이어지며, 그렇지 않으면 방마다 체력이 회복돼 연쇄가 뜻을 잃는다.
 
     Returns:
         연쇄 결과.
@@ -89,9 +100,11 @@ def run_room_chain(
         engine = build_engine(
             template,
             balance,
-            seed=seed + index * 1000,
+            seed=seed + index * SEED_STRIDE,
             max_ticks=max_ticks,
             pressure=pressure,
+            snapshots=snapshots,
+            loadout=loadout,
         )
         player = engine.state.entities["player"]
         if carried_hp is not None:

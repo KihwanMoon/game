@@ -1,0 +1,140 @@
+{
+  "_comment": "층 사슬 기준 결과 (게이트 G3). 시드 분기·HP 인계·층 압력 유지를 고정한다 — 셋 다 방 사이에서만 일어나므로 단일 방 골든이 잡지 못한다. 손으로 고치지 않는다. scripts/export_chain_golden.py 로 다시 만든다.",
+  "seed_stride": 1000,
+  "chains": [
+    {
+      "ruleset_id": "g0_kite",
+      "room_ids": [
+        "corridor",
+        "corridor",
+        "corridor"
+      ],
+      "seed": 4242,
+      "cleared_rooms": 3,
+      "outcome": "PLAYER_WIN",
+      "total_ticks": 42,
+      "player_hp": 46,
+      "per_room": [
+        {
+          "outcome": "PLAYER_WIN",
+          "ticks": 14,
+          "player_hp": 82
+        },
+        {
+          "outcome": "PLAYER_WIN",
+          "ticks": 14,
+          "player_hp": 64
+        },
+        {
+          "outcome": "PLAYER_WIN",
+          "ticks": 14,
+          "player_hp": 46
+        }
+      ]
+    },
+    {
+      "ruleset_id": "g0_kite",
+      "room_ids": [
+        "open_field",
+        "corridor",
+        "pillars"
+      ],
+      "seed": 8080,
+      "cleared_rooms": 3,
+      "outcome": "PLAYER_WIN",
+      "total_ticks": 67,
+      "player_hp": 69,
+      "per_room": [
+        {
+          "outcome": "PLAYER_WIN",
+          "ticks": 15,
+          "player_hp": 100
+        },
+        {
+          "outcome": "PLAYER_WIN",
+          "ticks": 14,
+          "player_hp": 82
+        },
+        {
+          "outcome": "PLAYER_WIN",
+          "ticks": 38,
+          "player_hp": 69
+        }
+      ]
+    },
+    {
+      "ruleset_id": "g0_kite",
+      "room_ids": [
+        "open_field",
+        "corridor",
+        "pillars"
+      ],
+      "seed": 4242,
+      "cleared_rooms": 3,
+      "outcome": "PLAYER_WIN",
+      "total_ticks": 68,
+      "player_hp": 69,
+      "per_room": [
+        {
+          "outcome": "PLAYER_WIN",
+          "ticks": 15,
+          "player_hp": 100
+        },
+        {
+          "outcome": "PLAYER_WIN",
+          "ticks": 14,
+          "player_hp": 82
+        },
+        {
+          "outcome": "PLAYER_WIN",
+          "ticks": 39,
+          "player_hp": 69
+        }
+      ]
+    },
+    {
+      "ruleset_id": "g0_cover",
+      "room_ids": [
+        "open_field",
+        "corridor",
+        "pillars"
+      ],
+      "seed": 4242,
+      "cleared_rooms": 1,
+      "outcome": "PLAYER_LOSS",
+      "total_ticks": 39,
+      "player_hp": 0,
+      "per_room": [
+        {
+          "outcome": "PLAYER_WIN",
+          "ticks": 13,
+          "player_hp": 30
+        },
+        {
+          "outcome": "PLAYER_LOSS",
+          "ticks": 26,
+          "player_hp": 0
+        }
+      ]
+    },
+    {
+      "ruleset_id": null,
+      "room_ids": [
+        "corridor",
+        "corridor"
+      ],
+      "seed": 31337,
+      "cleared_rooms": 0,
+      "outcome": "PLAYER_LOSS",
+      "total_ticks": 36,
+      "player_hp": 0,
+      "per_room": [
+        {
+          "outcome": "PLAYER_LOSS",
+          "ticks": 36,
+          "player_hp": 0
+        }
+      ]
+    }
+  ]
+}

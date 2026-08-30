@@ -16,8 +16,10 @@ import {
   buildEngine,
   parseBalance,
   PLAYER_ENTITY_ID,
+  runBattle,
   type BalanceData,
 } from '../core/services/runBattle'
+import { ChainCursor } from '../core/services/runChain'
 import { buildRuleVm } from '../core/rules/ruleVm'
 import type { MonsterSnapshot, PlayerLoadout, RoomTemplate, RuleSet } from '../core/schemas'
 import type { TickEngine } from '../core/sim/engine'
@@ -56,6 +58,21 @@ export interface BattleSetup {
    * **이것이 없으면 화면은 맨몸으로 싸우고 서버는 장비를 낀 채로 재시뮬한다.**
    */
   readonly loadout?: PlayerLoadout
+  /**
+   * 이 판이 연쇄의 몇 번째 방인가.
+   *
+   * **앞 방들을 여기서 다시 돌린다.** 그래야 "같은 setup 이면 같은 판" (R5) 이 유지되고,
+   * 사후 분석이 관전한 것과 같은 판을 본다 — 인계된 HP 를 setup 에 적어 두면 그 값을
+   * 손으로 고쳐 강한 판을 만들 수 있다.
+   */
+  readonly chain?: ChainPosition
+}
+
+/** 연쇄에서의 위치. */
+export interface ChainPosition {
+  readonly roomIds: readonly string[]
+  /** 0부터. 이 방을 관전한다. */
+  readonly index: number
 }
 
 /** 조립된 판. 화면은 이 묶음만 들고 돈다. */
@@ -128,6 +145,81 @@ export function addExtraEnemies(
   engine.registerNewcomers()
 }
 
+
+/**
+ * 방 하나짜리 판을 조립한다.
+ *
+ * @param setup 판을 특정하는 값들.
+ * @param template 룸 템플릿.
+ * @param ruleset 플레이어 규칙표.
+ * @param balance 밸런스.
+ * @param buildTracer 플레이어 정책을 만드는 것.
+ * @returns 조립된 엔진.
+ */
+function buildSingleRoom(
+  setup: BattleSetup,
+  template: RoomTemplate,
+  ruleset: RuleSet,
+  balance: BalanceData,
+  buildTracer: (engine: TickEngine, rules: RuleSet) => TracingRuleVm,
+): TickEngine {
+  const engine = buildEngine({
+    template,
+    balance,
+    seed: setup.seed,
+    snapshots: setup.snapshots ?? [],
+    ...(setup.loadout === undefined ? {} : { loadout: setup.loadout }),
+  })
+  engine.policies.set(PLAYER_ENTITY_ID, buildTracer(engine, ruleset))
+  assignEnemyPolicies(engine, balance, BLOCK_CATALOG, ENEMY_RULESETS)
+  return engine
+}
+
+/**
+ * 연쇄의 한 방을 조립한다. **앞 방들을 여기서 다시 돌린다.**
+ *
+ * 연쇄 규칙(시드 분기·HP 인계·층 압력)은 `ChainCursor` 하나에만 있다. 화면이 그것을 다시
+ * 구현하면 헤드리스 경로와 갈려 "재현" 이 재현이 아니게 된다.
+ *
+ * @param setup 판을 특정하는 값들.
+ * @param position 연쇄에서의 위치.
+ * @param ruleset 플레이어 규칙표.
+ * @param balance 밸런스.
+ * @param buildTracer 관전할 방의 플레이어 정책을 만드는 것.
+ * @returns 관전할 방의 엔진.
+ * @throws 앞 방에서 이미 졌는데 뒷 방을 요구한 경우. 그 판은 존재하지 않는다.
+ */
+function buildChainRoom(
+  setup: BattleSetup,
+  position: ChainPosition,
+  ruleset: RuleSet,
+  balance: BalanceData,
+  buildTracer: (engine: TickEngine, rules: RuleSet) => TracingRuleVm,
+): TickEngine {
+  const cursor = new ChainCursor({
+    templates: position.roomIds.map(findRoomTemplate),
+    balance,
+    catalog: BLOCK_CATALOG,
+    playerRuleset: ruleset,
+    enemyRulesets: ENEMY_RULESETS,
+    seed: setup.seed,
+    snapshots: setup.snapshots ?? [],
+    ...(setup.loadout === undefined ? {} : { loadout: setup.loadout }),
+  })
+  for (let index = 0; index < position.index; index += 1) {
+    const past = cursor.buildNext()
+    if (past === undefined) {
+      throw new Error(`연쇄 ${String(position.index)}번 방에 닿을 수 없다 — 앞 방에서 졌다`)
+    }
+    cursor.recordRoom(runBattle(past))
+  }
+  const engine = cursor.buildNext(buildTracer)
+  if (engine === undefined) {
+    throw new Error(`연쇄 ${String(position.index)}번 방에 닿을 수 없다 — 앞 방에서 졌다`)
+  }
+  return engine
+}
+
 /**
  * 전투 한 판을 조립한다. 첫 틱은 아직 돌지 않았다.
  *
@@ -146,20 +238,26 @@ export function buildBattleSession(
     throw new Error(`없는 규칙표 id 다: ${setup.rulesetId}`)
   }
   const balance = parseBalance(BALANCE)
-  const engine = buildEngine({
-    template,
-    balance,
-    seed: setup.seed,
-    snapshots: setup.snapshots ?? [],
-    ...(setup.loadout === undefined ? {} : { loadout: setup.loadout }),
-  })
+  let tracer: TracingRuleVm | undefined
+  /**
+   * 플레이어 정책에 추적기를 씌운다. 화면이 규칙 상태를 그리려면 필요하다.
+   *
+   * @param target 조립된 엔진.
+   * @param rules 플레이어 규칙표.
+   * @returns 추적기.
+   */
+  function buildTracer(target: TickEngine, rules: RuleSet): TracingRuleVm {
+    tracer = new TracingRuleVm(buildRuleVm(rules, BLOCK_CATALOG, target.config.kindTypes), BLOCK_CATALOG)
+    return tracer
+  }
 
-  const tracer = new TracingRuleVm(
-    buildRuleVm(ruleset, BLOCK_CATALOG, engine.config.kindTypes),
-    BLOCK_CATALOG,
-  )
-  engine.policies.set(PLAYER_ENTITY_ID, tracer)
-  assignEnemyPolicies(engine, balance, BLOCK_CATALOG, ENEMY_RULESETS)
+  const engine =
+    setup.chain === undefined
+      ? buildSingleRoom(setup, template, ruleset, balance, buildTracer)
+      : buildChainRoom(setup, setup.chain, ruleset, balance, buildTracer)
+  if (tracer === undefined) {
+    throw new Error('플레이어 정책이 만들어지지 않았다')
+  }
   addExtraEnemies(engine, balance, setup.extraEnemies ?? [])
 
   return { engine, template, ruleset, balance, tracer }

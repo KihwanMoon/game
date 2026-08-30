@@ -18,9 +18,8 @@
 from dataclasses import dataclass
 from typing import Any
 
-from game.app.rules.rule_vm import build_rule_vm
 from game.app.rules.validator import validate_ruleset
-from game.app.services.run_battle import assign_enemy_policies, build_engine, run_battle
+from game.app.services.run_chain import run_room_chain
 from game.app.store.runs import VERDICT_REJECTED, VERDICT_VERIFIED
 from game.schemas.blocks import BlockCatalog
 from game.schemas.loadout import PlayerLoadout
@@ -84,6 +83,7 @@ def evaluate_submission(
     rule_slots: int,
     snapshots: tuple[MonsterSnapshot, ...] = (),
     loadout: PlayerLoadout | None = None,
+    room_ids: tuple[str, ...] = (),
 ) -> VerifiedRun:
     """제출 하나를 재시뮬해서 판정한다.
 
@@ -100,6 +100,9 @@ def evaluate_submission(
         snapshots: **티켓이 얼려 둔** 지속 몬스터 상태. 클라이언트가 보낸 것이 아니다 —
             받으면 약한 스냅샷으로 바꿔 제출할 수 있다 (T8).
         loadout: **티켓이 얼려 둔** 플레이어 전투 입력. 클라이언트가 보낸 것이 아니다.
+        room_ids: **티켓이 얼려 둔** 방 목록. 비어 있으면 `room_id` 한 방만 돈다 —
+            구버전 티켓이 그 경우다. 여기가 비면 브라우저는 세 방을 도는데 서버는 한
+            방만 계산해, 이긴 판이 진 것으로 확정된다.
 
     Returns:
         확정된 결과. 규칙표가 형식이나 예산을 어기면 `rejected` 다.
@@ -114,16 +117,27 @@ def evaluate_submission(
     if problems:
         return VerifiedRun("", 0, 0, VERDICT_REJECTED, f"규칙표 위반: {problems[0]}")
 
-    if room_id not in context.rooms:
-        return VerifiedRun("", 0, 0, VERDICT_REJECTED, f"없는 방이다: {room_id}")
+    rooms = room_ids or (room_id,)
+    missing = [name for name in rooms if name not in context.rooms]
+    if missing:
+        return VerifiedRun("", 0, 0, VERDICT_REJECTED, f"없는 방이다: {missing[0]}")
 
-    engine = build_engine(context.rooms[room_id], context.balance, seed=seed, snapshots=snapshots)
-    engine.policies[PLAYER_ID] = build_rule_vm(ruleset, context.catalog, engine.config.kind_types)
-    assign_enemy_policies(engine, context.balance, context.catalog, context.enemy_rulesets)
-    result = run_battle(engine)
+    # **로드아웃과 방 목록을 반드시 넘긴다.** 빠뜨리면 서버는 맨몸으로 한 방만 다시
+    # 돌려, 장비를 끼고 세 방을 이긴 판을 진 것으로 기록한다 — 제출이 반려되는 것이
+    # 아니라 **틀린 결과가 확정된다.** 그 결과가 경험치·전리품·순위로 흘러간다.
+    result = run_room_chain(
+        tuple(context.rooms[name] for name in rooms),
+        context.balance,
+        context.catalog,
+        ruleset,
+        context.enemy_rulesets,
+        seed,
+        snapshots=snapshots,
+        loadout=loadout,
+    )
     return VerifiedRun(
         outcome=result.outcome,
-        ticks=result.ticks,
+        ticks=result.total_ticks,
         player_hp=result.player_hp,
         verdict=VERDICT_VERIFIED,
     )

@@ -318,6 +318,13 @@ export interface ServerTicket {
    * 맨몸으로 싸우고 서버는 장비를 낀 채로 계산한다.
    */
   readonly loadout: PlayerLoadout | undefined
+  /**
+   * 이 런이 도는 방들 (로드맵 W3).
+   *
+   * **서버가 이 목록대로 재시뮬한다.** 비면 브라우저는 세 방을 도는데 서버는 한 방만
+   * 계산해, 이긴 판이 진 것으로 확정된다.
+   */
+  readonly roomIds: readonly string[]
 }
 
 /**
@@ -353,6 +360,7 @@ export async function requestTicket(
     core_version: string
     monster_snapshot?: RawMonsterSnapshot[]
     loadout?: RawPlayerLoadout | null
+    room_ids?: string[]
   }
   return {
     ticketId: body.ticket_id,
@@ -363,6 +371,9 @@ export async function requestTicket(
     coreVersion: body.core_version,
     snapshots: sortSnapshots((body.monster_snapshot ?? []).map(parseSnapshot)),
     loadout: body.loadout ? parseLoadout(body.loadout) : undefined,
+    // 구버전 서버는 목록을 주지 않는다. 그때는 방 하나짜리다 — 없는 것을 길이 3으로
+    // 채우면 서버가 계산하지 않은 방을 브라우저가 돈다.
+    roomIds: body.room_ids ?? [body.room_id],
   }
 }
 
@@ -655,6 +666,14 @@ export interface ProgressView {
   readonly spentPoints: number
   readonly bonusRuleSlots: number
   readonly bonusCpu: number
+  /**
+   * 지금 이 캐릭터의 확정 전투 입력.
+   *
+   * **에디터가 CPU·슬롯 한도를 여기서 읽는다.** 기본값으로 두면 레벨·장비로 늘어난
+   * 한도가 화면에 안 보이고, 보이더라도 서버가 기본값으로 검증해 제출이 반려된다 —
+   * 규칙 검증은 화면과 서버가 **같은 한도**를 봐야 한다.
+   */
+  readonly loadout: PlayerLoadout | undefined
 }
 
 /** 순위표 한 줄. */
@@ -710,6 +729,7 @@ export async function readProgress(token: string): Promise<ProgressView | undefi
     spent_points: number
     bonus_rule_slots: number
     bonus_cpu: number
+    loadout?: RawPlayerLoadout | null
   }
   return {
     level: body.level,
@@ -722,6 +742,7 @@ export async function readProgress(token: string): Promise<ProgressView | undefi
     spentPoints: body.spent_points,
     bonusRuleSlots: body.bonus_rule_slots,
     bonusCpu: body.bonus_cpu,
+    loadout: body.loadout ? parseLoadout(body.loadout) : undefined,
   }
 }
 
