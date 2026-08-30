@@ -11,7 +11,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createEmptyMeta } from '../core/schemas'
 import { mergeMeta } from '../core/services/manageMeta'
-import { TOKEN_STORAGE_KEY, ensureToken, readServerMeta, readToken } from './serverSync'
+import {
+  TOKEN_STORAGE_KEY,
+  ensureToken,
+  readServerMeta,
+  readToken,
+  requestTicket,
+} from './serverSync'
 import type { StorageLike } from './saveStore'
 
 /**
@@ -148,5 +154,75 @@ describe('세이브 합치기', () => {
   it('프리셋은 기기 것을 지킨다 — 편집 중인 것이 사라지면 안 된다', () => {
     const withPreset = { ...local, presets: [{ name: '내 것', ruleset: local.presets[0]?.ruleset }] }
     expect(mergeMeta(server, withPreset as typeof local).presets).toHaveLength(1)
+  })
+})
+
+describe('티켓 — 지속 몬스터 스냅샷 (E4)', () => {
+  const RAW = {
+    ticket_id: 't1',
+    seed: 42,
+    room_id: 'corridor',
+    floor: 1,
+    mode: 'PRACTICE',
+    core_version: 'b5.v2.e1',
+    monster_snapshot: [
+      {
+        entity_id: 'goblin_archer_1',
+        record_id: 2,
+        kind_id: 'goblin_archer',
+        tier: 'BOSS',
+        level: 12,
+        hp_max: 140,
+        attack: 24,
+        defense: 9,
+        rule_slots: 6,
+        cpu_budget: 10,
+      },
+      {
+        entity_id: 'goblin_rusher_0',
+        record_id: 1,
+        kind_id: 'goblin_rusher',
+        tier: 'ELITE',
+        level: 7,
+        hp_max: 96,
+        attack: 17,
+        defense: 5,
+        rule_slots: 4,
+        cpu_budget: 7,
+      },
+    ],
+  }
+
+  it('★ 티켓의 스냅샷을 읽는다', async () => {
+    // **이 자리가 실제로 비어 있었다.** 서버는 스냅샷으로 재시뮬하는데 클라이언트가
+    // 그것을 읽지 않아, 화면이 기본 적을 그리는 동안 서버는 엘리트를 상대할 뻔했다.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(RAW) }),
+    )
+    const ticket = await requestTicket('token', 'corridor', 42)
+    expect(ticket?.snapshots).toHaveLength(2)
+    expect(ticket?.snapshots[0]?.hpMax).toBe(140)
+  })
+
+  it('entityId 순으로 정렬해서 준다 — 순서가 흔들리면 재현이 흔들린다', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(RAW) }),
+    )
+    const ticket = await requestTicket('token', 'corridor', 42)
+    expect(ticket?.snapshots.map((item) => item.entityId)).toEqual([
+      'goblin_archer_1',
+      'goblin_rusher_0',
+    ])
+  })
+
+  it('스냅샷 절이 없으면 빈 배열이다 — 로컬·구버전 서버가 이 경우다', async () => {
+    const { monster_snapshot: _omitted, ...withoutSnapshot } = RAW
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(withoutSnapshot) }),
+    )
+    expect((await requestTicket('token', 'corridor', 42))?.snapshots).toEqual([])
   })
 })

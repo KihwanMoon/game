@@ -17,6 +17,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import { BLOCK_CATALOG, BALANCE, ENEMY_RULESETS, G0_RULESETS, ROOM_TEMPLATES } from '../core/resources'
+import { recordBattle } from '../hud'
 import { buildRuleVm } from '../core/rules/ruleVm'
 import {
   PLAYER_ENTITY_ID,
@@ -813,5 +814,57 @@ describe('토큰을 다시 읽어도 같은 값이면 도면을 다시 그리지
 
   it('아직 읽은 적이 없으면 거짓이다 — 첫 값은 반드시 들어간다', () => {
     expect(checkPlanThemeSame(undefined, FAKE_THEME)).toBe(false)
+  })
+})
+
+describe('지속 몬스터 스냅샷 배선 (E4)', () => {
+  const SETUP = { roomId: 'corridor', rulesetId: 'g0_pressure', seed: 7 }
+  const SNAPSHOT = {
+    entityId: 'goblin_rusher_0',
+    recordId: 1,
+    kindId: 'goblin_rusher',
+    tier: 'ELITE',
+    level: 7,
+    hpMax: 96,
+    attack: 17,
+    defense: 5,
+    ruleSlots: 4,
+    cpuBudget: 7,
+  }
+
+  it('★ 조립이 스냅샷을 실제로 반영한다', () => {
+    // **골든은 이것을 못 잡는다.** 골든은 코어 함수를 직접 부르므로 앱의 배선이 그
+    // 경로 밖이고, 실제로 한 번 빠뜨려 화면과 서버가 다른 판을 돌 뻔했다.
+    const plain = buildBattleSession(SETUP, G0_RULESETS)
+    const withSnapshot = buildBattleSession({ ...SETUP, snapshots: [SNAPSHOT] }, G0_RULESETS)
+    const before = plain.engine.state.entities.get('goblin_rusher_0')
+    const after = withSnapshot.engine.state.entities.get('goblin_rusher_0')
+    expect(before).toBeDefined()
+    expect(after).toBeDefined()
+    expect(after?.hpMax).toBe(SNAPSHOT.hpMax)
+    expect(after?.attack).toBe(SNAPSHOT.attack)
+    expect(after?.hpMax).not.toBe(before?.hpMax)
+  })
+
+  it('스냅샷이 없으면 방 배치 그대로다 — 로컬 티켓이 이 경우다', () => {
+    const plain = buildBattleSession(SETUP, G0_RULESETS)
+    const empty = buildBattleSession({ ...SETUP, snapshots: [] }, G0_RULESETS)
+    expect(empty.engine.state.entities.get('goblin_rusher_0')?.hpMax).toBe(
+      plain.engine.state.entities.get('goblin_rusher_0')?.hpMax,
+    )
+  })
+
+  it('없는 자리를 겨냥한 스냅샷은 조용히 지나간다', () => {
+    // entity_id 가 갈리면 아무에게도 적용되지 않는다. 조립이 죽으면 안 된다.
+    const session = buildBattleSession(
+      { ...SETUP, snapshots: [{ ...SNAPSHOT, entityId: 'nobody_9' }] },
+      G0_RULESETS,
+    )
+    expect(session.engine.state.entities.get('goblin_rusher_0')?.hpMax).not.toBe(SNAPSHOT.hpMax)
+  })
+
+  it('기록도 같은 setup 을 쓰므로 함께 반영된다', () => {
+    const recording = recordBattle({ ...SETUP, snapshots: [SNAPSHOT] }, G0_RULESETS)
+    expect(recording.frames.length).toBeGreaterThan(0)
   })
 })

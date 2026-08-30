@@ -451,6 +451,7 @@ export function App(): React.JSX.Element {
     setPostState('auto')
     const local = createLocalTicket(session.seed, session.roomId, coreVersion)
     setRun({
+      // 로컬 티켓에는 스냅샷이 없다 — 지속 몬스터는 서버가 아는 것이다.
       setup: { roomId: local.roomId, rulesetId: ruleset.rulesetId, seed: local.seed },
       rulesets: new Map([[ruleset.rulesetId, ruleset]]),
       ticket: local,
@@ -465,7 +466,14 @@ export function App(): React.JSX.Element {
       // 서버가 준 시드로 판을 다시 건다. 연습 모드라 제안한 시드가 그대로 오지만,
       // 순위 모드가 생기면 여기서 값이 갈리고 그때는 서버 것이 정본이다.
       setRun({
-        setup: { roomId: issued.roomId, rulesetId: ruleset.rulesetId, seed: issued.seed },
+        setup: {
+          roomId: issued.roomId,
+          rulesetId: ruleset.rulesetId,
+          seed: issued.seed,
+          // **반드시 넘긴다.** 서버가 이 스냅샷으로 재시뮬하므로, 빠뜨리면 화면이
+          // 기본 적을 그리는 동안 서버는 엘리트를 상대한다 (docs/설계/6_몬스터 §5).
+          snapshots: issued.snapshots,
+        },
         rulesets: new Map([[ruleset.rulesetId, ruleset]]),
         ticket: {
           ticketId: issued.ticketId,

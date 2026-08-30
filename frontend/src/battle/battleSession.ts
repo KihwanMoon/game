@@ -19,7 +19,7 @@ import {
   type BalanceData,
 } from '../core/services/runBattle'
 import { buildRuleVm } from '../core/rules/ruleVm'
-import type { RoomTemplate, RuleSet } from '../core/schemas'
+import type { MonsterSnapshot, RoomTemplate, RuleSet } from '../core/schemas'
 import type { TickEngine } from '../core/sim/engine'
 import { OUTCOME_ONGOING } from '../core/sim/phases'
 import { FACTION_ENEMY, createEntity } from '../core/sim/state'
@@ -43,6 +43,13 @@ export interface BattleSetup {
    * 확인할 수 없다는 뜻이다.
    */
   readonly extraEnemies?: readonly ExtraEnemy[]
+  /**
+   * 티켓이 얼려 둔 지속 몬스터 상태 (docs/설계/6_몬스터 §5).
+   *
+   * **이것이 없으면 브라우저와 서버가 다른 판을 돈다.** 서버는 티켓의 스냅샷으로
+   * 재시뮬하므로, 화면이 기본 적을 그리는 동안 서버는 엘리트를 상대한다.
+   */
+  readonly snapshots?: readonly MonsterSnapshot[]
 }
 
 /** 조립된 판. 화면은 이 묶음만 들고 돈다. */
@@ -133,7 +140,12 @@ export function buildBattleSession(
     throw new Error(`없는 규칙표 id 다: ${setup.rulesetId}`)
   }
   const balance = parseBalance(BALANCE)
-  const engine = buildEngine({ template, balance, seed: setup.seed })
+  const engine = buildEngine({
+    template,
+    balance,
+    seed: setup.seed,
+    snapshots: setup.snapshots ?? [],
+  })
 
   const tracer = new TracingRuleVm(
     buildRuleVm(ruleset, BLOCK_CATALOG, engine.config.kindTypes),

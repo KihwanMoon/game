@@ -8,7 +8,8 @@
  * 계정은 익명이다. 첫 접속에 계정이 생기고 토큰이 기기에 저장된다. **토큰을 잃으면
  * 계정을 잃는다** — 승격 경로(이메일·OAuth)가 아이템과 거래 전에 필요하다.
  */
-import type { MetaSave } from '../core/schemas'
+import type { MetaSave, MonsterSnapshot, RawMonsterSnapshot } from '../core/schemas'
+import { parseSnapshot, sortSnapshots } from '../core/schemas'
 import { buildMetaPayload, parseMetaPayload } from './metaSave'
 import type { StorageLike } from './saveStore'
 
@@ -297,6 +298,13 @@ export interface ServerTicket {
   readonly floor: number
   readonly mode: string
   readonly coreVersion: string
+  /**
+   * 이 런이 만날 지속 몬스터의 얼어붙은 상태.
+   *
+   * **전투에 반드시 넘겨야 한다.** 서버는 이것으로 재시뮬하므로, 넘기지 않으면 화면과
+   * 서버가 다른 판을 돈다 (docs/설계/6_몬스터 §5).
+   */
+  readonly snapshots: readonly MonsterSnapshot[]
 }
 
 /**
@@ -330,6 +338,7 @@ export async function requestTicket(
     floor: number
     mode: string
     core_version: string
+    monster_snapshot?: RawMonsterSnapshot[]
   }
   return {
     ticketId: body.ticket_id,
@@ -338,6 +347,7 @@ export async function requestTicket(
     floor: body.floor,
     mode: body.mode,
     coreVersion: body.core_version,
+    snapshots: sortSnapshots((body.monster_snapshot ?? []).map(parseSnapshot)),
   }
 }
 
