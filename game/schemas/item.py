@@ -95,6 +95,9 @@ class ItemCatalogEntry:
     affixes: tuple[Affix, ...] = ()
     requirements: tuple[Requirement, ...] = ()
     stack_max: int = 1
+    # 이 장비가 여는 스킬 (결정 #13). 장비는 전투 전에 캐릭터로 녹으므로, 스킬도
+    # 규칙표가 직접 장비를 보는 것이 아니라 **캐릭터가 그것을 갖게** 되는 방식이다.
+    grants_skill: str | None = None
     tags: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -155,5 +158,6 @@ def parse_item(raw: dict) -> ItemCatalogEntry:
         affixes=tuple(parse_affix(item) for item in raw.get("affixes", [])),
         requirements=tuple(parse_requirement(item) for item in raw.get("requirements", [])),
         stack_max=int(raw.get("stack_max", 1)),
+        grants_skill=raw.get("grants_skill"),
         tags=tuple(raw.get("tags", [])),
     )

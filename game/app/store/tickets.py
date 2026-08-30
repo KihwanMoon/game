@@ -8,10 +8,12 @@
 나머지를 버리는 것까지는 막지 못하지만(§5 의 남는 문제), 무한히 쌓아 두는 것은 막는다.
 """
 
+import json
 import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
+from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
 from game.schemas.run_ticket import MAX_SEED, RunMode
@@ -34,6 +36,8 @@ class IssuedTicket:
     floor: int
     mode: str
     core_version: str
+    # 장비·레벨이 확정한 전투 입력. 없으면 기본 스탯으로 선다.
+    loadout: dict | None = None
 
 
 def create_seed() -> int:
@@ -58,6 +62,7 @@ def create_ticket(
     wanted_seed: int | None = None,
     forced_seed: int | None = None,
     ttl: timedelta = TICKET_TTL,
+    loadout: dict | None = None,
 ) -> IssuedTicket:
     """티켓을 발급한다.
 
@@ -75,6 +80,8 @@ def create_ticket(
             아니라 서버가 날짜에서 파생한 값이므로 T2 와 무관하다. 둘을 한 인자로 두면
             "누가 정했는가" 가 흐려지고, 그 구분이 이 게이트의 전부다.
         ttl: 유효 기간. 데일리는 짧게 잡는다 — "받아 두고 연습한 뒤 제출" 을 좁힌다.
+        loadout: 장비·레벨이 확정한 전투 입력. 얼려 두지 않으면 화면과 서버가 다른
+            캐릭터로 싸운다.
 
     Returns:
         발급된 티켓.
@@ -95,9 +102,19 @@ def create_ticket(
     with pool.connection() as connection:
         connection.execute(
             "INSERT INTO run_ticket"
-            " (id, account_id, seed, room_id, floor, mode, core_version, expires_at)"
-            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-            (ticket_id, account_id, seed, room_id, floor, str(mode), core_version, expires_at),
+            " (id, account_id, seed, room_id, floor, mode, core_version, expires_at, loadout)"
+            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (
+                ticket_id,
+                account_id,
+                seed,
+                room_id,
+                floor,
+                str(mode),
+                core_version,
+                expires_at,
+                Jsonb(loadout) if loadout is not None else None,
+            ),
         )
     return IssuedTicket(
         ticket_id=ticket_id,
@@ -106,6 +123,7 @@ def create_ticket(
         floor=floor,
         mode=str(mode),
         core_version=core_version,
+        loadout=loadout,
     )
 
 
@@ -124,7 +142,7 @@ def find_open_ticket(pool: ConnectionPool, ticket_id: str, account_id: int) -> I
     """
     with pool.connection() as connection:
         row = connection.execute(
-            "SELECT id, seed, room_id, floor, mode, core_version FROM run_ticket"
+            "SELECT id, seed, room_id, floor, mode, core_version, loadout FROM run_ticket"
             " WHERE id = %s AND account_id = %s"
             " AND consumed_at IS NULL AND expires_at > now()",
             (ticket_id, account_id),
@@ -138,6 +156,7 @@ def find_open_ticket(pool: ConnectionPool, ticket_id: str, account_id: int) -> I
         floor=int(row[3]),
         mode=str(row[4]),
         core_version=str(row[5]),
+        loadout=(json.loads(row[6]) if isinstance(row[6], str) else row[6]),
     )
 
 

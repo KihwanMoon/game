@@ -15,6 +15,7 @@ import { describe, expect, it } from 'vitest'
 import golden from '../golden/sim_golden.json'
 import { BALANCE, ROOM_TEMPLATES } from '../resources'
 import { parseSnapshot } from '../schemas/monsterSnapshot'
+import { parseLoadout } from '../schemas/loadout'
 import { getManhattanDistance } from '../grid/geometry'
 import { ACTION_COUNT } from '../schemas'
 import {
@@ -70,9 +71,22 @@ interface GoldenSnapshot {
   readonly cpu_budget: number
 }
 
+interface GoldenLoadout {
+  readonly hp_max: number
+  readonly attack: number
+  readonly defense: number
+  readonly attack_range: number
+  readonly initiative: number
+  readonly cpu_budget: number
+  readonly rule_slots: number
+  readonly skills: readonly string[]
+}
+
 interface GoldenBattle {
   /** 티켓이 얼려 둔 지속 몬스터 상태 (E단계). 없으면 빈 배열이다. */
   readonly snapshots?: readonly GoldenSnapshot[]
+  /** 티켓이 얼려 둔 플레이어 전투 입력 (장비·레벨). 없으면 기본 스탯으로 선다. */
+  readonly loadout?: GoldenLoadout | null
   readonly template_id: string
   readonly seed: number
   readonly policy: string
@@ -206,6 +220,8 @@ function runGoldenBattle(battle: GoldenBattle): { engine: TickEngine } {
     floor: battle.floor,
     // 지속 몬스터 상태. 겹치기가 두 코어에서 갈리면 여기서 결과가 달라진다.
     snapshots: (battle.snapshots ?? []).map(parseSnapshot),
+    // 장비가 전투를 바꾸는 경로. 겹치기가 두 코어에서 갈리면 여기서 결과가 달라진다.
+    ...(battle.loadout ? { loadout: parseLoadout(battle.loadout) } : {}),
   })
   if (battle.policy === POLICY_CYCLE) {
     engine.policy = new CyclingPolicy(

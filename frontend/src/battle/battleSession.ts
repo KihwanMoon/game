@@ -19,7 +19,7 @@ import {
   type BalanceData,
 } from '../core/services/runBattle'
 import { buildRuleVm } from '../core/rules/ruleVm'
-import type { MonsterSnapshot, RoomTemplate, RuleSet } from '../core/schemas'
+import type { MonsterSnapshot, PlayerLoadout, RoomTemplate, RuleSet } from '../core/schemas'
 import type { TickEngine } from '../core/sim/engine'
 import { OUTCOME_ONGOING } from '../core/sim/phases'
 import { FACTION_ENEMY, createEntity } from '../core/sim/state'
@@ -50,6 +50,12 @@ export interface BattleSetup {
    * 재시뮬하므로, 화면이 기본 적을 그리는 동안 서버는 엘리트를 상대한다.
    */
   readonly snapshots?: readonly MonsterSnapshot[]
+  /**
+   * 티켓이 얼려 둔 플레이어 전투 입력 (장비·레벨).
+   *
+   * **이것이 없으면 화면은 맨몸으로 싸우고 서버는 장비를 낀 채로 재시뮬한다.**
+   */
+  readonly loadout?: PlayerLoadout
 }
 
 /** 조립된 판. 화면은 이 묶음만 들고 돈다. */
@@ -145,6 +151,7 @@ export function buildBattleSession(
     balance,
     seed: setup.seed,
     snapshots: setup.snapshots ?? [],
+    ...(setup.loadout === undefined ? {} : { loadout: setup.loadout }),
   })
 
   const tracer = new TracingRuleVm(

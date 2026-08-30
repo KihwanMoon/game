@@ -8,8 +8,14 @@
  * 계정은 익명이다. 첫 접속에 계정이 생기고 토큰이 기기에 저장된다. **토큰을 잃으면
  * 계정을 잃는다** — 승격 경로(이메일·OAuth)가 아이템과 거래 전에 필요하다.
  */
-import type { MetaSave, MonsterSnapshot, RawMonsterSnapshot } from '../core/schemas'
-import { parseSnapshot, sortSnapshots } from '../core/schemas'
+import type {
+  MetaSave,
+  MonsterSnapshot,
+  PlayerLoadout,
+  RawMonsterSnapshot,
+  RawPlayerLoadout,
+} from '../core/schemas'
+import { parseLoadout, parseSnapshot, sortSnapshots } from '../core/schemas'
 import { buildMetaPayload, parseMetaPayload } from './metaSave'
 import type { StorageLike } from './saveStore'
 
@@ -305,6 +311,13 @@ export interface ServerTicket {
    * 서버가 다른 판을 돈다 (docs/설계/6_몬스터 §5).
    */
   readonly snapshots: readonly MonsterSnapshot[]
+  /**
+   * 장비·레벨이 확정한 전투 입력 (결정 #13).
+   *
+   * **전투에 반드시 넘겨야 한다.** 서버는 이것으로 재시뮬하므로, 넘기지 않으면 화면은
+   * 맨몸으로 싸우고 서버는 장비를 낀 채로 계산한다.
+   */
+  readonly loadout: PlayerLoadout | undefined
 }
 
 /**
@@ -339,6 +352,7 @@ export async function requestTicket(
     mode: string
     core_version: string
     monster_snapshot?: RawMonsterSnapshot[]
+    loadout?: RawPlayerLoadout | null
   }
   return {
     ticketId: body.ticket_id,
@@ -348,6 +362,7 @@ export async function requestTicket(
     mode: body.mode,
     coreVersion: body.core_version,
     snapshots: sortSnapshots((body.monster_snapshot ?? []).map(parseSnapshot)),
+    loadout: body.loadout ? parseLoadout(body.loadout) : undefined,
   }
 }
 

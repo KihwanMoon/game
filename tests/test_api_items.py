@@ -15,6 +15,7 @@ import os
 import pytest
 
 from game.app.store.connection import DATABASE_URL_ENV
+from game.schemas.item import Affix
 
 fastapi_testclient = pytest.importorskip("fastapi.testclient")
 
@@ -238,3 +239,87 @@ def test_repair_costs_currency(client, token):
         if e["slot"] == "HEAD"
     )
     assert head["item"]["is_broken"] is False
+
+
+# ── 장비 → 티켓 (결정 #13) ───────────────────────────────────────────────
+
+
+def apply_equip_via_api(client, token, item_id, slot):
+    """착용하고 **성공했는지 확인한다.**
+
+    응답 코드를 안 보면 422·409 로 조용히 실패한 것이 뒤따르는 단언에서 "장비가 반영되지
+    않았다" 로 둔갑한다. 실제로 한 번 그렇게 읽었다.
+    """
+    body = {"item_id": item_id, "slot": slot}
+    response = client.post("/api/equip", headers=build_headers(token), json=body)
+    assert response.status_code == 200, response.text
+    return response
+
+
+def request_loadout(client, token):
+    """티켓을 하나 받아 그 안의 로드아웃을 돌려준다."""
+    body = {"room_id": ROOM_ID, "seed": 42}
+    return client.post("/api/ticket", headers=build_headers(token), json=body).json()["loadout"]
+
+
+def test_ticket_carries_loadout(client, token):
+    """★ 맨몸이어도 티켓은 로드아웃을 싣는다.
+
+    브라우저가 전투를 돌리므로 서버만 아는 장비를 티켓에 얼려 보내야 한다. 이 절이 없으면
+    클라이언트는 기본값으로 떨어지고, 서버는 장비를 낀 채로 재시뮬해 정상 제출이 전부
+    반려된다.
+    """
+    loadout = request_loadout(client, token)
+    assert loadout["attack_range"] >= 1
+    assert "ATTACK" in loadout["skills"]
+
+
+def test_equipping_changes_the_issued_loadout(client, token):
+    """★ 여기가 실제로 비어 있던 자리다 — 부품은 다 있고 배선이 없었다.
+
+    장비를 끼면 티켓이 싣는 값이 바뀌어야 한다. 안 바뀌면 인벤토리는 화면 장식이다.
+    """
+    before = request_loadout(client, token)
+    item_id = grant_item(client, token, "bow_long")
+    apply_equip_via_api(client, token, item_id, "WEAPON_MAIN")
+    after = request_loadout(client, token)
+    assert after["attack_range"] > before["attack_range"]
+
+
+def test_equipping_opens_a_skill(client, token):
+    """★ 장비가 스킬을 연다 — 규칙표 재설계로 이어지는 지점이다 (결정 #13)."""
+    item_id = grant_item(client, token, "shield_buckler")
+    apply_equip_via_api(client, token, item_id, "WEAPON_OFF")
+    assert "GUARD_BRACE" in request_loadout(client, token)["skills"]
+
+
+def test_broken_gear_grants_nothing(client, token):
+    """★ 파손은 그 자리가 비어 있는 것과 같다 (결정 #34).
+
+    파손된 장비가 계속 스탯을 주면 사망 대가가 사라진다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.accounts import find_player_entity
+    from game.app.store.equipment import mark_item_broken
+
+    item_id = grant_item(client, token, "bow_long")
+    apply_equip_via_api(client, token, item_id, "WEAPON_MAIN")
+    geared = request_loadout(client, token)
+    account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
+    mark_item_broken(get_pool(), find_player_entity(get_pool(), account_id), item_id)
+    assert request_loadout(client, token)["attack_range"] < geared["attack_range"]
+
+
+def test_instance_affixes_beat_catalog_defaults(client, token):
+    """★ 같은 이름의 아이템이 조금씩 다르게 나와야 파밍이 성립한다.
+
+    인스턴스가 굴린 접사를 안 쓰면 모든 롱보우가 똑같아진다.
+    """
+    plain_id = grant_item(client, token, "helm_iron")
+    apply_equip_via_api(client, token, plain_id, "HEAD")
+    plain = request_loadout(client, token)
+    unequip = {"item_id": plain_id, "slot": "HEAD"}
+    client.post("/api/unequip", headers=build_headers(token), json=unequip)
+    rolled_id = grant_item(client, token, "helm_iron", (Affix(stat="hp_max", flat=40),))
+    apply_equip_via_api(client, token, rolled_id, "HEAD")
+    assert request_loadout(client, token)["hp_max"] > plain["hp_max"]

@@ -868,3 +868,39 @@ describe('지속 몬스터 스냅샷 배선 (E4)', () => {
     expect(recording.frames.length).toBeGreaterThan(0)
   })
 })
+
+describe('로드아웃 배선 (결정 #13)', () => {
+  const SETUP = { roomId: 'corridor', rulesetId: 'g0_pressure', seed: 7 }
+  const LOADOUT = {
+    hpMax: 132,
+    attack: 18,
+    defense: 8,
+    attackRange: 4,
+    initiative: 56,
+    cpuBudget: 11,
+    ruleSlots: 6,
+    skills: ['ATTACK', 'SKILL_2'],
+  }
+
+  it('★ 조립이 로드아웃을 실제로 반영한다', () => {
+    // 넘기지 않으면 화면은 맨몸으로 싸우고 서버는 장비를 낀 채로 재시뮬한다.
+    // E4 에서 같은 자리를 한 번 빠뜨렸다.
+    const plain = buildBattleSession(SETUP, G0_RULESETS)
+    const geared = buildBattleSession({ ...SETUP, loadout: LOADOUT }, G0_RULESETS)
+    const before = plain.engine.state.entities.get('player')
+    const after = geared.engine.state.entities.get('player')
+    expect(after?.hpMax).toBe(LOADOUT.hpMax)
+    expect(after?.attackRange).toBe(LOADOUT.attackRange)
+    expect(after?.hpMax).not.toBe(before?.hpMax)
+  })
+
+  it('★ 로드아웃이 장착 스킬을 정한다 — 미장착이면 「불가」가 실제로 뜬다', () => {
+    const geared = buildBattleSession({ ...SETUP, loadout: LOADOUT }, G0_RULESETS)
+    expect(geared.engine.state.entities.get('player')?.skills).toEqual(['ATTACK', 'SKILL_2'])
+  })
+
+  it('로드아웃이 없으면 기본 스탯이고 스킬 제한이 없다 — 오프라인 연습이 이 경우다', () => {
+    const plain = buildBattleSession(SETUP, G0_RULESETS)
+    expect(plain.engine.state.entities.get('player')?.skills).toBeNull()
+  })
+})

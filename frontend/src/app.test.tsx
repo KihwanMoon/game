@@ -14,7 +14,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { App, buildInitialRuleSet, describeRunResult, findLaunchBlocker, formatLocation, readPlayerLimits } from './App'
+import { App, buildInitialRuleSet, buildRunSetup, describeRunResult, findLaunchBlocker, formatLocation, readPlayerLimits } from './App'
 import { buildBattleSession, checkOngoing, type BattleSetup } from './battle'
 import { BALANCE, BLOCK_CATALOG } from './core/resources'
 import type { LogEntry } from './core/eventLog'
@@ -160,5 +160,60 @@ describe('관전한 판과 사후 분석이 보는 판이 같다', () => {
     const recorded = recordBattle(setup, rulesets)
     expect(recorded.frames).toHaveLength(recorded.ticks + 1)
     expect(recorded.frames[0]?.tick).toBe(0)
+  })
+})
+
+describe('티켓 → 전투 조립 (E4, 결정 #13)', () => {
+  const ISSUED = {
+    ticketId: 't1',
+    seed: 42,
+    roomId: 'corridor',
+    floor: 1,
+    coreVersion: 'b5.v2.e1',
+    mode: 'PRACTICE' as const,
+    snapshots: [
+      {
+        entityId: 'goblin_archer_1',
+        recordId: 2,
+        kindId: 'goblin_archer',
+        tier: 'BOSS' as const,
+        level: 12,
+        hpMax: 140,
+        attack: 24,
+        defense: 9,
+        ruleSlots: 6,
+        cpuBudget: 10,
+      },
+    ],
+    loadout: {
+      hpMax: 132,
+      attack: 18,
+      defense: 8,
+      attackRange: 4,
+      initiative: 56,
+      cpuBudget: 11,
+      ruleSlots: 6,
+      skills: ['ATTACK', 'SKILL_2'],
+    },
+  }
+
+  it('★ 스냅샷을 흘리지 않는다 — E4 에서 실제로 여기서 샜다', () => {
+    expect(buildRunSetup(ISSUED, 'g0_pressure').snapshots).toEqual(ISSUED.snapshots)
+  })
+
+  it('★ 로드아웃을 흘리지 않는다', () => {
+    // 흘리면 화면은 맨몸으로 싸우고 서버는 장비를 낀 채로 재시뮬한다 —
+    // 정상적으로 이긴 판이 전부 불일치로 반려된다.
+    expect(buildRunSetup(ISSUED, 'g0_pressure').loadout).toEqual(ISSUED.loadout)
+  })
+
+  it('규칙표는 티켓이 아니라 기기가 정한다', () => {
+    expect(buildRunSetup(ISSUED, 'g0_pressure').rulesetId).toBe('g0_pressure')
+    expect(buildRunSetup(ISSUED, 'g0_range').rulesetId).toBe('g0_range')
+  })
+
+  it('로드아웃 없는 티켓은 필드 자체가 없다 — 구버전 서버가 이 경우다', () => {
+    const { loadout: _omitted, ...bare } = ISSUED
+    expect(buildRunSetup({ ...bare, loadout: undefined }, 'g0_pressure').loadout).toBeUndefined()
   })
 })

@@ -299,3 +299,8 @@ CREATE TABLE IF NOT EXISTS auction_listing (
 
 CREATE INDEX IF NOT EXISTS auction_open_idx ON auction_listing (state, price, listed_at);
 CREATE INDEX IF NOT EXISTS auction_seller_idx ON auction_listing (seller_id, listed_at DESC);
+
+-- 티켓이 얼려 둔 플레이어 전투 입력 (장비·레벨). 몬스터 스냅샷과 같은 이유로 필요하다 —
+-- 장비를 서버가 알고 전투를 브라우저가 도므로, 얼려 두지 않으면 화면은 맨몸으로 싸우고
+-- 서버는 장비를 낀 채로 재시뮬한다 (결정 #13).
+ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS loadout JSONB;

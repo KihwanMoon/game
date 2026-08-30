@@ -26,126 +26,28 @@ from game.app.simulation.engine import TickEngine
 from game.app.simulation.perception import PerceptionSnapshot
 from game.app.simulation.plan import PlannedAction
 from game.app.simulation.scaling import build_floor_scale, get_scaled_enemy_stats
-from game.app.simulation.selectors import (
-    SELECTOR_ALLY_WOUNDED,
-    SELECTOR_NEAREST,
-    resolve_target,
-)
+from game.app.simulation.selectors import SELECTOR_NEAREST, resolve_target
 from game.app.simulation.state import FACTION_ENEMY, Entity, WorldState
 from game.config import BALANCE_PATH, ROOM_TEMPLATES_PATH
+from game.schemas.loadout import PlayerLoadout, build_loadout_payload
 from game.schemas.monster_snapshot import MonsterSnapshot, build_snapshot_payload
 from game.schemas.room import RoomTemplate, load_room_templates
+from scripts.sim_golden_cases import (
+    ACTION_CYCLE,
+    CYCLE_CASES,
+    CYCLE_FLAG,
+    CYCLE_SELECTORS,
+    CYCLE_SKILL,
+    FALLBACK_CASES,
+    FLOOR,
+    LOADOUT_CASES,
+    MAX_TICKS,
+    POLICY_CYCLE,
+    POLICY_FALLBACK,
+    SNAPSHOT_CASES,
+)
 
 GOLDEN_PATH = Path(__file__).resolve().parents[1] / "frontend/src/core/golden/sim_golden.json"
-
-POLICY_FALLBACK = "fallback"
-POLICY_CYCLE = "cycle"
-
-# 시간 초과로 끝나는 판도 대조 대상이다. 400 은 실제 실행값과 같다.
-MAX_TICKS = 400
-
-# 기본 층. 케이스마다 다를 수 있으므로 각 레코드가 자기 층을 함께 싣는다.
-FLOOR = 1
-
-# 동결된 행동 전부. 순서를 바꾸면 기준 로그가 통째로 달라진다. HEAL 은 v4, USE_SKILL 은
-# v5 에서 **뒤에** 붙였다 — 사이에 끼우면 그 뒤의 모든 기준 로그가 이유 없이 밀린다.
-ACTION_CYCLE = (
-    "APPROACH",
-    "ATTACK",
-    "SKILL_2",
-    "AREA_ATTACK",
-    "RETREAT",
-    "MOVE_TO_COVER",
-    "SUMMON",
-    "USE_POTION",
-    "MOVE_TO_HEAL",
-    "SET_FLAG",
-    "MOVE_TO_EXIT",
-    "HOLD",
-    "SKILL_1",
-    "HEAL",
-    "USE_SKILL",
-)
-
-# 지속 몬스터 케이스. 스냅샷이 층 스케일을 **대체하는지**(얹는 것이 아니라) 가 여기서
-# 드러난다 — 얹으면 같은 개체가 층마다 다른 값을 갖게 되어 스냅샷의 뜻이 사라진다.
-SNAPSHOT_CASES: tuple[tuple[tuple[str, int, int], tuple[MonsterSnapshot, ...]], ...] = (
-    (
-        ("corridor", 31337, 1),
-        (
-            MonsterSnapshot(
-                entity_id="goblin_rusher_0",
-                record_id=1,
-                kind_id="goblin_rusher",
-                tier="ELITE",
-                level=7,
-                hp_max=96,
-                attack=17,
-                defense=5,
-                rule_slots=4,
-                cpu_budget=7,
-            ),
-        ),
-    ),
-    (
-        # 층 5 인데도 스냅샷 값이 그대로 쓰이는지 본다. 층 스케일이 얹히면 여기서 갈린다.
-        ("corridor", 31337, 5),
-        (
-            MonsterSnapshot(
-                entity_id="goblin_archer_1",
-                record_id=2,
-                kind_id="goblin_archer",
-                tier="BOSS",
-                level=12,
-                hp_max=140,
-                attack=24,
-                defense=9,
-                rule_slots=6,
-                cpu_budget=10,
-            ),
-        ),
-    ),
-)
-
-# USE_SKILL 이 실행할 스킬. 이 정책은 규칙표를 타지 않으므로 여기서 정한다.
-# 사거리 4 인 사격을 고른 이유는 근접 스킬과 결과가 갈려야 대조에 뜻이 있기 때문이다.
-CYCLE_SKILL = "SKILL_2"
-
-# 행동별 대상 셀렉터. 이 정책은 규칙표를 타지 않으므로 진영을 여기서 맞춘다 —
-# 전부 NEAREST 로 두면 HEAL 이 적을 회복해 기준 로그가 뜻 없는 것을 고정한다.
-CYCLE_SELECTORS = {"HEAL": SELECTOR_ALLY_WOUNDED}
-
-# SET_FLAG 가 세울 플래그. 규칙표가 쓰는 A~D 안에서 고른다.
-CYCLE_FLAG = "A=true"
-
-# 템플릿 id · 시드 · 층. 템플릿마다 적 구성과 지형이 달라 서로 다른 코드 경로를 밟는다.
-# 뒤의 다섯은 min_floor 로 층 2~3 에 묶인 방이며, 그 방이 나오는 층에서 돌린다 — 폭탄
-# 슬라임·수복 사제·장궁병·정예 돌격병·대소환사가 룸 템플릿에 배치되면서 생긴 자리다.
-FALLBACK_CASES = (
-    ("open_field", 1, 1),
-    ("corridor", 12345, 1),
-    ("pillars", 7, 1),
-    ("hazard_field", 99, 1),
-    ("spring_bait", 2024, 1),
-    ("blast_yard", 606, 1),
-    ("chapel", 707, 2),
-    ("longshot", 909, 2),
-    ("warlord_gate", 1212, 2),
-    ("summoner_vault", 1515, 3),
-)
-
-# 템플릿 id · 시드 · 덧붙일 적. 좌표는 전부 통행 가능하고 스폰과 겹치지 않는 칸이다.
-# 폭탄 슬라임과 대소환사를 넣는 것은 예고·자폭·소환이 이 조합에서만 돌기 때문이다.
-# 템플릿 id · 시드 · 층 · 덧붙일 적.
-CYCLE_CASES = (
-    ("open_field", 4242, 1, (("bomb_slime", 5, 4), ("mender_acolyte", 6, 2))),
-    ("pillars", 555, 1, (("arch_summoner", 7, 4), ("veteran_rusher", 4, 6))),
-    ("hazard_field", 808, 1, (("longbow_archer", 6, 4),)),
-    ("spring_bait", 31337, 1, (("bomb_slime", 6, 6),)),
-    # 층 깊이 스케일이 걸린 채로 행동 14개를 다 돌린다. 방 배치·소환·덧붙인 적이 모두
-    # 같은 기준으로 서는지 여기서 고정된다 (docs/04 P-1).
-    ("pillars", 3131, 3, (("arch_summoner", 7, 4), ("veteran_rusher", 4, 6))),
-)
 
 
 class CyclingPolicy:
@@ -255,6 +157,7 @@ def build_case(
     policy_name: str,
     extras: tuple[tuple[str, int, int], ...] = (),
     snapshots: tuple[MonsterSnapshot, ...] = (),
+    loadout: PlayerLoadout | None = None,
 ) -> dict[str, Any]:
     """전투 한 판을 돌리고 대조용 레코드를 만든다.
 
@@ -265,6 +168,7 @@ def build_case(
         policy_name: POLICY_FALLBACK 또는 POLICY_CYCLE.
         extras: 덧붙일 적 목록.
         snapshots: 티켓이 얼려 둔 지속 몬스터 상태.
+        loadout: 티켓이 얼려 둔 플레이어 전투 입력.
 
     Returns:
         JSON 에 넣을 레코드.
@@ -272,7 +176,13 @@ def build_case(
     template_id, seed, floor = case
     template = find_template(templates, template_id)
     engine = build_engine(
-        template, balance, seed=seed, max_ticks=MAX_TICKS, floor=floor, snapshots=snapshots
+        template,
+        balance,
+        seed=seed,
+        max_ticks=MAX_TICKS,
+        floor=floor,
+        snapshots=snapshots,
+        loadout=loadout,
     )
     if policy_name == POLICY_CYCLE:
         engine.policy = CyclingPolicy({k["id"]: k["type"] for k in balance["enemies"]})
@@ -284,6 +194,7 @@ def build_case(
         "seed": seed,
         "policy": policy_name,
         "snapshots": [build_snapshot_payload(item) for item in snapshots],
+        "loadout": None if loadout is None else build_loadout_payload(loadout),
         "max_ticks": MAX_TICKS,
         "floor": floor,
         "extra_enemies": [{"kind": kind, "x": x, "y": y} for kind, x, y in extras],
@@ -345,6 +256,12 @@ def build_battle_cases() -> list[dict[str, Any]]:
     cases.extend(
         build_case(balance, templates, case, POLICY_FALLBACK, snapshots=snapshots)
         for case, snapshots in SNAPSHOT_CASES
+    )
+    # 로드아웃 케이스. **이것이 없으면 장비가 전투를 바꾸는 경로에서 두 코어가 갈려도
+    # 골든이 침묵한다** — 화면은 맨몸으로 싸우고 서버는 장비를 낀 채 재시뮬한다.
+    cases.extend(
+        build_case(balance, templates, case, POLICY_FALLBACK, loadout=loadout)
+        for case, loadout in LOADOUT_CASES
     )
     return cases
 

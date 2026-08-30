@@ -23,6 +23,7 @@ from game.app.rules.validator import validate_ruleset
 from game.app.services.run_battle import assign_enemy_policies, build_engine, run_battle
 from game.app.store.runs import VERDICT_REJECTED, VERDICT_VERIFIED
 from game.schemas.blocks import BlockCatalog
+from game.schemas.loadout import PlayerLoadout
 from game.schemas.monster_snapshot import MonsterSnapshot
 from game.schemas.room import RoomTemplate
 from game.schemas.ruleset import RuleSet, parse_ruleset
@@ -82,6 +83,7 @@ def evaluate_submission(
     cpu_budget: int,
     rule_slots: int,
     snapshots: tuple[MonsterSnapshot, ...] = (),
+    loadout: PlayerLoadout | None = None,
 ) -> VerifiedRun:
     """제출 하나를 재시뮬해서 판정한다.
 
@@ -97,6 +99,7 @@ def evaluate_submission(
         rule_slots: 이 계정의 규칙 슬롯 상한.
         snapshots: **티켓이 얼려 둔** 지속 몬스터 상태. 클라이언트가 보낸 것이 아니다 —
             받으면 약한 스냅샷으로 바꿔 제출할 수 있다 (T8).
+        loadout: **티켓이 얼려 둔** 플레이어 전투 입력. 클라이언트가 보낸 것이 아니다.
 
     Returns:
         확정된 결과. 규칙표가 형식이나 예산을 어기면 `rejected` 다.

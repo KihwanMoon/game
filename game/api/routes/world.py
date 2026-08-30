@@ -11,6 +11,7 @@
 """
 
 import hashlib
+import json
 from datetime import date, timedelta
 from typing import Annotated
 
@@ -18,6 +19,7 @@ from fastapi import APIRouter, Header, HTTPException, status
 from psycopg_pool import ConnectionPool
 
 from game.api.deps import TOKEN_HEADER, CurrentAccount, get_context, get_core_version, get_pool
+from game.api.loadout_service import build_ticket_loadout
 from game.api.schemas import (
     AllocationRequest,
     LeaderboardResponse,
@@ -150,7 +152,7 @@ def create_daily_ticket(account: CurrentAccount) -> TicketResponse:
     core_version = get_core_version()
     with pool.connection() as connection:
         found = connection.execute(
-            "SELECT t.id, t.seed, t.room_id, t.floor, t.mode, t.core_version"
+            "SELECT t.id, t.seed, t.room_id, t.floor, t.mode, t.core_version, t.loadout"
             " FROM daily_entry d JOIN run_ticket t ON t.id = d.ticket_id"
             " WHERE d.account_id = %s AND d.day = %s",
             (account.account_id, today),
@@ -163,6 +165,7 @@ def create_daily_ticket(account: CurrentAccount) -> TicketResponse:
             floor=int(found[3]),
             mode=str(found[4]),
             core_version=str(found[5]),
+            loadout=json.loads(found[6]) if isinstance(found[6], str) else found[6],
             monster_snapshot=[],
         )
 
@@ -174,6 +177,7 @@ def create_daily_ticket(account: CurrentAccount) -> TicketResponse:
         mode=RunMode.DAILY,
         # 서버가 정한 값이다 — 클라이언트 제안이 아니므로 T2 와 무관하다.
         forced_seed=build_daily_seed(today, core_version),
+        loadout=build_ticket_loadout(account.account_id),
         ttl=DAILY_TTL,
     )
     snapshots = build_daily_snapshots(pool, ticket.ticket_id, ticket.floor)

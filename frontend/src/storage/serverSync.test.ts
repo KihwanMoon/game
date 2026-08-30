@@ -226,3 +226,54 @@ describe('티켓 — 지속 몬스터 스냅샷 (E4)', () => {
     expect((await requestTicket('token', 'corridor', 42))?.snapshots).toEqual([])
   })
 })
+
+describe('티켓 — 로드아웃 (결정 #13)', () => {
+  const RAW = {
+    ticket_id: 't2',
+    seed: 42,
+    room_id: 'corridor',
+    floor: 1,
+    mode: 'PRACTICE',
+    core_version: 'b5.v2.e1',
+    loadout: {
+      hp_max: 132,
+      attack: 18,
+      defense: 8,
+      attack_range: 4,
+      initiative: 56,
+      cpu_budget: 11,
+      rule_slots: 6,
+      skills: ['SKILL_2', 'ATTACK'],
+    },
+  }
+
+  it('★ 티켓의 로드아웃을 읽는다', async () => {
+    // 스냅샷과 같은 자리다. 서버는 장비를 낀 캐릭터로 재시뮬하므로, 여기서 흘리면
+    // 화면은 맨몸으로 싸우고 제출은 전부 불일치로 반려된다.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(RAW) }),
+    )
+    const ticket = await requestTicket('token', 'corridor', 42)
+    expect(ticket?.loadout?.attackRange).toBe(4)
+    expect(ticket?.loadout?.hpMax).toBe(132)
+  })
+
+  it('스킬을 정렬해서 준다 — 순서가 흔들리면 「불가」 판정이 흔들린다', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(RAW) }),
+    )
+    const ticket = await requestTicket('token', 'corridor', 42)
+    expect(ticket?.loadout?.skills).toEqual(['ATTACK', 'SKILL_2'])
+  })
+
+  it('로드아웃 절이 없으면 undefined 다 — 오프라인·구버전 서버가 이 경우다', async () => {
+    const { loadout: _omitted, ...withoutLoadout } = RAW
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(withoutLoadout) }),
+    )
+    expect((await requestTicket('token', 'corridor', 42))?.loadout).toBeUndefined()
+  })
+})

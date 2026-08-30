@@ -64,6 +64,9 @@ class TicketResponse(BaseModel):
     # 이 런이 만날 지속 몬스터의 얼어붙은 상태 (docs/설계/6_몬스터 §5).
     # **제출 때 되보내지 않는다** — 서버가 ticket_id 로 자기 것을 조회한다 (T8).
     monster_snapshot: list[dict] = Field(default_factory=list)
+    # 장비·레벨이 확정한 플레이어 전투 입력 (결정 #13). **제출 때 되보내지 않는다** —
+    # 서버가 ticket_id 로 자기 것을 조회한다.
+    loadout: dict | None = None
 
 
 class SubmissionRequest(BaseModel):

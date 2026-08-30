@@ -2,6 +2,7 @@
 export * from './blocks'
 export * from './room'
 export * from './metaSave'
+export * from './loadout'
 export * from './monsterSnapshot'
 export * from './runTicket'
 export * from './ruleset'

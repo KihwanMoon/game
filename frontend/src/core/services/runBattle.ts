@@ -30,6 +30,7 @@ import type { RawDamageFormula } from '../combat/damage'
 import { FACTION_ENEMY, FACTION_PLAYER, WorldState, createEntity } from '../sim/state'
 import type { Entity } from '../sim/state'
 import { buildEntityId, type MonsterSnapshot } from '../schemas/monsterSnapshot'
+import type { PlayerLoadout } from '../schemas/loadout'
 
 /** 이 틱을 넘기면 시간 초과로 끝낸다. */
 export const DEFAULT_MAX_TICKS = 400
@@ -155,6 +156,12 @@ export interface EngineSetup {
    * 얹으면 같은 개체가 층마다 다른 값을 갖게 되어 스냅샷의 뜻이 사라진다.
    */
   readonly snapshots?: readonly MonsterSnapshot[]
+  /**
+   * 티켓이 얼려 둔 플레이어 전투 입력 (장비·레벨).
+   *
+   * 없으면 balance.json 기본값으로 선다 — 오프라인 연습이 그 경우다.
+   */
+  readonly loadout?: PlayerLoadout
 }
 
 /**
@@ -176,6 +183,10 @@ export function buildEngine(setup: EngineSetup): TickEngine {
   initSpringPools(state, rules.springPoolDefault)
 
   const playerStats = balance.player
+  // 로드아웃이 있으면 장비·레벨이 확정한 값이 기본값을 **대체한다** (결정 #13).
+  // 얹으면 같은 장비가 밸런스 패치마다 다른 값을 낸다.
+  const loadout = setup.loadout
+  const playerHp = loadout?.hpMax ?? playerStats.hp_max
   state.entities.set(
     PLAYER_ENTITY_ID,
     createEntity({
@@ -183,15 +194,18 @@ export function buildEngine(setup: EngineSetup): TickEngine {
       kindId: PLAYER_ENTITY_ID,
       faction: FACTION_PLAYER,
       position: template.playerSpawn,
-      hp: playerStats.hp_max,
-      hpMax: playerStats.hp_max,
-      attack: playerStats.attack,
-      defense: playerStats.defense,
-      attackRange: playerStats.attack_range,
-      initiative: playerStats.initiative,
+      hp: playerHp,
+      hpMax: playerHp,
+      attack: loadout?.attack ?? playerStats.attack,
+      defense: loadout?.defense ?? playerStats.defense,
+      attackRange: loadout?.attackRange ?? playerStats.attack_range,
+      initiative: loadout?.initiative ?? playerStats.initiative,
       regenBase: playerStats.regen_base,
-      cpuBudget: playerStats.cpu_budget,
+      cpuBudget: loadout?.cpuBudget ?? playerStats.cpu_budget,
       potions: playerStats.potions,
+      // null 은 "장착 개념이 배선되지 않음" 이라 전부 허용한다 — 오프라인 연습이
+      // 그 경우다. 로드아웃이 있으면 그 목록만 쓴다.
+      skills: loadout === undefined ? null : [...loadout.skills],
     }),
   )
 

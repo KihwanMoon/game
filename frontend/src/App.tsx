@@ -108,6 +108,7 @@ import {
   type InventoryView,
   type RunResult,
   type RunVerdict,
+  type ServerTicket,
 } from './storage'
 import { createEmptyMeta, type MetaSave } from './core/schemas'
 import { MAX_SEED, buildCoreVersion, createLocalTicket, type RunTicket } from './core/schemas'
@@ -241,6 +242,30 @@ export function findLaunchBlocker(problems: readonly string[]): string {
  *
  * @returns 렌더 트리.
  */
+/**
+ * 서버 티켓을 전투 조립 입력으로 옮긴다.
+ *
+ * **티켓이 실어 온 것을 하나도 흘리면 안 된다.** 서버는 이 티켓으로 판을 다시 돌려
+ * 제출을 대조하므로, 여기서 빠진 항목이 하나라도 있으면 화면과 서버가 서로 다른 판을
+ * 돌고 정상 제출이 전부 반려된다. 실제로 E4 에서 스냅샷이 이 자리에서 새어
+ * 나갔다 — 그래서 이 옮김을 인라인으로 두지 않고 이름을 붙여 검사 대상으로 만들었다.
+ *
+ * @param issued 서버가 발급한 티켓.
+ * @param rulesetId 이 판에 쓸 규칙표 id. 규칙표는 티켓이 아니라 기기가 정한다.
+ * @returns 전투 조립 입력.
+ */
+export function buildRunSetup(issued: ServerTicket, rulesetId: string): BattleSetup {
+  return {
+    roomId: issued.roomId,
+    rulesetId,
+    seed: issued.seed,
+    // 지속 몬스터 (docs/설계/6_몬스터 §5).
+    snapshots: issued.snapshots,
+    ...(issued.loadout === undefined ? {} : { loadout: issued.loadout }),
+    // 장비·레벨이 확정한 플레이어 전투 입력 (결정 #13).
+  }
+}
+
 export function App(): React.JSX.Element {
   const [session, setSession] = useState<EditorSession>(() =>
     createSession(readSave(getLocalStorage()), {
@@ -516,14 +541,7 @@ export function App(): React.JSX.Element {
       // 서버가 준 시드로 판을 다시 건다. 연습 모드라 제안한 시드가 그대로 오지만,
       // 순위 모드가 생기면 여기서 값이 갈리고 그때는 서버 것이 정본이다.
       setRun({
-        setup: {
-          roomId: issued.roomId,
-          rulesetId: ruleset.rulesetId,
-          seed: issued.seed,
-          // **반드시 넘긴다.** 서버가 이 스냅샷으로 재시뮬하므로, 빠뜨리면 화면이
-          // 기본 적을 그리는 동안 서버는 엘리트를 상대한다 (docs/설계/6_몬스터 §5).
-          snapshots: issued.snapshots,
-        },
+        setup: buildRunSetup(issued, ruleset.rulesetId),
         rulesets: new Map([[ruleset.rulesetId, ruleset]]),
         ticket: {
           ticketId: issued.ticketId,

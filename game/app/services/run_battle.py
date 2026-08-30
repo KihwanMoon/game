@@ -19,6 +19,7 @@ from game.app.simulation.springs import init_spring_pools
 from game.app.simulation.state import FACTION_ENEMY, FACTION_PLAYER, Entity, WorldState
 from game.config import SKILLS_PATH
 from game.schemas.blocks import BlockCatalog
+from game.schemas.loadout import PlayerLoadout
 from game.schemas.monster_snapshot import MonsterSnapshot, build_entity_id
 from game.schemas.room import RoomTemplate
 from game.schemas.ruleset import RuleSet
@@ -94,6 +95,7 @@ def build_engine(
     floor: int = 1,
     pressure: PressureTracker | None = None,
     snapshots: tuple[MonsterSnapshot, ...] = (),
+    loadout: PlayerLoadout | None = None,
 ) -> TickEngine:
     """방 템플릿과 밸런스 값으로 엔진을 조립한다.
 
@@ -108,6 +110,8 @@ def build_engine(
         pressure: 층 단위 압력 추적기. 방마다 새로 만들면 층 체류 스케일이
             매 방 0 으로 돌아가므로 연쇄 실행은 하나를 만들어 계속 넘긴다.
         snapshots: 티켓이 얼려 둔 지속 몬스터 상태. 해당 자리의 층 스케일을 대체한다.
+        loadout: 티켓이 얼려 둔 플레이어 전투 입력 (장비·레벨). 없으면 balance.json 의
+            기본값으로 선다 — 오프라인 연습이 그 경우다.
 
     Returns:
         첫 틱을 돌릴 준비가 된 엔진.
@@ -119,20 +123,26 @@ def build_engine(
     init_spring_pools(state, rules.spring_pool_default)
 
     player_stats = balance["player"]
+    # 로드아웃이 있으면 장비·레벨이 확정한 값이 기본값을 **대체한다** (결정 #13).
+    # 얹으면 같은 장비가 밸런스 패치마다 다른 값을 낸다.
+    hp_max = loadout.hp_max if loadout else player_stats["hp_max"]
     state.entities["player"] = Entity(
         entity_id="player",
         kind_id="player",
         faction=FACTION_PLAYER,
         position=template.player_spawn,
-        hp=player_stats["hp_max"],
-        hp_max=player_stats["hp_max"],
-        attack=player_stats["attack"],
-        defense=player_stats["defense"],
-        attack_range=player_stats["attack_range"],
-        initiative=player_stats["initiative"],
+        hp=hp_max,
+        hp_max=hp_max,
+        attack=loadout.attack if loadout else player_stats["attack"],
+        defense=loadout.defense if loadout else player_stats["defense"],
+        attack_range=loadout.attack_range if loadout else player_stats["attack_range"],
+        initiative=loadout.initiative if loadout else player_stats["initiative"],
         regen_base=player_stats["regen_base"],
-        cpu_budget=player_stats["cpu_budget"],
+        cpu_budget=loadout.cpu_budget if loadout else player_stats["cpu_budget"],
         potions=player_stats["potions"],
+        # None 은 "장착 개념이 배선되지 않음" 이라 전부 허용한다 — 오프라인 연습이
+        # 그 경우다. 로드아웃이 있으면 그 목록만 쓴다.
+        skills=loadout.skills if loadout else None,
     )
 
     kinds = balance["enemies"]

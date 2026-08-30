@@ -7,6 +7,7 @@
 from fastapi import APIRouter, HTTPException, status
 
 from game.api.deps import CurrentAccount, get_context, get_core_version, get_pool
+from game.api.loadout_service import build_ticket_loadout
 from game.api.schemas import TicketRequest, TicketResponse
 from game.app.store.monsters import build_monster_snapshot, list_monsters, save_snapshots
 from game.app.store.tickets import create_ticket
@@ -39,6 +40,8 @@ def create_run_ticket(request: TicketRequest, account: CurrentAccount) -> Ticket
         get_core_version(),
         floor=request.floor,
         wanted_seed=request.seed,
+        # 장비·레벨을 얼려 넣는다. 없으면 화면과 서버가 다른 캐릭터로 싸운다 (결정 #13).
+        loadout=build_ticket_loadout(account.account_id),
     )
     # 지속 몬스터를 **얼려 넣는다** (docs/설계/6_몬스터 §5). 이것이 있어야 런 등식이
     # f(시드, 규칙표, 코어버전, 스냅샷) 으로 유지되고, 서버가 같은 상태로 재시뮬할 수 있다.

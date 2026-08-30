@@ -32,6 +32,7 @@ from game.app.store.runs import (
     save_submission,
 )
 from game.app.store.tickets import IssuedTicket, find_open_ticket, mark_ticket_consumed
+from game.schemas.loadout import parse_loadout
 
 router = APIRouter()
 
@@ -249,6 +250,8 @@ def check_run_submission(request: SubmissionRequest, ticket: IssuedTicket) -> Ve
         int(player["rule_slots"]),
         # **서버가 조회한다.** 제출이 스냅샷을 실어 오면 약한 것으로 바꿀 수 있다 (T8).
         load_snapshots(get_pool(), ticket.ticket_id),
+        # 로드아웃도 티켓에서 온다. 제출이 실어 오면 강한 캐릭터로 바꿔 보낼 수 있다.
+        parse_loadout(ticket.loadout) if ticket.loadout else None,
     )
 
 
