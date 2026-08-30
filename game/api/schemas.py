@@ -274,3 +274,63 @@ class ListingAction(BaseModel):
     """매물 하나를 대상으로 하는 요청."""
 
     listing_id: int
+
+
+class AdminMonsterView(BaseModel):
+    """관리자 화면의 몬스터 한 줄."""
+
+    record_id: int
+    catalog_id: str
+    tier: str
+    zone_floor: int
+    entity_slot: str
+    level: int
+    # 그 층의 상한. **함께 보내야 한다** — 레벨만 보면 그것이 높은 값인지 알 수 없다.
+    level_cap: int
+    total_xp: int
+    alive: bool
+    # 이 개체가 들고 있는 아이템 수. 남의 장비를 들고 있는 것이 World Loop 의 동기다.
+    held_items: int
+
+
+class AdminActionView(BaseModel):
+    """관리자가 세계에 손댄 기록 한 줄."""
+
+    handle: str
+    action: str
+    target: str
+    detail: str
+    created_at: str
+
+
+class AdminOverviewResponse(BaseModel):
+    """세계 현황 한 화면.
+
+    **콘텐츠 수치는 읽기 전용이다.** 아이템 카탈로그·적 종류는 `resources/*.json` 이고
+    그것은 `core_version` 에 묶여 있다 — 런타임에 바꾸면 이미 발급된 티켓이 다른 게임을
+    가리킨다 (결정 #06, R5).
+    """
+
+    accounts: int
+    registered: int
+    entities: int
+    monsters_alive: int
+    items: int
+    items_bound: int
+    items_held_by_monsters: int
+    listings_open: int
+    currency_total: int
+    verified_runs: int
+    catalog_items: int
+    enemy_kinds: int
+    core_version: str
+    level_counts: list[dict] = Field(default_factory=list)
+    monsters: list[AdminMonsterView] = Field(default_factory=list)
+    recent_actions: list[AdminActionView] = Field(default_factory=list)
+
+
+class MonsterLevelRequest(BaseModel):
+    """지속 몬스터 레벨 조정."""
+
+    record_id: int
+    level: int

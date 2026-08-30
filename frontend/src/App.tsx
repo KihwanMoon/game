@@ -48,6 +48,7 @@ import { Button, ValueExpr } from './ds'
 import {
   RuleEditor,
   AccountPanel,
+  AdminPanel,
   BestiaryPanel,
   CharacterPanel,
   TutorialPanel,
@@ -93,6 +94,8 @@ import {
   readAuction,
   readBestiary,
   readLeaderboard,
+  applyMonsterLevel,
+  readAdminOverview,
   readProgress,
   readServerMeta,
   applyAuctionAction,
@@ -113,6 +116,7 @@ import {
   type InventoryView,
   type RunResult,
   type RunVerdict,
+  type AdminOverview,
   type ServerTicket,
   type StorageLike,
 } from './storage'
@@ -413,6 +417,10 @@ export function App(): React.JSX.Element {
   const [leaderboard, setLeaderboard] = useState<LeaderboardView | undefined>(undefined)
   const [auction, setAuction] = useState<AuctionView | undefined>(undefined)
   const [worldDetail, setWorldDetail] = useState('')
+  // 관리자 현황. **관리자가 아니면 undefined 로 남고 패널이 아무것도 그리지 않는다** —
+  // 서버가 404 로 답하므로 그 사실 자체가 화면에 드러나지 않는다.
+  const [admin, setAdmin] = useState<AdminOverview | undefined>(undefined)
+  const [adminDetail, setAdminDetail] = useState('')
   const [run, setRun] = useState<RunSpec | undefined>(undefined)
   const [outcome, setOutcome] = useState(OUTCOME_ONGOING)
   const [postState, setPostState] = useState<PostState>('auto')
@@ -573,6 +581,9 @@ export function App(): React.JSX.Element {
     void readLeaderboard(account).then(setLeaderboard)
     void readAuction(account).then(setAuction)
     void readInventory(account).then(setInventory)
+    // **관리자가 아니면 undefined 로 남는다.** 서버가 404 로 답하므로 관리자 경로가
+    // 있다는 사실 자체가 일반 계정 화면에 드러나지 않는다.
+    void readAdminOverview(account).then(setAdmin)
   }
 
   /**
@@ -1025,6 +1036,22 @@ export function App(): React.JSX.Element {
                 }}
               />
               <BestiaryPanel entries={bestiary} isOnline={isOnline} />
+              <AdminPanel
+                overview={admin}
+                detail={adminDetail}
+                onSetMonsterLevel={(recordId, level) => {
+                  if (account === undefined) {
+                    return
+                  }
+                  setAdminDetail('')
+                  void applyMonsterLevel(account, recordId, level).then((outcome) => {
+                    setAdminDetail(outcome.detail)
+                    if (outcome.overview !== undefined) {
+                      setAdmin(outcome.overview)
+                    }
+                  })
+                }}
+              />
               <MetaPanel meta={meta} baseSlots={limits.ruleSlots} />
               <RuleLibrary
               presets={session.presets}

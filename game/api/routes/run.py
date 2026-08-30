@@ -28,7 +28,6 @@ from game.app.store.meta import load_meta_payload, save_meta_payload
 from game.app.store.monsters import (
     add_monster_xp,
     apply_monster_defeat,
-    create_trophy,
     load_snapshots,
 )
 from game.app.store.progress import add_player_xp, read_progress, save_leaderboard
@@ -40,6 +39,7 @@ from game.app.store.runs import (
     save_submission,
 )
 from game.app.store.tickets import IssuedTicket, find_open_ticket, mark_ticket_consumed
+from game.app.store.trophies import create_trophy
 from game.schemas.loadout import parse_loadout
 from game.schemas.meta_save import MetaSave, build_meta_payload, parse_meta_save
 

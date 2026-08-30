@@ -328,3 +328,26 @@ ALTER TABLE item_instance ADD COLUMN IF NOT EXISTS is_bound BOOLEAN NOT NULL DEF
 ALTER TABLE auction_listing DROP CONSTRAINT IF EXISTS auction_listing_item_id_key;
 CREATE UNIQUE INDEX IF NOT EXISTS auction_open_item_idx
     ON auction_listing (item_id) WHERE state = 'OPEN';
+
+-- 관리자 권한.
+--
+-- **API 로는 절대 세울 수 없다.** 세우는 길은 `scripts/grant_admin.py` 뿐이고, 그것은
+-- DB 접속이 있어야 돈다 — 관리자 승격이 엔드포인트로 열려 있으면 그 하나가 뚫리는 순간
+-- 세계 전체가 뚫린다. 이 게임은 클라이언트를 적대적이라고 전제하는데(CLAUDE.md),
+-- 관리자 경로는 그 전제가 가장 크게 걸리는 자리다.
+ALTER TABLE account ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- 관리자가 세계에 손댄 기록.
+--
+-- **개입은 반드시 남는다.** 남지 않으면 "이 몬스터 레벨이 왜 이렇지" 를 나중에 아무도
+-- 답할 수 없고, 경매 원장이 있는 이유와 같다 — 손댄 사실 자체가 조사 대상이다.
+CREATE TABLE IF NOT EXISTS admin_action (
+    id          BIGSERIAL   PRIMARY KEY,
+    account_id  BIGINT      NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    action      TEXT        NOT NULL,
+    target      TEXT        NOT NULL DEFAULT '',
+    detail      TEXT        NOT NULL DEFAULT '',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS admin_action_recent_idx ON admin_action (created_at DESC);

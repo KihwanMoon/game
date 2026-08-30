@@ -13,6 +13,7 @@ from game.app.items.catalog import load_item_catalog
 from game.app.services.run_battle import load_balance
 from game.app.services.verify_run import VerifyContext
 from game.app.store.accounts import Account, find_account
+from game.app.store.admin import check_is_admin
 from game.config import (
     BALANCE_PATH,
     BLOCKS_PATH,
@@ -111,6 +112,29 @@ def resolve_account(token: Annotated[str | None, Header(alias=TOKEN_HEADER)] = N
 
 
 CurrentAccount = Annotated[Account, Depends(resolve_account)]
+
+
+def resolve_admin(account: CurrentAccount) -> Account:
+    """관리자만 통과시킨다.
+
+    **403 이 아니라 404 로 답한다.** 403 은 "여기 뭔가 있는데 너는 못 본다" 를 알려 주고,
+    그것은 관리자 경로의 존재 자체를 노출한다 — 없는 것처럼 보이는 편이 낫다.
+
+    Args:
+        account: 토큰으로 푼 계정.
+
+    Returns:
+        관리자 계정.
+
+    Raises:
+        HTTPException: 관리자가 아닌 경우.
+    """
+    if not check_is_admin(get_pool(), account.account_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "없는 경로다")
+    return account
+
+
+CurrentAdmin = Annotated[Account, Depends(resolve_admin)]
 
 
 def get_item_catalog() -> dict:

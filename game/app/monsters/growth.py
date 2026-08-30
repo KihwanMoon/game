@@ -78,6 +78,21 @@ def compute_required_xp(level: int) -> int:
     return required
 
 
+def compute_level_xp(level: int) -> int:
+    """그 레벨에 딱 닿는 누적 경험치.
+
+    관리자가 레벨을 직접 정할 때 경험치를 함께 맞추는 데 쓴다 — 레벨만 바꾸면 다음
+    경험치 한 점에 원래 레벨로 되돌아가고, 손댄 것이 조용히 사라진다.
+
+    Args:
+        level: 목표 레벨.
+
+    Returns:
+        그 레벨에 닿는 누적 경험치.
+    """
+    return sum(compute_required_xp(step) for step in range(MIN_LEVEL, level))
+
+
 def compute_cap_xp(floor: int) -> int:
     """그 층의 상한 레벨에 딱 닿는 누적 경험치.
 

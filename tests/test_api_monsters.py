@@ -246,7 +246,7 @@ def test_trophy_transfers_a_copy(client, token, monster):
     from game.api.routes.run import apply_trophy_transfer
     from game.app.store.accounts import find_player_entity
     from game.app.store.items import create_item
-    from game.app.store.monsters import list_trophies
+    from game.app.store.trophies import list_trophies
 
     headers = build_headers(token)
     account_id = client.get("/api/account", headers=headers).json()["account_id"]

@@ -15,7 +15,8 @@ from game.api.schemas import BestiaryEntry, BestiaryResponse
 from game.app.monsters.affixes import build_affix_label, list_monster_affixes
 from game.app.monsters.growth import get_level_cap
 from game.app.monsters.tiers import MonsterTier
-from game.app.store.monsters import list_monsters, list_trophies
+from game.app.store.monsters import list_monsters
+from game.app.store.trophies import list_trophies
 from game.schemas.meta_save import build_ruleset_payload
 
 router = APIRouter()

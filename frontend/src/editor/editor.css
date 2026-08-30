@@ -1417,3 +1417,62 @@
 .inv__affix {
   display: flex;
 }
+
+/* ── 관리자 화면 ─────────────────────────────────────────────────────────
+   일반 화면과 같은 괘선·간격을 쓴다. 관리자라고 다른 성격을 주면 같은 도면 위에서
+   두 언어를 읽게 된다 — 이 디자인의 성격은 기계 도면이고 거기에 특권 표기는 없다. */
+.adm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.adm__head {
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  border-bottom: var(--line-1) solid var(--line);
+  padding-bottom: var(--sp-1);
+}
+
+.adm__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  list-style: none;
+}
+
+.adm__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+
+.adm__label {
+  color: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  min-width: 6rem;
+}
+
+.adm__row > :last-child {
+  margin-left: auto;
+}
+
+.adm__monster {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding-bottom: var(--sp-2);
+  border-bottom: var(--line-1) solid var(--line);
+}
+
+.adm__field {
+  width: 5rem;
+  min-height: var(--btn-tap-sm-h);
+  font-family: var(--font-mono);
+  font-size: var(--fs-input);
+}

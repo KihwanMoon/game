@@ -868,3 +868,137 @@ export async function applyAuctionAction(
   }
   return { auction: readAuctionBody(await response.json()), detail: '' }
 }
+
+/** 관리자 화면의 몬스터 한 줄. */
+export interface AdminMonsterRow {
+  readonly recordId: number
+  readonly catalogId: string
+  readonly tier: string
+  readonly zoneFloor: number
+  readonly entitySlot: string
+  readonly level: number
+  readonly levelCap: number
+  readonly alive: boolean
+  readonly heldItems: number
+}
+
+/** 관리자가 세계에 손댄 기록 한 줄. */
+export interface AdminActionRow {
+  readonly handle: string
+  readonly action: string
+  readonly target: string
+  readonly detail: string
+  readonly createdAt: string
+}
+
+/** 세계 현황 한 화면. */
+export interface AdminOverview {
+  readonly accounts: number
+  readonly registered: number
+  readonly monstersAlive: number
+  readonly items: number
+  readonly itemsBound: number
+  readonly itemsHeldByMonsters: number
+  readonly listingsOpen: number
+  readonly currencyTotal: number
+  readonly verifiedRuns: number
+  readonly catalogItems: number
+  readonly enemyKinds: number
+  readonly coreVersion: string
+  readonly levelCounts: readonly { readonly level: number; readonly count: number }[]
+  readonly monsters: readonly AdminMonsterRow[]
+  readonly recentActions: readonly AdminActionRow[]
+}
+
+/**
+ * 서버가 준 절을 관리자 현황으로 읽는다.
+ *
+ * @param body 응답 절.
+ * @returns 현황.
+ */
+export function parseAdminOverview(body: Record<string, never>): AdminOverview {
+  const raw = body as unknown as Record<string, number & string & unknown[]>
+  return {
+    accounts: Number(raw.accounts),
+    registered: Number(raw.registered),
+    monstersAlive: Number(raw.monsters_alive),
+    items: Number(raw.items),
+    itemsBound: Number(raw.items_bound),
+    itemsHeldByMonsters: Number(raw.items_held_by_monsters),
+    listingsOpen: Number(raw.listings_open),
+    currencyTotal: Number(raw.currency_total),
+    verifiedRuns: Number(raw.verified_runs),
+    catalogItems: Number(raw.catalog_items),
+    enemyKinds: Number(raw.enemy_kinds),
+    coreVersion: String(raw.core_version),
+    levelCounts: (raw.level_counts as unknown as { level: number; count: number }[]).map(
+      (row) => ({ level: Number(row.level), count: Number(row.count) }),
+    ),
+    monsters: (raw.monsters as unknown as Record<string, never>[]).map((row) => {
+      const item = row as unknown as Record<string, number & string & boolean>
+      return {
+        recordId: Number(item.record_id),
+        catalogId: String(item.catalog_id),
+        tier: String(item.tier),
+        zoneFloor: Number(item.zone_floor),
+        entitySlot: String(item.entity_slot),
+        level: Number(item.level),
+        levelCap: Number(item.level_cap),
+        alive: Boolean(item.alive),
+        heldItems: Number(item.held_items),
+      }
+    }),
+    recentActions: (raw.recent_actions as unknown as Record<string, string>[]).map((row) => ({
+      handle: String(row.handle),
+      action: String(row.action),
+      target: String(row.target),
+      detail: String(row.detail),
+      createdAt: String(row.created_at),
+    })),
+  }
+}
+
+/**
+ * 관리자 현황을 읽는다.
+ *
+ * **관리자가 아니면 서버가 404 로 답한다** — 403 은 경로의 존재를 알려 주기 때문이다.
+ * 그때는 undefined 를 돌려주고 화면은 아무것도 그리지 않는다.
+ *
+ * @param token 기기 토큰.
+ * @returns 현황. 관리자가 아니거나 서버에 못 닿으면 undefined.
+ */
+export async function readAdminOverview(token: string): Promise<AdminOverview | undefined> {
+  const response = await sendRequest('/admin/overview', { headers: { [TOKEN_HEADER]: token } })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  return parseAdminOverview((await response.json()) as Record<string, never>)
+}
+
+/**
+ * 지속 몬스터의 레벨을 고친다.
+ *
+ * @param token 기기 토큰.
+ * @param recordId 대상 개체.
+ * @param level 새 레벨.
+ * @returns 갱신된 현황과 실패 사유.
+ */
+export async function applyMonsterLevel(
+  token: string,
+  recordId: number,
+  level: number,
+): Promise<{ overview: AdminOverview | undefined; detail: string }> {
+  const response = await sendRequest('/admin/monster/level', {
+    method: 'PUT',
+    headers: { [TOKEN_HEADER]: token, 'content-type': 'application/json' },
+    body: JSON.stringify({ record_id: recordId, level }),
+  })
+  if (response === undefined) {
+    return { overview: undefined, detail: '서버에 닿지 못했다' }
+  }
+  const body = (await response.json()) as Record<string, never> & { detail?: string }
+  if (!response.ok) {
+    return { overview: undefined, detail: String(body.detail ?? '거절당했다') }
+  }
+  return { overview: parseAdminOverview(body), detail: '' }
+}

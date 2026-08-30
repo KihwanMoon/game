@@ -20,6 +20,7 @@ from game.app.monsters.growth import (
     compute_cap_xp,
     compute_defeat_xp,
     compute_level,
+    compute_level_xp,
 )
 from game.app.monsters.tiers import MonsterTier, compute_tier_stat
 from game.schemas.monster_snapshot import (
@@ -159,6 +160,45 @@ def list_monsters(pool: ConnectionPool, zone_floor: int) -> tuple[MonsterRecord,
             (zone_floor,),
         ).fetchall()
     return tuple(_build_record(row) for row in rows)
+
+
+def find_monster(pool: ConnectionPool, record_id: int) -> MonsterRecord | None:
+    """지속 몬스터 하나를 id 로 찾는다.
+
+    Args:
+        pool: 연결 풀.
+        record_id: 개체 id.
+
+    Returns:
+        찾은 레코드. 없으면 None. **죽은 것도 돌려준다** — 관리자는 죽은 개체도 봐야 한다.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT id, catalog_id, tier, zone_floor, entity_slot, total_xp, level, alive,"
+            " spawn_seed, ruleset_json"
+            " FROM entity_record WHERE kind = 'MONSTER' AND id = %s",
+            (record_id,),
+        ).fetchone()
+    return None if row is None else _build_record(row)
+
+
+def set_monster_level(pool: ConnectionPool, record_id: int, level: int) -> None:
+    """지속 몬스터의 레벨을 정한다 (관리자 개입).
+
+    **경험치도 함께 맞춘다.** 레벨만 바꾸면 다음 경험치 한 점에 원래 레벨로 되돌아가고,
+    관리자가 손댄 것이 조용히 사라진다.
+
+    Args:
+        pool: 연결 풀.
+        record_id: 개체 id.
+        level: 새 레벨. 상한 판정은 부르는 쪽이 한다.
+    """
+    with pool.connection() as connection:
+        connection.execute(
+            "UPDATE entity_record SET level = %s, total_xp = %s, updated_at = now()"
+            " WHERE kind = 'MONSTER' AND id = %s",
+            (level, compute_level_xp(level), record_id),
+        )
 
 
 def build_monster_snapshot(record: MonsterRecord, base: dict) -> MonsterSnapshot:
@@ -314,51 +354,3 @@ def apply_monster_defeat(pool: ConnectionPool, record_id: int, zone_floor: int) 
             (total_xp, level, record_id),
         )
     return level
-
-
-def create_trophy(
-    pool: ConnectionPool,
-    record_id: int,
-    catalog_id: str,
-    affixes: list[dict],
-    taken_from: int,
-) -> None:
-    """몬스터가 플레이어의 장비 사본을 가져간다 (결정 #34).
-
-    **별도 표가 아니라 그 개체가 소유한 아이템으로 넣는다.** 표를 가르면 "몬스터가 내
-    장비를 들고 있다" 가 다시 특수 케이스가 되고, 나중에 몬스터가 그것을 장착하거나
-    되찾기가 거래를 타야 할 때 양쪽을 합쳐야 한다.
-
-    Args:
-        pool: 연결 풀.
-        record_id: 가져간 몬스터의 개체 id.
-        catalog_id: 아이템 카탈로그 id.
-        affixes: 접사 절.
-        taken_from: 누구에게서 가져왔는가.
-    """
-    with pool.connection() as connection:
-        connection.execute(
-            "INSERT INTO item_instance (owner_entity_id, catalog_id, affixes, taken_from)"
-            " VALUES (%s, %s, %s, %s)",
-            (record_id, catalog_id, Jsonb(affixes), taken_from),
-        )
-
-
-def list_trophies(pool: ConnectionPool, record_id: int) -> tuple[dict, ...]:
-    """그 몬스터가 들고 있는 전리품을 읽는다. 도감이 이것을 보여준다.
-
-    Args:
-        pool: 연결 풀.
-        record_id: 몬스터 id.
-
-    Returns:
-        전리품 절들.
-    """
-    with pool.connection() as connection:
-        rows = connection.execute(
-            "SELECT catalog_id, taken_from FROM item_instance"
-            " WHERE owner_entity_id = %s AND taken_from IS NOT NULL"
-            " ORDER BY created_at DESC",
-            (record_id,),
-        ).fetchall()
-    return tuple({"catalog_id": str(row[0]), "taken_from": row[1]} for row in rows)
