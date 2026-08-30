@@ -174,3 +174,27 @@ docker compose -f deploy/docker-compose.yml run --rm -e GAME_SEED=424242 sim | g
   Phase 1 W3 산출물이다. 생기면 compose 의 `command` 를 `scripts/` 의 러너로 바꾼다.
 - 레지스트리 푸시는 하지 않는다. 로컬·사내 서버에서 `compose up` 까지가 현재 범위다.
 - TLS 는 Cloudflare 가 종단한다. 오리진은 http:80 이다.
+
+## 운영 명령
+
+`api` 이미지에 `scripts/` 가 함께 실린다. **관리자 승격을 API 로 열지 않았으므로**(그
+하나가 뚫리면 세계 전체가 뚫린다) 길이 이 스크립트뿐이고, 그것이 이미지에 없으면 길이
+없는 것과 같다 — 실제로 그렇게 한 번 배포됐다.
+
+`uv` 는 런타임에 없다(의존성 0개가 설계다). `/opt/venv` 의 파이썬을 직접 부른다.
+
+```bash
+export COMPOSE_FILE=deploy/docker-compose.yml
+RUN="docker compose run --rm --entrypoint /opt/venv/bin/python backend"
+
+$RUN -m scripts.grant_admin <아이디>            # 관리자 부여
+$RUN -m scripts.grant_admin <아이디> --revoke   # 해제
+$RUN -m scripts.run_world_tick <시드>           # 세계 한 틱 (몬스터끼리 전투)
+$RUN -m scripts.report_g1                       # G1 판정 자료
+```
+
+**가입한 계정만 관리자가 될 수 있다.** 익명은 토큰만 있으면 되므로, 그 계정이 관리자면
+토큰 하나가 곧 세계 전체다.
+
+골든 내보내기 같은 개발 도구는 dev 의존성이 없어 이 이미지에서 돌지 않는다 — 그것이
+맞다. 운영이 부르는 것과 개발이 부르는 것은 계층이 다르다.

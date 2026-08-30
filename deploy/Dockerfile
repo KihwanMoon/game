@@ -79,6 +79,13 @@ FROM base AS api
 COPY --from=deps-api --chown=app:app /opt/venv /opt/venv
 COPY --chown=app:app pyproject.toml ./
 COPY --chown=app:app game/ ./game/
+# 운영이 부르는 명령들. **이것이 없으면 관리자 권한을 줄 방법이 아예 없다** —
+# 승격은 API 로 열지 않았으므로(그 하나가 뚫리면 세계 전체가 뚫린다) 길이 이 스크립트
+# 하나뿐인데, 그것이 이미지에 없으면 길이 없는 것과 같다. 실제로 그렇게 배포됐다.
+#
+# 세계 틱과 G1 계측도 같은 처지였다. 셋 다 psycopg 만 쓰므로 이 계층에서 돈다 —
+# 골든 내보내기 같은 개발 도구는 dev 의존성이 없어 여기서 돌지 않고, 그것이 맞다.
+COPY --chown=app:app scripts/ ./scripts/
 
 # 서버도 재현되어야 한다. 재시뮬 결과가 프로세스마다 달라지면 검증이 성립하지 않는다.
 ENV PYTHONHASHSEED=0
