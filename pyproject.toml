@@ -1,7 +1,7 @@
 [project]
 name = "game"
 version = "0.1.0"
-description = "코딩형 로그라이크 그리드 RPG — 결정론적 시뮬레이션 코어"
+description = "코딩형 던전 RPG — 결정론적 시뮬레이션 코어"
 requires-python = ">=3.11"
 
 # TDD §1.2 — Phase 1 프로토타입은 표준 라이브러리만 쓴다.

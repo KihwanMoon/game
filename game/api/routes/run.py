@@ -12,6 +12,7 @@ from game.api.deps import CurrentAccount, get_context, get_item_catalog, get_poo
 from game.api.schemas import SubmissionRequest, SubmissionResponse
 from game.app.items.catalog import find_item as find_catalog_item
 from game.app.items.loot import create_loot_roll
+from game.app.progression.levels import add_run_xp
 from game.app.services.verify_run import VerifiedRun, check_submission_version, evaluate_submission
 from game.app.store.accounts import find_player_entity
 from game.app.store.equipment import add_currency, mark_item_broken, remove_item
@@ -22,6 +23,7 @@ from game.app.store.monsters import (
     create_trophy,
     load_snapshots,
 )
+from game.app.store.progress import add_player_xp, read_progress, save_leaderboard
 from game.app.store.runs import (
     VERDICT_REJECTED,
     VERDICT_VERIFIED,
@@ -72,7 +74,9 @@ def apply_death_penalty(account_id: int) -> str:
     return f"가방의 장비를 잃었다 (#{item_id})"
 
 
-def apply_run_rewards(account_id: int, submission_id: int, verified: VerifiedRun) -> str:
+def apply_run_rewards(
+    account_id: int, submission_id: int, verified: VerifiedRun, mode: str, core_version: str
+) -> str:
     """검증된 런의 보상을 준다.
 
     **여기가 아이템이 세계에 들어오는 유일한 문이다** (결정 #02). 클라이언트는 아이템을
@@ -83,6 +87,8 @@ def apply_run_rewards(account_id: int, submission_id: int, verified: VerifiedRun
         account_id: 받을 계정.
         submission_id: 이 결과의 제출 id.
         verified: 서버가 확정한 결과.
+        mode: 런 모드. 순위표를 가르는 값이다.
+        core_version: 이 서버의 코어 버전. 시즌을 가르는 값이다.
 
     Returns:
         플레이어에게 보여줄 한 줄. 없으면 빈 문자열.
@@ -94,13 +100,32 @@ def apply_run_rewards(account_id: int, submission_id: int, verified: VerifiedRun
     add_currency(get_pool(), account_id, roll.currency)
     notes = [f"화폐 +{roll.currency}"]
     if roll.catalog_id is not None:
-        item_id = create_item(get_pool(), account_id, roll.catalog_id, roll.affixes, submission_id)
+        # **개체 id 다. 계정 id 가 아니다.** 둘 다 int 라 바꿔 넣어도 타입이 못 막는다 —
+        # 실제로 한 번 그렇게 들어갔고, 외래키가 우연히 잡았다(id 가 겹쳤다면 남의 개체에
+        # 아이템이 들어갔을 것이다).
+        item_id = create_item(
+            get_pool(),
+            find_player_entity(get_pool(), account_id),
+            roll.catalog_id,
+            roll.affixes,
+            submission_id,
+        )
         entry = find_catalog_item(get_item_catalog(), roll.catalog_id)
         notes.append(
             f"{entry.label_ko} 획득"
             if item_id is not None
             else "인벤토리가 가득 차 전리품을 놓쳤다"
         )
+    # 경험치는 **검증된 런에서만** 오른다. 클라이언트 보고로 오르면 순위표가 곧
+    # 거짓이 된다 — 순위의 근거가 누적 경험치이기 때문이다.
+    pool = get_pool()
+    entity_id = find_player_entity(pool, account_id)
+    gained = add_run_xp(is_cleared)
+    level = add_player_xp(pool, entity_id, gained)
+    notes.append(f"경험치 +{gained}")
+    progress = read_progress(pool, entity_id)
+    save_leaderboard(pool, str(mode), core_version, account_id, progress.total_xp, level)
+
     if not is_cleared:
         penalty = apply_death_penalty(account_id)
         if penalty:
@@ -264,7 +289,9 @@ def create_run_submission(
             detail=verified.detail,
         ),
     )
-    reward = apply_run_rewards(account.account_id, submission_id, verified)
+    reward = apply_run_rewards(
+        account.account_id, submission_id, verified, ticket.mode, ticket.core_version
+    )
     world = apply_monster_outcome(ticket, submission_id, verified, account.account_id)
     if world:
         reward = f"{reward} · {world}" if reward else world

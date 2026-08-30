@@ -56,6 +56,8 @@ def create_ticket(
     floor: int = 1,
     mode: RunMode = RunMode.PRACTICE,
     wanted_seed: int | None = None,
+    forced_seed: int | None = None,
+    ttl: timedelta = TICKET_TTL,
 ) -> IssuedTicket:
     """티켓을 발급한다.
 
@@ -66,8 +68,13 @@ def create_ticket(
         core_version: 이 서버가 도는 코어 버전.
         floor: 층.
         mode: 런 모드.
-        wanted_seed: 클라이언트가 제안한 시드. **연습 모드에서만 반영한다** — 순위에
+        wanted_seed: **클라이언트가** 제안한 시드. 연습 모드에서만 반영한다 — 순위에
             반영되는 판에서 받으면 유리한 시드를 골라 담을 수 있다 (T2).
+        forced_seed: **서버가** 정한 시드. 모드와 무관하게 그대로 쓴다. 데일리가 이것을
+            쓴다 — 모두가 같은 시드를 받아야 성립하는데, 그것은 클라이언트가 고른 것이
+            아니라 서버가 날짜에서 파생한 값이므로 T2 와 무관하다. 둘을 한 인자로 두면
+            "누가 정했는가" 가 흐려지고, 그 구분이 이 게이트의 전부다.
+        ttl: 유효 기간. 데일리는 짧게 잡는다 — "받아 두고 연습한 뒤 제출" 을 좁힌다.
 
     Returns:
         발급된 티켓.
@@ -76,11 +83,15 @@ def create_ticket(
         RuntimeError: 삽입이 실패한 경우.
     """
     ticket_id = secrets.token_urlsafe(TICKET_ID_BYTES)
-    is_practice = mode is RunMode.PRACTICE
-    seed = wanted_seed if is_practice and wanted_seed is not None else create_seed()
+    if forced_seed is not None:
+        seed = forced_seed
+    elif mode is RunMode.PRACTICE and wanted_seed is not None:
+        seed = wanted_seed
+    else:
+        seed = create_seed()
     if not 0 <= seed <= MAX_SEED:
         raise ValueError(f"시드가 이식 범위를 벗어났다: {seed}")
-    expires_at = datetime.now(UTC) + TICKET_TTL
+    expires_at = datetime.now(UTC) + ttl
     with pool.connection() as connection:
         connection.execute(
             "INSERT INTO run_ticket"

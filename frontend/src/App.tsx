@@ -47,6 +47,7 @@ import {
   RuleEditor,
   AccountPanel,
   BestiaryPanel,
+  WorldPanel,
   InventoryPanel,
   MetaPanel,
   RuleLibrary,
@@ -84,8 +85,12 @@ import {
   readMeta,
   readSave,
   readAccount,
+  readAuction,
   readBestiary,
+  readLeaderboard,
+  readProgress,
   readServerMeta,
+  applyAuctionAction,
   applyItemAction,
   buildRuleSetPayload,
   readInventory,
@@ -96,7 +101,10 @@ import {
   writeServerMeta,
   writeToken,
   type AccountState,
+  type AuctionView,
   type BestiaryEntry,
+  type LeaderboardView,
+  type ProgressView,
   type InventoryView,
   type RunResult,
   type RunVerdict,
@@ -256,6 +264,11 @@ export function App(): React.JSX.Element {
   const [itemDetail, setItemDetail] = useState('')
   // 도감. 세계의 몬스터는 서버가 알므로 오프라인에서는 비어 있다.
   const [bestiary, setBestiary] = useState<readonly BestiaryEntry[] | undefined>(undefined)
+  // 세계 — 성장·순위·경매장. 전부 서버가 아는 것이라 오프라인에서는 비어 있다.
+  const [progress, setProgress] = useState<ProgressView | undefined>(undefined)
+  const [leaderboard, setLeaderboard] = useState<LeaderboardView | undefined>(undefined)
+  const [auction, setAuction] = useState<AuctionView | undefined>(undefined)
+  const [worldDetail, setWorldDetail] = useState('')
   const [run, setRun] = useState<RunSpec | undefined>(undefined)
   const [outcome, setOutcome] = useState(OUTCOME_ONGOING)
   const [postState, setPostState] = useState<PostState>('auto')
@@ -303,6 +316,9 @@ export function App(): React.JSX.Element {
       setProfile(await readAccount(token))
       setInventory(await readInventory(token))
       setBestiary(await readBestiary(token))
+      setProgress(await readProgress(token))
+      setLeaderboard(await readLeaderboard(token))
+      setAuction(await readAuction(token))
       const outcome = await readServerMeta(token)
       if (!isCurrent) {
         return
@@ -389,6 +405,40 @@ export function App(): React.JSX.Element {
         return
       }
       void readInventory(account).then(setInventory)
+    })
+  }
+
+  /**
+   * 세계를 다시 읽는다. 성장·순위·경매장이 함께 바뀌는 일이 많다.
+   */
+  function refreshWorld(): void {
+    if (account === undefined) {
+      return
+    }
+    void readProgress(account).then(setProgress)
+    void readLeaderboard(account).then(setLeaderboard)
+    void readAuction(account).then(setAuction)
+    void readInventory(account).then(setInventory)
+  }
+
+  /**
+   * 경매장을 조작하고 결과를 반영한다.
+   *
+   * @param path `/auction/buy` 같은 경로.
+   * @param body 보낼 절.
+   */
+  function applyAuction(path: string, body: Record<string, unknown>): void {
+    if (account === undefined) {
+      return
+    }
+    setWorldDetail('')
+    void applyAuctionAction(account, path, body).then((outcome) => {
+      if (outcome.auction !== undefined) {
+        setAuction(outcome.auction)
+        void readInventory(account).then(setInventory)
+        return
+      }
+      setWorldDetail(outcome.detail)
     })
   }
 
@@ -515,6 +565,9 @@ export function App(): React.JSX.Element {
         void readInventory(account).then(setInventory)
         // 판이 끝나면 몬스터가 컸거나 내 장비를 가져갔을 수 있다.
         void readBestiary(account).then(setBestiary)
+        // 판이 끝나면 경험치와 순위가 올랐다.
+        void readProgress(account).then(setProgress)
+        void readLeaderboard(account).then(setLeaderboard)
       })
     }
 
@@ -699,6 +752,44 @@ export function App(): React.JSX.Element {
                 }}
                 onRepair={(itemId) => {
                   applyItem('/item/repair', { item_id: itemId })
+                }}
+              />
+              <WorldPanel
+                progress={progress}
+                leaderboard={leaderboard}
+                auction={auction}
+                accountId={profile?.accountId}
+                isOnline={isOnline}
+                detail={worldDetail}
+                onAllocate={(stats) => {
+                  if (account === undefined) {
+                    return
+                  }
+                  setWorldDetail('')
+                  void fetch('/api/progress/stats', {
+                    method: 'PUT',
+                    headers: { 'X-Game-Token': account, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ stats }),
+                  }).then(() => {
+                    refreshWorld()
+                  })
+                }}
+                onBuy={(listingId) => {
+                  applyAuction('/auction/buy', { listing_id: listingId })
+                }}
+                onCancel={(listingId) => {
+                  applyAuction('/auction/cancel', { listing_id: listingId })
+                }}
+                onDaily={() => {
+                  if (account === undefined) {
+                    return
+                  }
+                  void fetch('/api/daily', {
+                    method: 'POST',
+                    headers: { 'X-Game-Token': account },
+                  }).then(() => {
+                    setWorldDetail('오늘의 도전 티켓을 받았다 — 출격하면 그 판이 돈다')
+                  })
                 }}
               />
               <BestiaryPanel entries={bestiary} isOnline={isOnline} />

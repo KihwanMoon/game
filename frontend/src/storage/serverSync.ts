@@ -627,3 +627,177 @@ export async function readBestiary(token: string): Promise<readonly BestiaryEntr
     holdsMine: raw.holds_mine,
   }))
 }
+
+/** 플레이어 성장. 레벨이 표현력(상한 있음)과 능력치 포인트(상한 없음)를 함께 준다. */
+export interface ProgressView {
+  readonly level: number
+  readonly totalXp: number
+  readonly remainingXp: number
+  readonly nextXp: number
+  readonly stats: Readonly<Record<string, number>>
+  readonly statKeys: readonly string[]
+  readonly statPoints: number
+  readonly spentPoints: number
+  readonly bonusRuleSlots: number
+  readonly bonusCpu: number
+}
+
+/** 순위표 한 줄. */
+export interface RankEntry {
+  readonly rank: number
+  readonly handle: string
+  readonly score: number
+  readonly level: number
+  readonly accountId: number
+}
+
+/** 순위표. `coreVersion` 이 시즌 이름이다 (결정 #06). */
+export interface LeaderboardView {
+  readonly coreVersion: string
+  readonly entries: readonly RankEntry[]
+}
+
+/** 경매 매물 한 건. */
+export interface ListingView {
+  readonly listingId: number
+  readonly itemId: number
+  readonly labelKo: string
+  readonly price: number
+  readonly isMine: boolean
+}
+
+/** 경매장. 수수료율을 함께 받는다 — 걸기 전에 얼마가 나가는지 알아야 한다. */
+export interface AuctionView {
+  readonly listings: readonly ListingView[]
+  readonly balance: number
+  readonly feePercent: number
+}
+
+/**
+ * 내 성장 상태를 읽는다.
+ *
+ * @param token 기기 토큰.
+ * @returns 성장 상태. 서버에 닿지 못했으면 undefined.
+ */
+export async function readProgress(token: string): Promise<ProgressView | undefined> {
+  const response = await sendRequest('/progress', { headers: { [TOKEN_HEADER]: token } })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  const body = (await response.json()) as {
+    level: number
+    total_xp: number
+    remaining_xp: number
+    next_xp: number
+    stats: Record<string, number>
+    stat_keys: string[]
+    stat_points: number
+    spent_points: number
+    bonus_rule_slots: number
+    bonus_cpu: number
+  }
+  return {
+    level: body.level,
+    totalXp: body.total_xp,
+    remainingXp: body.remaining_xp,
+    nextXp: body.next_xp,
+    stats: body.stats,
+    statKeys: body.stat_keys,
+    statPoints: body.stat_points,
+    spentPoints: body.spent_points,
+    bonusRuleSlots: body.bonus_rule_slots,
+    bonusCpu: body.bonus_cpu,
+  }
+}
+
+/**
+ * 순위표를 읽는다. 토큰이 없어도 볼 수 있다 — 순위표는 공개다.
+ *
+ * @param token 기기 토큰.
+ * @returns 순위표. 서버에 닿지 못했으면 undefined.
+ */
+export async function readLeaderboard(token: string): Promise<LeaderboardView | undefined> {
+  const response = await sendRequest('/leaderboard', { headers: { [TOKEN_HEADER]: token } })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  const body = (await response.json()) as {
+    core_version: string
+    entries: { rank: number; handle: string; score: number; level: number; account_id: number }[]
+  }
+  return {
+    coreVersion: body.core_version,
+    entries: body.entries.map((item) => ({
+      rank: item.rank,
+      handle: item.handle,
+      score: item.score,
+      level: item.level,
+      accountId: item.account_id,
+    })),
+  }
+}
+
+/**
+ * 응답 절을 경매장 화면 모양으로 옮긴다.
+ *
+ * @param raw 서버가 준 절.
+ * @returns 경매장.
+ */
+function readAuctionBody(raw: {
+  listings: { listing_id: number; item_id: number; label_ko: string; price: number; is_mine: boolean }[]
+  balance: number
+  fee_percent: number
+}): AuctionView {
+  return {
+    listings: raw.listings.map((item) => ({
+      listingId: item.listing_id,
+      itemId: item.item_id,
+      labelKo: item.label_ko,
+      price: item.price,
+      isMine: item.is_mine,
+    })),
+    balance: raw.balance,
+    feePercent: raw.fee_percent,
+  }
+}
+
+/**
+ * 경매장을 읽는다.
+ *
+ * @param token 기기 토큰.
+ * @returns 매물 목록. 서버에 닿지 못했으면 undefined.
+ */
+export async function readAuction(token: string): Promise<AuctionView | undefined> {
+  const response = await sendRequest('/auction', { headers: { [TOKEN_HEADER]: token } })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  return readAuctionBody(await response.json())
+}
+
+/**
+ * 경매장을 조작한다.
+ *
+ * @param token 기기 토큰.
+ * @param path `/auction/list` 같은 경로.
+ * @param body 보낼 절.
+ * @returns 갱신된 경매장과 사유.
+ */
+export async function applyAuctionAction(
+  token: string,
+  path: string,
+  body: Record<string, unknown>,
+): Promise<{ auction: AuctionView | undefined; detail: string }> {
+  const response = await sendRequest(path, {
+    method: 'POST',
+    headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (response === undefined) {
+    return { auction: undefined, detail: '서버에 닿지 못했다' }
+  }
+  if (!response.ok) {
+    return { auction: undefined, detail: await readErrorDetail(response) }
+  }
+  return { auction: readAuctionBody(await response.json()), detail: '' }
+}

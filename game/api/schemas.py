@@ -197,3 +197,67 @@ class BestiaryResponse(BaseModel):
     """도감 전체."""
 
     entries: list[BestiaryEntry] = Field(default_factory=list)
+
+
+class ProgressResponse(BaseModel):
+    """플레이어 성장. **레벨이 표현력과 능력치 포인트를 함께 준다** (기획 §0.1)."""
+
+    entity_id: int
+    level: int
+    total_xp: int
+    remaining_xp: int
+    next_xp: int
+    stats: dict = Field(default_factory=dict)
+    bonus_rule_slots: int = 0
+    bonus_cpu: int = 0
+    bonus_flags: int = 0
+    stat_points: int = 0
+    spent_points: int = 0
+    # 배분할 수 있는 능력치. 무엇을 여는지는 미결 #51 이 정한다.
+    stat_keys: list[str] = Field(default_factory=list)
+
+
+class AllocationRequest(BaseModel):
+    """능력치 배분 요청."""
+
+    stats: dict[str, int] = Field(default_factory=dict)
+
+
+class LeaderboardResponse(BaseModel):
+    """순위표. `core_version` 이 시즌 이름이다 (결정 #06)."""
+
+    mode: str
+    core_version: str
+    entries: list[dict] = Field(default_factory=list)
+
+
+class ListingView(BaseModel):
+    """매물 한 건."""
+
+    listing_id: int
+    item_id: int
+    catalog_id: str
+    label_ko: str
+    price: int
+    is_mine: bool = False
+
+
+class AuctionResponse(BaseModel):
+    """경매장. 수수료율을 함께 낸다 — 걸기 전에 얼마가 나가는지 알아야 한다."""
+
+    listings: list[ListingView] = Field(default_factory=list)
+    balance: int = 0
+    fee_percent: int = 0
+
+
+class AuctionListRequest(BaseModel):
+    """경매 등록 요청."""
+
+    item_id: int
+    price: int = Field(gt=0, le=1_000_000)
+
+
+class ListingAction(BaseModel):
+    """매물 하나를 대상으로 하는 요청."""
+
+    listing_id: int

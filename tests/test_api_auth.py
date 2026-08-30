@@ -188,8 +188,11 @@ def test_wrong_password_and_unknown_id_look_the_same(client):
     login_id = create_login_id(client)
     client.post("/api/register", json={"login_id": login_id, "password": PASSWORD})
 
+    # 없는 아이디도 **매번 새로 만든다.** 고정 문자열을 쓰면 검사를 여러 번 돌리는 동안
+    # 그 아이디에 실패가 쌓여 잠기고(시도 제한이 제대로 도는 것이다), 401 대신 429 가 온다.
+    missing = f"nobody{create_login_id(client)}"
     wrong = client.post("/api/login", json={"login_id": login_id, "password": OTHER_PASSWORD})
-    unknown = client.post("/api/login", json={"login_id": "nobody_here", "password": PASSWORD})
+    unknown = client.post("/api/login", json={"login_id": missing, "password": PASSWORD})
     assert wrong.status_code == unknown.status_code == 401
     assert wrong.json()["detail"] == unknown.json()["detail"]
 

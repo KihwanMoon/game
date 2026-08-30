@@ -199,3 +199,27 @@ def test_ticket_without_a_seed_gets_a_server_one(client, token):
     }
     # 서버가 정하면 매번 같을 수 없다.
     assert len(seeds) > 1
+
+
+def test_forced_seed_is_server_authoritative(client, token):
+    """★ 서버가 정한 시드와 클라이언트가 제안한 시드를 가른다.
+
+    데일리는 모두가 같은 시드를 받아야 성립하는데, 그것은 클라이언트가 고른 것이 아니라
+    서버가 날짜에서 파생한 값이므로 T2 와 무관하다. 둘을 한 인자로 두면 "누가 정했는가"
+    가 흐려지고, 그 구분이 이 게이트의 전부다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.tickets import create_ticket
+    from game.schemas.run_ticket import RunMode
+
+    account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
+    # 순위 모드라도 서버가 정한 시드는 그대로 쓴다.
+    ranked = create_ticket(
+        get_pool(), account_id, ROOM_ID, "b5.v2.e1", mode=RunMode.DAILY, forced_seed=4321
+    )
+    assert ranked.seed == 4321
+    # 클라이언트 제안은 순위 모드에서 무시된다.
+    proposed = create_ticket(
+        get_pool(), account_id, ROOM_ID, "b5.v2.e1", mode=RunMode.DAILY, wanted_seed=4321
+    )
+    assert proposed.seed != 4321

@@ -244,3 +244,58 @@ CREATE TABLE IF NOT EXISTS monster_kill (
 -- 전리품 표를 따로 두지 않는다. 몬스터가 가져간 장비는 **그 개체가 소유한
 -- item_instance** 이며, taken_from 이 원주인을 가리킨다 — 표를 가르면 "몬스터가 내 장비를
 -- 들고 있다" 가 다시 특수 케이스가 된다 (결정 #34, docs/설계/6_몬스터 §7).
+
+-- ── 랭킹 (F단계) ─────────────────────────────────────────────────────────
+-- **코어 버전별로 가른다** (결정 #06). 밸런스나 블록 목록이 바뀌면 과거 기록이
+-- 재현되지 않으므로, 한 표에 섞으면 검증할 수 없는 기록이 상위에 남는다.
+--
+-- 점수는 **누적 경험치**다. 한 판의 성적이 아니라 얼마나 멀리 왔는가를 잰다.
+CREATE TABLE IF NOT EXISTS leaderboard (
+    mode          TEXT        NOT NULL,
+    core_version  TEXT        NOT NULL,
+    account_id    BIGINT      NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    score         BIGINT      NOT NULL DEFAULT 0,
+    level         INTEGER     NOT NULL DEFAULT 1,
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (mode, core_version, account_id)
+);
+
+CREATE INDEX IF NOT EXISTS leaderboard_rank_idx
+    ON leaderboard (mode, core_version, score DESC, updated_at);
+
+-- 데일리 챌린지. 하루에 한 번, 모두가 같은 시드를 받는다.
+-- **티켓 자체가 아니라 참가 기록이다** — 티켓은 run_ticket 이 들고 있고, 여기는
+-- "이 계정이 오늘 이미 받았다" 만 본다.
+CREATE TABLE IF NOT EXISTS daily_entry (
+    account_id   BIGINT      NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    day          DATE        NOT NULL,
+    ticket_id    TEXT        NOT NULL REFERENCES run_ticket(id) ON DELETE CASCADE,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (account_id, day)
+);
+
+-- ── 경매장 (F단계, 결정 #20) ─────────────────────────────────────────────
+-- **원장이다.** 상태 전이만 남기고 지우지 않는다 — "내 아이템이 어디로 갔나" 를 되짚을
+-- 수 없으면 문의에 답할 수 없고, 자전거래 탐지도 불가능해진다.
+--
+-- 경제 설계에서 이 표가 담당하는 것은 셋이다.
+--   * **수수료** — 등록할 때 떼는 몫이 화폐를 태운다. 인플레이션의 유일한 배출구다.
+--   * **만료** — 안 팔린 물건이 영원히 걸려 있으면 시세가 굳는다.
+--   * **자전거래 흔적** — 판 사람과 산 사람이 원장에 남아 계정 간 이전을 셀 수 있다.
+CREATE TABLE IF NOT EXISTS auction_listing (
+    id              BIGSERIAL   PRIMARY KEY,
+    item_id         BIGINT      NOT NULL UNIQUE REFERENCES item_instance(id) ON DELETE CASCADE,
+    seller_id       BIGINT      NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    buyer_id        BIGINT      REFERENCES account(id) ON DELETE SET NULL,
+    price           BIGINT      NOT NULL,
+    fee             BIGINT      NOT NULL DEFAULT 0,
+    -- OPEN | SOLD | CANCELLED | EXPIRED
+    state           TEXT        NOT NULL DEFAULT 'OPEN',
+    listed_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at      TIMESTAMPTZ NOT NULL,
+    settled_at      TIMESTAMPTZ,
+    CHECK (price > 0)
+);
+
+CREATE INDEX IF NOT EXISTS auction_open_idx ON auction_listing (state, price, listed_at);
+CREATE INDEX IF NOT EXISTS auction_seller_idx ON auction_listing (seller_id, listed_at DESC);
