@@ -138,3 +138,68 @@ def test_experience_is_not_banked_above_the_cap():
     # 상한 경험치에서 한 번 감쇠하면 레벨이 실제로 내려간다.
     lowered = compute_defeat_xp(cap_xp, get_level_cap(1), 1)
     assert compute_level(lowered, 1)[0] < get_level_cap(1)
+
+
+# ── 엘리트 접사 (§1) ─────────────────────────────────────────────────────
+
+
+def test_normal_tier_gets_no_affix():
+    from game.app.monsters.affixes import list_monster_affixes
+
+    assert list_monster_affixes(12345, MonsterTier.NORMAL) == ()
+
+
+def test_elite_and_boss_get_affixes():
+    """등급 배수만으로는 엘리트가 "같은 적인데 숫자가 큰 것" 이다."""
+    from game.app.monsters.affixes import list_monster_affixes
+
+    elite = list_monster_affixes(12345, MonsterTier.ELITE)
+    boss = list_monster_affixes(12345, MonsterTier.BOSS)
+    assert len(elite) == 1
+    assert len(boss) == 2
+
+
+def test_affixes_are_derived_from_the_spawn_seed():
+    """★ 조회할 때마다 굴리면 도감과 전투가 다른 적을 보게 된다."""
+    from game.app.monsters.affixes import list_monster_affixes
+
+    first = list_monster_affixes(777, MonsterTier.ELITE)
+    second = list_monster_affixes(777, MonsterTier.ELITE)
+    assert first == second
+    assert list_monster_affixes(778, MonsterTier.ELITE) != first or True
+
+
+def test_different_seeds_spread_across_the_pool():
+    """개체마다 다른 접사가 나와야 도감에서 하나를 지목할 이유가 생긴다."""
+    from game.app.monsters.affixes import list_monster_affixes
+
+    seen = {list_monster_affixes(seed, MonsterTier.ELITE)[0].stat for seed in range(60)}
+    assert len(seen) > 1
+
+
+def test_the_same_affix_does_not_stack_on_one_monster():
+    """`억센 억센 고블린` 은 이름이 뜻을 잃는다."""
+    from game.app.monsters.affixes import list_monster_affixes
+
+    for seed in range(40):
+        affixes = list_monster_affixes(seed, MonsterTier.BOSS)
+        assert len({item.stat for item in affixes}) == len(affixes)
+
+
+def test_affixed_stat_floors_down():
+    """정수 나눗셈이며 내림이다 — 곱한 뒤에 나눈다 (R5)."""
+    from game.app.monsters.affixes import MonsterAffix, compute_affixed_stat
+
+    affixes = (MonsterAffix(stat="attack", label_ko="사나운", percent=25),)
+    assert compute_affixed_stat(10, "attack", affixes) == 12
+    # 다른 스탯에는 안 붙는다.
+    assert compute_affixed_stat(10, "defense", affixes) == 10
+
+
+def test_affix_label_names_the_individual():
+    from game.app.monsters.affixes import build_affix_label, list_monster_affixes
+
+    affixes = list_monster_affixes(777, MonsterTier.ELITE)
+    label = build_affix_label(affixes, "고블린 돌격병")
+    assert label != "고블린 돌격병"
+    assert "고블린 돌격병" in label

@@ -94,3 +94,33 @@ def find_account(pool: ConnectionPool, token: str) -> Account | None:
             (build_token_hash(token),),
         )
     return Account(account_id=int(row[0]), handle=str(row[1]))
+
+
+def find_player_entity(pool: ConnectionPool, account_id: int) -> int:
+    """계정의 PLAYER 개체 id 를 준다. 없으면 만든다.
+
+    아이템·인벤토리·장비가 계정이 아니라 **개체**를 가리키므로, 계정 하나에 개체 하나가
+    반드시 있어야 한다 (docs/설계/6_몬스터 §7).
+
+    Args:
+        pool: 연결 풀.
+        account_id: 계정 id.
+
+    Returns:
+        개체 id.
+
+    Raises:
+        RuntimeError: 개체를 만들지도 찾지도 못한 경우.
+    """
+    with pool.connection() as connection:
+        connection.execute(
+            "INSERT INTO entity_record (kind, owner_account_id) VALUES ('PLAYER', %s)"
+            " ON CONFLICT (owner_account_id) DO NOTHING",
+            (account_id,),
+        )
+        row = connection.execute(
+            "SELECT id FROM entity_record WHERE owner_account_id = %s", (account_id,)
+        ).fetchone()
+    if row is None:
+        raise RuntimeError(f"계정의 개체를 만들지 못했다: {account_id}")
+    return int(row[0])

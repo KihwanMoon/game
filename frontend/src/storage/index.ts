@@ -69,6 +69,7 @@ export {
   createLogin,
   ensureToken,
   readAccount,
+  readBestiary,
   readInventory,
   readServerMeta,
   readToken,
@@ -81,6 +82,7 @@ export {
 export type {
   AccountState,
   AuthOutcome,
+  BestiaryEntry,
   InventoryView,
   ItemView,
   RequirementView,

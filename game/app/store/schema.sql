@@ -98,6 +98,47 @@ CREATE TABLE IF NOT EXISTS login_attempt (
 CREATE INDEX IF NOT EXISTS login_attempt_lookup_idx
     ON login_attempt (login_id, attempted_at DESC);
 
+-- ── 개체 (E단계) ────────────────────────────────────────────────────────
+-- **아이템 표보다 먼저 선다.** 아이템·인벤토리·장비가 이 표를 외래키로 가리키므로
+-- 순서가 뒤집히면 신규 DB 에서 생성이 실패한다.
+CREATE TABLE IF NOT EXISTS entity_record (
+    id            BIGSERIAL   PRIMARY KEY,
+    -- PLAYER | MONSTER. **한 표에 둘을 담는다** (docs/설계/6_몬스터 §7) — 장비·인벤토리가
+    -- 이 표를 참조하므로 "몬스터가 내 장비를 들고 있다" 가 특수 케이스가 아니다.
+    -- 따로 두면 아이템이 계정을 참조하게 되고, 몬스터가 무언가를 들려면 그때 양쪽을
+    -- 마이그레이션해야 한다.
+    kind              TEXT        NOT NULL,
+    -- PLAYER 만 채운다. 계정 하나에 개체 하나다.
+    owner_account_id  BIGINT      UNIQUE REFERENCES account(id) ON DELETE CASCADE,
+    -- MONSTER 만 채운다. 어느 종인가.
+    catalog_id        TEXT,
+    tier              TEXT,
+    persistence       TEXT        NOT NULL DEFAULT 'PERSISTENT',
+    level             INTEGER     NOT NULL DEFAULT 1,
+    total_xp          BIGINT      NOT NULL DEFAULT 0,
+    -- 요구조건 판정의 소재. **장비 보너스를 담지 않는다** (docs/설계/4_아이템 §7) —
+    -- 담으면 착용 순서가 결과를 바꾸고 서버가 (계정, 아이템)만으로 재판정할 수 없다.
+    stat_json         JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    -- **이것이 이 설계의 중심이다.** 몬스터의 정체는 스탯이 아니라 규칙표이고, 도감이
+    -- 공개하는 것도 성장이 바꾸는 것도 그것이다. 비어 있으면 카탈로그 기본표를 쓴다.
+    ruleset_json      JSONB,
+    rule_slots        INTEGER     NOT NULL DEFAULT 0,
+    cpu_budget        INTEGER     NOT NULL DEFAULT 0,
+    -- 굴림의 재현 근거. 엘리트 접사가 여기서 나온다.
+    spawn_seed        BIGINT,
+    -- 어디에 있는가 (PERSISTENT 만).
+    zone_floor        INTEGER,
+    entity_slot       TEXT,
+    alive             BOOLEAN     NOT NULL DEFAULT true,
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- 한 층의 한 자리에 개체 하나. 없으면 같은 자리에 여럿이 겹쳐 스냅샷이 어느 것을
+    -- 가리키는지 알 수 없다.
+    UNIQUE (zone_floor, entity_slot)
+);
+
+CREATE INDEX IF NOT EXISTS entity_record_zone_idx ON entity_record (zone_floor, entity_slot);
+
 -- ── 아이템 (D단계) ───────────────────────────────────────────────────────
 -- **서버가 발급한다** (결정 #02). 전리품 생성이 전투 시뮬레이션 밖에 있으므로 코어는
 -- 아이템을 모르고, 전투 결정론이 온전하다. 대가는 오프라인에서 아이템이 안 나오는 것이다.
@@ -106,7 +147,11 @@ CREATE INDEX IF NOT EXISTS login_attempt_lookup_idx
 -- 서버 하나뿐이라는 것이 그 자리를 대신하고, 그래서 발급 코드가 API 층 밖으로 새면 안 된다.
 CREATE TABLE IF NOT EXISTS item_instance (
     id                    BIGSERIAL   PRIMARY KEY,
-    owner_account_id      BIGINT      NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    -- 소유자는 **개체다**. 계정이 아니라 entity_record 를 가리키므로 "몬스터가 내 장비를
+    -- 들고 있다" 가 특수 케이스가 아니다 (docs/설계/6_몬스터 §7).
+    owner_entity_id       BIGINT      NOT NULL REFERENCES entity_record(id) ON DELETE CASCADE,
+    -- 누구에게서 빼앗았는가. 도감이 "내 아이템을 들고 있다" 를 말하려면 필요하다 (#34).
+    taken_from            BIGINT      REFERENCES account(id) ON DELETE SET NULL,
     catalog_id            TEXT        NOT NULL,
     affixes               JSONB       NOT NULL DEFAULT '[]'::jsonb,
     -- 어느 검증된 런에서 나왔는가. 재현 검증은 못 하지만 감사와 조사에 이 연결이 필요하다.
@@ -116,16 +161,15 @@ CREATE TABLE IF NOT EXISTS item_instance (
     created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS item_instance_owner_idx ON item_instance (owner_account_id, id);
 
 -- 인벤토리. **slot_index 가 PK 에 든다** — 순서를 조회 시점에 정하지 않는다 (R5).
 CREATE TABLE IF NOT EXISTS inventory_slot (
-    account_id        BIGINT   NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    entity_id         BIGINT   NOT NULL REFERENCES entity_record(id) ON DELETE CASCADE,
     slot_index        INTEGER  NOT NULL,
     item_id           BIGINT   REFERENCES item_instance(id) ON DELETE CASCADE,
     stack_catalog_id  TEXT,
     stack_count       INTEGER,
-    PRIMARY KEY (account_id, slot_index),
+    PRIMARY KEY (entity_id, slot_index),
     -- 장비 한 개이거나 소모품 스택이거나, 둘 중 하나다.
     CHECK ((item_id IS NULL) <> (stack_catalog_id IS NULL))
 );
@@ -133,10 +177,10 @@ CREATE TABLE IF NOT EXISTS inventory_slot (
 -- 장비 슬롯 여섯. 양손무기의 보조 봉인은 **저장하지 않는다** — 파생값이며, 저장하면
 -- 착용·해제 순서에 따라 갈린다 (docs/설계/4_아이템 §2.1).
 CREATE TABLE IF NOT EXISTS equipment_slot (
-    account_id  BIGINT  NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    entity_id   BIGINT  NOT NULL REFERENCES entity_record(id) ON DELETE CASCADE,
     slot        TEXT    NOT NULL,
     item_id     BIGINT  NOT NULL REFERENCES item_instance(id) ON DELETE CASCADE,
-    PRIMARY KEY (account_id, slot),
+    PRIMARY KEY (entity_id, slot),
     UNIQUE (item_id)
 );
 
@@ -161,7 +205,8 @@ CREATE TABLE IF NOT EXISTS wallet (
 CREATE TABLE IF NOT EXISTS item_event (
     id          BIGSERIAL   PRIMARY KEY,
     item_id     BIGINT      REFERENCES item_instance(id) ON DELETE SET NULL,
-    account_id  BIGINT      NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    -- 개체 기준이다. 몬스터도 아이템을 가지므로 계정으로 두면 그쪽 이력이 남지 않는다.
+    entity_id   BIGINT      NOT NULL REFERENCES entity_record(id) ON DELETE CASCADE,
     kind        TEXT        NOT NULL,
     detail      TEXT        NOT NULL DEFAULT '',
     at          TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -173,28 +218,13 @@ CREATE TABLE IF NOT EXISTS item_event (
 --
 -- ruleset_json 이 여기 있는 것이 이 설계의 중심이다 — 몬스터의 정체는 스탯이 아니라
 -- 규칙표이고, 도감이 공개하는 것도 성장이 바꾸는 것도 그것이다.
-CREATE TABLE IF NOT EXISTS monster_record (
-    id            BIGSERIAL   PRIMARY KEY,
-    catalog_id    TEXT        NOT NULL,
-    tier          TEXT        NOT NULL,
-    persistence   TEXT        NOT NULL DEFAULT 'PERSISTENT',
-    zone_floor    INTEGER     NOT NULL DEFAULT 1,
-    entity_slot   TEXT        NOT NULL,
-    total_xp      BIGINT      NOT NULL DEFAULT 0,
-    level         INTEGER     NOT NULL DEFAULT 1,
-    alive         BOOLEAN     NOT NULL DEFAULT true,
-    last_seen_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    -- 한 층의 한 자리에 개체 하나. 없으면 같은 자리에 여럿이 겹쳐 스냅샷이 어느 것을
-    -- 가리키는지 알 수 없다.
-    UNIQUE (zone_floor, entity_slot)
-);
+
 
 -- 티켓이 얼려 둔 상태 (§5). **클라이언트가 되보내지 않는다** — 서버가 ticket_id 로
 -- 자기가 발급한 것을 조회한다. 받으면 약한 스냅샷으로 바꿔 제출할 수 있다 (T8).
 CREATE TABLE IF NOT EXISTS monster_snapshot (
     ticket_id  TEXT   NOT NULL REFERENCES run_ticket(id) ON DELETE CASCADE,
-    record_id  BIGINT NOT NULL REFERENCES monster_record(id) ON DELETE CASCADE,
+    record_id  BIGINT NOT NULL REFERENCES entity_record(id) ON DELETE CASCADE,
     state      JSONB  NOT NULL,
     PRIMARY KEY (ticket_id, record_id)
 );
@@ -203,7 +233,7 @@ CREATE TABLE IF NOT EXISTS monster_snapshot (
 -- 몬스터가 크는 구조면, 자기 몬스터를 키우려고 일부러 지는 어뷰징이 열린다.
 CREATE TABLE IF NOT EXISTS monster_kill (
     id             BIGSERIAL   PRIMARY KEY,
-    record_id      BIGINT      NOT NULL REFERENCES monster_record(id) ON DELETE CASCADE,
+    record_id      BIGINT      NOT NULL REFERENCES entity_record(id) ON DELETE CASCADE,
     victim_kind    TEXT        NOT NULL,
     victim_id      BIGINT,
     run_result_id  BIGINT      REFERENCES run_result(submission_id) ON DELETE SET NULL,
@@ -211,15 +241,6 @@ CREATE TABLE IF NOT EXISTS monster_kill (
     at             TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 몬스터가 가져간 장비 사본 (결정 #34). 원본은 플레이어 쪽에서 파손되거나 삭제된다.
-CREATE TABLE IF NOT EXISTS monster_trophy (
-    id           BIGSERIAL   PRIMARY KEY,
-    record_id    BIGINT      NOT NULL REFERENCES monster_record(id) ON DELETE CASCADE,
-    catalog_id   TEXT        NOT NULL,
-    affixes      JSONB       NOT NULL DEFAULT '[]'::jsonb,
-    -- 누구에게서 가져왔는가. 도감이 "내 아이템을 들고 있다" 를 말하려면 필요하다.
-    taken_from   BIGINT      REFERENCES account(id) ON DELETE SET NULL,
-    taken_at     TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS monster_trophy_owner_idx ON monster_trophy (taken_from, record_id);
+-- 전리품 표를 따로 두지 않는다. 몬스터가 가져간 장비는 **그 개체가 소유한
+-- item_instance** 이며, taken_from 이 원주인을 가리킨다 — 표를 가르면 "몬스터가 내 장비를
+-- 들고 있다" 가 다시 특수 케이스가 된다 (결정 #34, docs/설계/6_몬스터 §7).

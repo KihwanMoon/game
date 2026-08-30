@@ -87,37 +87,37 @@ def build_affix_payload(affixes: tuple[Affix, ...]) -> list[dict]:
 
 
 def record_item_event(
-    pool: ConnectionPool, account_id: int, item_id: int | None, kind: str, detail: str = ""
+    pool: ConnectionPool, entity_id: int, item_id: int | None, kind: str, detail: str = ""
 ) -> None:
     """아이템 이력 한 줄을 남긴다.
 
     Args:
         pool: 연결 풀.
-        account_id: 계정 id.
+        entity_id: 개체 id (entity_record).
         item_id: 대상 아이템. 소모품이면 None.
         kind: 사건 종류.
         detail: 부연.
     """
     with pool.connection() as connection:
         connection.execute(
-            "INSERT INTO item_event (item_id, account_id, kind, detail) VALUES (%s, %s, %s, %s)",
-            (item_id, account_id, kind, detail),
+            "INSERT INTO item_event (item_id, entity_id, kind, detail) VALUES (%s, %s, %s, %s)",
+            (item_id, entity_id, kind, detail),
         )
 
 
-def find_empty_slot(pool: ConnectionPool, account_id: int) -> int | None:
+def find_empty_slot(pool: ConnectionPool, entity_id: int) -> int | None:
     """가장 낮은 빈 칸을 찾는다.
 
     Args:
         pool: 연결 풀.
-        account_id: 계정 id.
+        entity_id: 개체 id (entity_record).
 
     Returns:
         칸 번호. 가득 찼으면 None.
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT slot_index FROM inventory_slot WHERE account_id = %s", (account_id,)
+            "SELECT slot_index FROM inventory_slot WHERE entity_id = %s", (entity_id,)
         ).fetchall()
     used = {int(row[0]) for row in rows}
     for index in range(INVENTORY_SIZE):
@@ -128,7 +128,7 @@ def find_empty_slot(pool: ConnectionPool, account_id: int) -> int | None:
 
 def create_item(
     pool: ConnectionPool,
-    account_id: int,
+    entity_id: int,
     catalog_id: str,
     affixes: tuple[Affix, ...],
     origin_run_result_id: int | None = None,
@@ -140,7 +140,7 @@ def create_item(
 
     Args:
         pool: 연결 풀.
-        account_id: 받을 계정.
+        entity_id: 받을 개체.
         catalog_id: 카탈로그 id.
         affixes: 굴린 접사.
         origin_run_result_id: 어느 검증된 런에서 나왔는가.
@@ -148,32 +148,32 @@ def create_item(
     Returns:
         만들어진 아이템 id. 인벤토리가 가득 찼으면 None.
     """
-    slot = find_empty_slot(pool, account_id)
+    slot = find_empty_slot(pool, entity_id)
     if slot is None:
         return None
     with pool.connection() as connection:
         row = connection.execute(
-            "INSERT INTO item_instance (owner_account_id, catalog_id, affixes,"
+            "INSERT INTO item_instance (owner_entity_id, catalog_id, affixes,"
             " origin_run_result_id) VALUES (%s, %s, %s, %s) RETURNING id",
-            (account_id, catalog_id, Jsonb(build_affix_payload(affixes)), origin_run_result_id),
+            (entity_id, catalog_id, Jsonb(build_affix_payload(affixes)), origin_run_result_id),
         ).fetchone()
         if row is None:
             raise RuntimeError("아이템을 만들지 못했다")
         item_id = int(row[0])
         connection.execute(
-            "INSERT INTO inventory_slot (account_id, slot_index, item_id) VALUES (%s, %s, %s)",
-            (account_id, slot, item_id),
+            "INSERT INTO inventory_slot (entity_id, slot_index, item_id) VALUES (%s, %s, %s)",
+            (entity_id, slot, item_id),
         )
-    record_item_event(pool, account_id, item_id, EVENT_GRANT, catalog_id)
+    record_item_event(pool, entity_id, item_id, EVENT_GRANT, catalog_id)
     return item_id
 
 
-def list_inventory(pool: ConnectionPool, account_id: int) -> tuple[InventoryEntry, ...]:
+def list_inventory(pool: ConnectionPool, entity_id: int) -> tuple[InventoryEntry, ...]:
     """인벤토리를 칸 번호 순으로 읽는다.
 
     Args:
         pool: 연결 풀.
-        account_id: 계정 id.
+        entity_id: 개체 id (entity_record).
 
     Returns:
         칸 번호 순으로 정렬된 항목들. 빈 칸은 담지 않는다.
@@ -183,8 +183,8 @@ def list_inventory(pool: ConnectionPool, account_id: int) -> tuple[InventoryEntr
             "SELECT s.slot_index, s.item_id, s.stack_catalog_id, s.stack_count,"
             " i.catalog_id, i.affixes, i.is_broken"
             " FROM inventory_slot s LEFT JOIN item_instance i ON i.id = s.item_id"
-            " WHERE s.account_id = %s ORDER BY s.slot_index",
-            (account_id,),
+            " WHERE s.entity_id = %s ORDER BY s.slot_index",
+            (entity_id,),
         ).fetchall()
     return tuple(
         InventoryEntry(
@@ -204,12 +204,12 @@ def list_inventory(pool: ConnectionPool, account_id: int) -> tuple[InventoryEntr
     )
 
 
-def list_equipment(pool: ConnectionPool, account_id: int) -> dict[EquipSlot, StoredItem]:
+def list_equipment(pool: ConnectionPool, entity_id: int) -> dict[EquipSlot, StoredItem]:
     """착용 중인 장비를 읽는다. **봉인은 반영하지 않는다** — 읽는 쪽이 계산한다.
 
     Args:
         pool: 연결 풀.
-        account_id: 계정 id.
+        entity_id: 개체 id (entity_record).
 
     Returns:
         슬롯에서 아이템으로의 대응표.
@@ -218,8 +218,8 @@ def list_equipment(pool: ConnectionPool, account_id: int) -> dict[EquipSlot, Sto
         rows = connection.execute(
             "SELECT e.slot, i.id, i.catalog_id, i.affixes, i.is_broken"
             " FROM equipment_slot e JOIN item_instance i ON i.id = e.item_id"
-            " WHERE e.account_id = %s ORDER BY e.slot",
-            (account_id,),
+            " WHERE e.entity_id = %s ORDER BY e.slot",
+            (entity_id,),
         ).fetchall()
     return {
         EquipSlot(str(row[0])): StoredItem(
@@ -232,12 +232,12 @@ def list_equipment(pool: ConnectionPool, account_id: int) -> dict[EquipSlot, Sto
     }
 
 
-def find_item(pool: ConnectionPool, account_id: int, item_id: int) -> StoredItem | None:
+def find_item(pool: ConnectionPool, entity_id: int, item_id: int) -> StoredItem | None:
     """계정이 가진 아이템 하나를 찾는다.
 
     Args:
         pool: 연결 풀.
-        account_id: 계정 id.
+        entity_id: 개체 id (entity_record).
         item_id: 아이템 id.
 
     Returns:
@@ -246,8 +246,8 @@ def find_item(pool: ConnectionPool, account_id: int, item_id: int) -> StoredItem
     with pool.connection() as connection:
         row = connection.execute(
             "SELECT id, catalog_id, affixes, is_broken FROM item_instance"
-            " WHERE id = %s AND owner_account_id = %s",
-            (item_id, account_id),
+            " WHERE id = %s AND owner_entity_id = %s",
+            (item_id, entity_id),
         ).fetchone()
     if row is None:
         return None

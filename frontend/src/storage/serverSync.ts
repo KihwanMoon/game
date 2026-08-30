@@ -560,3 +560,60 @@ export async function applyItemAction(
     detail: '',
   }
 }
+
+/** 도감 한 줄. 규칙표를 **요약 없이** 받는다 — 원문이 카운터 설계의 입력이다. */
+export interface BestiaryEntry {
+  readonly recordId: number
+  readonly labelKo: string
+  readonly tier: string
+  readonly level: number
+  readonly levelCap: number
+  readonly zoneFloor: number
+  readonly entitySlot: string
+  readonly ruleCount: number
+  readonly affixes: readonly string[]
+  readonly trophies: readonly string[]
+  /** 이 개체가 내 아이템을 들고 있는가. 되찾으러 가는 동기가 여기서 나온다. */
+  readonly holdsMine: boolean
+}
+
+interface RawBestiaryEntry {
+  record_id: number
+  label_ko: string
+  tier: string
+  level: number
+  level_cap: number
+  zone_floor: number
+  entity_slot: string
+  ruleset: { rules?: unknown[] } | null
+  affixes: { label_ko: string }[]
+  trophies: string[]
+  holds_mine: boolean
+}
+
+/**
+ * 도감을 읽는다.
+ *
+ * @param token 기기 토큰.
+ * @returns 도감 줄들. 서버에 닿지 못했으면 undefined.
+ */
+export async function readBestiary(token: string): Promise<readonly BestiaryEntry[] | undefined> {
+  const response = await sendRequest('/bestiary', { headers: { [TOKEN_HEADER]: token } })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  const body = (await response.json()) as { entries: RawBestiaryEntry[] }
+  return body.entries.map((raw) => ({
+    recordId: raw.record_id,
+    labelKo: raw.label_ko,
+    tier: raw.tier,
+    level: raw.level,
+    levelCap: raw.level_cap,
+    zoneFloor: raw.zone_floor,
+    entitySlot: raw.entity_slot,
+    ruleCount: raw.ruleset?.rules?.length ?? 0,
+    affixes: raw.affixes.map((item) => item.label_ko),
+    trophies: raw.trophies,
+    holdsMine: raw.holds_mine,
+  }))
+}

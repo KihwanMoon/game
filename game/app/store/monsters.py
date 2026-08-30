@@ -8,11 +8,13 @@
 """
 
 import json
+import secrets
 from dataclasses import dataclass
 
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
+from game.app.monsters.affixes import compute_affixed_stat, list_monster_affixes
 from game.app.monsters.growth import (
     build_growth,
     compute_cap_xp,
@@ -29,7 +31,19 @@ from game.schemas.monster_snapshot import (
 
 # 플레이어를 잡았을 때 얻는 경험치. 처치한 플레이어의 레벨·장비에 비례시키지 않는다 —
 # 비례시키면 강한 캐릭터로 일부러 죽어 주는 것이 가장 빠른 육성법이 된다 (T9).
+# 퍼센트 기준. 100 이 1.0배다.
+PERCENT_BASE = 100
+
 XP_PER_PLAYER = 60
+
+# 스폰 시드 상한. 엘리트 접사 굴림의 재현 근거이며, 예측 불가능해야 어느 개체가 어떤
+# 접사를 갖는지 미리 계산해 그것만 노리는 일이 막힌다.
+MAX_SPAWN_SEED = 1 << 40
+
+# 조회 결과에서의 자리. SELECT 목록과 함께 고쳐야 한다 — 어긋나면 접사와 규칙표가
+# 조용히 비고, 그것이 "엘리트인데 접사가 없다" 로 나타난다.
+COLUMN_SPAWN_SEED = 8
+COLUMN_RULESET = 9
 
 
 @dataclass(frozen=True)
@@ -44,6 +58,10 @@ class MonsterRecord:
     total_xp: int
     level: int
     alive: bool
+    # 엘리트 접사 굴림의 재현 근거. 같은 개체는 언제 조회해도 같은 접사를 낸다.
+    spawn_seed: int = 0
+    # 이 개체 전용 규칙표. None 이면 카탈로그 기본표를 쓴다 — 레벨별 규칙표(#36)의 자리다.
+    ruleset_json: dict | None = None
 
 
 def create_monster(
@@ -52,6 +70,8 @@ def create_monster(
     tier: MonsterTier,
     zone_floor: int,
     entity_slot: str,
+    spawn_seed: int | None = None,
+    ruleset_json: dict | None = None,
 ) -> MonsterRecord | None:
     """지속 몬스터를 세계에 놓는다. 그 자리에 이미 있으면 아무것도 하지 않는다.
 
@@ -61,16 +81,30 @@ def create_monster(
         tier: 등급.
         zone_floor: 사는 층.
         entity_slot: 방 배치에서의 엔티티 id.
+        spawn_seed: 굴림의 재현 근거. 생략하면 서버가 만든다 — 엘리트 접사가 이것에서
+            나오므로, 같은 개체는 언제 조회해도 같은 접사를 낸다.
+        ruleset_json: 이 개체 전용 규칙표. 없으면 카탈로그 기본표를 쓴다 — 레벨별
+            규칙표(#36)가 정해지면 여기 들어온다.
 
     Returns:
         만들어진 레코드. 이미 있으면 None.
     """
     with pool.connection() as connection:
         row = connection.execute(
-            "INSERT INTO monster_record (catalog_id, tier, zone_floor, entity_slot)"
-            " VALUES (%s, %s, %s, %s) ON CONFLICT (zone_floor, entity_slot) DO NOTHING"
-            " RETURNING id, catalog_id, tier, zone_floor, entity_slot, total_xp, level, alive",
-            (catalog_id, str(tier), zone_floor, entity_slot),
+            "INSERT INTO entity_record"
+            " (kind, catalog_id, tier, zone_floor, entity_slot, spawn_seed, ruleset_json)"
+            " VALUES ('MONSTER', %s, %s, %s, %s, %s, %s)"
+            " ON CONFLICT (zone_floor, entity_slot) DO NOTHING"
+            " RETURNING id, catalog_id, tier, zone_floor, entity_slot, total_xp, level, alive,"
+            " spawn_seed, ruleset_json",
+            (
+                catalog_id,
+                str(tier),
+                zone_floor,
+                entity_slot,
+                spawn_seed if spawn_seed is not None else secrets.randbelow(MAX_SPAWN_SEED),
+                Jsonb(ruleset_json) if ruleset_json is not None else None,
+            ),
         ).fetchone()
     return None if row is None else _build_record(row)
 
@@ -84,6 +118,7 @@ def _build_record(row: tuple) -> MonsterRecord:
     Returns:
         만들어진 레코드.
     """
+    raw_ruleset = row[COLUMN_RULESET] if len(row) > COLUMN_RULESET else None
     return MonsterRecord(
         record_id=int(row[0]),
         catalog_id=str(row[1]),
@@ -93,6 +128,12 @@ def _build_record(row: tuple) -> MonsterRecord:
         total_xp=int(row[5]),
         level=int(row[6]),
         alive=bool(row[7]),
+        spawn_seed=(
+            int(row[COLUMN_SPAWN_SEED])
+            if len(row) > COLUMN_SPAWN_SEED and row[COLUMN_SPAWN_SEED] is not None
+            else 0
+        ),
+        ruleset_json=(json.loads(raw_ruleset) if isinstance(raw_ruleset, str) else raw_ruleset),
     )
 
 
@@ -111,8 +152,9 @@ def list_monsters(pool: ConnectionPool, zone_floor: int) -> tuple[MonsterRecord,
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT id, catalog_id, tier, zone_floor, entity_slot, total_xp, level, alive"
-            " FROM monster_record WHERE zone_floor = %s AND alive = true"
+            "SELECT id, catalog_id, tier, zone_floor, entity_slot, total_xp, level, alive,"
+            " spawn_seed, ruleset_json"
+            " FROM entity_record WHERE kind = 'MONSTER' AND zone_floor = %s AND alive = true"
             " ORDER BY entity_slot",
             (zone_floor,),
         ).fetchall()
@@ -134,15 +176,28 @@ def build_monster_snapshot(record: MonsterRecord, base: dict) -> MonsterSnapshot
     """
     tier = MonsterTier(record.tier)
     growth = build_growth(record.level)
+    # 엘리트 접사는 spawn_seed 에서 파생한다 — 조회할 때마다 굴리면 도감과 전투가 다른
+    # 적을 보게 된다 (docs/설계/6_몬스터 §1).
+    affixes = list_monster_affixes(record.spawn_seed, tier)
     return MonsterSnapshot(
         entity_id=record.entity_slot,
         record_id=record.record_id,
         kind_id=record.catalog_id,
         tier=record.tier,
         level=record.level,
-        hp_max=compute_tier_stat(int(base["hp_max"]), tier) * growth.stat_percent // 100,
-        attack=compute_tier_stat(int(base["attack"]), tier) * growth.stat_percent // 100,
-        defense=compute_tier_stat(int(base["defense"]), tier),
+        hp_max=compute_affixed_stat(
+            compute_tier_stat(int(base["hp_max"]), tier) * growth.stat_percent // PERCENT_BASE,
+            "hp_max",
+            affixes,
+        ),
+        attack=compute_affixed_stat(
+            compute_tier_stat(int(base["attack"]), tier) * growth.stat_percent // PERCENT_BASE,
+            "attack",
+            affixes,
+        ),
+        defense=compute_affixed_stat(
+            compute_tier_stat(int(base["defense"]), tier), "defense", affixes
+        ),
         rule_slots=int(base.get("rule_slots", 0)) + growth.bonus_rule_slots,
         cpu_budget=int(base.get("cpu_budget", 0)) + growth.bonus_cpu,
     )
@@ -212,14 +267,14 @@ def add_monster_xp(
     """
     with pool.connection() as connection:
         row = connection.execute(
-            "UPDATE monster_record SET total_xp = total_xp + %s, last_seen_at = now()"
+            "UPDATE entity_record SET total_xp = total_xp + %s, updated_at = now()"
             " WHERE id = %s RETURNING total_xp",
             (amount, record_id),
         ).fetchone()
         if row is None:
             return 0
         level, _ = compute_level(int(row[0]), zone_floor)
-        connection.execute("UPDATE monster_record SET level = %s WHERE id = %s", (level, record_id))
+        connection.execute("UPDATE entity_record SET level = %s WHERE id = %s", (level, record_id))
         connection.execute(
             "INSERT INTO monster_kill (record_id, victim_kind, run_result_id, xp_gained)"
             " VALUES (%s, %s, %s, %s)",
@@ -244,7 +299,7 @@ def apply_monster_defeat(pool: ConnectionPool, record_id: int, zone_floor: int) 
     """
     with pool.connection() as connection:
         row = connection.execute(
-            "SELECT total_xp, level FROM monster_record WHERE id = %s", (record_id,)
+            "SELECT total_xp, level FROM entity_record WHERE id = %s", (record_id,)
         ).fetchone()
         if row is None:
             return 0
@@ -255,8 +310,7 @@ def apply_monster_defeat(pool: ConnectionPool, record_id: int, zone_floor: int) 
         total_xp = compute_defeat_xp(current, level, zone_floor)
         level, _ = compute_level(total_xp, zone_floor)
         connection.execute(
-            "UPDATE monster_record SET total_xp = %s, level = %s, last_seen_at = now()"
-            " WHERE id = %s",
+            "UPDATE entity_record SET total_xp = %s, level = %s, updated_at = now() WHERE id = %s",
             (total_xp, level, record_id),
         )
     return level
@@ -271,16 +325,20 @@ def create_trophy(
 ) -> None:
     """몬스터가 플레이어의 장비 사본을 가져간다 (결정 #34).
 
+    **별도 표가 아니라 그 개체가 소유한 아이템으로 넣는다.** 표를 가르면 "몬스터가 내
+    장비를 들고 있다" 가 다시 특수 케이스가 되고, 나중에 몬스터가 그것을 장착하거나
+    되찾기가 거래를 타야 할 때 양쪽을 합쳐야 한다.
+
     Args:
         pool: 연결 풀.
-        record_id: 가져간 몬스터.
+        record_id: 가져간 몬스터의 개체 id.
         catalog_id: 아이템 카탈로그 id.
         affixes: 접사 절.
         taken_from: 누구에게서 가져왔는가.
     """
     with pool.connection() as connection:
         connection.execute(
-            "INSERT INTO monster_trophy (record_id, catalog_id, affixes, taken_from)"
+            "INSERT INTO item_instance (owner_entity_id, catalog_id, affixes, taken_from)"
             " VALUES (%s, %s, %s, %s)",
             (record_id, catalog_id, Jsonb(affixes), taken_from),
         )
@@ -298,8 +356,9 @@ def list_trophies(pool: ConnectionPool, record_id: int) -> tuple[dict, ...]:
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT catalog_id, taken_from FROM monster_trophy WHERE record_id = %s"
-            " ORDER BY taken_at DESC",
+            "SELECT catalog_id, taken_from FROM item_instance"
+            " WHERE owner_entity_id = %s AND taken_from IS NOT NULL"
+            " ORDER BY created_at DESC",
             (record_id,),
         ).fetchall()
     return tuple({"catalog_id": str(row[0]), "taken_from": row[1]} for row in rows)

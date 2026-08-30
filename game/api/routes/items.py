@@ -21,6 +21,7 @@ from game.api.schemas import (
 from game.app.items.catalog import find_item as find_catalog_item
 from game.app.items.requirements import check_requirements
 from game.app.items.stats import get_effective_slots
+from game.app.store.accounts import find_player_entity
 from game.app.store.equipment import (
     REPAIR_COST,
     add_currency,
@@ -106,15 +107,16 @@ def read_inventory(account: CurrentAccount) -> InventoryResponse:
         칸 번호 순 인벤토리와 슬롯 순 장비. 봉인된 슬롯은 `is_sealed` 가 참이다.
     """
     pool = get_pool()
+    entity_id = find_player_entity(pool, account.account_id)
     catalog = get_item_catalog()
     base_stats = build_base_stats(get_context().balance)
 
-    equipped = list_equipment(pool, account.account_id)
+    equipped = list_equipment(pool, entity_id)
     entries = {slot: find_catalog_item(catalog, item.catalog_id) for slot, item in equipped.items()}
     sealed = {slot: entry is None for slot, entry in get_effective_slots(entries)}
 
     return InventoryResponse(
-        size=len(list_inventory(pool, account.account_id)),
+        size=len(list_inventory(pool, entity_id)),
         slots=[
             InventorySlotView(
                 slot_index=entry.slot_index,
@@ -124,7 +126,7 @@ def read_inventory(account: CurrentAccount) -> InventoryResponse:
                 stack_catalog_id=entry.stack_catalog_id,
                 stack_count=entry.stack_count,
             )
-            for entry in list_inventory(pool, account.account_id)
+            for entry in list_inventory(pool, entity_id)
         ],
         equipment=[
             InventorySlotView(
@@ -157,7 +159,8 @@ def create_equip(request: EquipRequest, account: CurrentAccount) -> InventoryRes
         HTTPException: 남의 아이템이거나, 그 슬롯에 못 들어가거나, 요구조건을 못 채운 경우.
     """
     pool = get_pool()
-    stored = find_item(pool, account.account_id, request.item_id)
+    entity_id = find_player_entity(pool, account.account_id)
+    stored = find_item(pool, entity_id, request.item_id)
     if stored is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "가진 아이템이 아니다")
     catalog = get_item_catalog()
@@ -178,7 +181,7 @@ def create_equip(request: EquipRequest, account: CurrentAccount) -> InventoryRes
             status.HTTP_409_CONFLICT,
             f"{first.stat}({first.actual}) >= 요구({first.minimum}) 거짓",
         )
-    apply_equip(pool, account.account_id, request.item_id, slot)
+    apply_equip(pool, entity_id, request.item_id, slot)
     return read_inventory(account)
 
 
@@ -197,7 +200,9 @@ def create_unequip(request: EquipRequest, account: CurrentAccount) -> InventoryR
         HTTPException: 인벤토리가 가득 차 받을 칸이 없는 경우.
     """
     try:
-        apply_unequip(get_pool(), account.account_id, EquipSlot(request.slot))
+        apply_unequip(
+            get_pool(), find_player_entity(get_pool(), account.account_id), EquipSlot(request.slot)
+        )
     except ValueError as error:
         raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
     return read_inventory(account)
@@ -217,7 +222,9 @@ def create_discard(request: ItemActionRequest, account: CurrentAccount) -> Inven
     Raises:
         HTTPException: 가진 아이템이 아닌 경우.
     """
-    if not remove_item(get_pool(), account.account_id, request.item_id):
+    if not remove_item(
+        get_pool(), find_player_entity(get_pool(), account.account_id), request.item_id
+    ):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "가진 아이템이 아니다")
     return read_inventory(account)
 
@@ -237,10 +244,11 @@ def create_repair(request: ItemActionRequest, account: CurrentAccount) -> Wallet
         HTTPException: 가진 아이템이 아니거나 잔액이 모자란 경우.
     """
     pool = get_pool()
-    if find_item(pool, account.account_id, request.item_id) is None:
+    entity_id = find_player_entity(pool, account.account_id)
+    if find_item(pool, entity_id, request.item_id) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "가진 아이템이 아니다")
     try:
-        balance = apply_repair(pool, account.account_id, request.item_id)
+        balance = apply_repair(pool, account.account_id, entity_id, request.item_id)
     except ValueError as error:
         raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
     return WalletResponse(balance=balance, repair_cost=REPAIR_COST)

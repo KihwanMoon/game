@@ -13,6 +13,7 @@ from game.api.schemas import SubmissionRequest, SubmissionResponse
 from game.app.items.catalog import find_item as find_catalog_item
 from game.app.items.loot import create_loot_roll
 from game.app.services.verify_run import VerifiedRun, check_submission_version, evaluate_submission
+from game.app.store.accounts import find_player_entity
 from game.app.store.equipment import add_currency, mark_item_broken, remove_item
 from game.app.store.items import create_item, list_equipment, list_inventory
 from game.app.store.monsters import (
@@ -53,10 +54,11 @@ def apply_death_penalty(account_id: int) -> str:
         무슨 일이 있었는지. 잃을 것이 없으면 빈 문자열.
     """
     pool = get_pool()
-    equipped = [(item.item_id, True) for item in list_equipment(pool, account_id).values()]
+    entity_id = find_player_entity(pool, account_id)
+    equipped = [(item.item_id, True) for item in list_equipment(pool, entity_id).values()]
     carried = [
         (entry.item.item_id, False)
-        for entry in list_inventory(pool, account_id)
+        for entry in list_inventory(pool, entity_id)
         if entry.item is not None
     ]
     pool_of_items = equipped + carried
@@ -64,9 +66,9 @@ def apply_death_penalty(account_id: int) -> str:
         return ""
     item_id, was_equipped = pool_of_items[secrets.randbelow(len(pool_of_items))]
     if was_equipped:
-        mark_item_broken(pool, account_id, item_id)
+        mark_item_broken(pool, entity_id, item_id)
         return f"장착 중이던 장비가 파손됐다 (#{item_id})"
-    remove_item(pool, account_id, item_id)
+    remove_item(pool, entity_id, item_id)
     return f"가방의 장비를 잃었다 (#{item_id})"
 
 
@@ -176,8 +178,9 @@ def apply_trophy_transfer(account_id: int, record_id: int) -> str:
         무슨 일이 있었는지. 가져갈 것이 없으면 빈 문자열.
     """
     pool = get_pool()
-    equipped = list(list_equipment(pool, account_id).values())
-    carried = [entry.item for entry in list_inventory(pool, account_id) if entry.item is not None]
+    entity_id = find_player_entity(pool, account_id)
+    equipped = list(list_equipment(pool, entity_id).values())
+    carried = [entry.item for entry in list_inventory(pool, entity_id) if entry.item is not None]
     candidates = equipped + carried
     if not candidates:
         return ""

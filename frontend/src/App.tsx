@@ -46,6 +46,7 @@ import { Button, ValueExpr } from './ds'
 import {
   RuleEditor,
   AccountPanel,
+  BestiaryPanel,
   InventoryPanel,
   MetaPanel,
   RuleLibrary,
@@ -83,6 +84,7 @@ import {
   readMeta,
   readSave,
   readAccount,
+  readBestiary,
   readServerMeta,
   applyItemAction,
   buildRuleSetPayload,
@@ -94,6 +96,7 @@ import {
   writeServerMeta,
   writeToken,
   type AccountState,
+  type BestiaryEntry,
   type InventoryView,
   type RunResult,
   type RunVerdict,
@@ -251,6 +254,8 @@ export function App(): React.JSX.Element {
   // 아이템은 **서버가 발급한다** (결정 #02). 화면은 받아서 보여줄 뿐이다.
   const [inventory, setInventory] = useState<InventoryView | undefined>(undefined)
   const [itemDetail, setItemDetail] = useState('')
+  // 도감. 세계의 몬스터는 서버가 알므로 오프라인에서는 비어 있다.
+  const [bestiary, setBestiary] = useState<readonly BestiaryEntry[] | undefined>(undefined)
   const [run, setRun] = useState<RunSpec | undefined>(undefined)
   const [outcome, setOutcome] = useState(OUTCOME_ONGOING)
   const [postState, setPostState] = useState<PostState>('auto')
@@ -297,6 +302,7 @@ export function App(): React.JSX.Element {
       setOnline(true)
       setProfile(await readAccount(token))
       setInventory(await readInventory(token))
+      setBestiary(await readBestiary(token))
       const outcome = await readServerMeta(token)
       if (!isCurrent) {
         return
@@ -499,6 +505,8 @@ export function App(): React.JSX.Element {
         setVerdict(result)
         // 전리품과 화폐가 여기서 들어온다. 다시 읽어야 화면이 그것을 안다.
         void readInventory(account).then(setInventory)
+        // 판이 끝나면 몬스터가 컸거나 내 장비를 가져갔을 수 있다.
+        void readBestiary(account).then(setBestiary)
       })
     }
 
@@ -685,6 +693,7 @@ export function App(): React.JSX.Element {
                   applyItem('/item/repair', { item_id: itemId })
                 }}
               />
+              <BestiaryPanel entries={bestiary} isOnline={isOnline} />
               <MetaPanel meta={meta} baseSlots={limits.ruleSlots} />
               <RuleLibrary
               presets={session.presets}

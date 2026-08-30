@@ -234,12 +234,13 @@ def test_trophy_transfers_a_copy(client, token, monster):
     """★ 몬스터가 사본을 가져간다 (결정 #34). 도감이 "내 아이템을 들고 있다" 를 말한다."""
     from game.api.deps import get_pool
     from game.api.routes.run import apply_trophy_transfer
+    from game.app.store.accounts import find_player_entity
     from game.app.store.items import create_item
     from game.app.store.monsters import list_trophies
 
     headers = build_headers(token)
     account_id = client.get("/api/account", headers=headers).json()["account_id"]
-    create_item(get_pool(), account_id, "helm_iron", ())
+    create_item(get_pool(), find_player_entity(get_pool(), account_id), "helm_iron", ())
     note = apply_trophy_transfer(account_id, monster.record_id)
     assert "helm_iron" in note
     trophies = list_trophies(get_pool(), monster.record_id)
@@ -277,11 +278,12 @@ def test_bestiary_flags_my_own_items(client, token, monster):
     """★ "내 아이템을 들고 있다" 가 되찾으러 가는 동기다 (World Loop)."""
     from game.api.deps import get_pool
     from game.api.routes.run import apply_trophy_transfer
+    from game.app.store.accounts import find_player_entity
     from game.app.store.items import create_item
 
     headers = build_headers(token)
     account_id = client.get("/api/account", headers=headers).json()["account_id"]
-    create_item(get_pool(), account_id, "boots_swift", ())
+    create_item(get_pool(), find_player_entity(get_pool(), account_id), "boots_swift", ())
     apply_trophy_transfer(account_id, monster.record_id)
 
     entry = next(
@@ -297,10 +299,11 @@ def test_another_account_does_not_see_it_as_theirs(client, token, monster):
     """남의 전리품을 내 것으로 표시하면 도감이 거짓말을 한다."""
     from game.api.deps import get_pool
     from game.api.routes.run import apply_trophy_transfer
+    from game.app.store.accounts import find_player_entity
     from game.app.store.items import create_item
 
     account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
-    create_item(get_pool(), account_id, "armor_plate", ())
+    create_item(get_pool(), find_player_entity(get_pool(), account_id), "armor_plate", ())
     apply_trophy_transfer(account_id, monster.record_id)
 
     other = client.post("/api/account").json()["token"]

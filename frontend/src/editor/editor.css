@@ -1218,3 +1218,42 @@
 .inv__warn {
   padding: var(--sp-1) var(--sp-0);
 }
+
+/* ── 도감 ──────────────────────────────────────────────────────────────────
+   등급을 색으로 칠하지 않는다 — 글자로 적고, "내 것" 만 글리프가 가른다. */
+.bst {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.bst__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  list-style: none;
+}
+
+.bst__entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding-bottom: var(--sp-2);
+  border-bottom: var(--line-1) solid var(--line);
+}
+
+.bst__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.bst__name {
+  color: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+}

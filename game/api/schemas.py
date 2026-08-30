@@ -186,6 +186,8 @@ class BestiaryEntry(BaseModel):
     zone_floor: int
     entity_slot: str
     ruleset: dict | None = None
+    # 이 개체에 붙은 접사. 등급 배수만으로는 "같은 적인데 숫자가 큰 것" 이다.
+    affixes: list[dict] = Field(default_factory=list)
     trophies: list[str] = Field(default_factory=list)
     # 이 개체가 내 아이템을 들고 있는가. 되찾으러 가는 동기가 여기서 나온다.
     holds_mine: bool = False

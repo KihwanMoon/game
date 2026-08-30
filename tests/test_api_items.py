@@ -46,10 +46,12 @@ def build_headers(token):
 def grant_item(client, token, catalog_id, affixes=()):
     """검사용으로 아이템 하나를 직접 넣는다. API 에는 이런 문이 없다."""
     from game.api.deps import get_pool
+    from game.app.store.accounts import find_player_entity
     from game.app.store.items import create_item
 
     account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
-    return create_item(get_pool(), account_id, catalog_id, tuple(affixes))
+    entity_id = find_player_entity(get_pool(), account_id)
+    return create_item(get_pool(), entity_id, catalog_id, tuple(affixes))
 
 
 # ── 발급 경로 (결정 #02) ─────────────────────────────────────────────────
