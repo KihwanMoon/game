@@ -300,7 +300,9 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
     <div className="editor">
       <header className="editor__top">
         <h1 className="editor__title">규칙 에디터</h1>
-        <ValueExpr text={ruleset.rulesetId} size="sm" dim />
+        <span className="editor__hint">
+          <ValueExpr text={ruleset.rulesetId} size="sm" dim />
+        </span>
         <span className="editor__spacer" />
         <SegmentedGauge value={totalCpu} max={cpuBudget} tone="cpu" label="cpu" readout={cpuReadout} />
         <ValueExpr text={`규칙 ${String(ruleset.rules.length)} / ${String(ruleSlots)}`} size="sm" />
@@ -430,11 +432,15 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
       </div>
 
       <footer className="editor__bottom">
-        <ValueExpr
-          text="Alt+↑/↓ 순서 · Alt+Enter 추가 · Alt+D 복제 · Alt+T 조건 추가 · Alt+Backspace 삭제 · Ctrl+Z 되돌리기"
-          size="sm"
-          dim
-        />
+        {/* 터치 화면에서 Alt+↑ 는 뜻이 없다. 좁아지면 이것부터 버린다 — 남겨 두면
+            오른쪽 끝의 `cpu 10 / 8` 이 대신 밀려 나간다. */}
+        <span className="editor__hint">
+          <ValueExpr
+            text="Alt+↑/↓ 순서 · Alt+Enter 추가 · Alt+D 복제 · Alt+T 조건 추가 · Alt+Backspace 삭제 · Ctrl+Z 되돌리기"
+            size="sm"
+            dim
+          />
+        </span>
         <span className="editor__spacer" />
         <ValueExpr text={`cpu ${cpuReadout}`} size="sm" dim={totalCpu <= cpuBudget} />
       </footer>

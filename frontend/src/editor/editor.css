@@ -8,6 +8,10 @@
   background: var(--surface-base);
 }
 
+/* 바는 고정 높이라 줄바꿈을 못 한다. 넘치면 오른쪽 끝의 것부터 밀려 나가는데 거기
+   있는 것이 출격 버튼과 CPU 수치다 — **가장 중요한 둘이 먼저 사라진다.** 그래서
+   넘치는 것을 감추되(overflow:hidden), 감출 순서를 미리 정해 둔다: 보조 정보는
+   `--bar-hint` 가 세로에서 없애고, 버튼은 절대 줄지 않으며, 제목만 줄어든다. */
 .editor__top,
 .editor__bottom {
   display: flex;
@@ -15,6 +19,22 @@
   gap: var(--sp-4);
   padding: var(--sp-0) var(--sp-4);
   background: var(--surface-panel);
+  overflow: hidden;
+}
+
+/* 버튼과 수치는 줄지 않는다. 줄면 글자가 잘려 무슨 버튼인지 모른다. */
+.editor__top > .ds-button,
+.editor__bottom > .ds-button {
+  flex: 0 0 auto;
+}
+
+/* 좁아지면 먼저 버리는 것 — 키보드 단축키 안내와 규칙표 id. */
+.editor__hint {
+  display: var(--bar-hint);
+  min-width: var(--sp-0);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .editor__top {
@@ -25,26 +45,34 @@
   border-top: var(--border);
 }
 
+/* 제목만 줄어든다. 나머지는 값이라 잘리면 뜻이 달라진다. */
 .editor__title {
   font-family: var(--font-display);
   font-size: var(--fs-display-m);
   color: var(--text-display);
+  min-width: var(--sp-0);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .editor__spacer {
   flex: 1;
 }
 
+/* 격자 모양이 토큰이다 — 세로에서는 한 열이 된다. 화면 CSS 는 미디어쿼리를 스스로
+   적지 않는다: 브레이크포인트가 한 곳에만 있어야 세 화면이 같은 경계에서 함께 바뀐다. */
 .editor__body {
   display: grid;
-  grid-template-columns:
-    var(--col-rules) var(--gap-col) minmax(var(--sp-0), 1fr)
-    var(--gap-col) var(--col-log);
+  grid-template-columns: var(--editor-cols);
   min-height: var(--sp-0);
+  overflow-y: var(--editor-overflow);
 }
 
-/* 열 사이는 1px 괘선 하나. 그래서 열 안의 패널은 자기 테두리를 쓰지 않는다. */
+/* 열 사이는 1px 괘선 하나. 그래서 열 안의 패널은 자기 테두리를 쓰지 않는다.
+   세로로 쌓이면 1px 짜리 빈 줄이 되므로 토큰이 감춘다. */
 .editor__rule-line {
+  display: var(--rule-line);
   background: var(--line);
 }
 
@@ -343,9 +371,13 @@
   min-height: var(--sp-0);
 }
 
+/* 팔레트 아래에 서랍 하나가 온다. **높이를 반씩 나눈다.**
+   예전에는 `flex: 0 0 auto; max-height: 50%` 였는데, 곁다리 패널이 아홉이 되자 열 높이의
+   450% 를 요구하면서 줄지도 않아 아래쪽이 하단 바를 뚫고 나갔다. 서랍이 한 번에 하나만
+   세우므로 이제 둘이고, 둘 다 줄어들 수 있어야 한다. */
 .editor__col--palette > .ds-panel + .ds-panel {
-  flex: 0 0 auto;
-  max-height: 50%;
+  flex: 1 1 var(--sp-0);
+  min-height: var(--sp-0);
   border-top: var(--border);
 }
 
@@ -491,6 +523,7 @@
   min-width: var(--sp-0);
   padding: var(--sp-0) var(--plan-pad);
   background: var(--surface-panel);
+  overflow: hidden;
 }
 
 .edit-m__bar--top {
@@ -1028,6 +1061,7 @@
 
 .edit-ls__col--side {
   background: var(--surface-panel);
+  overflow: hidden;
 }
 
 /* ── 메타 진행 패널 ────────────────────────────────────────────────────────
@@ -1475,4 +1509,43 @@
   min-height: var(--btn-tap-sm-h);
   font-family: var(--font-mono);
   font-size: var(--fs-input);
+}
+
+/* ── 서랍 ────────────────────────────────────────────────────────────────
+   탭 줄은 고정 높이, 몸통이 남은 높이를 전부 먹고 자기 안에서 스크롤한다. 몸통이
+   부풀게 두면 열이 밀려 아래쪽이 화면 밖으로 나간다 — 그것이 "겹친다" 로 보인다. */
+.drw {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: var(--sp-0);
+}
+
+.drw__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--pad-panel);
+  border-bottom: var(--border);
+  /* 탭 줄은 줄어들지 않는다. 줄어들면 버튼이 서로 겹친다. */
+  flex: 0 0 auto;
+}
+
+.drw__body {
+  flex: 1 1 var(--sp-0);
+  min-height: var(--sp-0);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 서랍 안의 패널은 자기 테두리를 쓰지 않는다 — 서랍이 이미 한 칸이다. */
+.drw__body > .ds-panel {
+  border: none;
+  border-radius: var(--radius-none);
+  flex: 0 0 auto;
+}
+
+.drw__body > .ds-panel + .ds-panel {
+  border-top: var(--border);
 }

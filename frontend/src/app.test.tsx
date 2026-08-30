@@ -80,23 +80,28 @@ describe('첫 화면', () => {
     expect(markup).not.toContain('사후 분석')
   })
 
-  it('코드 라이브러리가 팔레트 아래에 함께 뜬다 — 짠 것을 둘 곳이 화면에 있다', () => {
-    expect(markup).toContain('코드 라이브러리')
-    expect(markup).toContain('id="library-name"')
-    expect(markup).toContain('id="library-code"')
+  it('코드 라이브러리는 「서고」 탭에 있다 — 짠 것을 둘 곳이 화면에 있다', () => {
+    // 서랍은 한 번에 하나만 세우므로 첫 화면 마크업에는 탭 이름만 있다. 내용이 실제로
+    // 그려지는지는 아래 서랍 검사가 본다.
+    expect(markup).toContain('>서고<')
   })
 
-  it('영구 기록이 팔레트 아래에 함께 뜬다 — 죽어도 남는 것이 화면에 있다', () => {
-    // GDD §2.3 의 "실패한 런도 자산을 남긴다" 가 화면에 없으면 성립하지 않는다 (P1).
-    expect(markup).toContain('영구 기록')
-    expect(markup).toContain('사망해도 남는다')
-    expect(markup).toContain('최고 층')
-    expect(markup).toContain('도감')
+  it('★ 곁다리 패널이 서랍으로 갈려 있다 — 아홉을 쌓으면 규칙 에디터에 닿지 못한다', () => {
+    // 쌓기를 그만둔 이유는 두 가지다. 높이가 안 나와 아래쪽이 하단 바를 뚫고 나갔고,
+    // 규칙 에디터에 닿기 전에 스크롤을 아홉 번 지나야 했다.
+    expect(markup).toContain('서랍')
+    for (const label of ['나', '가방', '세계', '배움', '서고']) {
+      expect(markup).toContain(`>${label}<`)
+    }
   })
 
-  it('처음에는 도감이 비어 있고, 비어 있다고 말한다', () => {
-    // 빈 패널은 고장으로 읽힌다.
-    expect(markup).toContain('아직 없다')
+  it('★ 관리 탭은 관리자에게만 생긴다 — 빈 탭도 경로의 존재를 알려 준다', () => {
+    expect(markup).not.toContain('>관리<')
+  })
+
+  it('처음 열려 있는 서랍이 자기 내용을 보여준다 — 빈 패널은 고장으로 읽힌다', () => {
+    // 첫 칸은 「나」다. 계정과 캐릭터가 거기 있다.
+    expect(markup).toContain('캐릭터')
   })
 
   it('되돌리기 조작이 상단 바에 있고, 되돌릴 것이 없으면 잠겨 있다', () => {

@@ -50,6 +50,8 @@ import {
   AccountPanel,
   AdminPanel,
   BestiaryPanel,
+  DrawerPanel,
+  type DrawerTab,
   CharacterPanel,
   TutorialPanel,
   WorldPanel,
@@ -947,7 +949,30 @@ export function App(): React.JSX.Element {
           }}
           controls={launchControls}
           library={
-            <>
+            <DrawerPanel tabs={buildDrawerTabs()} />
+          }
+        />
+      </div>
+    )
+  }
+
+  /**
+   * 서랍 탭을 만든다.
+   *
+   * **묶음은 "무엇에 대한 것인가" 로 가른다.** 화면 수를 줄이려고 아무거나 합치면 탭
+   * 이름이 설명을 못 하고, 그러면 탭이 있으나 마나다.
+   *
+   * 관리자 탭은 관리자에게만 생긴다 — 빈 탭이라도 있으면 관리자 경로의 존재가 드러난다.
+   *
+   * @returns 탭 목록.
+   */
+  function buildDrawerTabs(): DrawerTab[] {
+    const tabs: DrawerTab[] = [
+      {
+        id: 'me',
+        label: '나',
+        body: (
+          <>
               <AccountPanel
                 account={profile}
                 isOnline={isOnline}
@@ -961,6 +986,14 @@ export function App(): React.JSX.Element {
                 allSkills={ALL_SKILL_IDS}
                 isOnline={isOnline}
               />
+          </>
+        ),
+      },
+      {
+        id: 'bag',
+        label: '가방',
+        body: (
+          <>
               <InventoryPanel
                 inventory={inventory}
                 isOnline={isOnline}
@@ -978,6 +1011,14 @@ export function App(): React.JSX.Element {
                   applyItem('/item/repair', { item_id: itemId })
                 }}
               />
+          </>
+        ),
+      },
+      {
+        id: 'world',
+        label: '세계',
+        body: (
+          <>
               <WorldPanel
                 progress={progress}
                 leaderboard={leaderboard}
@@ -1016,6 +1057,15 @@ export function App(): React.JSX.Element {
                   })
                 }}
               />
+              <BestiaryPanel entries={bestiary} isOnline={isOnline} />
+          </>
+        ),
+      },
+      {
+        id: 'learn',
+        label: '배움',
+        body: (
+          <>
               <TutorialPanel
                 stages={TUTORIAL_STAGES}
                 cleared={tutorialCleared}
@@ -1035,7 +1085,40 @@ export function App(): React.JSX.Element {
                   setTutorialId(undefined)
                 }}
               />
-              <BestiaryPanel entries={bestiary} isOnline={isOnline} />
+              <MetaPanel meta={meta} baseSlots={limits.ruleSlots} />
+          </>
+        ),
+      },
+      {
+        id: 'library',
+        label: '서고',
+        body: (
+          <>
+              <RuleLibrary
+              presets={session.presets}
+              onSave={(name) => {
+                setSession((current) => applyPresetSave(current, name))
+              }}
+              onLoad={(index) => {
+                setSession((current) => applyPresetLoad(current, index))
+              }}
+              onRemove={(index) => {
+                setSession((current) => applyPresetRemove(current, index))
+              }}
+              onImport={readSharedCode}
+              onExport={(name) => exportSessionCode(session, name)}
+                onExportSlot={(index) => exportSlotCode(session, index)}
+              />
+          </>
+        ),
+      },
+    ]
+    if (admin !== undefined) {
+      tabs.push({
+        id: 'admin',
+        label: '관리',
+        body: (
+          <>
               <AdminPanel
                 overview={admin}
                 detail={adminDetail}
@@ -1052,27 +1135,11 @@ export function App(): React.JSX.Element {
                   })
                 }}
               />
-              <MetaPanel meta={meta} baseSlots={limits.ruleSlots} />
-              <RuleLibrary
-              presets={session.presets}
-              onSave={(name) => {
-                setSession((current) => applyPresetSave(current, name))
-              }}
-              onLoad={(index) => {
-                setSession((current) => applyPresetLoad(current, index))
-              }}
-              onRemove={(index) => {
-                setSession((current) => applyPresetRemove(current, index))
-              }}
-              onImport={readSharedCode}
-              onExport={(name) => exportSessionCode(session, name)}
-                onExportSlot={(index) => exportSlotCode(session, index)}
-              />
-            </>
-          }
-        />
-      </div>
-    )
+          </>
+        ),
+      })
+    }
+    return tabs
   }
 
   const nextRoom = run === undefined ? undefined : buildNextRoomSetup(run.setup, outcome)
