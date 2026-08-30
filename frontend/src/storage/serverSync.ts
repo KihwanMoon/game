@@ -391,3 +391,172 @@ export async function submitRun(
     detail: body.detail ?? '',
   }
 }
+
+/** 요구조건 한 줄. 실측값을 함께 받는다 — 무엇이 얼마나 모자란지가 화면에 있어야 한다. */
+export interface RequirementView {
+  readonly stat: string
+  readonly actual: number
+  readonly minimum: number
+  readonly isMet: boolean
+}
+
+/** 아이템 하나. */
+export interface ItemView {
+  readonly itemId: number
+  readonly catalogId: string
+  readonly labelKo: string
+  readonly kind: string
+  readonly slot: string | null
+  readonly hands: string | null
+  readonly equippedSlot: string | null
+  readonly isBroken: boolean
+  readonly requirements: readonly RequirementView[]
+  readonly canEquip: boolean
+}
+
+/** 인벤토리 한 칸 또는 장비 한 자리. */
+export interface SlotView {
+  readonly slotIndex: number
+  readonly item: ItemView | null
+  readonly slot: string | null
+  /** 양손무기가 막은 자리. 서버가 계산해서 준다 — 저장된 상태가 아니다. */
+  readonly isSealed: boolean
+}
+
+/** 인벤토리·장비·지갑. */
+export interface InventoryView {
+  readonly slots: readonly SlotView[]
+  readonly equipment: readonly SlotView[]
+  readonly balance: number
+  readonly repairCost: number
+}
+
+interface RawRequirement {
+  stat: string
+  actual: number
+  minimum: number
+  is_met: boolean
+}
+
+interface RawItem {
+  item_id: number
+  catalog_id: string
+  label_ko: string
+  kind: string
+  slot: string | null
+  hands: string | null
+  equipped_slot: string | null
+  is_broken: boolean
+  requirements: RawRequirement[]
+  can_equip: boolean
+}
+
+interface RawSlot {
+  slot_index: number
+  item: RawItem | null
+  slot: string | null
+  is_sealed: boolean
+}
+
+/**
+ * 응답 절을 화면이 쓰는 모양으로 옮긴다.
+ *
+ * @param raw 서버가 준 칸.
+ * @returns 화면용 칸.
+ */
+function readSlot(raw: RawSlot): SlotView {
+  return {
+    slotIndex: raw.slot_index,
+    slot: raw.slot,
+    isSealed: raw.is_sealed,
+    item:
+      raw.item === null
+        ? null
+        : {
+            itemId: raw.item.item_id,
+            catalogId: raw.item.catalog_id,
+            labelKo: raw.item.label_ko,
+            kind: raw.item.kind,
+            slot: raw.item.slot,
+            hands: raw.item.hands,
+            equippedSlot: raw.item.equipped_slot,
+            isBroken: raw.item.is_broken,
+            canEquip: raw.item.can_equip,
+            requirements: raw.item.requirements.map((item) => ({
+              stat: item.stat,
+              actual: item.actual,
+              minimum: item.minimum,
+              isMet: item.is_met,
+            })),
+          },
+  }
+}
+
+/**
+ * 인벤토리를 읽는다.
+ *
+ * @param token 기기 토큰.
+ * @returns 인벤토리. 서버에 닿지 못했으면 undefined.
+ */
+export async function readInventory(token: string): Promise<InventoryView | undefined> {
+  const response = await sendRequest('/inventory', { headers: { [TOKEN_HEADER]: token } })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  const body = (await response.json()) as {
+    slots: RawSlot[]
+    equipment: RawSlot[]
+    balance: number
+    repair_cost: number
+  }
+  return {
+    slots: body.slots.map(readSlot),
+    equipment: body.equipment.map(readSlot),
+    balance: body.balance,
+    repairCost: body.repair_cost,
+  }
+}
+
+/**
+ * 아이템을 조작한다. 성공하면 갱신된 인벤토리가 돌아온다.
+ *
+ * @param token 기기 토큰.
+ * @param path `/equip` 같은 경로.
+ * @param body 보낼 절.
+ * @returns 갱신된 인벤토리와 사유. 실패하면 인벤토리가 undefined 다.
+ */
+export async function applyItemAction(
+  token: string,
+  path: string,
+  body: Record<string, unknown>,
+): Promise<{ inventory: InventoryView | undefined; detail: string }> {
+  const response = await sendRequest(path, {
+    method: 'POST',
+    headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (response === undefined) {
+    return { inventory: undefined, detail: '서버에 닿지 못했다' }
+  }
+  if (!response.ok) {
+    return { inventory: undefined, detail: await readErrorDetail(response) }
+  }
+  const raw = (await response.json()) as {
+    slots?: RawSlot[]
+    equipment?: RawSlot[]
+    balance?: number
+    repair_cost?: number
+  }
+  if (raw.slots === undefined) {
+    return { inventory: undefined, detail: '' }
+  }
+  return {
+    inventory: {
+      slots: raw.slots.map(readSlot),
+      equipment: (raw.equipment ?? []).map(readSlot),
+      balance: raw.balance ?? 0,
+      repairCost: raw.repair_cost ?? 0,
+    },
+    detail: '',
+  }
+}

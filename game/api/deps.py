@@ -9,10 +9,17 @@ from typing import Annotated
 from fastapi import Depends, Header, HTTPException, status
 from psycopg_pool import ConnectionPool
 
+from game.app.items.catalog import load_item_catalog
 from game.app.services.run_battle import load_balance
 from game.app.services.verify_run import VerifyContext
 from game.app.store.accounts import Account, find_account
-from game.config import BALANCE_PATH, BLOCKS_PATH, ENEMY_RULESETS_PATH, ROOM_TEMPLATES_PATH
+from game.config import (
+    BALANCE_PATH,
+    BLOCKS_PATH,
+    ENEMY_RULESETS_PATH,
+    ITEMS_PATH,
+    ROOM_TEMPLATES_PATH,
+)
 from game.schemas.blocks import load_block_catalog
 from game.schemas.room import load_room_templates
 from game.schemas.ruleset import load_rulesets
@@ -47,6 +54,7 @@ def init_state(pool: ConnectionPool) -> None:
     """
     context = build_verify_context()
     _state["pool"] = pool
+    _state["items"] = load_item_catalog(ITEMS_PATH)
     _state["context"] = context
     _state["core_version"] = build_core_version(
         context.catalog.version, int(context.balance["balance_version"])
@@ -103,3 +111,13 @@ def resolve_account(token: Annotated[str | None, Header(alias=TOKEN_HEADER)] = N
 
 
 CurrentAccount = Annotated[Account, Depends(resolve_account)]
+
+
+def get_item_catalog() -> dict:
+    """아이템 카탈로그를 준다.
+
+    Returns:
+        catalog_id 에서 항목으로의 대응표.
+    """
+    catalog: dict = _state["items"]  # type: ignore[assignment]
+    return catalog

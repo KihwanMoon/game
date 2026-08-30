@@ -83,6 +83,8 @@ class SubmissionResponse(BaseModel):
     player_hp: int
     verdict: str
     detail: str = ""
+    # 이 런이 준 것. 아이템은 **서버가 발급한다** (결정 #02).
+    reward: str = ""
 
 
 class MetaResponse(BaseModel):
@@ -96,3 +98,74 @@ class MetaRequest(BaseModel):
     """메타 세이브 저장 요청."""
 
     payload: dict
+
+
+class RequirementView(BaseModel):
+    """요구조건 한 줄. **실측값을 함께 낸다** (docs/설계/4_아이템 §6.1).
+
+    "장착할 수 없습니다" 만 띄우면 무엇이 얼마나 모자란지 알 수 없어 P1 위반이다.
+    규칙 에디터의 조건문 표기와 같은 규약을 쓴다.
+    """
+
+    stat: str
+    actual: int
+    minimum: int
+    is_met: bool
+
+
+class ItemView(BaseModel):
+    """아이템 하나."""
+
+    item_id: int
+    catalog_id: str
+    label_ko: str
+    kind: str
+    slot: str | None = None
+    hands: str | None = None
+    equipped_slot: str | None = None
+    is_broken: bool = False
+    affixes: list[dict] = Field(default_factory=list)
+    requirements: list[RequirementView] = Field(default_factory=list)
+    can_equip: bool = False
+
+
+class InventorySlotView(BaseModel):
+    """인벤토리 한 칸 또는 장비 한 자리."""
+
+    slot_index: int
+    item: ItemView | None = None
+    stack_catalog_id: str | None = None
+    stack_count: int = 0
+    slot: str | None = None
+    # 양손무기가 막은 자리. **저장된 상태가 아니라 계산값이다** (§2.1).
+    is_sealed: bool = False
+
+
+class InventoryResponse(BaseModel):
+    """인벤토리·장비·지갑."""
+
+    size: int
+    slots: list[InventorySlotView] = Field(default_factory=list)
+    equipment: list[InventorySlotView] = Field(default_factory=list)
+    balance: int = 0
+    repair_cost: int = 0
+
+
+class EquipRequest(BaseModel):
+    """착용·해제 요청."""
+
+    item_id: int = 0
+    slot: str = Field(min_length=1, max_length=32)
+
+
+class ItemActionRequest(BaseModel):
+    """아이템 하나를 대상으로 하는 요청."""
+
+    item_id: int
+
+
+class WalletResponse(BaseModel):
+    """지갑."""
+
+    balance: int
+    repair_cost: int

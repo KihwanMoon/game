@@ -1,0 +1,259 @@
+"""아이템 보관 — 인벤토리·장비·지갑 (docs/설계/4_아이템 §5·§12).
+
+**봉인을 저장하지 않는다.** 양손무기가 보조 슬롯을 막는 것은 파생값이며, 저장하면
+착용·해제 순서에 따라 상태가 갈린다 (§2.1). 여기는 착용한 것만 담고, 봉인은 읽는 쪽이
+`get_effective_slots` 로 계산한다.
+
+인벤토리는 **가장 낮은 빈 칸**에 넣는다. 자동 폐기를 두지 않는 이유는 P1 이다 — 왜
+사라졌는지 설명할 수 없는 삭제는 버그와 구분되지 않는다.
+"""
+
+import json
+from dataclasses import dataclass
+
+from psycopg.types.json import Jsonb
+from psycopg_pool import ConnectionPool
+
+from game.schemas.item import Affix, EquipSlot
+
+# 인벤토리 칸 수. 밸런스가 정해지기 전의 출발값이다 (docs/설계/4_아이템 §5).
+INVENTORY_SIZE = 20
+
+EVENT_GRANT = "grant"
+EVENT_EQUIP = "equip"
+EVENT_UNEQUIP = "unequip"
+EVENT_DISCARD = "discard"
+EVENT_BREAK = "break"
+EVENT_REPAIR = "repair"
+
+
+@dataclass(frozen=True)
+class StoredItem:
+    """보관된 아이템 하나."""
+
+    item_id: int
+    catalog_id: str
+    affixes: tuple[Affix, ...]
+    is_broken: bool
+
+
+@dataclass(frozen=True)
+class InventoryEntry:
+    """인벤토리 한 칸. 장비이거나 소모품 스택이다."""
+
+    slot_index: int
+    item: StoredItem | None
+    stack_catalog_id: str | None
+    stack_count: int
+
+
+def read_affixes(raw: object) -> tuple[Affix, ...]:
+    """저장된 접사 절을 읽는다.
+
+    Args:
+        raw: JSONB 에서 나온 값.
+
+    Returns:
+        접사들. 형식이 아니면 빈 튜플.
+    """
+    items = json.loads(raw) if isinstance(raw, str) else raw
+    if not isinstance(items, list):
+        return ()
+    return tuple(
+        Affix(
+            stat=str(item["stat"]),
+            flat=int(item.get("flat", 0)),
+            percent=int(item.get("percent", 0)),
+            label_ko=str(item.get("label_ko", "")),
+        )
+        for item in items
+        if isinstance(item, dict) and "stat" in item
+    )
+
+
+def build_affix_payload(affixes: tuple[Affix, ...]) -> list[dict]:
+    """접사를 저장 절로 되돌린다.
+
+    Args:
+        affixes: 저장할 접사들.
+
+    Returns:
+        JSONB 에 넣을 목록.
+    """
+    return [
+        {"stat": a.stat, "flat": a.flat, "percent": a.percent, "label_ko": a.label_ko}
+        for a in affixes
+    ]
+
+
+def record_item_event(
+    pool: ConnectionPool, account_id: int, item_id: int | None, kind: str, detail: str = ""
+) -> None:
+    """아이템 이력 한 줄을 남긴다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 계정 id.
+        item_id: 대상 아이템. 소모품이면 None.
+        kind: 사건 종류.
+        detail: 부연.
+    """
+    with pool.connection() as connection:
+        connection.execute(
+            "INSERT INTO item_event (item_id, account_id, kind, detail) VALUES (%s, %s, %s, %s)",
+            (item_id, account_id, kind, detail),
+        )
+
+
+def find_empty_slot(pool: ConnectionPool, account_id: int) -> int | None:
+    """가장 낮은 빈 칸을 찾는다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 계정 id.
+
+    Returns:
+        칸 번호. 가득 찼으면 None.
+    """
+    with pool.connection() as connection:
+        rows = connection.execute(
+            "SELECT slot_index FROM inventory_slot WHERE account_id = %s", (account_id,)
+        ).fetchall()
+    used = {int(row[0]) for row in rows}
+    for index in range(INVENTORY_SIZE):
+        if index not in used:
+            return index
+    return None
+
+
+def create_item(
+    pool: ConnectionPool,
+    account_id: int,
+    catalog_id: str,
+    affixes: tuple[Affix, ...],
+    origin_run_result_id: int | None = None,
+) -> int | None:
+    """아이템을 발급해 인벤토리에 넣는다.
+
+    가득 찼으면 **발급하지 않는다.** 발급만 하고 칸을 못 주면 어디에도 없는 아이템이
+    생기고, 그것은 문의로 돌아온다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 받을 계정.
+        catalog_id: 카탈로그 id.
+        affixes: 굴린 접사.
+        origin_run_result_id: 어느 검증된 런에서 나왔는가.
+
+    Returns:
+        만들어진 아이템 id. 인벤토리가 가득 찼으면 None.
+    """
+    slot = find_empty_slot(pool, account_id)
+    if slot is None:
+        return None
+    with pool.connection() as connection:
+        row = connection.execute(
+            "INSERT INTO item_instance (owner_account_id, catalog_id, affixes,"
+            " origin_run_result_id) VALUES (%s, %s, %s, %s) RETURNING id",
+            (account_id, catalog_id, Jsonb(build_affix_payload(affixes)), origin_run_result_id),
+        ).fetchone()
+        if row is None:
+            raise RuntimeError("아이템을 만들지 못했다")
+        item_id = int(row[0])
+        connection.execute(
+            "INSERT INTO inventory_slot (account_id, slot_index, item_id) VALUES (%s, %s, %s)",
+            (account_id, slot, item_id),
+        )
+    record_item_event(pool, account_id, item_id, EVENT_GRANT, catalog_id)
+    return item_id
+
+
+def list_inventory(pool: ConnectionPool, account_id: int) -> tuple[InventoryEntry, ...]:
+    """인벤토리를 칸 번호 순으로 읽는다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 계정 id.
+
+    Returns:
+        칸 번호 순으로 정렬된 항목들. 빈 칸은 담지 않는다.
+    """
+    with pool.connection() as connection:
+        rows = connection.execute(
+            "SELECT s.slot_index, s.item_id, s.stack_catalog_id, s.stack_count,"
+            " i.catalog_id, i.affixes, i.is_broken"
+            " FROM inventory_slot s LEFT JOIN item_instance i ON i.id = s.item_id"
+            " WHERE s.account_id = %s ORDER BY s.slot_index",
+            (account_id,),
+        ).fetchall()
+    return tuple(
+        InventoryEntry(
+            slot_index=int(row[0]),
+            item=None
+            if row[1] is None
+            else StoredItem(
+                item_id=int(row[1]),
+                catalog_id=str(row[4]),
+                affixes=read_affixes(row[5]),
+                is_broken=bool(row[6]),
+            ),
+            stack_catalog_id=None if row[2] is None else str(row[2]),
+            stack_count=int(row[3] or 0),
+        )
+        for row in rows
+    )
+
+
+def list_equipment(pool: ConnectionPool, account_id: int) -> dict[EquipSlot, StoredItem]:
+    """착용 중인 장비를 읽는다. **봉인은 반영하지 않는다** — 읽는 쪽이 계산한다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 계정 id.
+
+    Returns:
+        슬롯에서 아이템으로의 대응표.
+    """
+    with pool.connection() as connection:
+        rows = connection.execute(
+            "SELECT e.slot, i.id, i.catalog_id, i.affixes, i.is_broken"
+            " FROM equipment_slot e JOIN item_instance i ON i.id = e.item_id"
+            " WHERE e.account_id = %s ORDER BY e.slot",
+            (account_id,),
+        ).fetchall()
+    return {
+        EquipSlot(str(row[0])): StoredItem(
+            item_id=int(row[1]),
+            catalog_id=str(row[2]),
+            affixes=read_affixes(row[3]),
+            is_broken=bool(row[4]),
+        )
+        for row in rows
+    }
+
+
+def find_item(pool: ConnectionPool, account_id: int, item_id: int) -> StoredItem | None:
+    """계정이 가진 아이템 하나를 찾는다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 계정 id.
+        item_id: 아이템 id.
+
+    Returns:
+        찾은 아이템. 없거나 남의 것이면 None.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT id, catalog_id, affixes, is_broken FROM item_instance"
+            " WHERE id = %s AND owner_account_id = %s",
+            (item_id, account_id),
+        ).fetchone()
+    if row is None:
+        return None
+    return StoredItem(
+        item_id=int(row[0]),
+        catalog_id=str(row[1]),
+        affixes=read_affixes(row[2]),
+        is_broken=bool(row[3]),
+    )

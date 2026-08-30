@@ -65,9 +65,11 @@ export {
   API_ROOT,
   TOKEN_HEADER,
   TOKEN_STORAGE_KEY,
+  applyItemAction,
   createLogin,
   ensureToken,
   readAccount,
+  readInventory,
   readServerMeta,
   readToken,
   registerAccount,
@@ -76,4 +78,14 @@ export {
   writeServerMeta,
   writeToken,
 } from './serverSync'
-export type { AccountState, AuthOutcome, RunVerdict, ServerTicket, SyncOutcome } from './serverSync'
+export type {
+  AccountState,
+  AuthOutcome,
+  InventoryView,
+  ItemView,
+  RequirementView,
+  RunVerdict,
+  ServerTicket,
+  SlotView,
+  SyncOutcome,
+} from './serverSync'

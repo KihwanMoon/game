@@ -4,15 +4,100 @@
 저장하는 클라이언트 값은 규칙표 하나뿐이고, 그마저 서버에서 다시 검증된다.
 """
 
+import secrets
+
 from fastapi import APIRouter, HTTPException, status
 
-from game.api.deps import CurrentAccount, get_context, get_pool
+from game.api.deps import CurrentAccount, get_context, get_item_catalog, get_pool
 from game.api.schemas import SubmissionRequest, SubmissionResponse
+from game.app.items.catalog import find_item as find_catalog_item
+from game.app.items.loot import create_loot_roll
 from game.app.services.verify_run import VerifiedRun, check_submission_version, evaluate_submission
-from game.app.store.runs import VERDICT_REJECTED, StoredResult, save_run_result, save_submission
+from game.app.store.equipment import add_currency, mark_item_broken, remove_item
+from game.app.store.items import create_item, list_equipment, list_inventory
+from game.app.store.runs import (
+    VERDICT_REJECTED,
+    VERDICT_VERIFIED,
+    StoredResult,
+    save_run_result,
+    save_submission,
+)
 from game.app.store.tickets import IssuedTicket, find_open_ticket, mark_ticket_consumed
 
 router = APIRouter()
+
+# 승리로 세는 결과 문자열. 코어가 내는 값과 같아야 한다.
+OUTCOME_WIN = "PLAYER_WIN"
+
+
+def apply_death_penalty(account_id: int) -> str:
+    """사망 손실을 적용한다 (결정 #34).
+
+    **장착·인벤토리를 통틀어 장비 하나만 뽑는다.** 뽑힌 것이 장착 중이었으면 파손되고
+    복구비용을 내야 다시 쓰며, 가방에 있었으면 사라진다 — 그 차이가 "좋은 건 끼고
+    다녀라" 는 유인을 만든다.
+
+    몬스터가 사본을 가져가는 절반은 아직 없다. 지속 몬스터가 E단계이고, 받을 개체가
+    없는 상태에서 사본만 만들면 주인 없는 아이템이 쌓인다.
+
+    Args:
+        account_id: 죽은 계정.
+
+    Returns:
+        무슨 일이 있었는지. 잃을 것이 없으면 빈 문자열.
+    """
+    pool = get_pool()
+    equipped = [(item.item_id, True) for item in list_equipment(pool, account_id).values()]
+    carried = [
+        (entry.item.item_id, False)
+        for entry in list_inventory(pool, account_id)
+        if entry.item is not None
+    ]
+    pool_of_items = equipped + carried
+    if not pool_of_items:
+        return ""
+    item_id, was_equipped = pool_of_items[secrets.randbelow(len(pool_of_items))]
+    if was_equipped:
+        mark_item_broken(pool, account_id, item_id)
+        return f"장착 중이던 장비가 파손됐다 (#{item_id})"
+    remove_item(pool, account_id, item_id)
+    return f"가방의 장비를 잃었다 (#{item_id})"
+
+
+def apply_run_rewards(account_id: int, submission_id: int, verified: VerifiedRun) -> str:
+    """검증된 런의 보상을 준다.
+
+    **여기가 아이템이 세계에 들어오는 유일한 문이다** (결정 #02). 클라이언트는 아이템을
+    만들 수 없고, 발급 경로가 서버 하나뿐이라는 것이 시드 파생의 '재현으로 검증' 을
+    대신한다.
+
+    Args:
+        account_id: 받을 계정.
+        submission_id: 이 결과의 제출 id.
+        verified: 서버가 확정한 결과.
+
+    Returns:
+        플레이어에게 보여줄 한 줄. 없으면 빈 문자열.
+    """
+    if verified.verdict != VERDICT_VERIFIED:
+        return ""
+    is_cleared = verified.outcome == OUTCOME_WIN
+    roll = create_loot_roll(get_item_catalog(), is_cleared)
+    add_currency(get_pool(), account_id, roll.currency)
+    notes = [f"화폐 +{roll.currency}"]
+    if roll.catalog_id is not None:
+        item_id = create_item(get_pool(), account_id, roll.catalog_id, roll.affixes, submission_id)
+        entry = find_catalog_item(get_item_catalog(), roll.catalog_id)
+        notes.append(
+            f"{entry.label_ko} 획득"
+            if item_id is not None
+            else "인벤토리가 가득 차 전리품을 놓쳤다"
+        )
+    if not is_cleared:
+        penalty = apply_death_penalty(account_id)
+        if penalty:
+            notes.append(penalty)
+    return " · ".join(notes)
 
 
 def build_rejection(detail: str) -> VerifiedRun:
@@ -91,4 +176,5 @@ def create_run_submission(
             detail=verified.detail,
         ),
     )
-    return SubmissionResponse(submission_id=submission_id, **vars(verified))
+    reward = apply_run_rewards(account.account_id, submission_id, verified)
+    return SubmissionResponse(submission_id=submission_id, reward=reward, **vars(verified))

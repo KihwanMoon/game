@@ -46,6 +46,7 @@ import { Button, ValueExpr } from './ds'
 import {
   RuleEditor,
   AccountPanel,
+  InventoryPanel,
   MetaPanel,
   RuleLibrary,
   checkCanRedo,
@@ -83,7 +84,9 @@ import {
   readSave,
   readAccount,
   readServerMeta,
+  applyItemAction,
   buildRuleSetPayload,
+  readInventory,
   registerAccount,
   requestTicket,
   submitRun,
@@ -91,6 +94,7 @@ import {
   writeServerMeta,
   writeToken,
   type AccountState,
+  type InventoryView,
   type RunResult,
   type RunVerdict,
 } from './storage'
@@ -244,6 +248,9 @@ export function App(): React.JSX.Element {
   const [isOnline, setOnline] = useState(false)
   // 서버가 확정한 판정. 브라우저가 낸 결과와 다르면 두 코어가 갈린 것이다 (G3).
   const [verdict, setVerdict] = useState<RunVerdict | undefined>(undefined)
+  // 아이템은 **서버가 발급한다** (결정 #02). 화면은 받아서 보여줄 뿐이다.
+  const [inventory, setInventory] = useState<InventoryView | undefined>(undefined)
+  const [itemDetail, setItemDetail] = useState('')
   const [run, setRun] = useState<RunSpec | undefined>(undefined)
   const [outcome, setOutcome] = useState(OUTCOME_ONGOING)
   const [postState, setPostState] = useState<PostState>('auto')
@@ -289,6 +296,7 @@ export function App(): React.JSX.Element {
       setAccount(token)
       setOnline(true)
       setProfile(await readAccount(token))
+      setInventory(await readInventory(token))
       const outcome = await readServerMeta(token)
       if (!isCurrent) {
         return
@@ -351,6 +359,32 @@ export function App(): React.JSX.Element {
     () => (run === undefined || !finished ? undefined : recordBattle(run.setup, run.rulesets)),
     [run, finished],
   )
+
+  /**
+   * 아이템을 조작하고 결과를 화면에 반영한다.
+   *
+   * 실패 사유를 그대로 띄운다 — 요구조건 미달이면 서버가 실측값을 담아 보낸다.
+   *
+   * @param path `/equip` 같은 경로.
+   * @param body 보낼 절.
+   */
+  function applyItem(path: string, body: Record<string, unknown>): void {
+    if (account === undefined) {
+      return
+    }
+    setItemDetail('')
+    void applyItemAction(account, path, body).then((outcome) => {
+      if (outcome.inventory !== undefined) {
+        setInventory(outcome.inventory)
+        return
+      }
+      if (outcome.detail !== '') {
+        setItemDetail(outcome.detail)
+        return
+      }
+      void readInventory(account).then(setInventory)
+    })
+  }
 
   /**
    * 가입한다. 지금 토큰을 함께 보내므로 **익명 계정이 승격된다** — 계정 id 가 그대로라
@@ -461,7 +495,11 @@ export function App(): React.JSX.Element {
         ticket.ticketId,
         buildRuleSetPayload(finishedRun.ruleset),
         ticket.coreVersion,
-      ).then(setVerdict)
+      ).then((result) => {
+        setVerdict(result)
+        // 전리품과 화폐가 여기서 들어온다. 다시 읽어야 화면이 그것을 안다.
+        void readInventory(account).then(setInventory)
+      })
     }
 
     const enemyRulesets = listEncounteredRulesets(
@@ -629,6 +667,23 @@ export function App(): React.JSX.Element {
                 hasLocalProgress={meta.bestFloor > 0 || meta.bestiary.length > 0}
                 onRegister={applyRegister}
                 onLogin={applyLogin}
+              />
+              <InventoryPanel
+                inventory={inventory}
+                isOnline={isOnline}
+                detail={itemDetail}
+                onEquip={(itemId, slot) => {
+                  applyItem('/equip', { item_id: itemId, slot })
+                }}
+                onUnequip={(slot) => {
+                  applyItem('/unequip', { item_id: 0, slot })
+                }}
+                onDiscard={(itemId) => {
+                  applyItem('/item/discard', { item_id: itemId })
+                }}
+                onRepair={(itemId) => {
+                  applyItem('/item/repair', { item_id: itemId })
+                }}
               />
               <MetaPanel meta={meta} baseSlots={limits.ruleSlots} />
               <RuleLibrary
