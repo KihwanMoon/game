@@ -7,12 +7,15 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  BALANCE,
   BENCHMARK_RULESETS,
   BLOCK_CATALOG,
   ENEMY_RULESETS,
   G0_RULESETS,
   ROOM_TEMPLATES,
+  SKILLS,
 } from '../resources'
+import { parseBalance } from '../services/runBattle'
 import {
   ACTION_COUNT,
   FACTION_ALLY,
@@ -311,5 +314,20 @@ describe('규칙표', () => {
         ],
       }),
     ).toThrow(/조건 연산자/)
+  })
+})
+
+describe('스킬 정의 파일', () => {
+  it('스킬은 balance.json 이 아니라 skills.json 에서 온다', () => {
+    // 되돌아가는 것을 막는 검사다. 두 곳이 같은 것을 말하면 어느 쪽이 정본인지가
+    // 코드마다 갈린다. 파이썬 tests/test_resources.py 의 같은 검사와 짝이다.
+    expect(SKILLS.skills.length).toBeGreaterThan(0)
+    expect(BALANCE.skills).toEqual(SKILLS.skills)
+  })
+
+  it('합쳐진 뷰가 전투 설정이 쓰는 모양이다', () => {
+    const skills = parseBalance(BALANCE).skills
+    expect(skills.map((skill) => skill.id)).toContain('SKILL_2')
+    expect(skills.every((skill) => typeof skill.coef_pct === 'number')).toBe(true)
   })
 })

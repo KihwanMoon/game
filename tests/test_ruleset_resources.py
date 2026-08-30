@@ -9,6 +9,7 @@ import json
 import pytest
 
 from game.app.rules.validator import validate_ruleset
+from game.app.services.run_battle import load_balance
 from game.config import (
     BALANCE_PATH,
     BLOCKS_PATH,
@@ -43,7 +44,9 @@ def templates():
 
 @pytest.fixture(scope="module")
 def balance():
-    return json.loads(BALANCE_PATH.read_text(encoding="utf-8"))
+    # load_balance 를 거친다. 스킬이 skills.json 으로 갈라져 있고 둘을 합치는 자리가
+    # 거기 하나이므로, 파일을 직접 읽으면 검사가 실제로 도는 데이터와 달라진다.
+    return load_balance(BALANCE_PATH)
 
 
 # ── G0 규칙표 예시 ───────────────────────────────────────────────────────────

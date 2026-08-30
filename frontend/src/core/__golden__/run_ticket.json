@@ -1,0 +1,36 @@
+{
+  "_comment": "파이썬 정본이 만든 티켓 id 와 코어 버전. scripts/export_ticket_golden.py",
+  "block_list_version": 4,
+  "balance_version": 3,
+  "core_version": "b4.v3.e1",
+  "cases": [
+    {
+      "seed": 0,
+      "room_id": "room_a",
+      "floor": 1,
+      "ticket_id": "local:PRACTICE:room_a:1:0",
+      "mode": "PRACTICE"
+    },
+    {
+      "seed": 12345,
+      "room_id": "room_a",
+      "floor": 1,
+      "ticket_id": "local:PRACTICE:room_a:1:12345",
+      "mode": "PRACTICE"
+    },
+    {
+      "seed": 12345,
+      "room_id": "room_b",
+      "floor": 3,
+      "ticket_id": "local:PRACTICE:room_b:3:12345",
+      "mode": "PRACTICE"
+    },
+    {
+      "seed": 9007199254740991,
+      "room_id": "room_a",
+      "floor": 1,
+      "ticket_id": "local:PRACTICE:room_a:1:9007199254740991",
+      "mode": "PRACTICE"
+    }
+  ]
+}

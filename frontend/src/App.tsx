@@ -82,6 +82,7 @@ import {
   type RunResult,
 } from './storage'
 import { createEmptyMeta, type MetaSave } from './core/schemas'
+import { MAX_SEED, buildCoreVersion, createLocalTicket, type RunTicket } from './core/schemas'
 import { applyRunSummary } from './core/services/manageMeta'
 import { buildRunSummary, listEncounteredRulesets } from './core/services/runSummary'
 import { parseBalance } from './core/services/runBattle'
@@ -97,6 +98,13 @@ interface RunSpec {
   readonly setup: BattleSetup
   /** 규칙표 대응표. 출격 시점의 규칙표 하나만 든다. */
   readonly rulesets: ReadonlyMap<string, RuleSet>
+  /**
+   * 이 런을 시작할 권한. 시드의 출처이며, 서버가 붙으면 여기 몬스터 스냅샷이 함께 온다.
+   *
+   * 판이 도는 동안 티켓을 들고 있는 이유는 제출이 티켓 id 를 요구하기 때문이다 —
+   * 결과를 보낼 때 시드를 다시 싣지 않는다 (docs/설계/7_변조방지 §4).
+   */
+  readonly ticket: RunTicket
 }
 
 /** 사후 분석 패널의 표시 상태. auto 는 "판이 끝나면 저절로 뜬다" 다. */
@@ -114,6 +122,9 @@ const SEED_STEP = 1
 
 /** 시드가 음수로 내려가지 않게 막는 하한. */
 const MIN_SEED = 0
+
+/** 시드 상한. 이식 제약이며 이유는 `core/schemas/runTicket` 의 MAX_SEED 에 있다. */
+const SEED_LIMIT = MAX_SEED
 
 const DECIMAL_RADIX = 10
 
@@ -223,6 +234,12 @@ export function App(): React.JSX.Element {
   // 결산이 적 종류에서 규칙표를 찾는 데 쓴다. parseBalance 는 절 형식을 검사하므로
   // 렌더마다 돌리지 않는다.
   const balanceData = useMemo(() => parseBalance(BALANCE), [])
+  // 코어 버전은 블록·밸런스·엔진 세대의 조합이다. 하나라도 바뀌면 과거 기록이
+  // 재현되지 않으므로 랭킹 시즌이 갈린다 (docs/설계/1 §2).
+  const coreVersion = useMemo(
+    () => buildCoreVersion(BLOCK_CATALOG.version, BALANCE.balance_version),
+    [],
+  )
   const problems = useMemo(
     () => validateRuleSet(ruleset, BLOCK_CATALOG, limits.cpuBudget, limits.ruleSlots),
     [ruleset, limits],
@@ -289,9 +306,15 @@ export function App(): React.JSX.Element {
    * 지금 규칙표로 판을 시작한다. 방·시드·규칙표를 이 순간의 값으로 얼린다.
    */
   function startRun(): void {
+    // 시드는 티켓을 거쳐서만 전투로 들어간다. 지금은 로컬이 연습 티켓을 발급하지만,
+    // 서버가 붙으면 이 한 줄의 발급처만 바뀐다 — 순위·데일리는 로컬이 만들 수 없다
+    // (core/schemas/runTicket). 이음매를 지금 두는 이유는 나중에 두면 그때까지의
+    // 기록이 전부 무효가 되기 때문이다 (결정/1_결정대기목록 #01).
+    const ticket = createLocalTicket(session.seed, session.roomId, coreVersion)
     setRun({
-      setup: { roomId: session.roomId, rulesetId: ruleset.rulesetId, seed: session.seed },
+      setup: { roomId: ticket.roomId, rulesetId: ruleset.rulesetId, seed: ticket.seed },
       rulesets: new Map([[ruleset.rulesetId, ruleset]]),
+      ticket,
     })
     setOutcome(OUTCOME_ONGOING)
     setPostState('auto')
@@ -414,7 +437,8 @@ export function App(): React.JSX.Element {
         value={session.seed}
         onChange={(event) => {
           const parsed = Number.parseInt(event.target.value, DECIMAL_RADIX)
-          const seed = Number.isNaN(parsed) ? MIN_SEED : Math.max(MIN_SEED, parsed)
+          const bounded = Number.isNaN(parsed) ? MIN_SEED : Math.max(MIN_SEED, parsed)
+          const seed = Math.min(SEED_LIMIT, Math.trunc(bounded))
           setSession((current) => applySeedChoice(current, seed))
         }}
       />

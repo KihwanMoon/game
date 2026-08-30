@@ -8,11 +8,13 @@ import json
 
 import pytest
 
+from game.app.services.run_battle import load_balance
 from game.config import (
     BALANCE_PATH,
     BLOCKS_PATH,
     ENEMY_RULESETS_PATH,
     ROOM_TEMPLATES_PATH,
+    SKILLS_PATH,
 )
 from game.schemas.blocks import (
     ACTION_COUNT,
@@ -49,7 +51,9 @@ def templates():
 
 @pytest.fixture(scope="module")
 def balance():
-    return json.loads(BALANCE_PATH.read_text(encoding="utf-8"))
+    # load_balance 를 거친다. 스킬이 skills.json 으로 갈라져 있고 둘을 합치는 자리가
+    # 거기 하나이므로, 파일을 직접 읽으면 검사가 실제로 도는 데이터와 달라진다.
+    return load_balance(BALANCE_PATH)
 
 
 # ── 블록 동결 ────────────────────────────────────────────────────────────────
@@ -284,3 +288,36 @@ def test_anti_abuse_numbers_are_present(balance):
     assert anti["combat_regen_pct"] < 100  # 회복 타일 무한 대기
     assert anti["hunter_spawn_tick"] > 0  # 무한 카이팅
     assert anti["floor_attack_pct_per_10_ticks"] > 0  # 층 지연
+
+
+def test_skills_live_in_their_own_file():
+    """스킬은 balance.json 이 아니라 skills.json 에 있다.
+
+    되돌아가는 것을 막는 검사다. balance.json 에 skills 절이 다시 생기면 두 파일이
+    같은 것을 말하게 되고, 어느 쪽이 정본인지가 코드마다 갈린다.
+    """
+    raw_balance = json.loads(BALANCE_PATH.read_text(encoding="utf-8"))
+    assert "skills" not in raw_balance
+    raw_skills = json.loads(SKILLS_PATH.read_text(encoding="utf-8"))
+    assert raw_skills["skills"]
+
+
+def test_load_balance_merges_skills():
+    """읽는 쪽은 두 파일을 알지 않는다. 합치는 자리는 load_balance 하나다."""
+    merged = load_balance(BALANCE_PATH)
+    raw_skills = json.loads(SKILLS_PATH.read_text(encoding="utf-8"))
+    assert merged["skills"] == raw_skills["skills"]
+
+
+def test_every_skill_declares_family_and_shape():
+    """계열과 형태가 빠진 스킬이 없다 (docs/설계/5_스킬 §1·§2).
+
+    아직 아무도 읽지 않는 서술 필드지만, 여기서 비워 두면 블록 v5 를 붙일 때
+    스킬마다 사람이 다시 판정해야 한다.
+    """
+    families = {"ATTACK", "MOVE", "GUARD", "STATUS", "UTILITY"}
+    shapes = {"SINGLE", "LINE", "AREA", "CONE", "SELF"}
+    for skill in load_balance(BALANCE_PATH)["skills"]:
+        assert skill["family"] in families, skill["id"]
+        assert skill["shape"]["kind"] in shapes, skill["id"]
+        assert skill["target_faction"] in {"enemy", "ally", "self"}, skill["id"]

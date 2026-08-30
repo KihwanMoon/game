@@ -13,6 +13,7 @@
  */
 import balanceRaw from '@resources/balance/balance.json'
 import blocksRaw from '@resources/balance/blocks.json'
+import skillsRaw from '@resources/balance/skills.json'
 import roomsRaw from '@resources/rooms/templates.json'
 import benchmarkRaw from '@resources/rulesets/benchmark.json'
 import enemiesRaw from '@resources/rulesets/enemies.json'
@@ -59,5 +60,20 @@ export const BENCHMARK_RULESETS: ReadonlyMap<string, RuleSet> = loadRuleSets(
   benchmarkRaw as unknown as RawRuleSetFile,
 )
 
-/** 밸런스 수치 원본. 전투 수식을 옮기기 전까지는 그대로 통과시킨다. */
-export const BALANCE: RawBalanceFile = balanceRaw as unknown as RawBalanceFile
+/**
+ * 스킬 정의 원본. `balance.json` 에서 갈라 나왔다 — 스킬은 종류가 늘어나는 것이고
+ * 밸런스 수치는 조정되는 것이라 수명이 다르다.
+ */
+export const SKILLS = skillsRaw as unknown as { readonly skills: readonly unknown[] }
+
+/**
+ * 밸런스 수치 원본. **스킬을 합쳐 하나의 뷰로 낸다.**
+ *
+ * 합치는 자리를 여기 하나로 두어, 읽는 쪽은 예전처럼 `balance.skills` 를 그대로 본다 —
+ * 파이썬의 `load_balance` 와 같은 배치다. 소비자마다 두 파일을 알게 하면 새 소비자가
+ * 생길 때마다 합치는 코드가 늘고, 언젠가 한 곳이 빠진다.
+ */
+export const BALANCE: RawBalanceFile = {
+  ...(balanceRaw as unknown as RawBalanceFile),
+  skills: SKILLS.skills,
+}

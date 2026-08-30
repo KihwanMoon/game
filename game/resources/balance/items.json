@@ -1,0 +1,79 @@
+{
+  "_comment": "아이템 카탈로그 (docs/설계/4_아이템). 접사 굴림은 아직 없다 — 시드 파생식이 결정 대기(#02)이고, 정하기 전에 굴린 아이템은 나중에 검증할 수 없다. 여기 있는 것은 굴림 없이 값이 고정된 정의뿐이다. 요구조건이 참조하는 능력치는 지금 코어에 실제로 있는 것만 쓴다 — level·str 같은 축은 #10·#11 이 정해진 뒤에 들어온다.",
+  "item_list_version": 1,
+  "items": [
+    {
+      "id": "sword_short", "kind": "EQUIPMENT", "label_ko": "단검",
+      "slot": "WEAPON_MAIN", "hands": "ONE",
+      "affixes": [{ "stat": "attack", "flat": 2, "label_ko": "예리함" }],
+      "tags": ["MELEE"]
+    },
+    {
+      "id": "sword_great", "kind": "EQUIPMENT", "label_ko": "대검",
+      "slot": "WEAPON_MAIN", "hands": "TWO",
+      "affixes": [
+        { "stat": "attack", "flat": 5, "label_ko": "묵직함" },
+        { "stat": "cpu_budget", "percent": -25, "label_ko": "[과부하] 굼뜬 제어" }
+      ],
+      "requirements": [{ "stat": "attack", "min": 12 }],
+      "tags": ["MELEE", "CURSED"],
+      "_note": "저주 접사가 퍼센트를 음수로 만든다. 합산의 내림 절삭이 실제로 걸리는 자리이며, TS 이식이 Math.trunc 를 쓰면 여기서 갈린다 (§9)."
+    },
+    {
+      "id": "bow_long", "kind": "EQUIPMENT", "label_ko": "장궁",
+      "slot": "WEAPON_MAIN", "hands": "TWO",
+      "affixes": [
+        { "stat": "attack_range", "flat": 3, "label_ko": "먼 사거리" },
+        { "stat": "attack", "flat": -1, "label_ko": "가벼운 화살" }
+      ],
+      "tags": ["RANGED"],
+      "_note": "사거리를 바꾸는 장비. 같은 규칙표가 다른 전투를 만드는 지점이라 P2 를 만족한다 — 규칙표가 이것을 읽으려면 블록 v5 가 필요하다 (#13)."
+    },
+    {
+      "id": "shield_buckler", "kind": "EQUIPMENT", "label_ko": "소형 방패",
+      "slot": "WEAPON_OFF", "hands": "OFFHAND",
+      "affixes": [{ "stat": "defense", "flat": 2, "label_ko": "막아냄" }],
+      "tags": ["SHIELD"]
+    },
+    {
+      "id": "helm_iron", "kind": "EQUIPMENT", "label_ko": "철 투구",
+      "slot": "HEAD",
+      "affixes": [{ "stat": "hp_max", "flat": 8, "label_ko": "튼튼함" }]
+    },
+    {
+      "id": "armor_plate", "kind": "EQUIPMENT", "label_ko": "판금 갑옷",
+      "slot": "BODY",
+      "affixes": [
+        { "stat": "defense", "flat": 3, "label_ko": "견고함" },
+        { "stat": "hp_max", "percent": 10, "label_ko": "활력" }
+      ],
+      "requirements": [{ "stat": "hp_max", "min": 90 }]
+    },
+    {
+      "id": "boots_swift", "kind": "EQUIPMENT", "label_ko": "경보 신발",
+      "slot": "FEET",
+      "affixes": [{ "stat": "initiative", "flat": 6, "label_ko": "빠른 판단" }]
+    },
+    {
+      "id": "gloves_core", "kind": "EQUIPMENT", "label_ko": "연산 장갑",
+      "slot": "HANDS",
+      "affixes": [{ "stat": "cpu_budget", "flat": 3, "label_ko": "연산 코어" }],
+      "requirements": [{ "stat": "cpu_budget", "min": 6 }],
+      "tags": ["MODULE"],
+      "_note": "GDD §6.2 의 모듈 접사. 스탯이 아니라 로직 표현력을 올리는 축이며, 요구조건도 그 축에 걸었다."
+    },
+    {
+      "id": "potion_heal", "kind": "CONSUMABLE", "label_ko": "회복 물약",
+      "stack_max": 9, "tags": ["POTION"]
+    },
+    {
+      "id": "scroll_shield", "kind": "CONSUMABLE", "label_ko": "보호 주문서",
+      "stack_max": 5, "tags": ["SCROLL"]
+    },
+    {
+      "id": "quest_seal", "kind": "QUEST", "label_ko": "봉인된 각인",
+      "tags": ["QUEST"],
+      "_note": "퀘스트 시스템은 추후 업데이트다. 자리만 둔다 — 소모·장비·거래 불가이고 인벤토리 칸을 먹지 않는다 (§4)."
+    }
+  ]
+}

@@ -16,6 +16,10 @@ PACKAGE_ROOT = Path(__file__).resolve().parent
 RESOURCES_DIR = PACKAGE_ROOT / "resources"
 BLOCKS_PATH = RESOURCES_DIR / "balance" / "blocks.json"
 BALANCE_PATH = RESOURCES_DIR / "balance" / "balance.json"
+# 스킬은 balance.json 에서 갈라 나왔다 — 스킬은 종류가 늘어나는 것이고 밸런스 수치는
+# 조정되는 것이라 수명이 다르다. 합치는 자리는 load_balance 하나다.
+SKILLS_PATH = RESOURCES_DIR / "balance" / "skills.json"
+ITEMS_PATH = RESOURCES_DIR / "balance" / "items.json"
 ROOM_TEMPLATES_PATH = RESOURCES_DIR / "rooms" / "templates.json"
 G0_RULESETS_PATH = RESOURCES_DIR / "rulesets" / "g0_examples.json"
 ENEMY_RULESETS_PATH = RESOURCES_DIR / "rulesets" / "enemies.json"

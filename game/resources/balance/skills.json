@@ -1,0 +1,89 @@
+{
+  "_comment": "스킬 정의. balance.json 에서 갈라 나왔다 — 스킬은 종류가 늘어나는 것이고 밸런스 수치는 조정되는 것이라 수명이 다르다 (docs/설계/5_스킬 §9). family·shape·target_faction·telegraph·tags 는 아직 아무도 읽지 않는 서술 필드이며, 블록 v5 의 USE_SKILL[skill_id] 와 계열별 실행기가 이것을 읽는다. coef_pct·cooldown·range·heal_pct 는 값이 그대로이므로 골든 리플레이가 바뀌지 않는다.",
+  "skill_list_version": 1,
+  "skills": [
+    {
+      "id": "ATTACK",
+      "family": "ATTACK",
+      "shape": {
+        "kind": "SINGLE"
+      },
+      "target_faction": "enemy",
+      "coef_pct": 100,
+      "cooldown": 0,
+      "range": null,
+      "telegraph": 0,
+      "tags": [
+        "BASIC"
+      ],
+      "_note": "range null = 엔티티의 attack_range 를 쓴다"
+    },
+    {
+      "id": "SKILL_1",
+      "family": "ATTACK",
+      "shape": {
+        "kind": "SINGLE"
+      },
+      "target_faction": "enemy",
+      "coef_pct": 160,
+      "cooldown": 3,
+      "range": null,
+      "telegraph": 0,
+      "tags": [
+        "MELEE"
+      ]
+    },
+    {
+      "id": "SKILL_2",
+      "label_ko": "사격",
+      "family": "ATTACK",
+      "shape": {
+        "kind": "SINGLE"
+      },
+      "target_faction": "enemy",
+      "coef_pct": 150,
+      "cooldown": 2,
+      "range": 4,
+      "telegraph": 0,
+      "tags": [
+        "RANGED"
+      ],
+      "_note": "GDD §3.5 의 카이팅 예시가 `쿨타임[사격]` 을 전제한다. 원거리 수단이 없으면 그 전략 자체가 성립하지 않아 §11 의 '전략 2가지 이상' 지표를 검증할 수 없다. 계수 110 -> 150 은 W6 통합의 조정이다. 이 스킬은 이제 쿨타임 2틱과 직선 시야라는 두 비용을 내는데, 110 은 그 둘이 모두 공짜였을 때의 값이다. 그대로 두면 카이팅이 어느 시드에서도 성립하지 않는다 (실측 docs/05)."
+    },
+    {
+      "id": "AREA_ATTACK",
+      "family": "ATTACK",
+      "shape": {
+        "kind": "AREA",
+        "radius": 2
+      },
+      "target_faction": "enemy",
+      "coef_pct": 90,
+      "cooldown": 5,
+      "range": 2,
+      "telegraph": 0,
+      "tags": [
+        "AOE"
+      ],
+      "_note": "반경 2 이내 전체"
+    },
+    {
+      "id": "HEAL",
+      "label_ko": "수복",
+      "family": "UTILITY",
+      "shape": {
+        "kind": "SINGLE"
+      },
+      "target_faction": "ally",
+      "coef_pct": 0,
+      "cooldown": 3,
+      "range": null,
+      "heal_pct": 30,
+      "telegraph": 0,
+      "tags": [
+        "SUPPORT"
+      ],
+      "_note": "블록 목록 v4. 회복량은 대상 최대 HP 의 30% 이며 정수 퍼센트다 (R5). 고정값이 아니라 비율인 이유는 회복이 대상의 덩치에 비례해야 하기 때문이다 — 돌격병(40)은 12, 사제 자신 같은 중형(30)은 9 를 받는다. coef_pct 0 은 이 행동이 피해를 내지 않는다는 뜻이다. range null 이라 시전자의 attack_range 를 쓴다 — 사제는 2 이므로 아군 곁에 붙어 있어야 하고, 그것이 '흩어 놓으면 회복이 끊긴다' 는 두 번째 카운터가 된다. 쿨타임 3 은 플레이어 화력(틱당 약 11)이 회복(3틱당 12)을 앞서도록 잡은 값이다."
+    }
+  ]
+}

@@ -17,6 +17,7 @@ from game.app.simulation.pressure import PressureTracker, build_pressure_rules
 from game.app.simulation.scaling import build_floor_scale, get_scaled_enemy_stats
 from game.app.simulation.springs import init_spring_pools
 from game.app.simulation.state import FACTION_ENEMY, FACTION_PLAYER, Entity, WorldState
+from game.config import SKILLS_PATH
 from game.schemas.blocks import BlockCatalog
 from game.schemas.room import RoomTemplate
 from game.schemas.ruleset import RuleSet
@@ -218,13 +219,22 @@ def run_battle(engine: TickEngine) -> BattleResult:
     )
 
 
-def load_balance(source_path: Path) -> dict:
-    """밸런스 JSON 을 읽는다.
+def load_balance(source_path: Path, skills_path: Path | None = None) -> dict:
+    """밸런스 JSON 을 읽는다. 스킬은 별도 파일에서 합친다.
+
+    스킬을 갈라 둔 이유는 수명이 다르기 때문이다 — 밸런스 수치는 조정되는 것이고 스킬은
+    종류가 늘어나는 것이다. 합치는 자리를 여기 하나로 두어, 읽는 쪽은 예전처럼
+    `balance["skills"]` 를 그대로 본다. 소비자마다 두 파일을 알게 하면 새 소비자가
+    생길 때마다 합치는 코드가 늘고, 언젠가 한 곳이 빠진다.
 
     Args:
         source_path: balance.json 경로.
+        skills_path: skills.json 경로. 생략하면 기본 위치를 쓴다.
 
     Returns:
-        읽어들인 딕셔너리.
+        읽어들인 딕셔너리. `skills` 절이 합쳐져 있다.
     """
-    return json.loads(source_path.read_text(encoding="utf-8"))
+    balance = json.loads(source_path.read_text(encoding="utf-8"))
+    skills = json.loads((skills_path or SKILLS_PATH).read_text(encoding="utf-8"))
+    balance["skills"] = skills["skills"]
+    return balance
