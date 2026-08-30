@@ -18,16 +18,24 @@ import roomsRaw from '@resources/rooms/templates.json'
 import benchmarkRaw from '@resources/rulesets/benchmark.json'
 import enemiesRaw from '@resources/rulesets/enemies.json'
 import g0Raw from '@resources/rulesets/g0_examples.json'
+import tutorialRaw from '@resources/tutorial/stages.json'
 
 import type {
   BlockCatalog,
   RawBlockCatalog,
   RawRoomFile,
   RawRuleSetFile,
+  RawTutorialStage,
   RoomTemplate,
   RuleSet,
+  TutorialStage,
 } from './schemas'
-import { loadBlockCatalog, loadRoomTemplates, loadRuleSets } from './schemas'
+import {
+  loadBlockCatalog,
+  loadRoomTemplates,
+  loadRuleSets,
+  parseTutorialStage,
+} from './schemas'
 
 /** balance.json 의 원시 형태. 세부 스키마는 전투 수식을 옮길 때 붙인다. */
 export interface RawBalanceFile {
@@ -77,3 +85,14 @@ export const BALANCE: RawBalanceFile = {
   ...(balanceRaw as unknown as RawBalanceFile),
   skills: SKILLS.skills,
 }
+
+/**
+ * 튜토리얼 스테이지 (로드맵 W20).
+ *
+ * **파이썬과 같은 파일을 읽는다.** 사본을 두면 검사가 통과한 스테이지와 화면이 보여
+ * 주는 스테이지가 갈린다 — 「시작으로는 지고 해답으로는 이긴다」가 화면에서만 조용히
+ * 깨지는 방식이다.
+ */
+export const TUTORIAL_STAGES: readonly TutorialStage[] = (
+  tutorialRaw as unknown as { readonly stages: readonly RawTutorialStage[] }
+).stages.map(parseTutorialStage)

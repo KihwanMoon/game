@@ -1,0 +1,643 @@
+{
+  "_comment": "튜토리얼 스테이지 (로드맵 W20, 결정 #17). 각 단계는 **시작 규칙표로는 지고 해답 규칙표로는 이겨야 한다** — 그 대비가 가르치는 내용 자체다. tests/test_tutorial.py 가 매 커밋 그것을 확인한다. 손으로 고치면 그 대비가 조용히 깨질 수 있으니 반드시 검사를 함께 돌린다.",
+  "tutorial_version": 1,
+  "stages": [
+    {
+      "stage_id": "first_rule",
+      "title_ko": "규칙 한 줄",
+      "teaches_ko": "규칙은 「조건 → 행동」이다. 조건이 참이면 그 행동을 한다.",
+      "room_id": "open_field",
+      "seed": 4242,
+      "brief_ko": "규칙표가 비어 있으면 캐릭터는 아무것도 하지 않고 맞아 죽는다. 붙으면 때리고, 멀면 다가가게 두 줄을 적어라.",
+      "hint_ko": "「적거리(NEAREST) <= 1 → 공격」과 「적거리(NEAREST) > 1 → 접근」.",
+      "start_rules": [],
+      "solution_rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        }
+      ],
+      "goal": {
+        "outcome": "PLAYER_WIN"
+      }
+    },
+    {
+      "stage_id": "priority",
+      "title_ko": "순서가 결과를 바꾼다",
+      "teaches_ko": "한 틱에 **가장 위의 참인 규칙 하나만** 실행된다. 아래에 있으면 참이어도 차례가 오지 않는다.",
+      "room_id": "chapel",
+      "seed": 4242,
+      "brief_ko": "물약 규칙이 공격 아래에 있다. 붙은 적이 있는 한 공격이 먼저 참이라 물약은 영영 차례가 오지 않는다. 순서만 바꿔라.",
+      "hint_ko": "규칙을 지우거나 고치지 않아도 된다. **물약을 맨 위로** 올리면 된다.",
+      "start_rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 50
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        }
+      ],
+      "solution_rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 50
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        }
+      ],
+      "goal": {
+        "outcome": "PLAYER_WIN"
+      }
+    },
+    {
+      "stage_id": "flag_alternation",
+      "title_ko": "플래그로 교대시킨다",
+      "teaches_ko": "플래그는 **지난 틱에 무엇을 했는지**를 기억한다. 그것으로 두 행동을 번갈아 시킬 수 있다.",
+      "room_id": "open_field",
+      "seed": 4242,
+      "brief_ko": "거리 2에서 후퇴하면 사격 조건도 함께 참이라, 매 틱 후퇴만 하고 한 번도 쏘지 못한다. 후퇴할 때 플래그를 세우고, 플래그가 서 있으면 쏘고 내려라.",
+      "hint_ko": "1번에 `A=true`, 2번 조건에 「플래그 A == 참」과 `A=false`. 후퇴 조건은 <= 1 로 좁힌다.",
+      "start_rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 1,
+          "action": "RETREAT",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 2,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "NEAREST"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 4,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        }
+      ],
+      "solution_rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 1,
+          "action": "RETREAT",
+          "target": "NEAREST",
+          "set_flag": "A=true",
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": "A=false",
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "flag_state",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "A"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "NEAREST"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        }
+      ],
+      "goal": {
+        "outcome": "PLAYER_WIN"
+      }
+    },
+    {
+      "stage_id": "cpu_budget",
+      "title_ko": "CPU 예산",
+      "teaches_ko": "조건의 **항이 늘수록 비싸진다** (1항 1 · 2항 2 · 3항 4). 예산을 넘으면 출격할 수 없다.",
+      "room_id": "open_field",
+      "seed": 4242,
+      "brief_ko": "앞 단계의 답에 쓸모없는 항이 하나씩 붙어 CPU 12 가 됐다. 예산은 8 이다. 결과를 바꾸지 않는 항을 지워라.",
+      "hint_ko": "「자기 HP % > 0」 은 살아 있는 동안 언제나 참이라 아무것도 거르지 않는다. 셋 다 지우면 5 가 된다.",
+      "start_rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "RETREAT",
+          "target": "NEAREST",
+          "set_flag": "A=true",
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              },
+              {
+                "lhs": "self_hp_percent",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 4,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": "A=false",
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "flag_state",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "A"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              },
+              {
+                "lhs": "self_hp_percent",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 4,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "NEAREST"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              },
+              {
+                "lhs": "self_hp_percent",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        }
+      ],
+      "solution_rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 1,
+          "action": "RETREAT",
+          "target": "NEAREST",
+          "set_flag": "A=true",
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": "A=false",
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "flag_state",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "A"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "NEAREST"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        }
+      ],
+      "goal": {
+        "outcome": "PLAYER_WIN",
+        "max_cpu": 8
+      }
+    },
+    {
+      "stage_id": "read_the_log",
+      "title_ko": "실패를 읽는다",
+      "teaches_ko": "로그는 조건의 **실측값을 함께 적는다**. `적거리(2) <= 0` 처럼 영영 참이 될 수 없는 항이 거기서 드러난다.",
+      "room_id": "corridor",
+      "seed": 4242,
+      "brief_ko": "이 규칙표는 진다. 사후 분석에서 1번 규칙이 매 틱 거짓인 것을 확인하고, 그 조건을 고쳐라.",
+      "hint_ko": "거리는 0 이 될 수 없다 — 같은 칸에 설 수 없기 때문이다. `<= 1` 이어야 인접했을 때 참이 된다.",
+      "start_rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 1,
+          "action": "RETREAT",
+          "target": "NEAREST",
+          "set_flag": "A=true",
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 0,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": "A=false",
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "flag_state",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "A"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "NEAREST"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        }
+      ],
+      "solution_rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 1,
+          "action": "RETREAT",
+          "target": "NEAREST",
+          "set_flag": "A=true",
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": "A=false",
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "flag_state",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "A"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "NEAREST"
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        }
+      ],
+      "goal": {
+        "outcome": "PLAYER_WIN"
+      }
+    }
+  ]
+}

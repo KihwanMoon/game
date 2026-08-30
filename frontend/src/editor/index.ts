@@ -85,3 +85,5 @@ export {
 } from './termMeasure'
 export type { TermReadings } from './termMeasure'
 export { formatActionLabel } from './blockOptions'
+export { TutorialPanel } from './TutorialPanel'
+export type { TutorialPanelProps } from './TutorialPanel'

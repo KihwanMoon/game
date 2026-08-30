@@ -24,6 +24,7 @@ ROOM_TEMPLATES_PATH = RESOURCES_DIR / "rooms" / "templates.json"
 G0_RULESETS_PATH = RESOURCES_DIR / "rulesets" / "g0_examples.json"
 ENEMY_RULESETS_PATH = RESOURCES_DIR / "rulesets" / "enemies.json"
 BENCHMARK_RULESETS_PATH = RESOURCES_DIR / "rulesets" / "benchmark.json"
+TUTORIAL_STAGES_PATH = RESOURCES_DIR / "tutorial" / "stages.json"
 
 DEFAULT_SEED = 1
 DEFAULT_MAX_TICKS = 400

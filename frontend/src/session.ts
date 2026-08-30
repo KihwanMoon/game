@@ -19,7 +19,8 @@ import {
   applyUndo,
   createHistory,
 } from './editor/history'
-import type { RuleSet } from './core/schemas'
+import type { RawRule, RuleSet, TutorialStage } from './core/schemas'
+import { parseRuleSet } from './core/schemas'
 import {
   MAX_PRESET_SLOTS,
   type EditorSave,
@@ -235,6 +236,38 @@ export function applyPresetImport(session: EditorSession, code: string): EditorS
     ...session,
     presets: stored.presets,
     history: applyChange(session.history, preset.ruleset),
+  }
+}
+
+/**
+ * 튜토리얼 단계를 세션에 싣는다 (로드맵 W20).
+ *
+ * **방·시드·규칙표를 한꺼번에 바꾼다.** 셋 중 하나라도 남으면 단계가 의도한 판이 서지
+ * 않고, 그러면 "시작 규칙표로는 진다" 는 대비가 성립하지 않는다.
+ *
+ * 실린 규칙표는 **틀린 것**이다. 실패한 판을 한 번 보고 나서 고치는 것이 이 게임의 학습
+ * 방식이다 (P1 실패는 정보다).
+ *
+ * @param session 세션.
+ * @param stage 열 단계.
+ * @param rules 실을 규칙 목록. 시작 규칙표이거나 힌트로 여는 해답이다.
+ * @returns 새 세션.
+ */
+export function applyTutorialStage(
+  session: EditorSession,
+  stage: TutorialStage,
+  rules: readonly RawRule[],
+): EditorSession {
+  const ruleset = parseRuleSet({
+    ruleset_id: stage.stageId,
+    version: 1,
+    rules: [...rules],
+  })
+  return {
+    ...session,
+    roomId: stage.roomId,
+    seed: stage.seed,
+    history: applyChange(session.history, ruleset),
   }
 }
 

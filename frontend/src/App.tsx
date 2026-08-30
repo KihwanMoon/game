@@ -37,6 +37,7 @@ import {
   ENEMY_RULESETS,
   G0_RULESETS,
   ROOM_TEMPLATES,
+  TUTORIAL_STAGES,
 } from './core/resources'
 import type { RawBalanceFile } from './core/resources'
 import { validateRuleSet } from './core/rules/validator'
@@ -47,6 +48,7 @@ import {
   RuleEditor,
   AccountPanel,
   BestiaryPanel,
+  TutorialPanel,
   WorldPanel,
   InventoryPanel,
   MetaPanel,
@@ -66,6 +68,7 @@ import {
   applyPresetSave,
   applyRedoStep,
   applyRoomChoice,
+  applyTutorialStage,
   applyRuleSetEdit,
   applyRunResult,
   applySeedChoice,
@@ -109,8 +112,14 @@ import {
   type RunResult,
   type RunVerdict,
   type ServerTicket,
+  type StorageLike,
 } from './storage'
-import { createEmptyMeta, type MetaSave } from './core/schemas'
+import {
+  checkStageCleared,
+  createEmptyMeta,
+  type MetaSave,
+  type TutorialStage,
+} from './core/schemas'
 import { MAX_SEED, buildCoreVersion, createLocalTicket, type RunTicket } from './core/schemas'
 import { applyRunSummary, mergeMeta } from './core/services/manageMeta'
 import { buildRunSummary, listEncounteredRulesets } from './core/services/runSummary'
@@ -312,6 +321,44 @@ export function buildNextRoomSetup(
   return { ...setup, roomId, chain: { roomIds: chain.roomIds, index: next } }
 }
 
+/** 튜토리얼 진행을 기기에 남기는 열쇠. */
+export const TUTORIAL_PROGRESS_KEY = 'tutorial.cleared.v1'
+
+/**
+ * 통과한 단계 목록을 읽는다.
+ *
+ * 읽을 수 없으면 빈 목록이다. **여기서 던지면 앱이 안 뜬다** — 튜토리얼 진행은 게임을
+ * 막을 만한 값이 아니다.
+ *
+ * @param storage 기기 저장소.
+ * @returns 통과한 단계 id 들.
+ */
+export function readTutorialProgress(storage: StorageLike | undefined): readonly string[] {
+  try {
+    const raw = storage?.getItem(TUTORIAL_PROGRESS_KEY)
+    const parsed: unknown = raw === null || raw === undefined ? [] : JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * 이 판이 지금 단계를 통과시켰는가.
+ *
+ * @param stage 열려 있는 단계. 없으면 통과할 것도 없다.
+ * @param outcome 판정.
+ * @param playerHp 남은 체력.
+ * @returns 통과했으면 true.
+ */
+export function checkTutorialCleared(
+  stage: TutorialStage | undefined,
+  outcome: string,
+  playerHp: number,
+): boolean {
+  return stage !== undefined && checkStageCleared(stage.goal, outcome, playerHp)
+}
+
 /**
  * 이 판에 적용할 CPU·슬롯 한도를 고른다.
  *
@@ -367,6 +414,11 @@ export function App(): React.JSX.Element {
   const [run, setRun] = useState<RunSpec | undefined>(undefined)
   const [outcome, setOutcome] = useState(OUTCOME_ONGOING)
   const [postState, setPostState] = useState<PostState>('auto')
+  // 튜토리얼 진행. 기기에만 남긴다 — 보상도 순위도 없으니 서버가 알 이유가 없다.
+  const [tutorialCleared, setTutorialCleared] = useState<readonly string[]>(() =>
+    readTutorialProgress(getLocalStorage()),
+  )
+  const [tutorialId, setTutorialId] = useState<string | undefined>(undefined)
   const { theme } = usePlanTheme()
 
   const ruleset = getSessionRuleSet(session)
@@ -711,10 +763,32 @@ export function App(): React.JSX.Element {
   }
 
   /**
+   * 끝난 판이 지금 튜토리얼 단계를 통과시켰는지 반영한다.
+   *
+   * @param outcome 판정.
+   * @param playerHp 남은 체력.
+   */
+  function applyTutorialResult(outcome: string, playerHp: number): void {
+    const stage = TUTORIAL_STAGES.find((item) => item.stageId === tutorialId)
+    if (!checkTutorialCleared(stage, outcome, playerHp) || stage === undefined) {
+      return
+    }
+    setTutorialCleared((current) => {
+      if (current.includes(stage.stageId)) {
+        return current
+      }
+      const next = [...current, stage.stageId]
+      getLocalStorage()?.setItem(TUTORIAL_PROGRESS_KEY, JSON.stringify(next))
+      return next
+    })
+  }
+
+  /**
    * 에디터로 돌아간다. 판을 버리고 결과만 들고 나온다.
    */
   function goToEditor(): void {
     if (recording !== undefined) {
+      applyTutorialResult(recording.outcome, recording.playerHp)
       const result = {
         outcome: recording.outcome,
         ticks: recording.ticks,
@@ -907,6 +981,25 @@ export function App(): React.JSX.Element {
                   }).then(() => {
                     setWorldDetail('오늘의 도전 티켓을 받았다 — 출격하면 그 판이 돈다')
                   })
+                }}
+              />
+              <TutorialPanel
+                stages={TUTORIAL_STAGES}
+                cleared={tutorialCleared}
+                activeId={tutorialId}
+                onOpen={(stage) => {
+                  // **틀린 규칙표를 싣는다.** 실패한 판을 한 번 보고 나서 고치는 것이
+                  // 이 게임의 학습 방식이다 (P1).
+                  setTutorialId(stage.stageId)
+                  setSession((current) => applyTutorialStage(current, stage, stage.startRules))
+                }}
+                onHint={(stage) => {
+                  // 막히면 답을 준다. 벽에 부딪힌 사람을 세워 두면 G1 이 재는 것이
+                  // "재미" 가 아니라 "인내" 가 된다.
+                  setSession((current) => applyTutorialStage(current, stage, stage.solutionRules))
+                }}
+                onClose={() => {
+                  setTutorialId(undefined)
                 }}
               />
               <BestiaryPanel entries={bestiary} isOnline={isOnline} />

@@ -1311,3 +1311,49 @@
 .wld__warn {
   padding: var(--sp-1) var(--sp-0);
 }
+
+/* ── 튜토리얼 (W20) ──────────────────────────────────────────────────────
+   목록과 펼친 단계가 같은 폭을 쓴다. 단계를 열 때 패널 폭이 변하면 옆의 규칙
+   에디터가 함께 밀려, 배운 것을 바로 적용하려는 손이 목표를 잃는다. */
+.tut {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.tut__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  list-style: none;
+}
+
+.tut__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.tut__open {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.tut__head {
+  color: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  border-bottom: var(--line-1) solid var(--line);
+  padding-bottom: var(--sp-1);
+}
+
+.tut__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
