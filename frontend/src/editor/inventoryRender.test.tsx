@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { InventoryPanel, formatAffix } from './InventoryPanel'
+import { InventoryPanel, ListingRow, formatAffix } from './InventoryPanel'
 import type { InventoryView } from '../storage'
 
 const noop = () => undefined
@@ -95,6 +95,8 @@ describe('인벤토리 패널', () => {
       onUnequip={noop}
       onDiscard={noop}
       onRepair={noop}
+      onList={noop}
+      feePercent={5}
     />,
   )
 
@@ -135,6 +137,8 @@ describe('인벤토리 패널 — 서버 없음', () => {
         onUnequip={noop}
         onDiscard={noop}
         onRepair={noop}
+        onList={noop}
+        feePercent={5}
       />,
     )
     expect(markup).toContain('서버에 닿지 못했다')
@@ -172,6 +176,8 @@ describe('귀속 표시 (결정 #07)', () => {
         onUnequip={() => undefined}
         onDiscard={() => undefined}
         onRepair={() => undefined}
+        onList={() => undefined}
+        feePercent={5}
       />,
     )
     expect(html).toContain('귀속')
@@ -187,6 +193,8 @@ describe('귀속 표시 (결정 #07)', () => {
         onUnequip={() => undefined}
         onDiscard={() => undefined}
         onRepair={() => undefined}
+        onList={() => undefined}
+        feePercent={5}
       />,
     )
     expect(html).not.toContain('귀속')
@@ -205,6 +213,8 @@ describe('아이템이 주는 것 (기존 화면 보완)', () => {
         onUnequip={() => undefined}
         onDiscard={() => undefined}
         onRepair={() => undefined}
+        onList={() => undefined}
+        feePercent={5}
       />,
     )
     expect(html).toContain('튼튼함')
@@ -238,6 +248,8 @@ describe('소모품 스택 (#54)', () => {
       onUnequip={noop}
       onDiscard={noop}
       onRepair={noop}
+      onList={noop}
+      feePercent={5}
     />,
   )
 
@@ -263,6 +275,8 @@ describe('되찾음 (`설계/6_몬스터` §5)', () => {
         onUnequip={noop}
         onDiscard={noop}
         onRepair={noop}
+        onList={noop}
+        feePercent={5}
       />,
     )
     expect(html).toContain('되찾음')
@@ -278,8 +292,64 @@ describe('되찾음 (`설계/6_몬스터` §5)', () => {
         onUnequip={noop}
         onDiscard={noop}
         onRepair={noop}
+        onList={noop}
+        feePercent={5}
       />,
     )
     expect(html).not.toContain('되찾음')
+  })
+})
+
+describe('경매 등록 (서버에는 있었는데 화면에 없던 길)', () => {
+  const ITEM = {
+    itemId: 7,
+    catalogId: 'helm_iron',
+    labelKo: '철 투구',
+    kind: 'EQUIPMENT',
+    slot: 'HEAD',
+    hands: null,
+    equippedSlot: null,
+    isBroken: false,
+    isBound: false,
+    isRecovered: false,
+    affixes: [],
+    canEquip: true,
+    requirements: [],
+  }
+
+  it('★ 팔 길이 화면에 있다 — 없으면 경제의 절반이 안 돈다', () => {
+    const html = renderToStaticMarkup(
+      <ListingRow item={ITEM} feePercent={5} onList={() => undefined} />,
+    )
+    expect(html).toContain('걸기')
+    expect(html).toContain('호가')
+  })
+
+  it('★ 수수료율을 호가 적기 전에 적는다 — 걸고 나서 알면 이미 나간 뒤다', () => {
+    const html = renderToStaticMarkup(
+      <ListingRow item={ITEM} feePercent={5} onList={() => undefined} />,
+    )
+    expect(html).toContain('수수료 5%')
+  })
+
+  it('★ 귀속된 것에는 줄 자체를 안 그린다 — 눌러 봐야 거절이다', () => {
+    const html = renderToStaticMarkup(
+      <ListingRow item={{ ...ITEM, isBound: true }} feePercent={5} onList={() => undefined} />,
+    )
+    expect(html).toBe('')
+  })
+
+  it('★ 파손품도 못 건다 — 복구비용을 남에게 떠넘기는 것이 최적이 된다', () => {
+    const html = renderToStaticMarkup(
+      <ListingRow item={{ ...ITEM, isBroken: true }} feePercent={5} onList={() => undefined} />,
+    )
+    expect(html).toBe('')
+  })
+
+  it('★ 호가가 비면 버튼이 잠긴다 — 0 원 매물은 원장만 더럽힌다', () => {
+    const html = renderToStaticMarkup(
+      <ListingRow item={ITEM} feePercent={5} onList={() => undefined} />,
+    )
+    expect(html).toContain('disabled')
   })
 })

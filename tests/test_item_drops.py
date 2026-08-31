@@ -276,3 +276,44 @@ def test_a_quest_item_never_drops(client, token):
     for grade in ("COMMON", "FINE", "RELIC"):
         listed |= {name for name, _weight in read_item_weights(get_pool(), source_id, grade, 99)}
     assert not (listed & set(quest)), f"퀘스트 아이템이 드롭 표에 있다: {listed & set(quest)}"
+
+
+def test_a_monster_table_replaces_the_default(client, token):
+    """★ 소스별 표가 있으면 `ANY` 를 안 본다 (D3).
+
+    두 표를 합치면 "이 몬스터만 떨군다" 가 성립하지 않는다 — 도감이 표적 목록이 되는
+    근거가 그 배타성이다.
+    """
+    from game.api.deps import get_pool
+    from game.api.loot_service import find_drop_source
+    from game.app.store.drops import (
+        SOURCE_ANY,
+        SOURCE_MONSTER,
+        read_item_weights,
+        save_monster_drop,
+    )
+
+    pool = get_pool()
+    save_monster_drop(pool, "goblin_archer", "COMMON", "bow_long", 5)
+    source_id, kind, ref = find_drop_source(pool, "goblin_archer")
+    assert kind == SOURCE_MONSTER and ref == "goblin_archer"
+    assert source_id is not None
+    listed = dict(read_item_weights(pool, source_id, "COMMON", 9))
+    assert listed == {"bow_long": 5}, "소스별 표에 ANY 의 후보가 섞였다"
+    # 표가 없는 종은 그대로 ANY 로 떨어진다.
+    assert find_drop_source(pool, "no_such_kind")[1] == SOURCE_ANY
+
+
+def test_a_monster_table_inherits_the_grade_split(client, token):
+    """★ 소스를 만들자마자 굴림이 통째로 막히면 아무도 소스를 안 만든다.
+
+    **매번 새 종을 쓴다.** 같은 종을 쓰면 앞선 실행이 남긴 등급 가중치 때문에 상속을
+    지워도 검사가 통과한다 — 실제로 그렇게 통과했다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.drops import read_grade_weights, save_monster_drop
+
+    account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
+    pool = get_pool()
+    source_id = save_monster_drop(pool, f"probe_kind_{account_id}", "FINE", "sword_great", 3)
+    assert read_grade_weights(pool, source_id), "등급 가중치가 비어 있다 — 아무것도 안 나온다"

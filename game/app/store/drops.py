@@ -235,3 +235,67 @@ def record_roll(pool: ConnectionPool, account_id: int, fields: dict) -> None:
                 fields.get("detail", ""),
             ),
         )
+
+
+def save_monster_drop(
+    pool: ConnectionPool, kind_id: str, grade: str, catalog_id: str, weight: int
+) -> int:
+    """특정 몬스터 종에게만 걸리는 드롭 줄을 만든다 (D3).
+
+    **소스가 있으면 `ANY` 를 안 본다.** 두 표를 합치면 "이 몬스터만 떨군다" 가 성립하지
+    않는다 — 도감이 표적 목록이 되는 근거가 그 배타성이다.
+
+    등급 가중치가 없으면 `ANY` 의 것을 복사해 온다. 소스를 만들자마자 굴림이 통째로
+    막히는 것을 피하려는 배치이며, 그 뒤로는 이 소스의 값이 정본이다.
+
+    Args:
+        pool: 연결 풀.
+        kind_id: 몬스터 종.
+        grade: 등급.
+        catalog_id: 떨굴 아이템.
+        weight: 그 등급 안의 가중치.
+
+    Returns:
+        이 소스의 id.
+    """
+    source_id = save_source(pool, SOURCE_MONSTER, kind_id)
+    if not read_grade_weights(pool, source_id):
+        base_id = find_source(pool, SOURCE_ANY)
+        rows = read_grade_weights(pool, base_id) if base_id is not None else ()
+        with pool.connection() as connection:
+            for name, base_weight, scale in rows:
+                connection.execute(
+                    "INSERT INTO drop_grade_weight (source_id, grade, weight, level_scale_pct)"
+                    " VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING",
+                    (source_id, name, base_weight, scale),
+                )
+    with pool.connection() as connection:
+        connection.execute(
+            "INSERT INTO drop_item_weight (source_id, grade, catalog_id, weight)"
+            " VALUES (%s, %s, %s, %s)"
+            " ON CONFLICT (source_id, grade, catalog_id) DO UPDATE SET weight = EXCLUDED.weight",
+            (source_id, grade, catalog_id, weight),
+        )
+    return source_id
+
+
+def list_monster_drops(pool: ConnectionPool, kind_id: str) -> tuple[tuple[str, str, int], ...]:
+    """그 몬스터에게만 걸린 드롭 줄들을 읽는다.
+
+    Args:
+        pool: 연결 풀.
+        kind_id: 몬스터 종.
+
+    Returns:
+        (등급, catalog_id, 가중치) 들. 소스가 없으면 빈 튜플.
+    """
+    source_id = find_source(pool, SOURCE_MONSTER, kind_id)
+    if source_id is None:
+        return ()
+    with pool.connection() as connection:
+        rows = connection.execute(
+            "SELECT grade, catalog_id, weight FROM drop_item_weight"
+            " WHERE source_id = %s ORDER BY grade, catalog_id",
+            (source_id,),
+        ).fetchall()
+    return tuple((str(row[0]), str(row[1]), int(row[2])) for row in rows)

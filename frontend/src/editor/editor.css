@@ -1740,3 +1740,24 @@
   font-family: var(--font-mono);
   font-size: var(--fs-input);
 }
+
+/* 경매 등록 줄. 호가 칸·수수료·버튼을 한 줄에 두되 좁으면 접는다 — 버튼이 밀려
+   나가지 않아야 한다 (경매 매물과 같은 규율). */
+.inv__list-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.inv__price {
+  inline-size: var(--sp-12);
+  min-block-size: var(--btn-tap-sm-h);
+  padding: var(--sp-1) var(--sp-2);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  color: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: var(--fs-input);
+}

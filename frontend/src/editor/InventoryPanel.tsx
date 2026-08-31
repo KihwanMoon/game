@@ -11,8 +11,14 @@
  * 자체 브레이크포인트를 두지 않는다. 높이는 `--btn-tap-h` 가 정하므로 터치 배치에서
  * 저절로 44px 가 된다.
  */
+import { useState } from 'react'
+
 import { Button, GlyphState, Panel, Thumb, ValueExpr } from '../ds'
 import type { AffixView, InventoryView, ItemView, SlotView } from '../storage'
+
+/** 십진수 파싱. 앞의 0 을 8진수로 읽는 사고를 막는다. */
+const DECIMAL_RADIX = 10
+const PERCENT_BASE = 100
 
 export interface InventoryPanelProps {
   readonly inventory: InventoryView | undefined
@@ -21,6 +27,13 @@ export interface InventoryPanelProps {
   readonly onEquip: (itemId: number, slot: string) => void
   readonly onUnequip: (slot: string) => void
   readonly onDiscard: (itemId: number) => void
+  /**
+   * 경매에 건다. **서버에는 처음부터 있던 길인데 화면에 없었다** — 팔 방법이 없으면
+   * 경제의 절반(파는 쪽)이 돌지 않는다.
+   */
+  readonly onList: (itemId: number, price: number) => void
+  /** 걸 때 떼는 수수료율(%). 걸기 전에 얼마가 나가는지 알아야 한다. */
+  readonly feePercent: number
   readonly onRepair: (itemId: number) => void
 }
 
@@ -113,6 +126,73 @@ function renderAffixes(item: ItemView): React.JSX.Element | null {
         </li>
       ))}
     </ul>
+  )
+}
+
+/** 경매 등록 줄이 받는 props. */
+export interface ListingRowProps {
+  readonly item: ItemView
+  readonly feePercent: number
+  readonly onList: (itemId: number, price: number) => void
+}
+
+/**
+ * 가방 아이템 하나를 경매에 거는 줄.
+ *
+ * **걸 수 없는 것에는 줄 자체를 그리지 않는다.** 귀속·파손은 서버가 거절하는데, 그
+ * 사실을 누른 뒤에 알면 이미 "왜 안 되지" 를 겪은 뒤다 — 가방 줄에 「귀속 · 거래 불가」
+ * 가 이미 적혀 있으므로 이유는 그쪽이 말한다.
+ *
+ * 수수료는 **호가를 적는 동안** 보인다. 걸고 나서 알면 그때는 이미 나간 뒤다.
+ *
+ * @param props 아이템·수수료율·콜백.
+ * @returns 렌더 트리. 걸 수 없는 아이템이면 null.
+ */
+export function ListingRow(props: ListingRowProps): React.JSX.Element | null {
+  const [price, setPrice] = useState('')
+  const { item } = props
+  if (item.isBound || item.isBroken) {
+    return null
+  }
+  const asked = Number.parseInt(price, DECIMAL_RADIX)
+  const isValid = Number.isFinite(asked) && asked > 0
+  const fee = isValid ? Math.floor((asked * props.feePercent) / PERCENT_BASE) : 0
+
+  return (
+    <div className="inv__list-row">
+      <input
+        className="inv__price"
+        inputMode="numeric"
+        value={price}
+        placeholder="호가"
+        aria-label={`${item.labelKo} 호가`}
+        onChange={(event) => {
+          setPrice(event.target.value)
+        }}
+      />
+      <ValueExpr
+        text={
+          isValid
+            ? `수수료 ${String(fee)} 는 안 돌아온다`
+            : `수수료 ${String(props.feePercent)}%`
+        }
+        size="sm"
+        dim={!isValid}
+      />
+      <Button
+        size="sm"
+        variant="secondary"
+        glyph="⇪"
+        disabled={!isValid}
+        title="경매에 건다 — 수수료는 걸 때 나가고 내려도 안 돌아온다"
+        onClick={() => {
+          props.onList(item.itemId, asked)
+          setPrice('')
+        }}
+      >
+        걸기
+      </Button>
+    </div>
   )
 }
 
@@ -256,6 +336,11 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
                       </div>
                       {renderAffixes(entry.item)}
                       {renderRequirements(entry.item)}
+                      <ListingRow
+                        item={entry.item}
+                        feePercent={props.feePercent}
+                        onList={props.onList}
+                      />
                     </li>
                   ),
                 )}

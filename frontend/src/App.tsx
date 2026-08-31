@@ -1146,6 +1146,15 @@ export function App(): React.JSX.Element {
                 onRepair={(itemId) => {
                   applyItem('/item/repair', { item_id: itemId })
                 }}
+                feePercent={auction?.feePercent ?? 0}
+                onList={(itemId, price) => {
+                  // **경매에 걸면 가방과 지갑이 함께 바뀐다.** 아이템이 빠지고 수수료가
+                  // 나가므로 둘 다 다시 읽어야 화면이 그것을 안다.
+                  applyAuction('/auction/list', { item_id: itemId, price })
+                  if (account !== undefined) {
+                    void readInventory(account).then(setInventory)
+                  }
+                }}
               />
           </>
         ),
