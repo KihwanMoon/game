@@ -323,3 +323,18 @@ def test_another_account_does_not_see_it_as_theirs(client, token, monster):
         if e["record_id"] == monster.record_id
     )
     assert entry["holds_mine"] is False
+
+
+def test_the_bestiary_carries_stats_too(client, token, monster):
+    """★ 규칙표만으로는 **이길 수 있는지**를 알 수 없다.
+
+    도감이 표적 목록이려면 "어떻게 싸우는가"(규칙표)와 "얼마나 센가"(스탯)가 둘 다
+    있어야 한다 (`설계/6_몬스터` §8).
+    """
+    rows = client.get("/api/bestiary", headers=build_headers(token)).json()["entries"]
+    assert rows
+    for row in rows:
+        assert row["hp_max"] > 0
+        assert row["attack"] > 0
+        # 전투가 쓰는 것과 같은 계산이어야 한다 — 따로 세면 화면과 실제가 갈린다.
+        assert row["ruleset"] is None or row["ruleset"]["rules"]

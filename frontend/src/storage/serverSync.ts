@@ -9,13 +9,15 @@
  * 계정을 잃는다** — 승격 경로(이메일·OAuth)가 아이템과 거래 전에 필요하다.
  */
 import type {
+  RawRuleSet,
+  RuleSet,
   MetaSave,
   MonsterSnapshot,
   PlayerLoadout,
   RawMonsterSnapshot,
   RawPlayerLoadout,
 } from '../core/schemas'
-import { parseLoadout, parseSnapshot, sortSnapshots } from '../core/schemas'
+import { parseRuleSet, parseLoadout, parseSnapshot, sortSnapshots } from '../core/schemas'
 import { buildMetaPayload, parseMetaPayload } from './metaSave'
 import type { StorageLike } from './saveStore'
 
@@ -637,7 +639,17 @@ export interface BestiaryEntry {
   readonly levelCap: number
   readonly zoneFloor: number
   readonly entitySlot: string
-  readonly ruleCount: number
+  /**
+   * 이 개체의 규칙표. **줄 수가 아니라 규칙표 그대로다.**
+   *
+   * 요약하면 카운터를 설계할 수 없다 (`설계/6_몬스터` §8) — 도감이 표적 목록인 이유가
+   * 이것이고, 예전에는 클라이언트가 `rules.length` 로 접어 버려 그 뜻이 사라져 있었다.
+   */
+  readonly ruleset: RuleSet | undefined
+  /** 얼마나 센가. 규칙표만으로는 "어떻게 싸우는가" 만 알 수 있다. */
+  readonly hpMax: number
+  readonly attack: number
+  readonly defense: number
   readonly affixes: readonly string[]
   readonly trophies: readonly string[]
   /** 이 개체가 내 아이템을 들고 있는가. 되찾으러 가는 동기가 여기서 나온다. */
@@ -652,10 +664,13 @@ interface RawBestiaryEntry {
   level_cap: number
   zone_floor: number
   entity_slot: string
-  ruleset: { rules?: unknown[] } | null
+  ruleset: RawRuleSet | null
   affixes: { label_ko: string }[]
   trophies: string[]
   holds_mine: boolean
+  hp_max?: number
+  attack?: number
+  defense?: number
 }
 
 /**
@@ -678,7 +693,10 @@ export async function readBestiary(token: string): Promise<readonly BestiaryEntr
     levelCap: raw.level_cap,
     zoneFloor: raw.zone_floor,
     entitySlot: raw.entity_slot,
-    ruleCount: raw.ruleset?.rules?.length ?? 0,
+    ruleset: raw.ruleset === null ? undefined : parseRuleSet(raw.ruleset),
+    hpMax: raw.hp_max ?? 0,
+    attack: raw.attack ?? 0,
+    defense: raw.defense ?? 0,
     affixes: raw.affixes.map((item) => item.label_ko),
     trophies: raw.trophies,
     holdsMine: raw.holds_mine,

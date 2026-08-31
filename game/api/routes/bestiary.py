@@ -15,7 +15,7 @@ from game.api.schemas import BestiaryEntry, BestiaryResponse
 from game.app.monsters.affixes import build_affix_label, list_monster_affixes
 from game.app.monsters.growth import get_level_cap
 from game.app.monsters.tiers import MonsterTier
-from game.app.store.monsters import list_monsters
+from game.app.store.monsters import build_monster_snapshot, list_monsters
 from game.app.store.trophies import list_trophies
 from game.schemas.meta_save import build_ruleset_payload
 
@@ -51,6 +51,9 @@ def read_bestiary(account: CurrentAccount) -> BestiaryResponse:
             # 레벨별 규칙표(#36)가 정해지면 앞엣것이 채워진다.
             ruleset = context.enemy_rulesets.get(base.get("ruleset_id", ""))
             affixes = list_monster_affixes(record.spawn_seed, MonsterTier(record.tier))
+            # 전투가 쓰는 것과 **같은 계산**을 쓴다. 도감이 따로 세면 화면에 적힌 수치와
+            # 실제로 만나는 적이 갈린다.
+            snapshot = build_monster_snapshot(record, base)
             entries.append(
                 BestiaryEntry(
                     record_id=record.record_id,
@@ -66,6 +69,9 @@ def read_bestiary(account: CurrentAccount) -> BestiaryResponse:
                     level_cap=get_level_cap(floor),
                     zone_floor=floor,
                     entity_slot=record.entity_slot,
+                    hp_max=snapshot.hp_max,
+                    attack=snapshot.attack,
+                    defense=snapshot.defense,
                     # 적의 규칙표를 **그대로** 낸다. 요약하면 카운터를 설계할 수 없다.
                     ruleset=(
                         record.ruleset_json

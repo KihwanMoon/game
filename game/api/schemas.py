@@ -197,6 +197,11 @@ class BestiaryEntry(BaseModel):
     ruleset: dict | None = None
     # 이 개체에 붙은 접사. 등급 배수만으로는 "같은 적인데 숫자가 큰 것" 이다.
     affixes: list[dict] = Field(default_factory=list)
+    # **얼마나 센가.** 규칙표만으로는 "어떻게 싸우는가" 만 알 수 있고, 이길 수 있는지는
+    # 알 수 없다 — 도감이 표적 목록이려면 둘 다 필요하다 (`설계/6_몬스터` §8).
+    hp_max: int = 0
+    attack: int = 0
+    defense: int = 0
     trophies: list[str] = Field(default_factory=list)
     # 이 개체가 내 아이템을 들고 있는가. 되찾으러 가는 동기가 여기서 나온다.
     holds_mine: bool = False

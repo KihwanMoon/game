@@ -1620,3 +1620,19 @@
 .cat__row > :last-child {
   margin-left: auto;
 }
+
+/* 도감의 규칙표. 에디터와 같은 등폭 글꼴로 적는다 — 본 것을 그대로 옮겨 적을 수 있어야
+   카운터 설계가 성립한다. */
+.bst__rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin: var(--sp-0);
+  padding: var(--sp-0) var(--sp-0) var(--sp-0) var(--sp-4);
+  list-style: decimal;
+  border-left: var(--line-1) solid var(--line);
+}
+
+.bst__rule {
+  color: var(--text-data);
+}

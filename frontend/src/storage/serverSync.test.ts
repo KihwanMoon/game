@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createEmptyMeta } from '../core/schemas'
 import { adoptServerMeta } from '../core/services/manageMeta'
-import {
+import { readBestiary,
   TOKEN_STORAGE_KEY,
   ensureToken,
   readServerMeta,
@@ -275,5 +275,76 @@ describe('티켓 — 로드아웃 (결정 #13)', () => {
       vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(withoutLoadout) }),
     )
     expect((await requestTicket('token', 'corridor', 42))?.loadout).toBeUndefined()
+  })
+})
+
+describe('도감 — 규칙표를 그대로 읽는다', () => {
+  const RAW = {
+    entries: [
+      {
+        record_id: 3,
+        catalog_id: 'goblin_rusher',
+        label_ko: '사나운 고블린 돌격병',
+        tier: 'ELITE',
+        level: 3,
+        level_cap: 5,
+        zone_floor: 1,
+        entity_slot: 'goblin_rusher_0',
+        hp_max: 74,
+        attack: 14,
+        defense: 3,
+        ruleset: {
+          ruleset_id: 'ai_rusher',
+          version: 1,
+          rules: [
+            {
+              priority: 1,
+              cpu_cost: 1,
+              action: 'ATTACK',
+              target: 'NEAREST',
+              set_flag: null,
+              conditions: {
+                op: 'SINGLE',
+                terms: [{ lhs: 'target_distance', lhs_param: 'NEAREST', cmp: '<=', rhs: 1 }],
+              },
+            },
+          ],
+        },
+        affixes: [{ label_ko: '사나운' }],
+        trophies: ['helm_iron'],
+        holds_mine: true,
+      },
+    ],
+  }
+
+  it('★ **줄 수로 접지 않는다.**', async () => {
+    // 서버는 처음부터 규칙표를 보내고 있었는데 파싱이 `rules.length` 로 접어 버렸다.
+    // 도감이 표적 목록인 이유가 그 규칙표다 — 요약하면 카운터를 설계할 수 없다.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(RAW) }),
+    )
+    const rows = await readBestiary('token')
+    expect(rows?.[0]?.ruleset?.rules).toHaveLength(1)
+    expect(rows?.[0]?.ruleset?.rules[0]?.action).toBe('ATTACK')
+  })
+
+  it('★ 스탯도 읽는다 — 규칙표만으로는 이길 수 있는지 알 수 없다', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(RAW) }),
+    )
+    const rows = await readBestiary('token')
+    expect(rows?.[0]?.hpMax).toBe(74)
+    expect(rows?.[0]?.attack).toBe(14)
+  })
+
+  it('규칙표가 없으면 undefined 다 — 구버전 서버가 이 경우다', async () => {
+    const bare = { entries: [{ ...RAW.entries[0], ruleset: null }] }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(bare) }),
+    )
+    expect((await readBestiary('token'))?.[0]?.ruleset).toBeUndefined()
   })
 })
