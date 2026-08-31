@@ -13,6 +13,7 @@ import { useState } from "react";
 
 import { buildAttributeBonus } from "../core/progression/attributes";
 import { Button, GlyphState, Panel, ValueExpr } from "../ds";
+import { formatAffix } from "./InventoryPanel";
 import type { AuctionView, LeaderboardView, ProgressView } from "../storage";
 
 export interface WorldPanelProps {
@@ -207,32 +208,56 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
             ) : (
               <ul className="wld__list">
                 {auction.listings.slice(0, 12).map((item) => (
-                  <li className="wld__row" key={item.listingId}>
-                    <span className="wld__name">{item.labelKo}</span>
-                    <ValueExpr text={String(item.price)} size="sm" />
-                    {item.isMine ? (
-                      <Button
+                  // **세로에서는 줄을 쌓는다.** 한 줄에 이름·접사·값·만료·버튼을 다 넣으면
+                  // 좁은 폭에서 오른쪽 끝의 버튼이 밀려 나가고, 그것이 가장 중요한 것이다.
+                  <li className="wld__listing" key={item.listingId}>
+                    <div className="wld__row">
+                      <span className="wld__name">{item.labelKo}</span>
+                      <ValueExpr text={`${String(item.price)} 화폐`} size="sm" />
+                    </div>
+                    {item.affixes.length === 0 ? null : (
+                      // 저주 접사는 음수다. 모르고 사면 돈을 내고 약해진다.
+                      <ValueExpr
+                        text={item.affixes.map(formatAffix).join(' · ')}
                         size="sm"
-                        variant="ghost"
-                        glyph="↰"
-                        title="내린다 (수수료는 안 돌려준다)"
-                        onClick={() => {
-                          props.onCancel(item.listingId);
-                        }}
                       />
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        glyph="↧"
-                        disabled={(auction.balance ?? 0) < item.price}
-                        onClick={() => {
-                          props.onBuy(item.listingId);
-                        }}
-                      >
-                        구매
-                      </Button>
                     )}
+                    <div className="wld__row">
+                      <ValueExpr
+                        text={
+                          item.isMine
+                            ? `내 매물 · 수수료 ${String(item.fee)} 는 안 돌아온다`
+                            : `${String(item.expiresInMinutes)}분 뒤 사라진다`
+                        }
+                        size="sm"
+                        dim
+                      />
+                      {item.isMine ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          glyph="↰"
+                          title="내린다 (수수료는 안 돌려준다)"
+                          onClick={() => {
+                            props.onCancel(item.listingId);
+                          }}
+                        >
+                          내리기
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          glyph="↧"
+                          disabled={(auction.balance ?? 0) < item.price}
+                          onClick={() => {
+                            props.onBuy(item.listingId);
+                          }}
+                        >
+                          구매
+                        </Button>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>

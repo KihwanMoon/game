@@ -36,6 +36,7 @@ import {
   BLOCK_CATALOG,
   ENEMY_RULESETS,
   G0_RULESETS,
+  ALL_ITEM_TAGS,
   ALL_SKILL_IDS,
   ROOM_TEMPLATES,
   TUTORIAL_STAGES,
@@ -1012,6 +1013,7 @@ export function App(): React.JSX.Element {
                 progress={progress}
                 baseStats={BALANCE.player as Record<string, number>}
                 allSkills={ALL_SKILL_IDS}
+                allItems={ALL_ITEM_TAGS}
                 isOnline={isOnline}
               />
           </>

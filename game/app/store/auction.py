@@ -15,6 +15,7 @@
 팔 수 있다.
 """
 
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -52,6 +53,11 @@ class Listing:
     price: int
     state: str
     is_mine: bool
+    # **사기 전에 알아야 하는 것들.** 이름과 값만 보고 사면 같은 「장궁」이라도 무엇이
+    # 붙어 있는지 모르고, 언제 사라질지도 모른다.
+    affixes: tuple[dict, ...] = ()
+    expires_in_minutes: int = 0
+    is_broken: bool = False
 
 
 def compute_fee(price: int) -> int:
@@ -164,7 +170,9 @@ def list_open(pool: ConnectionPool, account_id: int, limit: int = 50) -> tuple[L
     apply_expiry(pool)
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT l.id, l.item_id, i.catalog_id, l.seller_id, l.price, l.state"
+            "SELECT l.id, l.item_id, i.catalog_id, l.seller_id, l.price, l.state,"
+            " i.affixes, i.is_broken,"
+            " greatest(0, extract(epoch FROM (l.expires_at - now()))::bigint / 60)"
             " FROM auction_listing l JOIN item_instance i ON i.id = l.item_id"
             " WHERE l.state = %s ORDER BY l.price ASC, l.listed_at ASC LIMIT %s",
             (STATE_OPEN, limit),
@@ -178,8 +186,35 @@ def list_open(pool: ConnectionPool, account_id: int, limit: int = 50) -> tuple[L
             price=int(row[4]),
             state=str(row[5]),
             is_mine=int(row[3]) == account_id,
+            affixes=tuple(read_affix_rows(row[6])),
+            is_broken=bool(row[7]),
+            expires_in_minutes=int(row[8] or 0),
         )
         for row in rows
+    )
+
+
+def read_affix_rows(raw: object) -> tuple[dict, ...]:
+    """접사 절을 화면용 줄들로 읽는다.
+
+    Args:
+        raw: JSONB 컬럼 값.
+
+    Returns:
+        `stat`·`flat`·`percent`·`label_ko` 를 담은 줄들.
+    """
+    parsed = json.loads(raw) if isinstance(raw, str) else raw
+    if not isinstance(parsed, list):
+        return ()
+    return tuple(
+        {
+            "stat": str(item.get("stat", "")),
+            "flat": int(item.get("flat", 0)),
+            "percent": int(item.get("percent", 0)),
+            "label_ko": str(item.get("label_ko", "")),
+        }
+        for item in parsed
+        if isinstance(item, dict)
     )
 
 

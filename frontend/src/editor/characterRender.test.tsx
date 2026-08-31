@@ -13,6 +13,7 @@ import type { ProgressView } from '../storage'
 import { CharacterPanel, formatDelta, splitStatSources } from './CharacterPanel'
 
 const BASE = BALANCE.player as unknown as Record<string, number>
+const ITEMS = ['POTION', 'SCROLL']
 const SKILLS = ['ATTACK', 'GUARD_BRACE', 'SKILL_1', 'SKILL_2']
 
 const PROGRESS: ProgressView = {
@@ -46,6 +47,7 @@ function render(progress: ProgressView | undefined, isOnline = true) {
       progress={progress}
       baseStats={BASE}
       allSkills={SKILLS}
+      allItems={ITEMS}
       isOnline={isOnline}
     />,
   )
@@ -98,10 +100,16 @@ describe('캐릭터 시트 화면', () => {
     expect(html).toContain(STATE_GLYPHS.get('true'))
   })
 
-  it('★ 전부 장착했으면 「불가」 글리프가 없다 — 붙으면 못 쓰는 것처럼 보인다', () => {
+  it('★ 전부 갖췄으면 「불가」 글리프가 없다 — 붙으면 못 쓰는 것처럼 보인다', () => {
+    // 스킬과 소모품 **둘 다** 갖춰야 한다. 하나라도 비면 그 줄이 불가로 남는다 —
+    // 소모품이 그 목록에 들어온 뒤로 스킬만 채운 것으로는 부족해졌다 (#54).
     const full = {
       ...PROGRESS,
-      loadout: { ...PROGRESS.loadout, skills: [...SKILLS] },
+      loadout: {
+        ...PROGRESS.loadout,
+        skills: [...SKILLS],
+        consumables: ITEMS.map((kind) => [kind, 1] as const),
+      },
     } as ProgressView
     expect(render(full)).not.toContain(STATE_GLYPHS.get('blocked'))
   })
@@ -116,5 +124,27 @@ describe('캐릭터 시트 화면', () => {
   it('서버에 못 닿으면 그렇게 적는다 — 빈 표를 보여주면 스탯이 0 인 줄 안다', () => {
     expect(render(PROGRESS, false)).toContain('서버에 닿지 못했다')
     expect(render(undefined)).toContain('서버에 닿지 못했다')
+  })
+})
+
+describe('소모품 (#54)', () => {
+  it('★ 들고 있지 않은 소모품을 「불가」로 보여준다', () => {
+    // `USE_ITEM[SCROLL]` 이 안 뜬 이유는 "주문서가 없다" 인데, 안 보여주면 그 답을
+    // 어디서도 찾을 수 없다. 스킬 미장착과 같은 자리다.
+    const html = render({
+      ...PROGRESS,
+      loadout: { ...PROGRESS.loadout, consumables: [['POTION', 2] as const] },
+    } as ProgressView)
+    expect(html).toContain('POTION')
+    expect(html).toContain('SCROLL')
+    expect(html).toContain('주우면 열린다')
+  })
+
+  it('★ 개수를 적는다 — 몇 번 쓸 수 있는지가 규칙 설계의 입력이다', () => {
+    const html = render({
+      ...PROGRESS,
+      loadout: { ...PROGRESS.loadout, consumables: [['POTION', 3] as const] },
+    } as ProgressView)
+    expect(html).toContain('>3<')
   })
 })

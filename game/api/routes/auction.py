@@ -20,6 +20,7 @@ from game.app.items.catalog import find_item as find_catalog_item
 from game.app.store.accounts import find_player_entity
 from game.app.store.auction import (
     LISTING_FEE_PERCENT,
+    Listing,
     apply_cancel,
     apply_purchase,
     compute_fee,
@@ -30,6 +31,58 @@ from game.app.store.equipment import read_balance
 from game.app.store.items import find_item
 
 router = APIRouter()
+
+
+def build_affix_rows(listing: Listing, catalog: dict) -> list[dict]:
+    """이 매물이 실제로 지닌 접사를 낸다.
+
+    **인스턴스가 굴린 접사가 카탈로그 기본값을 대체한다** — 로드아웃 계산과 같은
+    규칙이다. 화면만 둘을 합치면 산 것과 쓰는 것이 갈린다.
+
+    Args:
+        listing: 매물 한 건.
+        catalog: 아이템 카탈로그.
+
+    Returns:
+        접사 절들. 굴린 것도 기본값도 없으면 빈 목록.
+    """
+    if listing.affixes:
+        return [dict(affix) for affix in listing.affixes]
+    return [
+        {
+            "stat": entry.stat,
+            "flat": entry.flat,
+            "percent": entry.percent,
+            "label_ko": entry.label_ko,
+        }
+        for entry in find_catalog_item(catalog, listing.catalog_id).affixes
+    ]
+
+
+def build_listing_view(listing: Listing, catalog: dict) -> ListingView:
+    """매물 한 건을 화면이 읽을 절로 바꾼다.
+
+    수수료를 여기서 계산해 실어 보내는 이유는, 화면이 다시 계산하면 두 곳이 갈리기
+    때문이다.
+
+    Args:
+        listing: 저장 층이 읽어 온 매물.
+        catalog: 아이템 카탈로그.
+
+    Returns:
+        매물 절.
+    """
+    return ListingView(
+        listing_id=listing.listing_id,
+        item_id=listing.item_id,
+        catalog_id=listing.catalog_id,
+        label_ko=find_catalog_item(catalog, listing.catalog_id).label_ko,
+        price=listing.price,
+        is_mine=listing.is_mine,
+        affixes=build_affix_rows(listing, catalog),
+        expires_in_minutes=listing.expires_in_minutes,
+        fee=compute_fee(listing.price),
+    )
 
 
 def build_auction_response(account_id: int) -> AuctionResponse:
@@ -43,19 +96,8 @@ def build_auction_response(account_id: int) -> AuctionResponse:
     """
     pool = get_pool()
     catalog = get_item_catalog()
-    listings = list_open(pool, account_id)
     return AuctionResponse(
-        listings=[
-            ListingView(
-                listing_id=item.listing_id,
-                item_id=item.item_id,
-                catalog_id=item.catalog_id,
-                label_ko=find_catalog_item(catalog, item.catalog_id).label_ko,
-                price=item.price,
-                is_mine=item.is_mine,
-            )
-            for item in listings
-        ],
+        listings=[build_listing_view(row, catalog) for row in list_open(pool, account_id)],
         balance=read_balance(pool, account_id),
         fee_percent=LISTING_FEE_PERCENT,
     )

@@ -1636,3 +1636,24 @@
 .bst__rule {
   color: var(--text-data);
 }
+
+/* 경매 매물 한 건. **줄을 쌓는다** — 이름·접사·값·만료·버튼을 한 줄에 넣으면 좁은
+   폭에서 오른쪽 끝의 버튼이 밀려 나가고, 그것이 가장 중요한 것이다. */
+.wld__listing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding-bottom: var(--sp-2);
+  border-bottom: var(--line-1) solid var(--line);
+}
+
+/* 매물 안의 줄은 버튼을 오른쪽에 붙이되 넘치면 접는다. 버튼 높이는 --btn-tap-sm-h 가
+   정하고, 세로 배치에서 44px(--tap-min)로 커진다 — 손가락이 닿아야 한다. */
+.wld__listing .wld__row {
+  align-items: center;
+}
+
+.wld__listing .wld__row > .ds-button {
+  margin-left: auto;
+  flex: 0 0 auto;
+}

@@ -182,7 +182,18 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
             ) : (
               <ul className="inv__slots">
                 {inventory.slots.map((entry) =>
-                  entry.item === null ? null : (
+                  entry.item === null ? (
+                    // 소모품은 아이템 인스턴스가 아니라 **쌓인 칸**이다. 개수를 안 적으면
+                    // 물약이 1개인지 9개인지 모르고 규칙표를 짠다 (#54).
+                    entry.stackCatalogId === null ? null : (
+                      <li className="inv__bag" key={entry.slotIndex}>
+                        <div className="inv__row">
+                          <span className="inv__name">{entry.stackCatalogId}</span>
+                          <ValueExpr text={`x${String(entry.stackCount)}`} size="sm" />
+                        </div>
+                      </li>
+                    )
+                  ) : (
                     <li className="inv__bag" key={entry.slotIndex}>
                       <div className="inv__row">
                         <span className="inv__name">{entry.item.labelKo}</span>

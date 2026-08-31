@@ -23,6 +23,13 @@ export interface CharacterPanelProps {
   readonly baseStats: Readonly<Record<string, number>>
   /** 이 코어가 아는 스킬 전부. 장착하지 않은 것을 「불가」로 보여주는 데 쓴다. */
   readonly allSkills: readonly string[]
+  /**
+   * 이 코어가 아는 소모품 태그 전부.
+   *
+   * 스킬과 같은 이유로 필요하다 — `USE_ITEM[SCROLL]` 이 「불가」로 뜬 이유는 "주문서가
+   * 없다" 인데, 안 보여주면 그 답을 어디서도 찾을 수 없다 (#54).
+   */
+  readonly allItems: readonly string[]
   readonly isOnline: boolean
 }
 
@@ -94,7 +101,7 @@ export function formatDelta(value: number, suffix = ''): string {
  * @returns 패널 요소.
  */
 export function CharacterPanel(props: CharacterPanelProps): React.JSX.Element {
-  const { progress, baseStats, allSkills, isOnline } = props
+  const { progress, baseStats, allSkills, allItems, isOnline } = props
   const loadout = progress?.loadout
   const bonus = buildAttributeBonus(progress?.stats ?? {})
   const equipped = new Set(loadout?.skills ?? [])
@@ -165,6 +172,27 @@ export function CharacterPanel(props: CharacterPanelProps): React.JSX.Element {
                 />
                 <ValueExpr text={`= ${String(loadout.skillPowerPct)}%`} size="sm" />
               </li>
+            </ul>
+
+            <div className="chr__head">소모품 · 들고 있어야 규칙에 쓸 수 있다</div>
+            <ul className="chr__list">
+              {allItems.map((kind) => {
+                const held = new Map(loadout.consumables).get(kind) ?? 0
+                return (
+                  <li className="chr__row" key={kind}>
+                    <GlyphState
+                      state={held > 0 ? 'true' : 'blocked'}
+                      size="sm"
+                      label={kind}
+                    />
+                    <ValueExpr
+                      text={held > 0 ? String(held) : '주우면 열린다'}
+                      size="sm"
+                      dim={held === 0}
+                    />
+                  </li>
+                )
+              })}
             </ul>
 
             <div className="chr__head">스킬 · 장착한 것만 규칙에 쓸 수 있다</div>

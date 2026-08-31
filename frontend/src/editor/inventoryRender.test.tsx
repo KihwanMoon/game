@@ -42,6 +42,8 @@ const INVENTORY: InventoryView = {
       slotIndex: 0,
       slot: null,
       isSealed: false,
+      stackCatalogId: null,
+      stackCount: 0,
       item: {
         itemId: 1,
         catalogId: 'gloves_core',
@@ -63,6 +65,8 @@ const INVENTORY: InventoryView = {
       slotIndex: 0,
       slot: 'WEAPON_OFF',
       isSealed: true,
+      stackCatalogId: null,
+      stackCount: 0,
       item: null,
     },
   ],
@@ -215,5 +219,32 @@ describe('아이템이 주는 것 (기존 화면 보완)', () => {
 
   it('접사 이름이 없으면 스탯 이름을 쓴다 — 빈 줄을 그리지 않는다', () => {
     expect(formatAffix({ stat: 'hp_max', flat: 5, percent: 0, labelKo: '' })).toBe('hp_max +5')
+  })
+})
+
+describe('소모품 스택 (#54)', () => {
+  const html = renderToStaticMarkup(
+    <InventoryPanel
+      inventory={
+        {
+          ...INVENTORY,
+          slots: [{ slotIndex: 0, slot: null, isSealed: false, stackCatalogId: 'potion_small', stackCount: 3, item: null }],
+        } as InventoryView
+      }
+      isOnline
+      detail=""
+      onEquip={noop}
+      onUnequip={noop}
+      onDiscard={noop}
+      onRepair={noop}
+    />,
+  )
+
+  it('★ 개수를 적는다 — 물약 한 칸과 세 칸은 규칙표가 달라진다', () => {
+    expect(html).toContain('x3')
+  })
+
+  it('★ 빈 칸이 아니라고 말한다 — 이름이 있어야 무엇을 들었는지 안다', () => {
+    expect(html).toContain('potion_small')
   })
 })

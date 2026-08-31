@@ -24,6 +24,7 @@ pytestmark = pytest.mark.skipif(
 ROOM_ID = "corridor"
 
 # 매물 조회 상한. 화면은 50줄만 보여주지만 검사는 "걸렸는가" 를 봐야 하므로 넉넉히 둔다.
+MINUTES_IN_HOUR = 60
 LISTING_PROBE_LIMIT = 10000
 
 
@@ -283,3 +284,74 @@ def test_the_same_item_cannot_be_listed_twice_at_once(client, token):
         "/api/auction/list", json={"item_id": item_id, "price": 300}, headers=headers
     )
     assert second.status_code >= 400
+
+
+def find_listing_row(client, token, item_id):
+    """이 아이템의 매물을 **화면이 받는 절 그대로** 만들어 낸다.
+
+    `/api/auction` 응답을 뒤지지 않는다. 그것은 싼 것부터 50줄만 보여주는 화면용
+    목록이라 매물이 쌓이면 방금 건 것이 페이지 밖으로 밀린다. 대신 저장 층에서 그 줄을
+    꺼내 라우트와 같은 변환 함수에 넣는다 — 검사 대상은 페이지네이션이 아니라 변환이다.
+
+    Args:
+        client: 테스트 클라이언트.
+        token: 기기 토큰.
+        item_id: 대상 아이템.
+
+    Returns:
+        매물 절.
+    """
+    from game.api.deps import get_item_catalog, get_pool
+    from game.api.routes.auction import build_listing_view
+    from game.app.store.auction import list_open
+
+    rows = list_open(get_pool(), account_id_of(client, token), limit=LISTING_PROBE_LIMIT)
+    row = next(entry for entry in rows if entry.item_id == item_id)
+    return build_listing_view(row, get_item_catalog())
+
+
+def test_a_listing_carries_the_affixes_it_actually_rolled(client, token):
+    """★ 이름과 값만 보고 사면 저주를 돈 주고 산다.
+
+    접사는 인스턴스마다 다르게 굴린다. 카탈로그 기본값을 보내면 화면이 거짓말을 한다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.accounts import find_player_entity
+    from game.app.store.items import create_item
+    from game.schemas.item import Affix
+
+    headers = build_headers(token)
+    grant_currency(client, token, 1000)
+    entity_id = find_player_entity(get_pool(), account_id_of(client, token))
+    rolled = (Affix(stat="attack", flat=7, percent=0, label_ko="날카로움"),)
+    item_id = create_item(get_pool(), entity_id, "helm_iron", rolled)
+    client.post("/api/auction/list", json={"item_id": item_id, "price": 100}, headers=headers)
+    view = find_listing_row(client, token, item_id)
+    # 카탈로그의 `helm_iron` 은 이 접사를 갖고 있지 않다. 값이 그대로 나오면 인스턴스가
+    # 굴린 것을 실었다는 뜻이고, 다른 값이 나오면 카탈로그 기본값을 실은 것이다.
+    assert view.affixes == [{"stat": "attack", "flat": 7, "percent": 0, "label_ko": "날카로움"}]
+
+
+def test_a_listing_says_when_it_disappears(client, token):
+    """★ 언제 사라지는지 모르면 기다릴지 지금 살지를 정할 수 없다."""
+    headers = build_headers(token)
+    grant_currency(client, token, 1000)
+    item_id = grant_item(client, token)
+    client.post("/api/auction/list", json={"item_id": item_id, "price": 100}, headers=headers)
+    view = find_listing_row(client, token, item_id)
+    # 방금 걸었으므로 만료까지 한 시간 이상 남아 있어야 한다. 0 이면 시계가 아니라
+    # 상수를 보내고 있다는 뜻이다.
+    assert view.expires_in_minutes > MINUTES_IN_HOUR
+
+
+def test_a_listing_says_how_much_of_the_fee_is_gone(client, token):
+    """★ 내려도 안 돌아오는 돈이다. 그 사실이 화면에 있어야 한다."""
+    from game.app.store.auction import compute_fee
+
+    headers = build_headers(token)
+    grant_currency(client, token, 2000)
+    item_id = grant_item(client, token)
+    client.post("/api/auction/list", json={"item_id": item_id, "price": 700}, headers=headers)
+    view = find_listing_row(client, token, item_id)
+    assert view.fee == compute_fee(700)
+    assert view.fee > 0

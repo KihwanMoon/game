@@ -106,3 +106,16 @@ export const TUTORIAL_STAGES: readonly TutorialStage[] = (
 export const ALL_SKILL_IDS: readonly string[] = SKILLS.skills
   .map((skill) => (skill as { readonly id: string }).id)
   .sort()
+
+/**
+ * 이 코어가 아는 소모품 태그 전부, 정렬해서.
+ *
+ * 캐릭터 시트가 **들고 있지 않은 것을 「불가」로** 보여주는 데 쓴다 — `USE_ITEM[SCROLL]`
+ * 이 안 뜬 이유는 "주문서가 없다" 인데, 안 보여주면 그 답을 어디서도 찾을 수 없다 (#54).
+ *
+ * 블록 카탈로그에서 읽는다. 아이템 목록에서 뽑으면 아직 아무도 안 가진 태그가 빠지고,
+ * 그러면 "주우면 열린다" 를 보여줄 수가 없다.
+ */
+export const ALL_ITEM_TAGS: readonly string[] = [
+  ...(BLOCK_CATALOG.actions.get('USE_ITEM')?.param?.values ?? []),
+].sort()

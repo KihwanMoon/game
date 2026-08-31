@@ -481,6 +481,14 @@ export interface SlotView {
   readonly slot: string | null
   /** 양손무기가 막은 자리. 서버가 계산해서 준다 — 저장된 상태가 아니다. */
   readonly isSealed: boolean
+  /**
+   * 쌓인 소모품. 아이템 인스턴스가 아니라 **카탈로그 id + 개수**다.
+   *
+   * 개수를 안 보여주면 물약이 1개인지 9개인지 모르고 규칙표를 짠다 — `USE_ITEM` 이
+   * 몇 번 돌 수 있는지가 규칙 설계의 입력이다 (#54).
+   */
+  readonly stackCatalogId: string | null
+  readonly stackCount: number
 }
 
 /** 인벤토리·장비·지갑. */
@@ -518,6 +526,8 @@ interface RawSlot {
   item: RawItem | null
   slot: string | null
   is_sealed: boolean
+  stack_catalog_id?: string | null
+  stack_count?: number
 }
 
 /**
@@ -531,6 +541,8 @@ function readSlot(raw: RawSlot): SlotView {
     slotIndex: raw.slot_index,
     slot: raw.slot,
     isSealed: raw.is_sealed,
+    stackCatalogId: raw.stack_catalog_id ?? null,
+    stackCount: raw.stack_count ?? 0,
     item:
       raw.item === null
         ? null
@@ -747,6 +759,16 @@ export interface ListingView {
   readonly labelKo: string
   readonly price: number
   readonly isMine: boolean
+  /**
+   * 사기 전에 알아야 하는 것들.
+   *
+   * 이름과 값만 보고 사면 같은 「장궁」이라도 무엇이 붙어 있는지 모른다 — 저주 접사는
+   * 음수이므로 그것을 모르고 사면 돈을 내고 약해진다.
+   */
+  readonly affixes: readonly AffixView[]
+  /** 남은 시간(분). 절대 시각이 아니라 남은 양이라 기기 시계가 어긋나도 같다. */
+  readonly expiresInMinutes: number
+  readonly fee: number
 }
 
 /** 경매장. 수수료율을 함께 받는다 — 걸기 전에 얼마가 나가는지 알아야 한다. */
@@ -829,7 +851,16 @@ export async function readLeaderboard(token: string): Promise<LeaderboardView | 
  * @returns 경매장.
  */
 function readAuctionBody(raw: {
-  listings: { listing_id: number; item_id: number; label_ko: string; price: number; is_mine: boolean }[]
+  listings: {
+    listing_id: number
+    item_id: number
+    label_ko: string
+    price: number
+    is_mine: boolean
+    affixes?: { stat: string; flat: number; percent: number; label_ko: string }[]
+    expires_in_minutes?: number
+    fee?: number
+  }[]
   balance: number
   fee_percent: number
 }): AuctionView {
@@ -839,6 +870,14 @@ function readAuctionBody(raw: {
       itemId: item.item_id,
       labelKo: item.label_ko,
       price: item.price,
+      affixes: (item.affixes ?? []).map((affix) => ({
+        stat: affix.stat,
+        flat: affix.flat,
+        percent: affix.percent,
+        labelKo: affix.label_ko,
+      })),
+      expiresInMinutes: item.expires_in_minutes ?? 0,
+      fee: item.fee ?? 0,
       isMine: item.is_mine,
     })),
     balance: raw.balance,

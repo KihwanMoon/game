@@ -38,8 +38,26 @@ const LEADERBOARD: LeaderboardView = {
 
 const AUCTION: AuctionView = {
   listings: [
-    { listingId: 1, itemId: 11, labelKo: '철 투구', price: 300, isMine: false },
-    { listingId: 2, itemId: 12, labelKo: '대검', price: 900, isMine: true },
+    {
+      listingId: 1,
+      itemId: 11,
+      labelKo: '철 투구',
+      price: 300,
+      isMine: false,
+      affixes: [{ stat: 'hp_max', flat: 8, percent: 0, labelKo: '튼튼함' }],
+      expiresInMinutes: 42,
+      fee: 15,
+    },
+    {
+      listingId: 2,
+      itemId: 12,
+      labelKo: '대검',
+      price: 900,
+      isMine: true,
+      affixes: [],
+      expiresInMinutes: 10,
+      fee: 45,
+    },
   ],
   balance: 500,
   feePercent: 5,
@@ -145,5 +163,40 @@ describe('능력치 미리보기 (결정 #51)', () => {
 
   it('0점이면 아무것도 적지 않는다 — 빈 줄이 세 개 늘면 목록이 읽히지 않는다', () => {
     expect(formatAttributeEffect('str', 0)).toBe('')
+  })
+})
+
+describe('경매 — 사기 전에 알아야 할 것 (모바일 우선)', () => {
+  const markup = renderToStaticMarkup(
+    <WorldPanel
+      progress={PROGRESS}
+      leaderboard={undefined}
+      auction={AUCTION}
+      accountId={1}
+      isOnline
+      detail=""
+      onAllocate={() => undefined}
+      onBuy={() => undefined}
+      onCancel={() => undefined}
+      onDaily={() => undefined}
+    />,
+  )
+
+  it('★ 접사가 보인다 — 이름과 값만 보고 사면 저주를 돈 주고 산다', () => {
+    expect(markup).toContain('튼튼함 +8')
+  })
+
+  it('★ 언제 사라지는지 보인다', () => {
+    expect(markup).toContain('42분 뒤 사라진다')
+  })
+
+  it('★ 내 매물에는 못 돌려받는 수수료를 적는다', () => {
+    expect(markup).toContain('수수료 45')
+  })
+
+  it('★ 버튼이 자기 줄에 있다 — 한 줄에 몰면 좁은 폭에서 밀려 나간다', () => {
+    // 세로 배치에서 버튼은 --tap-min(44px)까지 커진다. 이름·접사와 같은 줄에 두면
+    // 그 높이가 줄을 밀어 올려 겹친다.
+    expect(markup).toContain('wld__listing')
   })
 })

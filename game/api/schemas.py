@@ -258,6 +258,14 @@ class ListingView(BaseModel):
     label_ko: str
     price: int
     is_mine: bool = False
+    # **사기 전에 알아야 하는 것들.** 이름과 값만 보고 사면 같은 「장궁」이라도 무엇이
+    # 붙어 있는지 모르고, 언제 사라질지도 모른다.
+    affixes: list[dict] = Field(default_factory=list)
+    # 남은 시간(분). 절대 시각이 아니라 남은 양으로 보내는 이유는 기기 시계가 어긋나도
+    # 같은 값을 보여야 하기 때문이다.
+    expires_in_minutes: int = 0
+    # 걸 때 떼는 수수료. 화면이 다시 계산하면 두 곳이 갈린다.
+    fee: int = 0
 
 
 class AuctionResponse(BaseModel):
