@@ -16,6 +16,7 @@ from psycopg_pool import ConnectionPool
 from game.api.deps import get_item_catalog, get_pool
 from game.api.discovery_service import record_item_discovery
 from game.app.items.drops import GRADE_MISS, build_grade_pool, create_affix_rolls, get_weighted
+from game.app.items.sealed import GRADE_SEALED_SLOTS
 from game.app.store.accounts import find_player_entity
 from game.app.store.drops import (
     DEFAULT_GRADE_WEIGHTS,
@@ -121,6 +122,8 @@ def create_kill_drop(account_id: int, entity_id: int, context: dict) -> str:
         create_affix_rolls(entry.affixes, grade),
         context.get("submission_id"),
         grade,
+        # 등급이 봉인 칸을 준다 (§17). 최저 등급은 고정 옵션만 갖는다.
+        GRADE_SEALED_SLOTS.get(grade, 0),
     )
     detail = "가방이 가득 차 놓쳤다" if item_id is None else ""
     record_roll(

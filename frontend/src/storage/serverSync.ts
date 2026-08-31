@@ -473,6 +473,17 @@ export interface ItemView {
    */
   readonly isRecovered: boolean
   /**
+   * 남은 봉인 칸 (설계/4_아이템 §17).
+   *
+   * **무엇이 들어올지는 안 온다.** 오면 열기 전에 아는 것이 되어 열 이유가 사라진다 —
+   * 서버가 열 때 굴린다.
+   */
+  readonly sealedSlots: number
+  /** 다음 칸을 여는 값. 화면이 다시 계산하면 두 곳이 갈린다. */
+  readonly unsealCost: number
+  /** 굴린 등급. 봉인 칸 수가 여기서 나온다. */
+  readonly grade: string
+  /**
    * 이 아이템이 실제로 주는 것.
    *
    * **끼기 전에 보여야 한다** — 무엇을 주는지 모르고 끼우면 캐릭터 시트를 보고 나서야
@@ -534,6 +545,9 @@ interface RawItem {
   is_broken: boolean
   is_bound?: boolean
   is_recovered?: boolean
+  sealed_slots?: number
+  unseal_cost?: number
+  grade?: string
   affixes?: { stat: string; flat: number; percent: number; label_ko: string }[]
   requirements: RawRequirement[]
   can_equip: boolean
@@ -575,6 +589,9 @@ function readSlot(raw: RawSlot): SlotView {
             isBroken: raw.item.is_broken,
             isBound: raw.item.is_bound ?? false,
             isRecovered: raw.item.is_recovered ?? false,
+            sealedSlots: raw.item.sealed_slots ?? 0,
+            unsealCost: raw.item.unseal_cost ?? 0,
+            grade: raw.item.grade ?? '',
             affixes: (raw.item.affixes ?? []).map((affix) => ({
               stat: affix.stat,
               flat: affix.flat,

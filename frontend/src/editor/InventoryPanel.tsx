@@ -32,6 +32,11 @@ export interface InventoryPanelProps {
    * 경제의 절반(파는 쪽)이 돌지 않는다.
    */
   readonly onList: (itemId: number, price: number) => void
+  /**
+   * 봉인 한 칸을 연다 (§17). **결과는 서버가 정한다** — 요청에 무엇을 받을지 적을
+   * 자리가 없다.
+   */
+  readonly onUnseal: (itemId: number) => void
   /** 걸 때 떼는 수수료율(%). 걸기 전에 얼마가 나가는지 알아야 한다. */
   readonly feePercent: number
   readonly onRepair: (itemId: number) => void
@@ -294,6 +299,15 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
                             label="되찾음 · 빼앗겼던 것"
                           />
                         ) : null}
+                        {entry.item.sealedSlots > 0 ? (
+                          // 봉인 칸은 등급이 준다. **무엇이 들어올지는 화면도 모른다** —
+                          // 서버가 열 때 굴리고, 그래서 열 이유가 남는다.
+                          <GlyphState
+                            state="pending"
+                            size="sm"
+                            label={`봉인 ${String(entry.item.sealedSlots)}칸`}
+                          />
+                        ) : null}
                         {entry.item.isBound ? (
                           // 산 물건은 다시 팔 수 없다 (결정 #07). 걸기 전에 보여야
                           // 하므로 가방 줄에 적는다 — 해칭은 「불가」와 뜻이 같다.
@@ -336,6 +350,26 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
                       </div>
                       {renderAffixes(entry.item)}
                       {renderRequirements(entry.item)}
+                      {entry.item.sealedSlots === 0 ? null : (
+                        <div className="inv__list-row">
+                          <ValueExpr
+                            text={`해제 ${String(entry.item.unsealCost)} · 무엇이 나올지는 열어야 안다`}
+                            size="sm"
+                            dim
+                          />
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            glyph="◈"
+                            title="화폐를 내고 옵션 하나를 연다 — 결과는 서버가 정한다"
+                            onClick={() => {
+                              props.onUnseal(entry.item?.itemId ?? 0)
+                            }}
+                          >
+                            봉인 해제
+                          </Button>
+                        </div>
+                      )}
                       <ListingRow
                         item={entry.item}
                         feePercent={props.feePercent}

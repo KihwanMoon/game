@@ -186,3 +186,25 @@ ALTER TABLE item_instance ADD COLUMN IF NOT EXISTS grade TEXT;
 ALTER TABLE account ADD COLUMN IF NOT EXISTS deactivated_at TIMESTAMPTZ;
 
 CREATE INDEX IF NOT EXISTS account_active_idx ON account (id) WHERE deactivated_at IS NULL;
+
+-- ── 봉인된 옵션 칸 (설계/4_아이템 §17) ──────────────────────────────────
+--
+-- 등급이 올라가면 옵션 칸이 하나씩 는다. 획득 시점에는 **봉인돼 있고**, 화폐를 내면
+-- 서버가 무작위 옵션 하나를 굴려 붙인다.
+--
+-- **남은 칸 수만 센다.** 무엇이 들어올지를 미리 정해 두면 그것이 클라이언트에 실려 나가고,
+-- 그 순간 "열기 전에 아는" 것이 된다 — 열 이유가 사라진다.
+ALTER TABLE item_instance ADD COLUMN IF NOT EXISTS sealed_slots INT NOT NULL DEFAULT 0;
+
+-- 봉인을 열 때 뽑는 옵션 풀. 서버만 읽는다 — 굴림이 코어 밖이라 리플레이가 안 흔들린다.
+CREATE TABLE IF NOT EXISTS affix_pool (
+    id           BIGSERIAL PRIMARY KEY,
+    stat         TEXT      NOT NULL,
+    label_ko     TEXT      NOT NULL,
+    flat_min     INT       NOT NULL DEFAULT 0,
+    flat_max     INT       NOT NULL DEFAULT 0,
+    percent_min  INT       NOT NULL DEFAULT 0,
+    percent_max  INT       NOT NULL DEFAULT 0,
+    weight       INT       NOT NULL DEFAULT 1,
+    is_retired   BOOLEAN   NOT NULL DEFAULT FALSE
+);

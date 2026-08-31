@@ -138,6 +138,12 @@ class ItemView(BaseModel):
     is_bound: bool = False
     # 빼앗겼다가 되찾은 것 (`설계/6_몬스터` §5). 되찾으러 간 런이 가방에 남는다.
     is_recovered: bool = False
+    # 남은 봉인 칸 (§17). **무엇이 들어올지는 안 보낸다** — 보내면 열기 전에 아는 것이
+    # 되어 열 이유가 사라진다.
+    sealed_slots: int = 0
+    # 다음 칸을 여는 값. 화면이 다시 계산하면 두 곳이 갈린다.
+    unseal_cost: int = 0
+    grade: str = ""
     affixes: list[dict] = Field(default_factory=list)
     requirements: list[RequirementView] = Field(default_factory=list)
     can_equip: bool = False

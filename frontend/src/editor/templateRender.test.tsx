@@ -29,7 +29,7 @@ const MARKUP = renderToStaticMarkup(
 
 describe('추천 규칙표', () => {
   it('★ 저장소에 있는 규칙표가 하나도 안 빠진다 — 못 고르는 것은 없는 것과 같다', () => {
-    expect(RULE_TEMPLATES.length).toBeGreaterThanOrEqual(16)
+    expect(RULE_TEMPLATES.length).toBeGreaterThanOrEqual(17)
     for (const item of RULE_TEMPLATES) {
       expect(MARKUP).toContain(`<span class="tpl__name">${item.templateId}</span>`)
     }
@@ -143,5 +143,31 @@ describe('한국어 문장', () => {
       cpuCost: 1,
     }
     expect(formatRuleSentence(odd, BLOCK_CATALOG)).toContain('NOT_A_BLOCK')
+  })
+})
+
+
+describe('무기 사거리 (설계/4_아이템)', () => {
+  it('★ 사거리를 읽는 예시가 있다 — 없으면 아무도 그 기능을 못 찾는다', () => {
+    // `attack_range` 는 처음부터 우변 스탯이었고 장궁이 그 값을 바꿔 왔다. 그런데
+    // 예시 규칙표 중 어느 것도 그것을 쓰지 않아, 쓰는 사람이 기능의 존재를 몰랐다.
+    const reach = RULE_TEMPLATES.find((item) => item.templateId === 'weapon_reach')
+    expect(reach).toBeDefined()
+    const uses = reach?.ruleset.rules.some((rule) =>
+      rule.conditions.terms.some(
+        (term) => typeof term.rhs === 'object' && term.rhs !== null && 'stat' in term.rhs,
+      ),
+    )
+    expect(uses).toBe(true)
+  })
+
+  it('★ 숫자가 아니라 스탯을 가리킨다 — 숫자면 무기를 바꿀 때 규칙표를 다시 짠다', () => {
+    const reach = RULE_TEMPLATES.find((item) => item.templateId === 'weapon_reach')
+    const stats = (reach?.ruleset.rules ?? []).flatMap((rule) =>
+      rule.conditions.terms
+        .filter((term) => typeof term.rhs === 'object' && term.rhs !== null)
+        .map((term) => (term.rhs as { stat: string }).stat),
+    )
+    expect(stats).toContain('attack_range')
   })
 })

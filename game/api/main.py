@@ -28,6 +28,7 @@ from game.api.routes import (
     meta,
     run,
     ticket,
+    unseal,
     world,
 )
 from game.app.store.connection import apply_schema, create_pool
@@ -72,6 +73,7 @@ def create_app() -> FastAPI:
         run,
         meta,
         items,
+        unseal,
         bestiary,
         world,
         auction,

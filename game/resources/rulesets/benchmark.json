@@ -1288,6 +1288,102 @@
           }
         }
       ]
+    },
+    {
+      "ruleset_id": "weapon_reach",
+      "version": 1,
+      "strategy_ko": "무기 사거리를 읽는다 — 「적거리 <= 내 사거리」 로 쓰면 무기를 바꾸는 것만으로 같은 규칙표가 다른 전투를 만든다. 단검(1)이면 붙어야 때리고 장궁(4)이면 멀리서 때린다. 숫자를 박아 두면 무기를 바꿔도 규칙표를 다시 짜야 한다.",
+      "target_room": "corridor",
+      "cpu_total": 6,
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": {
+                  "stat": "attack_range"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "RETREAT",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<",
+                "rhs": {
+                  "stat": "attack_range"
+                }
+              },
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 60
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": ">",
+                "rhs": {
+                  "stat": "attack_range"
+                }
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

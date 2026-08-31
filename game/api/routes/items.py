@@ -20,6 +20,7 @@ from game.api.schemas import (
 )
 from game.app.items.catalog import find_item as find_catalog_item
 from game.app.items.requirements import check_requirements
+from game.app.items.sealed import GRADE_SEALED_SLOTS, compute_unseal_cost
 from game.app.items.stats import get_effective_slots
 from game.app.store.accounts import find_player_entity
 from game.app.store.equipment import (
@@ -86,6 +87,11 @@ def build_item_view(
         is_broken=stored.is_broken,
         is_bound=stored.is_bound,
         is_recovered=stored.is_recovered,
+        sealed_slots=stored.sealed_slots,
+        grade=stored.grade,
+        unseal_cost=compute_unseal_cost(
+            max(0, GRADE_SEALED_SLOTS.get(stored.grade, 0) - stored.sealed_slots)
+        ),
         # **실제로 붙어 있는 접사를 보낸다.** 인스턴스가 굴린 것이 있으면 그것이
         # 카탈로그 기본값을 대체하고(로드아웃 계산과 같은 규칙), 없으면 카탈로그
         # 것이 그대로 붙어 있다 — 인스턴스 것만 보내면 기본 접사를 가진 아이템이

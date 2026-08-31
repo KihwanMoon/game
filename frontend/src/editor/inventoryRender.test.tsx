@@ -55,6 +55,9 @@ const INVENTORY: InventoryView = {
         isBroken: false,
         isBound: false,
         isRecovered: false,
+    sealedSlots: 0,
+    unsealCost: 0,
+    grade: 'COMMON',
         affixes: [{ stat: 'hp_max', flat: 8, percent: 0, labelKo: '튼튼함' }],
         canEquip: false,
         requirements: [{ stat: 'cpu_budget', actual: 4, minimum: 6, isMet: false }],
@@ -97,6 +100,7 @@ describe('인벤토리 패널', () => {
       onRepair={noop}
       onList={noop}
       feePercent={5}
+      onUnseal={() => undefined}
     />,
   )
 
@@ -139,6 +143,7 @@ describe('인벤토리 패널 — 서버 없음', () => {
         onRepair={noop}
         onList={noop}
         feePercent={5}
+        onUnseal={() => undefined}
       />,
     )
     expect(markup).toContain('서버에 닿지 못했다')
@@ -178,6 +183,7 @@ describe('귀속 표시 (결정 #07)', () => {
         onRepair={() => undefined}
         onList={() => undefined}
         feePercent={5}
+        onUnseal={() => undefined}
       />,
     )
     expect(html).toContain('귀속')
@@ -195,6 +201,7 @@ describe('귀속 표시 (결정 #07)', () => {
         onRepair={() => undefined}
         onList={() => undefined}
         feePercent={5}
+        onUnseal={() => undefined}
       />,
     )
     expect(html).not.toContain('귀속')
@@ -215,6 +222,7 @@ describe('아이템이 주는 것 (기존 화면 보완)', () => {
         onRepair={() => undefined}
         onList={() => undefined}
         feePercent={5}
+        onUnseal={() => undefined}
       />,
     )
     expect(html).toContain('튼튼함')
@@ -250,6 +258,7 @@ describe('소모품 스택 (#54)', () => {
       onRepair={noop}
       onList={noop}
       feePercent={5}
+      onUnseal={() => undefined}
     />,
   )
 
@@ -277,6 +286,7 @@ describe('되찾음 (`설계/6_몬스터` §5)', () => {
         onRepair={noop}
         onList={noop}
         feePercent={5}
+        onUnseal={() => undefined}
       />,
     )
     expect(html).toContain('되찾음')
@@ -294,6 +304,7 @@ describe('되찾음 (`설계/6_몬스터` §5)', () => {
         onRepair={noop}
         onList={noop}
         feePercent={5}
+        onUnseal={() => undefined}
       />,
     )
     expect(html).not.toContain('되찾음')
@@ -312,6 +323,9 @@ describe('경매 등록 (서버에는 있었는데 화면에 없던 길)', () =>
     isBroken: false,
     isBound: false,
     isRecovered: false,
+    sealedSlots: 0,
+    unsealCost: 0,
+    grade: 'COMMON',
     affixes: [],
     canEquip: true,
     requirements: [],
@@ -351,5 +365,39 @@ describe('경매 등록 (서버에는 있었는데 화면에 없던 길)', () =>
       <ListingRow item={ITEM} feePercent={5} onList={() => undefined} />,
     )
     expect(html).toContain('disabled')
+  })
+})
+
+describe('봉인된 옵션 (설계/4_아이템 §17)', () => {
+  const build = (patch: Record<string, unknown>) =>
+    renderToStaticMarkup(
+      <InventoryPanel
+        inventory={buildInventory(patch)}
+        isOnline
+        detail=""
+        onEquip={() => undefined}
+        onUnequip={() => undefined}
+        onDiscard={() => undefined}
+        onRepair={() => undefined}
+        onList={() => undefined}
+        feePercent={5}
+        onUnseal={() => undefined}
+      />,
+    )
+
+  it('★ 남은 칸 수가 보인다 — 등급이 무엇을 줬는지가 가방에 있어야 한다', () => {
+    expect(build({ sealedSlots: 2, unsealCost: 180 })).toContain('봉인 2칸')
+  })
+
+  it('★ 여는 값이 서버가 준 값이다 — 화면이 다시 계산하면 두 곳이 갈린다', () => {
+    expect(build({ sealedSlots: 2, unsealCost: 180 })).toContain('해제 180')
+  })
+
+  it('★ 무엇이 나올지는 안 적는다 — 적으면 열 이유가 사라진다', () => {
+    expect(build({ sealedSlots: 1, unsealCost: 120 })).toContain('열어야 안다')
+  })
+
+  it('★ 칸이 없으면 버튼도 없다', () => {
+    expect(build({ sealedSlots: 0 })).not.toContain('봉인 해제')
   })
 })
