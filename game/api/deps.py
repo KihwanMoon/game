@@ -9,6 +9,7 @@ from typing import Annotated
 from fastapi import Depends, Header, HTTPException, status
 from psycopg_pool import ConnectionPool
 
+from game.app.content_versions import read_content_versions
 from game.app.items.catalog import load_item_catalog
 from game.app.services.run_battle import load_balance
 from game.app.services.verify_run import VerifyContext
@@ -57,9 +58,7 @@ def init_state(pool: ConnectionPool) -> None:
     _state["pool"] = pool
     _state["items"] = load_item_catalog(ITEMS_PATH)
     _state["context"] = context
-    _state["core_version"] = build_core_version(
-        context.catalog.version, int(context.balance["balance_version"])
-    )
+    _state["core_version"] = build_core_version(read_content_versions())
 
 
 def get_pool() -> ConnectionPool:

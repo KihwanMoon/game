@@ -87,16 +87,16 @@ describe('시드 범위 — 이식 제약', () => {
 })
 
 describe('코어 버전', () => {
-  it('블록·밸런스·엔진 세 세대를 담는다', () => {
-    expect(buildCoreVersion(4, 3)).toBe(`b4.v3.e${String(ENGINE_VERSION)}`)
+  it('★ 여섯 자산과 엔진을 모두 담는다 — 하나라도 빠지면 그 축이 시즌을 안 가른다', () => {
+    // 자산마다 다른 값을 준다. 같은 값을 쓰면 축 하나를 다른 축에 붙여 놓아도 통과한다.
+    const versions = { blocks: 4, balance: 3, items: 2, skills: 5, rooms: 6, enemies: 7 }
+    expect(buildCoreVersion(versions)).toBe(`b4.v3.i2.s5.r6.a7.e${String(ENGINE_VERSION)}`)
   })
 })
 
 describe('파이썬 정본 대조', () => {
   it('코어 버전 문자열이 같다 — ENGINE_VERSION 이 갈리면 여기서 드러난다', () => {
-    expect(buildCoreVersion(golden.block_list_version, golden.balance_version)).toBe(
-      golden.core_version,
-    )
+    expect(buildCoreVersion(golden.versions)).toBe(golden.core_version)
   })
 
   it.each(golden.cases.map((item) => [item.ticket_id, item] as const))(

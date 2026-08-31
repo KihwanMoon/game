@@ -34,6 +34,7 @@ import { BattleView, checkOngoing, type BattleSetup, type ChainPosition } from '
 import {
   BALANCE,
   BLOCK_CATALOG,
+  CONTENT_VERSIONS,
   ENEMY_RULESETS,
   G0_RULESETS,
   ALL_ITEM_TAGS,
@@ -453,12 +454,9 @@ export function App(): React.JSX.Element {
   // 결산이 적 종류에서 규칙표를 찾는 데 쓴다. parseBalance 는 절 형식을 검사하므로
   // 렌더마다 돌리지 않는다.
   const balanceData = useMemo(() => parseBalance(BALANCE), [])
-  // 코어 버전은 블록·밸런스·엔진 세대의 조합이다. 하나라도 바뀌면 과거 기록이
+  // 코어 버전은 자산 여섯 세대와 엔진의 조합이다. 하나라도 바뀌면 과거 기록이
   // 재현되지 않으므로 랭킹 시즌이 갈린다 (docs/설계/1 §2).
-  const coreVersion = useMemo(
-    () => buildCoreVersion(BLOCK_CATALOG.version, BALANCE.balance_version),
-    [],
-  )
+  const coreVersion = useMemo(() => buildCoreVersion(CONTENT_VERSIONS), [])
   const problems = useMemo(
     () => validateRuleSet(ruleset, BLOCK_CATALOG, limits.cpuBudget, limits.ruleSlots),
     [ruleset, limits],

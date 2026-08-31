@@ -68,17 +68,38 @@ export function checkRanked(ticket: RunTicket): boolean {
 }
 
 /**
+ * 런 결과를 바꿀 수 있는 자산들의 세대.
+ *
+ * **숫자 여섯 개를 위치 인자로 받지 않는다.** 전부 number 라 두 개를 바꿔 넣어도 타입이
+ * 못 막는다. 이름을 붙이면 그 사고가 컴파일 전에 걸린다 — 파이썬 쪽과 같은 이유다.
+ */
+export interface ContentVersions {
+  readonly blocks: number
+  readonly balance: number
+  readonly items: number
+  readonly skills: number
+  readonly rooms: number
+  readonly enemies: number
+}
+
+/**
  * 코어 버전 문자열을 만든다.
  *
- * 하나의 값이 아니라 셋의 조합이다 — 블록 카탈로그·밸런스 수치·엔진 로직. 하나라도
- * 바뀌면 과거 기록이 재현되지 않으므로 랭킹 시즌이 갈린다.
+ * **파이썬 `build_core_version` 과 글자 하나까지 같아야 한다.** 갈리면 서버가 티켓을
+ * 못 알아본다.
  *
- * @param blockListVersion blocks.json 의 세대.
- * @param balanceVersion balance.json 의 세대.
- * @returns `b4.v3.e1` 형태의 버전 문자열.
+ * 여섯 자산을 전부 넣는다. 예전에는 블록과 밸런스 둘만 봉인했는데, 스킬 계수나 방
+ * 배치를 고치면 과거 리플레이가 달라지는데도 시즌이 안 갈렸다.
+ *
+ * @param versions 자산별 세대.
+ * @returns `b6.v2.i1.s2.r1.a1.e1` 형태의 문자열.
  */
-export function buildCoreVersion(blockListVersion: number, balanceVersion: number): string {
-  return `b${String(blockListVersion)}.v${String(balanceVersion)}.e${String(ENGINE_VERSION)}`
+export function buildCoreVersion(versions: ContentVersions): string {
+  return (
+    `b${String(versions.blocks)}.v${String(versions.balance)}.i${String(versions.items)}` +
+    `.s${String(versions.skills)}.r${String(versions.rooms)}.a${String(versions.enemies)}` +
+    `.e${String(ENGINE_VERSION)}`
+  )
 }
 
 /**

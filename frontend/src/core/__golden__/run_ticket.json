@@ -1,8 +1,14 @@
 {
   "_comment": "파이썬 정본이 만든 티켓 id 와 코어 버전. scripts/export_ticket_golden.py",
-  "block_list_version": 4,
-  "balance_version": 3,
-  "core_version": "b4.v3.e1",
+  "versions": {
+    "blocks": 4,
+    "balance": 3,
+    "items": 2,
+    "skills": 5,
+    "rooms": 6,
+    "enemies": 7
+  },
+  "core_version": "b4.v3.i2.s5.r6.a7.e1",
   "cases": [
     {
       "seed": 0,

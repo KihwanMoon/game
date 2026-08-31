@@ -335,3 +335,39 @@ def test_every_skill_declares_family_and_shape():
         assert skill["family"] in families, skill["id"]
         assert skill["shape"]["kind"] in shapes, skill["id"]
         assert skill["target_faction"] in {"enemy", "ally", "self"}, skill["id"]
+
+
+def test_every_asset_file_carries_a_version():
+    """★ 버전이 없는 자산은 고쳐도 코어 버전이 안 움직인다.
+
+    룸 템플릿과 적 규칙표에는 버전 필드가 아예 없었다. 방 배치를 바꾸면 같은 room_id 가
+    다른 방이 되는데도 저장된 리플레이가 그대로 유효한 것처럼 보였다.
+    """
+    import json
+
+    from game.app.content_versions import VERSION_KEYS
+
+    for name, (path, key) in VERSION_KEYS.items():
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        assert key in raw, f"{name}: {path.name} 에 {key} 가 없다"
+        assert int(raw[key]) >= 1
+
+
+def test_reading_versions_does_not_invent_a_default():
+    """★ 없는 버전을 0 으로 채우면 파일이 바뀌어도 코어 버전이 그대로다."""
+    import json
+
+    import pytest as pytest_module
+
+    from game.app.content_versions import VERSION_KEYS, read_content_versions
+
+    path, key = VERSION_KEYS["items"]
+    original = path.read_text(encoding="utf-8")
+    raw = json.loads(original)
+    del raw[key]
+    path.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
+    try:
+        with pytest_module.raises(KeyError):
+            read_content_versions()
+    finally:
+        path.write_text(original, encoding="utf-8")

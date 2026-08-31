@@ -9,7 +9,12 @@
 import json
 from pathlib import Path
 
-from game.schemas.run_ticket import MAX_SEED, build_core_version, create_local_ticket
+from game.schemas.run_ticket import (
+    MAX_SEED,
+    ContentVersions,
+    build_core_version,
+    create_local_ticket,
+)
 
 GOLDEN_PATH = Path(__file__).resolve().parents[1] / "frontend/src/core/__golden__/run_ticket.json"
 
@@ -23,8 +28,9 @@ CASES: tuple[tuple[int, str, int], ...] = (
     (MAX_SEED, "room_a", 1),
 )
 
-BLOCK_LIST_VERSION = 4
-BALANCE_VERSION = 3
+# 실제 자산의 세대가 아니라 **고정한 표본**이다. 자산을 고칠 때마다 이 골든이 흔들리면
+# 검사하는 것이 문자열 조립이 아니라 오늘의 밸런스 수치가 된다.
+VERSIONS = ContentVersions(blocks=4, balance=3, items=2, skills=5, rooms=6, enemies=7)
 
 
 def export_ticket_golden() -> Path:
@@ -33,7 +39,7 @@ def export_ticket_golden() -> Path:
     Returns:
         쓴 파일 경로.
     """
-    core_version = build_core_version(BLOCK_LIST_VERSION, BALANCE_VERSION)
+    core_version = build_core_version(VERSIONS)
     cases = []
     for seed, room_id, floor in CASES:
         ticket = create_local_ticket(seed, room_id, core_version, floor=floor)
@@ -48,8 +54,14 @@ def export_ticket_golden() -> Path:
         )
     payload = {
         "_comment": "파이썬 정본이 만든 티켓 id 와 코어 버전. scripts/export_ticket_golden.py",
-        "block_list_version": BLOCK_LIST_VERSION,
-        "balance_version": BALANCE_VERSION,
+        "versions": {
+            "blocks": VERSIONS.blocks,
+            "balance": VERSIONS.balance,
+            "items": VERSIONS.items,
+            "skills": VERSIONS.skills,
+            "rooms": VERSIONS.rooms,
+            "enemies": VERSIONS.enemies,
+        },
         "core_version": core_version,
         "cases": cases,
     }

@@ -12,6 +12,10 @@
  * 로더가 런타임에 한다 — 단언이 검사를 대신하지 않게 하려는 배치다.
  */
 import balanceRaw from '@resources/balance/balance.json'
+// **정의가 아니라 세대만 쓴다.** 아이템 정의는 서버가 읽고 브라우저 코어는 로드아웃으로
+// 합산된 값만 본다 — 그래도 코어 버전 문자열에는 아이템 세대가 들어가야 하므로
+// (안 넣으면 아이템을 고쳐도 시즌이 안 갈린다) 이 파일에서 숫자 하나를 가져온다.
+import itemsRaw from '@resources/balance/items.json'
 import blocksRaw from '@resources/balance/blocks.json'
 import skillsRaw from '@resources/balance/skills.json'
 import roomsRaw from '@resources/rooms/templates.json'
@@ -22,6 +26,7 @@ import tutorialRaw from '@resources/tutorial/stages.json'
 
 import type {
   BlockCatalog,
+  ContentVersions,
   RawBlockCatalog,
   RawRoomFile,
   RawRuleSetFile,
@@ -81,6 +86,21 @@ export const SKILLS = skillsRaw as unknown as { readonly skills: readonly unknow
  * 파이썬의 `load_balance` 와 같은 배치다. 소비자마다 두 파일을 알게 하면 새 소비자가
  * 생길 때마다 합치는 코드가 늘고, 언젠가 한 곳이 빠진다.
  */
+/**
+ * 런 결과를 바꿀 수 있는 자산들의 세대.
+ *
+ * 파이썬은 `read_content_versions()` 가 같은 여섯 값을 읽는다. 두 코어가 같은 코어
+ * 버전 문자열을 내야 하므로 여기서 빠지는 축이 있으면 안 된다.
+ */
+export const CONTENT_VERSIONS: ContentVersions = {
+  blocks: (blocksRaw as unknown as { block_list_version: number }).block_list_version,
+  balance: (balanceRaw as unknown as { balance_version: number }).balance_version,
+  items: (itemsRaw as unknown as { item_list_version: number }).item_list_version,
+  skills: (skillsRaw as unknown as { skill_list_version: number }).skill_list_version,
+  rooms: (roomsRaw as unknown as { room_list_version: number }).room_list_version,
+  enemies: (enemiesRaw as unknown as { enemy_list_version: number }).enemy_list_version,
+}
+
 export const BALANCE: RawBalanceFile = {
   ...(balanceRaw as unknown as RawBalanceFile),
   skills: SKILLS.skills,

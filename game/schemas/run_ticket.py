@@ -91,20 +91,47 @@ class RunSubmission:
     core_version: str
 
 
-def build_core_version(block_list_version: int, balance_version: int) -> str:
+@dataclass(frozen=True)
+class ContentVersions:
+    """런 결과를 바꿀 수 있는 자산들의 세대.
+
+    **정수 여섯 개를 위치 인자로 받지 않는 이유가 있다.** 전부 int 라 두 개를 바꿔 넣어도
+    타입이 못 막고, 그런 사고가 이 저장소에서 이미 한 번 났다(개체 id 자리에 계정 id).
+    이름을 붙이면 그 사고가 컴파일 전에 걸린다.
+
+    엔진 로직(`ENGINE_VERSION`)은 파일이 아니라 코드라 여기 없다 —
+    `build_core_version` 이 마지막에 붙인다.
+    """
+
+    blocks: int
+    balance: int
+    items: int
+    skills: int
+    rooms: int
+    enemies: int
+
+
+def build_core_version(versions: ContentVersions) -> str:
     """코어 버전 문자열을 만든다.
 
-    하나의 값이 아니라 셋의 조합이다 — 블록 카탈로그·밸런스 수치·엔진 로직. 하나라도
-    바뀌면 과거 기록이 재현되지 않으므로 랭킹 시즌이 갈린다 (docs/설계/3 §7).
+    하나라도 바뀌면 과거 기록이 재현되지 않으므로 랭킹 시즌이 갈린다 (docs/설계/3 §7).
+
+    **여섯 자산을 전부 넣는다.** 예전에는 블록과 밸런스 둘만 봉인했는데, 스킬 계수나 방
+    배치를 고치면 과거 리플레이가 달라지는데도 시즌이 안 갈렸다 — 저장된 리플레이가
+    조용히 거짓이 되는 길이었다. 관리자가 콘텐츠를 고칠 수 있게 되면 그 일이 상시로
+    일어난다.
 
     Args:
-        block_list_version: blocks.json 의 세대.
-        balance_version: balance.json 의 세대.
+        versions: 자산별 세대.
 
     Returns:
-        `b4.v3.e1` 형태의 버전 문자열.
+        `b6.v2.i1.s2.r1.a1.e1` 형태의 버전 문자열.
     """
-    return f"b{block_list_version}.v{balance_version}.e{ENGINE_VERSION}"
+    return (
+        f"b{versions.blocks}.v{versions.balance}.i{versions.items}"
+        f".s{versions.skills}.r{versions.rooms}.a{versions.enemies}"
+        f".e{ENGINE_VERSION}"
+    )
 
 
 def create_local_ticket(
