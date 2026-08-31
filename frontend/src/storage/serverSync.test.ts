@@ -13,6 +13,7 @@ import { createEmptyMeta } from '../core/schemas'
 import { adoptServerMeta } from '../core/services/manageMeta'
 import { readBestiary,
   TOKEN_STORAGE_KEY,
+  readInventory,
   ensureToken,
   readServerMeta,
   readToken,
@@ -346,5 +347,59 @@ describe('도감 — 규칙표를 그대로 읽는다', () => {
       vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(bare) }),
     )
     expect((await readBestiary('token'))?.[0]?.ruleset).toBeUndefined()
+  })
+})
+
+
+describe('가방을 읽을 때 서버가 붙인 표시를 잃지 않는다', () => {
+  /**
+   * 서버가 이런 칸 하나를 보냈다고 둔다.
+   *
+   * @param item 아이템 절에 덮어쓸 값.
+   * @returns fetch 가 낼 응답.
+   */
+  function buildResponse(item: Record<string, unknown>) {
+    return {
+      ok: true,
+      json: async () => ({
+        slots: [
+          {
+            slot_index: 0,
+            slot: null,
+            is_sealed: false,
+            item: {
+              item_id: 1,
+              catalog_id: 'helm_iron',
+              label_ko: '철투구',
+              kind: 'EQUIPMENT',
+              slot: 'HEAD',
+              hands: null,
+              equipped_slot: null,
+              is_broken: false,
+              can_equip: true,
+              requirements: [],
+              ...item,
+            },
+          },
+        ],
+        equipment: [],
+        balance: 0,
+        repair_cost: 0,
+      }),
+    }
+  }
+
+  it('★ 되찾음 표시를 옮긴다 — 키 이름이 어긋나면 조용히 사라진다', async () => {
+    // 이 계층은 snake_case 를 camelCase 로 옮기기만 한다. 그래서 오타 하나가 기능
+    // 전체를 죽이면서 타입 검사도 통과한다 (`is_recovered` → 항상 false).
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(buildResponse({ is_recovered: true })))
+    const view = await readInventory('t')
+    expect(view?.slots[0]?.item?.isRecovered).toBe(true)
+  })
+
+  it('서버가 안 보내면 거짓이다 — 없는 것을 「되찾음」으로 칠하지 않는다', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(buildResponse({})))
+    const view = await readInventory('t')
+    expect(view?.slots[0]?.item?.isRecovered).toBe(false)
   })
 })

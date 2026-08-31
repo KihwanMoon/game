@@ -54,6 +54,7 @@ const INVENTORY: InventoryView = {
         equippedSlot: null,
         isBroken: false,
         isBound: false,
+        isRecovered: false,
         affixes: [{ stat: 'hp_max', flat: 8, percent: 0, labelKo: '튼튼함' }],
         canEquip: false,
         requirements: [{ stat: 'cpu_budget', actual: 4, minimum: 6, isMet: false }],
@@ -246,5 +247,39 @@ describe('소모품 스택 (#54)', () => {
 
   it('★ 빈 칸이 아니라고 말한다 — 이름이 있어야 무엇을 들었는지 안다', () => {
     expect(html).toContain('potion_small')
+  })
+})
+
+describe('되찾음 (`설계/6_몬스터` §5)', () => {
+  it('★ 빼앗겼다가 되찾은 것을 그렇게 말한다', () => {
+    // 잃은 것과 되찾은 것이 가방에서 같아 보이면 되찾으러 간 런이 흔적을 남기지
+    // 않는다. World Loop 의 동기가 도감에만 있고 가방에는 없게 된다.
+    const html = renderToStaticMarkup(
+      <InventoryPanel
+        inventory={buildInventory({ isRecovered: true })}
+        isOnline
+        detail=""
+        onEquip={noop}
+        onUnequip={noop}
+        onDiscard={noop}
+        onRepair={noop}
+      />,
+    )
+    expect(html).toContain('되찾음')
+  })
+
+  it('평범한 아이템에는 안 붙는다 — 붙으면 표시가 뜻을 잃는다', () => {
+    const html = renderToStaticMarkup(
+      <InventoryPanel
+        inventory={buildInventory({ isRecovered: false })}
+        isOnline
+        detail=""
+        onEquip={noop}
+        onUnequip={noop}
+        onDiscard={noop}
+        onRepair={noop}
+      />,
+    )
+    expect(html).not.toContain('되찾음')
   })
 })

@@ -136,6 +136,8 @@ class ItemView(BaseModel):
     # 거래 후 귀속 (결정 #07). **팔기 전에 보여야 한다** — 모르면 걸다가 거절당하고,
     # 그때는 이미 "왜 안 되지" 를 겪은 뒤다.
     is_bound: bool = False
+    # 빼앗겼다가 되찾은 것 (`설계/6_몬스터` §5). 되찾으러 간 런이 가방에 남는다.
+    is_recovered: bool = False
     affixes: list[dict] = Field(default_factory=list)
     requirements: list[RequirementView] = Field(default_factory=list)
     can_equip: bool = False

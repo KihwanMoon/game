@@ -37,6 +37,9 @@ class StoredItem:
     is_broken: bool
     # 거래 후 귀속 (결정 #07). 한 번 팔린 아이템은 산 사람에게 묶여 다시 팔 수 없다.
     is_bound: bool = False
+    # 몬스터에게 빼앗겼다가 되찾은 것인가 (`설계/6_몬스터` §5). 잃은 것과 되찾은 것이
+    # 가방에서 같아 보이면 World Loop 가 화면에 흔적을 남기지 않는다.
+    is_recovered: bool = False
 
 
 @dataclass(frozen=True)
@@ -183,7 +186,7 @@ def list_inventory(pool: ConnectionPool, entity_id: int) -> tuple[InventoryEntry
     with pool.connection() as connection:
         rows = connection.execute(
             "SELECT s.slot_index, s.item_id, s.stack_catalog_id, s.stack_count,"
-            " i.catalog_id, i.affixes, i.is_broken, i.is_bound"
+            " i.catalog_id, i.affixes, i.is_broken, i.is_bound, i.taken_from"
             " FROM inventory_slot s LEFT JOIN item_instance i ON i.id = s.item_id"
             " WHERE s.entity_id = %s ORDER BY s.slot_index",
             (entity_id,),
@@ -199,6 +202,9 @@ def list_inventory(pool: ConnectionPool, entity_id: int) -> tuple[InventoryEntry
                 affixes=read_affixes(row[5]),
                 is_broken=bool(row[6]),
                 is_bound=bool(row[7]),
+                # `taken_from` 이 채워진 채 내 가방에 있다는 것은 되찾았다는 뜻이다 —
+                # 몬스터가 들고 있는 동안에는 그 개체가 소유자다.
+                is_recovered=row[8] is not None,
             ),
             stack_catalog_id=None if row[2] is None else str(row[2]),
             stack_count=int(row[3] or 0),
@@ -219,7 +225,8 @@ def list_equipment(pool: ConnectionPool, entity_id: int) -> dict[EquipSlot, Stor
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT e.slot, i.id, i.catalog_id, i.affixes, i.is_broken, i.is_bound"
+            "SELECT e.slot, i.id, i.catalog_id, i.affixes, i.is_broken, i.is_bound,"
+            " i.taken_from"
             " FROM equipment_slot e JOIN item_instance i ON i.id = e.item_id"
             " WHERE e.entity_id = %s ORDER BY e.slot",
             (entity_id,),
@@ -231,6 +238,7 @@ def list_equipment(pool: ConnectionPool, entity_id: int) -> dict[EquipSlot, Stor
             affixes=read_affixes(row[3]),
             is_broken=bool(row[4]),
             is_bound=bool(row[5]),
+            is_recovered=row[6] is not None,
         )
         for row in rows
     }
@@ -249,7 +257,7 @@ def find_item(pool: ConnectionPool, entity_id: int, item_id: int) -> StoredItem 
     """
     with pool.connection() as connection:
         row = connection.execute(
-            "SELECT id, catalog_id, affixes, is_broken, is_bound FROM item_instance"
+            "SELECT id, catalog_id, affixes, is_broken, is_bound, taken_from FROM item_instance"
             " WHERE id = %s AND owner_entity_id = %s",
             (item_id, entity_id),
         ).fetchone()
@@ -261,4 +269,5 @@ def find_item(pool: ConnectionPool, entity_id: int, item_id: int) -> StoredItem 
         affixes=read_affixes(row[2]),
         is_broken=bool(row[3]),
         is_bound=bool(row[4]),
+        is_recovered=row[5] is not None,
     )

@@ -200,6 +200,13 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
                         {entry.item.isBroken ? (
                           <GlyphState state="danger" size="sm" label="파손" />
                         ) : null}
+                        {entry.item.isRecovered ? (
+                          <GlyphState
+                            state="true"
+                            size="sm"
+                            label="되찾음 · 빼앗겼던 것"
+                          />
+                        ) : null}
                         {entry.item.isBound ? (
                           // 산 물건은 다시 팔 수 없다 (결정 #07). 걸기 전에 보여야
                           // 하므로 가방 줄에 적는다 — 해칭은 「불가」와 뜻이 같다.

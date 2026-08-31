@@ -456,6 +456,13 @@ export interface ItemView {
    */
   readonly isBound: boolean
   /**
+   * 몬스터에게 빼앗겼다가 되찾은 것인가 (`설계/6_몬스터` §5).
+   *
+   * 잃은 것과 되찾은 것이 가방에서 같아 보이면, 되찾으러 간 런이 아무 흔적도 남기지
+   * 않는다. World Loop 의 동기는 그 흔적에서 나온다.
+   */
+  readonly isRecovered: boolean
+  /**
    * 이 아이템이 실제로 주는 것.
    *
    * **끼기 전에 보여야 한다** — 무엇을 주는지 모르고 끼우면 캐릭터 시트를 보고 나서야
@@ -516,6 +523,7 @@ interface RawItem {
   equipped_slot: string | null
   is_broken: boolean
   is_bound?: boolean
+  is_recovered?: boolean
   affixes?: { stat: string; flat: number; percent: number; label_ko: string }[]
   requirements: RawRequirement[]
   can_equip: boolean
@@ -556,6 +564,7 @@ function readSlot(raw: RawSlot): SlotView {
             equippedSlot: raw.item.equipped_slot,
             isBroken: raw.item.is_broken,
             isBound: raw.item.is_bound ?? false,
+            isRecovered: raw.item.is_recovered ?? false,
             affixes: (raw.item.affixes ?? []).map((affix) => ({
               stat: affix.stat,
               flat: affix.flat,

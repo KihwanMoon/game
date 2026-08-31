@@ -39,7 +39,7 @@ from game.app.store.runs import (
     save_submission,
 )
 from game.app.store.tickets import IssuedTicket, find_open_ticket, mark_ticket_consumed
-from game.app.store.trophies import create_trophy
+from game.app.store.trophies import apply_recovery, create_trophy
 from game.schemas.loadout import parse_loadout
 from game.schemas.meta_save import MetaSave, build_meta_payload, parse_meta_save
 
@@ -182,9 +182,15 @@ def apply_monster_outcome(
     if verified.outcome == OUTCOME_WIN:
         # 이겼으면 그 층의 지속 몬스터가 전부 감쇠한다 — 플레이어의 승리가 세계에
         # 흔적을 남긴다 (결정 #35).
+        entity_id = find_player_entity(pool, account_id)
         for item in snapshots:
             level = apply_monster_defeat(pool, item.record_id, ticket.floor)
             notes.append(f"{item.kind_id} 레벨 {item.level}→{level}")
+            # 그 개체가 들고 있던 **내 것**을 되찾는다 (`설계/6_몬스터` §5). 도감이
+            # "내 아이템을 들고 있다" 고 말해 놓고 잡아도 못 돌려받으면, World Loop 의
+            # 동기가 화면에만 있고 세계에는 없다.
+            for catalog_id in apply_recovery(pool, item.record_id, account_id, entity_id):
+                notes.append(f"{catalog_id} 되찾음")
         return " · ".join(notes)
 
     # 졌으면 그 층의 몬스터가 경험치를 얻고, 하나가 장비 사본을 가져간다 (결정 #34).
