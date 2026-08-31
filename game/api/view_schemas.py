@@ -231,3 +231,36 @@ class ContentAssetResponse(BaseModel):
     draft: dict | None = None
     note: str = ""
     version_key: str = ""
+
+
+class MonsterDropRequest(BaseModel):
+    """몬스터별 드롭 줄 하나 (D3).
+
+    **가중치 0 은 지우는 것이 아니라 안 나오게 하는 것이다.** 줄을 지우면 "이 몬스터가
+    무엇을 떨구기로 되어 있었는가" 를 나중에 못 읽는다.
+    """
+
+    kind_id: str = Field(min_length=1, max_length=64)
+    grade: str
+    catalog_id: str
+    weight: int = Field(ge=0, le=100_000)
+    reason: str = ""
+
+
+class MonsterDropRow(BaseModel):
+    """드롭 줄 하나."""
+
+    grade: str
+    catalog_id: str
+    label_ko: str = ""
+    weight: int = 0
+
+
+class MonsterDropResponse(BaseModel):
+    """한 몬스터의 드롭 표."""
+
+    kind_id: str
+    rows: list[MonsterDropRow] = Field(default_factory=list)
+    # 소스별 표가 없으면 ANY 로 떨어진다. 그 사실이 화면에 있어야 "왜 다른 게 나오지" 를
+    # 안 겪는다.
+    uses_default: bool = True

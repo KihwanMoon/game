@@ -24,9 +24,18 @@ from game.api.view_schemas import (
     CatalogAdminRow,
     CatalogItemRequest,
     CatalogRetireRequest,
+    MonsterDropRequest,
+    MonsterDropResponse,
+    MonsterDropRow,
 )
 from game.app.store.admin import record_admin_action
-from game.app.store.drops import SOURCE_ANY, find_source, save_source
+from game.app.store.drops import (
+    SOURCE_ANY,
+    find_source,
+    list_monster_drops,
+    save_monster_drop,
+    save_source,
+)
 from game.app.store.item_catalog import (
     DEFAULT_GRADES,
     apply_generation_bump,
@@ -212,3 +221,71 @@ def create_catalog_retire(
         f"세대 {generation} · {reason}",
     )
     return read_catalog_items(account)
+
+
+@router.get("/api/admin/drops/{kind_id}", response_model=MonsterDropResponse)
+def read_monster_drops(kind_id: str, account: CurrentAdmin) -> MonsterDropResponse:
+    """그 몬스터에게만 걸린 드롭 표를 본다 (D3).
+
+    **소스별 표가 없으면 `ANY` 로 떨어진다.** 그 사실이 화면에 있어야 "왜 다른 게
+    나오지" 를 안 겪는다.
+
+    Args:
+        kind_id: 몬스터 종.
+        account: 관리자.
+
+    Returns:
+        드롭 줄들과 기본 표를 쓰는지 여부.
+    """
+    pool = get_pool()
+    catalog = list_catalog(pool)
+    rows = list_monster_drops(pool, kind_id)
+    return MonsterDropResponse(
+        kind_id=kind_id,
+        rows=[
+            MonsterDropRow(
+                grade=grade,
+                catalog_id=catalog_id,
+                label_ko=catalog[catalog_id].label_ko if catalog_id in catalog else "",
+                weight=weight,
+            )
+            for grade, catalog_id, weight in rows
+        ],
+        uses_default=not rows,
+    )
+
+
+@router.post("/api/admin/drops", response_model=MonsterDropResponse)
+def create_monster_drop(request: MonsterDropRequest, account: CurrentAdmin) -> MonsterDropResponse:
+    """몬스터별 드롭 줄을 세운다 (D3).
+
+    **첫 줄을 세우는 순간 그 몬스터는 `ANY` 를 안 본다.** 두 표를 합치면 "이 몬스터만
+    떨군다" 가 성립하지 않고, 도감이 표적 목록이 되는 근거가 그 배타성이다 — 그래서
+    첫 등록이 그 몬스터의 드롭을 통째로 바꾼다.
+
+    드롭 표는 코어 버전을 안 바꾼다. 굴림은 서버 밖(재시뮬 뒤)에서 일어나므로 리플레이가
+    달라지지 않는다 — 아이템 카탈로그와 다른 점이다.
+
+    Args:
+        request: 종·등급·아이템·가중치와 사유.
+        account: 관리자.
+
+    Returns:
+        갱신된 드롭 표.
+
+    Raises:
+        HTTPException: 없는 아이템이거나 사유가 없는 경우.
+    """
+    reason = check_reason(request.reason)
+    pool = get_pool()
+    if request.catalog_id not in list_catalog(pool):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "없는 아이템이다")
+    save_monster_drop(pool, request.kind_id, request.grade, request.catalog_id, request.weight)
+    record_admin_action(
+        pool,
+        account.account_id,
+        "monster_drop",
+        f"{request.kind_id}/{request.catalog_id}",
+        f"가중치 {request.weight} · {reason}",
+    )
+    return read_monster_drops(request.kind_id, account)

@@ -192,3 +192,106 @@ def test_there_is_no_delete_route(client, admin):
     for route in create_app().routes:
         if "/admin/catalog" in getattr(route, "path", ""):
             assert "DELETE" not in set(getattr(route, "methods", set()))
+
+
+def read_drops(client, token, kind_id):
+    return client.get(f"/api/admin/drops/{kind_id}", headers=build_headers(token)).json()
+
+
+def test_a_monster_without_a_table_says_so(client, admin):
+    """★ 소스별 표가 없으면 ANY 로 떨어진다 — 그 사실이 화면에 있어야 「왜 다른 게
+    나오지」를 안 겪는다."""
+    body = read_drops(client, admin, "no_such_kind_probe")
+    assert body["uses_default"] is True
+    assert body["rows"] == []
+
+
+def test_setting_a_drop_takes_the_monster_off_the_default(client, admin):
+    """★ 첫 줄을 세우는 순간 그 몬스터는 ANY 를 안 본다 (D3).
+
+    두 표를 합치면 "이 몬스터만 떨군다" 가 성립하지 않고, 도감이 표적 목록이 되는 근거가
+    그 배타성이다.
+    """
+    account_id = client.get("/api/account", headers=build_headers(admin)).json()["account_id"]
+    kind = f"probe_drop_{account_id}"
+    response = client.post(
+        "/api/admin/drops",
+        json={
+            "kind_id": kind,
+            "grade": "COMMON",
+            "catalog_id": "helm_iron",
+            "weight": 7,
+            "reason": REASON,
+        },
+        headers=build_headers(admin),
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["uses_default"] is False
+    assert [(row["catalog_id"], row["weight"]) for row in body["rows"]] == [("helm_iron", 7)]
+    assert body["rows"][0]["label_ko"] != "", "이름이 없으면 관리자가 id 로만 고른다"
+
+
+def test_a_drop_for_a_missing_item_is_refused(client, admin):
+    """★ 없는 아이템을 표에 올리면 굴림이 그 등급에서 아무것도 못 뽑는다."""
+    response = client.post(
+        "/api/admin/drops",
+        json={
+            "kind_id": "probe_kind",
+            "grade": "COMMON",
+            "catalog_id": "no_such_item",
+            "weight": 1,
+            "reason": REASON,
+        },
+        headers=build_headers(admin),
+    )
+    assert response.status_code == 404
+
+
+def test_a_drop_without_a_reason_is_refused(client, admin):
+    """★ 사유 없는 개입은 나중에 아무도 설명할 수 없다."""
+    response = client.post(
+        "/api/admin/drops",
+        json={
+            "kind_id": "probe_kind",
+            "grade": "COMMON",
+            "catalog_id": "helm_iron",
+            "weight": 1,
+            "reason": "",
+        },
+        headers=build_headers(admin),
+    )
+    assert response.status_code == 400
+
+
+def test_a_zero_weight_keeps_the_row(client, admin):
+    """★ 가중치 0 은 지우는 것이 아니라 안 나오게 하는 것이다.
+
+    줄을 지우면 "이 몬스터가 무엇을 떨구기로 되어 있었는가" 를 나중에 못 읽는다.
+    """
+    account_id = client.get("/api/account", headers=build_headers(admin)).json()["account_id"]
+    kind = f"probe_zero_{account_id}"
+    client.post(
+        "/api/admin/drops",
+        json={
+            "kind_id": kind,
+            "grade": "COMMON",
+            "catalog_id": "helm_iron",
+            "weight": 5,
+            "reason": REASON,
+        },
+        headers=build_headers(admin),
+    )
+    response = client.post(
+        "/api/admin/drops",
+        json={
+            "kind_id": kind,
+            "grade": "COMMON",
+            "catalog_id": "helm_iron",
+            "weight": 0,
+            "reason": REASON,
+        },
+        headers=build_headers(admin),
+    )
+    rows = response.json()["rows"]
+    assert [(row["catalog_id"], row["weight"]) for row in rows] == [("helm_iron", 0)]
