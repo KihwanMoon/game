@@ -19,7 +19,7 @@ import {
   applyUndo,
   createHistory,
 } from './editor/history'
-import type { RawRule, RuleSet, TutorialStage } from './core/schemas'
+import type { MetaSave, RawRule, RuleSet, TutorialStage } from './core/schemas'
 import { parseRuleSet } from './core/schemas'
 import {
   MAX_PRESET_SLOTS,
@@ -292,4 +292,42 @@ export function exportSlotCode(session: EditorSession, index: number): string {
  */
 export function exportSessionCode(session: EditorSession, name: string): string {
   return exportPresetCode({ name, ruleset: getSessionRuleSet(session) })
+}
+
+/**
+ * 세션의 코드 라이브러리를 메타 세이브에 싣는다.
+ *
+ * **서버로 가는 것은 메타 세이브다.** `MetaSave.presets` 는 처음부터 있었지만 아무도
+ * 채우지 않아 늘 빈 배열이었고, 그래서 슬롯에 저장한 규칙표가 계정을 따라오지 않았다 —
+ * 기기를 바꾼 사람에게 그것은 "저장이 안 된다" 로 보인다.
+ *
+ * 편집 중인 규칙표는 싣지 않는다. 이름 없는 초안을 계정 단위로 하나만 두면 두 기기가
+ * 서로의 편집을 조용히 덮어쓴다. 슬롯은 이름이 있어 합칠 수 있다.
+ *
+ * @param session 세션.
+ * @param meta 지금 메타 세이브.
+ * @returns 코드 라이브러리가 실린 메타 세이브.
+ */
+export function buildMetaFromSession(session: EditorSession, meta: MetaSave): MetaSave {
+  return { ...meta, presets: session.presets }
+}
+
+/**
+ * 서버에서 받은 코드 라이브러리를 세션에 싣는다.
+ *
+ * **이 기기에 슬롯이 하나라도 있으면 손대지 않는다.** 덮어쓰면 방금 만든 것이 사라지고,
+ * 그 손실은 되돌릴 수 없다 — 비어 있을 때만 채우는 쪽이 잃는 것이 없다.
+ *
+ * @param session 세션.
+ * @param presets 서버가 준 슬롯들.
+ * @returns 새 세션. 채울 것이 없으면 같은 객체.
+ */
+export function adoptPresets(
+  session: EditorSession,
+  presets: readonly RulePreset[],
+): EditorSession {
+  if (session.presets.length > 0 || presets.length === 0) {
+    return session
+  }
+  return { ...session, presets: presets.slice(0, MAX_PRESET_SLOTS) }
 }

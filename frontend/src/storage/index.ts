@@ -49,7 +49,7 @@ export {
   removeSave,
   writeSave,
 } from './saveStore'
-export type { SaveScheduler, StorageLike } from './saveStore'
+export type { SaveOutcome, SaveScheduler, StorageLike } from './saveStore'
 export {
   META_FORMAT_TAG,
   META_STORAGE_KEY,

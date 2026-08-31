@@ -93,7 +93,7 @@ describe('저장 왕복', () => {
   it('쓰고 새 탭처럼 다시 읽으면 같은 것이 나온다', () => {
     const storage = createFakeStorage()
     const save = buildSample()
-    expect(writeSave(storage, save)).toBe(true)
+    expect(writeSave(storage, save)).toBe('saved')
 
     // 새로고침. 남는 것은 저장소뿐이고 메모리의 상태는 사라진다.
     const restored = readSave(storage)
@@ -158,12 +158,12 @@ describe('저장이 막힌 브라우저', () => {
   it('쓸 수 없으면 false 를 내고 편집을 막지 않는다', () => {
     const storage = createFakeStorage()
     storage.failing = true
-    expect(writeSave(storage, buildSample())).toBe(false)
+    expect(writeSave(storage, buildSample())).toBe('blocked')
   })
 
   it('저장소가 아예 없어도 읽기·쓰기가 던지지 않는다', () => {
     expect(readSave(undefined)).toBeUndefined()
-    expect(writeSave(undefined, buildSample())).toBe(false)
+    expect(writeSave(undefined, buildSample())).toBe('blocked')
     expect(() => {
       removeSave(undefined)
     }).not.toThrow()
@@ -261,5 +261,49 @@ describe('압축·인코딩', () => {
     const text = formatBase64Url(bytes)
     expect(text).not.toMatch(/[+/]/)
     expect([...parseBase64Url(text)]).toEqual([...bytes])
+  })
+})
+
+describe('저장 실패는 조용하지 않다', () => {
+  it('★ 저장소가 막혔으면 blocked 다 — 사파리 프라이빗 창이 그렇다', () => {
+    const blocked: StorageLike = {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error('막힘')
+      },
+      removeItem: () => undefined,
+    }
+    expect(writeSave(blocked, buildSample())).toBe('blocked')
+  })
+
+  it('★ 듣는 이가 없어도 저장은 돈다 — 옵셔널 호출이 인자를 건너뛴 적이 있다', () => {
+    vi.useFakeTimers()
+    const storage = createFakeStorage()
+    // listen 을 부르지 않는다. 이것이 앱이 뜨기 전과 같은 상태다.
+    createSaveScheduler(storage, 10).schedule(buildSample())
+    vi.advanceTimersByTime(10)
+    expect(readSave(storage)?.seed).toBe(42)
+    vi.useRealTimers()
+  })
+
+  it('★ 결과를 듣는 이에게 전한다 — 아무도 안 들으면 화면이 말할 수 없다', () => {
+    vi.useFakeTimers()
+    const heard: string[] = []
+    const scheduler = createSaveScheduler(createFakeStorage(), 10)
+    scheduler.listen((outcome) => {
+      heard.push(outcome)
+    })
+    scheduler.schedule(buildSample())
+    vi.advanceTimersByTime(10)
+    expect(heard).toEqual(['saved'])
+    vi.useRealTimers()
+  })
+})
+
+describe('직렬화 실패는 저장소 차단과 다르다', () => {
+  it('★ 문자열로 못 만들면 broken 이다 — 차단과 같은 값이면 우리 결함이 숨는다', () => {
+    // BigInt 는 JSON.stringify 가 던진다. 저장소는 멀쩡한데 우리가 못 만드는 경우다.
+    const bad = { ...buildSample(), seed: 1n as unknown as number }
+    expect(writeSave(createFakeStorage(), bad)).toBe('broken')
   })
 })

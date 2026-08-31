@@ -22,6 +22,15 @@ export interface StorageLike {
   removeItem: (key: string) => void
 }
 
+/**
+ * 저장 시도의 결과.
+ *
+ * `blocked` 는 브라우저가 막은 것이고(사파리 프라이빗 창, 쿠키 차단), `broken` 은 우리가
+ * 못 만든 것이다. **화면이 둘을 다르게 말해야 한다** — 앞엣것은 쓰는 사람이 손쓸 수
+ * 있고 뒤엣것은 우리가 고쳐야 한다.
+ */
+export type SaveOutcome = 'saved' | 'blocked' | 'broken'
+
 /** 디바운스된 저장기. */
 export interface SaveScheduler {
   /** 저장을 예약한다. 간격 안에 다시 부르면 앞의 예약은 버려진다. */
@@ -30,6 +39,8 @@ export interface SaveScheduler {
   readonly flush: () => void
   /** 예약을 버린다. */
   readonly cancel: () => void
+  /** 마지막 쓰기의 결과를 듣는다. 화면이 저장 상태를 말할 수 있어야 한다. */
+  readonly listen: (watcher: (outcome: SaveOutcome) => void) => void
 }
 
 /**
@@ -73,15 +84,24 @@ export function readSave(storage: StorageLike | undefined): EditorSave | undefin
  * @param save 저장할 내용.
  * @returns 실제로 썼으면 true.
  */
-export function writeSave(storage: StorageLike | undefined, save: EditorSave): boolean {
+export function writeSave(storage: StorageLike | undefined, save: EditorSave): SaveOutcome {
   if (storage === undefined) {
-    return false
+    return 'blocked'
+  }
+  let text: string
+  try {
+    // **직렬화와 쓰기를 가른다.** 한 try 로 묶으면 "저장소가 막혔다" 와 "이 규칙표를
+    // 문자열로 못 만든다" 가 같은 실패로 보이고, 뒤엣것은 코드 결함인데도 조용히
+    // 넘어간다 — 쓰는 사람에게는 둘 다 "저장이 안 된다" 이지만 고칠 사람에게는 다르다.
+    text = buildSaveText(save)
+  } catch {
+    return 'broken'
   }
   try {
-    storage.setItem(SAVE_STORAGE_KEY, buildSaveText(save))
-    return true
+    storage.setItem(SAVE_STORAGE_KEY, text)
+    return 'saved'
   } catch {
-    return false
+    return 'blocked'
   }
 }
 
@@ -111,6 +131,7 @@ export function createSaveScheduler(
 ): SaveScheduler {
   let timer: ReturnType<typeof setTimeout> | undefined = undefined
   let pending: EditorSave | undefined = undefined
+  let watcher: ((outcome: SaveOutcome) => void) | undefined = undefined
 
   function cancel(): void {
     if (timer !== undefined) {
@@ -128,7 +149,11 @@ export function createSaveScheduler(
     }
     pending = undefined
     if (save !== undefined) {
-      writeSave(storage, save)
+      // **결과를 먼저 계산한다.** `watcher?.(writeSave(...))` 로 쓰면 듣는 이가 없을 때
+      // 옵셔널 호출이 인자까지 건너뛰어 저장 자체가 안 돈다 — 한 번 그렇게 썼고
+      // 디바운스 검사가 잡았다.
+      const outcome = writeSave(storage, save)
+      watcher?.(outcome)
     }
   }
 
@@ -140,5 +165,14 @@ export function createSaveScheduler(
     timer = setTimeout(flush, delayMs)
   }
 
-  return { schedule, flush, cancel }
+  /**
+   * 저장 결과를 들을 곳을 정한다.
+   *
+   * @param next 결과를 받을 함수.
+   */
+  function listen(next: (outcome: SaveOutcome) => void): void {
+    watcher = next
+  }
+
+  return { schedule, flush, cancel, listen }
 }

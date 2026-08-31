@@ -46,7 +46,7 @@ import type { RawBalanceFile } from './core/resources'
 import { validateRuleSet } from './core/rules/validator'
 import type { RuleSet } from './core/schemas'
 import { OUTCOME_ONGOING, OUTCOME_PLAYER_WIN } from './core/sim/phases'
-import { Button, ValueExpr } from './ds'
+import { Button, GlyphState, ValueExpr } from './ds'
 import {
   RuleEditor,
   AccountPanel,
@@ -78,7 +78,9 @@ import {
   applyRedoStep,
   applyRoomChoice,
   applyTutorialStage,
+  adoptPresets,
   applyRuleSetEdit,
+  buildMetaFromSession,
   applyRunResult,
   applySeedChoice,
   applyUndoStep,
@@ -120,6 +122,7 @@ import {
   type AccountState,
   type AuctionView,
   type BestiaryEntry,
+  type SaveOutcome,
   type DiscoveryView,
   type LeaderboardView,
   type ProgressView,
@@ -465,12 +468,37 @@ export function App(): React.JSX.Element {
   // 저장기는 앱이 사는 동안 하나다. 렌더마다 새로 만들면 앞선 예약이 사라져 디바운스가
   // "마지막 것 하나" 가 아니라 "아무것도 안 씀" 이 된다.
   const scheduler = useMemo(() => createSaveScheduler(getLocalStorage()), [])
+  // **저장 실패가 조용하면 저장이 없는 것과 같다.** 지금까지 writeSave 의 결과를 아무도
+  // 읽지 않아, 사파리 프라이빗 창처럼 저장소가 막힌 브라우저에서는 편집이 매번 사라지는데
+  // 화면은 아무 말도 하지 않았다.
+  const [saveState, setSaveState] = useState<SaveOutcome>('saved')
+
+  useEffect(() => {
+    scheduler.listen(setSaveState)
+  }, [scheduler])
 
   // 세션이 바뀔 때마다 예약한다. 화면을 떠날 때는 예약을 버리지 않고 즉시 쓴다 — 마지막
   // 편집이 400ms 안에 있었다는 이유로 사라지면 저장이 없는 것과 다르지 않다.
   useEffect(() => {
     scheduler.schedule(buildSessionSave(session))
   }, [scheduler, session])
+
+  // **코드 라이브러리는 계정을 따라온다.** `MetaSave.presets` 는 처음부터 있었는데
+  // 아무도 채우지 않아 늘 빈 배열이었고, 그래서 슬롯에 저장한 규칙표가 기기를 바꾸면
+  // 사라졌다 — 쓰는 사람에게 그것은 "저장이 안 된다" 로 보인다.
+  useEffect(() => {
+    setMeta((current) => {
+      const merged = buildMetaFromSession(session, current)
+      if (merged.presets === current.presets) {
+        return current
+      }
+      writeMeta(getLocalStorage(), merged)
+      if (account !== undefined) {
+        void writeServerMeta(account, merged)
+      }
+      return merged
+    })
+  }, [session.presets, account])
 
   // 계정을 확보하고 서버 세이브를 합친다. **실패해도 아무 일도 일어나지 않는다** —
   // 서버가 없어도 게임은 돌아야 한다. 합치기는 최대값·합집합이라 몇 번을 해도 같은
@@ -495,6 +523,9 @@ export function App(): React.JSX.Element {
           outcome.meta === undefined ? current : adoptServerMeta(outcome.meta, current)
         writeMeta(storage, merged)
         void writeServerMeta(token, merged)
+        // 받은 슬롯을 편집기에도 싣는다. 이 기기에 슬롯이 있으면 손대지 않는다 —
+        // 덮어쓰면 방금 만든 것이 사라지고 그 손실은 되돌릴 수 없다.
+        setSession((live) => adoptPresets(live, merged.presets))
         return merged
       })
     })()
@@ -890,6 +921,17 @@ export function App(): React.JSX.Element {
 
   const launchControls = (
     <div className="launch">
+      {saveState === 'saved' ? null : (
+        <GlyphState
+          state="danger"
+          size="sm"
+          label={
+            saveState === 'blocked'
+              ? '저장 안 됨 — 이 브라우저가 저장을 막고 있다 (프라이빗 창?)'
+              : '저장 안 됨 — 이 규칙표를 저장 형식으로 못 만든다'
+          }
+        />
+      )}
       {resultText === '' ? null : <ValueExpr text={resultText} size="sm" dim />}
       {verdictText === '' ? null : <ValueExpr text={verdictText} size="sm" />}
       <Button
