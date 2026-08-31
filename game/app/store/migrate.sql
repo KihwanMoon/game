@@ -168,3 +168,9 @@ ALTER TABLE item_event ALTER COLUMN entity_id SET NOT NULL;
 CREATE INDEX IF NOT EXISTS item_instance_owner_idx ON item_instance (owner_entity_id, id);
 CREATE INDEX IF NOT EXISTS item_instance_taken_idx ON item_instance (taken_from);
 CREATE INDEX IF NOT EXISTS item_event_entity_idx ON item_event (entity_id, at DESC);
+
+-- ── 아이템 인스턴스에 등급을 새긴다 (설계/4_아이템 §15.5) ────────────────
+--
+-- **카탈로그를 참조하지 않고 복사한다.** 참조로 두면 카탈로그의 등급을 고칠 때 이미
+-- 나온 아이템의 등급까지 소급해 바뀐다 — 접사에서 이미 같은 함정을 겪었다.
+ALTER TABLE item_instance ADD COLUMN IF NOT EXISTS grade TEXT;

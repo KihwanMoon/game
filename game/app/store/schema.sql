@@ -366,3 +366,111 @@ CREATE TABLE IF NOT EXISTS account_discovery (
     found_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (account_id, kind, ref_id)
 );
+
+-- ── 아이템 카탈로그 (설계/4_아이템 §15) ─────────────────────────────────
+--
+-- **정본이 DB 로 옮겨 왔다.** 관리자가 종류를 조회·등록·폐기할 수 있어야 하고, 아이템은
+-- 브라우저 코어가 읽지 않는 유일한 자산이라 런타임 이관이 가능한 유일한 것이기도 하다
+-- (로드아웃으로 합산돼 티켓에 얼려 들어간다).
+--
+-- `resources/balance/items.json` 은 이제 **파생물**이다. `scripts/export_items.py` 가
+-- DB 에서 내보내고, 코어와 골든은 그 스냅샷을 읽는다 — 골든 재현이 DB 상태에 묶이지
+-- 않게 하려는 배치다 (§15.7).
+
+-- 등급. 접사 굴림 수를 등급이 정한다 — 이름표로만 두면 「유물 단검」이 「보통 단검」보다
+-- 나은 점이 없어 등급이 뜻을 잃는다 (결정 #42).
+CREATE TABLE IF NOT EXISTS item_grade (
+    code        TEXT    PRIMARY KEY,
+    rank        INT     NOT NULL,
+    label_ko    TEXT    NOT NULL,
+    affix_min   INT     NOT NULL DEFAULT 1,
+    affix_max   INT     NOT NULL DEFAULT 1
+);
+
+-- 카탈로그 한 줄. **지우지 않는다** — item_instance·원장·경매가 catalog_id 를 가리키므로
+-- 지우면 과거 기록을 못 읽는다. `is_retired` 가 "새로 안 나온다" 만 뜻한다 (§15.7).
+CREATE TABLE IF NOT EXISTS item_catalog (
+    catalog_id        TEXT        PRIMARY KEY,
+    kind              TEXT        NOT NULL,
+    slot              TEXT,
+    hands             TEXT,
+    grade             TEXT        NOT NULL REFERENCES item_grade(code),
+    label_ko          TEXT        NOT NULL,
+    tags              JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    affixes           JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    requirements      JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    grants_skill      TEXT,
+    -- 이 층부터 나온다 (D1). 1층에서 유물이 나오면 깊이 들어갈 이유가 없다.
+    min_floor         INT         NOT NULL DEFAULT 1,
+    is_retired        BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS item_catalog_live_idx ON item_catalog (grade) WHERE NOT is_retired;
+
+-- 카탈로그 세대. 한 줄짜리 표다. 이 값이 core_version 의 `i` 축이 되고, 스냅샷 파일의
+-- item_list_version 으로 나간다 — 관리자가 아이템을 고치는 것은 시즌을 가르는 일이며
+-- 그 사실이 코어 버전 문자열에 남아야 한다 (§15.8).
+CREATE TABLE IF NOT EXISTS catalog_generation (
+    id          INT         PRIMARY KEY DEFAULT 1,
+    generation  INT         NOT NULL DEFAULT 1,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK (id = 1)
+);
+
+-- 드롭 소스. 어느 몬스터 종·어느 층에서 굴리는가. `ANY` 는 소스별 표가 없을 때의 바탕.
+CREATE TABLE IF NOT EXISTS drop_source (
+    id       BIGSERIAL PRIMARY KEY,
+    kind     TEXT      NOT NULL,
+    ref_id   TEXT      NOT NULL DEFAULT '',
+    UNIQUE (kind, ref_id)
+);
+
+-- 1단계 — 등급 추첨. **몬스터 레벨이 여기에만 개입한다** (§15.2). 2단계에 개입시키면
+-- "레벨 높은 적이 단검을 더 자주 준다" 같은, 아무도 설명할 수 없는 규칙이 생긴다.
+CREATE TABLE IF NOT EXISTS drop_grade_weight (
+    source_id        BIGINT NOT NULL REFERENCES drop_source(id) ON DELETE CASCADE,
+    grade            TEXT   NOT NULL REFERENCES item_grade(code),
+    weight           INT    NOT NULL DEFAULT 0,
+    -- 레벨 1당 이 가중치가 몇 퍼센트씩 밀리는가. 수식은 나중에 정한다 (§15.6).
+    level_scale_pct  INT    NOT NULL DEFAULT 0,
+    PRIMARY KEY (source_id, grade)
+);
+
+-- 2단계 — 그 등급 안의 상대 비율. `(source_id, grade)` 로 묶이는 것이 두 단계를 스키마에
+-- 박아 둔 것이다. 아이템을 더해도 이 줄만 늘고 등급 분포는 안 흔들린다 (§15.2).
+CREATE TABLE IF NOT EXISTS drop_item_weight (
+    source_id   BIGINT NOT NULL REFERENCES drop_source(id) ON DELETE CASCADE,
+    grade       TEXT   NOT NULL REFERENCES item_grade(code),
+    catalog_id  TEXT   NOT NULL REFERENCES item_catalog(catalog_id),
+    weight      INT    NOT NULL DEFAULT 1,
+    PRIMARY KEY (source_id, grade, catalog_id)
+);
+
+-- 천장 (D2). 확률만으로는 "나는 안 나온다" 를 못 막는다 — 운이 나쁜 사람이 이탈한다.
+CREATE TABLE IF NOT EXISTS drop_pity (
+    account_id  BIGINT NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    grade       TEXT   NOT NULL REFERENCES item_grade(code),
+    misses      INT    NOT NULL DEFAULT 0,
+    PRIMARY KEY (account_id, grade)
+);
+
+-- 굴림 기록 (D4). **입력까지 남긴다.** 결과만 남기면 확률이 맞는지 사후에 증명할 수 없고,
+-- 문의가 오면 답이 없다. 아이템이 안 나온 굴림도 남긴다 — 안 나온 것이 데이터다.
+CREATE TABLE IF NOT EXISTS item_roll_log (
+    id             BIGSERIAL   PRIMARY KEY,
+    account_id     BIGINT      NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    submission_id  BIGINT,
+    source_kind    TEXT        NOT NULL,
+    source_ref     TEXT        NOT NULL DEFAULT '',
+    monster_level  INT         NOT NULL DEFAULT 0,
+    floor          INT         NOT NULL DEFAULT 1,
+    generation     INT         NOT NULL DEFAULT 0,
+    grade          TEXT,
+    catalog_id     TEXT,
+    detail         TEXT        NOT NULL DEFAULT '',
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS item_roll_log_account_idx ON item_roll_log (account_id, created_at DESC);

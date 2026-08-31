@@ -4,22 +4,23 @@
 읽어 여기 둔다.
 """
 
+from dataclasses import replace
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, status
 from psycopg_pool import ConnectionPool
 
 from game.app.content_versions import read_content_versions
-from game.app.items.catalog import load_item_catalog
 from game.app.services.run_battle import load_balance
 from game.app.services.verify_run import VerifyContext
 from game.app.store.accounts import Account, find_account
 from game.app.store.admin import check_is_admin
+from game.app.store.catalog_seed import apply_catalog_seed
+from game.app.store.item_catalog import list_catalog, read_generation
 from game.config import (
     BALANCE_PATH,
     BLOCKS_PATH,
     ENEMY_RULESETS_PATH,
-    ITEMS_PATH,
     ROOM_TEMPLATES_PATH,
 )
 from game.schemas.blocks import load_block_catalog
@@ -56,9 +57,17 @@ def init_state(pool: ConnectionPool) -> None:
     """
     context = build_verify_context()
     _state["pool"] = pool
-    _state["items"] = load_item_catalog(ITEMS_PATH)
+    # **카탈로그 정본은 DB 다** (설계/4_아이템 §15.7). 파일은 빈 표를 채우는 씨앗이고,
+    # 그 뒤로는 파생물이다 — 서버가 뜰 때마다 파일로 덮으면 관리자가 고친 것이 배포
+    # 한 번에 사라진다.
+    apply_catalog_seed(pool)
+    _state["items"] = list_catalog(pool)
     _state["context"] = context
-    _state["core_version"] = build_core_version(read_content_versions())
+    # 아이템 축은 파일이 아니라 DB 세대에서 온다. 관리자가 아이템을 고치는 것은 시즌을
+    # 가르는 일이고, 그 사실이 코어 버전 문자열에 남아야 한다 (§15.8).
+    _state["core_version"] = build_core_version(
+        replace(read_content_versions(), items=read_generation(pool))
+    )
 
 
 def get_pool() -> ConnectionPool:

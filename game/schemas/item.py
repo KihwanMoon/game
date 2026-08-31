@@ -83,6 +83,19 @@ class Affix:
     label_ko: str = ""
 
 
+# 등급 코드 (결정 #42). 셋을 넘기면 괘선 굵기 표기가 부족해진다.
+GRADE_COMMON = "COMMON"
+GRADE_FINE = "FINE"
+GRADE_RELIC = "RELIC"
+
+# 등급별 접사 굴림 수. 등급이 성능을 정하는 유일한 자리다 (§15.4).
+GRADE_AFFIX_ROLLS: dict[str, tuple[int, int]] = {
+    GRADE_COMMON: (1, 1),
+    GRADE_FINE: (1, 2),
+    GRADE_RELIC: (2, 3),
+}
+
+
 @dataclass(frozen=True)
 class ItemCatalogEntry:
     """카탈로그 한 줄. 런과 무관하게 고정인 정의다."""
@@ -99,6 +112,14 @@ class ItemCatalogEntry:
     # 규칙표가 직접 장비를 보는 것이 아니라 **캐릭터가 그것을 갖게** 되는 방식이다.
     grants_skill: str | None = None
     tags: tuple[str, ...] = field(default_factory=tuple)
+    # 등급 (결정 #42). 접사 굴림 수를 이것이 정한다 — 이름표로만 두면 「유물 단검」이
+    # 「보통 단검」보다 나은 점이 없어 등급이 뜻을 잃는다 (설계/4_아이템 §15.4).
+    grade: str = GRADE_COMMON
+    # 이 층부터 나온다 (D1). 1층에서 유물이 나오면 깊이 들어갈 이유가 없다.
+    min_floor: int = 1
+    # 폐기. **지우지 않는다** — 인스턴스·원장·경매가 catalog_id 를 가리키므로 지우면
+    # 과거 기록을 못 읽는다. 이것은 "새로 안 나온다" 만 뜻한다 (§15.7).
+    is_retired: bool = False
 
 
 def parse_requirement(raw: dict) -> Requirement:
@@ -160,4 +181,50 @@ def parse_item(raw: dict) -> ItemCatalogEntry:
         stack_max=int(raw.get("stack_max", 1)),
         grants_skill=raw.get("grants_skill"),
         tags=tuple(raw.get("tags", [])),
+        # 등급이 없는 절은 보통으로 읽는다. 스냅샷 파일이 등급 이전 세대일 수 있고,
+        # 그때 터지면 배포 순서 하나로 서버가 안 뜬다.
+        grade=raw.get("grade", GRADE_COMMON),
+        min_floor=int(raw.get("min_floor", 1)),
+        is_retired=bool(raw.get("is_retired", False)),
     )
+
+
+def build_item_payload(entry: ItemCatalogEntry) -> dict:
+    """카탈로그 항목을 JSON 절로 되돌린다.
+
+    `scripts/export_items.py` 가 DB 스냅샷을 파일로 내보낼 때 쓴다. `parse_item` 이 다시
+    읽을 수 있어야 하므로 **키 이름이 그쪽과 같아야 한다.**
+
+    Args:
+        entry: 카탈로그 항목.
+
+    Returns:
+        items.json 에 들어갈 절.
+    """
+    payload: dict = {
+        "id": entry.catalog_id,
+        "kind": str(entry.kind.value),
+        "label_ko": entry.label_ko,
+        "grade": entry.grade,
+        "min_floor": entry.min_floor,
+    }
+    if entry.slot is not None:
+        payload["slot"] = str(entry.slot.value)
+    if entry.hands is not None:
+        payload["hands"] = str(entry.hands.value)
+    if entry.affixes:
+        payload["affixes"] = [
+            {"stat": a.stat, "flat": a.flat, "percent": a.percent, "label_ko": a.label_ko}
+            for a in entry.affixes
+        ]
+    if entry.requirements:
+        payload["requirements"] = [{"stat": r.stat, "min": r.minimum} for r in entry.requirements]
+    if entry.stack_max != 1:
+        payload["stack_max"] = entry.stack_max
+    if entry.grants_skill:
+        payload["grants_skill"] = entry.grants_skill
+    if entry.tags:
+        payload["tags"] = list(entry.tags)
+    if entry.is_retired:
+        payload["is_retired"] = True
+    return payload
