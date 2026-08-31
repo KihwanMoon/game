@@ -37,6 +37,7 @@ import type {
 } from './schemas'
 import {
   loadBlockCatalog,
+  parseRuleSet,
   loadRoomTemplates,
   loadRuleSets,
   parseTutorialStage,
@@ -52,6 +53,55 @@ export interface RawBalanceFile {
 export const BLOCK_CATALOG: BlockCatalog = loadBlockCatalog(
   blocksRaw as unknown as RawBlockCatalog,
 )
+
+/**
+ * 추천 규칙표 한 벌.
+ *
+ * `RuleSet` 에 설명을 넣지 않는 이유는 그것이 **두 코어가 함께 읽는 계약**이기 때문이다
+ * (TDD §3). 사람에게 보여줄 문구는 화면의 것이므로 여기서 따로 묶는다.
+ */
+export interface RuleTemplate {
+  readonly templateId: string
+  /** 이 규칙표가 무엇을 노리는가. JSON 의 `strategy_ko` 를 그대로 쓴다. */
+  readonly strategyKo: string
+  readonly ruleset: RuleSet
+  /** 이 규칙표가 쓰는 CPU 합계. 예산 안에 드는지 고르기 전에 보여야 한다. */
+  readonly cpuTotal: number
+}
+
+/**
+ * 추천 규칙표를 묶는다.
+ *
+ * **새로 쓰지 않는다.** 저장소에는 이미 예시 3벌과 벤치마크 13벌이 있고, 전부 시작 예산
+ * (슬롯 5 · CPU 8) 안에 들며 골든·벤치마크가 매일 돌려 검증한다. 화면에서 닿을 수 없었을
+ * 뿐이다.
+ *
+ * @param file 규칙표 묶음 파일의 원시 내용.
+ * @returns 설명이 붙은 규칙표들. 파일에 적힌 순서를 유지한다.
+ */
+function collectTemplates(file: RawRuleSetFile): readonly RuleTemplate[] {
+  return file.rulesets.map((raw) => {
+    const ruleset = parseRuleSet(raw)
+    const described = raw as unknown as { strategy_ko?: string }
+    return {
+      templateId: ruleset.rulesetId,
+      strategyKo: described.strategy_ko ?? '',
+      ruleset,
+      cpuTotal: ruleset.rules.reduce((sum, rule) => sum + rule.cpuCost, 0),
+    }
+  })
+}
+
+/**
+ * 화면에 낼 추천 규칙표 전부.
+ *
+ * 예시가 먼저 온다 — 셋 다 GDD 가 설명하는 기본 전술이라, 처음 여는 사람이 위에서부터
+ * 읽으면 된다.
+ */
+export const RULE_TEMPLATES: readonly RuleTemplate[] = [
+  ...collectTemplates(g0Raw as unknown as RawRuleSetFile),
+  ...collectTemplates(benchmarkRaw as unknown as RawRuleSetFile),
+]
 
 /** 룸 템플릿 목록 (GDD §4.4). 파일에 적힌 순서를 유지한다. */
 export const ROOM_TEMPLATES: readonly RoomTemplate[] = loadRoomTemplates(

@@ -40,6 +40,7 @@ import {
   ALL_ITEM_TAGS,
   ALL_SKILL_IDS,
   ROOM_TEMPLATES,
+  RULE_TEMPLATES,
   TUTORIAL_STAGES,
 } from './core/resources'
 import type { RawBalanceFile } from './core/resources'
@@ -57,6 +58,7 @@ import {
   DrawerPanel,
   type DrawerTab,
   CharacterPanel,
+  TemplatePanel,
   TutorialPanel,
   WorldPanel,
   InventoryPanel,
@@ -1165,6 +1167,17 @@ export function App(): React.JSX.Element {
         label: '배움',
         body: (
           <>
+              <TemplatePanel
+                templates={RULE_TEMPLATES}
+                catalog={BLOCK_CATALOG}
+                cpuBudget={limits.cpuBudget}
+                ruleSlots={limits.ruleSlots}
+                onLoad={(next) => {
+                  // 편집 한 단계로 쌓는다 — 되돌리기로 돌아간다. 공유 코드 불러오기와
+                  // 같은 방식이라 "눌렀다가 내 것이 사라졌다" 가 되지 않는다.
+                  setSession((current) => applyRuleSetEdit(current, next))
+                }}
+              />
               <TutorialPanel
                 stages={TUTORIAL_STAGES}
                 cleared={tutorialCleared}
