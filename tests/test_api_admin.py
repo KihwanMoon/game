@@ -105,6 +105,7 @@ def test_there_is_no_route_that_grants_admin(client):
         "/api/admin/content",
         "/api/admin/content/discard",
         "/api/admin/content/draft",
+        "/api/admin/content/{asset}",
         "/api/admin/item/recall",
         "/api/admin/monster/level",
         "/api/admin/overview",

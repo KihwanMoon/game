@@ -21,6 +21,181 @@ export interface CatalogAdminPanelProps {
   readonly detail: string
   readonly onRetire: (catalogId: string, isRetired: boolean, reason: string) => void
   readonly onRename: (catalogId: string, labelKo: string, minFloor: number, reason: string) => void
+  /** 새 종류를 등록한다. 절은 서버의 파서가 검사한다 — 화면이 문법을 따로 알 필요가 없다. */
+  readonly onCreate: (payload: Record<string, unknown>, reason: string) => void
+}
+
+/** 신규 등록 폼이 받는 props. */
+export interface CatalogFormProps {
+  readonly grades: readonly string[]
+  readonly onCreate: (payload: Record<string, unknown>, reason: string) => void
+}
+
+/** 장비 슬롯. 카탈로그가 쓰는 값 그대로다 — 화면이 새 이름을 지으면 서버가 못 읽는다. */
+const SLOTS: readonly string[] = [
+  'WEAPON_MAIN',
+  'WEAPON_OFF',
+  'HEAD',
+  'BODY',
+  'FEET',
+  'HANDS',
+]
+
+const KINDS: readonly string[] = ['EQUIPMENT', 'CONSUMABLE', 'QUEST']
+
+/**
+ * 아이템 종류를 새로 등록하는 폼.
+ *
+ * **접사는 JSON 으로 받는다.** 접사는 개수가 정해져 있지 않고 stat·flat·percent·label 이
+ * 함께 가는 절이라, 칸을 늘렸다 줄였다 하는 UI 를 만드는 것보다 절을 그대로 받고 서버의
+ * 파서가 검사하게 하는 편이 정확하다 — 화면이 문법을 따로 알면 두 규칙이 생긴다.
+ *
+ * @param props 등급 목록과 콜백.
+ * @returns 렌더 트리.
+ */
+export function CatalogForm(props: CatalogFormProps): React.JSX.Element {
+  const [id, setId] = useState('')
+  const [kind, setKind] = useState('EQUIPMENT')
+  const [slot, setSlot] = useState('HEAD')
+  const [label, setLabel] = useState('')
+  const [grade, setGrade] = useState('COMMON')
+  const [minFloor, setMinFloor] = useState('1')
+  const [affixes, setAffixes] = useState('[]')
+  const [reason, setReason] = useState('')
+
+  return (
+    <div className="cat__detail">
+      <span className="cat__name">새 종류 등록</span>
+      {/* 수정이 막혀 있으므로 등록이 유일한 변경 경로다. 그 사실을 여기에 적는다. */}
+      <ValueExpr
+        text="접사·등급을 바꾸려면 여기서 새로 등록하고 옛 id 를 폐기한다"
+        size="sm"
+        dim
+      />
+      <label className="cat__field">
+        <span>id</span>
+        <input
+          className="cat__input"
+          value={id}
+          placeholder="sword_long"
+          onChange={(event) => {
+            setId(event.target.value)
+          }}
+        />
+      </label>
+      <label className="cat__field">
+        <span>이름</span>
+        <input
+          className="cat__input"
+          value={label}
+          placeholder="장검"
+          onChange={(event) => {
+            setLabel(event.target.value)
+          }}
+        />
+      </label>
+      <div className="cat__row">
+        {KINDS.map((name) => (
+          <Button
+            key={name}
+            size="sm"
+            variant={name === kind ? 'primary' : 'ghost'}
+            onClick={() => {
+              setKind(name)
+            }}
+          >
+            {name}
+          </Button>
+        ))}
+      </div>
+      {kind !== 'EQUIPMENT' ? null : (
+        <div className="cat__row">
+          {SLOTS.map((name) => (
+            <Button
+              key={name}
+              size="sm"
+              variant={name === slot ? 'primary' : 'ghost'}
+              onClick={() => {
+                setSlot(name)
+              }}
+            >
+              {name}
+            </Button>
+          ))}
+        </div>
+      )}
+      <div className="cat__row">
+        {props.grades.map((name) => (
+          <Button
+            key={name}
+            size="sm"
+            variant={name === grade ? 'primary' : 'ghost'}
+            onClick={() => {
+              setGrade(name)
+            }}
+          >
+            {name}
+          </Button>
+        ))}
+      </div>
+      <label className="cat__field">
+        <span>최소 층</span>
+        <input
+          className="cat__input"
+          inputMode="numeric"
+          value={minFloor}
+          onChange={(event) => {
+            setMinFloor(event.target.value)
+          }}
+        />
+      </label>
+      <label className="cat__field">
+        <span>접사 (JSON)</span>
+        <input
+          className="cat__input"
+          value={affixes}
+          placeholder='[{"stat":"attack","flat":3,"label_ko":"예리함"}]'
+          onChange={(event) => {
+            setAffixes(event.target.value)
+          }}
+        />
+      </label>
+      <label className="cat__field">
+        <span>사유</span>
+        <input
+          className="cat__input"
+          value={reason}
+          placeholder="왜 넣는가 (4자 이상)"
+          onChange={(event) => {
+            setReason(event.target.value)
+          }}
+        />
+      </label>
+      <Button
+        size="sm"
+        variant="primary"
+        disabled={id === ''}
+        title="등록한다 — 코어 버전이 바뀌고 드롭 표에 오른다"
+        onClick={() => {
+          props.onCreate(
+            {
+              id,
+              kind,
+              label_ko: label === '' ? id : label,
+              slot: kind === 'EQUIPMENT' ? slot : null,
+              hands: slot.startsWith('WEAPON') ? 'ONE' : null,
+              grade,
+              min_floor: Number.parseInt(minFloor, 10) || 1,
+              affixes,
+            },
+            reason,
+          )
+        }}
+      >
+        등록
+      </Button>
+    </div>
+  )
 }
 
 const OFFLINE_HINT = '서버에 닿지 못했다 — 카탈로그는 서버가 안다'
@@ -91,6 +266,8 @@ export function CatalogAdminPanel(props: CatalogAdminPanelProps): React.JSX.Elem
           }}
           emptyText="카탈로그가 비어 있다"
         />
+
+        <CatalogForm grades={catalog.grades} onCreate={props.onCreate} />
 
         {row === undefined ? null : (
           <div className="cat__detail">

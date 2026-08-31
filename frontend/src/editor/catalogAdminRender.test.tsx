@@ -11,7 +11,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { CatalogAdminPanel } from './CatalogAdminPanel'
+import { CatalogAdminPanel, CatalogForm } from './CatalogAdminPanel'
 import type { CatalogAdminView } from '../storage'
 
 const VIEW: CatalogAdminView = {
@@ -51,7 +51,8 @@ const VIEW: CatalogAdminView = {
 
 const noop = () => undefined
 const MARKUP = renderToStaticMarkup(
-  <CatalogAdminPanel catalog={VIEW} detail="" onRetire={noop} onRename={noop} />,
+  <CatalogAdminPanel catalog={VIEW} detail="" onRetire={noop} onRename={noop}
+        onCreate={noop} />,
 )
 
 describe('카탈로그 관리', () => {
@@ -77,7 +78,8 @@ describe('카탈로그 관리', () => {
 
   it('★ 서버가 없으면 그렇게 말한다 — 빈 카탈로그와 못 불러온 카탈로그는 다르다', () => {
     const html = renderToStaticMarkup(
-      <CatalogAdminPanel catalog={undefined} detail="" onRetire={noop} onRename={noop} />,
+      <CatalogAdminPanel catalog={undefined} detail="" onRetire={noop} onRename={noop}
+        onCreate={noop} />,
     )
     expect(html).toContain('서버에 닿지 못했다')
   })
@@ -89,8 +91,39 @@ describe('카탈로그 관리', () => {
         detail="이미 나온 아이템이 소급해 바뀐다 — 새 id 로 등록한다"
         onRetire={noop}
         onRename={noop}
+        onCreate={noop}
       />,
     )
     expect(html).toContain('새 id 로 등록한다')
+  })
+})
+
+describe('신규 등록 폼', () => {
+  it('★ 등록 길이 화면에 있다 — 수정이 막혀 있으니 등록이 유일한 변경 경로다', () => {
+    expect(MARKUP).toContain('새 종류 등록')
+    expect(MARKUP).toContain('등록')
+  })
+
+  it('★ 서버가 아는 슬롯 이름을 그대로 쓴다 — 화면이 새 이름을 지으면 서버가 못 읽는다', () => {
+    for (const slot of ['WEAPON_MAIN', 'HEAD', 'BODY', 'FEET', 'HANDS']) {
+      expect(MARKUP).toContain(slot)
+    }
+  })
+
+  it('★ 등급을 서버가 준 목록에서 고른다 — 화면이 목록을 들고 있으면 갈린다', () => {
+    for (const grade of VIEW.grades) {
+      expect(MARKUP).toContain(grade)
+    }
+  })
+
+  it('★ id 가 없으면 잠긴다 — 이름 없는 아이템은 원장만 더럽힌다', () => {
+    const html = renderToStaticMarkup(
+      <CatalogForm grades={VIEW.grades} onCreate={() => undefined} />,
+    )
+    expect(html).toContain('disabled')
+  })
+
+  it('★ 등록도 새 id 로 하라는 안내가 붙는다 — 수정이 막힌 이유가 여기서 이어진다', () => {
+    expect(MARKUP).toContain('새로 등록하고 옛 id 를 폐기한다')
   })
 })

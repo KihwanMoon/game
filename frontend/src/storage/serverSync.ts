@@ -1248,6 +1248,123 @@ export interface LevelCurveRow {
   readonly players: number
 }
 
+/** 콘텐츠 초안 한 줄. 본문은 담지 않는다 — 목록은 목록이다. */
+export interface ContentDraftRow {
+  readonly asset: string
+  readonly note: string
+  readonly updatedAt: string
+  /** 지금 파일의 세대. 초안의 세대가 이것보다 커야 저장된다. */
+  readonly currentVersion: number
+}
+
+/** 콘텐츠 편집 화면 하나. */
+export interface ContentDraftView {
+  readonly drafts: readonly ContentDraftRow[]
+  readonly assets: readonly string[]
+  readonly problem: string
+  /** 발행이 사람 손을 탄다는 사실. 화면이 이것을 말해야 한다. */
+  readonly publishHint: string
+}
+
+/** 자산 하나의 지금 내용과 초안. */
+export interface ContentAssetView {
+  readonly asset: string
+  readonly current: unknown
+  readonly draft: unknown
+  readonly note: string
+  readonly versionKey: string
+}
+
+/**
+ * 콘텐츠 편집 응답을 옮긴다.
+ *
+ * @param raw 서버 응답.
+ * @returns 화면이 읽는 절.
+ */
+function readContentDrafts(raw: Record<string, unknown>): ContentDraftView {
+  const rows = (raw.drafts ?? []) as Record<string, unknown>[]
+  return {
+    drafts: rows.map((row) => ({
+      asset: String(row.asset),
+      note: String(row.note ?? ''),
+      updatedAt: String(row.updated_at ?? ''),
+      currentVersion: Number(row.current_version ?? 0),
+    })),
+    assets: (raw.assets ?? []) as string[],
+    problem: String(raw.problem ?? ''),
+    publishHint: String(raw.publish_hint ?? ''),
+  }
+}
+
+/**
+ * 콘텐츠 초안 목록을 읽는다.
+ *
+ * @param token 기기 토큰.
+ * @returns 초안 목록. 관리자가 아니면 undefined.
+ */
+export async function readContentAdmin(token: string): Promise<ContentDraftView | undefined> {
+  const response = await sendRequest('/admin/content', { headers: { [TOKEN_HEADER]: token } })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  return readContentDrafts((await response.json()) as Record<string, unknown>)
+}
+
+/**
+ * 자산 하나의 지금 내용과 초안을 읽는다.
+ *
+ * @param token 기기 토큰.
+ * @param asset 자산 이름.
+ * @returns 자산 절. 관리자가 아니거나 모르는 자산이면 undefined.
+ */
+export async function readContentAsset(
+  token: string,
+  asset: string,
+): Promise<ContentAssetView | undefined> {
+  const response = await sendRequest(`/admin/content/${asset}`, {
+    headers: { [TOKEN_HEADER]: token },
+  })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  const raw = (await response.json()) as Record<string, unknown>
+  return {
+    asset: String(raw.asset),
+    current: raw.current,
+    draft: raw.draft ?? null,
+    note: String(raw.note ?? ''),
+    versionKey: String(raw.version_key ?? ''),
+  }
+}
+
+/**
+ * 초안을 저장하거나 버린다.
+ *
+ * @param token 기기 토큰.
+ * @param path `/admin/content/draft` 또는 `/admin/content/discard`.
+ * @param body 보낼 절.
+ * @returns 갱신된 목록과 거절 사유.
+ */
+export async function applyContentAdmin(
+  token: string,
+  path: string,
+  body: unknown,
+): Promise<{ view: ContentDraftView | undefined; detail: string }> {
+  const response = await sendRequest(path, {
+    method: 'POST',
+    headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (response === undefined) {
+    return { view: undefined, detail: '서버에 닿지 못했다' }
+  }
+  const raw = (await response.json()) as Record<string, unknown>
+  if (!response.ok) {
+    return { view: undefined, detail: String(raw.detail ?? '거절됐다') }
+  }
+  return { view: readContentDrafts(raw), detail: '' }
+}
+
 /** 관리자가 보는 카탈로그 한 줄. 굴림에 걸리는 값까지 함께 온다. */
 export interface CatalogAdminRow {
   readonly catalogId: string

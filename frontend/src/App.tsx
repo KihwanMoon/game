@@ -55,6 +55,7 @@ import {
   BestiaryPanel,
   DiscoveryPanel,
   CatalogAdminPanel,
+  ContentAdminPanel,
   CatalogPanel,
   DrawerPanel,
   type DrawerTab,
@@ -110,7 +111,10 @@ import {
   applyMonsterLevel,
   readAdminCatalog,
   readAdminItems,
+  readContentAdmin,
+  readContentAsset,
   applyCatalogAdmin,
+  applyContentAdmin,
   readAdminOverview,
   readProgress,
   readServerMeta,
@@ -128,6 +132,8 @@ import {
   type AuctionView,
   type BestiaryEntry,
   type CatalogAdminView,
+  type ContentAssetView,
+  type ContentDraftView,
   type SaveOutcome,
   type DiscoveryView,
   type LeaderboardView,
@@ -482,6 +488,9 @@ export function App(): React.JSX.Element {
   // 카탈로그 조작의 결과 한 줄. 관리자 개입 결과(adminDetail)와 갈라 둔다 — 둘이 한
   // 칸을 쓰면 방금 무엇을 눌렀는지 화면이 못 말한다.
   const [catalogDetail, setCatalogDetail] = useState('')
+  const [contentView, setContentView] = useState<ContentDraftView | undefined>(undefined)
+  const [contentAsset, setContentAsset] = useState<ContentAssetView | undefined>(undefined)
+  const [contentDetail, setContentDetail] = useState('')
   // 저장을 몇 번 눌렀는지. 값 자체는 안 쓰고, **눌린 적이 있는가**만 본다 — 누른 적이
   // 없는데 "저장됨" 이 떠 있으면 그 표시는 아무 말도 하지 않는 것과 같다.
   const [savedAt, setSavedAt] = useState(0)
@@ -702,6 +711,7 @@ export function App(): React.JSX.Element {
     setAdmin(await readAdminOverview(token))
     setCatalog(await readAdminCatalog(token))
     setAdminItems(await readAdminItems(token))
+    setContentView(await readContentAdmin(token))
   }
 
   /**
@@ -1092,6 +1102,40 @@ export function App(): React.JSX.Element {
   }
 
   /**
+   * 콘텐츠 초안을 저장하거나 버린다.
+   *
+   * **절을 여기서 파싱한다.** 깨진 JSON 을 서버에 보내면 422 가 돌아오는데, 그 메시지는
+   * 사람이 읽을 것이 아니다 — 어디가 깨졌는지는 브라우저의 파서가 더 잘 말한다.
+   *
+   * @param path 라우트 경로.
+   * @param asset 자산 이름.
+   * @param text 절의 JSON 텍스트. 버리기는 빈 문자열을 준다.
+   * @param note 사유.
+   */
+  function applyContent(path: string, asset: string, text: string, note: string): void {
+    if (account === undefined) {
+      return
+    }
+    let payload: unknown = {}
+    if (text !== '') {
+      try {
+        payload = JSON.parse(text)
+      } catch (error) {
+        setContentDetail(`JSON 이 아니다 — ${String(error)}`)
+        return
+      }
+    }
+    setContentDetail('')
+    void applyContentAdmin(account, path, { asset, payload, note }).then((outcome) => {
+      setContentDetail(outcome.detail)
+      if (outcome.view !== undefined) {
+        setContentView(outcome.view)
+        void readContentAsset(account, asset).then(setContentAsset)
+      }
+    })
+  }
+
+  /**
    * 서랍 탭을 만든다.
    *
    * **묶음은 "무엇에 대한 것인가" 로 가른다.** 화면 수를 줄이려고 아무거나 합치면 탭
@@ -1305,6 +1349,22 @@ export function App(): React.JSX.Element {
                 }}
               />
             <CatalogPanel catalog={catalog} />
+            <ContentAdminPanel
+              content={contentView}
+              asset={contentAsset}
+              detail={contentDetail}
+              onOpen={(name) => {
+                if (account !== undefined) {
+                  void readContentAsset(account, name).then(setContentAsset)
+                }
+              }}
+              onSave={(name, text, note) => {
+                applyContent('/admin/content/draft', name, text, note)
+              }}
+              onDiscard={(name, note) => {
+                applyContent('/admin/content/discard', name, '', note)
+              }}
+            />
             <CatalogAdminPanel
               catalog={adminItems}
               detail={catalogDetail}
@@ -1333,6 +1393,18 @@ export function App(): React.JSX.Element {
                   grants_skill: row.grantsSkill === '' ? null : row.grantsSkill,
                   reason,
                 })
+              }}
+              onCreate={(payload, reason) => {
+                // **접사만 여기서 파싱한다.** 나머지는 서버의 파서가 본다 — 화면이 문법을
+                // 따로 알면 규칙이 둘이 되고, 관리자가 만든 아이템만 다르게 검사된다.
+                let affixes: unknown = []
+                try {
+                  affixes = JSON.parse(String(payload.affixes ?? '[]'))
+                } catch (error) {
+                  setCatalogDetail(`접사가 JSON 이 아니다 — ${String(error)}`)
+                  return
+                }
+                applyAdminCatalog('/admin/catalog/item', { ...payload, affixes, reason })
               }}
             />
           </>

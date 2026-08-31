@@ -217,3 +217,17 @@ class ContentDraftResponse(BaseModel):
     problem: str = ""
     # 발행이 사람 손을 탄다는 사실을 화면이 말해야 한다.
     publish_hint: str = ""
+
+
+class ContentAssetResponse(BaseModel):
+    """자산 하나의 지금 내용과 초안.
+
+    **지금 파일을 함께 낸다.** 편집은 백지가 아니라 지금 것에서 시작해야 하고, 화면이
+    그것을 모르면 관리자가 손으로 옮겨 적게 된다 — 그 순간 오타가 콘텐츠가 된다.
+    """
+
+    asset: str
+    current: dict = Field(default_factory=dict)
+    draft: dict | None = None
+    note: str = ""
+    version_key: str = ""

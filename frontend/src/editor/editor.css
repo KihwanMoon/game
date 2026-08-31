@@ -1761,3 +1761,19 @@
   font-family: var(--font-mono);
   font-size: var(--fs-input);
 }
+
+/* 콘텐츠 절 편집기. 자산 파일이 수백 줄이라 높이를 크게 준다 — 창이 좁으면 편집이
+   스크롤 싸움이 되고, 그러면 아무도 여기서 안 고친다. */
+.cnt__editor {
+  min-block-size: var(--sp-12);
+  block-size: 40vh;
+  inline-size: 100%;
+  padding: var(--sp-2);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  color: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: var(--fs-input);
+  resize: vertical;
+}
