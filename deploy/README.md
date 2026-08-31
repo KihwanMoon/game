@@ -219,3 +219,25 @@ docker compose run --rm test uv run python -m scripts.export_items
 
 스냅샷의 `item_list_version` 은 DB 의 카탈로그 세대이고, 그 값이 `core_version` 의 `i`
 축이다 — 아이템을 고치는 것은 순위표 시즌을 가르는 일이다.
+
+
+## 검사는 프로덕션 DB 를 쓰지 않는다
+
+`test` 서비스는 `game_test` 를, `ops` 서비스는 실제 `game` 을 본다. 예전에는 둘이 같은
+DB 였고, 그래서 검사가 만든 계정·아이템·매물이 실제 서비스에 쌓였다 — 계정 69개 중
+68개가 검사 잔여였고, **검사용 계정 하나가 관리자 권한까지 갖고 있었다.** 검사는 관리자
+경로를 확인해야 하므로 스스로를 승격시킨다. 그 권한이 프로덕션에 남는 것은 검사의
+잘못이 아니라 배치의 잘못이다.
+
+두 자리를 한 서비스로 두지 않는 이유도 같다. 어느 DB 를 건드리는지가 명령줄에 남아야
+지우는 명령이 어디에 떨어지는지 알 수 있다.
+
+```bash
+docker compose run --rm test                                        # game_test
+docker compose run --rm ops uv run python -m scripts.purge_test_accounts          # 미리보기
+docker compose run --rm ops uv run python -m scripts.purge_test_accounts --apply  # 실제 삭제
+```
+
+`purge_test_accounts` 는 **남길 계정을 이름으로 적는다** (`KEEP_LOGIN_IDS`). "지울 것" 을
+고르는 방식이면 새 계정이 생길 때마다 목록을 고쳐야 하고, 한 번 빠뜨리면 남의 계정이
+지워진다. 남길 것을 적으면 빠뜨렸을 때 지워지는 쪽이 아니라 **남는 쪽으로** 실패한다.
