@@ -158,7 +158,9 @@ def list_leaderboard(
         rows = connection.execute(
             "SELECT a.handle, a.login_id, l.score, l.level, l.account_id"
             " FROM leaderboard l JOIN account a ON a.id = l.account_id"
-            " WHERE l.mode = %s AND l.core_version = %s"
+            # 비활성 계정은 순위표에서 빠진다. 검사가 만든 계정이 1위에 있으면 순위표가
+            # 말하는 것이 실력이 아니라 내 탐침 횟수가 된다.
+            " WHERE l.mode = %s AND l.core_version = %s AND a.deactivated_at IS NULL"
             " ORDER BY l.score DESC, l.updated_at ASC LIMIT %s",
             (mode, core_version, limit),
         ).fetchall()

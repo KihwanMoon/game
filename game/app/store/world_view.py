@@ -61,8 +61,11 @@ def read_world_summary(pool: ConnectionPool) -> WorldSummary:
     with pool.connection() as connection:
         row = connection.execute(
             "SELECT"
-            " (SELECT count(*) FROM account),"
-            " (SELECT count(*) FROM account WHERE login_id IS NOT NULL),"
+            # **활성 계정만 센다.** 비활성이 섞이면 "사람이 몇인가" 가 거짓이 되고,
+            # 그 숫자로 밸런스를 판단하게 된다.
+            " (SELECT count(*) FROM account WHERE deactivated_at IS NULL),"
+            " (SELECT count(*) FROM account"
+            "    WHERE login_id IS NOT NULL AND deactivated_at IS NULL),"
             " (SELECT count(*) FROM entity_record),"
             " (SELECT count(*) FROM entity_record WHERE kind = 'MONSTER' AND alive),"
             " (SELECT count(*) FROM item_instance),"
@@ -179,7 +182,11 @@ def count_levels(pool: ConnectionPool) -> tuple[tuple[int, int], ...]:
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT level, count(*) FROM entity_record WHERE kind = 'PLAYER'"
-            " GROUP BY level ORDER BY level ASC"
+            # 비활성 계정의 개체는 분포에서 뺀다 — 검사가 만든 레벨 1 수십 개가
+            # 곡선의 앞머리를 눌러 "다들 초반에 멈춘다" 로 읽힌다.
+            "SELECT e.level, count(*) FROM entity_record e"
+            " JOIN account a ON a.id = e.owner_account_id"
+            " WHERE e.kind = 'PLAYER' AND a.deactivated_at IS NULL"
+            " GROUP BY e.level ORDER BY e.level ASC"
         ).fetchall()
     return tuple((int(row[0]), int(row[1])) for row in rows)

@@ -174,7 +174,11 @@ def list_open(pool: ConnectionPool, account_id: int, limit: int = 50) -> tuple[L
             " i.affixes, i.is_broken,"
             " greatest(0, extract(epoch FROM (l.expires_at - now()))::bigint / 60)"
             " FROM auction_listing l JOIN item_instance i ON i.id = l.item_id"
-            " WHERE l.state = %s ORDER BY l.price ASC, l.listed_at ASC LIMIT %s",
+            " JOIN account s ON s.id = l.seller_id"
+            # 비활성 계정의 매물은 안 보인다. 지웠다면 사라졌을 것들이고, 남겨 두면
+            # 사는 사람의 돈이 죽은 지갑으로 들어간다.
+            " WHERE l.state = %s AND s.deactivated_at IS NULL"
+            " ORDER BY l.price ASC, l.listed_at ASC LIMIT %s",
             (STATE_OPEN, limit),
         ).fetchall()
     return tuple(

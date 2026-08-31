@@ -174,3 +174,15 @@ CREATE INDEX IF NOT EXISTS item_event_entity_idx ON item_event (entity_id, at DE
 -- **카탈로그를 참조하지 않고 복사한다.** 참조로 두면 카탈로그의 등급을 고칠 때 이미
 -- 나온 아이템의 등급까지 소급해 바뀐다 — 접사에서 이미 같은 함정을 겪었다.
 ALTER TABLE item_instance ADD COLUMN IF NOT EXISTS grade TEXT;
+
+-- ── 계정 비활성화 ───────────────────────────────────────────────────────
+--
+-- **지우지 않는다.** 계정을 지우면 그 계정이 남긴 것(제출·원장·경매 이력)이 함께
+-- 사라지고, 그러면 "이 아이템이 어디서 왔는가" 를 나중에 못 읽는다. 아이템 카탈로그를
+-- 폐기로 다루는 것과 같은 규율이다 (설계/4_아이템 §15.7).
+--
+-- 비운 값(NULL)이 활성이다. 불리언과 시각을 함께 두면 둘이 어긋나는 날이 오고, 그때
+-- 어느 쪽이 옳은지 아무도 모른다.
+ALTER TABLE account ADD COLUMN IF NOT EXISTS deactivated_at TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS account_active_idx ON account (id) WHERE deactivated_at IS NULL;

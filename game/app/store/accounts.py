@@ -11,6 +11,7 @@
 import hashlib
 import secrets
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from psycopg_pool import ConnectionPool
 
@@ -82,9 +83,12 @@ def find_account(pool: ConnectionPool, token: str) -> Account | None:
     """
     with pool.connection() as connection:
         row = connection.execute(
+            # **비활성 계정의 토큰은 안 통한다.** 통계에서만 빼면 그 계정이 여전히
+            # 게임을 돌리고 관리자 권한까지 쓴다 — 비활성화가 삭제를 대신하려면 여기서
+            # 막혀야 한다.
             "SELECT a.id, a.handle FROM account_token t"
             " JOIN account a ON a.id = t.account_id"
-            " WHERE t.token_hash = %s",
+            " WHERE t.token_hash = %s AND a.deactivated_at IS NULL",
             (build_token_hash(token),),
         ).fetchone()
         if row is None:
@@ -124,3 +128,48 @@ def find_player_entity(pool: ConnectionPool, account_id: int) -> int:
     if row is None:
         raise RuntimeError(f"계정의 개체를 만들지 못했다: {account_id}")
     return int(row[0])
+
+
+def apply_deactivation(pool: ConnectionPool, account_ids: tuple[int, ...], is_active: bool) -> int:
+    """계정을 비활성화하거나 되살린다. 지우지 않는다.
+
+    지우면 그 계정이 남긴 것(제출·원장·경매 이력)이 함께 사라지고, 그러면 "이 아이템이
+    어디서 왔는가" 를 나중에 못 읽는다. 아이템 카탈로그를 폐기로 다루는 것과 같은
+    규율이다 (설계/4_아이템 §15.7).
+
+    비활성 계정은 **토큰이 안 통하고, 통계에서 빠지고, 매물이 안 보인다.** 통계에서만
+    빼면 그 계정이 여전히 게임을 돌린다.
+
+    Args:
+        pool: 연결 풀.
+        account_ids: 대상 계정들.
+        is_active: 살릴지. False 면 비활성화한다.
+
+    Returns:
+        바뀐 계정 수.
+    """
+    if not account_ids:
+        return 0
+    with pool.connection() as connection:
+        cursor = connection.execute(
+            "UPDATE account SET deactivated_at = %s WHERE id = ANY(%s)",
+            (None if is_active else datetime.now(UTC), list(account_ids)),
+        )
+    return cursor.rowcount
+
+
+def check_is_active(pool: ConnectionPool, account_id: int) -> bool:
+    """그 계정이 활성인지 본다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 대상 계정.
+
+    Returns:
+        활성이면 True. 없는 계정도 False.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT deactivated_at IS NULL FROM account WHERE id = %s", (account_id,)
+        ).fetchone()
+    return bool(row[0]) if row is not None else False
