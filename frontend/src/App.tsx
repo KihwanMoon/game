@@ -472,6 +472,9 @@ export function App(): React.JSX.Element {
   // 읽지 않아, 사파리 프라이빗 창처럼 저장소가 막힌 브라우저에서는 편집이 매번 사라지는데
   // 화면은 아무 말도 하지 않았다.
   const [saveState, setSaveState] = useState<SaveOutcome>('saved')
+  // 저장을 몇 번 눌렀는지. 값 자체는 안 쓰고, **눌린 적이 있는가**만 본다 — 누른 적이
+  // 없는데 "저장됨" 이 떠 있으면 그 표시는 아무 말도 하지 않는 것과 같다.
+  const [savedAt, setSavedAt] = useState(0)
 
   useEffect(() => {
     scheduler.listen(setSaveState)
@@ -921,6 +924,24 @@ export function App(): React.JSX.Element {
 
   const launchControls = (
     <div className="launch">
+      {/* **저장 버튼.** 편집은 400ms 뒤에 자동으로 저장되지만, 자동은 눈에 안 보이고
+          안 보이는 것은 안 일어난 것과 구별되지 않는다. 눌러서 지금 쓰고, 그 결과를
+          바로 옆에 적는다. */}
+      <Button
+        size="sm"
+        variant="primary"
+        glyph="▣"
+        title="지금 저장한다 (편집은 자동으로도 저장된다)"
+        onClick={() => {
+          scheduler.flush()
+          setSavedAt((count) => count + 1)
+        }}
+      >
+        저장
+      </Button>
+      {saveState !== 'saved' || savedAt === 0 ? null : (
+        <ValueExpr text="저장됨" size="sm" dim />
+      )}
       {saveState === 'saved' ? null : (
         <GlyphState
           state="danger"

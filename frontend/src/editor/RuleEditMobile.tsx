@@ -39,7 +39,7 @@ import { formatMeasuredCondition, type TermReadings } from './termMeasure'
 /** 화면 글자. 한 곳에 모아 두어 두 배치가 같은 말을 쓰게 한다. */
 const LIST_TITLE = '규칙표'
 const ADD_RULE_TEXT = '＋ 규칙 추가'
-const CANCEL_TEXT = '취소'
+const CANCEL_TEXT = '되돌리기'
 const SAVE_TEXT = '저장'
 const CPU_LABEL = 'cpu'
 const PASS_TEXT = '검증 통과'
@@ -278,7 +278,10 @@ function RuleEditScreen(props: RuleEditScreenProps): React.JSX.Element {
 
   const head = (
     <header className="edit-m__bar edit-m__bar--top">
-      <button type="button" className="edit-m__back" onClick={props.onCancel}>
+      {/* **뒤로는 되돌리기가 아니다.** 예전에는 이 화살표가 `onCancel` 을 불러, 규칙을
+          고치고 목록으로 돌아가면 고친 것이 조용히 사라졌다 — 그것이 "수정해도 저장이
+          안 된다" 로 보고됐다. 되돌리는 것은 아래의 「취소」 하나뿐이다. */}
+      <button type="button" className="edit-m__back" onClick={props.onSave}>
         <span className="edit-m__back-arrow" aria-hidden="true">
           ←
         </span>

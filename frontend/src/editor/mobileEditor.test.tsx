@@ -242,11 +242,11 @@ describe('세로 편집 화면 — 명세 C 의 카드 넷', () => {
     expect(render(buildProps())).toContain(PRIORITY_NOTE)
   })
 
-  it('상단바는 규칙 번호를, 하단바는 취소와 저장을 낸다', () => {
+  it('상단바는 규칙 번호를, 하단바는 되돌리기와 저장을 낸다', () => {
     const markup = render(buildProps())
     expect(markup).toContain('edit-m__heading-num')
     expect(markup).toContain('번 규칙 편집')
-    expect(markup).toContain('취소')
+    expect(markup).toContain('되돌리기')
     expect(markup).toContain('edit-m__btn--save')
   })
 
@@ -474,16 +474,23 @@ describe('저장과 취소', () => {
     expect(props.onCancel).not.toHaveBeenCalled()
   })
 
-  it('취소는 되돌린다 — 상단 화살표도 같은 문이다', () => {
+  it('되돌리기는 되돌린다 — 되돌리는 문은 이것 하나뿐이다', () => {
     const props = buildProps()
-    findByText(props, '취소')?.props.onClick?.()
+    findByText(props, '되돌리기')?.props.onClick?.()
     expect(props.onCancel).toHaveBeenCalledTimes(1)
+  })
 
+  it('★ 뒤로 화살표는 고친 것을 지키고 나간다 — 되돌리지 않는다', () => {
+    // 예전에는 이 화살표가 `onCancel` 이었다. 규칙을 고치고 목록으로 돌아가면 고친 것이
+    // 조용히 사라졌고, 그것이 "수정해도 저장이 안 된다" 로 보고됐다. 뒤로는 어디서나
+    // "여기까지" 라는 뜻이지 "없던 일로" 가 아니다.
+    const props = buildProps()
     const back = collectElements(RuleEditMobile(props)).find((element) =>
       String((element.props as { className?: string }).className ?? '').includes('edit-m__back'),
     )
     ;(back as Handled | undefined)?.props.onClick?.()
-    expect(props.onCancel).toHaveBeenCalledTimes(2)
+    expect(props.onSave).toHaveBeenCalledTimes(1)
+    expect(props.onCancel).not.toHaveBeenCalled()
   })
 
   it('지워진 규칙을 편집하던 중이면 목록으로 접힌다', () => {
