@@ -101,6 +101,23 @@ def list_droppable(catalog: dict[str, ItemCatalogEntry]) -> tuple[ItemCatalogEnt
     return tuple(sorted(found, key=lambda entry: entry.catalog_id))
 
 
+def compute_run_currency(is_cleared: bool, floor: int = 1) -> int:
+    """이 런이 주는 화폐를 낸다.
+
+    **화폐는 런 단위로 남는다.** 아이템은 처치마다 굴리도록 바뀌었지만(설계/4_아이템
+    §15.3), 화폐까지 처치마다 주면 방에 적이 많은 것이 곧 수입이 되어 방 설계가
+    난이도가 아니라 수입 조절 장치가 된다.
+
+    Args:
+        is_cleared: 이겼는가.
+        floor: 도달한 층.
+
+    Returns:
+        줄 화폐.
+    """
+    return (WIN_CURRENCY if is_cleared else LOSS_CURRENCY) * max(1, floor)
+
+
 def create_loot_roll(
     catalog: dict[str, ItemCatalogEntry], is_cleared: bool, floor: int = 1
 ) -> LootRoll:

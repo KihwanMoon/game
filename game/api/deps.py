@@ -16,6 +16,7 @@ from game.app.services.verify_run import VerifyContext
 from game.app.store.accounts import Account, find_account
 from game.app.store.admin import check_is_admin
 from game.app.store.catalog_seed import apply_catalog_seed
+from game.app.store.drops import apply_drop_seed
 from game.app.store.item_catalog import list_catalog, read_generation
 from game.config import (
     BALANCE_PATH,
@@ -61,7 +62,10 @@ def init_state(pool: ConnectionPool) -> None:
     # 그 뒤로는 파생물이다 — 서버가 뜰 때마다 파일로 덮으면 관리자가 고친 것이 배포
     # 한 번에 사라진다.
     apply_catalog_seed(pool)
-    _state["items"] = list_catalog(pool)
+    catalog = list_catalog(pool)
+    _state["items"] = catalog
+    # 드롭 표도 빈 것만 채운다. 관리자가 조정한 가중치가 배포 한 번에 사라지면 안 된다.
+    apply_drop_seed(pool, catalog)
     _state["context"] = context
     # 아이템 축은 파일이 아니라 DB 세대에서 온다. 관리자가 아이템을 고치는 것은 시즌을
     # 가르는 일이고, 그 사실이 코어 버전 문자열에 남아야 한다 (§15.8).

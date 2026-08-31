@@ -12,19 +12,18 @@ from game.api.deps import (
     CurrentAccount,
     get_context,
     get_core_version,
-    get_item_catalog,
     get_pool,
 )
 from game.api.discovery_service import record_item_discovery
+from game.api.loot_service import create_run_drops
 from game.api.schemas import SubmissionRequest, SubmissionResponse
-from game.app.items.catalog import find_item as find_catalog_item
-from game.app.items.loot import create_loot_roll
+from game.app.items.loot import compute_run_currency
 from game.app.progression.levels import add_run_xp
 from game.app.services.manage_meta import apply_run_result
 from game.app.services.verify_run import VerifiedRun, check_submission_version, evaluate_submission
 from game.app.store.accounts import find_player_entity
 from game.app.store.equipment import add_currency, mark_item_broken, remove_item
-from game.app.store.items import create_item, list_equipment, list_inventory
+from game.app.store.items import list_equipment, list_inventory
 from game.app.store.meta import load_meta_payload, save_meta_payload
 from game.app.store.monsters import (
     add_monster_xp,
@@ -92,6 +91,7 @@ def apply_run_rewards(
     mode: str,
     core_version: str,
     floor: int = 1,
+    ticket_id: str = "",
 ) -> str:
     """검증된 런의 보상을 준다.
 
@@ -106,6 +106,7 @@ def apply_run_rewards(
         mode: 런 모드. 순위표를 가르는 값이다.
         core_version: 이 서버의 코어 버전. 시즌을 가르는 값이다.
         floor: 이 런의 층. 화폐가 이것에 비례한다 — 안 넘기면 깊이 들어가도 1층 값이다.
+        ticket_id: 이 런의 티켓. 처치별 굴림이 스냅샷에서 개체 레벨을 찾는다.
 
     Returns:
         플레이어에게 보여줄 한 줄. 없으면 빈 문자열.
@@ -113,30 +114,12 @@ def apply_run_rewards(
     if verified.verdict != VERDICT_VERIFIED:
         return ""
     is_cleared = verified.outcome == OUTCOME_WIN
-    roll = create_loot_roll(get_item_catalog(), is_cleared, floor)
-    add_currency(get_pool(), account_id, roll.currency)
-    notes = [f"화폐 +{roll.currency}"]
-    if roll.catalog_id is not None:
-        # **개체 id 다. 계정 id 가 아니다.** 둘 다 int 라 바꿔 넣어도 타입이 못 막는다 —
-        # 실제로 한 번 그렇게 들어갔고, 외래키가 우연히 잡았다(id 가 겹쳤다면 남의 개체에
-        # 아이템이 들어갔을 것이다).
-        item_id = create_item(
-            get_pool(),
-            find_player_entity(get_pool(), account_id),
-            roll.catalog_id,
-            roll.affixes,
-            submission_id,
-        )
-        entry = find_catalog_item(get_item_catalog(), roll.catalog_id)
-        if item_id is not None:
-            # 손에 들어온 것만 밝힌다. 가방이 가득 차 놓친 것을 밝히면 도감이 "가진 적
-            # 없는 것" 을 열어 버린다.
-            record_item_discovery(account_id, roll.catalog_id)
-        notes.append(
-            f"{entry.label_ko} 획득"
-            if item_id is not None
-            else "인벤토리가 가득 차 전리품을 놓쳤다"
-        )
+    add_currency(get_pool(), account_id, compute_run_currency(is_cleared, floor))
+    notes = [f"화폐 +{compute_run_currency(is_cleared, floor)}"]
+    # **처치마다 굴린다** (설계/4_아이템 §15.3). 런 단위로 굴리면 몬스터 레벨이 개입할
+    # 자리가 없다. 재시뮬이 확정한 처치 목록만 쓴다 — 클라이언트 보고로 굴리면 "많이
+    # 잡았다" 고 적어 보내는 것이 곧 파밍이 된다.
+    notes.extend(create_run_drops(account_id, submission_id, verified, floor, ticket_id))
     # 경험치는 **검증된 런에서만** 오른다. 클라이언트 보고로 오르면 순위표가 곧
     # 거짓이 된다 — 순위의 근거가 누적 경험치이기 때문이다.
     pool = get_pool()
@@ -331,6 +314,7 @@ def create_run_submission(
         ticket.mode,
         ticket.core_version,
         ticket.floor,
+        ticket.ticket_id,
     )
     world = apply_monster_outcome(ticket, submission_id, verified, account.account_id)
     if world:

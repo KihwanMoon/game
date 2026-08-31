@@ -137,6 +137,7 @@ def create_item(
     catalog_id: str,
     affixes: tuple[Affix, ...],
     origin_run_result_id: int | None = None,
+    grade: str | None = None,
 ) -> int | None:
     """아이템을 발급해 인벤토리에 넣는다.
 
@@ -149,6 +150,8 @@ def create_item(
         catalog_id: 카탈로그 id.
         affixes: 굴린 접사.
         origin_run_result_id: 어느 검증된 런에서 나왔는가.
+        grade: 굴린 등급. **카탈로그를 참조하지 않고 복사한다** — 참조로 두면 카탈로그를
+            고칠 때 남의 가방에 있는 아이템의 등급이 소급해 바뀐다 (설계/4_아이템 §15.5).
 
     Returns:
         만들어진 아이템 id. 인벤토리가 가득 찼으면 None.
@@ -159,8 +162,14 @@ def create_item(
     with pool.connection() as connection:
         row = connection.execute(
             "INSERT INTO item_instance (owner_entity_id, catalog_id, affixes,"
-            " origin_run_result_id) VALUES (%s, %s, %s, %s) RETURNING id",
-            (entity_id, catalog_id, Jsonb(build_affix_payload(affixes)), origin_run_result_id),
+            " origin_run_result_id, grade) VALUES (%s, %s, %s, %s, %s) RETURNING id",
+            (
+                entity_id,
+                catalog_id,
+                Jsonb(build_affix_payload(affixes)),
+                origin_run_result_id,
+                grade,
+            ),
         ).fetchone()
         if row is None:
             raise RuntimeError("아이템을 만들지 못했다")
