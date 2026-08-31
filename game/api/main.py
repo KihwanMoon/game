@@ -20,6 +20,7 @@ from game.api.routes import (
     auction,
     auth,
     bestiary,
+    catalog_admin,
     discovery,
     health,
     items,
@@ -75,6 +76,7 @@ def create_app() -> FastAPI:
         auction,
         discovery,
         admin,
+        catalog_admin,
     ):
         server.include_router(module.router)
     return server

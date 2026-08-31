@@ -1720,3 +1720,23 @@
   padding-left: var(--sp-2);
   border-left: var(--bw) solid var(--line);
 }
+
+/* 카탈로그 관리의 사유 칸. 사유 없는 개입은 서버가 거절하므로 자리를 크게 둔다. */
+.cat__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  font-size: var(--fs-body-s);
+  color: var(--text-dim);
+}
+
+.cat__input {
+  min-block-size: var(--btn-tap-sm-h);
+  padding: var(--sp-1) var(--sp-2);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  color: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: var(--fs-input);
+}

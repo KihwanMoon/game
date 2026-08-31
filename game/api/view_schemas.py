@@ -127,3 +127,60 @@ class DiscoveryResponse(BaseModel):
     skills: list[DiscoveryRow] = Field(default_factory=list)
     found: int = 0
     total: int = 0
+
+
+class CatalogItemRequest(BaseModel):
+    """관리자가 등록·수정하는 아이템 한 줄.
+
+    **파일의 절과 같은 모양이다.** 형식을 따로 만들면 파서가 둘이 되고, 관리자가 만든
+    아이템만 다른 규칙으로 검사되는 날이 온다.
+    """
+
+    id: str = Field(min_length=1, max_length=64)
+    kind: str
+    label_ko: str = ""
+    slot: str | None = None
+    hands: str | None = None
+    grade: str = "COMMON"
+    min_floor: int = 1
+    affixes: list[dict] = Field(default_factory=list)
+    requirements: list[dict] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    grants_skill: str | None = None
+    stack_max: int = 1
+    # 되돌릴 수 없는 조작이다. 사유 없는 개입은 나중에 아무도 설명할 수 없다.
+    reason: str = ""
+
+
+class CatalogRetireRequest(BaseModel):
+    """폐기·복구. **삭제가 아니다** — 인스턴스·원장·경매가 이 id 를 가리킨다."""
+
+    catalog_id: str = Field(min_length=1, max_length=64)
+    is_retired: bool = True
+    reason: str = ""
+
+
+class CatalogAdminRow(BaseModel):
+    """관리자가 보는 카탈로그 한 줄. 굴림에 걸리는 값까지 함께 낸다."""
+
+    catalog_id: str
+    kind: str
+    label_ko: str
+    slot: str = ""
+    hands: str = ""
+    grade: str
+    min_floor: int = 1
+    is_retired: bool = False
+    affixes: list[str] = Field(default_factory=list)
+    requirements: list[str] = Field(default_factory=list)
+    grants_skill: str = ""
+    # 이 아이템이 드롭 표에서 갖는 가중치. 0 이면 표에 없다 — 굴려도 안 나온다.
+    drop_weight: int = 0
+
+
+class CatalogAdminResponse(BaseModel):
+    """카탈로그 관리 화면 하나."""
+
+    items: list[CatalogAdminRow] = Field(default_factory=list)
+    generation: int = 0
+    grades: list[str] = Field(default_factory=list)

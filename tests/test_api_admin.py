@@ -99,6 +99,9 @@ def test_there_is_no_route_that_grants_admin(client):
     assert sorted(path for path in paths if "/admin/" in path) == [
         "/api/admin/auction/cancel",
         "/api/admin/catalog",
+        "/api/admin/catalog/item",
+        "/api/admin/catalog/items",
+        "/api/admin/catalog/retire",
         "/api/admin/item/recall",
         "/api/admin/monster/level",
         "/api/admin/overview",
@@ -327,17 +330,40 @@ def test_the_catalog_shows_what_the_game_reads(client):
     assert len(body["enemies"]) == len(get_context().balance["enemies"])
 
 
-def test_the_catalog_has_no_write_route(client):
-    """★ 콘텐츠를 런타임에 고칠 길이 있으면 안 된다.
+def test_only_the_item_catalog_is_writable(client):
+    """★ 브라우저 코어가 읽는 자산에는 런타임 쓰기 경로가 없다 (개정 2026-08-31).
 
-    resources/*.json 은 core_version 에 묶여 있다 — 바꾸는 순간 이미 발급된 티켓이 다른
-    게임을 가리키고, 브라우저(빌드에 박힌 JSON)와 서버가 다른 값을 본다 (결정 #06, R5).
+    예전에는 카탈로그 전체가 읽기 전용이었다. 아이템 카탈로그만 DB 로 옮겼는데
+    (설계/4_아이템 §15.7), 그것이 **브라우저 코어가 읽지 않는 유일한 자산**이기 때문이다 —
+    아이템은 로드아웃으로 합산돼 티켓에 얼려 들어간다.
+
+    스킬·블록·밸런스·룸·적 규칙표는 두 코어가 함께 읽으므로 런타임에 바꾸면 브라우저와
+    서버가 다른 게임을 돈다 (결정 #06, R5). 그쪽 쓰기 경로가 생기면 여기서 걸린다.
     """
     from game.api.main import create_app
 
+    banned = ("skill", "block", "balance", "room", "enemy")
     for route in create_app().routes:
-        if "/admin/catalog" in getattr(route, "path", ""):
-            assert set(getattr(route, "methods", set())) <= {"GET", "HEAD"}
+        path = getattr(route, "path", "")
+        methods = set(getattr(route, "methods", set()))
+        if "/admin/" not in path or methods <= {"GET", "HEAD"}:
+            continue
+        assert not [word for word in banned if word in path], f"{path} 에 런타임 쓰기가 생겼다"
+
+
+def test_every_catalog_write_moves_the_generation(client):
+    """★ 아이템을 고치는 것은 시즌을 가르는 일이다 (§15.8).
+
+    세대를 안 올리면 관리자가 조용히 과거 기록을 무효로 만든다 — 저장된 리플레이가
+    거짓이 되는데 코어 버전은 그대로다.
+    """
+    import inspect
+
+    from game.api.routes import catalog_admin
+
+    for name in ("create_catalog_item", "create_catalog_retire"):
+        source = inspect.getsource(getattr(catalog_admin, name))
+        assert "apply_generation_bump" in source, f"{name} 이 세대를 안 올린다"
 
 
 def test_the_level_curve_carries_the_real_distribution(client):

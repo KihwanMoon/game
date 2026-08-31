@@ -54,6 +54,7 @@ import {
   AdminPanel,
   BestiaryPanel,
   DiscoveryPanel,
+  CatalogAdminPanel,
   CatalogPanel,
   DrawerPanel,
   type DrawerTab,
@@ -108,6 +109,8 @@ import {
   applyAdminAction,
   applyMonsterLevel,
   readAdminCatalog,
+  readAdminItems,
+  applyCatalogAdmin,
   readAdminOverview,
   readProgress,
   readServerMeta,
@@ -124,6 +127,7 @@ import {
   type AccountState,
   type AuctionView,
   type BestiaryEntry,
+  type CatalogAdminView,
   type SaveOutcome,
   type DiscoveryView,
   type LeaderboardView,
@@ -474,6 +478,10 @@ export function App(): React.JSX.Element {
   // 읽지 않아, 사파리 프라이빗 창처럼 저장소가 막힌 브라우저에서는 편집이 매번 사라지는데
   // 화면은 아무 말도 하지 않았다.
   const [saveState, setSaveState] = useState<SaveOutcome>('saved')
+  const [adminItems, setAdminItems] = useState<CatalogAdminView | undefined>(undefined)
+  // 카탈로그 조작의 결과 한 줄. 관리자 개입 결과(adminDetail)와 갈라 둔다 — 둘이 한
+  // 칸을 쓰면 방금 무엇을 눌렀는지 화면이 못 말한다.
+  const [catalogDetail, setCatalogDetail] = useState('')
   // 저장을 몇 번 눌렀는지. 값 자체는 안 쓰고, **눌린 적이 있는가**만 본다 — 누른 적이
   // 없는데 "저장됨" 이 떠 있으면 그 표시는 아무 말도 하지 않는 것과 같다.
   const [savedAt, setSavedAt] = useState(0)
@@ -693,6 +701,7 @@ export function App(): React.JSX.Element {
     // 관리자가 아니면 undefined 로 남는다 — 서버가 404 로 답한다.
     setAdmin(await readAdminOverview(token))
     setCatalog(await readAdminCatalog(token))
+    setAdminItems(await readAdminItems(token))
   }
 
   /**
@@ -1061,6 +1070,28 @@ export function App(): React.JSX.Element {
   }
 
   /**
+   * 카탈로그를 고치고 결과를 화면에 싣는다.
+   *
+   * **거절 사유를 그대로 적는다.** 서버가 「새 id 로 등록하라」 고 답하는 자리라, 그
+   * 문장이 곧 관리자에게 필요한 설명이다.
+   *
+   * @param path 라우트 경로.
+   * @param body 보낼 절.
+   */
+  function applyAdminCatalog(path: string, body: unknown): void {
+    if (account === undefined) {
+      return
+    }
+    setCatalogDetail('')
+    void applyCatalogAdmin(account, path, body).then((outcome) => {
+      setCatalogDetail(outcome.detail)
+      if (outcome.view !== undefined) {
+        setAdminItems(outcome.view)
+      }
+    })
+  }
+
+  /**
    * 서랍 탭을 만든다.
    *
    * **묶음은 "무엇에 대한 것인가" 로 가른다.** 화면 수를 줄이려고 아무거나 합치면 탭
@@ -1265,6 +1296,36 @@ export function App(): React.JSX.Element {
                 }}
               />
             <CatalogPanel catalog={catalog} />
+            <CatalogAdminPanel
+              catalog={adminItems}
+              detail={catalogDetail}
+              onRetire={(catalogId, isRetired, reason) => {
+                applyAdminCatalog('/admin/catalog/retire', {
+                  catalog_id: catalogId,
+                  is_retired: isRetired,
+                  reason,
+                })
+              }}
+              onRename={(catalogId, labelKo, minFloor, reason) => {
+                // **이름과 최소 층만 보낸다.** 나머지는 지금 값을 그대로 실어야 서버의
+                // 「소급 수정 금지」 판정에 걸리지 않는다 (설계/4_아이템 §15.7).
+                const row = adminItems?.items.find((item) => item.catalogId === catalogId)
+                if (row === undefined) {
+                  return
+                }
+                applyAdminCatalog('/admin/catalog/item', {
+                  id: catalogId,
+                  kind: row.kind,
+                  slot: row.slot === '' ? null : row.slot,
+                  hands: row.hands === '' ? null : row.hands,
+                  grade: row.grade,
+                  label_ko: labelKo,
+                  min_floor: minFloor,
+                  grants_skill: row.grantsSkill === '' ? null : row.grantsSkill,
+                  reason,
+                })
+              }}
+            />
           </>
         ),
       })

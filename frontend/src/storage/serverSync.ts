@@ -1248,6 +1248,103 @@ export interface LevelCurveRow {
   readonly players: number
 }
 
+/** 관리자가 보는 카탈로그 한 줄. 굴림에 걸리는 값까지 함께 온다. */
+export interface CatalogAdminRow {
+  readonly catalogId: string
+  readonly kind: string
+  readonly labelKo: string
+  readonly slot: string
+  readonly hands: string
+  readonly grade: string
+  readonly minFloor: number
+  readonly isRetired: boolean
+  readonly affixes: readonly string[]
+  readonly requirements: readonly string[]
+  readonly grantsSkill: string
+  /** 드롭 표의 가중치. 0 이면 표에 없다 — 굴려도 안 나온다. */
+  readonly dropWeight: number
+}
+
+/** 카탈로그 관리 화면 하나. */
+export interface CatalogAdminView {
+  readonly items: readonly CatalogAdminRow[]
+  /** 카탈로그 세대. 코어 버전의 `i` 축이며, 고치면 시즌이 갈린다. */
+  readonly generation: number
+  readonly grades: readonly string[]
+}
+
+/**
+ * 관리자 카탈로그 응답을 옮긴다.
+ *
+ * @param raw 서버 응답.
+ * @returns 화면이 읽는 절.
+ */
+function readCatalogAdmin(raw: Record<string, unknown>): CatalogAdminView {
+  const rows = (raw.items ?? []) as Record<string, unknown>[]
+  return {
+    items: rows.map((row) => ({
+      catalogId: String(row.catalog_id),
+      kind: String(row.kind),
+      labelKo: String(row.label_ko),
+      slot: String(row.slot ?? ''),
+      hands: String(row.hands ?? ''),
+      grade: String(row.grade),
+      minFloor: Number(row.min_floor ?? 1),
+      isRetired: Boolean(row.is_retired),
+      affixes: (row.affixes ?? []) as string[],
+      requirements: (row.requirements ?? []) as string[],
+      grantsSkill: String(row.grants_skill ?? ''),
+      dropWeight: Number(row.drop_weight ?? 0),
+    })),
+    generation: Number(raw.generation ?? 0),
+    grades: (raw.grades ?? []) as string[],
+  }
+}
+
+/**
+ * 관리자 카탈로그를 읽는다.
+ *
+ * @param token 기기 토큰.
+ * @returns 카탈로그. 관리자가 아니거나 서버에 닿지 못했으면 undefined.
+ */
+export async function readAdminItems(token: string): Promise<CatalogAdminView | undefined> {
+  const response = await sendRequest('/admin/catalog/items', {
+    headers: { [TOKEN_HEADER]: token },
+  })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  return readCatalogAdmin((await response.json()) as Record<string, unknown>)
+}
+
+/**
+ * 카탈로그를 고친다. **사유가 반드시 붙는다** — 되돌릴 수 없는 조작이다.
+ *
+ * @param token 기기 토큰.
+ * @param path `/admin/catalog/item` 또는 `/admin/catalog/retire`.
+ * @param body 보낼 절.
+ * @returns 갱신된 카탈로그와 한 줄 설명.
+ */
+export async function applyCatalogAdmin(
+  token: string,
+  path: string,
+  body: unknown,
+): Promise<{ view: CatalogAdminView | undefined; detail: string }> {
+  const response = await sendRequest(path, {
+    method: 'POST',
+    headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (response === undefined) {
+    return { view: undefined, detail: '서버에 닿지 못했다' }
+  }
+  const raw = (await response.json()) as Record<string, unknown>
+  if (!response.ok) {
+    return { view: undefined, detail: String(raw.detail ?? '거절됐다') }
+  }
+  return { view: readCatalogAdmin(raw), detail: '' }
+}
+
 /** 콘텐츠 카탈로그. 읽기 전용이다. */
 export interface AdminCatalog {
   readonly coreVersion: string
