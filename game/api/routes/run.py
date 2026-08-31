@@ -15,6 +15,7 @@ from game.api.deps import (
     get_item_catalog,
     get_pool,
 )
+from game.api.discovery_service import record_item_discovery
 from game.api.schemas import SubmissionRequest, SubmissionResponse
 from game.app.items.catalog import find_item as find_catalog_item
 from game.app.items.loot import create_loot_roll
@@ -121,6 +122,10 @@ def apply_run_rewards(
             submission_id,
         )
         entry = find_catalog_item(get_item_catalog(), roll.catalog_id)
+        if item_id is not None:
+            # 손에 들어온 것만 밝힌다. 가방이 가득 차 놓친 것을 밝히면 도감이 "가진 적
+            # 없는 것" 을 열어 버린다.
+            record_item_discovery(account_id, roll.catalog_id)
         notes.append(
             f"{entry.label_ko} 획득"
             if item_id is not None
@@ -190,6 +195,7 @@ def apply_monster_outcome(
             # "내 아이템을 들고 있다" 고 말해 놓고 잡아도 못 돌려받으면, World Loop 의
             # 동기가 화면에만 있고 세계에는 없다.
             for catalog_id in apply_recovery(pool, item.record_id, account_id, entity_id):
+                record_item_discovery(account_id, catalog_id)
                 notes.append(f"{catalog_id} 되찾음")
         return " · ".join(notes)
 

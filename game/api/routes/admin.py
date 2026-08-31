@@ -29,7 +29,7 @@ from game.api.deps import (
     get_item_catalog,
     get_pool,
 )
-from game.api.schemas import (
+from game.api.view_schemas import (
     AdminActionView,
     AdminCatalogResponse,
     AdminHeldItemView,

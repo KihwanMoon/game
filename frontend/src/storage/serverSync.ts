@@ -724,6 +724,80 @@ export async function readBestiary(token: string): Promise<readonly BestiaryEntr
   }))
 }
 
+/** 도감 한 줄. 밝혔든 아니든 자리는 있다. */
+export interface DiscoveryRow {
+  readonly kind: string
+  readonly refId: string
+  readonly labelKo: string
+  readonly category: string
+  readonly isFound: boolean
+  /**
+   * 속살. **밝힌 것만 채워져 온다** — 화면이 가리는 것이 아니라 응답에 없다.
+   *
+   * 화면에서 가리면 개발자 도구를 열었을 때 답이 그대로 보이고, 그러면 가린 것이 아니다.
+   */
+  readonly detail: string
+}
+
+/** 도감 한 화면. */
+export interface DiscoveryView {
+  readonly items: readonly DiscoveryRow[]
+  readonly skills: readonly DiscoveryRow[]
+  readonly found: number
+  readonly total: number
+}
+
+interface RawDiscoveryRow {
+  kind: string
+  ref_id: string
+  label_ko: string
+  category?: string
+  is_found?: boolean
+  detail?: string
+}
+
+/**
+ * 도감 한 줄을 옮긴다.
+ *
+ * @param raw 서버가 보낸 줄.
+ * @returns 화면이 읽는 줄.
+ */
+function readDiscoveryRow(raw: RawDiscoveryRow): DiscoveryRow {
+  return {
+    kind: raw.kind,
+    refId: raw.ref_id,
+    labelKo: raw.label_ko,
+    category: raw.category ?? '',
+    isFound: raw.is_found ?? false,
+    detail: raw.detail ?? '',
+  }
+}
+
+/**
+ * 내 도감을 읽는다.
+ *
+ * @param token 기기 토큰.
+ * @returns 도감. 서버에 닿지 못했으면 undefined.
+ */
+export async function readDiscovery(token: string): Promise<DiscoveryView | undefined> {
+  const response = await sendRequest('/discovery', { headers: { [TOKEN_HEADER]: token } })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  const body = (await response.json()) as {
+    items: RawDiscoveryRow[]
+    skills: RawDiscoveryRow[]
+    found?: number
+    total?: number
+  }
+  return {
+    items: body.items.map(readDiscoveryRow),
+    skills: body.skills.map(readDiscoveryRow),
+    found: body.found ?? 0,
+    total: body.total ?? 0,
+  }
+}
+
 /** 플레이어 성장. 레벨이 표현력(상한 있음)과 능력치 포인트(상한 없음)를 함께 준다. */
 export interface ProgressView {
   readonly level: number

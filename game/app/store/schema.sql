@@ -351,3 +351,18 @@ CREATE TABLE IF NOT EXISTS admin_action (
 );
 
 CREATE INDEX IF NOT EXISTS admin_action_recent_idx ON admin_action (created_at DESC);
+
+-- 도감 해금 — 이 계정이 무엇을 처음 손에 넣어 봤는가.
+--
+-- **소유가 아니라 이력이다.** 팔거나 잃어도 해금은 남는다 — 소유로 계산하면 아이템을
+-- 판 순간 도감이 잠기고, 그러면 도감이 "본 것" 이 아니라 "지금 가진 것" 이 된다.
+--
+-- 결정론과 무관하다. 코어는 이 표를 모르고, 여기 있는 것은 화면이 무엇을 밝혀 보여줄지
+-- 뿐이다 (R5).
+CREATE TABLE IF NOT EXISTS account_discovery (
+    account_id  BIGINT      NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    kind        TEXT        NOT NULL,
+    ref_id      TEXT        NOT NULL,
+    found_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (account_id, kind, ref_id)
+);

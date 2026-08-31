@@ -51,6 +51,7 @@ import {
   AccountPanel,
   AdminPanel,
   BestiaryPanel,
+  DiscoveryPanel,
   CatalogPanel,
   DrawerPanel,
   type DrawerTab,
@@ -97,6 +98,7 @@ import {
   readAccount,
   readAuction,
   readBestiary,
+  readDiscovery,
   readLeaderboard,
   applyAdminAction,
   applyMonsterLevel,
@@ -117,6 +119,7 @@ import {
   type AccountState,
   type AuctionView,
   type BestiaryEntry,
+  type DiscoveryView,
   type LeaderboardView,
   type ProgressView,
   type InventoryView,
@@ -419,6 +422,7 @@ export function App(): React.JSX.Element {
   const [itemDetail, setItemDetail] = useState('')
   // 도감. 세계의 몬스터는 서버가 알므로 오프라인에서는 비어 있다.
   const [bestiary, setBestiary] = useState<readonly BestiaryEntry[] | undefined>(undefined)
+  const [discovery, setDiscovery] = useState<DiscoveryView | undefined>(undefined)
   // 세계 — 성장·순위·경매장. 전부 서버가 아는 것이라 오프라인에서는 비어 있다.
   const [progress, setProgress] = useState<ProgressView | undefined>(undefined)
   const [leaderboard, setLeaderboard] = useState<LeaderboardView | undefined>(undefined)
@@ -648,6 +652,7 @@ export function App(): React.JSX.Element {
     setProfile(await readAccount(token))
     setInventory(await readInventory(token))
     setBestiary(await readBestiary(token))
+    setDiscovery(await readDiscovery(token))
     setProgress(await readProgress(token))
     setLeaderboard(await readLeaderboard(token))
     setAuction(await readAuction(token))
@@ -759,6 +764,8 @@ export function App(): React.JSX.Element {
         void readInventory(account).then(setInventory)
         // 판이 끝나면 몬스터가 컸거나 내 장비를 가져갔을 수 있다.
         void readBestiary(account).then(setBestiary)
+        // 전리품이 들어왔으면 도감이 열린다 — 그 순간 안 읽으면 다음 접속까지 잠겨 보인다.
+        void readDiscovery(account).then(setDiscovery)
         // 판이 끝나면 경험치와 순위가 올랐다.
         void readProgress(account).then(setProgress)
         void readLeaderboard(account).then(setLeaderboard)
@@ -1088,6 +1095,7 @@ export function App(): React.JSX.Element {
                 }}
               />
               <BestiaryPanel entries={bestiary} isOnline={isOnline} />
+              <DiscoveryPanel discovery={discovery} isOnline={isOnline} />
           </>
         ),
       },

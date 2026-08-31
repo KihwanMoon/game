@@ -308,11 +308,17 @@ def apply_purchase(
             "INSERT INTO inventory_slot (entity_id, slot_index, item_id) VALUES (%s, %s, %s)",
             (buyer_entity_id, index, item_id),
         )
+        # **채워서 돌려준다.** 빈 문자열로 두면 부르는 쪽이 그것을 유효한 id 로 알고
+        # 쓰고, 아무 일도 안 일어나면서 오류도 안 난다 — 도감 해금이 실제로 그렇게
+        # 조용히 죽었다.
+        sold = connection.execute(
+            "SELECT catalog_id FROM item_instance WHERE id = %s", (item_id,)
+        ).fetchone()
     record_item_event(pool, buyer_entity_id, item_id, "buy", str(price))
     return Listing(
         listing_id=listing_id,
         item_id=item_id,
-        catalog_id="",
+        catalog_id="" if sold is None else str(sold[0]),
         seller_id=seller_id,
         price=price,
         state=STATE_SOLD,

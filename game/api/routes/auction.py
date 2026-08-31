@@ -10,6 +10,7 @@
 from fastapi import APIRouter, HTTPException, status
 
 from game.api.deps import CurrentAccount, get_item_catalog, get_pool
+from game.api.discovery_service import record_item_discovery
 from game.api.schemas import (
     AuctionListRequest,
     AuctionResponse,
@@ -161,7 +162,7 @@ def create_auction_purchase(request: ListingAction, account: CurrentAccount) -> 
     """
     pool = get_pool()
     try:
-        apply_purchase(
+        sold = apply_purchase(
             pool,
             request.listing_id,
             account.account_id,
@@ -169,6 +170,9 @@ def create_auction_purchase(request: ListingAction, account: CurrentAccount) -> 
         )
     except ValueError as error:
         raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
+    # 산 것도 얻은 것이다. 발급만 도감에 남기면 "경매로만 구할 수 있는 것" 이 영영
+    # 안 열린다.
+    record_item_discovery(account.account_id, sold.catalog_id)
     return build_auction_response(account.account_id)
 
 
