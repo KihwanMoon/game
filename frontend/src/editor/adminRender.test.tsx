@@ -5,6 +5,9 @@
  * 현황이 undefined 로 남고, 그때 이 패널은 아무것도 그리면 안 된다 — 빈 패널이라도
  * 그리면 관리자 경로가 있다는 사실이 드러난다.
  */
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
@@ -136,5 +139,24 @@ describe('개입 2단계', () => {
 
   it('빼앗긴 것이 없으면 그렇게 적는다 — 빈 목록은 고장으로 읽힌다', () => {
     expect(render({ ...OVERVIEW, heldItems: [] })).toContain('아직 빼앗긴 장비가 없다')
+  })
+})
+
+describe('관리 현황을 언제 읽는가', () => {
+  it('★ **접속하자마자 읽는다** — 안 읽으면 권한을 줘도 탭이 안 생긴다', () => {
+    // 예전에는 refreshWorld() 안에서만 불렀는데, 그것은 경매를 조작해야 돈다.
+    // 그래서 관리자 권한을 줘도 화면에 아무 일이 없었다.
+    const source = readFileSync(fileURLToPath(new URL('../App.tsx', import.meta.url)), 'utf8')
+    const boot = source.slice(source.indexOf('const token = await ensureToken'))
+    const untilMeta = boot.slice(0, boot.indexOf('readServerMeta'))
+    expect(untilMeta).toContain('readAdminOverview')
+  })
+
+  it('★ 로그인 뒤에도 다시 읽는다 — 계정이 바뀌면 권한도 바뀐다', () => {
+    // 관리자로 로그인해도 안 뜨거나, 관리자에서 일반 계정으로 갈아탔는데 남아 있으면
+    // 둘 다 틀렸다.
+    const source = readFileSync(fileURLToPath(new URL('../App.tsx', import.meta.url)), 'utf8')
+    const login = source.slice(source.indexOf('async function applyLogin'))
+    expect(login.slice(0, login.indexOf('return \'\''))).toContain('readAdminOverview')
   })
 })

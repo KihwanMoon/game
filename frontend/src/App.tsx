@@ -488,6 +488,11 @@ export function App(): React.JSX.Element {
       setProgress(await readProgress(token))
       setLeaderboard(await readLeaderboard(token))
       setAuction(await readAuction(token))
+      // **관리자면 여기서 관리 탭이 생긴다.** 예전에는 refreshWorld() 안에서만 불러서,
+      // 경매를 한 번 조작하기 전에는 영영 뜨지 않았다 — 관리자 권한을 줘도 화면에
+      // 아무 일이 없었다.
+      setAdmin(await readAdminOverview(token))
+      setCatalog(await readAdminCatalog(token))
       const outcome = await readServerMeta(token)
       if (!isCurrent) {
         return
@@ -660,6 +665,10 @@ export function App(): React.JSX.Element {
     const next = server.meta ?? createEmptyMeta()
     writeMeta(storage, next)
     setMeta(next)
+    // **계정이 바뀌면 권한도 바뀐다.** 다시 읽지 않으면 관리자로 로그인해도 관리 탭이
+    // 안 뜨고, 관리자에서 일반 계정으로 갈아타면 남아 있는다.
+    setAdmin(await readAdminOverview(outcome.token))
+    setCatalog(await readAdminCatalog(outcome.token))
     return ''
   }
 
