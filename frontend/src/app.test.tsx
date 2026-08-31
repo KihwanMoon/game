@@ -11,6 +11,9 @@
  *    같다는 것이 이 설계의 유일한 전제이며, 여기서 배속(한 번에 4틱)까지 바꿔 가며
  *    같은지 확인한다 (R5).
  */
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
@@ -200,6 +203,7 @@ describe('티켓 → 전투 조립 (E4, 결정 #13)', () => {
       cpuBudget: 11,
       ruleSlots: 6,
       skillPowerPct: 100,
+      consumables: [],
       skills: ['ATTACK', 'SKILL_2'],
     },
   }
@@ -254,6 +258,7 @@ describe('규칙 한도 (결정 #51, #13)', () => {
         cpuBudget: 12,
         ruleSlots: 7,
         skillPowerPct: 100,
+        consumables: [],
         skills: ['ATTACK'],
       },
     })
@@ -332,5 +337,31 @@ describe('서버가 정한 방 목록 (W3)', () => {
     )
     expect(setup.chain?.roomIds).toEqual(['corridor', 'pillars', 'open_field'])
     expect(setup.chain?.index).toBe(0)
+  })
+})
+
+describe('계정이 바뀌면 화면도 바뀐다', () => {
+  it('★ **로그인이 계정 상태를 다시 읽는다**', () => {
+    // 안 읽으면 다른 기기에서 로그인했을 때 화면이 익명 계정의 값을 계속 보여준다 —
+    // 레벨과 CPU 가 사라진 것처럼 보인다. 서버에는 그대로 있고 화면만 낡은 것이다.
+    const source = readFileSync(fileURLToPath(new URL('./App.tsx', import.meta.url)), 'utf8')
+    const login = source.slice(source.indexOf('async function applyLogin'))
+    expect(login.slice(0, login.indexOf("return ''"))).toContain('loadAccountState')
+  })
+
+  it('★ 승격도 다시 읽는다 — 토큰이 바뀌면 그 뒤 조회가 옛 토큰을 쓴다', () => {
+    const source = readFileSync(fileURLToPath(new URL('./App.tsx', import.meta.url)), 'utf8')
+    const register = source.slice(source.indexOf('async function applyRegister'))
+    expect(register.slice(0, register.indexOf("return ''"))).toContain('loadAccountState')
+  })
+
+  it('★ 한 자리에서 읽는다 — 갈라 두면 한쪽만 고치고 끝난다', () => {
+    // 실제로 그렇게 됐다. 첫 접속만 읽고 로그인은 안 읽는 상태로 배포됐다.
+    const source = readFileSync(fileURLToPath(new URL('./App.tsx', import.meta.url)), 'utf8')
+    const loader = source.slice(source.indexOf('async function loadAccountState'))
+    const body = loader.slice(0, loader.indexOf('\n  }'))
+    for (const call of ['readProgress', 'readInventory', 'readBestiary', 'readAdminOverview']) {
+      expect(body).toContain(call)
+    }
   })
 })

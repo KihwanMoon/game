@@ -190,7 +190,7 @@ function createWorld(spec: GoldenWorld): WorldState {
       initiative: raw.initiative,
       regenBase: raw.regen_base,
       cpuBudget: raw.cpu_budget,
-      potions: raw.potions,
+      consumables: new Map([['POTION', raw.potions]]),
     })
     state.entities.set(entity.entityId, entity)
   }

@@ -24,7 +24,7 @@ import {
 } from '../grid/vision'
 import { TILE_DOOR, TILE_SPRING, TILE_STAIRS, WALKABLE_TILES } from '../schemas'
 import { ALL_SELECTORS, resolveTarget } from './selectors'
-import { type Entity, type WorldState, checkHasSkill, getHpPercent } from './state'
+import { type Entity, type WorldState, checkHasSkill, countItem, getHpPercent } from './state'
 import { type TelegraphBoard, getForesightTicks } from './telegraph'
 
 /** 인지 변수 nearest_tile_distance 의 인자에서 타일 ID 로. 파이썬 dict 의 순서를 지킨다. */
@@ -208,7 +208,9 @@ export function buildSnapshot(input: SnapshotInput): PerceptionSnapshot {
 
   const values = new Map<string, number | boolean>()
   values.set('self_hp_percent', getHpPercent(entity))
-  values.set('self_potion_count', entity.potions)
+  // 태그를 받는 인지 변수는 아직 없다. 규칙표는 소모품이 없을 때 「불가」로 알게
+  // 되며, 그것이 스킬 미장착과 같은 방식이다.
+  values.set('self_potion_count', countItem(entity, 'POTION'))
   values.set('self_on_heal_tile', state.getTile(entity.position.x, entity.position.y) === TILE_SPRING)
   // 여기에 방 전체 적 수를 남겨 두지 않는다. 실제 값은 addVisionValues 가 LOS 로 좁혀
   // 넣으며(파이썬 정본과 같다), 미리 깔아 두면 두 가지가 어긋난다 — 격자를 넘기지 않은

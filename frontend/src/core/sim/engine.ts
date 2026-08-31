@@ -33,7 +33,7 @@ import {
   PHASE_TELEGRAPH,
   PHASE_UPKEEP,
 } from './phases'
-import { OUTCOME_BLOCKED, resolveSkillPlan } from './plan'
+import { USE_ITEM_ACTION, OUTCOME_BLOCKED, resolveSkillPlan } from './plan'
 import type { DecisionPolicy, EngineConfig, PlannedAction, PolicyFactory } from './plan'
 import { PressureTracker, applySpringDrain, removeDrainedSprings } from './pressure'
 import { FACTION_PLAYER, type Entity, type WorldState, isAlive } from './state'
@@ -394,8 +394,8 @@ export class TickEngine {
       executor.applyAttack(entity, plan)
     } else if (plan.actionId === 'AREA_ATTACK') {
       executor.applyAreaAttack(entity, plan)
-    } else if (plan.actionId === 'USE_POTION') {
-      executor.applyPotion(entity, plan)
+    } else if (plan.actionId === 'USE_POTION' || plan.actionId === USE_ITEM_ACTION) {
+      executor.applyItem(entity, plan)
     } else if (plan.actionId === 'HEAL') {
       executor.applyHeal(entity, plan)
     } else if (plan.actionId === 'HOLD' || plan.actionId === 'SET_FLAG') {

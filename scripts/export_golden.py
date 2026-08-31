@@ -92,7 +92,7 @@ def build_entity_rows(state: WorldState) -> list[dict[str, Any]]:
                 "x": entity.position[0],
                 "y": entity.position[1],
                 "attack": entity.attack,
-                "potions": entity.potions,
+                "potions": entity.count_item("POTION"),
                 "cooldowns": {key: entity.cooldowns[key] for key in sorted(entity.cooldowns)},
                 "flags": {key: entity.flags[key] for key in sorted(entity.flags)},
             }

@@ -14,7 +14,13 @@ from game.app.grid.geometry import get_manhattan_distance, iter_neighbors
 from game.app.grid.vision import VisionGrid, check_line_of_sight, find_cover_positions
 from game.app.pathfinding.distance_field import build_distance_field, find_next_step
 from game.app.simulation import abilities
-from game.app.simulation.plan import PHASE_ACT, STATUS_GUARD, EngineConfig, PlannedAction
+from game.app.simulation.plan import (
+    GUARD_SKILL_ID,
+    PHASE_ACT,
+    STATUS_GUARD,
+    EngineConfig,
+    PlannedAction,
+)
 from game.app.simulation.state import Entity, WorldState
 from game.app.simulation.support_actions import SupportActionMixin
 from game.app.simulation.telegraph import TelegraphBoard
@@ -23,9 +29,7 @@ from game.schemas.room import TILE_DOOR, TILE_SPRING, TILE_STAIRS, WALKABLE_TILE
 # 퍼센트 기준. 100 이 1.0배다.
 PERCENT_BASE = 100
 
-# 방어 감소율을 읽을 스킬 id. 지금 GUARD 계열이 하나뿐이라 상수로 둔다 — 늘어나면
 # 어느 방어가 걸렸는지를 상태에 함께 실어야 한다 (지금은 그럴 필요가 없다).
-GUARD_SKILL_ID = "GUARD_BRACE"
 
 MOVE_ACTIONS = frozenset({"APPROACH", "RETREAT", "MOVE_TO_EXIT", "MOVE_TO_HEAL", "MOVE_TO_COVER"})
 ATTACK_ACTIONS = frozenset({"ATTACK", "SKILL_1", "SKILL_2"})

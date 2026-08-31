@@ -35,7 +35,12 @@ class Entity:
     # 이 개체가 내는 스킬의 위력. 정수 퍼센트이며 100 이 "계수 그대로" 다 (결정 #51).
     # 지능이 여기를 올린다. 개체마다 다르므로 스킬 카탈로그가 아니라 개체가 갖는다.
     skill_power_pct: int = PERCENT_BASE
-    potions: int = 0
+    # 들고 있는 소모품. **종류별로 센다** (블록 v6, #54). 예전에는 정수 하나(`potions`)라
+    # 보호 주문서가 카탈로그에 있어도 쓸 수가 없었다 — 셀 자리가 없었다.
+    #
+    # 열쇠는 카탈로그 id 가 아니라 **태그**다(POTION·SCROLL). 회복 물약을 여러 등급으로
+    # 늘려도 규칙표가 가리키는 것은 그대로라, 아이템이 늘 때마다 규칙표가 깨지지 않는다.
+    consumables: dict[str, int] = field(default_factory=dict)
     # 누가 불러냈는가. 소환 상한을 소환사별로 세기 위해 필요하다.
     summoner_id: str | None = None
     # 장착된 스킬 (블록 v5). None 은 "장착 개념이 아직 배선되지 않음" 이라 전부 허용한다 —
@@ -44,6 +49,17 @@ class Entity:
     cooldowns: dict[str, int] = field(default_factory=dict)
     flags: dict[str, bool] = field(default_factory=dict)
     statuses: dict[str, int] = field(default_factory=dict)
+
+    def count_item(self, kind: str) -> int:
+        """그 종류의 소모품을 몇 개 들고 있는가.
+
+        Args:
+            kind: 소모품 태그 (POTION·SCROLL).
+
+        Returns:
+            개수. 없으면 0.
+        """
+        return self.consumables.get(kind, 0)
 
     def check_has_skill(self, skill_id: str) -> bool:
         """이 스킬을 장착하고 있는가.

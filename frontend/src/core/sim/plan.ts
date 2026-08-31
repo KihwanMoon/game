@@ -39,6 +39,13 @@ export const OUTCOME_BLOCKED = '불가'
 /** 스킬을 정체로 가리키는 행동 (블록 v5, 결정 #04). 파이썬과 같은 값이어야 한다. */
 export const USE_SKILL_ACTION = 'USE_SKILL'
 
+/** 소모품 사용 (v6, #54). 파라미터는 카탈로그 id 가 아니라 태그다 — 물약을 여러 등급으로
+ * 늘려도 규칙표가 가리키는 것이 그대로여야 한다. */
+export const USE_ITEM_ACTION = 'USE_ITEM'
+
+/** 방어 감소율과 유지 틱을 읽을 스킬 id. GUARD 계열이 하나뿐이라 상수로 둔다. */
+export const GUARD_SKILL_ID = 'GUARD_BRACE' 
+
 /** 조건은 참이었으나 실행할 수단이 없어 건너뛴 규칙 하나. */
 export interface BlockedRule {
   readonly ruleIndex: number
@@ -56,6 +63,8 @@ export interface PlannedAction {
   readonly setFlag: string | null
   /** 실행할 스킬 (블록 v5). `USE_SKILL` 이 아니면 null 이다. */
   readonly skillId: string | null
+  /** `USE_ITEM[kind]` 가 가리키는 소모품 태그 (v6, #54). 스킬과 같은 한 겹의 지시다. */
+  readonly itemKind: string | null
   /**
    * 조건은 참인데 수단이 없어 건너뛴 규칙들 (블록 v5, 결정 #04).
    *
@@ -73,6 +82,7 @@ export interface PlannedActionInput {
   readonly expr?: string
   readonly setFlag?: string | null
   readonly skillId?: string | null
+  readonly itemKind?: string | null
   readonly blocked?: readonly BlockedRule[]
 }
 
@@ -91,6 +101,7 @@ export function createPlannedAction(input: PlannedActionInput): PlannedAction {
     expr: input.expr ?? '',
     setFlag: input.setFlag ?? null,
     skillId: input.skillId ?? null,
+    itemKind: input.itemKind ?? null,
     blocked: input.blocked ?? [],
   }
 }
@@ -188,6 +199,14 @@ export interface EngineConfig {
    * 이유는 R5 다 — 부동소수를 쓰면 플랫폼마다 결과가 갈린다.
    */
   readonly skillHealPct: ReadonlyMap<string, number>
+  /**
+   * 방어 태세의 피해 감소율과 유지 틱 (결정 #16).
+   *
+   * **파이썬에는 있는데 여기 없었다.** 방패를 껴도 브라우저는 아무 일도 안 하고 서버만
+   * 적용해, 같은 판이 두 코어에서 갈렸다 (게이트 G3). 보호 주문서(v6)도 같은 값을 쓴다.
+   */
+  readonly skillGuardPct: ReadonlyMap<string, number>
+  readonly skillGuardTicks: ReadonlyMap<string, number>
   /**
    * kindId -> 소환 규칙. '언제 소환하는가' 는 규칙표가 정하고, 여기 남는 것은 '무엇을
    * 몇 마리까지' 와 쿨타임[SUMMON] 의 초기값이 되는 주기(every_ticks)다.

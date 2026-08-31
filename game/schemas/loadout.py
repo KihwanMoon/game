@@ -41,6 +41,12 @@ class PlayerLoadout:
     # 지능이 여기를 올린다.
     skill_power_pct: int
     skills: tuple[str, ...]
+    # 이 런에 들고 들어가는 소모품. 종류에서 개수로 (#54).
+    #
+    # **장비와 같은 이유로 티켓이 싣는다.** 인벤토리는 서버가 알고 전투는 브라우저가
+    # 도므로, 얼려 두지 않으면 화면은 빈손으로 싸우고 서버는 주머니를 채운 채 재시뮬한다.
+    # 정렬된 쌍으로 담는 이유는 딕셔너리 순회 순서가 티켓에 새어 나가면 안 되기 때문이다 (R5).
+    consumables: tuple[tuple[str, int], ...] = ()
 
 
 def parse_loadout(raw: dict) -> PlayerLoadout:
@@ -63,6 +69,8 @@ def parse_loadout(raw: dict) -> PlayerLoadout:
         # 없으면 기준값이다. 구버전 티켓이 남아 있어도 그것이 "위력 0" 이 되면
         # 그 티켓으로 돌린 판이 전부 최소피해로 끝난다.
         skill_power_pct=int(raw.get("skill_power_pct", BASE_SKILL_POWER_PCT)),
+        # 정렬해서 담는다 (R5). 없으면 빈손이다 — 구버전 티켓이 그 경우다.
+        consumables=tuple(sorted((str(k), int(v)) for k, v in raw.get("consumables", {}).items())),
         # 정렬해서 담는다. 순서가 실행마다 다르면 같은 티켓이 다른 글자로 저장된다 (R5).
         skills=tuple(sorted(raw.get("skills", []))),
     )
@@ -86,5 +94,6 @@ def build_loadout_payload(loadout: PlayerLoadout) -> dict:
         "cpu_budget": loadout.cpu_budget,
         "rule_slots": loadout.rule_slots,
         "skill_power_pct": loadout.skill_power_pct,
+        "consumables": dict(loadout.consumables),
         "skills": list(loadout.skills),
     }

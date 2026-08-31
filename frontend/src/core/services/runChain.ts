@@ -106,7 +106,7 @@ export class ChainCursor {
 
   private carriedHp: number | undefined
 
-  private carriedPotions = 0
+  private carriedPotions: ReadonlyMap<string, number> = new Map()
 
   private index = 0
 
@@ -175,7 +175,7 @@ export class ChainCursor {
     if (this.carriedHp !== undefined) {
       // **HP 와 포션만 인계한다.** 스탯까지 인계하면 압력 스케일이 두 번 얹힌다.
       player.hp = this.carriedHp
-      player.potions = this.carriedPotions
+      player.consumables = new Map(this.carriedPotions)
     }
     const ruleset = this.setup.playerRuleset
     if (ruleset !== undefined) {
@@ -204,7 +204,7 @@ export class ChainCursor {
     }
     this.cleared += 1
     this.carriedHp = result.playerHp
-    this.carriedPotions = this.current?.potions ?? 0
+    this.carriedPotions = new Map(this.current?.consumables ?? [])
   }
 
   /** 지금까지의 연쇄 결과. */

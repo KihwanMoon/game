@@ -37,7 +37,7 @@ import {
   parseBalance,
   type BalanceData,
 } from './services/runBattle'
-import { FACTION_ENEMY, createEntity } from './sim/state'
+import { countItem, FACTION_ENEMY, createEntity } from './sim/state'
 
 /** 기준 문서에 적힌 로그 한 줄. 필드 이름은 파이썬 `LogEntry` 를 그대로 따른다. */
 interface GoldenLogRow {
@@ -198,7 +198,7 @@ function addExtraEnemies(engine: TickEngine, extras: readonly GoldenExtra[]): vo
         initiative: kind.initiative,
         regenBase: kind.regen_base ?? 0,
         cpuBudget: kind.cpu_budget ?? 0,
-        potions: kind.potions ?? 0,
+        consumables: new Map([['POTION', kind.potions ?? 0]]),
       }),
     )
   })
@@ -245,7 +245,7 @@ function buildEntityRows(engine: TickEngine): GoldenEntity[] {
       x: entity.position.x,
       y: entity.position.y,
       attack: entity.attack,
-      potions: entity.potions,
+      potions: countItem(entity, 'POTION'),
       cooldowns: sortMapEntries(entity.cooldowns),
       flags: sortMapEntries(entity.flags),
     }

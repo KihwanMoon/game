@@ -32,6 +32,13 @@ export interface PlayerLoadout {
    */
   readonly skillPowerPct: number
   readonly skills: readonly string[]
+  /**
+   * 이 런에 들고 들어가는 소모품. 태그에서 개수로 (#54).
+   *
+   * **장비와 같은 이유로 티켓이 싣는다.** 인벤토리는 서버가 알고 전투는 브라우저가
+   * 도므로, 얼려 두지 않으면 화면은 빈손으로 싸우고 서버는 주머니를 채운 채 재시뮬한다.
+   */
+  readonly consumables: readonly (readonly [string, number])[]
 }
 
 /** 서버가 주는 절. 파이썬 `build_loadout_payload` 와 같은 열쇠다. */
@@ -45,6 +52,7 @@ export interface RawPlayerLoadout {
   readonly rule_slots: number
   readonly skill_power_pct?: number
   readonly skills: readonly string[]
+  readonly consumables?: Record<string, number>
 }
 
 /**
@@ -67,5 +75,9 @@ export function parseLoadout(raw: RawPlayerLoadout): PlayerLoadout {
     skillPowerPct: raw.skill_power_pct ?? BASE_SKILL_POWER_PCT,
     // 정렬해서 담는다. 순서가 실행마다 다르면 같은 티켓이 다른 글자로 저장된다 (R5).
     skills: [...raw.skills].sort(),
+    // 정렬해서 담는다 (R5). 없으면 빈손이다 — 구버전 티켓이 그 경우다.
+    consumables: Object.entries(raw.consumables ?? {})
+      .map(([kind, count]) => [kind, Number(count)] as const)
+      .sort((left, right) => (left[0] < right[0] ? -1 : 1)),
   }
 }

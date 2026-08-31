@@ -33,6 +33,7 @@ from game.app.simulation.plan import (
     PHASE_DECIDE,
     PHASE_TELEGRAPH,
     PHASE_UPKEEP,
+    USE_ITEM_ACTION,
     DecisionPolicy,
     EngineConfig,
     PlannedAction,
@@ -266,8 +267,8 @@ class TickEngine:
             executor.apply_attack(entity, plan)
         elif plan.action_id == "AREA_ATTACK":
             executor.apply_area_attack(entity, plan)
-        elif plan.action_id == "USE_POTION":
-            executor.apply_potion(entity, plan)
+        elif plan.action_id in {"USE_POTION", USE_ITEM_ACTION}:
+            executor.apply_item(entity, plan)
         elif plan.action_id == "HEAL":
             executor.apply_heal(entity, plan)
         elif plan.action_id == GUARD_SKILL_ID:

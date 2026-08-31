@@ -85,7 +85,7 @@ def build_duel_entity(
         initiative=int(base["initiative"]),
         regen_base=int(base["regen_base"]),
         cpu_budget=snapshot.cpu_budget,
-        potions=int(base.get("potions", 0)),
+        consumables={"POTION": int(base.get("potions", 0))},
     )
 
 

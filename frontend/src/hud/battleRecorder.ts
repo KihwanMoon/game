@@ -20,6 +20,7 @@ import type { BattleSetup, PlanScene } from '../battle'
 import type { LogEntry } from '../core/eventLog'
 import type { Position } from '../core/grid/geometry'
 import type { RoomTemplate, RuleSet } from '../core/schemas'
+import { countItem } from '../core/sim/state'
 import { PLAYER_ENTITY_ID } from '../core/services/runBattle'
 import { runTickBatch } from '../core/services/runSteppedBattle'
 import { countEnemyKinds } from '../core/services/runSummary'
@@ -115,7 +116,7 @@ export function recordFrame(
     scene: buildPlanScene(engine),
     playerHp: player.hp,
     playerHpMax: player.hpMax,
-    potions: player.potions,
+    potions: countItem(player, 'POTION'),
     threat: buildThreatNotice(engine.telegraphs, player.position, getForesightTicks(player)),
     outcome,
   }

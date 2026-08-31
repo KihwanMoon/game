@@ -30,6 +30,7 @@ import {
 } from '../schemas'
 import { type PerceptionSnapshot, readSnapshot } from '../sim/perception'
 import {
+  USE_ITEM_ACTION,
   USE_SKILL_ACTION,
   type BlockedRule,
   type DecisionPolicy,
@@ -37,7 +38,7 @@ import {
   createPlannedAction,
 } from '../sim/plan'
 import { resolveTarget } from '../sim/selectors'
-import { type Entity, type WorldState, checkHasSkill, getHpPercent } from '../sim/state'
+import { countItem, type Entity, type WorldState, checkHasSkill, getHpPercent } from '../sim/state'
 
 /** 측정된 값. `undefined` 는 "아직 값을 만들 수 없다" 는 뜻이며 0·false 와 다르다. */
 export type MeasuredValue = number | boolean | undefined
@@ -60,7 +61,7 @@ export const RHS_STAT_READERS: ReadonlyMap<string, (actor: Entity) => number> = 
   ['defense', (actor: Entity) => actor.defense],
   ['hp_max', (actor: Entity) => actor.hpMax],
   ['cpu_budget', (actor: Entity) => actor.cpuBudget],
-  ['potions', (actor: Entity) => actor.potions],
+  ['potions', (actor: Entity) => countItem(actor, 'POTION')],
 ])
 
 export const DEFAULT_ACTION = 'APPROACH'
@@ -367,6 +368,16 @@ export class RuleVm implements DecisionPolicy {
         })
         continue
       }
+      // 소모품도 같다 — 조건은 참인데 수단이 없다. 이것이 「거짓」과 다르다는 것이
+      // 이 게임의 규칙 상태 4종 중 하나다 (결정 #04).
+      if (rule.action === USE_ITEM_ACTION && countItem(entity, rule.actionParam ?? '') <= 0) {
+        blocked.push({
+          ruleIndex: rule.priority,
+          expr,
+          reason: `${String(rule.actionParam)} 없음`,
+        })
+        continue
+      }
       return createPlannedAction({
         entityId: entity.entityId,
         actionId: rule.action,
@@ -375,6 +386,7 @@ export class RuleVm implements DecisionPolicy {
         expr,
         setFlag: rule.setFlag,
         skillId: rule.action === USE_SKILL_ACTION ? rule.actionParam : null,
+        itemKind: rule.action === USE_ITEM_ACTION ? rule.actionParam : null,
         blocked,
       })
     }

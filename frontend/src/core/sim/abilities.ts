@@ -24,7 +24,7 @@ import { WALKABLE_TILES } from '../schemas'
 import { divideFloor } from '../combat/damage'
 import type { EngineConfig, PlannedAction, RawEnemyKind, RawTelegraphSetting } from './plan'
 import { getScaledEnemyStats } from './scaling'
-import { type Entity, type WorldState, createEntity, isAlive } from './state'
+import { type Entity, type WorldState, countItem, createEntity, isAlive } from './state'
 import { type TelegraphBoard, buildBlastTiles } from './telegraph'
 
 /** 소환 쿨타임을 다는 키. 인지 변수 self_cooldown_ready[SUMMON] 가 이것을 읽는다. */
@@ -123,7 +123,7 @@ export function createMinion(
     initiative: stats.initiative,
     regenBase: stats.regen_base ?? 0,
     cpuBudget: stats.cpu_budget ?? 0,
-    potions: stats.potions ?? 0,
+    consumables: new Map([[ITEM_POTION, stats.potions ?? 0]]),
     summonerId: summoner.entityId,
   })
   state.entities.set(minion.entityId, minion)
@@ -251,11 +251,53 @@ export function resolveHeal(
  * @returns 회복량과 로그에 남길 결과 문자열. 포션이 없으면 회복량이 null 이다 — 0 과
  *   구분해야 "만피라서 0" 과 "포션이 없어 아무 일도 없었다" 가 갈린다.
  */
+/** 소모품 태그. 카탈로그 id 가 아니라 태그인 이유는 물약을 여러 등급으로 늘려도
+ * 규칙표가 가리키는 것이 그대로여야 하기 때문이다 (#54). */
+/** 방어 태세 상태 열쇠. 방패와 같은 값을 쓴다 — 규칙표를 짜는 사람이 새 개념을
+ * 배우지 않아도 된다. */
+export const GUARD_STATUS = 'GUARD'
+
+export const ITEM_POTION = 'POTION'
+export const ITEM_SCROLL = 'SCROLL'
+
+/**
+ * 소모품 하나를 쓴다.
+ *
+ * @param entity 사용자.
+ * @param kind 소모품 태그.
+ * @returns 실제로 썼으면 true. 없으면 false 이고 아무것도 바뀌지 않는다.
+ */
+export function spendItem(entity: Entity, kind: string): boolean {
+  const held = countItem(entity, kind)
+  if (held <= 0) {
+    return false
+  }
+  entity.consumables.set(kind, held - 1)
+  return true
+}
+
+/**
+ * 보호 주문서를 써서 방어 태세에 들어간다.
+ *
+ * **가드 기제를 그대로 쓴다.** 방패의 `GUARD_BRACE` 와 같은 상태이므로 피해 감소도 같은
+ * 자리에서 계산되고, 규칙표를 짜는 사람은 새 개념을 배우지 않아도 된다.
+ *
+ * @param entity 사용자.
+ * @param ticks 태세가 유지될 틱.
+ * @returns 유지 틱과 로그 문자열. 주문서가 없으면 틱이 null 이다.
+ */
+export function resolveScroll(entity: Entity, ticks: number): PotionResult {
+  if (!spendItem(entity, ITEM_SCROLL)) {
+    return { healed: null, outcome: '주문서 없음 — 틱 낭비' }
+  }
+  entity.statuses.set(GUARD_STATUS, ticks)
+  return { healed: ticks, outcome: `방어 태세 ${String(ticks)}틱` }
+}
+
 export function resolvePotion(entity: Entity): PotionResult {
-  if (entity.potions <= 0) {
+  if (!spendItem(entity, ITEM_POTION)) {
     return { healed: null, outcome: '포션 없음 — 틱 낭비' }
   }
-  entity.potions -= 1
   const healed = Math.min(entity.hpMax - entity.hp, divideFloor(entity.hpMax, POTION_HEAL_DIVISOR))
   entity.hp += healed
   return { healed, outcome: `HP ${entity.hp}/${entity.hpMax}` }

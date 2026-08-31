@@ -10,7 +10,13 @@
 
 from game.app.core.event_log import EventLog, LogEntry
 from game.app.simulation import abilities
-from game.app.simulation.plan import PHASE_ACT, STATUS_GUARD, EngineConfig, PlannedAction
+from game.app.simulation.plan import (
+    GUARD_SKILL_ID,
+    PHASE_ACT,
+    STATUS_GUARD,
+    EngineConfig,
+    PlannedAction,
+)
 from game.app.simulation.state import Entity, WorldState
 
 
@@ -68,13 +74,22 @@ class SupportActionMixin:
             self._apply_cooldown(entity, plan.action_id)
         self._record(entity.entity_id, plan, outcome, healed or None)
 
-    def apply_potion(self, entity: Entity, plan: PlannedAction) -> None:
-        """포션을 쓴다.
+    def apply_item(self, entity: Entity, plan: PlannedAction) -> None:
+        """소모품을 쓴다 (v6, #54).
+
+        **종류로 갈린다.** `USE_POTION` 은 `USE_ITEM[POTION]` 의 별칭이므로 태그가 없으면
+        포션으로 본다 — 저장된 규칙표와 골든이 그 id 를 쓰기 때문이다.
 
         Args:
             entity: 사용자.
             plan: 실행할 계획.
         """
+        kind = plan.item_kind or abilities.ITEM_POTION
+        if kind == abilities.ITEM_SCROLL:
+            ticks = self.config.skill_guard_ticks.get(GUARD_SKILL_ID, 0)
+            held, outcome = abilities.resolve_scroll(entity, ticks)
+            self._record(entity.entity_id, plan, outcome, held)
+            return
         healed, outcome = abilities.resolve_potion(entity)
         self._record(entity.entity_id, plan, outcome, healed)
 

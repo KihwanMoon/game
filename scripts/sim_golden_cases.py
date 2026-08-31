@@ -22,7 +22,8 @@ MAX_TICKS = 400
 FLOOR = 1
 
 # 동결된 행동 전부. 순서를 바꾸면 기준 로그가 통째로 달라진다. HEAL 은 v4, USE_SKILL 은
-# v5 에서 **뒤에** 붙였다 — 사이에 끼우면 그 뒤의 모든 기준 로그가 이유 없이 밀린다.
+# v5, USE_ITEM 은 v6 에서 **뒤에** 붙였다 — 사이에 끼우면 그 뒤의 모든 기준 로그가
+# 이유 없이 밀린다.
 ACTION_CYCLE = (
     "APPROACH",
     "ATTACK",
@@ -39,6 +40,7 @@ ACTION_CYCLE = (
     "SKILL_1",
     "HEAL",
     "USE_SKILL",
+    "USE_ITEM",
 )
 
 # 지속 몬스터 케이스. 스냅샷이 층 스케일을 **대체하는지**(얹는 것이 아니라) 가 여기서
@@ -134,6 +136,12 @@ LOADOUT_CASES: tuple[tuple[tuple[str, int, int], PlayerLoadout], ...] = (
 # USE_SKILL 이 실행할 스킬. 이 정책은 규칙표를 타지 않으므로 여기서 정한다.
 # 사거리 4 인 사격을 고른 이유는 근접 스킬과 결과가 갈려야 대조에 뜻이 있기 때문이다.
 CYCLE_SKILL = "SKILL_2"
+
+# USE_ITEM 이 가리킬 소모품 (v6). 포션이면 실제로 회복이 일어나 소모 경로가 로그에 남는다.
+# 주문서로 둔다. 포션 경로는 USE_POTION 이 이미 태우고 있고, 주문서라야 방어 태세가
+# 서서 **가드 감소가 대조된다** — 그 경로를 아무 골든도 안 태우고 있었다.
+CYCLE_ITEM = "SCROLL"
+CYCLE_ITEM_COUNT = 3
 
 # 행동별 대상 셀렉터. 이 정책은 규칙표를 타지 않으므로 진영을 여기서 맞춘다 —
 # 전부 NEAREST 로 두면 HEAL 이 적을 회복해 기준 로그가 뜻 없는 것을 고정한다.

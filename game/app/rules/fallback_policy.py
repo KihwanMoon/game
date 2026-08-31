@@ -35,7 +35,8 @@ class FallbackPolicy:
             실행할 계획.
         """
         hp_percent = snapshot.read("self_hp_percent")
-        if entity.potions > 0 and isinstance(hp_percent, int) and hp_percent < LOW_HP_PERCENT:
+        is_hurt = isinstance(hp_percent, int) and hp_percent < LOW_HP_PERCENT
+        if entity.count_item("POTION") > 0 and is_hurt:
             return PlannedAction(
                 entity_id=entity.entity_id,
                 action_id="USE_POTION",

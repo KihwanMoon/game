@@ -26,7 +26,7 @@ R5 다 — 같은 시드가 같은 자리를 내야 리플레이가 성립한다
 """
 
 from game.app.grid.geometry import get_manhattan_distance, iter_steps
-from game.app.simulation.plan import EngineConfig, PlannedAction
+from game.app.simulation.plan import STATUS_GUARD, EngineConfig, PlannedAction
 from game.app.simulation.scaling import get_scaled_enemy_stats
 from game.app.simulation.state import Entity, WorldState
 from game.app.simulation.telegraph import TelegraphBoard, build_blast_tiles
@@ -42,6 +42,11 @@ HEAL_ACTION = "HEAL"
 PERCENT_BASE = 100
 
 # 포션이 채우는 몫. 최대 HP 의 절반이다.
+# 소모품 태그. 카탈로그 id 가 아니라 태그인 이유는 회복 물약을 여러 등급으로 늘려도
+# 규칙표가 가리키는 것이 그대로여야 하기 때문이다 (#54).
+ITEM_POTION = "POTION"
+ITEM_SCROLL = "SCROLL"
+
 POTION_HEAL_DIVISOR = 2
 
 
@@ -114,7 +119,7 @@ def create_minion(
         initiative=stats["initiative"],
         regen_base=stats.get("regen_base", 0),
         cpu_budget=stats.get("cpu_budget", 0),
-        potions=stats.get("potions", 0),
+        consumables={ITEM_POTION: int(stats.get("potions", 0))},
         summoner_id=summoner.entity_id,
     )
     state.entities[minion.entity_id] = minion
@@ -232,9 +237,43 @@ def resolve_potion(entity: Entity) -> tuple[int | None, str]:
         (회복량, 로그에 남길 결과 문자열). 포션이 없으면 회복량이 None 이다 — 0 과
         구분해야 "만피라서 0" 과 "포션이 없어 아무 일도 없었다" 가 갈린다.
     """
-    if entity.potions <= 0:
+    if not remove_item(entity, ITEM_POTION):
         return None, "포션 없음 — 틱 낭비"
-    entity.potions -= 1
     healed = min(entity.hp_max - entity.hp, entity.hp_max // POTION_HEAL_DIVISOR)
     entity.hp += healed
     return healed, f"HP {entity.hp}/{entity.hp_max}"
+
+
+def remove_item(entity: Entity, kind: str) -> bool:
+    """소모품 하나를 주머니에서 뺀다.
+
+    Args:
+        entity: 사용자.
+        kind: 소모품 태그.
+
+    Returns:
+        실제로 썼으면 True. 없으면 False 이고 아무것도 바뀌지 않는다.
+    """
+    if entity.count_item(kind) <= 0:
+        return False
+    entity.consumables[kind] = entity.count_item(kind) - 1
+    return True
+
+
+def resolve_scroll(entity: Entity, ticks: int) -> tuple[int | None, str]:
+    """보호 주문서를 써서 방어 태세에 들어간다.
+
+    **가드 기제를 그대로 쓴다.** 방패의 `GUARD_BRACE` 와 같은 상태이므로 피해 감소도
+    같은 자리에서 계산되고, 규칙표를 짜는 사람은 새 개념을 하나도 배우지 않아도 된다.
+
+    Args:
+        entity: 사용자.
+        ticks: 태세가 유지될 틱.
+
+    Returns:
+        (유지 틱, 로그 문자열). 주문서가 없으면 틱이 None 이다.
+    """
+    if not remove_item(entity, ITEM_SCROLL):
+        return None, "주문서 없음 — 틱 낭비"
+    entity.statuses[STATUS_GUARD] = ticks
+    return ticks, f"방어 태세 {ticks}틱"

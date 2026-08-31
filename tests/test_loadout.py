@@ -20,6 +20,7 @@ BASE = {
     "attack_range": 1,
     "initiative": 50,
     "cpu_budget": 8,
+    "potions": 2,
 }
 BASE_SLOTS = 5
 
@@ -98,3 +99,41 @@ def test_skills_are_sorted(catalog):
     equipped = {EquipSlot.WEAPON_OFF: find_item(catalog, "shield_buckler")}
     loadout = build_player_loadout(BASE, equipped, level=1, base_rule_slots=BASE_SLOTS)
     assert list(loadout.skills) == sorted(loadout.skills)
+
+
+def test_the_base_potions_survive_a_loadout(catalog):
+    """★ **로드아웃이 생겼다고 기본 지급이 사라지면 안 된다.**
+
+    balance.json 의 `potions` 는 누구나 런을 시작할 때 받는 몫이고, 가방은 그 위에
+    더해지는 것이다. 가방만 쓰면 로드아웃이 붙는 순간 모두가 빈손이 된다 — 실제로 그렇게
+    회귀했고, 이기던 규칙표가 지기 시작해서 드러났다.
+    """
+    loadout = build_player_loadout(BASE, {}, level=1, base_rule_slots=BASE_SLOTS)
+    assert dict(loadout.consumables)["POTION"] == BASE["potions"]
+
+
+def test_the_bag_adds_on_top(catalog):
+    """★ 가방이 기본 지급을 덮으면 물약을 주울 이유가 없다."""
+    loadout = build_player_loadout(
+        BASE, {}, level=1, base_rule_slots=BASE_SLOTS, consumables={"POTION": 3, "SCROLL": 2}
+    )
+    counts = dict(loadout.consumables)
+    assert counts["POTION"] == BASE["potions"] + 3
+    assert counts["SCROLL"] == 2
+
+
+def test_empty_kinds_are_not_carried(catalog):
+    """0개인 종류를 담으면 티켓이 쓸데없이 길어진다."""
+    loadout = build_player_loadout(
+        BASE, {}, level=1, base_rule_slots=BASE_SLOTS, consumables={"SCROLL": 0}
+    )
+    assert "SCROLL" not in dict(loadout.consumables)
+
+
+def test_consumables_are_sorted(catalog):
+    """딕셔너리 순회 순서가 티켓에 새어 나가면 안 된다 (R5)."""
+    loadout = build_player_loadout(
+        BASE, {}, level=1, base_rule_slots=BASE_SLOTS, consumables={"SCROLL": 1, "AAA": 1}
+    )
+    kinds = [kind for kind, _ in loadout.consumables]
+    assert kinds == sorted(kinds)

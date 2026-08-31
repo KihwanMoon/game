@@ -138,7 +138,7 @@ export function addExtraEnemies(
         initiative: kind.initiative,
         regenBase: kind.regen_base ?? 0,
         cpuBudget: kind.cpu_budget ?? 0,
-        potions: kind.potions ?? 0,
+        consumables: new Map([['POTION', kind.potions ?? 0]]),
       }),
     )
   })

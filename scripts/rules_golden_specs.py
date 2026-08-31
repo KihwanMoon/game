@@ -23,7 +23,8 @@ from game.schemas.room import RoomTemplate
 
 # 엔티티 명세 한 항목이 가질 수 있는 값. `Any` 를 쓰지 않는 이유는 오타 난 덮어쓰기를
 # 검사가 잡아 주도록 하기 위한 것이다.
-SpecValue = int | str | list[int]
+# 소모품이 v6 에서 종류별 딕셔너리가 됐다 (#54).
+SpecValue = int | str | list[int] | dict[str, int]
 
 # 조건 항의 우변. 리터럴이거나 `{"stat": ...}` 스탯 참조다 (F-2).
 RhsValue = int | bool | dict[str, str]
@@ -105,7 +106,7 @@ def build_enemy_spec(entity_id: str, kind_id: str, **overrides: SpecValue) -> di
         initiative=40,
         regen_base=0,
         cpu_budget=4,
-        potions=0,
+        consumables={"POTION": 0},
     )
     spec.update(overrides)
     return spec
@@ -330,6 +331,10 @@ def create_world(spec: dict[str, Any], rooms: dict[str, RoomTemplate]) -> WorldS
     for entity_spec in spec["entities"]:
         fields = dict(entity_spec)
         fields["position"] = tuple(fields["position"])
+        # 소모품은 v6 에서 종류별이 됐다. 명세는 예전 이름으로 적혀 있고, 여기서 옮긴다 —
+        # 명세를 고치면 저장된 기준값이 통째로 흔들린다.
+        if "potions" in fields:
+            fields["consumables"] = {"POTION": int(fields.pop("potions"))}
         entity = Entity(**fields)
         state.entities[entity.entity_id] = entity
     state.tick = spec["tick"]

@@ -79,7 +79,10 @@
           "initiative": 40,
           "regen_base": 0,
           "cpu_budget": 4,
-          "potions": 0
+          "potions": 2,
+          "consumables": {
+            "POTION": 0
+          }
         },
         {
           "entity_id": "e_bravo",
@@ -97,7 +100,10 @@
           "initiative": 40,
           "regen_base": 0,
           "cpu_budget": 4,
-          "potions": 0
+          "potions": 2,
+          "consumables": {
+            "POTION": 0
+          }
         },
         {
           "entity_id": "e_charlie",
@@ -115,7 +121,10 @@
           "initiative": 40,
           "regen_base": 0,
           "cpu_budget": 4,
-          "potions": 0
+          "potions": 2,
+          "consumables": {
+            "POTION": 0
+          }
         },
         {
           "entity_id": "e_delta",
@@ -133,7 +142,10 @@
           "initiative": 40,
           "regen_base": 0,
           "cpu_budget": 4,
-          "potions": 0
+          "potions": 2,
+          "consumables": {
+            "POTION": 0
+          }
         },
         {
           "entity_id": "e_echo",
@@ -151,7 +163,10 @@
           "initiative": 40,
           "regen_base": 0,
           "cpu_budget": 4,
-          "potions": 0
+          "potions": 2,
+          "consumables": {
+            "POTION": 0
+          }
         }
       ]
     },
@@ -195,7 +210,10 @@
           "initiative": 40,
           "regen_base": 0,
           "cpu_budget": 4,
-          "potions": 0
+          "potions": 2,
+          "consumables": {
+            "POTION": 0
+          }
         },
         {
           "entity_id": "e_boss",
@@ -213,7 +231,10 @@
           "initiative": 40,
           "regen_base": 0,
           "cpu_budget": 4,
-          "potions": 0
+          "potions": 2,
+          "consumables": {
+            "POTION": 0
+          }
         }
       ]
     },
@@ -257,7 +278,10 @@
           "initiative": 40,
           "regen_base": 0,
           "cpu_budget": 4,
-          "potions": 0
+          "potions": 2,
+          "consumables": {
+            "POTION": 0
+          }
         }
       ]
     },
@@ -327,7 +351,10 @@
           "initiative": 40,
           "regen_base": 0,
           "cpu_budget": 4,
-          "potions": 0
+          "potions": 2,
+          "consumables": {
+            "POTION": 0
+          }
         }
       ]
     },
@@ -411,7 +438,10 @@
           "initiative": 40,
           "regen_base": 0,
           "cpu_budget": 4,
-          "potions": 0
+          "potions": 2,
+          "consumables": {
+            "POTION": 0
+          }
         },
         {
           "entity_id": "e_mender",
@@ -429,7 +459,10 @@
           "initiative": 40,
           "regen_base": 0,
           "cpu_budget": 4,
-          "potions": 0
+          "potions": 2,
+          "consumables": {
+            "POTION": 0
+          }
         }
       ]
     }

@@ -38,6 +38,8 @@ from scripts.sim_golden_cases import (
     ATTRIBUTE_CASES,
     CYCLE_CASES,
     CYCLE_FLAG,
+    CYCLE_ITEM,
+    CYCLE_ITEM_COUNT,
     CYCLE_SELECTORS,
     CYCLE_SKILL,
     FALLBACK_CASES,
@@ -48,6 +50,8 @@ from scripts.sim_golden_cases import (
     POLICY_FALLBACK,
     SNAPSHOT_CASES,
 )
+
+PLAYER_ID = "player"
 
 GOLDEN_PATH = Path(__file__).resolve().parents[1] / "frontend/src/core/golden/sim_golden.json"
 
@@ -93,6 +97,9 @@ class CyclingPolicy:
             expr=f"틱({snapshot.tick}) + 오프셋({offset}) % {len(ACTION_CYCLE)} = {index}",
             set_flag=CYCLE_FLAG if action_id == "SET_FLAG" else None,
             skill_id=CYCLE_SKILL if action_id == "USE_SKILL" else None,
+            # v6. 대조 전용 정책이라 태그를 고정한다 — 포션이면 실제로 회복이 일어나므로
+            # 소모 경로가 로그에 남는다.
+            item_kind=CYCLE_ITEM if action_id == "USE_ITEM" else None,
         )
 
 
@@ -147,7 +154,7 @@ def add_extra_enemies(
             initiative=kind["initiative"],
             regen_base=kind["regen_base"],
             cpu_budget=kind.get("cpu_budget", 0),
-            potions=kind.get("potions", 0),
+            consumables={"POTION": int(kind.get("potions", 0))},
         )
     engine.register_newcomers()
 
@@ -188,6 +195,11 @@ def build_case(
     )
     if policy_name == POLICY_CYCLE:
         engine.policy = CyclingPolicy({k["id"]: k["type"] for k in balance["enemies"]})
+        # **순환 정책에만 주문서를 쥐여 준다.** 그래야 `USE_ITEM[SCROLL]` 이 실제로
+        # 발동해 방어 태세가 서고, 그 뒤의 피해 감소가 두 코어에서 같은지 대조된다.
+        # 이것이 없으면 가드 경로를 아무 골든도 태우지 않는다 — 실제로 그래서
+        # TS 코어에 가드가 통째로 빠져 있는 것을 아무도 몰랐다.
+        engine.state.entities[PLAYER_ID].consumables[CYCLE_ITEM] = CYCLE_ITEM_COUNT
     if extras:
         add_extra_enemies(engine, balance, extras)
     result = run_battle(engine)
@@ -232,7 +244,7 @@ def build_entity_rows(state: WorldState) -> list[dict[str, Any]]:
                 "x": entity.position[0],
                 "y": entity.position[1],
                 "attack": entity.attack,
-                "potions": entity.potions,
+                "potions": entity.count_item("POTION"),
                 "cooldowns": {key: entity.cooldowns[key] for key in sorted(entity.cooldowns)},
                 "flags": {key: entity.flags[key] for key in sorted(entity.flags)},
             }
@@ -309,6 +321,8 @@ def build_golden_document() -> dict[str, Any]:
         "cycle_selectors": [[action, selector] for action, selector in CYCLE_SELECTORS.items()],
         "cycle_flag": CYCLE_FLAG,
         "cycle_skill": CYCLE_SKILL,
+        "cycle_item": CYCLE_ITEM,
+        "cycle_item_count": CYCLE_ITEM_COUNT,
         "attributes": build_attribute_rows(),
         "battles": build_battle_cases(),
     }

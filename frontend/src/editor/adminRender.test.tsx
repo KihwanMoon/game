@@ -147,9 +147,11 @@ describe('관리 현황을 언제 읽는가', () => {
     // 예전에는 refreshWorld() 안에서만 불렀는데, 그것은 경매를 조작해야 돈다.
     // 그래서 관리자 권한을 줘도 화면에 아무 일이 없었다.
     const source = readFileSync(fileURLToPath(new URL('../App.tsx', import.meta.url)), 'utf8')
+    // 계정 상태는 loadAccountState 한 자리에서 읽는다 — 갈라 두면 한쪽만 고치고 끝난다.
     const boot = source.slice(source.indexOf('const token = await ensureToken'))
-    const untilMeta = boot.slice(0, boot.indexOf('readServerMeta'))
-    expect(untilMeta).toContain('readAdminOverview')
+    expect(boot.slice(0, boot.indexOf('readServerMeta'))).toContain('loadAccountState')
+    const loader = source.slice(source.indexOf('async function loadAccountState'))
+    expect(loader.slice(0, loader.indexOf('\n  }'))).toContain('readAdminOverview')
   })
 
   it('★ 로그인 뒤에도 다시 읽는다 — 계정이 바뀌면 권한도 바뀐다', () => {
@@ -157,6 +159,6 @@ describe('관리 현황을 언제 읽는가', () => {
     // 둘 다 틀렸다.
     const source = readFileSync(fileURLToPath(new URL('../App.tsx', import.meta.url)), 'utf8')
     const login = source.slice(source.indexOf('async function applyLogin'))
-    expect(login.slice(0, login.indexOf('return \'\''))).toContain('readAdminOverview')
+    expect(login.slice(0, login.indexOf('return \'\''))).toContain('loadAccountState')
   })
 })

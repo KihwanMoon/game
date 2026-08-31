@@ -232,7 +232,7 @@ def run_node_battle(
     player.hp = min(state.hp, state.hp_max)
     player.attack = state.attack
     player.defense = state.defense
-    player.potions = state.potions
+    player.consumables = {"POTION": state.potions}
     player.cpu_budget = state.cpu_budget
     if ruleset is not None:
         engine.policies["player"] = build_rule_vm(
@@ -242,7 +242,7 @@ def run_node_battle(
 
     result = run_battle(engine)
     state.hp = player.hp
-    state.potions = player.potions
+    state.potions = player.count_item("POTION")
     return result
 
 

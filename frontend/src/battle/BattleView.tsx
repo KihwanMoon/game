@@ -45,6 +45,7 @@ import {
 } from '../ds'
 import { BLOCK_CATALOG } from '../core/resources'
 import { PLAYER_ENTITY_ID } from '../core/services/runBattle'
+import { countItem } from '../core/sim/state'
 import {
   SPEED_INSTANT,
   type TickBatch,
@@ -345,7 +346,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         entries={session.engine.log.entries.slice(-LOG_TAIL)}
         hp={player?.hp ?? 0}
         hpMax={player?.hpMax ?? 1}
-        potions={player?.potions ?? 0}
+        potions={player === undefined ? 0 : countItem(player, 'POTION')}
         potionsMax={session.balance.player.potions}
         tab={tab}
         onTabChange={setTab}
@@ -378,7 +379,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         entries={session.engine.log.entries.slice(-LOG_TAIL)}
         hp={player?.hp ?? 0}
         hpMax={player?.hpMax ?? 1}
-        potions={player?.potions ?? 0}
+        potions={player === undefined ? 0 : countItem(player, 'POTION')}
         potionsMax={session.balance.player.potions}
         tab={tab}
         onTabChange={setTab}
@@ -452,7 +453,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
       <StatusBar
         hp={player?.hp ?? 0}
         hpMax={player?.hpMax ?? 1}
-        potions={player?.potions ?? 0}
+        potions={player === undefined ? 0 : countItem(player, 'POTION')}
         potionsMax={session.balance.player.potions}
         {...(threatText === undefined ? {} : { threat: threatText })}
       />

@@ -25,6 +25,9 @@ COMBAT_STATS: tuple[str, ...] = (
 
 PERCENT_BASE = 100
 
+# 기본 지급이 들어가는 태그. balance.json 이 `potions` 라는 이름으로 적어 둔 것이다.
+POTION_TAG = "POTION"
+
 
 def build_player_loadout(
     base_stats: dict[str, int],
@@ -32,6 +35,7 @@ def build_player_loadout(
     level: int,
     base_rule_slots: int,
     stats: dict[str, int] | None = None,
+    consumables: dict[str, int] | None = None,
 ) -> PlayerLoadout:
     """장비와 레벨을 합쳐 이번 런의 전투 입력을 만든다.
 
@@ -44,6 +48,7 @@ def build_player_loadout(
         level: 플레이어 레벨.
         base_rule_slots: 기본 규칙 슬롯 수.
         stats: 유저가 배분한 힘·민첩·지능. None 이면 배분이 없는 것으로 본다.
+        consumables: 가방에 든 소모품. 태그에서 개수로. None 이면 빈손이다.
 
     Returns:
         확정된 전투 입력.
@@ -81,6 +86,28 @@ def build_player_loadout(
         cpu_budget=final["cpu_budget"] + growth.bonus_cpu + bonus.cpu_budget,
         rule_slots=base_rule_slots + growth.bonus_rule_slots,
         skill_power_pct=bonus.skill_power_pct,
+        # **기본 지급 위에 가방을 얹는다.** balance.json 의 `potions` 는 누구나 런을
+        # 시작할 때 받는 몫이고, 가방은 그 위에 더해지는 것이다 — 가방만 쓰면 로드아웃이
+        # 생기는 순간 기본 지급이 사라진다(실제로 그렇게 회귀했다).
+        #
+        # 정렬해서 담는다. 딕셔너리 순회 순서가 티켓에 새어 나가면 안 된다 (R5).
+        consumables=tuple(sorted(merge_consumables(base_stats, consumables or {}).items())),
         # 정렬해서 담는다. 집합 순회 순서가 티켓에 새어 나가면 안 된다 (R5).
         skills=tuple(sorted(skills)),
     )
+
+
+def merge_consumables(base_stats: dict[str, int], carried: dict[str, int]) -> dict[str, int]:
+    """기본 지급과 가방을 합친다.
+
+    Args:
+        base_stats: balance.json 의 플레이어 절. `potions` 를 기본 지급으로 읽는다.
+        carried: 가방에 든 소모품. 태그에서 개수로.
+
+    Returns:
+        태그에서 개수로. 0개인 종류는 담지 않는다 — 티켓이 쓸데없이 길어진다.
+    """
+    merged = {POTION_TAG: int(base_stats.get("potions", 0))}
+    for kind, count in carried.items():
+        merged[kind] = merged.get(kind, 0) + int(count)
+    return {kind: count for kind, count in merged.items() if count > 0}

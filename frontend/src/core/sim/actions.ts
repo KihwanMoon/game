@@ -20,9 +20,20 @@ import {
 import { VisionGrid, checkLineOfSight, findCoverPositions } from '../grid/vision'
 import { buildDistanceField, findNextStep } from '../pathfinding/distanceField'
 import { TILE_DOOR, TILE_SPRING, TILE_STAIRS, WALKABLE_TILES } from '../schemas'
-import { registerBlast, resolveHeal, resolvePotion, resolveSummon } from './abilities'
+import {
+  GUARD_STATUS,
+  ITEM_POTION,
+  ITEM_SCROLL,
+  registerBlast,
+  resolveHeal,
+  resolvePotion,
+  resolveScroll,
+  resolveSummon,
+} from './abilities'
 import { PHASE_ACT } from './phases'
+import { GUARD_SKILL_ID } from './plan'
 import type { EngineConfig, PlannedAction, RawTelegraphSetting } from './plan'
+import { divideFloor } from '../combat/damage'
 import { PERCENT_BASE, type Entity, type WorldState, isAlive } from './state'
 import { TelegraphBoard } from './telegraph'
 
@@ -207,12 +218,22 @@ export class ActionExecutor {
   }
 
   /**
-   * 포션을 쓴다.
+   * 소모품을 쓴다 (v6, #54).
+   *
+   * **종류로 갈린다.** `USE_POTION` 은 `USE_ITEM[POTION]` 의 별칭이므로 태그가 없으면
+   * 포션으로 본다 — 저장된 규칙표와 골든이 그 id 를 쓰기 때문이다.
    *
    * @param entity 사용자.
    * @param plan 실행할 계획.
    */
-  applyPotion(entity: Entity, plan: PlannedAction): void {
+  applyItem(entity: Entity, plan: PlannedAction): void {
+    const kind = plan.itemKind ?? ITEM_POTION
+    if (kind === ITEM_SCROLL) {
+      const ticks = this.config.skillGuardTicks.get(GUARD_SKILL_ID) ?? 0
+      const held = resolveScroll(entity, ticks)
+      this.recordResult(entity.entityId, plan, held.outcome, held.healed)
+      return
+    }
     const { healed, outcome } = resolvePotion(entity)
     this.recordResult(entity.entityId, plan, outcome, healed)
   }
@@ -277,7 +298,14 @@ export class ActionExecutor {
     actorId: string,
     rule: number | null = null,
   ): void {
-    target.hp = Math.max(0, target.hp - amount)
+    // 방어 태세는 여기서 본다. 정수 나눗셈이며 내림이다 (R5) — 부동소수를 쓰면
+    // 두 코어가 같은 피해에서 갈린다.
+    let dealt = amount
+    if ((target.statuses.get(GUARD_STATUS) ?? 0) > 0) {
+      const reduction = this.config.skillGuardPct.get(GUARD_SKILL_ID) ?? 0
+      dealt = divideFloor(dealt * (PERCENT_BASE - reduction), PERCENT_BASE)
+    }
+    target.hp = Math.max(0, target.hp - dealt)
     const suffix = isAlive(target) ? '' : ' 사망'
     this.log.record(
       createLogEntry({
@@ -286,7 +314,7 @@ export class ActionExecutor {
         phase,
         expr,
         outcome: `${target.entityId} HP ${target.hp}/${target.hpMax}${suffix}`,
-        delta: -amount,
+        delta: -dealt,
         fired: true,
         targetId: target.entityId,
         rule,

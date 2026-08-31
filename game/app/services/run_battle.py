@@ -141,7 +141,8 @@ def build_engine(
         cpu_budget=loadout.cpu_budget if loadout else player_stats["cpu_budget"],
         # 지능이 올린 스킬위력. 로드아웃이 없으면 기준값이라 기존 판이 그대로다.
         skill_power_pct=loadout.skill_power_pct if loadout else BASE_SKILL_POWER_PCT,
-        potions=player_stats["potions"],
+        # 로드아웃이 있으면 인벤토리가 정한 것을 쓴다 (#54). 없으면 기본값이다.
+        consumables=(dict(loadout.consumables) if loadout else {"POTION": player_stats["potions"]}),
         # None 은 "장착 개념이 배선되지 않음" 이라 전부 허용한다 — 오프라인 연습이
         # 그 경우다. 로드아웃이 있으면 그 목록만 쓴다.
         skills=loadout.skills if loadout else None,
@@ -182,7 +183,7 @@ def build_engine(
             initiative=kind["initiative"],
             regen_base=kind["regen_base"],
             cpu_budget=cpu_budget,
-            potions=kind.get("potions", 0),
+            consumables={"POTION": int(kind.get("potions", 0))},
         )
 
     config = EngineConfig(

@@ -24,7 +24,7 @@ from pathlib import Path
 
 # 콘텐츠 범위. 동결 대상이므로 상수로 박아 로드 때마다 대조한다.
 PERCEPTION_COUNT = 20
-ACTION_COUNT = 15
+ACTION_COUNT = 16  # v6 에서 USE_ITEM 이 들어왔다 (#54)
 SELECTOR_COUNT = 9
 RHS_STAT_COUNT = 6
 

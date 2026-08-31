@@ -55,8 +55,17 @@ OUTCOME_BLOCKED = "불가"
 # 방어 태세 상태 이름 (블록 v5). statuses 에 남은 틱 수로 들어가며, UPKEEP 이 줄인다.
 STATUS_GUARD = "GUARD"
 
+# 방어 감소율과 유지 틱을 읽을 스킬 id. 지금 GUARD 계열이 하나뿐이라 상수로 둔다 —
+# 늘어나면 스킬 정의에서 읽어야 한다. 보호 주문서(v6)도 같은 값을 쓴다: 방패와 같은
+# 상태라 규칙표를 짜는 사람이 새 개념을 배우지 않아도 된다.
+GUARD_SKILL_ID = "GUARD_BRACE"
+
 # 스킬을 정체로 가리키는 행동 (블록 v5, 결정 #04).
 USE_SKILL_ACTION = "USE_SKILL"
+
+# 소모품 사용 (v6, #54). 파라미터는 카탈로그 id 가 아니라 태그다 — 물약을 여러 등급으로
+# 늘려도 규칙표가 가리키는 것이 그대로여야 한다.
+USE_ITEM_ACTION = "USE_ITEM"
 
 
 @dataclass(frozen=True)
@@ -81,6 +90,8 @@ class PlannedAction:
     set_flag: str | None = None
     # 실행할 스킬 (블록 v5). USE_SKILL 이 아니면 None 이다.
     skill_id: str | None = None
+    # `USE_ITEM[kind]` 가 가리키는 소모품 태그 (v6, #54). 스킬과 같은 한 겹의 지시다.
+    item_kind: str | None = None
     # 조건은 참인데 수단이 없어 건너뛴 규칙들 (블록 v5, 결정 #04).
     #
     # **거짓과 다르다.** 거짓은 "조건이 안 맞았다", 불가는 "조건은 맞는데 스킬이 없다" 이고

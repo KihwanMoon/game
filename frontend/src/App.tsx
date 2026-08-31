@@ -482,17 +482,7 @@ export function App(): React.JSX.Element {
       }
       setAccount(token)
       setOnline(true)
-      setProfile(await readAccount(token))
-      setInventory(await readInventory(token))
-      setBestiary(await readBestiary(token))
-      setProgress(await readProgress(token))
-      setLeaderboard(await readLeaderboard(token))
-      setAuction(await readAuction(token))
-      // **관리자면 여기서 관리 탭이 생긴다.** 예전에는 refreshWorld() 안에서만 불러서,
-      // 경매를 한 번 조작하기 전에는 영영 뜨지 않았다 — 관리자 권한을 줘도 화면에
-      // 아무 일이 없었다.
-      setAdmin(await readAdminOverview(token))
-      setCatalog(await readAdminCatalog(token))
+      await loadAccountState(token)
       const outcome = await readServerMeta(token)
       if (!isCurrent) {
         return
@@ -638,8 +628,31 @@ export function App(): React.JSX.Element {
       writeToken(getLocalStorage(), outcome.token)
       setAccount(outcome.token)
     }
-    setProfile(outcome.account)
+    // 승격은 계정 id 를 바꾸지 않지만 **토큰은 바뀔 수 있다.** 그 뒤의 조회가 옛 토큰을
+    // 쓰면 서버가 거절하고, 화면은 조용히 낡은 값을 들고 있게 된다.
+    await loadAccountState(outcome.token ?? account ?? '')
     return ''
+  }
+
+  /**
+   * 이 토큰의 계정 상태를 전부 읽어 화면에 앉힌다.
+   *
+   * **로그인·승격·첫 접속이 같은 함수를 쓴다.** 예전에는 첫 접속에서만 읽어서, 다른
+   * 기기에서 로그인하면 화면이 **익명 계정의 값을 계속 보고 있었다** — 레벨과 CPU 가
+   * 사라진 것처럼 보였다. 서버에는 그대로 있었고 화면만 갱신되지 않은 것이다.
+   *
+   * @param token 기기 토큰.
+   */
+  async function loadAccountState(token: string): Promise<void> {
+    setProfile(await readAccount(token))
+    setInventory(await readInventory(token))
+    setBestiary(await readBestiary(token))
+    setProgress(await readProgress(token))
+    setLeaderboard(await readLeaderboard(token))
+    setAuction(await readAuction(token))
+    // 관리자가 아니면 undefined 로 남는다 — 서버가 404 로 답한다.
+    setAdmin(await readAdminOverview(token))
+    setCatalog(await readAdminCatalog(token))
   }
 
   /**
@@ -665,10 +678,9 @@ export function App(): React.JSX.Element {
     const next = server.meta ?? createEmptyMeta()
     writeMeta(storage, next)
     setMeta(next)
-    // **계정이 바뀌면 권한도 바뀐다.** 다시 읽지 않으면 관리자로 로그인해도 관리 탭이
-    // 안 뜨고, 관리자에서 일반 계정으로 갈아타면 남아 있는다.
-    setAdmin(await readAdminOverview(outcome.token))
-    setCatalog(await readAdminCatalog(outcome.token))
+    // **계정이 통째로 바뀐다.** 레벨·CPU·가방·권한이 전부 다른 사람의 것이 되므로
+    // 하나라도 안 읽으면 화면이 앞 계정의 값을 계속 보여준다.
+    await loadAccountState(outcome.token)
     return ''
   }
 

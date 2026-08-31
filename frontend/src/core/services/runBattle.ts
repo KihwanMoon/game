@@ -55,6 +55,8 @@ export interface RawPlayerStats {
 
 /** balance.json 의 skills 절 한 항목. */
 export interface RawSkill {
+  readonly guard_pct?: number
+  readonly guard_ticks?: number
   readonly id: string
   readonly coef_pct: number
   readonly cooldown: number
@@ -204,7 +206,11 @@ export function buildEngine(setup: EngineSetup): TickEngine {
       cpuBudget: loadout?.cpuBudget ?? playerStats.cpu_budget,
       // 지능이 올린 스킬위력. 로드아웃이 없으면 기준값이라 기존 판이 그대로다.
       skillPowerPct: loadout?.skillPowerPct ?? BASE_SKILL_POWER_PCT,
-      potions: playerStats.potions,
+      // 로드아웃이 있으면 인벤토리가 정한 것을 쓴다 (#54). 없으면 기본값이다.
+      consumables:
+        loadout === undefined
+          ? new Map([['POTION', playerStats.potions]])
+          : new Map(loadout.consumables),
       // null 은 "장착 개념이 배선되지 않음" 이라 전부 허용한다 — 오프라인 연습이
       // 그 경우다. 로드아웃이 있으면 그 목록만 쓴다.
       skills: loadout === undefined ? null : [...loadout.skills],
@@ -240,7 +246,7 @@ export function buildEngine(setup: EngineSetup): TickEngine {
         initiative: kind.initiative,
         regenBase: kind.regen_base ?? 0,
         cpuBudget: found?.cpuBudget ?? kind.cpu_budget ?? 0,
-        potions: kind.potions ?? 0,
+        consumables: new Map([['POTION', kind.potions ?? 0]]),
       }),
     )
   })
@@ -252,6 +258,14 @@ export function buildEngine(setup: EngineSetup): TickEngine {
     skillCoefPct: new Map(balance.skills.map((skill) => [skill.id, skill.coef_pct])),
     skillRange: new Map(balance.skills.map((skill) => [skill.id, skill.range ?? null])),
     skillCooldowns: new Map(balance.skills.map((skill) => [skill.id, skill.cooldown])),
+    skillGuardPct: new Map(
+      balance.skills.filter((s) => s.guard_pct !== undefined).map((s) => [s.id, s.guard_pct ?? 0]),
+    ),
+    skillGuardTicks: new Map(
+      balance.skills
+        .filter((s) => s.guard_ticks !== undefined)
+        .map((s) => [s.id, s.guard_ticks ?? 0]),
+    ),
     skillHealPct: new Map(
       balance.skills
         .filter((skill) => skill.heal_pct !== undefined)

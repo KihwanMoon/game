@@ -16,6 +16,7 @@ import {
   type PlannedAction,
   createPlannedAction,
 } from '../sim/plan'
+import { countItem } from '../sim/state'
 import type { Entity, WorldState } from '../sim/state'
 
 /** 이 아래로 떨어지면 포션을 쓴다. */
@@ -33,7 +34,7 @@ export class FallbackPolicy implements DecisionPolicy {
    */
   planAction(entity: Entity, snapshot: PerceptionSnapshot, state: WorldState): PlannedAction {
     const hpPercent = readSnapshot(snapshot, 'self_hp_percent')
-    if (entity.potions > 0 && typeof hpPercent === 'number' && hpPercent < LOW_HP_PERCENT) {
+    if (countItem(entity, 'POTION') > 0 && typeof hpPercent === 'number' && hpPercent < LOW_HP_PERCENT) {
       return createPlannedAction({
         entityId: entity.entityId,
         actionId: 'USE_POTION',

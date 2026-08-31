@@ -166,7 +166,9 @@ def build_snapshot(
 
     values: dict[str, int | bool] = {
         "self_hp_percent": entity.hp_percent,
-        "self_potion_count": entity.potions,
+        # 태그를 받는 인지 변수는 아직 없다. 규칙표는 소모품이 없을 때 「불가」로 알게
+        # 되며, 그것이 스킬 미장착과 같은 방식이다.
+        "self_potion_count": entity.count_item("POTION"),
         "self_on_heal_tile": state.get_tile(*entity.position) == TILE_SPRING,
         # 실제 값은 _add_vision_values 가 LOS 로 좁혀 덮어쓴다. 여기에 방 전체 수를
         # 남겨 두면 두 곳이 다른 말을 해 읽는 사람이 어느 쪽이 사실인지 알 수 없다.

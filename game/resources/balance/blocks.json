@@ -1,6 +1,6 @@
 {
-  "_comment": "블록 카탈로그 v5. 스킬을 액션마다 더하지 않고 USE_SKILL[skill_id] 파라미터 하나로 묶었다 — 스킬이 늘어도 액션 종류가 고정이라 랭킹 시즌이 갈리지 않는다 (docs/설계/5_스킬 §4). 기존 SKILL_1·SKILL_2·AREA_ATTACK·HEAL·SUMMON 과 self_cooldown_ready 는 지우지 않고 별칭으로 남긴다: 지우면 저장된 규칙표와 골든 리플레이가 전부 깨진다. 장비 전용 블록은 만들지 않는다 — 장비는 전투 전에 캐릭터 능력치·스킬로 녹고 규칙표는 캐릭터만 읽는다 (결정 #13).",
-  "block_list_version": 5,
+  "_comment": "블록 카탈로그 v5. 스킬을 액션마다 더하지 않고 USE_SKILL[skill_id] 파라미터 하나로 묶었다 — 스킬이 늘어도 액션 종류가 고정이라 랭킹 시즌이 갈리지 않는다 (docs/설계/5_스킬 §4). 기존 SKILL_1·SKILL_2·AREA_ATTACK·HEAL·SUMMON 과 self_cooldown_ready 는 지우지 않고 별칭으로 남긴다: 지우면 저장된 규칙표와 골든 리플레이가 전부 깨진다. 장비 전용 블록은 만들지 않는다 — 장비는 전투 전에 캐릭터 능력치·스킬로 녹고 규칙표는 캐릭터만 읽는다 (결정 #13). v6: USE_ITEM[kind] 를 더했다 (#54). 보호 주문서가 카탈로그에 있는데 그것을 쓸 수 있는 행동이 없어, 얻어도 영영 쓰지 못했다. USE_POTION 은 별칭으로 남는다.",
+  "block_list_version": 6,
   "perceptions": [
     {
       "id": "self_hp_percent",
@@ -299,7 +299,9 @@
       "id": "USE_POTION",
       "category": "control",
       "targeted": false,
-      "label_ko": "포션 사용"
+      "label_ko": "포션 사용",
+      "_alias_of": "USE_ITEM[POTION]",
+      "_note": "v6 부터 USE_ITEM[POTION] 의 별칭이다. 지우지 않는 이유는 저장된 규칙표와 골든 리플레이가 이 id 를 쓰기 때문이다."
     },
     {
       "id": "SET_FLAG",
@@ -343,6 +345,20 @@
         ]
       },
       "_note": "v5. 규칙표는 자리 번호가 아니라 **스킬 정체**를 가리킨다 (결정 #04). 1번 자리를 사격에서 강타로 바꿔도 같은 규칙표가 자살하지 않는다. 대신 미장착이면 그 규칙은 '불가' 로 표시되고 발동하지 않는다 — 거짓과 다르다: 조건은 참인데 수단이 없다. target_faction 은 스킬 정의(skills.json)의 값으로 덮인다."
+    },
+    {
+      "id": "USE_ITEM",
+      "category": "control",
+      "targeted": false,
+      "label_ko": "소모품 사용",
+      "param": {
+        "name": "item",
+        "values": [
+          "POTION",
+          "SCROLL"
+        ]
+      },
+      "_note": "v6. **파라미터가 카탈로그 id 가 아니라 태그다.** 회복 물약을 여러 등급으로 늘려도 전부 POTION 이라 블록 목록이 안 바뀌고, 그래야 아이템이 늘 때마다 랭킹 시즌이 갈리지 않는다 (USE_SKILL 이 액션 종류를 고정한 것과 같은 이유). 소모품이 없으면 그 규칙은 '불가' 로 표시되고 발동하지 않는다 — 거짓과 다르다: 조건은 참인데 수단이 없다."
     }
   ],
   "rhs_stats": [

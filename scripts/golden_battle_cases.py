@@ -180,7 +180,7 @@ def add_extra_enemies(
             initiative=kind["initiative"],
             regen_base=kind["regen_base"],
             cpu_budget=kind.get("cpu_budget", 0),
-            potions=kind.get("potions", 0),
+            consumables={"POTION": int(kind.get("potions", 0))},
         )
     engine.register_newcomers()
 

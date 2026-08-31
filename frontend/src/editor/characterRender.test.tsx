@@ -35,6 +35,7 @@ const PROGRESS: ProgressView = {
     cpuBudget: 13,
     ruleSlots: 6,
     skillPowerPct: 112,
+    consumables: [],
     skills: ['ATTACK', 'SKILL_1', 'SKILL_2'],
   },
 }

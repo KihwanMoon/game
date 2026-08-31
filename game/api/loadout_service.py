@@ -9,11 +9,13 @@
 
 from dataclasses import replace
 
+from psycopg_pool import ConnectionPool
+
 from game.api.deps import get_context, get_item_catalog, get_pool
 from game.app.items.catalog import find_item as find_catalog_item
 from game.app.items.loadout import build_player_loadout
 from game.app.store.accounts import find_player_entity
-from game.app.store.items import list_equipment
+from game.app.store.items import list_equipment, list_inventory
 from game.app.store.progress import read_progress
 from game.schemas.item import EquipSlot, ItemCatalogEntry
 from game.schemas.loadout import build_loadout_payload
@@ -49,6 +51,7 @@ def build_ticket_loadout(account_id: int) -> dict:
         progress.level,
         int(player["rule_slots"]),
         progress.stats,
+        count_consumables(pool, entity_id, catalog),
     )
     return build_loadout_payload(loadout)
 
@@ -64,3 +67,27 @@ def _build_rolled_entry(entry: ItemCatalogEntry, affixes: tuple) -> ItemCatalogE
         접사만 바뀐 항목.
     """
     return replace(entry, affixes=affixes)
+
+
+def count_consumables(pool: ConnectionPool, entity_id: int, catalog: dict) -> dict[str, int]:
+    """가방에 든 소모품을 **태그별로** 센다 (#54).
+
+    태그로 세는 이유는 규칙표가 카탈로그 id 가 아니라 태그를 가리키기 때문이다 — 회복
+    물약을 여러 등급으로 늘려도 `USE_ITEM[POTION]` 이 그대로 도는 것이 그 설계다.
+
+    Args:
+        pool: 연결 풀.
+        entity_id: 대상 개체.
+        catalog: 아이템 카탈로그.
+
+    Returns:
+        태그에서 개수로. 소모품이 없으면 빈 딕셔너리.
+    """
+    counts: dict[str, int] = {}
+    for entry in list_inventory(pool, entity_id):
+        if entry.stack_catalog_id is None or entry.stack_count <= 0:
+            continue
+        item = catalog.get(entry.stack_catalog_id)
+        for tag in getattr(item, "tags", ()) or ():
+            counts[tag] = counts.get(tag, 0) + entry.stack_count
+    return counts

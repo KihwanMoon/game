@@ -16,7 +16,12 @@ from dataclasses import dataclass, replace
 
 from game.app.grid.geometry import get_manhattan_distance
 from game.app.simulation.perception import PerceptionSnapshot
-from game.app.simulation.plan import USE_SKILL_ACTION, BlockedRule, PlannedAction
+from game.app.simulation.plan import (
+    USE_ITEM_ACTION,
+    USE_SKILL_ACTION,
+    BlockedRule,
+    PlannedAction,
+)
 from game.app.simulation.selectors import resolve_target
 from game.app.simulation.state import Entity, WorldState
 from game.schemas.blocks import BlockCatalog
@@ -33,7 +38,7 @@ RHS_STAT_READERS: dict[str, Callable[[Entity], int]] = {
     "defense": lambda actor: actor.defense,
     "hp_max": lambda actor: actor.hp_max,
     "cpu_budget": lambda actor: actor.cpu_budget,
-    "potions": lambda actor: actor.potions,
+    "potions": lambda actor: actor.count_item("POTION"),
 }
 
 DEFAULT_ACTION = "APPROACH"
@@ -273,6 +278,17 @@ class RuleVm:
                     )
                 )
                 continue
+            # 소모품도 같다 — 조건은 참인데 수단이 없다. 이것이 「거짓」과 다르다는 것이
+            # 이 게임의 규칙 상태 4종 중 하나다 (결정 #04).
+            if rule.action == USE_ITEM_ACTION and entity.count_item(rule.action_param or "") <= 0:
+                blocked.append(
+                    BlockedRule(
+                        rule_index=rule.priority,
+                        expr=expr,
+                        reason=f"{rule.action_param} 없음",
+                    )
+                )
+                continue
             return PlannedAction(
                 entity_id=entity.entity_id,
                 action_id=rule.action,
@@ -281,6 +297,7 @@ class RuleVm:
                 expr=expr,
                 set_flag=rule.set_flag,
                 skill_id=rule.action_param if rule.action == USE_SKILL_ACTION else None,
+                item_kind=rule.action_param if rule.action == USE_ITEM_ACTION else None,
                 blocked=tuple(blocked),
             )
         return replace(self._build_default_action(entity, state), blocked=tuple(blocked))

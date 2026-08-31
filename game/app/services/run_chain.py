@@ -82,7 +82,7 @@ def run_room_chain(
         연쇄 결과.
     """
     carried_hp: int | None = None
-    carried_potions: int | None = None
+    carried_potions: dict[str, int] | None = None
     results: list[BattleResult] = []
     cleared = 0
     outcome = OUTCOME_PLAYER_WIN
@@ -109,7 +109,7 @@ def run_room_chain(
         player = engine.state.entities["player"]
         if carried_hp is not None:
             player.hp = carried_hp
-            player.potions = carried_potions or 0
+            player.consumables = dict(carried_potions or {})
         if player_ruleset is not None:
             engine.policies["player"] = build_rule_vm(
                 player_ruleset, catalog, engine.config.kind_types
@@ -123,7 +123,7 @@ def run_room_chain(
             break
         cleared += 1
         carried_hp = result.player_hp
-        carried_potions = player.potions
+        carried_potions = dict(player.consumables)
 
     return ChainResult(
         cleared_rooms=cleared,

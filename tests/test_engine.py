@@ -255,12 +255,12 @@ def test_potion_restores_and_is_consumed(templates, balance):
     engine = build_engine(templates["open_field"], balance, seed=3)
     player = engine.state.entities["player"]
     player.hp = 20
-    potions_before = player.potions
+    potions_before = player.count_item("POTION")
     for _ in range(3):
         engine.run_tick()
-        if player.potions < potions_before:
+        if player.count_item("POTION") < potions_before:
             break
-    assert player.potions < potions_before
+    assert player.count_item("POTION") < potions_before
     assert player.hp > 20
 
 

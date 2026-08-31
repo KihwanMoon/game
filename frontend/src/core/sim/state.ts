@@ -35,7 +35,13 @@ export interface Entity {
   initiative: number
   regenBase: number
   cpuBudget: number
-  potions: number
+  /**
+   * 들고 있는 소모품. **종류별로 센다** (블록 v6, #54).
+   *
+   * 예전에는 정수 하나(`potions`)라 보호 주문서가 카탈로그에 있어도 쓸 수가 없었다 —
+   * 셀 자리가 없었다. 열쇠는 카탈로그 id 가 아니라 **태그**다(POTION·SCROLL).
+   */
+  consumables: Map<string, number>
   /**
    * 이 개체가 내는 스킬의 위력. 정수 퍼센트로 100 이 "계수 그대로" 다 (결정 #51).
    *
@@ -71,7 +77,7 @@ export interface EntityInput {
   readonly initiative: number
   readonly regenBase?: number
   readonly cpuBudget?: number
-  readonly potions?: number
+  readonly consumables?: ReadonlyMap<string, number>
   readonly skillPowerPct?: number
   readonly summonerId?: string | null
   readonly skills?: readonly string[] | null
@@ -100,7 +106,7 @@ export function createEntity(input: EntityInput): Entity {
     initiative: input.initiative,
     regenBase: input.regenBase ?? 0,
     cpuBudget: input.cpuBudget ?? 0,
-    potions: input.potions ?? 0,
+    consumables: new Map(input.consumables ?? []),
     skillPowerPct: input.skillPowerPct ?? PERCENT_BASE,
     summonerId: input.summonerId ?? null,
     skills: input.skills ?? null,
@@ -242,4 +248,15 @@ export class WorldState implements TileReader {
  */
 export function checkHasSkill(entity: Entity, skillId: string): boolean {
   return entity.skills === null || entity.skills.includes(skillId)
+}
+
+/**
+ * 그 종류의 소모품을 몇 개 들고 있는가.
+ *
+ * @param entity 볼 개체.
+ * @param kind 소모품 태그 (POTION·SCROLL).
+ * @returns 개수. 없으면 0.
+ */
+export function countItem(entity: Entity, kind: string): number {
+  return entity.consumables.get(kind) ?? 0
 }

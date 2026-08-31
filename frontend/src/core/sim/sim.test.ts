@@ -18,7 +18,7 @@ import { parseSnapshot } from '../schemas/monsterSnapshot'
 import { parseLoadout } from '../schemas/loadout'
 import { getManhattanDistance } from '../grid/geometry'
 import { ACTION_COUNT } from '../schemas'
-import {
+import { PLAYER_ENTITY_ID,
   buildEngine,
   parseBalance,
   runBattle,
@@ -34,7 +34,7 @@ import {
 } from './plan'
 import { getScaledEnemyStats } from './scaling'
 import { SELECTOR_NEAREST, resolveTarget } from './selectors'
-import { FACTION_ENEMY, type Entity, type WorldState, createEntity } from './state'
+import { countItem, FACTION_ENEMY, type Entity, type WorldState, createEntity } from './state'
 
 const POLICY_CYCLE = 'cycle'
 
@@ -111,6 +111,8 @@ const CYCLE_SELECTORS: ReadonlyMap<string, string> = new Map(
 const CYCLE_FLAG: string = golden.cycle_flag
 /** USE_SKILL 이 실행할 스킬. 골든에서 읽는다 — 하드코딩하면 두 곳이 갈린다. */
 const CYCLE_SKILL: string = golden.cycle_skill
+const CYCLE_ITEM: string = golden.cycle_item
+const CYCLE_ITEM_COUNT: number = golden.cycle_item_count
 const BATTLES = golden.battles as readonly GoldenBattle[]
 
 /**
@@ -153,6 +155,7 @@ class CyclingPolicy implements DecisionPolicy {
       expr: `틱(${snapshot.tick}) + 오프셋(${offset}) % ${ACTION_CYCLE.length} = ${index}`,
       setFlag: actionId === 'SET_FLAG' ? CYCLE_FLAG : null,
       skillId: actionId === 'USE_SKILL' ? CYCLE_SKILL : null,
+      itemKind: actionId === 'USE_ITEM' ? CYCLE_ITEM : null,
     })
   }
 }
@@ -193,7 +196,7 @@ function addExtraEnemies(
         initiative: kind.initiative,
         regenBase: kind.regen_base ?? 0,
         cpuBudget: kind.cpu_budget ?? 0,
-        potions: kind.potions ?? 0,
+        consumables: new Map([['POTION', kind.potions ?? 0]]),
       }),
     )
   })
@@ -227,6 +230,9 @@ function runGoldenBattle(battle: GoldenBattle): { engine: TickEngine } {
     engine.policy = new CyclingPolicy(
       new Map(balance.enemies.map((kind) => [kind.id, kind.type])),
     )
+    // **순환 정책에만 주문서를 쥐여 준다.** 파이썬 내보내기와 같은 값을 골든에서 읽는다 —
+    // 여기서 숫자를 따로 적으면 두 코어가 다른 주머니로 싸운다.
+    engine.state.entities.get(PLAYER_ENTITY_ID)?.consumables.set(CYCLE_ITEM, CYCLE_ITEM_COUNT)
   }
   if (battle.extra_enemies.length > 0) {
     addExtraEnemies(engine, balance, battle.extra_enemies)
@@ -251,7 +257,7 @@ function buildEntityRows(state: WorldState): GoldenEntity[] {
         x: entity.position.x,
         y: entity.position.y,
         attack: entity.attack,
-        potions: entity.potions,
+        potions: countItem(entity, 'POTION'),
         cooldowns: Object.fromEntries([...entity.cooldowns.entries()].sort()),
         flags: Object.fromEntries([...entity.flags.entries()].sort()),
       }
