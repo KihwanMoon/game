@@ -923,6 +923,10 @@ export function App(): React.JSX.Element {
     verdict === undefined || verdict.verdict === 'verified'
       ? ''
       : `서버 판정 ${verdict.verdict}${verdict.detail === '' ? '' : ` — ${verdict.detail}`}`
+  // **얻은 것을 말한다.** 서버는 처음부터 보내고 있었는데 화면이 버리고 있었다. 아이템은
+  // 이겨도 60% 로만 나오므로, 나왔다는 말이 없으면 안 나온 것과 구별되지 않는다 — 가방
+  // 20칸에서 새 것을 찾아내는 사람은 없다.
+  const rewardText = verdict?.reward ?? ''
 
   const launchControls = (
     <div className="launch">
@@ -957,6 +961,7 @@ export function App(): React.JSX.Element {
       )}
       {resultText === '' ? null : <ValueExpr text={resultText} size="sm" dim />}
       {verdictText === '' ? null : <ValueExpr text={verdictText} size="sm" />}
+      {rewardText === '' ? null : <GlyphState state="true" size="sm" label={rewardText} />}
       <Button
         size="sm"
         variant="ghost"

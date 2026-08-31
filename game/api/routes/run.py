@@ -86,7 +86,12 @@ def apply_death_penalty(account_id: int) -> str:
 
 
 def apply_run_rewards(
-    account_id: int, submission_id: int, verified: VerifiedRun, mode: str, core_version: str
+    account_id: int,
+    submission_id: int,
+    verified: VerifiedRun,
+    mode: str,
+    core_version: str,
+    floor: int = 1,
 ) -> str:
     """검증된 런의 보상을 준다.
 
@@ -100,6 +105,7 @@ def apply_run_rewards(
         verified: 서버가 확정한 결과.
         mode: 런 모드. 순위표를 가르는 값이다.
         core_version: 이 서버의 코어 버전. 시즌을 가르는 값이다.
+        floor: 이 런의 층. 화폐가 이것에 비례한다 — 안 넘기면 깊이 들어가도 1층 값이다.
 
     Returns:
         플레이어에게 보여줄 한 줄. 없으면 빈 문자열.
@@ -107,7 +113,7 @@ def apply_run_rewards(
     if verified.verdict != VERDICT_VERIFIED:
         return ""
     is_cleared = verified.outcome == OUTCOME_WIN
-    roll = create_loot_roll(get_item_catalog(), is_cleared)
+    roll = create_loot_roll(get_item_catalog(), is_cleared, floor)
     add_currency(get_pool(), account_id, roll.currency)
     notes = [f"화폐 +{roll.currency}"]
     if roll.catalog_id is not None:
@@ -319,7 +325,12 @@ def create_run_submission(
         ),
     )
     reward = apply_run_rewards(
-        account.account_id, submission_id, verified, ticket.mode, ticket.core_version
+        account.account_id,
+        submission_id,
+        verified,
+        ticket.mode,
+        ticket.core_version,
+        ticket.floor,
     )
     world = apply_monster_outcome(ticket, submission_id, verified, account.account_id)
     if world:

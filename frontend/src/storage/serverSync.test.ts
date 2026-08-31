@@ -14,6 +14,7 @@ import { adoptServerMeta } from '../core/services/manageMeta'
 import { readBestiary,
   TOKEN_STORAGE_KEY,
   readInventory,
+  submitRun,
   ensureToken,
   readServerMeta,
   readToken,
@@ -401,5 +402,49 @@ describe('가방을 읽을 때 서버가 붙인 표시를 잃지 않는다', () 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(buildResponse({})))
     const view = await readInventory('t')
     expect(view?.slots[0]?.item?.isRecovered).toBe(false)
+  })
+})
+
+describe('판정 응답이 보상을 잃지 않는다', () => {
+  /**
+   * 서버가 이런 판정을 보냈다고 둔다.
+   *
+   * @param body 응답 절.
+   * @returns fetch 가 낼 응답.
+   */
+  function buildRunResponse(body: Record<string, unknown>) {
+    return { ok: true, json: async () => body }
+  }
+
+  it('★ 얻은 것을 그대로 옮긴다 — 이 필드를 버리고 있었다', () => {
+    // 아이템은 이겨도 60% 로만 나온다. 나왔다는 말이 없으면 안 나온 것과 구별되지 않고,
+    // 가방 20칸에서 새 것을 찾아내는 사람은 없다.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        buildRunResponse({
+          verdict: 'verified',
+          outcome: 'PLAYER_WIN',
+          ticks: 10,
+          player_hp: 5,
+          reward: '화폐 +40 · 소형 방패 획득',
+        }),
+      ),
+    )
+    return submitRun('t', 'ticket', {}, 'b1.v1.i1.s1.r1.a1.e1').then((result) => {
+      expect(result?.reward).toBe('화폐 +40 · 소형 방패 획득')
+    })
+  })
+
+  it('서버가 안 보내면 빈 문자열이다 — 없는 보상을 지어내지 않는다', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        buildRunResponse({ verdict: 'verified', outcome: 'PLAYER_WIN', ticks: 10, player_hp: 5 }),
+      ),
+    )
+    return submitRun('t', 'ticket', {}, 'b1.v1.i1.s1.r1.a1.e1').then((result) => {
+      expect(result?.reward).toBe('')
+    })
   })
 })

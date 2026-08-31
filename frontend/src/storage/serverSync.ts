@@ -386,6 +386,14 @@ export interface RunVerdict {
   readonly ticks: number
   readonly playerHp: number
   readonly detail: string
+  /**
+   * 이 판으로 무엇을 얻었는가 — 화폐·아이템·경험치·몬스터 변화.
+   *
+   * **서버가 처음부터 보내고 있었는데 이 계층이 버리고 있었다.** 아이템은 이겨도 60%
+   * 로만 나오므로, 나왔다는 말이 없으면 안 나온 것과 구별되지 않는다. 가방을 열어
+   * 20칸에서 새 것을 찾아내는 사람은 없다.
+   */
+  readonly reward: string
 }
 
 /**
@@ -420,6 +428,7 @@ export async function submitRun(
     ticks: number
     player_hp: number
     detail?: string
+    reward?: string
   }
   return {
     verdict: body.verdict,
@@ -427,6 +436,7 @@ export async function submitRun(
     ticks: body.ticks,
     playerHp: body.player_hp,
     detail: body.detail ?? '',
+    reward: body.reward ?? '',
   }
 }
 

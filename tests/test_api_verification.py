@@ -213,3 +213,28 @@ def test_the_bestiary_counts_defeats_separately(client, token):
     submit_once(client, token, build_winning_ruleset())
     rows = read_meta(client, token)["bestiary"]
     assert any(row["defeats"] > 0 for row in rows)
+
+
+def test_deeper_floors_pay_more(client, token):
+    """★ 층이 깊을수록 화폐가 는다 — 안 그러면 깊이 들어갈 이유가 하나 준다.
+
+    `create_loot_roll` 은 처음부터 층을 받았는데 호출부가 안 넘겨서 늘 1층 값이었다.
+    문서가 말하는 동작과 실제가 갈려 있었고, 갈린 쪽이 조용했다.
+    """
+    from game.api.deps import get_item_catalog
+    from game.app.items.loot import LOSS_CURRENCY, WIN_CURRENCY, create_loot_roll
+
+    catalog = get_item_catalog()
+    assert create_loot_roll(catalog, True, 3).currency == WIN_CURRENCY * 3
+    assert create_loot_roll(catalog, False, 3).currency == LOSS_CURRENCY * 3
+    assert create_loot_roll(catalog, True, 1).currency == WIN_CURRENCY
+
+
+def test_the_route_passes_the_floor_through(client, token):
+    """★ 층을 안 넘기면 위 검사는 통과하면서 실제로는 늘 1층이다."""
+    import inspect
+
+    from game.api.routes import run as run_route
+
+    source = inspect.getsource(run_route.create_run_submission)
+    assert "ticket.floor" in source, "라우트가 층을 안 넘긴다"
