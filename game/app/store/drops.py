@@ -10,21 +10,33 @@
 from psycopg_pool import ConnectionPool
 
 from game.app.items.drops import GRADE_MISS
-from game.schemas.item import GRADE_COMMON, GRADE_FINE, GRADE_RELIC, ItemCatalogEntry
+from game.schemas.item import (
+    GRADE_COMMON,
+    GRADE_FINE,
+    GRADE_RELIC,
+    ItemCatalogEntry,
+    ItemKind,
+)
 
 # 소스 갈래. 소스별 표가 없으면 `ANY` 로 떨어진다.
 SOURCE_ANY = "ANY"
 SOURCE_MONSTER = "MONSTER_KIND"
 
-# 등급 가중치의 출발값. **밸런스가 아니라 자리다** (§15.6). 처치마다 굴리므로 런당
-# 60% 이던 예전보다 훨씬 낮아야 하고, 한 방에 넷을 잡는다고 보면 굴림당 1/4 쯤이 된다.
+# 등급 가중치의 출발값. **밸런스가 아니라 자리다** (§15.6).
+#
+# 만분율이다. 해상도를 크게 잡은 이유는 유물이 만분의 5 라서다 — 천분율로 두면 유물이
+# 1 이 되고, 그러면 천장 한 걸음이 그 등급을 두 배로 만든다.
+#
+# 실측으로 맞췄다. **한 런의 처치 수는 4가 아니라 16이다** — 소환사가 계속 부르므로
+# 방 배치의 적 수와 처치 수가 다르다. 굴림당 3.7% 면 런당 기대 0.6개로, 런당 60% 이던
+# 예전과 체감이 같다. 처음에 넷으로 어림잡아 18.9% 로 뒀다가 10판에 가방을 채웠다.
 # `GRADE_MISS` 는 아무것도 안 나오는 몫이다 — 등급과 같은 저울에 올려야 "안 나옴" 도
 # 분포의 일부가 된다.
 DEFAULT_GRADE_WEIGHTS: tuple[tuple[str, int, int], ...] = (
-    (GRADE_MISS, 820, 0),
-    (GRADE_COMMON, 150, 0),
-    (GRADE_FINE, 27, 6),
-    (GRADE_RELIC, 3, 4),
+    (GRADE_MISS, 9630, 0),
+    (GRADE_COMMON, 310, 0),
+    (GRADE_FINE, 55, 6),
+    (GRADE_RELIC, 5, 4),
 )
 
 
@@ -99,13 +111,16 @@ def read_item_weights(
         floor: 지금 층. `min_floor` 가 이보다 높으면 아직 안 나온다 (D1).
 
     Returns:
-        (catalog_id, 가중치) 들. id 순.
+        (catalog_id, 가중치) 들. id 순. 퀘스트 아이템은 담기지 않는다 (설계 §4).
     """
     with pool.connection() as connection:
         rows = connection.execute(
             "SELECT w.catalog_id, w.weight FROM drop_item_weight w"
             " JOIN item_catalog c ON c.catalog_id = w.catalog_id"
-            " WHERE w.source_id = %s AND w.grade = %s AND NOT c.is_retired AND c.min_floor <= %s"
+            # **퀘스트 아이템은 읽는 쪽에서도 막는다.** 시딩만 걸러 두면 표에 한 번 들어간
+            # 줄이 영원히 남는다 — 실제로 옛 코드가 넣어 둔 줄이 그대로 굴려졌다.
+            " WHERE w.source_id = %s AND w.grade = %s AND NOT c.is_retired"
+            " AND c.kind <> 'QUEST' AND c.min_floor <= %s"
             " ORDER BY w.catalog_id",
             (source_id, grade, floor),
         ).fetchall()
@@ -140,7 +155,10 @@ def apply_drop_seed(pool: ConnectionPool, catalog: dict[str, ItemCatalogEntry]) 
     filled = 0
     with pool.connection() as connection:
         for entry in sorted(catalog.values(), key=lambda item: item.catalog_id):
-            if entry.is_retired:
+            # **퀘스트 아이템은 굴려서 나오지 않는다** (설계/4_아이템 §4). 퀘스트가 주는
+            # 것이다. 예전 `list_droppable` 이 걸러 주던 것을 표로 옮기면서 한 번
+            # 빠뜨렸고, 프로덕션에서 「봉인된 각인」이 전리품으로 나왔다.
+            if entry.is_retired or entry.kind is ItemKind.QUEST:
                 continue
             connection.execute(
                 "INSERT INTO drop_item_weight (source_id, grade, catalog_id, weight)"

@@ -25,7 +25,12 @@ PERCENT_BASE = 100
 
 # 천장 한 걸음이 더하는 가중치 (D2). 연속으로 안 나온 만큼 그 등급이 무거워진다.
 # 확률만으로는 "나는 안 나온다" 를 못 막는다.
-PITY_STEP = 2
+PITY_STEP = 1
+
+# **천장의 상한.** 기본 가중치의 이 퍼센트까지만 민다. 상한이 없으면 유물이 문제가 된다 —
+# 한 런에 열여섯 번 굴리므로 미획득이 런당 16씩 쌓이고, 가중치 5 짜리 등급은 한 판 만에
+# 몇 배가 되어 천장이 아니라 자동 지급이 된다.
+PITY_CAP_PCT = 300
 
 
 def get_below(bound: int) -> int:
@@ -46,6 +51,9 @@ def compute_grade_weight(weight: int, level_scale_pct: int, level: int, misses: 
     레벨과 천장이 **더해지지 곱해지지 않는다.** 곱하면 레벨 10 짜리 개체 하나가 분포를
     통째로 뒤집고, 그러면 층 설계가 뜻을 잃는다.
 
+    천장은 **기본 가중치의 `PITY_CAP_PCT` 퍼센트까지만** 민다. 상한이 없으면 한 런에
+    열여섯 번 굴리는 동안 미획득이 쌓여 천장이 자동 지급이 된다.
+
     Args:
         weight: 표에 적힌 기본 가중치.
         level_scale_pct: 레벨 1당 기본 가중치의 몇 퍼센트를 더할지.
@@ -56,7 +64,8 @@ def compute_grade_weight(weight: int, level_scale_pct: int, level: int, misses: 
         최종 가중치. 0 아래로는 안 내려간다.
     """
     bonus = weight * level_scale_pct * max(0, level) // PERCENT_BASE
-    return max(0, weight + bonus + misses * PITY_STEP)
+    lifted = min(max(0, misses) * PITY_STEP, weight * PITY_CAP_PCT // PERCENT_BASE)
+    return max(0, weight + bonus + lifted)
 
 
 def get_weighted(entries: tuple[tuple[str, int], ...]) -> str | None:

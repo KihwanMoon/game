@@ -93,6 +93,29 @@ def test_the_grade_decides_how_many_affixes_roll():
     assert max(len(create_affix_rolls(base, GRADE_RELIC)) for _ in range(60)) == 3
 
 
+def test_the_pity_stops_at_a_ceiling():
+    """★ 상한이 없으면 천장이 자동 지급이 된다.
+
+    한 런에 열여섯 번 굴린다 — 실측이다. 미획득이 런당 16씩 쌓이므로, 상한이 없으면
+    가중치 5 짜리 유물 등급이 한 판 만에 몇 배가 된다.
+    """
+    from game.app.items.drops import PITY_CAP_PCT, compute_grade_weight
+
+    ceiling = 5 + 5 * PITY_CAP_PCT // 100
+    assert compute_grade_weight(5, 0, 0, 10_000) == ceiling
+    assert compute_grade_weight(5, 0, 0, 1_000_000) == ceiling
+
+
+def test_one_run_of_misses_does_not_multiply_the_top_grade():
+    """★ 한 판 굴린 것만으로 유물이 몇 배가 되면 천장이 아니라 지급이다."""
+    from game.app.items.drops import compute_grade_weight
+
+    kills_per_run = 16
+    base = compute_grade_weight(5, 0, 0, 0)
+    after = compute_grade_weight(5, 0, 0, kills_per_run)
+    assert after <= base * 4
+
+
 def test_the_weight_never_goes_below_zero():
     """음수 가중치가 나오면 get_weighted 의 합이 어긋나 뽑기가 치우친다."""
     from game.app.items.drops import compute_grade_weight
@@ -164,7 +187,7 @@ def test_a_miss_is_written_down_too(client, token):
     from game.api.loot_service import create_run_drops
 
     account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
-    verified = SimpleNamespace(summary=SimpleNamespace(defeated_kinds=("goblin_rusher",) * 40))
+    verified = SimpleNamespace(summary=SimpleNamespace(defeated_kinds=("goblin_rusher",) * 400))
     create_run_drops(account_id, None, verified, 1, "t")
     with get_pool().connection() as connection:
         row = connection.execute(
@@ -183,14 +206,16 @@ def test_the_instance_carries_the_grade_it_rolled(client, token):
     from game.app.store.accounts import find_player_entity
 
     account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
-    verified = SimpleNamespace(summary=SimpleNamespace(defeated_kinds=("goblin_rusher",) * 60))
+    verified = SimpleNamespace(summary=SimpleNamespace(defeated_kinds=("goblin_rusher",) * 400))
     create_run_drops(account_id, None, verified, 1, "t")
     entity_id = find_player_entity(get_pool(), account_id)
     with get_pool().connection() as connection:
         rows = connection.execute(
             "SELECT grade FROM item_instance WHERE owner_entity_id = %s", (entity_id,)
         ).fetchall()
-    assert rows, "60번 잡았는데 하나도 안 나왔다"
+    # 400번이다. 굴림당 3.7% 라 60번으로는 한 판에 10% 확률로 빈손이 되고, 그러면
+    # 검사가 운에 걸린다 — 실제로 그렇게 깜빡였다.
+    assert rows, "400번 잡았는데 하나도 안 나왔다"
     assert all(row[0] in {"COMMON", "FINE", "RELIC"} for row in rows)
 
 
@@ -230,3 +255,24 @@ def test_a_retired_item_stops_dropping(client, token):
         assert "helm_iron" not in dict(read_item_weights(get_pool(), source_id, "COMMON", 9))
     finally:
         apply_retire(get_pool(), "helm_iron", is_retired=False)
+
+
+def test_a_quest_item_never_drops(client, token):
+    """★ 퀘스트 아이템은 퀘스트가 주는 것이지 굴려서 나오는 것이 아니다 (설계 §4).
+
+    예전 `list_droppable` 이 걸러 주던 것을 드롭 표로 옮기면서 빠뜨렸고, 프로덕션에서
+    「봉인된 각인」이 전리품으로 나왔다.
+    """
+    from game.api.deps import get_item_catalog, get_pool
+    from game.app.store.drops import SOURCE_ANY, find_source, read_item_weights
+    from game.schemas.item import ItemKind
+
+    catalog = get_item_catalog()
+    quest = [key for key, entry in catalog.items() if entry.kind is ItemKind.QUEST]
+    assert quest, "퀘스트 아이템이 카탈로그에 없어 이 검사가 아무것도 안 본다"
+    source_id = find_source(get_pool(), SOURCE_ANY)
+    assert source_id is not None
+    listed = set()
+    for grade in ("COMMON", "FINE", "RELIC"):
+        listed |= {name for name, _weight in read_item_weights(get_pool(), source_id, grade, 99)}
+    assert not (listed & set(quest)), f"퀘스트 아이템이 드롭 표에 있다: {listed & set(quest)}"
