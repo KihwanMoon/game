@@ -184,3 +184,36 @@ class CatalogAdminResponse(BaseModel):
     items: list[CatalogAdminRow] = Field(default_factory=list)
     generation: int = 0
     grades: list[str] = Field(default_factory=list)
+
+
+class ContentDraftRequest(BaseModel):
+    """콘텐츠 초안 하나.
+
+    **이것은 아직 게임이 아니다.** 반영은 발행이 하고, 발행은 사람이 파일을 커밋해야
+    끝난다 (설계/4_아이템 §15.7 의 반대편).
+    """
+
+    asset: str = Field(min_length=1, max_length=32)
+    payload: dict
+    note: str = ""
+
+
+class ContentDraftRow(BaseModel):
+    """초안 목록 한 줄. 본문은 담지 않는다 — 목록은 목록이다."""
+
+    asset: str
+    note: str = ""
+    updated_at: str = ""
+    # 지금 파일의 세대. 초안의 세대가 이것보다 커야 발행할 수 있다.
+    current_version: int = 0
+
+
+class ContentDraftResponse(BaseModel):
+    """콘텐츠 편집 화면 하나."""
+
+    drafts: list[ContentDraftRow] = Field(default_factory=list)
+    assets: list[str] = Field(default_factory=list)
+    # 검증 결과. 빈 문자열이면 통과다.
+    problem: str = ""
+    # 발행이 사람 손을 탄다는 사실을 화면이 말해야 한다.
+    publish_hint: str = ""

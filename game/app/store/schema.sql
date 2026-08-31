@@ -474,3 +474,26 @@ CREATE TABLE IF NOT EXISTS item_roll_log (
 );
 
 CREATE INDEX IF NOT EXISTS item_roll_log_account_idx ON item_roll_log (account_id, created_at DESC);
+
+-- ── 콘텐츠 초안 (설계/4_아이템 §15.7 의 반대편) ─────────────────────────
+--
+-- **여기 있는 것은 아직 게임이 아니다.** 스킬·블록·밸런스·룸·적 규칙표는 두 코어가
+-- 함께 읽는 실행 자산이고, 브라우저는 그것을 빌드 시점에 번들로 인라인한다. 그래서
+-- 런타임에 DB 를 보게 만들면 **서버가 없으면 게임이 안 돈다** — 이 저장소가 지키는
+-- 전제가 무너진다.
+--
+-- 그래서 흐름이 셋으로 갈린다.
+--
+--   1. 편집  관리자가 초안을 여기 저장한다. 게임에는 아무 영향이 없다
+--   2. 검증  코어가 쓰는 그 로더로 읽어 본다. 여기서 막히면 배포가 서버를 죽였을 것이다
+--   3. 발행  운영자가 파일로 내보내고, 커밋·배포해야 실제로 반영된다
+--
+-- 3번이 사람 손을 타는 것이 설계다. 자동으로 반영되면 순위표 시즌이 아무도 모르게
+-- 갈린다.
+CREATE TABLE IF NOT EXISTS content_draft (
+    asset       TEXT        PRIMARY KEY,
+    payload     JSONB       NOT NULL,
+    note        TEXT        NOT NULL DEFAULT '',
+    updated_by  BIGINT      REFERENCES account(id) ON DELETE SET NULL,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);

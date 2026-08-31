@@ -23,7 +23,10 @@ pytestmark = pytest.mark.skipif(
     reason=f"{DATABASE_URL_ENV} 가 없다 — 컨테이너 게이트에서 돈다",
 )
 
-ROLLS = 4000
+# **표본이 크다.** 유물 등급은 만분의 5(0.05%)라 4000번으로는 기대값이 2이고, 그 자리에서
+# 두 분포를 비교하면 검사가 운에 걸린다 — 실제로 전량 실행에서 깜빡였다. 확률이 작을수록
+# 표본이 커야 하고, 그 사실을 상수 하나로 못 박는다.
+ROLLS = 200_000
 
 
 def build_weights():
@@ -56,6 +59,8 @@ def test_the_pity_lifts_the_grade_it_counts():
     """★ 확률만으로는 「나는 안 나온다」를 못 막는다 (D2)."""
     plain = count_grades(1)
     pitied = count_grades(1, {"RELIC": 40})
+    # 천장은 기본 가중치의 3배까지 민다(PITY_CAP_PCT). 여유를 두고 2배만 본다 —
+    # 정확한 배율은 `test_the_pity_stops_at_a_ceiling` 이 결정적으로 확인한다.
     assert pitied["RELIC"] > plain["RELIC"] * 2
 
 
