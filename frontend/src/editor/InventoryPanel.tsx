@@ -11,7 +11,7 @@
  * 자체 브레이크포인트를 두지 않는다. 높이는 `--btn-tap-h` 가 정하므로 터치 배치에서
  * 저절로 44px 가 된다.
  */
-import { Button, GlyphState, Panel, ValueExpr } from '../ds'
+import { Button, GlyphState, Panel, Thumb, ValueExpr } from '../ds'
 import type { AffixView, InventoryView, ItemView, SlotView } from '../storage'
 
 export interface InventoryPanelProps {
@@ -154,6 +154,7 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
                       <GlyphState state="blocked" size="sm" label="양손 점유" />
                     ) : entry?.item ? (
                       <>
+                        <Thumb kind={slot} label={entry.item.labelKo} size="sm" />
                         <span className="inv__name">{entry.item.labelKo}</span>
                         {entry.item.isBroken ? (
                           <GlyphState state="danger" size="sm" label="파손" />
@@ -188,6 +189,7 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
                     entry.stackCatalogId === null ? null : (
                       <li className="inv__bag" key={entry.slotIndex}>
                         <div className="inv__row">
+                          <Thumb kind="CONSUMABLE" label={entry.stackCatalogId} size="sm" />
                           <span className="inv__name">{entry.stackCatalogId}</span>
                           <ValueExpr text={`x${String(entry.stackCount)}`} size="sm" />
                         </div>
@@ -196,6 +198,11 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
                   ) : (
                     <li className="inv__bag" key={entry.slotIndex}>
                       <div className="inv__row">
+                        <Thumb
+                          kind={entry.item.slot === null ? entry.item.kind : entry.item.slot}
+                          label={entry.item.labelKo}
+                          size="sm"
+                        />
                         <span className="inv__name">{entry.item.labelKo}</span>
                         {entry.item.isBroken ? (
                           <GlyphState state="danger" size="sm" label="파손" />

@@ -11,8 +11,8 @@
  */
 import { useState } from 'react'
 
-import { Button, Panel, ValueExpr } from '../ds'
-import type { AdminCatalog } from '../storage'
+import { Button, CellGrid, Panel, Thumb, ValueExpr } from '../ds'
+import type { AdminCatalog, CatalogEnemyRow, CatalogItemRow } from '../storage'
 
 export interface CatalogPanelProps {
   readonly catalog: AdminCatalog | undefined
@@ -48,6 +48,59 @@ export function formatPeopleBar(count: number, peak: number): string {
 }
 
 /**
+ * 고른 아이템 하나의 상세.
+ *
+ * 격자에서 갈라 둔 이유는 검사 때문만이 아니다 — 칸마다 이 내용을 펼치면 격자가 다시
+ * 목록이 되고, 격자로 바꾼 이유가 사라진다.
+ *
+ * @param props 아이템 한 줄.
+ * @returns 렌더 트리.
+ */
+export function ItemDetail(props: { readonly row: CatalogItemRow }): React.JSX.Element {
+  const { row } = props
+  return (
+    <div className="cat__detail">
+      <span className="cat__name">{row.labelKo}</span>
+      <ValueExpr
+        text={`${row.kind}${row.slot === '' ? '' : ` · ${row.slot}`}${row.hands === '' ? '' : ` · ${row.hands}`}`}
+        size="sm"
+        dim
+      />
+      {row.affixes.length === 0 ? null : <ValueExpr text={row.affixes.join(' · ')} size="sm" />}
+      {row.requirements.length === 0 ? null : (
+        <ValueExpr text={`요구 ${row.requirements.join(' · ')}`} size="sm" dim />
+      )}
+      {row.grantsSkill === '' ? null : (
+        // 장비가 여는 스킬 (결정 #13). 장비 교체가 규칙 재설계로 이어지는 지점.
+        <ValueExpr text={`스킬 ${row.grantsSkill}`} size="sm" />
+      )}
+    </div>
+  )
+}
+
+/**
+ * 고른 적 하나의 상세.
+ *
+ * @param props 적 한 줄.
+ * @returns 렌더 트리.
+ */
+export function EnemyDetail(props: { readonly row: CatalogEnemyRow }): React.JSX.Element {
+  const { row } = props
+  return (
+    <div className="cat__detail">
+      <span className="cat__name">{row.labelKo}</span>
+      <ValueExpr text={row.type} size="sm" dim />
+      <ValueExpr
+        text={`hp ${String(row.hpMax)} · 공 ${String(row.attack)} · 방 ${String(row.defense)} · 사거리 ${String(row.attackRange)}`}
+        size="sm"
+      />
+      {/* 몬스터의 정체는 스탯이 아니라 규칙표다 (설계/6_몬스터 §2). */}
+      <ValueExpr text={`규칙표 ${row.rulesetId}`} size="sm" dim />
+    </div>
+  )
+}
+
+/**
  * 카탈로그 화면을 그린다.
  *
  * @param props 카탈로그. 관리자가 아니면 undefined 다.
@@ -56,9 +109,15 @@ export function formatPeopleBar(count: number, peak: number): string {
 export function CatalogPanel(props: CatalogPanelProps): React.JSX.Element | null {
   const { catalog } = props
   const [view, setView] = useState<View>('items')
+  // 격자는 이름과 분류까지만 담는다. 상세를 칸마다 펼치면 격자가 다시 목록이 되므로,
+  // 고른 것 하나만 아래에 편다 — 좁은 화면에서 특히 그렇다.
+  const [picked, setPicked] = useState('')
+  // 훅은 조기 반환보다 앞에 와야 한다(React 규칙). 카탈로그가 없으면 뒤에서 null 을 낸다.
   if (catalog === undefined) {
     return null
   }
+  const pickedItem = catalog.items.find((row) => row.catalogId === picked)
+  const pickedEnemy = catalog.enemies.find((row) => row.kindId === picked)
   const peak = Math.max(0, ...catalog.levelCurve.map((row) => row.players))
 
   return (
@@ -86,49 +145,69 @@ export function CatalogPanel(props: CatalogPanelProps): React.JSX.Element | null
         />
 
         {view === 'items' ? (
-          <ul className="cat__list">
-            {catalog.items.map((row) => (
-              <li className="cat__entry" key={row.catalogId}>
-                <div className="cat__row">
-                  <span className="cat__name">{row.labelKo}</span>
-                  <ValueExpr
-                    text={`${row.kind}${row.slot === '' ? '' : ` · ${row.slot}`}${row.hands === '' ? '' : ` · ${row.hands}`}`}
-                    size="sm"
-                    dim
-                  />
-                </div>
-                {row.affixes.length === 0 ? null : (
-                  <ValueExpr text={row.affixes.join(' · ')} size="sm" />
+          <>
+            <CellGrid
+              cells={catalog.items.map((row) => ({
+                id: row.catalogId,
+                thumb: (
+                  <Thumb kind={row.slot === '' ? row.kind : row.slot} label={row.labelKo} />
+                ),
+                name: row.labelKo,
+                meta: [row.slot === '' ? row.kind : row.slot],
+                isSelected: row.catalogId === picked,
+              }))}
+              onSelect={setPicked}
+              emptyText="등록된 아이템이 없다"
+            />
+            {pickedItem === undefined ? null : (
+              <div className="cat__detail">
+                <span className="cat__name">{pickedItem.labelKo}</span>
+                <ValueExpr
+                  text={`${pickedItem.kind}${pickedItem.slot === '' ? '' : ` · ${pickedItem.slot}`}${pickedItem.hands === '' ? '' : ` · ${pickedItem.hands}`}`}
+                  size="sm"
+                  dim
+                />
+                {pickedItem.affixes.length === 0 ? null : (
+                  <ValueExpr text={pickedItem.affixes.join(' · ')} size="sm" />
                 )}
-                {row.requirements.length === 0 ? null : (
-                  <ValueExpr text={`요구 ${row.requirements.join(' · ')}`} size="sm" dim />
+                {pickedItem.requirements.length === 0 ? null : (
+                  <ValueExpr text={`요구 ${pickedItem.requirements.join(' · ')}`} size="sm" dim />
                 )}
-                {row.grantsSkill === '' ? null : (
+                {pickedItem.grantsSkill === '' ? null : (
                   // 장비가 여는 스킬 (결정 #13). 장비 교체가 규칙 재설계로 이어지는 지점.
-                  <ValueExpr text={`스킬 ${row.grantsSkill}`} size="sm" />
+                  <ValueExpr text={`스킬 ${pickedItem.grantsSkill}`} size="sm" />
                 )}
-              </li>
-            ))}
-          </ul>
+              </div>
+            )}
+          </>
         ) : null}
 
         {view === 'enemies' ? (
-          <ul className="cat__list">
-            {catalog.enemies.map((row) => (
-              <li className="cat__entry" key={row.kindId}>
-                <div className="cat__row">
-                  <span className="cat__name">{row.labelKo}</span>
-                  <ValueExpr text={row.type} size="sm" dim />
-                </div>
+          <>
+            <CellGrid
+              cells={catalog.enemies.map((row) => ({
+                id: row.kindId,
+                thumb: <Thumb kind={row.type} label={row.labelKo} />,
+                name: row.labelKo,
+                meta: [`hp ${String(row.hpMax)} · 공 ${String(row.attack)}`],
+                isSelected: row.kindId === picked,
+              }))}
+              onSelect={setPicked}
+              emptyText="등록된 적이 없다"
+            />
+            {pickedEnemy === undefined ? null : (
+              <div className="cat__detail">
+                <span className="cat__name">{pickedEnemy.labelKo}</span>
+                <ValueExpr text={pickedEnemy.type} size="sm" dim />
                 <ValueExpr
-                  text={`hp ${String(row.hpMax)} · 공 ${String(row.attack)} · 방 ${String(row.defense)} · 사거리 ${String(row.attackRange)}`}
+                  text={`hp ${String(pickedEnemy.hpMax)} · 공 ${String(pickedEnemy.attack)} · 방 ${String(pickedEnemy.defense)} · 사거리 ${String(pickedEnemy.attackRange)}`}
                   size="sm"
                 />
                 {/* 몬스터의 정체는 스탯이 아니라 규칙표다 (설계/6_몬스터 §2). */}
-                <ValueExpr text={`규칙표 ${row.rulesetId}`} size="sm" dim />
-              </li>
-            ))}
-          </ul>
+                <ValueExpr text={`규칙표 ${pickedEnemy.rulesetId}`} size="sm" dim />
+              </div>
+            )}
+          </>
         ) : null}
 
         {view === 'curve' ? (

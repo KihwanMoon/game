@@ -63,6 +63,10 @@ export type { ThreatNoticeProps } from './ThreatNotice'
 export { TopBar } from './TopBar'
 export type { TopBarProps } from './TopBar'
 
+export { CellGrid } from './CellGrid'
+export type { Cell, CellGridProps } from './CellGrid'
+export { Thumb, THUMB_CODES } from './Thumb'
+export type { ThumbProps, ThumbState } from './Thumb'
 export { ValueExpr, splitExprSegments } from './ValueExpr'
 export type { ExprSegment, ValueExprProps } from './ValueExpr'
 

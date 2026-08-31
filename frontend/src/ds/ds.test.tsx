@@ -19,6 +19,7 @@ import { createLogEntry } from '../core/eventLog'
 
 import {
   Button,
+  CellGrid,
   GlyphState,
   HpGauge,
   LOW_HP_PERCENT,
@@ -39,6 +40,7 @@ import {
   SpeedControl,
   StatusBar,
   ThreatNotice,
+  Thumb,
   TopBar,
   ValueExpr,
   buildSegments,
@@ -473,5 +475,70 @@ describe('규칙 상태 네 번째 — 불가 (블록 v5, 결정 #04)', () => {
     const block = readStrippedCss('ds.css')
     const tail = block.slice(block.indexOf('.ds-glyph--blocked'))
     expect(tail).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
+  })
+})
+
+
+describe('Thumb — 그림이 오기 전의 자리', () => {
+  it('★ 분류 코드를 그린다 — 그림이 없어도 칸이 빈칸으로 보이지 않는다', () => {
+    expect(renderToStaticMarkup(<Thumb kind="HEAD" label="철투구" />)).toContain('HD')
+  })
+
+  it('★ 이름은 보조 기술이 읽는다 — 코드는 장식이고 이름이 정보다', () => {
+    const html = renderToStaticMarkup(<Thumb kind="HEAD" label="철투구" />)
+    expect(html).toContain('aria-label="철투구"')
+  })
+
+  it('★ 미해금은 「불가」와 같은 해칭을 쓴다 — 새 표기를 만들지 않는다', () => {
+    const html = renderToStaticMarkup(<Thumb kind="HEAD" label="철투구" state="locked" />)
+    expect(html).toContain('⧅')
+    expect(html).not.toContain('HD')
+  })
+
+  it('★ 미해금에는 그림을 안 그린다 — 그리면 해금이 뜻을 잃는다', () => {
+    const html = renderToStaticMarkup(
+      <Thumb kind="HEAD" label="철투구" art="data:image/svg+xml,x" state="locked" />,
+    )
+    expect(html).not.toContain('<img')
+  })
+
+  it('그림이 있으면 코드 대신 그림이다', () => {
+    const html = renderToStaticMarkup(
+      <Thumb kind="HEAD" label="철투구" art="data:image/svg+xml,x" />,
+    )
+    expect(html).toContain('<img')
+    expect(html).not.toContain('HD')
+  })
+
+  it('모르는 분류도 자리를 지킨다 — 칸이 무너지면 격자가 어긋난다', () => {
+    expect(renderToStaticMarkup(<Thumb kind="UNKNOWN_X" label="?" />)).toContain('··')
+  })
+})
+
+describe('CellGrid — 격자', () => {
+  const CELLS = [
+    { id: 'a', thumb: <Thumb kind="HEAD" label="철투구" />, name: '철투구', meta: ['HEAD'] },
+    { id: 'b', thumb: <Thumb kind="BODY" label="갑옷" />, name: '갑옷' },
+  ]
+
+  it('칸마다 이름을 적는다', () => {
+    const html = renderToStaticMarkup(<CellGrid cells={CELLS} />)
+    expect(html).toContain('철투구')
+    expect(html).toContain('갑옷')
+  })
+
+  it('★ 누를 수 있으면 칸 전체가 버튼이다 — 작은 글씨 옆 작은 버튼은 손가락이 못 맞춘다', () => {
+    const html = renderToStaticMarkup(<CellGrid cells={CELLS} onSelect={() => undefined} />)
+    expect(html).toContain('ds-cell__hit')
+    expect(html).toContain('<button')
+  })
+
+  it('안 누르는 격자에는 버튼을 만들지 않는다', () => {
+    expect(renderToStaticMarkup(<CellGrid cells={CELLS} />)).not.toContain('<button')
+  })
+
+  it('★ 비었으면 그렇게 말한다 — 빈 격자와 못 불러온 격자는 다르다', () => {
+    const html = renderToStaticMarkup(<CellGrid cells={[]} emptyText="등록된 아이템이 없다" />)
+    expect(html).toContain('등록된 아이템이 없다')
   })
 })

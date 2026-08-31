@@ -723,3 +723,108 @@
   /* 글리프 자체는 긋지 않는다 — 해칭 기호가 뭉개진다. */
   text-decoration: none;
 }
+
+/* ── Thumb · CellGrid ──────────────────────────────────────────────────
+   그림이 오기 전에 자리를 만든다. 지금 그려지는 것은 분류 코드이고, `art` 가 들어오면
+   같은 틀 안에서 그림으로 바뀐다 — 배치가 흔들리지 않는다. */
+.ds-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--thumb-md);
+  block-size: var(--thumb-md);
+  flex: 0 0 auto;
+  border: var(--bw) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  overflow: hidden;
+}
+
+.ds-thumb--sm {
+  inline-size: var(--thumb-sm);
+  block-size: var(--thumb-sm);
+}
+
+.ds-thumb__art {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: contain;
+}
+
+/* 코드는 도면의 부품 번호다. 고정폭이라 두 글자가 어느 기기에서도 같은 폭이다. */
+.ds-thumb__code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body-s);
+  letter-spacing: var(--ls-mono);
+  color: var(--text-dim);
+}
+
+/* 미해금은 「불가」와 같은 해칭을 쓴다 — 새 표기를 만들지 않는다. */
+.ds-thumb--locked {
+  border-style: dashed;
+}
+
+.ds-thumb--locked .ds-thumb__code {
+  color: var(--text-false);
+}
+
+/* 폭이 칸 수를 정한다. 화면 크기를 여기서 재지 않는다 — 브레이크포인트는 토큰에만 있다. */
+.ds-cells {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--cell-min), 1fr));
+  gap: var(--sp-2);
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  list-style: none;
+}
+
+.ds-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-2);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-panel);
+  min-block-size: var(--cell-h);
+  text-align: center;
+}
+
+.ds-cell--on {
+  border-color: var(--line-accent);
+}
+
+/* 칸 전체가 버튼이다. 작은 글씨 옆에 작은 버튼을 따로 두면 손가락이 못 맞춘다. */
+.ds-cell__hit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+  inline-size: 100%;
+  min-block-size: var(--tap-min);
+  padding: var(--sp-0);
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ds-cell__name {
+  font-size: var(--fs-body-s);
+  color: var(--text-body);
+  overflow-wrap: anywhere;
+}
+
+.ds-cell__meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  color: var(--text-dim);
+}
+
+.ds-cells__empty {
+  margin: var(--sp-0);
+  font-size: var(--fs-body-s);
+  color: var(--text-dim);
+}

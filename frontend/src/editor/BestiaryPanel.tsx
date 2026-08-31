@@ -15,7 +15,7 @@
 import { useState } from 'react'
 
 import { formatRuleText } from './ruleText'
-import { Button, GlyphState, Panel, ValueExpr } from '../ds'
+import { Button, GlyphState, Panel, Thumb, ValueExpr } from '../ds'
 import type { BestiaryEntry } from '../storage'
 
 export interface BestiaryPanelProps {
@@ -72,6 +72,9 @@ export function BestiaryPanel(props: BestiaryPanelProps): React.JSX.Element {
             {entries.map((entry) => (
               <li className="bst__entry" key={entry.recordId}>
                 <div className="bst__row">
+                  {/* 그림 자리. 지금은 등급 코드가 그려지고, 자산이 들어오면 같은
+                      틀 안에서 그림으로 바뀐다 — 배치가 흔들리지 않는다. */}
+                  <Thumb kind={entry.tier} label={entry.labelKo} size="sm" />
                   <span className="bst__name">{entry.labelKo}</span>
                   <ValueExpr
                     text={`${entry.tier} · lv ${String(entry.level)}/${String(entry.levelCap)}`}

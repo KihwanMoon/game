@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import type { AdminCatalog } from '../storage'
-import { CatalogPanel, formatPeopleBar } from './CatalogPanel'
+import { CatalogPanel, EnemyDetail, ItemDetail, formatPeopleBar } from './CatalogPanel'
 
 const CATALOG: AdminCatalog = {
   coreVersion: 'b5.v2.e1',
@@ -64,12 +64,36 @@ describe('읽기 전용이라고 화면이 말한다', () => {
 })
 
 describe('아이템 카탈로그', () => {
-  it('★ 접사·요구조건·여는 스킬이 함께 보인다', () => {
+  it('★ 격자에 이름이 하나도 안 빠진다 — 못 찾는 것은 없는 것과 같다', () => {
+    // **칸의 이름 자리**를 본다. 그냥 문자열을 찾으면 Thumb 의 aria-label 이 같은 이름을
+    // 담고 있어, 눈에 보이는 이름을 지워도 검사가 통과한다 (실제로 그랬다).
     const html = render(CATALOG)
-    expect(html).toContain('장궁')
+    for (const row of CATALOG.items) {
+      expect(html).toContain(`<span class="ds-cell__name">${row.labelKo}</span>`)
+    }
+  })
+
+  it('★ 고르면 접사·요구조건·여는 스킬이 함께 보인다', () => {
+    // 격자는 이름과 분류까지만 담고 상세는 아래 한 곳에 편다. 정보가 사라진 것이
+    // 아니라 자리를 옮긴 것이며, **옮긴 자리에 다 있는지**가 여기서 볼 것이다.
+    const row = CATALOG.items.find((entry) => entry.labelKo === '장궁')
+    if (row === undefined) {
+      throw new Error('장궁이 픽스처에 없다')
+    }
+    const html = renderToStaticMarkup(<ItemDetail row={row} />)
     expect(html).toContain('날카로움 +3')
     expect(html).toContain('attack &gt;= 10')
     expect(html).toContain('AREA_ATTACK')
+  })
+
+  it('★ 적 상세에는 규칙표가 있다 — 몬스터의 정체는 스탯이 아니라 규칙표다', () => {
+    const row = CATALOG.enemies[0]
+    if (row === undefined) {
+      throw new Error('적이 픽스처에 없다')
+    }
+    const html = renderToStaticMarkup(<EnemyDetail row={row} />)
+    expect(html).toContain(row.rulesetId)
+    expect(html).toContain(String(row.hpMax))
   })
 })
 
