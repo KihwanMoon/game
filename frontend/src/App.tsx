@@ -60,6 +60,7 @@ import {
   BestiaryPanel,
   DiscoveryPanel,
   DrawerPanel,
+  EvictionNotice,
   type DrawerTab,
   CharacterPanel,
   TemplatePanel,
@@ -102,6 +103,8 @@ import {
 import {
   applyLogout,
   createLogin,
+  listenEviction,
+  TOKEN_STORAGE_KEY,
   createSaveScheduler,
   ensureToken,
   getLocalStorage,
@@ -490,10 +493,32 @@ export function App(): React.JSX.Element {
   // 저장을 몇 번 눌렀는지. 값 자체는 안 쓰고, **눌린 적이 있는가**만 본다 — 누른 적이
   // 없는데 "저장됨" 이 떠 있으면 그 표시는 아무 말도 하지 않는 것과 같다.
   const [savedAt, setSavedAt] = useState(0)
+  // **튕겼다는 사실.** 다른 기기에서 로그인하면 이 기기의 토큰이 막히는데, 그것을
+  // 조용히 넘기면 화면이 오프라인처럼 보인다 — 서버가 죽은 것과 내가 튕긴 것은 사람이
+  // 해야 할 일이 다르다.
+  const [isEvicted, setEvicted] = useState(false)
 
   useEffect(() => {
     scheduler.listen(setSaveState)
   }, [scheduler])
+
+  // 토큰이 막히면 계정 연결만 끊는다. **이 기기의 저장은 안 지운다** — 튕긴 것은 내가
+  // 고른 일이 아니고, 여기서 지우면 잃는 것이 하나 더 는다. 로그아웃은 내가 고른
+  // 일이라 지운다.
+  useEffect(() => {
+    listenEviction(() => {
+      setEvicted(true)
+      setAccount(undefined)
+      setProfile(undefined)
+      setOnline(false)
+      setAdmin(undefined)
+      try {
+        getLocalStorage()?.removeItem(TOKEN_STORAGE_KEY)
+      } catch {
+        // 지우기 실패도 화면을 막지 않는다.
+      }
+    })
+  }, [])
 
   // 세션이 바뀔 때마다 예약한다. 화면을 떠날 때는 예약을 버리지 않고 즉시 쓴다 — 마지막
   // 편집이 400ms 안에 있었다는 이유로 사라지면 저장이 없는 것과 다르지 않다.
@@ -987,6 +1012,7 @@ export function App(): React.JSX.Element {
 
   const launchControls = (
     <div className="launch">
+      <EvictionNotice isEvicted={isEvicted} />
       {/* **저장 버튼.** 편집은 400ms 뒤에 자동으로 저장되지만, 자동은 눈에 안 보이고
           안 보이는 것은 안 일어난 것과 구별되지 않는다. 눌러서 지금 쓰고, 그 결과를
           바로 옆에 적는다. */}

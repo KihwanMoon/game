@@ -84,6 +84,7 @@ export {
   applyContentAdmin,
   applyContentPublish,
   applyLogout,
+  listenEviction,
   applyCatalogAdmin,
   readAdminOverview,
   readProgress,

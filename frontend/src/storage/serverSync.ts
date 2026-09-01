@@ -24,6 +24,9 @@ import { removeSave, type StorageLike } from './saveStore'
 /** 기기 토큰을 담는 localStorage 열쇠. */
 export const TOKEN_STORAGE_KEY = 'game.account-token'
 
+/** 토큰이 안 통할 때의 상태 코드. */
+const HTTP_UNAUTHORIZED = 401
+
 /** 인증 헤더 이름. 서버의 `TOKEN_HEADER` 와 같아야 한다. */
 export const TOKEN_HEADER = 'X-Game-Token'
 
@@ -55,6 +58,38 @@ export interface SyncOutcome {
 }
 
 /**
+ * 토큰이 더 이상 안 통할 때 부를 곳.
+ *
+ * **다른 기기에서 로그인하면 이 기기의 토큰이 지워진다** (한 계정은 한 기기). 그때 이
+ * 기기는 401 을 받는데, 그것을 조용히 넘기면 화면이 오프라인처럼 보인다 — 서버가 죽은
+ * 것과 내가 튕긴 것은 사람이 해야 할 일이 다르다.
+ */
+let evictionWatcher: (() => void) | undefined = undefined
+
+/**
+ * 토큰이 막혔을 때 들을 곳을 정한다.
+ *
+ * @param watcher 들을 함수.
+ */
+export function listenEviction(watcher: () => void): void {
+  evictionWatcher = watcher
+}
+
+/**
+ * 이 요청이 토큰을 들고 갔는지 본다.
+ *
+ * **로그인 실패도 401 이다.** 토큰 없이 간 요청의 401 은 "자격증명이 틀렸다" 이지
+ * "튕겼다" 가 아니다 — 가르지 않으면 비밀번호를 한 번 틀릴 때마다 튕겼다고 뜬다.
+ *
+ * @param init fetch 설정.
+ * @returns 토큰 헤더가 있으면 true.
+ */
+function checkHasToken(init: RequestInit): boolean {
+  const headers = init.headers as Record<string, string> | undefined
+  return headers !== undefined && headers[TOKEN_HEADER] !== undefined
+}
+
+/**
  * 제한 시간이 붙은 요청을 보낸다.
  *
  * @param path `/api` 뒤의 경로.
@@ -67,7 +102,11 @@ async function sendRequest(path: string, init: RequestInit): Promise<Response | 
     controller.abort()
   }, REQUEST_TIMEOUT_MS)
   try {
-    return await fetch(`${API_ROOT}${path}`, { ...init, signal: controller.signal })
+    const response = await fetch(`${API_ROOT}${path}`, { ...init, signal: controller.signal })
+    if (response.status === HTTP_UNAUTHORIZED && checkHasToken(init)) {
+      evictionWatcher?.()
+    }
+    return response
   } catch {
     return undefined
   } finally {

@@ -13,6 +13,8 @@ import { createEmptyMeta } from '../core/schemas'
 import { adoptServerMeta } from '../core/services/manageMeta'
 import { readBestiary,
   TOKEN_STORAGE_KEY,
+  createLogin,
+  listenEviction,
   readInventory,
   submitRun,
   ensureToken,
@@ -446,5 +448,46 @@ describe('판정 응답이 보상을 잃지 않는다', () => {
     return submitRun('t', 'ticket', {}, 'b1.v1.i1.s1.r1.a1.e1').then((result) => {
       expect(result?.reward).toBe('')
     })
+  })
+})
+
+describe('튕긴 기기가 그 사실을 안다', () => {
+  it('★ 토큰을 들고 간 요청이 401 이면 튕긴 것이다', async () => {
+    // 다른 기기에서 로그인하면 이 기기의 토큰이 막힌다 (한 계정은 한 기기). 조용히
+    // 넘기면 화면이 오프라인처럼 보이고, 서버가 죽은 것과 내가 튕긴 것은 사람이 해야
+    // 할 일이 다르다.
+    let evicted = false
+    listenEviction(() => {
+      evicted = true
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }))
+    await readInventory('t')
+    expect(evicted).toBe(true)
+    listenEviction(() => undefined)
+  })
+
+  it('★ 로그인 실패는 튕김이 아니다 — 가르지 않으면 비밀번호를 틀릴 때마다 튕겼다고 뜬다', async () => {
+    let evicted = false
+    listenEviction(() => {
+      evicted = true
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({}) }),
+    )
+    await createLogin('someone', 'wrong password')
+    expect(evicted).toBe(false)
+    listenEviction(() => undefined)
+  })
+
+  it('다른 오류는 튕김이 아니다', async () => {
+    let evicted = false
+    listenEviction(() => {
+      evicted = true
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }))
+    await readInventory('t')
+    expect(evicted).toBe(false)
+    listenEviction(() => undefined)
   })
 })
