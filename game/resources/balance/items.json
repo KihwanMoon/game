@@ -1,6 +1,6 @@
 {
   "_comment": "아이템 카탈로그 (docs/설계/4_아이템). 접사 굴림은 아직 없다 — 시드 파생식이 결정 대기(#02)이고, 정하기 전에 굴린 아이템은 나중에 검증할 수 없다. 여기 있는 것은 굴림 없이 값이 고정된 정의뿐이다. 요구조건이 참조하는 능력치는 지금 코어에 실제로 있는 것만 쓴다 — level·str 같은 축은 #10·#11 이 정해진 뒤에 들어온다. grants_skill 은 그 장비가 여는 스킬이다.",
-  "item_list_version": 1,
+  "item_list_version": 2,
   "items": [
     {
       "id": "sword_short",
@@ -192,6 +192,395 @@
         "QUEST"
       ],
       "_note": "퀘스트 시스템은 추후 업데이트다. 자리만 둔다 — 소모·장비·거래 불가이고 인벤토리 칸을 먹지 않는다 (§4)."
+    },
+    {
+      "id": "sword_saber",
+      "kind": "EQUIPMENT",
+      "label_ko": "도신검",
+      "slot": "WEAPON_MAIN",
+      "hands": "ONE",
+      "grade": "FINE",
+      "min_floor": 3,
+      "attack_range": 1,
+      "affixes": [
+        {
+          "stat": "attack",
+          "flat": 4,
+          "label_ko": "날 선"
+        },
+        {
+          "stat": "initiative",
+          "flat": 3,
+          "label_ko": "가벼운 손잡이"
+        }
+      ],
+      "tags": [
+        "MELEE"
+      ],
+      "_note": "한손이면서 선공권을 준다. 대검이 화력, 이쪽이 선수 — 같은 자리를 다른 축으로 채운다."
+    },
+    {
+      "id": "axe_heavy",
+      "kind": "EQUIPMENT",
+      "label_ko": "전투 도끼",
+      "slot": "WEAPON_MAIN",
+      "hands": "TWO",
+      "grade": "FINE",
+      "min_floor": 3,
+      "attack_range": 1,
+      "affixes": [
+        {
+          "stat": "attack",
+          "flat": 8,
+          "label_ko": "육중함"
+        },
+        {
+          "stat": "initiative",
+          "flat": -4,
+          "label_ko": "굼뜬 휘두름"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "attack",
+          "min": 14
+        }
+      ],
+      "grants_skill": "AREA_ATTACK",
+      "tags": [
+        "MELEE"
+      ],
+      "_note": "대검의 상급. 대가가 CPU 가 아니라 선공권이라, 대검과 무엇을 내주는가가 다르다."
+    },
+    {
+      "id": "shield_tower",
+      "kind": "EQUIPMENT",
+      "label_ko": "탑 방패",
+      "slot": "WEAPON_OFF",
+      "hands": "OFFHAND",
+      "grade": "FINE",
+      "min_floor": 3,
+      "affixes": [
+        {
+          "stat": "defense",
+          "flat": 5,
+          "label_ko": "버팀"
+        },
+        {
+          "stat": "initiative",
+          "flat": -3,
+          "label_ko": "무거운 테"
+        }
+      ],
+      "grants_skill": "GUARD_BRACE",
+      "tags": [
+        "SHIELD"
+      ]
+    },
+    {
+      "id": "helm_visor",
+      "kind": "EQUIPMENT",
+      "label_ko": "투시 투구",
+      "slot": "HEAD",
+      "grade": "FINE",
+      "min_floor": 3,
+      "affixes": [
+        {
+          "stat": "hp_max",
+          "flat": 14,
+          "label_ko": "두꺼운 이마"
+        },
+        {
+          "stat": "initiative",
+          "flat": 2,
+          "label_ko": "넓은 시야"
+        }
+      ]
+    },
+    {
+      "id": "armor_mesh",
+      "kind": "EQUIPMENT",
+      "label_ko": "사슬 갑옷",
+      "slot": "BODY",
+      "grade": "FINE",
+      "min_floor": 3,
+      "affixes": [
+        {
+          "stat": "defense",
+          "flat": 5,
+          "label_ko": "촘촘함"
+        },
+        {
+          "stat": "hp_max",
+          "percent": 15,
+          "label_ko": "숨통"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "hp_max",
+          "min": 100
+        }
+      ]
+    },
+    {
+      "id": "boots_gale",
+      "kind": "EQUIPMENT",
+      "label_ko": "질풍 신발",
+      "slot": "FEET",
+      "grade": "FINE",
+      "min_floor": 3,
+      "affixes": [
+        {
+          "stat": "initiative",
+          "flat": 11,
+          "label_ko": "앞선 발"
+        }
+      ]
+    },
+    {
+      "id": "gloves_lattice",
+      "kind": "EQUIPMENT",
+      "label_ko": "격자 장갑",
+      "slot": "HANDS",
+      "grade": "FINE",
+      "min_floor": 3,
+      "affixes": [
+        {
+          "stat": "cpu_budget",
+          "flat": 5,
+          "label_ko": "격자 회로"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "cpu_budget",
+          "min": 8
+        }
+      ],
+      "tags": [
+        "MODULE"
+      ],
+      "_note": "표현력 축의 상급. 스킬을 안 열어 주는 대신 값이 크다 — 스킬과 CPU 중 무엇을 살지가 선택이 된다."
+    },
+    {
+      "id": "sword_edge",
+      "kind": "EQUIPMENT",
+      "label_ko": "단층 검",
+      "slot": "WEAPON_MAIN",
+      "hands": "ONE",
+      "grade": "RELIC",
+      "min_floor": 6,
+      "attack_range": 2,
+      "affixes": [
+        {
+          "stat": "attack",
+          "flat": 7,
+          "label_ko": "갈라냄"
+        },
+        {
+          "stat": "defense",
+          "flat": -2,
+          "label_ko": "[허술함] 빈 자세"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "attack",
+          "min": 16
+        }
+      ],
+      "tags": [
+        "MELEE",
+        "CURSED"
+      ],
+      "_note": "한손인데 사거리가 2다. **규칙표가 달라지는 지점** — 「적거리 <= 사거리」가 한 칸 더 멀리서 참이 된다 (P2)."
+    },
+    {
+      "id": "bow_storm",
+      "kind": "EQUIPMENT",
+      "label_ko": "폭풍 활",
+      "slot": "WEAPON_MAIN",
+      "hands": "TWO",
+      "grade": "RELIC",
+      "min_floor": 6,
+      "attack_range": 5,
+      "affixes": [
+        {
+          "stat": "attack",
+          "flat": 3,
+          "label_ko": "쏘아붙임"
+        },
+        {
+          "stat": "cpu_budget",
+          "percent": -20,
+          "label_ko": "[과부하] 흔들리는 조준"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "initiative",
+          "min": 55
+        }
+      ],
+      "tags": [
+        "RANGED",
+        "CURSED"
+      ],
+      "_note": "장궁의 유물. 사거리가 5 라 규칙 한 줄로 방 하나를 건너다본다 — 대가는 CPU 다."
+    },
+    {
+      "id": "shield_aegis",
+      "kind": "EQUIPMENT",
+      "label_ko": "이지스",
+      "slot": "WEAPON_OFF",
+      "hands": "OFFHAND",
+      "grade": "RELIC",
+      "min_floor": 6,
+      "affixes": [
+        {
+          "stat": "defense",
+          "flat": 8,
+          "label_ko": "막아 세움"
+        },
+        {
+          "stat": "hp_max",
+          "percent": 8,
+          "label_ko": "굳건함"
+        },
+        {
+          "stat": "initiative",
+          "flat": -5,
+          "label_ko": "[둔중함] 늦은 반응"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "defense",
+          "min": 8
+        }
+      ],
+      "grants_skill": "GUARD_BRACE",
+      "tags": [
+        "SHIELD",
+        "CURSED"
+      ]
+    },
+    {
+      "id": "helm_oracle",
+      "kind": "EQUIPMENT",
+      "label_ko": "예지 투구",
+      "slot": "HEAD",
+      "grade": "RELIC",
+      "min_floor": 6,
+      "affixes": [
+        {
+          "stat": "hp_max",
+          "flat": 20,
+          "label_ko": "단단한 이마"
+        },
+        {
+          "stat": "cpu_budget",
+          "flat": 2,
+          "label_ko": "앞을 읽음"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "hp_max",
+          "min": 110
+        }
+      ],
+      "_note": "머리 자리에서 CPU 가 나오는 유일한 길. 장갑을 화력으로 쓰고 싶을 때의 우회로다."
+    },
+    {
+      "id": "armor_bulwark",
+      "kind": "EQUIPMENT",
+      "label_ko": "보루 갑옷",
+      "slot": "BODY",
+      "grade": "RELIC",
+      "min_floor": 6,
+      "affixes": [
+        {
+          "stat": "defense",
+          "flat": 9,
+          "label_ko": "성벽"
+        },
+        {
+          "stat": "hp_max",
+          "percent": 25,
+          "label_ko": "두터운 숨"
+        },
+        {
+          "stat": "initiative",
+          "flat": -6,
+          "label_ko": "[둔중함] 느린 걸음"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "hp_max",
+          "min": 130
+        }
+      ],
+      "tags": [
+        "CURSED"
+      ]
+    },
+    {
+      "id": "boots_phase",
+      "kind": "EQUIPMENT",
+      "label_ko": "위상 신발",
+      "slot": "FEET",
+      "grade": "RELIC",
+      "min_floor": 6,
+      "affixes": [
+        {
+          "stat": "initiative",
+          "flat": 16,
+          "label_ko": "앞질러 섬"
+        },
+        {
+          "stat": "hp_max",
+          "flat": -10,
+          "label_ko": "[희박함] 얇아진 몸"
+        }
+      ],
+      "tags": [
+        "CURSED"
+      ]
+    },
+    {
+      "id": "gloves_engine",
+      "kind": "EQUIPMENT",
+      "label_ko": "연산 기관",
+      "slot": "HANDS",
+      "grade": "RELIC",
+      "min_floor": 6,
+      "affixes": [
+        {
+          "stat": "cpu_budget",
+          "flat": 6,
+          "label_ko": "기관 회로"
+        },
+        {
+          "stat": "attack",
+          "flat": -3,
+          "label_ko": "[둔한 손] 무뎌진 타격"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "cpu_budget",
+          "min": 10
+        }
+      ],
+      "grants_skill": "HEAL",
+      "tags": [
+        "MODULE",
+        "CURSED"
+      ],
+      "_note": "표현력의 끝. CPU 를 무한히 주지 않는 이유는 표현력이 무한하면 정교한 로직의 가치가 사라지기 때문이다 (결정 #51 과 같은 이유)."
     }
   ]
 }

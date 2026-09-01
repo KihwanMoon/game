@@ -16,6 +16,7 @@ import { readBestiary,
   createLogin,
   listenEviction,
   readInventory,
+  readItemContext,
   submitRun,
   ensureToken,
   readServerMeta,
@@ -489,5 +490,75 @@ describe('튕긴 기기가 그 사실을 안다', () => {
     await readInventory('t')
     expect(evicted).toBe(false)
     listenEviction(() => undefined)
+  })
+})
+
+
+describe('아이템을 조작한 뒤 (장착·해제·복구·봉인 해제)', () => {
+  /**
+   * 경로별로 다른 절을 돌려주는 fetch 를 세운다.
+   *
+   * @param bodies 경로 조각에서 절로.
+   * @returns 부른 경로들.
+   */
+  function watchFetch(bodies: Record<string, unknown>): string[] {
+    const seen: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        seen.push(url)
+        const key = Object.keys(bodies).find((name) => url.includes(name)) ?? ''
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(bodies[key] ?? {}),
+        })
+      }),
+    )
+    return seen
+  }
+
+  it('★ 가방과 성장을 **함께** 읽는다 — 따로 읽으면 하나만 읽는 날이 온다', async () => {
+    // 예전에는 가방만 다시 읽어서, 낀 것을 바꿔도 「내 정보」의 숫자가 옛 값 그대로였다.
+    const seen = watchFetch({
+      inventory: { slots: [], equipment: [], balance: 0, repair_cost: 0 },
+      progress: {
+        level: 1,
+        total_xp: 0,
+        remaining_xp: 0,
+        next_xp: 0,
+        stats: {},
+        stat_keys: [],
+        stat_points: 0,
+        spent_points: 0,
+        bonus_rule_slots: 0,
+        bonus_cpu: 0,
+        bonus_flags: 0,
+      },
+    })
+    const context = await readItemContext('probe-token')
+    expect(seen.some((url) => url.includes('/inventory'))).toBe(true)
+    expect(seen.some((url) => url.includes('/progress'))).toBe(true)
+    expect(context.inventory).toBeDefined()
+    expect(context.progress).toBeDefined()
+  })
+
+  it('한쪽이 실패해도 다른 쪽은 온다 — 네트워크가 흔들렸다고 화면을 비우지 않는다', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        url.includes('/progress')
+          ? Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
+          : Promise.resolve({
+              ok: true,
+              status: 200,
+              json: () =>
+                Promise.resolve({ slots: [], equipment: [], balance: 0, repair_cost: 0 }),
+            }),
+      ),
+    )
+    const context = await readItemContext('probe-token')
+    expect(context.inventory).toBeDefined()
+    expect(context.progress).toBeUndefined()
   })
 })

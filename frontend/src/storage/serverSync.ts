@@ -959,6 +959,27 @@ export interface AuctionView {
  * @param token 기기 토큰.
  * @returns 성장 상태. 서버에 닿지 못했으면 undefined.
  */
+/** 아이템을 조작한 직후의 화면 상태. 가방과 성장이 **한 사건에서 함께** 바뀐다. */
+export interface ItemContext {
+  readonly inventory: InventoryView | undefined
+  readonly progress: ProgressView | undefined
+}
+
+/**
+ * 아이템을 조작한 뒤 화면이 다시 읽어야 할 것을 한꺼번에 읽는다.
+ *
+ * **둘을 묶어 두는 것이 요점이다.** 장착·해제·복구·봉인 해제는 전부 가방과 **캐릭터 시트**를
+ * 동시에 바꾸는데, 예전에는 가방만 다시 읽어서 낀 것을 바꿔도 「내 정보」의 숫자가 옛 값
+ * 그대로 남았다 — 따로 읽으면 하나만 읽는 날이 온다.
+ *
+ * @param token 기기 토큰.
+ * @returns 가방과 성장. 서버에 못 닿으면 각각 undefined 다.
+ */
+export async function readItemContext(token: string): Promise<ItemContext> {
+  const [inventory, progress] = await Promise.all([readInventory(token), readProgress(token)])
+  return { inventory, progress }
+}
+
 export async function readProgress(token: string): Promise<ProgressView | undefined> {
   const response = await sendRequest('/progress', { headers: { [TOKEN_HEADER]: token } })
   if (response === undefined || !response.ok) {

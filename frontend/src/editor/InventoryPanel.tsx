@@ -278,6 +278,8 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
               {SLOT_ORDER.map((slot) => {
                 const entry = equippedBySlot.get(slot)
                 const sealed = entry?.isSealed ?? false
+                // 콜백 안에서 `entry.item` 을 다시 읽으면 좁혀 둔 타입이 풀린다.
+                const equipped = entry?.item ?? undefined
                 return (
                   <li className="inv__slot" key={slot}>
                     <span className="inv__slot-label">{SLOT_LABELS.get(slot) ?? slot}</span>
@@ -310,6 +312,42 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
 
                             접었다 펴는 요소를 쓴다. 여섯 자리를 늘 펴 두면 장비 목록이
                             화면 한 판을 넘고, 그러면 가방이 안 보인다. */}
+                        {entry.item.sealedSlots > 0 ? (
+                          <GlyphState
+                            state="pending"
+                            size="sm"
+                            label={`봉인 ${String(entry.item.sealedSlots)}칸`}
+                          />
+                        ) : null}
+                        {/* **낀 채로 고치고 연다.** 서버는 처음부터 낀 것도 받았는데
+                            버튼이 가방 칸에만 있었다 — 고치거나 열려면 벗었다가 다시
+                            껴야 했고, 벗은 사이에 스탯이 흔들린다. */}
+                        {entry.item.isBroken ? (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            glyph="✚"
+                            title={`복구 ${String(inventory.repairCost)}`}
+                            onClick={() => {
+                              props.onRepair(equipped?.itemId ?? 0)
+                            }}
+                          >
+                            복구
+                          </Button>
+                        ) : null}
+                        {entry.item.sealedSlots === 0 ? null : (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            glyph="◈"
+                            title={`해제 ${String(entry.item.unsealCost)} — 무엇이 나올지는 열어야 안다`}
+                            onClick={() => {
+                              props.onUnseal(equipped?.itemId ?? 0)
+                            }}
+                          >
+                            봉인 해제
+                          </Button>
+                        )}
                         {renderAffixes(entry.item) === null ? null : (
                           <details className="inv__more">
                             <summary className="inv__more-head">능력치</summary>

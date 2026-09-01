@@ -31,6 +31,9 @@ function buildInventory(overrides: Partial<InventoryView['slots'][number]['item'
   const base = INVENTORY.slots[0]
   return {
     ...INVENTORY,
+    // **장비 자리를 비운다.** 안 비우면 낀 대검의 봉인 칸이 마크업에 섞여, 가방 쪽을
+    // 보는 검사가 무엇을 보고 통과했는지 알 수 없다 — 실제로 그렇게 빨개졌다.
+    equipment: [],
     slots: [{ ...base, item: { ...base?.item, ...overrides } }],
   } as InventoryView
 }
@@ -575,5 +578,68 @@ describe('낀 장비가 무엇을 주는가', () => {
   it('★ 낀 것의 등급도 보인다 — 유물을 끼고도 보통과 같아 보이면 등급이 뜻을 잃는다', () => {
     expect(drawPanel()).toContain('inv__name--relic')
     expect(drawPanel()).toContain('유물')
+  })
+})
+
+
+describe('낀 채로 고치고 연다', () => {
+  /**
+   * 장비 한 자리만 둔 가방을 그린다.
+   *
+   * @param isBroken 파손 여부.
+   * @param sealedSlots 남은 봉인 칸.
+   * @returns 마크업.
+   */
+  function drawEquipped(isBroken: boolean, sealedSlots: number) {
+    // `null` 도 걸러야 한다. `undefined` 만 보면 아이템이 없는 자리가 그대로 퍼져서
+    // 모든 칸이 선택 항목이 된다.
+    const base = INVENTORY.equipment[1]?.item
+    if (base === undefined || base === null) {
+      throw new Error('픽스처가 비었다')
+    }
+    const item = { ...base, isBroken, sealedSlots }
+    return renderToStaticMarkup(
+      <InventoryPanel
+        inventory={{
+          ...INVENTORY,
+          slots: [],
+          equipment: [
+            {
+              slotIndex: 1,
+              slot: 'WEAPON_MAIN',
+              isSealed: false,
+              stackCatalogId: null,
+              stackCount: 0,
+              item,
+            },
+          ],
+        }}
+        isOnline
+        detail=""
+        onEquip={noop}
+        onUnequip={noop}
+        onDiscard={noop}
+        onRepair={noop}
+        onList={noop}
+        feePercent={5}
+        onUnseal={() => undefined}
+      />,
+    )
+  }
+
+  it('★ 낀 장비가 파손됐으면 그 자리에서 복구한다 — 벗었다 끼는 사이 스탯이 흔들린다', () => {
+    expect(drawEquipped(true, 0)).toContain('복구')
+  })
+
+  it('★ 낀 장비의 봉인도 그 자리에서 연다 — 서버는 처음부터 낀 것도 받았다', () => {
+    expect(drawEquipped(false, 2)).toContain('봉인 해제')
+  })
+
+  it('★ 멀쩡하면 복구 버튼을 안 그린다 — 늘 떠 있으면 파손이 눈에 안 띈다', () => {
+    expect(drawEquipped(false, 0)).not.toContain('복구')
+  })
+
+  it('★ 열 봉인이 없으면 해제 버튼을 안 그린다 — 눌러도 거절당하는 버튼은 거짓말이다', () => {
+    expect(drawEquipped(false, 0)).not.toContain('봉인 해제')
   })
 })

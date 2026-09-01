@@ -288,3 +288,13 @@ UPDATE item_catalog SET use_tag = 'POTION'
  WHERE use_tag IS NULL AND kind = 'CONSUMABLE' AND tags @> '["POTION"]'::jsonb;
 UPDATE item_catalog SET use_tag = 'SCROLL'
  WHERE use_tag IS NULL AND kind = 'CONSUMABLE' AND tags @> '["SCROLL"]'::jsonb;
+
+
+-- ── 등급 없이 발급된 아이템에 등급을 준다 (설계/4_아이템 §15.5) ─────────
+--
+-- 등급이 생기기 전에 발급된 줄이 50개 남아 있었다. 등급이 비어 있으면 화면이 **색도
+-- 이름표도 안 붙인다** — 사람 눈에는 "등급 표기가 반영 안 됐다" 로 보인다.
+--
+-- 보통으로 채운다. 그때는 등급이 하나뿐이었으므로 이것이 사실이고, 봉인 칸은 보통이
+-- 0 칸이라 이미 0 인 값과 어긋나지 않는다.
+UPDATE item_instance SET grade = 'COMMON' WHERE grade IS NULL OR grade = '';

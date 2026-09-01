@@ -129,6 +129,7 @@ import {
   applyItemAction,
   buildRuleSetPayload,
   readInventory,
+  readItemContext,
   registerAccount,
   requestTicket,
   submitRun,
@@ -666,15 +667,24 @@ export function App(): React.JSX.Element {
     }
     setItemDetail('')
     void applyItemAction(account, path, body).then((outcome) => {
-      if (outcome.inventory !== undefined) {
-        setInventory(outcome.inventory)
-        return
-      }
-      if (outcome.detail !== '') {
+      if (outcome.detail !== '' && outcome.inventory === undefined) {
         setItemDetail(outcome.detail)
         return
       }
-      void readInventory(account).then(setInventory)
+      // **가방만 다시 읽으면 「내 정보」가 옛 값으로 남는다.** 장착·해제·복구·봉인 해제는
+      // 전부 캐릭터 시트의 숫자를 바꾸는데, 그 숫자는 `progress.loadout` 에서 온다 —
+      // 응답이 실어 주는 것은 가방뿐이다.
+      void readItemContext(account).then((context) => {
+        if (context.inventory !== undefined) {
+          setInventory(context.inventory)
+        }
+        if (context.progress !== undefined) {
+          setProgress(context.progress)
+        }
+      })
+      if (outcome.detail !== '') {
+        setItemDetail(outcome.detail)
+      }
     })
   }
 

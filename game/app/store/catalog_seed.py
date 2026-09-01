@@ -14,33 +14,40 @@ from game.app.store.item_catalog import apply_grade_seed, save_catalog_entry
 from game.config import ITEMS_PATH
 
 
-def count_catalog(pool: ConnectionPool) -> int:
-    """카탈로그에 몇 줄이 있는지 센다.
+def list_catalog_ids(pool: ConnectionPool) -> set[str]:
+    """카탈로그에 이미 있는 id 를 모은다.
 
     Args:
         pool: 연결 풀.
 
     Returns:
-        줄 수.
+        catalog_id 들. 비어 있으면 빈 집합.
     """
     with pool.connection() as connection:
-        row = connection.execute("SELECT count(*) FROM item_catalog").fetchone()
-    return 0 if row is None else int(row[0])
+        rows = connection.execute("SELECT catalog_id FROM item_catalog").fetchall()
+    return {str(row[0]) for row in rows}
 
 
 def apply_catalog_seed(pool: ConnectionPool) -> int:
-    """비어 있으면 파일의 카탈로그를 DB 로 옮긴다.
+    """파일에 있는데 DB 에 없는 줄만 심는다.
+
+    **이미 있는 줄은 손대지 않는다.** 서버가 뜰 때마다 파일로 덮으면 관리자가 DB 에서
+    고친 것이 배포 한 번에 사라지고, 그러면 정본이 DB 라는 말이 거짓이 된다. 폐기한
+    아이템이 되살아나는 것도 같은 사고다.
+
+    **한 번 채우고 끝내지도 않는다.** 예전에는 표가 비어 있을 때만 돌아서, 콘텐츠를 파일에
+    더해도 이미 돌고 있는 서버에는 영영 안 들어갔다 — 드롭 표에서 겪은 것과 같은 구멍이다.
 
     Args:
         pool: 연결 풀.
 
     Returns:
-        옮긴 줄 수. 이미 있었으면 0.
+        새로 심은 줄 수. 심을 것이 없었으면 0.
     """
     apply_grade_seed(pool)
-    if count_catalog(pool) > 0:
-        return 0
+    known = list_catalog_ids(pool)
     catalog = load_item_catalog(ITEMS_PATH)
-    for entry in catalog.values():
+    fresh = [entry for key, entry in sorted(catalog.items()) if key not in known]
+    for entry in fresh:
         save_catalog_entry(pool, entry)
-    return len(catalog)
+    return len(fresh)
