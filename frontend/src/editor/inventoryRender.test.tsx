@@ -643,3 +643,36 @@ describe('낀 채로 고치고 연다', () => {
     expect(drawEquipped(false, 0)).not.toContain('봉인 해제')
   })
 })
+
+
+describe('등급 색이 실제로 이기는가', () => {
+  const css = readText('./editor.css')
+
+  it('★ 등급 규칙이 `.inv__name` **뒤에** 있다 — 같은 우선순위라 순서가 이긴다', () => {
+    // 처음에는 규칙을 `styles/app.css` 에 뒀는데, 그 파일이 `editor.css` 보다 먼저
+    // 로드되므로 여기 있는 `.inv__name { color }` 이 등급색을 통째로 덮었다.
+    // 화면에는 아무 색도 안 나왔고, 배포 확인은 "클래스가 CSS 에 있다" 만 보고 통과했다.
+    const base = css.indexOf('.inv__name {')
+    const fine = css.indexOf('.inv__name--fine')
+    expect(base).toBeGreaterThan(-1)
+    expect(fine).toBeGreaterThan(base)
+  })
+
+  it('★ 세 등급이 서로 다른 값을 쓴다 — 같은 값이면 색으로 가른 것이 아니다', () => {
+    const read = (name: string) =>
+      new RegExp(`\\.inv__name--${name}\\s*\\{[^}]*color:\\s*([^;]+);`).exec(css)?.[1]?.trim()
+    const picked = [read('common'), read('fine'), read('relic')]
+    expect(picked.every((value) => value !== undefined)).toBe(true)
+    expect(new Set(picked).size).toBe(3)
+  })
+
+  it('★ 이름표에도 같은 색을 쓴다 — 이름과 이름표가 다른 색이면 무엇이 등급인지 흐려진다', () => {
+    expect(css).toContain('.inv__grade--relic')
+  })
+
+  it('★ 색 말고 글리프도 가른다 — 색이 유일한 채널이면 색을 못 가르는 사람에게 등급이 없다', () => {
+    const html = drawPanel()
+    expect(html).toContain('◆')
+    expect(html).toContain('·')
+  })
+})

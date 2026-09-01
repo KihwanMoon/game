@@ -1250,6 +1250,52 @@
   font-size: var(--fs-mono);
 }
 
+/* 등급 색. **`.inv__name` 뒤에 와야 한다** — 같은 우선순위라 순서가 이긴다. 토큰은
+   `styles/app.css` 에 있고 그 파일이 먼저 로드되므로, 규칙까지 거기 두면 여기 있는
+   `.inv__name` 이 색을 덮는다 (실제로 그렇게 덮였다). */
+.inv__name--common {
+  color: var(--grade-common);
+}
+
+.inv__name--fine {
+  color: var(--grade-fine);
+}
+
+.inv__name--relic {
+  color: var(--grade-relic);
+}
+
+/* 등급 이름표. **색만으로 가르지 않는다** — 색을 못 가르는 사람에게도 등급이 보여야 한다. */
+.inv__grade {
+  font-family: var(--font-body);
+  font-size: var(--fs-body-s);
+  padding-inline: var(--sp-1);
+  border: var(--border);
+}
+
+.inv__grade--common {
+  color: var(--grade-common);
+}
+
+.inv__grade--fine {
+  color: var(--grade-fine);
+}
+
+.inv__grade--relic {
+  color: var(--grade-relic);
+}
+
+.inv__more {
+  flex-basis: 100%;
+}
+
+.inv__more-head {
+  font-family: var(--font-body);
+  font-size: var(--fs-body-s);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
 .inv__reqs {
   display: flex;
   flex-direction: column;

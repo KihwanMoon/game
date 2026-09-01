@@ -55,6 +55,20 @@ const GRADE_LABELS: ReadonlyMap<string, string> = new Map([
 ])
 
 /**
+ * 등급의 글리프.
+ *
+ * **색이 유일한 채널이 되면 안 된다.** 이 저장소는 참·거짓을 색·글리프·명도 셋으로 적고,
+ * 등급도 같은 규율을 따른다 — 색을 못 가르는 사람에게 채워진 마름모와 빈 마름모는
+ * 노랑과 주황보다 확실하다. 괘선 굵기로 가르지 않는 이유는 `--bw-accent` 가 「활성 규칙
+ * 좌측 세로바만 예외」로 못박혀 있기 때문이다.
+ */
+const GRADE_GLYPHS: ReadonlyMap<string, string> = new Map([
+  ['COMMON', '·'],
+  ['FINE', '◇'],
+  ['RELIC', '◆'],
+])
+
+/**
  * 등급에 붙는 class 를 정한다.
  *
  * @param grade 등급 코드.
@@ -75,7 +89,11 @@ function renderGrade(grade: string): React.JSX.Element | null {
   if (label === undefined) {
     return null
   }
-  return <span className={`inv__grade inv__grade--${grade.toLowerCase()}`}>{label}</span>
+  return (
+    <span className={`inv__grade inv__grade--${grade.toLowerCase()}`}>
+      {`${GRADE_GLYPHS.get(grade) ?? ''} ${label}`}
+    </span>
+  )
 }
 
 /** 장비 슬롯 순서. 파이썬 `SLOT_ORDER` 와 같아야 화면과 합산이 같은 순서를 본다. */
