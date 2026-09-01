@@ -126,7 +126,9 @@ def test_a_known_stat_still_goes_through(client, admin):
     )
     assert response.status_code == 200
     row = next(item for item in response.json()["items"] if item["catalog_id"] == payload["id"])
-    assert row["affixes"] == ["굼뜬 제어 -25%"]
+    # **무엇을 올리는지 병기한다.** 「굼뜬 제어 -25%」 만 적으면 25% 가 무엇의 25% 인지
+    # 화면 어디에도 없다.
+    assert row["affixes"] == ["굼뜬 제어 · CPU -25%"]
 
 
 def test_the_catalog_response_carries_the_canon(client, admin):
@@ -155,3 +157,47 @@ def test_the_canon_lists_only_what_the_loadout_sums():
     from game.schemas import item
 
     assert loadout.COMBAT_STATS is item.COMBAT_STATS
+
+
+def test_the_label_says_which_stat_it_lifts():
+    """★ 「튼튼함 +8」 만 적으면 8 이 체력인지 방어력인지 화면 어디에도 없다.
+
+    조건문에 각 항의 실측값을 병기하는 것과 같은 규칙이다 (GDD §8.2).
+    """
+    from game.api.catalog_view import format_affix
+    from game.schemas.item import Affix
+
+    assert format_affix(Affix(stat="hp_max", flat=8, label_ko="튼튼함")) == "튼튼함 · 최대체력 +8"
+    assert (
+        format_affix(Affix(stat="cpu_budget", percent=-25, label_ko="굼뜬 제어"))
+        == "굼뜬 제어 · CPU -25%"
+    )
+
+
+def test_a_nameless_affix_falls_back_to_korean():
+    """★ 이름이 없으면 **영어 키가 그대로 새던** 자리다.
+
+    관리자 화면이 이름 칸을 비웠을 때 능력치 키를 이름으로 박아 넣어, 프로덕션의
+    `sword_great_fine` 이 「attack +3」 으로 떠 있었다.
+    """
+    from game.api.catalog_view import format_affix
+    from game.schemas.item import Affix
+
+    assert format_affix(Affix(stat="attack", flat=3)) == "공격력 +3"
+    # 이름이 능력치 키 그대로여도 같다 — 이미 그렇게 저장된 줄이 프로덕션에 있다.
+    assert format_affix(Affix(stat="attack", flat=3, label_ko="attack")) == "공격력 +3"
+
+
+def test_an_unknown_stat_keeps_its_raw_name():
+    """★ 모르는 이름을 빈칸으로 두면 값만 뜬 줄이 되어 무엇의 값인지 알 길이 없다."""
+    from game.api.catalog_view import format_affix
+    from game.schemas.item import Affix
+
+    assert format_affix(Affix(stat="mystery", flat=1)) == "mystery +1"
+
+
+def test_the_stat_labels_cover_the_canon():
+    """★ 정본에 있는데 이름이 없는 능력치가 있으면 그 접사만 영어로 뜬다."""
+    from game.schemas.item import COMBAT_STATS, STAT_LABELS
+
+    assert [stat for stat in COMBAT_STATS if stat not in STAT_LABELS] == []

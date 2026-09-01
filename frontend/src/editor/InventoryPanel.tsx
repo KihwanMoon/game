@@ -42,6 +42,42 @@ export interface InventoryPanelProps {
   readonly onRepair: (itemId: number) => void
 }
 
+/**
+ * 등급의 한글 이름.
+ *
+ * **색만으로 가르지 않는다.** 이름을 함께 적어야 색을 못 가르는 사람에게도 등급이 보이고,
+ * 그것이 이 저장소가 참·거짓을 색·글리프·명도 셋으로 적는 것과 같은 규율이다.
+ */
+const GRADE_LABELS: ReadonlyMap<string, string> = new Map([
+  ['COMMON', '보통'],
+  ['FINE', '상급'],
+  ['RELIC', '유물'],
+])
+
+/**
+ * 등급에 붙는 class 를 정한다.
+ *
+ * @param grade 등급 코드.
+ * @returns class 이름. 모르는 등급이면 빈 문자열 — 색을 안 입힌다.
+ */
+export function formatGradeClass(grade: string): string {
+  return GRADE_LABELS.has(grade) ? ` inv__name--${grade.toLowerCase()}` : ''
+}
+
+/**
+ * 등급 이름표를 그린다.
+ *
+ * @param grade 등급 코드.
+ * @returns 요소. 모르는 등급이면 아무것도 안 그린다.
+ */
+function renderGrade(grade: string): React.JSX.Element | null {
+  const label = GRADE_LABELS.get(grade)
+  if (label === undefined) {
+    return null
+  }
+  return <span className={`inv__grade inv__grade--${grade.toLowerCase()}`}>{label}</span>
+}
+
 /** 장비 슬롯 순서. 파이썬 `SLOT_ORDER` 와 같아야 화면과 합산이 같은 순서를 본다. */
 const SLOT_ORDER: readonly string[] = [
   'WEAPON_MAIN',
@@ -106,8 +142,12 @@ export function formatAffix(affix: AffixView): string {
   if (affix.percent !== 0) {
     parts.push(`${affix.percent > 0 ? '+' : ''}${String(affix.percent)}%`)
   }
-  const name = affix.labelKo || affix.stat
-  return parts.length === 0 ? name : `${name} ${parts.join(' ')}`
+  const label = affix.statLabel || affix.stat
+  const name = affix.labelKo
+  // **이름이 능력치를 되풀이하면 한 번만 적는다.** 「공격력 · 공격력 +3」 은 아무것도 더
+  // 말해 주지 않고, 관리자가 이름 칸을 비웠을 때 영어 키가 그대로 새던 자리이기도 하다.
+  const head = name === '' || name === affix.stat || name === label ? label : `${name} · ${label}`
+  return parts.length === 0 ? head : `${head} ${parts.join(' ')}`
 }
 
 /**
@@ -120,11 +160,18 @@ export function formatAffix(affix: AffixView): string {
  * @returns 요소. 접사가 없으면 null.
  */
 function renderAffixes(item: ItemView): React.JSX.Element | null {
-  if (item.affixes.length === 0) {
+  if (item.affixes.length === 0 && item.attackRange === 0) {
     return null
   }
   return (
     <ul className="inv__affixes">
+      {/* 사거리는 무기의 것이지 접사가 아니다 (§2.2). **접사에서 필드로 옮기면서 한 번
+          안 보이게 됐다** — 접사였을 때는 「먼 사거리 +3」 으로 뜨던 것이 사라졌었다. */}
+      {item.attackRange === 0 ? null : (
+        <li className="inv__affix" key="attack_range">
+          <ValueExpr text={`사거리 ${String(item.attackRange)}`} size="sm" dim />
+        </li>
+      )}
       {item.affixes.map((affix) => (
         <li className="inv__affix" key={`${affix.stat}:${affix.labelKo}`}>
           <ValueExpr text={formatAffix(affix)} size="sm" dim />
@@ -240,7 +287,10 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
                     ) : entry?.item ? (
                       <>
                         <Thumb kind={slot} label={entry.item.labelKo} size="sm" />
-                        <span className="inv__name">{entry.item.labelKo}</span>
+                        <span className={`inv__name${formatGradeClass(entry.item.grade)}`}>
+                          {entry.item.labelKo}
+                        </span>
+                        {renderGrade(entry.item.grade)}
                         {entry.item.isBroken ? (
                           <GlyphState state="danger" size="sm" label="파손" />
                         ) : null}
@@ -253,6 +303,19 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
                             props.onUnequip(slot)
                           }}
                         />
+                        {/* **낀 것이 무엇을 주는지 여기서 보인다.** 예전에는 능력치 줄이
+                            가방 칸에만 붙어 있어서, 낀 장비의 효과를 볼 데가 아예 없었다 —
+                            그래서 "가방에 있는 것이 적용되는 것 같다" 로 읽혔다.
+                            합산은 예나 지금이나 `equipment_slot` 만 본다.
+
+                            접었다 펴는 요소를 쓴다. 여섯 자리를 늘 펴 두면 장비 목록이
+                            화면 한 판을 넘고, 그러면 가방이 안 보인다. */}
+                        {renderAffixes(entry.item) === null ? null : (
+                          <details className="inv__more">
+                            <summary className="inv__more-head">능력치</summary>
+                            {renderAffixes(entry.item)}
+                          </details>
+                        )}
                       </>
                     ) : (
                       <ValueExpr text="비어 있다" size="sm" dim />
@@ -288,7 +351,10 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
                           label={entry.item.labelKo}
                           size="sm"
                         />
-                        <span className="inv__name">{entry.item.labelKo}</span>
+                        <span className={`inv__name${formatGradeClass(entry.item.grade)}`}>
+                          {entry.item.labelKo}
+                        </span>
+                        {renderGrade(entry.item.grade)}
                         {entry.item.isBroken ? (
                           <GlyphState state="danger" size="sm" label="파손" />
                         ) : null}

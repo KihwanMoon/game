@@ -109,7 +109,10 @@ export function buildAffixPayload(rows: readonly AffixRow[]): Record<string, unk
       stat: row.stat,
       flat: Number.parseInt(row.flat, DECIMAL_RADIX) || 0,
       percent: Number.parseInt(row.percent, DECIMAL_RADIX) || 0,
-      label_ko: row.labelKo === '' ? row.stat : row.labelKo,
+      // **비워 두면 비워 둔 채로 보낸다.** 예전에는 능력치 키를 이름으로 박아서,
+      // 이름 칸을 안 채운 아이템이 게임 안에서 「attack +3」 처럼 영어로 떴다.
+      // 이름이 없으면 서버가 능력치의 한글 이름으로 적는다.
+      label_ko: row.labelKo,
     }))
 }
 

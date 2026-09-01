@@ -144,6 +144,11 @@ class ItemView(BaseModel):
     # 다음 칸을 여는 값. 화면이 다시 계산하면 두 곳이 갈린다.
     unseal_cost: int = 0
     grade: str = ""
+    # 무기가 정하는 사거리 (§2.2). 0 은 「안 정한다」다.
+    #
+    # **가방에서 보여야 한다.** 사거리를 접사에서 필드로 올리면서 한 번 안 보이게 됐다 —
+    # 접사였을 때는 「먼 사거리 +3」 으로 뜨던 것이 필드가 된 순간 어느 화면에도 안 남았다.
+    attack_range: int = 0
     affixes: list[dict] = Field(default_factory=list)
     requirements: list[RequirementView] = Field(default_factory=list)
     can_equip: bool = False

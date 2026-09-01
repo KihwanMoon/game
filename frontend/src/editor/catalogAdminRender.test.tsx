@@ -213,9 +213,11 @@ describe('접사 입력 (JSON 을 손으로 치지 않는다)', () => {
     expect(payload[0]).toEqual({ stat: 'attack', flat: 3, percent: 0, label_ko: '예리함' })
   })
 
-  it('★ 이름을 안 적으면 능력치 이름을 쓴다 — 이름 없는 접사는 화면에서 사라진다', () => {
+  it('★ 이름을 안 적으면 비워 둔 채로 보낸다 — 능력치 키를 박으면 게임에서 영어로 뜬다', () => {
+    // 예전에는 여기서 `hp_max` 를 이름으로 박았고, 그 아이템이 가방에서 「hp_max +8」 로
+    // 보였다. 이름이 없으면 서버가 능력치의 한글 이름(「최대체력」)으로 적는다.
     const payload = buildAffixPayload([{ stat: 'hp_max', flat: '8', percent: '', labelKo: '' }])
-    expect(payload[0]?.label_ko).toBe('hp_max')
+    expect(payload[0]?.label_ko).toBe('')
   })
 
   it('줄 하나만 고친다 — 나머지 칸이 같이 지워지면 못 쓴다', () => {

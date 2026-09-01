@@ -185,3 +185,66 @@ body {
   font-size: var(--fs-body-s);
   text-decoration: none;
 }
+
+
+/* ── 아이템 등급 (설계/4_아이템 §15.4) ──────────────────────────────────
+ *
+ * **디자인 시스템의 의미색이 아니라 이 게임의 도메인 값이다.** 그래서 토큰 사본이 아니라
+ * 여기 둔다 — `design/tokens/colors.css` 는 정본의 사본이고, 거기에 색을 더하면 정본과
+ * 갈린다 (결정 #44 가 이미 그 상태다).
+ *
+ * 기본 팔레트가 9색으로 닫혀 있고 의미색 셋(참·거짓·위험)이 이미 배정돼 있어, §15.4 는
+ * 등급을 **괘선 굵기**로 적기로 했었다. 색을 쓰기로 바꾼 것은 요청이며, 황동
+ * (`--brass`, 화면당 3곳 상한)을 피해 등급 전용 값을 둔다.
+ *
+ * **색만으로 가르지 않는다.** 이름표(보통·상급·유물)를 늘 함께 적는다.
+ */
+:root {
+  --grade-common: var(--chalk);
+  --grade-fine: #d8c25e;
+  --grade-relic: #d2823f;
+}
+
+.inv__name--common {
+  color: var(--grade-common);
+}
+
+.inv__name--fine {
+  color: var(--grade-fine);
+}
+
+.inv__name--relic {
+  color: var(--grade-relic);
+}
+
+.inv__grade {
+  font-family: var(--font-body);
+  font-size: var(--fs-body-s);
+  padding-inline: var(--sp-1);
+  border: 1px solid currentcolor;
+}
+
+.inv__grade--common {
+  color: var(--grade-common);
+}
+
+.inv__grade--fine {
+  color: var(--grade-fine);
+}
+
+/* 유물만 괘선을 두껍게 둔다 — 색을 못 가르는 사람에게도 최상급이 드러나야 한다. */
+.inv__grade--relic {
+  color: var(--grade-relic);
+  border-width: 2px;
+}
+
+.inv__more {
+  flex-basis: 100%;
+}
+
+.inv__more-head {
+  font-family: var(--font-body);
+  font-size: var(--fs-body-s);
+  color: var(--text-dim);
+  cursor: pointer;
+}

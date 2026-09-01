@@ -329,7 +329,17 @@ def test_a_listing_carries_the_affixes_it_actually_rolled(client, token):
     view = find_listing_row(client, token, item_id)
     # 카탈로그의 `helm_iron` 은 이 접사를 갖고 있지 않다. 값이 그대로 나오면 인스턴스가
     # 굴린 것을 실었다는 뜻이고, 다른 값이 나오면 카탈로그 기본값을 실은 것이다.
-    assert view.affixes == [{"stat": "attack", "flat": 7, "percent": 0, "label_ko": "날카로움"}]
+    assert view.affixes == [
+        {
+            "stat": "attack",
+            "flat": 7,
+            "percent": 0,
+            "label_ko": "날카로움",
+            # 경매장도 능력치의 한글 이름을 받는다. 한 화면만 빠뜨리면 **거기서만**
+            # 영어 키가 보이고, 그 사실이 그 화면을 열기 전까지 안 드러난다.
+            "stat_label": "공격력",
+        }
+    ]
 
 
 def test_a_listing_says_when_it_disappears(client, token):

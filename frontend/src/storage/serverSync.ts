@@ -523,6 +523,13 @@ export interface ItemView {
   /** 굴린 등급. 봉인 칸 수가 여기서 나온다. */
   readonly grade: string
   /**
+   * 무기가 정하는 사거리 (§2.2). 0 은 「안 정한다」다.
+   *
+   * **가방에서 보여야 한다.** 사거리를 접사에서 필드로 올리면서 한 번 안 보이게 됐다 —
+   * 접사였을 때는 「먼 사거리 +3」 으로 뜨던 것이 필드가 된 순간 어느 화면에도 안 남았다.
+   */
+  readonly attackRange: number
+  /**
    * 이 아이템이 실제로 주는 것.
    *
    * **끼기 전에 보여야 한다** — 무엇을 주는지 모르고 끼우면 캐릭터 시트를 보고 나서야
@@ -539,6 +546,13 @@ export interface AffixView {
   readonly flat: number
   readonly percent: number
   readonly labelKo: string
+  /**
+   * 능력치의 한글 이름. **서버가 실어 보낸다.**
+   *
+   * 화면이 제 목록을 들고 있으면 정본이 둘이 되고, 서버가 아는 이름이 늘어도 화면은 옛
+   * 이름으로 그린다 — 접사 stat 목록을 서버가 보내기로 한 것과 같은 자리다.
+   */
+  readonly statLabel: string
 }
 
 /** 인벤토리 한 칸 또는 장비 한 자리. */
@@ -573,6 +587,15 @@ interface RawRequirement {
   is_met: boolean
 }
 
+/** 서버가 보내는 접사 절. `stat_label` 은 능력치의 한글 이름이다. */
+interface RawAffix {
+  stat: string
+  flat: number
+  percent: number
+  label_ko: string
+  stat_label?: string
+}
+
 interface RawItem {
   item_id: number
   catalog_id: string
@@ -587,7 +610,8 @@ interface RawItem {
   sealed_slots?: number
   unseal_cost?: number
   grade?: string
-  affixes?: { stat: string; flat: number; percent: number; label_ko: string }[]
+  affixes?: RawAffix[]
+  attack_range?: number
   requirements: RawRequirement[]
   can_equip: boolean
 }
@@ -631,11 +655,13 @@ function readSlot(raw: RawSlot): SlotView {
             sealedSlots: raw.item.sealed_slots ?? 0,
             unsealCost: raw.item.unseal_cost ?? 0,
             grade: raw.item.grade ?? '',
+            attackRange: raw.item.attack_range ?? 0,
             affixes: (raw.item.affixes ?? []).map((affix) => ({
               stat: affix.stat,
               flat: affix.flat,
               percent: affix.percent,
               labelKo: affix.label_ko,
+              statLabel: affix.stat_label ?? affix.stat,
             })),
             canEquip: raw.item.can_equip,
             requirements: raw.item.requirements.map((item) => ({
@@ -1006,7 +1032,7 @@ function readAuctionBody(raw: {
     label_ko: string
     price: number
     is_mine: boolean
-    affixes?: { stat: string; flat: number; percent: number; label_ko: string }[]
+    affixes?: RawAffix[]
     expires_in_minutes?: number
     fee?: number
   }[]
@@ -1020,6 +1046,7 @@ function readAuctionBody(raw: {
       labelKo: item.label_ko,
       price: item.price,
       affixes: (item.affixes ?? []).map((affix) => ({
+        statLabel: affix.stat_label ?? affix.stat,
         stat: affix.stat,
         flat: affix.flat,
         percent: affix.percent,

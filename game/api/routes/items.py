@@ -8,6 +8,7 @@
 
 from fastapi import APIRouter, HTTPException, status
 
+from game.api.catalog_view import build_affix_view
 from game.api.deps import CurrentAccount, get_context, get_item_catalog, get_pool
 from game.api.schemas import (
     EquipRequest,
@@ -96,10 +97,11 @@ def build_item_view(
         # 메웠는데, 그것이 곧 "카탈로그를 고치면 남의 가방이 바뀐다" 였다 — 그래서
         # 접사 수정이 통째로 막혀 있었다. 발급 시점에 인스턴스가 자기 접사를 갖게
         # 하고(마이그레이션), 여기서 카탈로그를 안 본다 (설계/4_아이템 §15.11).
-        affixes=[
-            {"stat": a.stat, "flat": a.flat, "percent": a.percent, "label_ko": a.label_ko}
-            for a in stored.affixes
-        ],
+        attack_range=entry.attack_range or 0,
+        # **능력치 이름을 함께 보낸다.** 화면이 제 목록을 들고 있으면 정본이 둘이 되고,
+        # 서버가 아는 이름이 늘어도 화면은 옛 이름으로 그린다 — 접사 stat 목록을 서버가
+        # 실어 보내기로 한 것과 같은 자리다 (§9).
+        affixes=[build_affix_view(a) for a in stored.affixes],
         requirements=[
             RequirementView(stat=c.stat, actual=c.actual, minimum=c.minimum, is_met=c.is_met)
             for c in checks

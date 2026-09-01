@@ -30,6 +30,7 @@ from game.app.store.auction import (
 )
 from game.app.store.equipment import read_balance
 from game.app.store.items import find_item
+from game.schemas.item import format_stat_label
 
 router = APIRouter()
 
@@ -46,7 +47,11 @@ def build_affix_rows(listing: Listing) -> list[dict]:
     Returns:
         접사 절들. 굴린 것이 없으면 빈 목록.
     """
-    return [dict(affix) for affix in listing.affixes]
+    # 한글 이름을 여기서도 붙인다. 안 붙이면 **경매장에서만** 영어 키가 보인다.
+    return [
+        {**dict(affix), "stat_label": format_stat_label(str(affix.get("stat", "")))}
+        for affix in listing.affixes
+    ]
 
 
 def build_listing_view(listing: Listing, catalog: dict) -> ListingView:

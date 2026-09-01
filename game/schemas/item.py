@@ -98,6 +98,34 @@ COMBAT_STATS: tuple[str, ...] = (
 )
 
 
+# 능력치의 한글 이름. **캐릭터 시트가 부르는 이름 그대로다** — 같은 값을 화면마다 다르게
+# 부르면 그것이 또 모호함이다 (`CharacterPanel` 의 STAT_ROWS).
+#
+# 접사 표기가 이것을 병기한다. 「튼튼함 +8」 만 적으면 8 이 체력인지 방어력인지 화면
+# 어디에도 없다 — 조건문에 실측값을 병기하는 것과 같은 규칙이다 (GDD §8.2).
+STAT_LABELS: dict[str, str] = {
+    "hp_max": "최대체력",
+    "attack": "공격력",
+    "defense": "방어력",
+    "attack_range": "사거리",
+    "initiative": "선공권",
+    "cpu_budget": "CPU",
+}
+
+
+def format_stat_label(stat: str) -> str:
+    """능력치의 한글 이름을 찾는다.
+
+    Args:
+        stat: 능력치 이름.
+
+    Returns:
+        한글 이름. 모르는 이름이면 받은 것을 그대로 — 빈칸으로 두면 값만 뜬 줄이 되어
+        무엇의 값인지 알 길이 아예 없어진다.
+    """
+    return STAT_LABELS.get(stat, stat)
+
+
 def list_unknown_stats(affixes: tuple[Affix, ...]) -> tuple[str, ...]:
     """정본에 없는 스탯 이름을 모은다.
 

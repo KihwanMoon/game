@@ -19,6 +19,7 @@ from dataclasses import replace
 from fastapi import APIRouter, HTTPException, status
 
 from game.api.catalog_admin import build_entry_from_request, list_locked_changes
+from game.api.catalog_view import format_affix
 from game.api.deps import CurrentAdmin, apply_catalog_reload, get_pool
 from game.api.routes.admin import check_reason
 from game.api.view_schemas import (
@@ -49,7 +50,6 @@ from game.app.store.item_catalog import (
 )
 from game.schemas.item import (
     COMBAT_STATS,
-    Affix,
     ItemCatalogEntry,
     list_grades_above,
     list_unknown_stats,
@@ -74,19 +74,6 @@ def read_drop_weights() -> dict[str, int]:
             "SELECT catalog_id, weight FROM drop_item_weight WHERE source_id = %s", (source_id,)
         ).fetchall()
     return {str(row[0]): int(row[1]) for row in rows}
-
-
-def format_affix(affix: Affix) -> str:
-    """접사 하나를 한 줄로 적는다.
-
-    Args:
-        affix: 접사.
-
-    Returns:
-        「튼튼함 +8」 또는 「굼뜬 제어 -25%」.
-    """
-    name = affix.label_ko or affix.stat
-    return f"{name} {affix.flat:+d}" if affix.flat else f"{name} {affix.percent:+d}%"
 
 
 def build_admin_row(entry: ItemCatalogEntry, weight: int) -> CatalogAdminRow:

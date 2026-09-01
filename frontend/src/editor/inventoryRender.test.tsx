@@ -16,8 +16,8 @@ import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { InventoryPanel, ListingRow, formatAffix } from './InventoryPanel'
-import type { InventoryView } from '../storage'
+import { InventoryPanel, ListingRow, formatAffix, formatGradeClass } from './InventoryPanel'
+import type { AffixView as InventoryAffix, InventoryView } from '../storage'
 
 const noop = () => undefined
 
@@ -58,7 +58,8 @@ const INVENTORY: InventoryView = {
     sealedSlots: 0,
     unsealCost: 0,
     grade: 'COMMON',
-        affixes: [{ stat: 'hp_max', flat: 8, percent: 0, labelKo: '튼튼함' }],
+    attackRange: 0,
+        affixes: [{ stat: 'hp_max', flat: 8, percent: 0, labelKo: '튼튼함', statLabel: '최대체력' }],
         canEquip: false,
         requirements: [{ stat: 'cpu_budget', actual: 4, minimum: 6, isMet: false }],
       },
@@ -72,6 +73,34 @@ const INVENTORY: InventoryView = {
       stackCatalogId: null,
       stackCount: 0,
       item: null,
+    },
+    {
+      slotIndex: 1,
+      slot: 'WEAPON_MAIN',
+      isSealed: false,
+      stackCatalogId: null,
+      stackCount: 0,
+      item: {
+        itemId: 2,
+        catalogId: 'sword_great',
+        labelKo: '대검',
+        kind: 'EQUIPMENT',
+        slot: 'WEAPON_MAIN',
+        hands: 'TWO',
+        equippedSlot: 'WEAPON_MAIN',
+        isBroken: false,
+        isBound: false,
+        isRecovered: false,
+        sealedSlots: 2,
+        unsealCost: 120,
+        grade: 'RELIC',
+        attackRange: 1,
+        affixes: [
+          { stat: 'attack', flat: 5, percent: 0, labelKo: '묵직함', statLabel: '공격력' },
+        ],
+        canEquip: true,
+        requirements: [],
+      },
     },
   ],
   balance: 250,
@@ -230,14 +259,30 @@ describe('아이템이 주는 것 (기존 화면 보완)', () => {
   })
 
   it('★ 저주 접사는 부호가 붙는다 — 「방어 -3」과 「방어 3」이 같아 보이면 안 된다', () => {
-    expect(formatAffix({ stat: 'defense', flat: -3, percent: 0, labelKo: '저주' })).toBe('저주 -3')
-    expect(formatAffix({ stat: 'attack', flat: 0, percent: 12, labelKo: '예리함' })).toBe(
-      '예리함 +12%',
-    )
+    expect(
+      formatAffix({ stat: 'defense', flat: -3, percent: 0, labelKo: '저주', statLabel: '방어력' }),
+    ).toBe('저주 · 방어력 -3')
+    expect(
+      formatAffix({ stat: 'attack', flat: 0, percent: 12, labelKo: '예리함', statLabel: '공격력' }),
+    ).toBe('예리함 · 공격력 +12%')
   })
 
-  it('접사 이름이 없으면 스탯 이름을 쓴다 — 빈 줄을 그리지 않는다', () => {
-    expect(formatAffix({ stat: 'hp_max', flat: 5, percent: 0, labelKo: '' })).toBe('hp_max +5')
+  it('★ 무엇을 올리는지 병기한다 — 「튼튼함 +8」 만으로는 8 이 무엇의 8 인지 모른다', () => {
+    expect(
+      formatAffix({ stat: 'hp_max', flat: 8, percent: 0, labelKo: '튼튼함', statLabel: '최대체력' }),
+    ).toBe('튼튼함 · 최대체력 +8')
+  })
+
+  it('★ 이름이 없으면 능력치 이름만 쓴다 — 영어 키가 그대로 새던 자리다', () => {
+    expect(
+      formatAffix({ stat: 'hp_max', flat: 5, percent: 0, labelKo: '', statLabel: '최대체력' }),
+    ).toBe('최대체력 +5')
+  })
+
+  it('이름이 능력치를 되풀이하면 한 번만 쓴다 — 「공격력 · 공격력 +3」 은 군더더기다', () => {
+    expect(
+      formatAffix({ stat: 'attack', flat: 3, percent: 0, labelKo: 'attack', statLabel: '공격력' }),
+    ).toBe('공격력 +3')
   })
 })
 
@@ -326,6 +371,7 @@ describe('경매 등록 (서버에는 있었는데 화면에 없던 길)', () =>
     sealedSlots: 0,
     unsealCost: 0,
     grade: 'COMMON',
+    attackRange: 0,
     affixes: [],
     canEquip: true,
     requirements: [],
@@ -399,5 +445,135 @@ describe('봉인된 옵션 (설계/4_아이템 §17)', () => {
 
   it('★ 칸이 없으면 버튼도 없다', () => {
     expect(build({ sealedSlots: 0 })).not.toContain('봉인 해제')
+  })
+})
+
+
+describe('무기 사거리 (설계/4_아이템 §2.2)', () => {
+  /**
+   * 무기 하나가 든 가방을 그린다.
+   *
+   * @param attackRange 무기가 정하는 사거리.
+   * @returns 마크업.
+   */
+  function drawBow(attackRange: number, affixes: InventoryAffix[] = []): string {
+    return renderToStaticMarkup(
+      <InventoryPanel
+        inventory={{
+          ...INVENTORY,
+          // 장비 칸을 비운다. 안 비우면 낀 대검의 사거리가 마크업에 섞여, 가방 쪽을
+          // 보는 이 검사가 무엇을 보고 통과했는지 알 수 없다.
+          equipment: [],
+          slots: [
+            {
+              slotIndex: 0,
+              slot: null,
+              isSealed: false,
+              stackCatalogId: null,
+              stackCount: 0,
+              item: {
+                itemId: 91,
+                catalogId: 'bow_long',
+                labelKo: '장궁',
+                kind: 'EQUIPMENT',
+                slot: 'WEAPON_MAIN',
+                hands: 'TWO',
+                equippedSlot: null,
+                isBroken: false,
+                isBound: false,
+                isRecovered: false,
+                sealedSlots: 0,
+                unsealCost: 0,
+                grade: 'COMMON',
+                attackRange,
+                affixes,
+                canEquip: true,
+                requirements: [],
+              },
+            },
+          ],
+        }}
+        isOnline
+        detail=""
+        onEquip={noop}
+        onUnequip={noop}
+        onDiscard={noop}
+        onRepair={noop}
+        onList={noop}
+        feePercent={5}
+        onUnseal={() => undefined}
+      />,
+    )
+  }
+
+  it('★ 무기의 사거리가 가방에서 보인다 — 접사에서 필드로 옮기며 한 번 안 보이게 됐다', () => {
+    expect(drawBow(4)).toContain('사거리 4')
+  })
+
+  it('★ 사거리를 안 정하는 것에는 안 적는다 — 「사거리 0」 은 못 때리는 무기로 읽힌다', () => {
+    // **접사를 하나 얹는다.** 접사가 없으면 함수가 먼저 빠져나가 안쪽 조건을 안 지나고,
+    // 그러면 이 검사가 조건을 지워도 통과한다 — 실제로 그렇게 통과했다.
+    const affix = { stat: 'attack', flat: 2, percent: 0, labelKo: '날', statLabel: '공격력' }
+    expect(drawBow(0, [affix])).not.toContain('사거리')
+    expect(drawBow(0, [affix])).toContain('날 · 공격력 +2')
+  })
+})
+
+
+/**
+ * 기본 픽스처로 패널을 그린다.
+ *
+ * @returns 마크업.
+ */
+function drawPanel(): string {
+  return renderToStaticMarkup(
+    <InventoryPanel
+      inventory={INVENTORY}
+      isOnline
+      detail=""
+      onEquip={noop}
+      onUnequip={noop}
+      onDiscard={noop}
+      onRepair={noop}
+      onList={noop}
+      feePercent={5}
+      onUnseal={() => undefined}
+    />,
+  )
+}
+
+describe('등급 표기 (설계/4_아이템 §15.4)', () => {
+  it('★ 등급마다 다른 색을 준다 — 보통·상급·유물', () => {
+    expect(formatGradeClass('COMMON')).toContain('common')
+    expect(formatGradeClass('FINE')).toContain('fine')
+    expect(formatGradeClass('RELIC')).toContain('relic')
+  })
+
+  it('★ 모르는 등급에는 색을 안 입힌다 — 아무 색이나 주면 등급이 있는 것처럼 보인다', () => {
+    expect(formatGradeClass('')).toBe('')
+    expect(formatGradeClass('MYTHIC')).toBe('')
+  })
+
+  it('★ 이름표를 함께 적는다 — 색만으로 가르면 색을 못 가르는 사람에게 등급이 없다', () => {
+    expect(drawPanel()).toContain('보통')
+  })
+
+  it('★ 가방이 등급을 말한다 — 서버는 보내는데 화면이 버리고 있었다', () => {
+    expect(drawPanel()).toContain('inv__name--common')
+  })
+})
+
+describe('낀 장비가 무엇을 주는가', () => {
+  it('★ 장비 칸에서 능력치를 볼 수 있다 — 없어서 「가방 것이 적용된다」로 읽혔다', () => {
+    // 합산은 예나 지금이나 `equipment_slot` 만 본다. 문제는 **낀 것의 효과를 볼 데가
+    // 아예 없었다**는 것이다 — 능력치 줄이 가방 칸에만 붙어 있었다.
+    expect(drawPanel()).toContain('능력치')
+    // 낀 대검의 접사가 실제로 적혀야 한다. 접었다 펴는 요소라 마크업에는 늘 들어 있다.
+    expect(drawPanel()).toContain('묵직함 · 공격력 +5')
+  })
+
+  it('★ 낀 것의 등급도 보인다 — 유물을 끼고도 보통과 같아 보이면 등급이 뜻을 잃는다', () => {
+    expect(drawPanel()).toContain('inv__name--relic')
+    expect(drawPanel()).toContain('유물')
   })
 })

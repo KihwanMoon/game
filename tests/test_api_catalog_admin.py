@@ -212,7 +212,7 @@ def test_editing_the_affixes_changes_what_drops_next(client, admin):
     row = find_row(response.json(), item["id"])
     assert row is not None
     assert row["grade"] == "RELIC"
-    assert row["affixes"] == ["다시 벼림 +12"]
+    assert row["affixes"] == ["다시 벼림 · 공격력 +12"]
 
 
 def test_an_edit_does_not_reach_into_a_bag(client, admin):

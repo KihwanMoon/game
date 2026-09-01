@@ -44,7 +44,7 @@ const AUCTION: AuctionView = {
       labelKo: '철 투구',
       price: 300,
       isMine: false,
-      affixes: [{ stat: 'hp_max', flat: 8, percent: 0, labelKo: '튼튼함' }],
+      affixes: [{ stat: 'hp_max', flat: 8, percent: 0, labelKo: '튼튼함', statLabel: '최대체력' }],
       expiresInMinutes: 42,
       fee: 15,
     },
@@ -183,7 +183,7 @@ describe('경매 — 사기 전에 알아야 할 것 (모바일 우선)', () => 
   )
 
   it('★ 접사가 보인다 — 이름과 값만 보고 사면 저주를 돈 주고 산다', () => {
-    expect(markup).toContain('튼튼함 +8')
+    expect(markup).toContain('튼튼함 · 최대체력 +8')
   })
 
   it('★ 언제 사라지는지 보인다', () => {

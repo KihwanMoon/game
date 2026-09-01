@@ -17,15 +17,42 @@ from game.app.progression.levels import (
     build_growth,
     compute_required_xp,
 )
-from game.schemas.item import Affix
+from game.schemas.item import Affix, format_stat_label
 
 # 곡선을 몇 레벨까지 보여줄 것인가. 상한이 없는 성장이라(결정: 스탯 성장 상한 없음)
 # 어딘가에서 끊어야 하고, 표현력 보너스가 전부 상한에 닿는 지점이 자연스러운 끝이다.
 CURVE_LEVELS = 25
 
 
+def build_affix_view(affix: Affix) -> dict:
+    """접사 하나를 화면이 읽는 절로 만든다.
+
+    **한글 이름을 여기서 붙인다.** 자리마다 따로 붙이면 한 화면만 빠뜨렸을 때 거기서만
+    영어 키가 보이고, 그 사실이 그 화면을 열기 전까지 안 드러난다.
+
+    `schemas.item.build_item_payload` 와 다르다 — 저쪽은 파일로 나가는 절이라 화면용
+    이름이 섞이면 다시 읽을 때 카탈로그에 눌러앉는다.
+
+    Args:
+        affix: 접사.
+
+    Returns:
+        화면용 절.
+    """
+    return {
+        "stat": affix.stat,
+        "flat": affix.flat,
+        "percent": affix.percent,
+        "label_ko": affix.label_ko,
+        "stat_label": format_stat_label(affix.stat),
+    }
+
+
 def format_affix(affix: Affix) -> str:
     """접사 하나를 사람이 읽는 한 줄로 만든다.
+
+    **무엇을 올리는지 병기한다.** 「튼튼함 +8」 만 적으면 8 이 체력인지 방어력인지 화면
+    어디에도 없다 — 조건문에 각 항의 실측값을 병기하는 것과 같은 규칙이다 (GDD §8.2).
 
     부호를 붙이는 이유는 저주 접사가 음수이기 때문이다 — 「방어 -3」과 「방어 3」이
     같아 보이면 저주가 장점으로 읽힌다 (`설계/4_아이템` §9).
@@ -34,10 +61,16 @@ def format_affix(affix: Affix) -> str:
         affix: 접사.
 
     Returns:
-        화면에 적을 문자열.
+        「튼튼함 · 최대체력 +8」. 이름이 없거나 능력치 이름 그대로면 능력치만 적는다 —
+        「공격력 · 공격력 +3」 은 아무것도 더 말해 주지 않고, 관리자가 이름 칸을 비웠을
+        때 영어 키가 그대로 새어 나오던 자리이기도 하다.
     """
-    name = affix.label_ko or affix.stat
-    return f"{name} {affix.flat:+d}" if affix.flat else f"{name} {affix.percent:+d}%"
+    label = format_stat_label(affix.stat)
+    amount = f"{affix.flat:+d}" if affix.flat else f"{affix.percent:+d}%"
+    name = affix.label_ko
+    if not name or name in (affix.stat, label):
+        return f"{label} {amount}"
+    return f"{name} · {label} {amount}"
 
 
 def build_item_rows(catalog: dict) -> list[dict]:
