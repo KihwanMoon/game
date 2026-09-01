@@ -17,6 +17,7 @@
  * 않은 기능이 동작하는 것처럼 보인다.
  */
 
+import { VisionGrid, checkLineOfSight } from '../grid/vision'
 import { getManhattanDistance } from '../grid/geometry'
 import {
   type BlockCatalog,
@@ -30,6 +31,8 @@ import {
 } from '../schemas'
 import { type PerceptionSnapshot, readSnapshot } from '../sim/perception'
 import {
+  ATTACK_ACTIONS,
+  MELEE_REACH,
   USE_ITEM_ACTION,
   USE_SKILL_ACTION,
   type BlockedRule,
@@ -288,6 +291,34 @@ export function countCpuUsage(ruleset: RuleSet): number {
 }
 
 /** 컴파일된 규칙표. 방 진입 시 한 번 만들고 틱마다 재사용한다 (TDD §5.1). */
+/**
+ * 원거리 공격인데 직선 시야가 막혔는가 (GDD §4.1).
+ *
+ * 근접은 안 본다 — 인접한 칸에 시야를 묻는 것은 뜻이 없고, 물으면 벽 모서리에서 근접
+ * 공격이 안 나가는 일이 생긴다.
+ *
+ * @param action 규칙이 고른 행동.
+ * @param entity 행위자.
+ * @param target 셀렉터가 고른 대상.
+ * @param state 지금 세계. 부순 벽을 반영해야 하므로 템플릿이 아니라 상태를 본다.
+ * @returns 막혔으면 true.
+ */
+export function checkSightBlocked(
+  action: string,
+  entity: Entity,
+  target: Entity | undefined,
+  state: WorldState,
+): boolean {
+  if (!ATTACK_ACTIONS.has(action) || target === undefined) {
+    return false
+  }
+  if (entity.attackRange <= MELEE_REACH) {
+    return false
+  }
+  const grid = new VisionGrid(state, state.room.width, state.room.height)
+  return !checkLineOfSight(grid, entity.position, target.position)
+}
+
 export class RuleVm implements DecisionPolicy {
   /**
    * VM 을 만든다.
@@ -376,6 +407,15 @@ export class RuleVm implements DecisionPolicy {
           expr,
           reason: `${String(rule.actionParam)} 없음`,
         })
+        continue
+      }
+      // **시야가 막힌 원거리 공격도 「불가」다** — 조건은 참인데 수단이 없다.
+      //
+      // 예전에는 그대로 발동시켜 틱만 버렸다. 사거리 안에 있는 한 조건은 매 틱 참이라
+      // 같은 규칙이 영원히 다시 뽑히고, 캐릭터가 엄폐물 뒤의 적을 향해 가만히 선 채로
+      // 판이 끝났다. 파이썬 `check_sight_blocked` 와 같은 자리다 (G3).
+      if (checkSightBlocked(rule.action, entity, target, state)) {
+        blocked.push({ ruleIndex: rule.priority, expr, reason: '시야 없음' })
         continue
       }
       return createPlannedAction({

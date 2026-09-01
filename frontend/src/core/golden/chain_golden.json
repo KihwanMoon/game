@@ -42,7 +42,7 @@
       "seed": 8080,
       "cleared_rooms": 3,
       "outcome": "PLAYER_WIN",
-      "total_ticks": 67,
+      "total_ticks": 46,
       "player_hp": 69,
       "per_room": [
         {
@@ -57,7 +57,7 @@
         },
         {
           "outcome": "PLAYER_WIN",
-          "ticks": 38,
+          "ticks": 17,
           "player_hp": 69
         }
       ]
@@ -72,7 +72,7 @@
       "seed": 4242,
       "cleared_rooms": 3,
       "outcome": "PLAYER_WIN",
-      "total_ticks": 68,
+      "total_ticks": 46,
       "player_hp": 69,
       "per_room": [
         {
@@ -87,7 +87,7 @@
         },
         {
           "outcome": "PLAYER_WIN",
-          "ticks": 39,
+          "ticks": 17,
           "player_hp": 69
         }
       ]
@@ -102,7 +102,7 @@
       "seed": 4242,
       "cleared_rooms": 1,
       "outcome": "PLAYER_LOSS",
-      "total_ticks": 39,
+      "total_ticks": 31,
       "player_hp": 0,
       "per_room": [
         {
@@ -112,7 +112,7 @@
         },
         {
           "outcome": "PLAYER_LOSS",
-          "ticks": 26,
+          "ticks": 18,
           "player_hp": 0
         }
       ]

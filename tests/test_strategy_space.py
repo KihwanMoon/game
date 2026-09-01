@@ -87,23 +87,35 @@ def test_bestiary_counter_wins_the_room_that_kiting_loses(parts):
 
 
 def test_dragging_the_room_out_ends_in_death(parts):
-    from game.config import BENCHMARK_RULESETS_PATH
+    """★ 버티기만 하면 **오래 끌다 죽는다** — 시간을 끌어 이기는 구멍이 없다 (G2).
 
-    # GDD §7 의 추격자가 시간에 값을 매긴다. spring_camp 는 회복타일을 끼고 버티는
-    # 규칙표이고, corridor 에서 100 틱을 넘긴 끝에 죽는다 — 시간을 끌어 이기는 구멍이
-    # 없다는 것의 실증이다 (G2).
-    stats = run_batch(
-        "spring_camp",
-        (parts["rooms"]["corridor"],),
-        parts["balance"],
-        parts["catalog"],
-        load_rulesets(BENCHMARK_RULESETS_PATH)["spring_camp"],
-        parts["enemy"],
+    **절대 틱수로 재지 않는다.** 예전에는 100틱을 넘는지를 봤는데, 그 숫자의 상당 부분이
+    **스톨 자체**였다 — 시야에 막힌 원거리 공격이 매 틱 같은 규칙을 다시 뽑아 캐릭터가
+    굳은 채로 틱이 쌓였다. 그것을 고치자 모든 판이 짧아졌고, 임계값은 뜻을 잃었다.
+
+    남는 주장은 둘이다: **이기지 못하고**, **싸운 판보다 오래 끈다.** 뒤엣것이 있어야
+    「즉사」와 「끌다 죽음」이 갈린다.
+    """
+    from game.config import BENCHMARK_RULESETS_PATH
+    from game.schemas.ruleset import parse_ruleset
+
+    bench = load_rulesets(BENCHMARK_RULESETS_PATH)
+    common = dict(
+        templates=(parts["rooms"]["corridor"],),
+        balance=parts["balance"],
+        catalog=parts["catalog"],
+        enemy_rulesets=parts["enemy"],
         runs=BATCH_RUNS,
         base_seed=1,
     )
-    assert stats.win_rate_pct == 0
-    assert stats.average_ticks > LONG_ROOM_TICKS
+    # 절대 때리지 않고 영원히 물러나는 규칙표. 계측기이므로 벤치마크가 아니라 여기 산다.
+    probe = parse_ruleset(next(item for item in ABUSE_PROBES if item["ruleset_id"] == "abuse_kite"))
+    dragged = run_batch("abuse_kite", player_ruleset=probe, **common)
+    fought = run_batch("spring_camp", player_ruleset=bench["spring_camp"], **common)
+
+    assert dragged.win_rate_pct == 0, dragged
+    assert fought.win_rate_pct == 100, "싸운 쪽이 져 버리면 비교가 뜻을 잃는다"
+    assert dragged.average_ticks > fought.average_ticks, (dragged, fought)
 
 
 # 어뷰징 시험용 규칙표 (G2 첫 조건, docs/05 §5.1). 벤치마크가 아니라 계측기이므로

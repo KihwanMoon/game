@@ -31,7 +31,7 @@ import {
   resolveSummon,
 } from './abilities'
 import { PHASE_ACT } from './phases'
-import { GUARD_SKILL_ID } from './plan'
+import { GUARD_SKILL_ID, MELEE_REACH } from './plan'
 import type { EngineConfig, PlannedAction, RawTelegraphSetting } from './plan'
 import { divideFloor } from '../combat/damage'
 import { PERCENT_BASE, type Entity, type WorldState, isAlive } from './state'
@@ -47,13 +47,11 @@ export const MOVE_ACTIONS: ReadonlySet<string> = new Set([
 ])
 
 /** 단일 대상 공격 계열 행동. */
-export const ATTACK_ACTIONS: ReadonlySet<string> = new Set(['ATTACK', 'SKILL_1', 'SKILL_2'])
 
 /** 예고를 쓰지 않는 즉발 광역기의 반경. 예고형의 반경은 balance.json 이 정한다. */
 export const AREA_ATTACK_RADIUS = 2
 
 /** 이 사거리까지는 시야를 묻지 않는다. 인접한 적은 벽 너머에 있을 수 없다. */
-export const MELEE_REACH = 1
 
 /** 포위 가산을 세는 인접 거리. */
 const ADJACENT_DISTANCE = 1

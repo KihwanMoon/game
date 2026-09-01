@@ -22,7 +22,7 @@ import { EventLog, createLogEntry } from '../eventLog'
 import { VisionCache, VisionGrid } from '../grid/vision'
 import { compareText, sortByKey } from '../ordering'
 import { TILE_LAVA, TILE_SPRING } from '../schemas'
-import { ATTACK_ACTIONS, ActionExecutor, MOVE_ACTIONS } from './actions'
+import {  ActionExecutor, MOVE_ACTIONS } from './actions'
 import { type PerceptionSnapshot, buildSnapshot } from './perception'
 import {
   OUTCOME_ONGOING,
@@ -33,7 +33,7 @@ import {
   PHASE_TELEGRAPH,
   PHASE_UPKEEP,
 } from './phases'
-import { USE_ITEM_ACTION, OUTCOME_BLOCKED, resolveSkillPlan } from './plan'
+import { ATTACK_ACTIONS, USE_ITEM_ACTION, OUTCOME_BLOCKED, resolveSkillPlan } from './plan'
 import type { DecisionPolicy, EngineConfig, PlannedAction, PolicyFactory } from './plan'
 import { PressureTracker, applySpringDrain, removeDrainedSprings } from './pressure'
 import { FACTION_PLAYER, type Entity, type WorldState, isAlive } from './state'

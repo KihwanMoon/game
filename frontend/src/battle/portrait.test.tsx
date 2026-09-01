@@ -213,9 +213,12 @@ describe('도면은 고정이고 스크롤되지 않는다', () => {
     expect(cutRule('.battle__sheet-body')).toContain('overflow-y: auto')
   })
 
-  it('여섯 줄 골격을 토큰으로만 짠다 — 도면 줄만 내용 높이다', () => {
+  it('여섯 줄 골격을 토큰으로 짠다 — 상단과 도면만 내용 높이다', () => {
+    // **상단이 `auto` 인 것은 두 줄을 받기 위해서다** — 층·틱은 헤더로 고정하고 조작을
+    // 아래 줄로 내린다. 치수는 여전히 토큰이 정한다: `min-height: var(--bar-top)` 이
+    // 한 줄일 때의 높이를 지키고, 늘어난 만큼 줄어드는 것은 로그(`1fr`)뿐이다.
     const block = cutRule('.battle--portrait')
-    expect(block).toContain('var(--bar-top) var(--bar-speed) auto var(--bar-status)')
+    expect(block).toContain('auto var(--bar-speed) auto var(--bar-status)')
     expect(block).toContain('1fr var(--bar-bottom)')
   })
 })

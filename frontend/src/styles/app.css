@@ -54,48 +54,11 @@ body {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-}
-
-/* ── 좁은 화면에서는 두 줄로 ──────────────────────────────────────────────
-   한 줄에 정보와 조작이 다 들어가면 폰에서 오른쪽이 잘린다 — 층·방 번호가 먼저 잘리는데,
-   그것이 지금 어디인지를 말하는 유일한 자리다.
-
-   **읽는 것을 위, 누르는 것을 아래로 나눈다.** 순서를 `order` 로 가르고 가짜 칸 하나로
-   줄을 끊는다. DOM 순서를 바꾸지 않는 이유는 그것이 탭 순서이기 때문이다 — 눈에 보이는
-   줄을 바꾸자고 키보드 이동 순서를 흔들면 접근성이 깨진다.
-
-   경계는 `--layout-mode:portrait` 와 같은 840px 다 (design/tokens/spacing.css). */
-@media (max-width: 840px) {
-  .launch {
-    flex-wrap: wrap;
-    row-gap: var(--sp-1);
-    justify-content: flex-start;
-  }
-
-  /* 읽는 것 — 층·방·시드·결과·상태 */
-  .launch > .ds-expr,
-  .launch > .ds-glyph {
-    order: 0;
-  }
-
-  /* 줄을 끊는다. `order:0` 무리의 맨 뒤에 서서 남은 폭을 다 먹는다. */
-  .launch::after {
-    content: '';
-    flex-basis: 100%;
-    order: 0;
-  }
-
-  /* 누르는 것 — 버튼·선택 칸·자동 진행 */
-  .launch > .ds-button,
-  .launch > .launch__field,
-  .launch > .launch__auto {
-    order: 1;
-  }
-
-  /* 둘째 줄도 넘치면 다시 접는다. 잘리는 것보다 두 줄이 낫다. */
-  .launch__auto {
-    padding-inline: var(--sp-1);
-  }
+  /* **넘치면 접는다.** 폰에서 한 줄에 다 들어가지 않으면 오른쪽이 잘리고, 잘리는 것은
+     늘 마지막에 놓인 것이다. 경계를 여기 적지 않는 이유는 이 저장소가 **breakpoint 를
+     토큰 한 곳에만** 두기 때문이다 — 넘칠 때만 접히므로 조건이 필요 없다. */
+  flex-wrap: wrap;
+  row-gap: var(--sp-1);
 }
 
 /* 자동 진행 안내. **한 덩어리로 묶는다** — 남은 초와 멈춤 버튼이 떨어져 있으면

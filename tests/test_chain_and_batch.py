@@ -292,8 +292,12 @@ def test_the_margin_separates_two_kinds_of_loss(parts):
     # 소환사를 노리는 규칙표인데 첫 방에는 소환사가 없다 — 네 규칙이 전부 거짓이라
     # 가만히 서서 죽는다.
     idle = run_batch("focus_summoner", player_ruleset=bench["focus_summoner"], **common)
-    # 끝까지 싸우고 아깝게 진다.
-    close = run_batch("spring_camp", player_ruleset=bench["spring_camp"], **common)
+    # 끝까지 싸우고 아깝게 진다 — 적 HP 를 한 자리수만 남긴다.
+    #
+    # 예전에는 `spring_camp` 이었는데, **시야에 막힌 원거리 공격이 굳던 것을 고치자
+    # 이겨 버렸다.** 지는 쪽 표본은 밸런스가 바뀔 때마다 다시 골라야 한다 — 그것이 이
+    # 검사가 재는 것(전략 공간의 모양)이 실제로 움직인다는 뜻이기도 하다.
+    close = run_batch("focus_lowest_guard", player_ruleset=bench["focus_lowest_guard"], **common)
 
     assert idle.win_rate_pct == close.win_rate_pct == 0, "둘 다 져야 이 검사가 뜻을 갖는다"
     assert idle.enemy_hp_left_pct == 100, idle

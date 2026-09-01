@@ -214,22 +214,22 @@
       "player_hp": 82,
       "width": 12,
       "height": 9,
-      "log_count": 76,
+      "log_count": 77,
       "rule_stats": {
         "goblin_archer_1": [
           {
             "label": "[2]",
             "fired": 4,
             "acted": 2,
-            "wasted": 1,
-            "waste_pct": 33
+            "wasted": 0,
+            "waste_pct": 0
           },
           {
             "label": "DEFAULT",
-            "fired": 10,
+            "fired": 11,
             "acted": 5,
-            "wasted": 5,
-            "waste_pct": 50
+            "wasted": 6,
+            "waste_pct": 54
           }
         ],
         "goblin_rusher_0": [
@@ -354,7 +354,7 @@
         "0,0,0,0,0,0,0,0,0,0,0,0"
       ],
       "recent_ticks": 15,
-      "recent_count": 76,
+      "recent_count": 77,
       "recent_first_tick": 1
     },
     {

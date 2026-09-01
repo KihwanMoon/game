@@ -43,6 +43,18 @@ export const USE_SKILL_ACTION = 'USE_SKILL'
  * 늘려도 규칙표가 가리키는 것이 그대로여야 한다. */
 export const USE_ITEM_ACTION = 'USE_ITEM'
 
+/**
+ * 공격으로 치는 행동들. **규칙 평가와 실행이 같은 목록을 봐야 한다** — 갈리면 규칙은
+ * 「불가」로 막았는데 실행은 때리거나, 그 반대가 된다.
+ */
+export const ATTACK_ACTIONS: ReadonlySet<string> = new Set(['ATTACK', 'SKILL_1', 'SKILL_2'])
+
+/**
+ * 근접 사거리. 이보다 멀리 닿는 공격만 직선 시야를 묻는다 — 인접한 칸에 시야를 묻는 것은
+ * 뜻이 없고, 물으면 벽 모서리에서 근접 공격이 안 나간다.
+ */
+export const MELEE_REACH = 1
+
 /** 방어 감소율과 유지 틱을 읽을 스킬 id. GUARD 계열이 하나뿐이라 상수로 둔다. */
 export const GUARD_SKILL_ID = 'GUARD_BRACE' 
 

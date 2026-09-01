@@ -456,3 +456,27 @@ describe('가로 화면도 황동 예산을 지킨다', () => {
     expect(css.slice(start)).not.toContain('--brass')
   })
 })
+
+
+describe('세로 배치의 상단 (층·틱은 헤더, 조작은 아래 줄)', () => {
+  const css = readStrippedCss('battle.css')
+
+  it('★ 조작이 둘째 줄로 내려간다 — 44px 한 줄에 다 넣으면 층과 틱이 먼저 잘린다', () => {
+    expect(css).toMatch(/\.battle--portrait \.battle__controls \{[\s\S]*?flex-basis: 100%/)
+  })
+
+  it('★ 상단 행이 두 줄을 받는다 — 44px 로 고정하면 둘째 줄이 밖으로 나간다', () => {
+    const block = /\.battle--portrait \{([\s\S]*?)\}/.exec(css)
+    expect(block?.[1] ?? '').toContain('auto var(--bar-speed)')
+  })
+
+  it('★ 그래도 44px 아래로는 안 줄어든다 — 층·틱 한 줄은 늘 그 높이다', () => {
+    const block = /\.battle--portrait \.battle__bar--top \{([\s\S]*?)\}/.exec(css)
+    expect(block?.[1] ?? '').toContain('min-height: var(--bar-top)')
+  })
+
+  it('★ 둘째 줄이 잘리지 않는다 — 바가 한 줄 전제로 잘라 두었다', () => {
+    const block = /\.battle--portrait \.battle__bar--top \{([\s\S]*?)\}/.exec(css)
+    expect(block?.[1] ?? '').toContain('overflow: visible')
+  })
+})

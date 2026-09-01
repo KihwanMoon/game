@@ -15,7 +15,9 @@ from game.app.grid.vision import VisionGrid, check_line_of_sight, find_cover_pos
 from game.app.pathfinding.distance_field import build_distance_field, find_next_step
 from game.app.simulation import abilities
 from game.app.simulation.plan import (
+    ATTACK_ACTIONS,
     GUARD_SKILL_ID,
+    MELEE_REACH,
     PHASE_ACT,
     STATUS_GUARD,
     EngineConfig,
@@ -24,6 +26,11 @@ from game.app.simulation.plan import (
 from game.app.simulation.state import Entity, WorldState
 from game.app.simulation.support_actions import SupportActionMixin
 from game.app.simulation.telegraph import TelegraphBoard
+
+# **여기서 다시 내보낸다.** 두 상수의 정본은 `plan.py` 로 옮겼지만(규칙 평가와 실행이
+# 같은 목록을 봐야 해서), 「행동이 사는 곳」에서 읽어 온 코드가 이미 여럿이다 — 그쪽을
+# 전부 고치는 것보다 파사드를 두는 편이 낫다.
+__all__ = ["ATTACK_ACTIONS", "MELEE_REACH", "ActionExecutor"]
 from game.schemas.room import TILE_DOOR, TILE_SPRING, TILE_STAIRS, WALKABLE_TILES
 
 # 퍼센트 기준. 100 이 1.0배다.
@@ -32,11 +39,9 @@ PERCENT_BASE = 100
 # 어느 방어가 걸렸는지를 상태에 함께 실어야 한다 (지금은 그럴 필요가 없다).
 
 MOVE_ACTIONS = frozenset({"APPROACH", "RETREAT", "MOVE_TO_EXIT", "MOVE_TO_HEAL", "MOVE_TO_COVER"})
-ATTACK_ACTIONS = frozenset({"ATTACK", "SKILL_1", "SKILL_2"})
 AREA_ATTACK_RADIUS = 2
 
 # 이 사거리까지는 시야를 묻지 않는다. 인접한 적은 벽 너머에 있을 수 없다.
-MELEE_REACH = 1
 
 # 아직 만들 수 없는 행동과 그 사유. 조용히 무시하지 않고 로그로 알린다.
 # **W6 통합으로 비었다.** 목록과 record_deferred 를 남겨 두는 것은 규칙표가 부를 수는

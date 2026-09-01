@@ -31,6 +31,8 @@ from game.app.simulation.state import Entity, WorldState
 __all__ = [
     "OUTCOME_ONGOING",
     "OUTCOME_PLAYER_LOSS",
+    "ATTACK_ACTIONS",
+    "MELEE_REACH",
     "OUTCOME_PLAYER_WIN",
     "OUTCOME_TIMEOUT",
     "PHASE_ACT",
@@ -66,6 +68,14 @@ USE_SKILL_ACTION = "USE_SKILL"
 # 소모품 사용 (v6, #54). 파라미터는 카탈로그 id 가 아니라 태그다 — 물약을 여러 등급으로
 # 늘려도 규칙표가 가리키는 것이 그대로여야 한다.
 USE_ITEM_ACTION = "USE_ITEM"
+
+# 공격으로 치는 행동들. **규칙 평가와 실행이 같은 목록을 봐야 한다** — 갈리면 규칙은
+# 「불가」로 막았는데 실행은 때리거나, 그 반대가 된다.
+ATTACK_ACTIONS = frozenset({"ATTACK", "SKILL_1", "SKILL_2"})
+
+# 근접 사거리. 이보다 멀리 닿는 공격만 직선 시야를 묻는다 — 인접한 칸에 시야를 묻는 것은
+# 뜻이 없고, 물으면 벽 모서리에서 근접 공격이 안 나간다.
+MELEE_REACH = 1
 
 
 @dataclass(frozen=True)

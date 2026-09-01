@@ -17,6 +17,9 @@ import { BALANCE, ROOM_TEMPLATES } from '../resources'
 import { parseSnapshot } from '../schemas/monsterSnapshot'
 import { parseLoadout } from '../schemas/loadout'
 import { getManhattanDistance } from '../grid/geometry'
+import { VisionGrid, checkLineOfSight } from '../grid/vision'
+import { DeterministicRng } from '../rng'
+import { checkSightBlocked } from '../rules/ruleVm'
 import { ACTION_COUNT } from '../schemas'
 import { PLAYER_ENTITY_ID,
   buildEngine,
@@ -34,7 +37,7 @@ import {
 } from './plan'
 import { getScaledEnemyStats } from './scaling'
 import { SELECTOR_NEAREST, resolveTarget } from './selectors'
-import { countItem, FACTION_ENEMY, type Entity, type WorldState, createEntity } from './state'
+import { countItem, FACTION_ENEMY, WorldState, type Entity, createEntity } from './state'
 
 const POLICY_CYCLE = 'cycle'
 
@@ -313,5 +316,84 @@ describe('결정론', () => {
 describe('셀렉터와 거리', () => {
   it('맨해튼 거리는 대각을 두 칸으로 센다', () => {
     expect(getManhattanDistance({ x: 0, y: 0 }, { x: 1, y: 1 })).toBe(2)
+  })
+})
+
+
+describe('시야에 막힌 원거리 공격 (GDD §4.1)', () => {
+  /**
+   * 한 방에 둘을 세운다.
+   *
+   * @param origin 공격자 자리.
+   * @param spot 대상 자리.
+   * @param attackRange 공격자의 사거리.
+   * @returns 세계와 두 개체.
+   */
+  function buildPair(origin: readonly [number, number], spot: readonly [number, number], attackRange: number) {
+    const template = ROOM_TEMPLATES.find((item) => item.templateId === 'pillars')
+    if (template === undefined) {
+      throw new Error('pillars 가 없다')
+    }
+    const state = new WorldState(template, new DeterministicRng(1n))
+    const actor = createEntity({
+      entityId: 'player', kindId: 'player', faction: 'player',
+      position: { x: origin[0], y: origin[1] },
+      hp: 100, hpMax: 100, attack: 10, defense: 0, attackRange, initiative: 50,
+    })
+    const target = createEntity({
+      entityId: 'e1', kindId: 'goblin_rusher', faction: FACTION_ENEMY,
+      position: { x: spot[0], y: spot[1] },
+      hp: 40, hpMax: 40, attack: 8, defense: 0, attackRange: 1, initiative: 60,
+    })
+    state.entities.set('player', actor)
+    state.entities.set('e1', target)
+    return { state, actor, target }
+  }
+
+  /**
+   * 엄폐물이 사이를 막는 두 자리를 찾는다.
+   *
+   * @returns 공격자와 대상의 자리.
+   */
+  function findBlockedPair(): [readonly [number, number], readonly [number, number]] {
+    const template = ROOM_TEMPLATES.find((item) => item.templateId === 'pillars')
+    if (template === undefined) {
+      throw new Error('pillars 가 없다')
+    }
+    const state = new WorldState(template, new DeterministicRng(1n))
+    const grid = new VisionGrid(state, template.width, template.height)
+    for (let y1 = 0; y1 < template.height; y1 += 1) {
+      for (let x1 = 0; x1 < template.width; x1 += 1) {
+        if (grid.getTile(x1, y1) !== 0) continue
+        for (let y2 = 0; y2 < template.height; y2 += 1) {
+          for (let x2 = 0; x2 < template.width; x2 += 1) {
+            if (grid.getTile(x2, y2) !== 0) continue
+            const gap = Math.abs(x1 - x2) + Math.abs(y1 - y2)
+            if (gap >= 2 && gap <= 4 && !checkLineOfSight(grid, { x: x1, y: y1 }, { x: x2, y: y2 })) {
+              return [[x1, y1], [x2, y2]]
+            }
+          }
+        }
+      }
+    }
+    throw new Error('엄폐물이 시야를 끊는 짝이 없다')
+  }
+
+  it('★ 사거리 안이어도 시야가 막히면 「불가」다 — 파이썬과 같은 답이어야 한다 (G3)', () => {
+    const [origin, spot] = findBlockedPair()
+    const { state, actor, target } = buildPair(origin, spot, 5)
+    expect(checkSightBlocked('ATTACK', actor, target, state)).toBe(true)
+  })
+
+  it('★ 근접은 시야를 안 묻는다 — 물으면 벽 모서리에서 근접 공격이 안 나간다', () => {
+    const [origin, spot] = findBlockedPair()
+    const { state, actor, target } = buildPair(origin, spot, 1)
+    expect(checkSightBlocked('ATTACK', actor, target, state)).toBe(false)
+  })
+
+  it('★ 공격만 막는다 — 이동까지 막으면 시야가 없을 때 다가갈 방법이 사라진다', () => {
+    const [origin, spot] = findBlockedPair()
+    const { state, actor, target } = buildPair(origin, spot, 5)
+    expect(checkSightBlocked('MOVE_TO', actor, target, state)).toBe(false)
   })
 })

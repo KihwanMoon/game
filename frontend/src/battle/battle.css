@@ -157,8 +157,10 @@
      · 시트 하단의 gap 10 → `--sp-3`(12). 10 은 4px 모듈에 없는 수다. */
 
 .battle--portrait {
+  /* 첫 행이 `auto` 다. 상단이 두 줄이 될 수 있고(층·틱 / 조작), 늘어난 만큼 줄어드는
+     것은 로그(`1fr`)뿐이다 — 도면 행은 `auto` 라 제 크기를 지킨다. */
   grid-template-rows:
-    var(--bar-top) var(--bar-speed) auto var(--bar-status)
+    auto var(--bar-speed) auto var(--bar-status)
     1fr var(--bar-bottom);
 }
 
@@ -555,4 +557,30 @@
   align-items: center;
   column-gap: var(--sp-3);
   padding: var(--sp-2) var(--sp-3);
+}
+
+/* ── 세로 배치의 상단: 층·틱은 헤더, 조작은 아래 줄 ────────────────────
+   44px 한 줄에 층·실·조작·틱을 다 넣으면 오른쪽이 잘리고, **층과 틱이 먼저 사라진다** —
+   지금 어디서 몇 틱째인지를 말하는 유일한 자리다.
+
+   헤더에는 층·틱만 남기고 조작을 통째로 아래 줄로 내린다. 첫 행을 `auto` 로 열어 두 줄을
+   받게 하되 `min-height` 로 44px 를 지킨다 — 줄어드는 것은 로그(`1fr`)뿐이고 도면은
+   그대로다.
+
+   **미디어쿼리를 안 쓴다.** `.battle--portrait` 는 세로에서만 붙으므로 조건이 이미
+   붙어 있고, 이 저장소는 경계를 토큰 한 곳에만 둔다. */
+.battle--portrait .battle__bar--top {
+  height: auto;
+  min-height: var(--bar-top);
+  flex-wrap: wrap;
+  row-gap: var(--sp-1);
+  padding-block: var(--sp-1);
+  /* `.battle__bar` 가 한 줄 전제로 잘라 두었다. 둘째 줄이 잘리면 안 된다. */
+  overflow: visible;
+}
+
+/* 조작은 통째로 둘째 줄. DOM 순서는 안 바꾼다 — 그것이 탭 순서다. */
+.battle--portrait .battle__controls {
+  order: 1;
+  flex-basis: 100%;
 }
