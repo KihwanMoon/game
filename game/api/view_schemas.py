@@ -299,14 +299,18 @@ class ContentPackResponse(BaseModel):
 
 
 class CatalogEditRequest(BaseModel):
-    """이미 있는 아이템에서 **고칠 수 있는 것만** 담는 절 (설계/4_아이템 §15.7).
+    """이미 있는 아이템에서 **고칠 수 있는 것만** 담는 절 (설계/4_아이템 §15.7·§15.11).
 
-    접사·등급·분류를 받을 자리가 없다. 자리가 없으면 소급 수정이 **표현 불가능**하고,
-    그러면 "빠뜨린 필드가 바뀐 것으로 읽히는" 사고도 같이 사라진다 — 전체 절을 받던
-    때는 화면이 접사를 안 실어 보내서 이름 바꾸기가 전부 거절됐다.
+    `kind`·`slot`·`hands` 를 받을 자리가 없다. 그 셋은 **이미 착용된 자리**를 가리키므로,
+    투구를 갑옷으로 바꾸면 누군가의 머리 칸에 갑옷이 들어 있게 된다.
+
+    접사·등급은 받는다. 인스턴스가 자기 접사·등급을 갖게 된 뒤로(§15.11) 카탈로그 수정이
+    이미 나온 아이템에 소급하지 않는다 — 앞으로 나올 것에만 걸린다.
     """
 
     catalog_id: str = Field(min_length=1, max_length=64)
     label_ko: str = Field(min_length=1, max_length=64)
     min_floor: int = Field(ge=1, le=100)
+    grade: str = ""
+    affixes: list[dict] = Field(default_factory=list)
     reason: str = ""

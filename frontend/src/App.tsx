@@ -84,6 +84,7 @@ import {
   applyRedoStep,
   applyRoomChoice,
   applyTutorialStage,
+  adoptDraft,
   adoptPresets,
   applyRuleSetEdit,
   buildMetaFromSession,
@@ -514,6 +515,9 @@ export function App(): React.JSX.Element {
     let isCurrent = true
     void (async () => {
       const storage = getLocalStorage()
+      // **저장이 있었는지를 먼저 본다.** 새 기기는 저장이 없고, 그때만 서버의 초안을
+      // 받는다 — 이미 짜던 것이 있으면 덮어쓰지 않는다.
+      const hasSave = readSave(storage) !== undefined
       const token = await ensureToken(storage)
       if (!isCurrent || token === undefined) {
         return
@@ -530,9 +534,9 @@ export function App(): React.JSX.Element {
           outcome.meta === undefined ? current : adoptServerMeta(outcome.meta, current)
         writeMeta(storage, merged)
         void writeServerMeta(token, merged)
-        // 받은 슬롯을 편집기에도 싣는다. 이 기기에 슬롯이 있으면 손대지 않는다 —
+        // 받은 슬롯과 초안을 편집기에도 싣는다. 이 기기에 있으면 손대지 않는다 —
         // 덮어쓰면 방금 만든 것이 사라지고 그 손실은 되돌릴 수 없다.
-        setSession((live) => adoptPresets(live, merged.presets))
+        setSession((live) => adoptDraft(adoptPresets(live, merged.presets), merged.draft, hasSave))
         return merged
       })
     })()

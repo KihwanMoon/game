@@ -34,30 +34,19 @@ from game.app.store.items import find_item
 router = APIRouter()
 
 
-def build_affix_rows(listing: Listing, catalog: dict) -> list[dict]:
+def build_affix_rows(listing: Listing) -> list[dict]:
     """이 매물이 실제로 지닌 접사를 낸다.
 
-    **인스턴스가 굴린 접사가 카탈로그 기본값을 대체한다** — 로드아웃 계산과 같은
-    규칙이다. 화면만 둘을 합치면 산 것과 쓰는 것이 갈린다.
+    **인스턴스가 가진 것만 낸다.** 예전에는 비어 있으면 카탈로그 기본값으로 메웠는데,
+    그것이 곧 "카탈로그를 고치면 남의 가방이 바뀐다" 였다 (설계/4_아이템 §15.11).
 
     Args:
         listing: 매물 한 건.
-        catalog: 아이템 카탈로그.
 
     Returns:
-        접사 절들. 굴린 것도 기본값도 없으면 빈 목록.
+        접사 절들. 굴린 것이 없으면 빈 목록.
     """
-    if listing.affixes:
-        return [dict(affix) for affix in listing.affixes]
-    return [
-        {
-            "stat": entry.stat,
-            "flat": entry.flat,
-            "percent": entry.percent,
-            "label_ko": entry.label_ko,
-        }
-        for entry in find_catalog_item(catalog, listing.catalog_id).affixes
-    ]
+    return [dict(affix) for affix in listing.affixes]
 
 
 def build_listing_view(listing: Listing, catalog: dict) -> ListingView:
@@ -80,7 +69,7 @@ def build_listing_view(listing: Listing, catalog: dict) -> ListingView:
         label_ko=find_catalog_item(catalog, listing.catalog_id).label_ko,
         price=listing.price,
         is_mine=listing.is_mine,
-        affixes=build_affix_rows(listing, catalog),
+        affixes=build_affix_rows(listing),
         expires_in_minutes=listing.expires_in_minutes,
         fee=compute_fee(listing.price),
     )

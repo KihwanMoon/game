@@ -40,9 +40,9 @@ def build_ticket_loadout(account_id: int) -> dict:
         if item.is_broken:
             continue
         entry = find_catalog_item(catalog, item.catalog_id)
-        # 인스턴스가 굴린 접사가 카탈로그 기본값을 **대체한다** — 같은 이름의 아이템이
-        # 조금씩 다르게 나와야 파밍이 성립한다.
-        equipped[slot] = entry if not item.affixes else _build_rolled_entry(entry, item.affixes)
+        # **인스턴스가 가진 것만 쓴다.** 카탈로그를 안 보므로 카탈로그를 고쳐도 이미
+        # 나온 장비의 성능이 안 바뀐다 — 그것이 §15.11 이 연 것이다.
+        equipped[slot] = _build_rolled_entry(entry, item.affixes)
     player = get_context().balance["player"]
     progress = read_progress(pool, entity_id)
     loadout = build_player_loadout(

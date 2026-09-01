@@ -301,15 +301,17 @@ export function exportSessionCode(session: EditorSession, name: string): string 
  * 채우지 않아 늘 빈 배열이었고, 그래서 슬롯에 저장한 규칙표가 계정을 따라오지 않았다 —
  * 기기를 바꾼 사람에게 그것은 "저장이 안 된다" 로 보인다.
  *
- * 편집 중인 규칙표는 싣지 않는다. 이름 없는 초안을 계정 단위로 하나만 두면 두 기기가
- * 서로의 편집을 조용히 덮어쓴다. 슬롯은 이름이 있어 합칠 수 있다.
+ * **편집 중인 규칙표도 싣는다.** 처음에는 "두 기기가 서로의 편집을 덮어쓴다" 를 걱정해
+ * 안 올렸는데, 기기를 바꾸면 규칙이 통째로 사라진 것처럼 보였다 — **잃는 쪽이 훨씬
+ * 나쁘다.** 받는 쪽에서 이 기기에 초안이 없을 때만 서버 것을 쓰므로, 덮어쓰기는 안
+ * 일어난다 (`adoptServerMeta`).
  *
  * @param session 세션.
  * @param meta 지금 메타 세이브.
  * @returns 코드 라이브러리가 실린 메타 세이브.
  */
 export function buildMetaFromSession(session: EditorSession, meta: MetaSave): MetaSave {
-  return { ...meta, presets: session.presets }
+  return { ...meta, presets: session.presets, draft: getSessionRuleSet(session) }
 }
 
 /**
@@ -330,4 +332,28 @@ export function adoptPresets(
     return session
   }
   return { ...session, presets: presets.slice(0, MAX_PRESET_SLOTS) }
+}
+
+/**
+ * 서버에서 받은 편집 중인 규칙표를 세션에 싣는다.
+ *
+ * **이 기기에 저장이 없을 때만 싣는다.** 새 기기가 정확히 그 경우이고, 그때 안 실으면
+ * 규칙이 통째로 사라진 것처럼 보인다 — 실제로 그렇게 보고됐다.
+ *
+ * 저장이 있으면 손대지 않는다. 덮어쓰면 방금 한 편집이 사라지고 그 손실은 되돌릴 수 없다.
+ *
+ * @param session 세션.
+ * @param draft 서버가 준 초안.
+ * @param hasLocalSave 이 기기에 저장이 있었는가.
+ * @returns 새 세션. 실을 것이 없으면 같은 객체.
+ */
+export function adoptDraft(
+  session: EditorSession,
+  draft: RuleSet | undefined,
+  hasLocalSave: boolean,
+): EditorSession {
+  if (draft === undefined || hasLocalSave) {
+    return session
+  }
+  return { ...session, history: createHistory(draft) }
 }

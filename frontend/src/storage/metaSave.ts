@@ -20,7 +20,13 @@ import {
 } from '../core/schemas/metaSave'
 import { formatCanonicalJson, parseJsonText, type JsonObject, type JsonValue } from './canonicalJson'
 import type { StorageLike } from './saveStore'
-import { buildPresetPayload, parsePresetPayload } from './presetPayload'
+import {
+  buildPresetPayload,
+  buildRuleSetPayload,
+  parsePresetPayload,
+  parseRuleSetPayload,
+} from './presetPayload'
+import type { RuleSet } from '../core/schemas'
 
 /** 형식 태그. 값이 아니라 접두어를 먼저 보는 것이 마이그레이션 판정의 방식이다. */
 export const META_FORMAT_PREFIX = 'v'
@@ -108,6 +114,23 @@ export function buildBestiaryPayload(record: BestiaryRecord): JsonObject {
  * @returns 정렬 정규화까지 끝난 메타 세이브.
  * @throws 형식 태그가 없거나 이 코어보다 새 버전인 경우.
  */
+/**
+ * 초안 절을 읽는다.
+ *
+ * @param raw 초안 절. 없으면 null 이다.
+ * @returns 읽어 낸 규칙표. 없거나 못 읽으면 undefined.
+ */
+function readDraft(raw: unknown): RuleSet | undefined {
+  if (raw === null || raw === undefined) {
+    return undefined
+  }
+  try {
+    return parseRuleSetPayload(raw)
+  } catch {
+    return undefined
+  }
+}
+
 export function parseMetaPayload(raw: unknown): MetaSave {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
     throw new Error('세이브 절이 객체가 아니다')
@@ -129,6 +152,9 @@ export function parseMetaPayload(raw: unknown): MetaSave {
     unlockedActions: readSortedStrings(record.unlocked_actions),
     bestiary: [...records].sort((left, right) => (left.kindId < right.kindId ? -1 : 1)),
     presets: readObjects(record.presets).map(parsePresetPayload),
+    // **못 읽으면 없는 것으로 둔다.** 초안 하나가 깨졌다고 세이브 전체를 버리면 도감과
+    // 해금까지 함께 사라진다.
+    draft: readDraft(record.draft),
   }
 }
 
@@ -146,6 +172,7 @@ export function buildMetaPayload(meta: MetaSave): JsonObject {
     unlocked_actions: [...meta.unlockedActions],
     bestiary: meta.bestiary.map(buildBestiaryPayload),
     presets: meta.presets.map(buildPresetPayload),
+    draft: meta.draft === undefined ? null : buildRuleSetPayload(meta.draft),
   }
 }
 

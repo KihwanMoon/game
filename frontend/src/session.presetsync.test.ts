@@ -10,11 +10,13 @@ import { describe, expect, it } from 'vitest'
 import { createEmptyMeta } from './core/schemas'
 import { adoptServerMeta } from './core/services/manageMeta'
 import {
+  adoptDraft,
   adoptPresets,
   applyPresetSave,
   buildMetaFromSession,
   buildSessionSave,
   createSession,
+  getSessionRuleSet,
 } from './session'
 import { G0_RULESETS, ROOM_TEMPLATES } from './core/resources'
 
@@ -59,5 +61,35 @@ describe('코드 라이브러리가 계정을 따라온다', () => {
     const local = applyPresetSave(buildSession(), '이 기기')
     const server = applyPresetSave(buildSession(), '서버').presets
     expect(adoptPresets(local, server).presets[0]?.name).toBe('이 기기')
+  })
+})
+
+
+describe('편집 중인 규칙표가 계정을 따라온다', () => {
+  it('★ 새 기기가 서버의 초안을 받는다 — 안 받으면 규칙이 통째로 사라진 것처럼 보인다', () => {
+    // 실제로 그렇게 보고됐다: "기기를 바꿔서 로그인했는데 규칙이 다 사라져있네".
+    const source = buildSession()
+    const meta = buildMetaFromSession(source, createEmptyMeta())
+    expect(meta.draft).toBeDefined()
+    const fresh = createSession(undefined, {
+      ruleset: { rulesetId: 'empty', version: 1, rules: [] },
+      roomId: 'x',
+      seed: 1,
+    })
+    const adopted = adoptDraft(fresh, meta.draft, false)
+    expect(getSessionRuleSet(adopted).rules.length).toBe(
+      getSessionRuleSet(source).rules.length,
+    )
+  })
+
+  it('★ 이 기기에 저장이 있으면 안 덮는다 — 방금 한 편집이 사라지면 되돌릴 수 없다', () => {
+    const mine = buildSession()
+    const server = { rulesetId: 'other', version: 1, rules: [] }
+    expect(adoptDraft(mine, server, true)).toBe(mine)
+  })
+
+  it('서버에 초안이 없으면 그대로 둔다', () => {
+    const mine = buildSession()
+    expect(adoptDraft(mine, undefined, false)).toBe(mine)
   })
 })

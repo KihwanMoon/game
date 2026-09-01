@@ -92,13 +92,13 @@ def build_item_view(
         unseal_cost=compute_unseal_cost(
             max(0, GRADE_SEALED_SLOTS.get(stored.grade, 0) - stored.sealed_slots)
         ),
-        # **실제로 붙어 있는 접사를 보낸다.** 인스턴스가 굴린 것이 있으면 그것이
-        # 카탈로그 기본값을 대체하고(로드아웃 계산과 같은 규칙), 없으면 카탈로그
-        # 것이 그대로 붙어 있다 — 인스턴스 것만 보내면 기본 접사를 가진 아이템이
-        # 화면에서 "아무 효과 없음" 으로 보인다.
+        # **인스턴스가 가진 것만 보낸다.** 예전에는 비어 있으면 카탈로그 기본값으로
+        # 메웠는데, 그것이 곧 "카탈로그를 고치면 남의 가방이 바뀐다" 였다 — 그래서
+        # 접사 수정이 통째로 막혀 있었다. 발급 시점에 인스턴스가 자기 접사를 갖게
+        # 하고(마이그레이션), 여기서 카탈로그를 안 본다 (설계/4_아이템 §15.11).
         affixes=[
             {"stat": a.stat, "flat": a.flat, "percent": a.percent, "label_ko": a.label_ko}
-            for a in (stored.affixes or entry.affixes)
+            for a in stored.affixes
         ],
         requirements=[
             RequirementView(stat=c.stat, actual=c.actual, minimum=c.minimum, is_met=c.is_met)

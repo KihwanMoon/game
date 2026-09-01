@@ -54,6 +54,13 @@ export interface MetaSave {
   readonly unlockedActions: readonly string[]
   readonly bestiary: readonly BestiaryRecord[]
   readonly presets: readonly RulePreset[]
+  /**
+   * 편집 중인 규칙표. **이름 붙인 슬롯이 아니라 지금 손에 든 것**이다.
+   *
+   * 기기를 바꿔 로그인하면 이것이 없어서 규칙이 통째로 사라진 것처럼 보였다 — 슬롯은
+   * 따라왔지만 사람이 실제로 짜고 있던 것은 이 초안이다.
+   */
+  readonly draft: RuleSet | undefined
 }
 
 /**
@@ -69,5 +76,6 @@ export function createEmptyMeta(): MetaSave {
     unlockedActions: [],
     bestiary: [],
     presets: [],
+    draft: undefined,
   }
 }

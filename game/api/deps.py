@@ -110,6 +110,23 @@ def apply_state_versions(pool: ConnectionPool, context: VerifyContext) -> None:
     )
 
 
+def apply_catalog_reload() -> None:
+    """카탈로그를 고친 뒤 서버가 들고 있는 사본을 갈아 끼운다.
+
+    **여기서 안 갈면 새로 등록한 아이템이 안 나온다.** 굴림이 `get_item_catalog()` 로
+    보는 것은 기동 시점에 읽은 사본이라, 등록해도 서버는 그 id 를 모른다 — 콘텐츠 팩이
+    발행 뒤 컨텍스트를 갈아 끼우는 것과 같은 자리다 (§18).
+    """
+    pool = get_pool()
+    catalog = list_catalog(pool)
+    _state["items"] = catalog
+    apply_drop_seed(pool, catalog)
+    _state["core_version"] = build_core_version(
+        replace(read_content_versions(), items=read_generation(pool)),
+        pack=read_pack_generation(pool),
+    )
+
+
 def apply_content_reload() -> None:
     """발행 뒤 서버가 읽는 콘텐츠를 갈아 끼운다.
 

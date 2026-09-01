@@ -208,3 +208,18 @@ CREATE TABLE IF NOT EXISTS affix_pool (
     weight       INT       NOT NULL DEFAULT 1,
     is_retired   BOOLEAN   NOT NULL DEFAULT FALSE
 );
+
+-- ── 인스턴스가 자기 접사를 갖게 한다 (설계/4_아이템 §15.11) ─────────────
+--
+-- **이 한 줄이 카탈로그 편집을 열어 준다.** 지금까지 인스턴스의 접사가 비어 있으면 읽는
+-- 쪽이 카탈로그 기본값으로 메웠고, 그래서 카탈로그를 고치면 남의 가방에 있는 아이템의
+-- 성능이 소급해 바뀌었다 — 그 때문에 접사·등급 수정을 통째로 막아 뒀다.
+--
+-- 비어 있던 것을 **지금 해석되는 값 그대로** 채운다. 동작은 하나도 안 바뀐다. 그러고
+-- 나면 읽는 쪽이 카탈로그를 안 봐도 되고, 카탈로그는 앞으로 나올 것에만 걸린다.
+UPDATE item_instance i
+SET affixes = c.affixes
+FROM item_catalog c
+WHERE c.catalog_id = i.catalog_id
+  AND i.affixes = '[]'::jsonb
+  AND c.affixes <> '[]'::jsonb;

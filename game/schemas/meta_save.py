@@ -65,6 +65,12 @@ class MetaSave:
     unlocked_actions: tuple[str, ...] = ()
     bestiary: tuple[BestiaryRecord, ...] = ()
     presets: tuple[RulePreset, ...] = ()
+    # 편집 중인 규칙표. **이름 붙인 슬롯이 아니라 지금 손에 든 것**이다.
+    #
+    # 기기를 바꿔 로그인하면 이것이 없어서 규칙이 통째로 사라진 것처럼 보였다 — 슬롯은
+    # 따라왔지만 사람이 실제로 짜고 있던 것은 이 초안이다. 두 기기가 서로를 덮어쓰는
+    # 것을 걱정해 안 올렸는데, **잃는 쪽이 훨씬 나쁘다.**
+    draft: RuleSet | None = None
 
 
 def get_format_version(tag: str) -> int:
@@ -243,6 +249,7 @@ def parse_meta_save(raw: dict) -> MetaSave:
         unlocked_actions=tuple(sorted(raw.get("unlocked_actions", []))),
         bestiary=tuple(sorted(records, key=lambda record: record.kind_id)),
         presets=tuple(parse_preset(item) for item in raw.get("presets", [])),
+        draft=parse_ruleset(raw["draft"]) if raw.get("draft") else None,
     )
 
 
@@ -262,4 +269,5 @@ def build_meta_payload(meta: MetaSave) -> dict:
         "unlocked_actions": list(meta.unlocked_actions),
         "bestiary": [build_bestiary_payload(record) for record in meta.bestiary],
         "presets": [build_preset_payload(preset) for preset in meta.presets],
+        "draft": None if meta.draft is None else build_ruleset_payload(meta.draft),
     }

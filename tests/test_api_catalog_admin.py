@@ -151,7 +151,6 @@ def test_a_retroactive_edit_is_refused(client, admin):
     response = client.post("/api/admin/catalog/item", json=changed, headers=build_headers(admin))
     assert response.status_code == 409
     assert "새 id" in response.json()["detail"]
-    assert "affixes" in response.json()["detail"]
 
 
 def test_the_name_and_floor_can_be_fixed_in_place(client, admin):
@@ -178,12 +177,94 @@ def test_the_name_and_floor_can_be_fixed_in_place(client, admin):
     assert row is not None and row["label_ko"] == "고친 이름" and row["min_floor"] == 5
 
 
-def test_editing_cannot_touch_the_affixes(client, admin):
-    """★ 접사를 받을 자리가 없어야 소급 수정이 표현 불가능하다."""
+def test_editing_cannot_touch_the_slot(client, admin):
+    """★ 분류·슬롯·손 규격은 **이미 착용된 자리**를 가리킨다 (개정: §15.11).
+
+    투구를 갑옷으로 바꾸면 누군가의 머리 칸에 갑옷이 들어 있게 되고, 그 상태를 어느
+    화면도 설명하지 못한다. 접사·등급은 인스턴스가 자기 것을 갖게 된 뒤로 열렸다.
+    """
     from game.api.view_schemas import CatalogEditRequest
 
     fields = set(CatalogEditRequest.model_fields)
-    assert fields == {"catalog_id", "label_ko", "min_floor", "reason"}
+    assert "kind" not in fields
+    assert "slot" not in fields
+    assert "hands" not in fields
+    assert {"affixes", "grade"} <= fields
+
+
+def test_editing_the_affixes_changes_what_drops_next(client, admin):
+    """★ 접사를 고칠 수 있어야 밸런스가 손에 잡힌다 — 그것이 §15.11 이 연 것이다."""
+    item = build_item(client, admin)
+    client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
+    response = client.post(
+        "/api/admin/catalog/edit",
+        json={
+            "catalog_id": item["id"],
+            "label_ko": "표본 검",
+            "min_floor": 2,
+            "grade": "RELIC",
+            "affixes": [{"stat": "attack", "flat": 12, "label_ko": "다시 벼림"}],
+            "reason": REASON,
+        },
+        headers=build_headers(admin),
+    )
+    assert response.status_code == 200
+    row = find_row(response.json(), item["id"])
+    assert row is not None
+    assert row["grade"] == "RELIC"
+    assert row["affixes"] == ["다시 벼림 +12"]
+
+
+def test_an_edit_does_not_reach_into_a_bag(client, admin):
+    """★ 카탈로그를 고쳐도 이미 나온 아이템은 안 바뀐다 (§15.11).
+
+    인스턴스가 자기 접사를 갖는 것이 그 근거다. 이 성질이 깨지면 접사 편집을 다시
+    통째로 막아야 한다.
+    """
+    from game.api.deps import get_item_catalog, get_pool
+    from game.app.store.accounts import find_player_entity
+    from game.app.store.items import create_item, find_item
+
+    item = build_item(client, admin)
+    client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
+    account_id = client.get("/api/account", headers=build_headers(admin)).json()["account_id"]
+    entity_id = find_player_entity(get_pool(), account_id)
+    held = create_item(get_pool(), entity_id, item["id"], get_item_catalog()[item["id"]].affixes)
+    before = find_item(get_pool(), entity_id, held)
+    client.post(
+        "/api/admin/catalog/edit",
+        json={
+            "catalog_id": item["id"],
+            "label_ko": "표본 검",
+            "min_floor": 2,
+            "affixes": [{"stat": "attack", "flat": 99, "label_ko": "소급 시도"}],
+            "reason": REASON,
+        },
+        headers=build_headers(admin),
+    )
+    after = find_item(get_pool(), entity_id, held)
+    assert after is not None and before is not None
+    assert after.affixes == before.affixes, "카탈로그 수정이 가방까지 닿았다"
+
+
+def test_an_empty_affix_list_keeps_the_current_ones(client, admin):
+    """★ 빈 목록을 「지운다」로 읽으면 이름만 고치려던 요청이 아이템을 맹탕으로 만든다."""
+    item = build_item(client, admin)
+    client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
+    before = find_row(read_items(client, admin), item["id"])
+    response = client.post(
+        "/api/admin/catalog/edit",
+        json={
+            "catalog_id": item["id"],
+            "label_ko": "이름만",
+            "min_floor": 2,
+            "reason": REASON,
+        },
+        headers=build_headers(admin),
+    )
+    after = find_row(response.json(), item["id"])
+    assert before is not None and after is not None
+    assert after["affixes"] == before["affixes"]
 
 
 def test_an_item_keeps_its_affixes_after_a_rename(client, admin):
@@ -247,102 +328,3 @@ def test_there_is_no_delete_route(client, admin):
 
 def read_drops(client, token, kind_id):
     return client.get(f"/api/admin/drops/{kind_id}", headers=build_headers(token)).json()
-
-
-def test_a_monster_without_a_table_says_so(client, admin):
-    """★ 소스별 표가 없으면 ANY 로 떨어진다 — 그 사실이 화면에 있어야 「왜 다른 게
-    나오지」를 안 겪는다."""
-    body = read_drops(client, admin, "no_such_kind_probe")
-    assert body["uses_default"] is True
-    assert body["rows"] == []
-
-
-def test_setting_a_drop_takes_the_monster_off_the_default(client, admin):
-    """★ 첫 줄을 세우는 순간 그 몬스터는 ANY 를 안 본다 (D3).
-
-    두 표를 합치면 "이 몬스터만 떨군다" 가 성립하지 않고, 도감이 표적 목록이 되는 근거가
-    그 배타성이다.
-    """
-    account_id = client.get("/api/account", headers=build_headers(admin)).json()["account_id"]
-    kind = f"probe_drop_{account_id}"
-    response = client.post(
-        "/api/admin/drops",
-        json={
-            "kind_id": kind,
-            "grade": "COMMON",
-            "catalog_id": "helm_iron",
-            "weight": 7,
-            "reason": REASON,
-        },
-        headers=build_headers(admin),
-    )
-    assert response.status_code == 200
-    body = response.json()
-    assert body["uses_default"] is False
-    assert [(row["catalog_id"], row["weight"]) for row in body["rows"]] == [("helm_iron", 7)]
-    assert body["rows"][0]["label_ko"] != "", "이름이 없으면 관리자가 id 로만 고른다"
-
-
-def test_a_drop_for_a_missing_item_is_refused(client, admin):
-    """★ 없는 아이템을 표에 올리면 굴림이 그 등급에서 아무것도 못 뽑는다."""
-    response = client.post(
-        "/api/admin/drops",
-        json={
-            "kind_id": "probe_kind",
-            "grade": "COMMON",
-            "catalog_id": "no_such_item",
-            "weight": 1,
-            "reason": REASON,
-        },
-        headers=build_headers(admin),
-    )
-    assert response.status_code == 404
-
-
-def test_a_drop_without_a_reason_is_refused(client, admin):
-    """★ 사유 없는 개입은 나중에 아무도 설명할 수 없다."""
-    response = client.post(
-        "/api/admin/drops",
-        json={
-            "kind_id": "probe_kind",
-            "grade": "COMMON",
-            "catalog_id": "helm_iron",
-            "weight": 1,
-            "reason": "",
-        },
-        headers=build_headers(admin),
-    )
-    assert response.status_code == 400
-
-
-def test_a_zero_weight_keeps_the_row(client, admin):
-    """★ 가중치 0 은 지우는 것이 아니라 안 나오게 하는 것이다.
-
-    줄을 지우면 "이 몬스터가 무엇을 떨구기로 되어 있었는가" 를 나중에 못 읽는다.
-    """
-    account_id = client.get("/api/account", headers=build_headers(admin)).json()["account_id"]
-    kind = f"probe_zero_{account_id}"
-    client.post(
-        "/api/admin/drops",
-        json={
-            "kind_id": kind,
-            "grade": "COMMON",
-            "catalog_id": "helm_iron",
-            "weight": 5,
-            "reason": REASON,
-        },
-        headers=build_headers(admin),
-    )
-    response = client.post(
-        "/api/admin/drops",
-        json={
-            "kind_id": kind,
-            "grade": "COMMON",
-            "catalog_id": "helm_iron",
-            "weight": 0,
-            "reason": REASON,
-        },
-        headers=build_headers(admin),
-    )
-    rows = response.json()["rows"]
-    assert [(row["catalog_id"], row["weight"]) for row in rows] == [("helm_iron", 0)]

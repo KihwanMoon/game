@@ -44,15 +44,21 @@ def build_headers(token):
     return {"X-Game-Token": token}
 
 
-def grant_item(client, token, catalog_id, affixes=()):
-    """검사용으로 아이템 하나를 직접 넣는다. API 에는 이런 문이 없다."""
-    from game.api.deps import get_pool
+def grant_item(client, token, catalog_id, affixes=None):
+    """검사용으로 아이템 하나를 직접 넣는다. API 에는 이런 문이 없다.
+
+    **접사를 안 주면 카탈로그의 것을 실어 준다.** 실제 발급 경로(`create_kill_drop`)가
+    그렇게 하기 때문이다 — 인스턴스가 자기 접사를 갖는 것이 §15.11 의 전부이고, 검사가
+    빈 접사로 만들면 진짜 아이템이 아닌 것을 놓고 보게 된다.
+    """
+    from game.api.deps import get_item_catalog, get_pool
     from game.app.store.accounts import find_player_entity
     from game.app.store.items import create_item
 
     account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
     entity_id = find_player_entity(get_pool(), account_id)
-    return create_item(get_pool(), entity_id, catalog_id, tuple(affixes))
+    rolled = get_item_catalog()[catalog_id].affixes if affixes is None else tuple(affixes)
+    return create_item(get_pool(), entity_id, catalog_id, rolled)
 
 
 # ── 발급 경로 (결정 #02) ─────────────────────────────────────────────────

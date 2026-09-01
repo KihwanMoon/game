@@ -186,5 +186,9 @@ export function adoptServerMeta(server: MetaSave, local: MetaSave): MetaSave {
   return {
     ...server,
     presets: local.presets.length > 0 ? local.presets : server.presets,
+    // **이 기기에 초안이 없을 때만 서버 것을 받는다.** 새 기기가 정확히 그 경우이고,
+    // 그때 안 받으면 규칙이 통째로 사라진 것처럼 보인다. 이미 짜던 것이 있으면 안
+    // 건드린다 — 덮어쓰면 방금 한 편집이 사라지고 그 손실은 되돌릴 수 없다.
+    draft: local.draft ?? server.draft,
   }
 }

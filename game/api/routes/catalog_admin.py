@@ -19,7 +19,7 @@ from dataclasses import replace
 from fastapi import APIRouter, HTTPException, status
 
 from game.api.catalog_admin import build_entry_from_request, list_locked_changes
-from game.api.deps import CurrentAdmin, get_pool
+from game.api.deps import CurrentAdmin, apply_catalog_reload, get_pool
 from game.api.routes.admin import check_reason
 from game.api.view_schemas import (
     CatalogAdminResponse,
@@ -47,7 +47,7 @@ from game.app.store.item_catalog import (
     read_generation,
     save_catalog_entry,
 )
-from game.schemas.item import Affix, ItemCatalogEntry
+from game.schemas.item import Affix, ItemCatalogEntry, parse_affix
 
 router = APIRouter()
 
@@ -187,6 +187,7 @@ def create_catalog_item(request: CatalogItemRequest, account: CurrentAdmin) -> C
     if before is None:
         apply_drop_entry(entry.catalog_id, entry.grade)
     generation = apply_generation_bump(pool)
+    apply_catalog_reload()
     record_admin_action(
         pool,
         account.account_id,
@@ -219,6 +220,7 @@ def create_catalog_retire(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "없는 아이템이다")
     apply_retire(pool, request.catalog_id, request.is_retired)
     generation = apply_generation_bump(pool)
+    apply_catalog_reload()
     record_admin_action(
         pool,
         account.account_id,
@@ -322,10 +324,24 @@ def create_catalog_edit(request: CatalogEditRequest, account: CurrentAdmin) -> C
     before = list_catalog(pool).get(request.catalog_id)
     if before is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "없는 아이템이다")
+    # **접사를 안 보내면 지금 것을 그대로 둔다.** 빈 목록을 "접사를 지운다" 로 읽으면
+    # 이름만 고치려던 요청이 아이템을 맹탕으로 만든다.
     save_catalog_entry(
-        pool, replace(before, label_ko=request.label_ko, min_floor=request.min_floor)
+        pool,
+        replace(
+            before,
+            label_ko=request.label_ko,
+            min_floor=request.min_floor,
+            grade=request.grade or before.grade,
+            affixes=(
+                before.affixes
+                if not request.affixes
+                else tuple(parse_affix(item) for item in request.affixes)
+            ),
+        ),
     )
     generation = apply_generation_bump(pool)
+    apply_catalog_reload()
     record_admin_action(
         pool,
         account.account_id,
