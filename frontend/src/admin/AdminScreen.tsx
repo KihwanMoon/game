@@ -238,13 +238,12 @@ export function AdminScreen(): React.JSX.Element {
                 }
               })
             }}
-            onEdit={(catalogId, labelKo, minFloor, reason) => {
-              // **고칠 수 있는 것만 보낸다.** 전체 절을 되풀이해 보내던 때는 화면이 접사를
-              // 안 실어 보내 이름 바꾸기가 전부 거절됐다 (설계/4_아이템 §15.7).
+            onEdit={(catalogId, patch, reason) => {
+              // **고칠 수 있는 것만 보낸다.** 절에 분류·슬롯을 담을 자리가 없으므로
+              // 소급 수정이 표현 불가능하다 (설계/4_아이템 §15.11).
               void applyCatalogAdmin(token, '/admin/catalog/edit', {
                 catalog_id: catalogId,
-                label_ko: labelKo,
-                min_floor: minFloor,
+                ...patch,
                 reason,
               }).then((outcome) => {
                 setDetail(outcome.detail)

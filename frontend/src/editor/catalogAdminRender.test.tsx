@@ -17,6 +17,7 @@ import {
   CatalogForm,
   buildAffixPayload,
   buildAffixRows,
+  parseAffixLabel,
 } from './CatalogAdminPanel'
 import type { CatalogAdminView } from '../storage'
 
@@ -176,7 +177,7 @@ describe('이름·최소 층 고치기', () => {
     throw new Error('픽스처가 비었다')
   }
   const picked = renderToStaticMarkup(
-    <CatalogDetail row={first} onRetire={noop} onEdit={noop} />,
+    <CatalogDetail row={first} grades={VIEW.grades} onRetire={noop} onEdit={noop} />,
   )
 
   it('★ 이름 칸이 있다 — 없어서 이름은 고칠 방법이 아예 없었다', () => {
@@ -191,5 +192,44 @@ describe('이름·최소 층 고치기', () => {
 
   it('★ 고치기 버튼이 있다', () => {
     expect(picked).toContain('고치기')
+  })
+})
+
+
+describe('수치·특성 편집 (설계/4_아이템 §15.11)', () => {
+  const first = VIEW.items[0]
+  if (first === undefined) {
+    throw new Error('픽스처가 비었다')
+  }
+  const html = renderToStaticMarkup(
+    <CatalogDetail row={first} grades={VIEW.grades} onRetire={noop} onEdit={noop} />,
+  )
+
+  it('★ 등급을 고를 수 있다 — 인스턴스가 자기 등급을 갖게 된 뒤로 열렸다', () => {
+    for (const grade of VIEW.grades) {
+      expect(html).toContain(grade)
+    }
+  })
+
+  it('★ 접사를 고치는 길이 있다 — 없으면 "수치를 못 바꾼다" 가 그대로다', () => {
+    expect(html).toContain('접사 고치기')
+  })
+
+  it('★ 적힌 접사를 다시 칸으로 되돌린다 — 처음부터 다시 치게 하면 아무도 안 고친다', () => {
+    const row = parseAffixLabel('튼튼함 +8')
+    expect(row.labelKo).toBe('튼튼함')
+    expect(row.flat).toBe('+8')
+    expect(row.percent).toBe('')
+  })
+
+  it('퍼센트 접사도 되돌린다', () => {
+    const row = parseAffixLabel('굼뜬 제어 -25%')
+    expect(row.percent).toBe('-25')
+    expect(row.flat).toBe('')
+    expect(row.labelKo).toBe('굼뜬 제어')
+  })
+
+  it('못 읽는 표기는 이름으로 둔다 — 지우는 것보다 낫다', () => {
+    expect(parseAffixLabel('알 수 없음').labelKo).toBe('알 수 없음')
   })
 })

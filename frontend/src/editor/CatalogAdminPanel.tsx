@@ -21,7 +21,7 @@ export interface CatalogAdminPanelProps {
   readonly detail: string
   readonly onRetire: (catalogId: string, isRetired: boolean, reason: string) => void
   /** 이름과 최소 층을 고친다. 나머지는 서버가 저장된 값을 그대로 쓴다 (§15.7). */
-  readonly onEdit: (catalogId: string, labelKo: string, minFloor: number, reason: string) => void
+  readonly onEdit: (catalogId: string, patch: Record<string, unknown>, reason: string) => void
   /** 새 종류를 등록한다. 절은 서버의 파서가 검사한다 — 화면이 문법을 따로 알 필요가 없다. */
   readonly onCreate: (payload: Record<string, unknown>, reason: string) => void
 }
@@ -312,7 +312,8 @@ const OFFLINE_HINT = '서버에 닿지 못했다 — 카탈로그는 서버가 �
 export interface CatalogDetailProps {
   readonly row: CatalogAdminRow
   readonly onRetire: (catalogId: string, isRetired: boolean, reason: string) => void
-  readonly onEdit: (catalogId: string, labelKo: string, minFloor: number, reason: string) => void
+  readonly onEdit: (catalogId: string, patch: Record<string, unknown>, reason: string) => void
+  readonly grades: readonly string[]
 }
 
 /**
@@ -329,6 +330,10 @@ export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
   const [reason, setReason] = useState('')
   const [label, setLabel] = useState('')
   const [floor, setFloor] = useState('')
+  const [grade, setGrade] = useState('')
+  // **안 건드리면 접사를 안 보낸다.** 서버는 빈 목록을 "안 바꾼다" 로 읽으므로, 화면이
+  // "고쳤다" 와 "안 건드렸다" 를 스스로 구분해야 한다.
+  const [affixRows, setAffixRows] = useState<readonly AffixRow[] | undefined>(undefined)
 
   return (
     <div className="cat__detail">
@@ -393,16 +398,118 @@ export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
         />
       </label>
 
+      {/* 등급과 접사를 여기서 고친다 (§15.11). 인스턴스가 자기 값을 갖게 된 뒤로 이
+          수정이 이미 나온 아이템에 소급하지 않는다 — 앞으로 나올 것에만 걸린다. */}
+      <div className="cat__row">
+        {props.grades.map((name) => (
+          <Button
+            key={name}
+            size="sm"
+            variant={(grade === '' ? row.grade : grade) === name ? 'primary' : 'ghost'}
+            onClick={() => {
+              setGrade(name)
+            }}
+          >
+            {name}
+          </Button>
+        ))}
+      </div>
+
+      {affixRows === undefined ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          glyph="✎"
+          title="접사를 고친다 — 지금 값에서 시작한다"
+          onClick={() => {
+            setAffixRows(
+              row.affixes.length === 0
+                ? [{ stat: AFFIX_STATS[0] ?? '', flat: '', percent: '', labelKo: '' }]
+                : row.affixes.map(parseAffixLabel),
+            )
+          }}
+        >
+          접사 고치기
+        </Button>
+      ) : (
+        <>
+          {affixRows.map((affix, index) => (
+            <div className="cat__row" key={`${String(index)}:${affix.stat}`}>
+              <select
+                className="cat__input"
+                aria-label={`고칠 접사 ${String(index + 1)} 능력치`}
+                value={affix.stat}
+                onChange={(event) => {
+                  setAffixRows(buildAffixRows(affixRows, index, { stat: event.target.value }))
+                }}
+              >
+                {AFFIX_STATS.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+              <input
+                className="cat__input"
+                inputMode="numeric"
+                aria-label={`고칠 접사 ${String(index + 1)} 고정값`}
+                value={affix.flat}
+                placeholder="고정"
+                onChange={(event) => {
+                  setAffixRows(buildAffixRows(affixRows, index, { flat: event.target.value }))
+                }}
+              />
+              <input
+                className="cat__input"
+                inputMode="numeric"
+                aria-label={`고칠 접사 ${String(index + 1)} 퍼센트`}
+                value={affix.percent}
+                placeholder="%"
+                onChange={(event) => {
+                  setAffixRows(buildAffixRows(affixRows, index, { percent: event.target.value }))
+                }}
+              />
+              <input
+                className="cat__input"
+                aria-label={`고칠 접사 ${String(index + 1)} 이름`}
+                value={affix.labelKo}
+                placeholder="예리함"
+                onChange={(event) => {
+                  setAffixRows(buildAffixRows(affixRows, index, { labelKo: event.target.value }))
+                }}
+              />
+            </div>
+          ))}
+          <Button
+            size="sm"
+            variant="ghost"
+            glyph="＋"
+            onClick={() => {
+              setAffixRows([
+                ...affixRows,
+                { stat: AFFIX_STATS[0] ?? '', flat: '', percent: '', labelKo: '' },
+              ])
+            }}
+          >
+            접사 추가
+          </Button>
+        </>
+      )}
+
       <div className="cat__row">
         <Button
           size="sm"
           variant="primary"
-          title="이름과 최소 층을 고친다 — 나머지는 서버가 저장된 값을 그대로 쓴다"
+          title="고친 값을 저장한다 — 이미 나온 아이템은 안 바뀐다 (§15.11)"
           onClick={() => {
             props.onEdit(
               row.catalogId,
-              label === '' ? row.labelKo : label,
-              Number.parseInt(floor, DECIMAL_RADIX) || row.minFloor,
+              {
+                label_ko: label === '' ? row.labelKo : label,
+                min_floor: Number.parseInt(floor, DECIMAL_RADIX) || row.minFloor,
+                grade: grade === '' ? row.grade : grade,
+                ...(affixRows === undefined ? {} : { affixes: buildAffixPayload(affixRows) }),
+              },
               reason,
             )
           }}
@@ -497,9 +604,38 @@ export function CatalogAdminPanel(props: CatalogAdminPanelProps): React.JSX.Elem
         <CatalogForm grades={catalog.grades} onCreate={props.onCreate} />
 
         {row === undefined ? null : (
-          <CatalogDetail row={row} onRetire={props.onRetire} onEdit={props.onEdit} />
+          <CatalogDetail
+            row={row}
+            grades={catalog.grades}
+            onRetire={props.onRetire}
+            onEdit={props.onEdit}
+          />
         )}
       </div>
     </Panel>
   )
+}
+
+
+/**
+ * 화면에 적힌 접사 한 줄을 다시 칸으로 되돌린다.
+ *
+ * 서버가 접사를 「튼튼함 +8」 처럼 **적어서** 보내므로, 고치려면 그것을 다시 갈라야 한다.
+ * 원본 절을 함께 보내면 이 되돌리기가 필요 없지만, 그러면 목록 응답이 두 배로 무거워진다.
+ *
+ * @param text 「이름 +8」 또는 「이름 -25%」.
+ * @returns 접사 줄. 못 읽으면 이름만 채운 줄.
+ */
+export function parseAffixLabel(text: string): AffixRow {
+  const matched = /^(.*)\s([+-]\d+)(%?)$/.exec(text.trim())
+  if (matched === null) {
+    return { stat: AFFIX_STATS[0] ?? '', flat: '', percent: '', labelKo: text }
+  }
+  const [, name, amount, percent] = matched
+  return {
+    stat: AFFIX_STATS[0] ?? '',
+    flat: percent === '%' ? '' : (amount ?? ''),
+    percent: percent === '%' ? (amount ?? '') : '',
+    labelKo: (name ?? '').trim(),
+  }
 }
