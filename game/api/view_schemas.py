@@ -296,3 +296,17 @@ class ContentPackResponse(BaseModel):
     assets: dict = Field(default_factory=dict)
     generation: int = 0
     core_version: str = ""
+
+
+class CatalogEditRequest(BaseModel):
+    """이미 있는 아이템에서 **고칠 수 있는 것만** 담는 절 (설계/4_아이템 §15.7).
+
+    접사·등급·분류를 받을 자리가 없다. 자리가 없으면 소급 수정이 **표현 불가능**하고,
+    그러면 "빠뜨린 필드가 바뀐 것으로 읽히는" 사고도 같이 사라진다 — 전체 절을 받던
+    때는 화면이 접사를 안 실어 보내서 이름 바꾸기가 전부 거절됐다.
+    """
+
+    catalog_id: str = Field(min_length=1, max_length=64)
+    label_ko: str = Field(min_length=1, max_length=64)
+    min_floor: int = Field(ge=1, le=100)
+    reason: str = ""

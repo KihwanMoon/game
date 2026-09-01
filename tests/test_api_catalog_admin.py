@@ -151,18 +151,69 @@ def test_a_retroactive_edit_is_refused(client, admin):
     response = client.post("/api/admin/catalog/item", json=changed, headers=build_headers(admin))
     assert response.status_code == 409
     assert "새 id" in response.json()["detail"]
+    assert "affixes" in response.json()["detail"]
 
 
 def test_the_name_and_floor_can_be_fixed_in_place(client, admin):
-    """★ 이미 나온 것에 소급하지 않는 것은 고칠 수 있어야 한다 — 오타까지 새 id 를
-    요구하면 아무도 안 고친다."""
+    """★ 이미 나온 것에 소급하지 않는 것은 고칠 수 있어야 한다.
+
+    **화면이 실제로 보내는 절로 부른다.** 예전 검사는 전체 절을 되풀이해 보냈고, 그래서
+    화면이 접사를 안 실어 보내 이름 바꾸기가 전부 거절되던 것을 못 봤다 — 검사가 진짜
+    클라이언트가 안 쓰는 모양을 쓰고 있었다.
+    """
     item = build_item(client, admin)
     client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
-    renamed = {**item, "label_ko": "고친 이름", "min_floor": 5}
-    response = client.post("/api/admin/catalog/item", json=renamed, headers=build_headers(admin))
+    response = client.post(
+        "/api/admin/catalog/edit",
+        json={
+            "catalog_id": item["id"],
+            "label_ko": "고친 이름",
+            "min_floor": 5,
+            "reason": REASON,
+        },
+        headers=build_headers(admin),
+    )
     assert response.status_code == 200
     row = find_row(response.json(), item["id"])
     assert row is not None and row["label_ko"] == "고친 이름" and row["min_floor"] == 5
+
+
+def test_editing_cannot_touch_the_affixes(client, admin):
+    """★ 접사를 받을 자리가 없어야 소급 수정이 표현 불가능하다."""
+    from game.api.view_schemas import CatalogEditRequest
+
+    fields = set(CatalogEditRequest.model_fields)
+    assert fields == {"catalog_id", "label_ko", "min_floor", "reason"}
+
+
+def test_an_item_keeps_its_affixes_after_a_rename(client, admin):
+    """★ 이름만 고쳤는데 접사가 사라지면 그 아이템이 성능을 잃는다."""
+    item = build_item(client, admin)
+    client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
+    before = find_row(read_items(client, admin), item["id"])
+    response = client.post(
+        "/api/admin/catalog/edit",
+        json={
+            "catalog_id": item["id"],
+            "label_ko": "이름만 바꿈",
+            "min_floor": 2,
+            "reason": REASON,
+        },
+        headers=build_headers(admin),
+    )
+    after = find_row(response.json(), item["id"])
+    assert before is not None and after is not None
+    assert after["affixes"] == before["affixes"]
+    assert after["grade"] == before["grade"]
+
+
+def test_registering_an_existing_id_says_where_to_go(client, admin):
+    """★ 있는 id 로 등록하려는 것은 십중팔구 「고치려던 것」이다."""
+    item = build_item(client, admin)
+    client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
+    response = client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
+    assert response.status_code == 409
+    assert "고치기" in response.json()["detail"]
 
 
 def test_a_write_without_a_reason_is_refused(client, admin):

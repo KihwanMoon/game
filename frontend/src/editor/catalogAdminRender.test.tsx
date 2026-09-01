@@ -13,6 +13,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   CatalogAdminPanel,
+  CatalogDetail,
   CatalogForm,
   buildAffixPayload,
   buildAffixRows,
@@ -56,7 +57,7 @@ const VIEW: CatalogAdminView = {
 
 const noop = () => undefined
 const MARKUP = renderToStaticMarkup(
-  <CatalogAdminPanel catalog={VIEW} detail="" onRetire={noop} onRename={noop}
+  <CatalogAdminPanel catalog={VIEW} detail="" onRetire={noop} onEdit={noop}
         onCreate={noop} />,
 )
 
@@ -83,7 +84,7 @@ describe('카탈로그 관리', () => {
 
   it('★ 서버가 없으면 그렇게 말한다 — 빈 카탈로그와 못 불러온 카탈로그는 다르다', () => {
     const html = renderToStaticMarkup(
-      <CatalogAdminPanel catalog={undefined} detail="" onRetire={noop} onRename={noop}
+      <CatalogAdminPanel catalog={undefined} detail="" onRetire={noop} onEdit={noop}
         onCreate={noop} />,
     )
     expect(html).toContain('서버에 닿지 못했다')
@@ -95,7 +96,7 @@ describe('카탈로그 관리', () => {
         catalog={VIEW}
         detail="이미 나온 아이템이 소급해 바뀐다 — 새 id 로 등록한다"
         onRetire={noop}
-        onRename={noop}
+        onEdit={noop}
         onCreate={noop}
       />,
     )
@@ -166,5 +167,29 @@ describe('접사 입력 (JSON 을 손으로 치지 않는다)', () => {
     expect(next[0]).toBe(rows[0])
     expect(next[1]?.flat).toBe('9')
     expect(next[1]?.labelKo).toBe('b')
+  })
+})
+
+describe('이름·최소 층 고치기', () => {
+  const first = VIEW.items[0]
+  if (first === undefined) {
+    throw new Error('픽스처가 비었다')
+  }
+  const picked = renderToStaticMarkup(
+    <CatalogDetail row={first} onRetire={noop} onEdit={noop} />,
+  )
+
+  it('★ 이름 칸이 있다 — 없어서 이름은 고칠 방법이 아예 없었다', () => {
+    expect(picked).toContain('aria-label="아이템 이름"')
+  })
+
+  it('★ 최소 층 칸이 있다 — 「+1」 버튼만으로는 되돌릴 수도 없었다', () => {
+    // **입력 칸을 직접 본다.** 그냥 "최소 층" 을 찾으면 버튼의 title 이 그 말을 담고 있어
+    // 칸을 지워도 검사가 통과한다 — 실제로 그렇게 통과했다.
+    expect(picked).toContain('aria-label="최소 층"')
+  })
+
+  it('★ 고치기 버튼이 있다', () => {
+    expect(picked).toContain('고치기')
   })
 })

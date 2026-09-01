@@ -14,6 +14,8 @@
 관리자 라우트는 404 로 답한다 — 존재 자체를 흘리지 않는다.
 """
 
+from dataclasses import replace
+
 from fastapi import APIRouter, HTTPException, status
 
 from game.api.catalog_admin import build_entry_from_request, list_locked_changes
@@ -22,6 +24,7 @@ from game.api.routes.admin import check_reason
 from game.api.view_schemas import (
     CatalogAdminResponse,
     CatalogAdminRow,
+    CatalogEditRequest,
     CatalogItemRequest,
     CatalogRetireRequest,
     MonsterDropRequest,
@@ -170,13 +173,16 @@ def create_catalog_item(request: CatalogItemRequest, account: CurrentAdmin) -> C
     catalog = list_catalog(pool)
     before = catalog.get(entry.catalog_id)
     if before is not None:
+        # **고치기는 `/edit` 이 한다.** 여기로 오는 것은 등록뿐이고, 있는 id 로 등록하려는
+        # 것은 십중팔구 "고치려던 것" 이다 — 그 사실을 사유에 적어 돌려준다.
         locked = list_locked_changes(before, entry)
+        detail = (
+            "이미 있는 id 다 — 이름·최소 층은 고치기로,"
+            " 나머지는 새 id 로 등록하고 옛 id 를 폐기한다"
+        )
         if locked:
-            raise HTTPException(
-                status.HTTP_409_CONFLICT,
-                "이미 나온 아이템이 소급해 바뀐다 — 새 id 로 등록하고 옛 id 를 폐기한다:"
-                f" {', '.join(locked)}",
-            )
+            detail = f"{detail} ({', '.join(locked)} 이(가) 다르다)"
+        raise HTTPException(status.HTTP_409_CONFLICT, detail)
     save_catalog_entry(pool, entry)
     if before is None:
         apply_drop_entry(entry.catalog_id, entry.grade)
@@ -289,3 +295,42 @@ def create_monster_drop(request: MonsterDropRequest, account: CurrentAdmin) -> M
         f"가중치 {request.weight} · {reason}",
     )
     return read_monster_drops(request.kind_id, account)
+
+
+@router.post("/api/admin/catalog/edit", response_model=CatalogAdminResponse)
+def create_catalog_edit(request: CatalogEditRequest, account: CurrentAdmin) -> CatalogAdminResponse:
+    """이미 있는 아이템의 이름과 최소 층을 고친다 (§15.7).
+
+    **고칠 수 있는 것만 받는다.** 접사·등급·분류를 받을 자리가 없으므로 소급 수정이
+    표현 불가능하고, 그러면 "화면이 빠뜨린 필드가 바뀐 것으로 읽히는" 사고도 같이
+    사라진다 — 전체 절을 받던 때는 그 사고로 이름 바꾸기가 전부 거절됐다.
+
+    나머지 필드는 **저장된 것을 그대로 쓴다.** 부르는 쪽이 되풀이해 보내지 않는다.
+
+    Args:
+        request: 대상과 새 이름·최소 층, 사유.
+        account: 관리자.
+
+    Returns:
+        갱신된 카탈로그.
+
+    Raises:
+        HTTPException: 없는 아이템인 경우.
+    """
+    reason = check_reason(request.reason)
+    pool = get_pool()
+    before = list_catalog(pool).get(request.catalog_id)
+    if before is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "없는 아이템이다")
+    save_catalog_entry(
+        pool, replace(before, label_ko=request.label_ko, min_floor=request.min_floor)
+    )
+    generation = apply_generation_bump(pool)
+    record_admin_action(
+        pool,
+        account.account_id,
+        "catalog_edit",
+        request.catalog_id,
+        f"세대 {generation} · {reason}",
+    )
+    return read_catalog_items(account)

@@ -98,6 +98,7 @@ def test_there_is_no_route_that_grants_admin(client):
     assert sorted(path for path in paths if "/admin/" in path) == [
         "/api/admin/auction/cancel",
         "/api/admin/catalog",
+        "/api/admin/catalog/edit",
         "/api/admin/catalog/item",
         "/api/admin/catalog/items",
         "/api/admin/catalog/retire",

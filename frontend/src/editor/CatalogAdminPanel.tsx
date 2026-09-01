@@ -14,13 +14,14 @@
 import { useState } from 'react'
 
 import { Button, CellGrid, GlyphState, Panel, Thumb, ValueExpr } from '../ds'
-import type { CatalogAdminView } from '../storage'
+import type { CatalogAdminRow, CatalogAdminView } from '../storage'
 
 export interface CatalogAdminPanelProps {
   readonly catalog: CatalogAdminView | undefined
   readonly detail: string
   readonly onRetire: (catalogId: string, isRetired: boolean, reason: string) => void
-  readonly onRename: (catalogId: string, labelKo: string, minFloor: number, reason: string) => void
+  /** 이름과 최소 층을 고친다. 나머지는 서버가 저장된 값을 그대로 쓴다 (§15.7). */
+  readonly onEdit: (catalogId: string, labelKo: string, minFloor: number, reason: string) => void
   /** 새 종류를 등록한다. 절은 서버의 파서가 검사한다 — 화면이 문법을 따로 알 필요가 없다. */
   readonly onCreate: (payload: Record<string, unknown>, reason: string) => void
 }
@@ -32,14 +33,7 @@ export interface CatalogFormProps {
 }
 
 /** 장비 슬롯. 카탈로그가 쓰는 값 그대로다 — 화면이 새 이름을 지으면 서버가 못 읽는다. */
-const SLOTS: readonly string[] = [
-  'WEAPON_MAIN',
-  'WEAPON_OFF',
-  'HEAD',
-  'BODY',
-  'FEET',
-  'HANDS',
-]
+const SLOTS: readonly string[] = ['WEAPON_MAIN', 'WEAPON_OFF', 'HEAD', 'BODY', 'FEET', 'HANDS']
 
 const KINDS: readonly string[] = ['EQUIPMENT', 'CONSUMABLE', 'QUEST']
 
@@ -132,11 +126,7 @@ export function CatalogForm(props: CatalogFormProps): React.JSX.Element {
     <div className="cat__detail">
       <span className="cat__name">새 종류 등록</span>
       {/* 수정이 막혀 있으므로 등록이 유일한 변경 경로다. 그 사실을 여기에 적는다. */}
-      <ValueExpr
-        text="접사·등급을 바꾸려면 여기서 새로 등록하고 옛 id 를 폐기한다"
-        size="sm"
-        dim
-      />
+      <ValueExpr text="접사·등급을 바꾸려면 여기서 새로 등록하고 옛 id 를 폐기한다" size="sm" dim />
       <label className="cat__field">
         <span>id</span>
         <input
@@ -270,7 +260,10 @@ export function CatalogForm(props: CatalogFormProps): React.JSX.Element {
         glyph="＋"
         title="접사 칸을 하나 더 만든다"
         onClick={() => {
-          setAffixRows([...affixRows, { stat: AFFIX_STATS[0] ?? '', flat: '', percent: '', labelKo: '' }])
+          setAffixRows([
+            ...affixRows,
+            { stat: AFFIX_STATS[0] ?? '', flat: '', percent: '', labelKo: '' },
+          ])
         }}
       >
         접사 추가
@@ -315,6 +308,126 @@ export function CatalogForm(props: CatalogFormProps): React.JSX.Element {
 
 const OFFLINE_HINT = '서버에 닿지 못했다 — 카탈로그는 서버가 안다'
 
+/** 고른 아이템 하나의 상세와 편집 칸. */
+export interface CatalogDetailProps {
+  readonly row: CatalogAdminRow
+  readonly onRetire: (catalogId: string, isRetired: boolean, reason: string) => void
+  readonly onEdit: (catalogId: string, labelKo: string, minFloor: number, reason: string) => void
+}
+
+/**
+ * 고른 아이템의 상세와 편집 칸을 그린다.
+ *
+ * 패널에서 갈라 둔 이유는 검사 때문만이 아니다 — 고른 것 하나에만 걸리는 상태(이름·층·
+ * 사유)를 패널이 들고 있으면, 다른 아이템을 골랐을 때 앞의 입력이 남는다.
+ *
+ * @param props 아이템 한 줄과 콜백.
+ * @returns 렌더 트리.
+ */
+export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
+  const { row } = props
+  const [reason, setReason] = useState('')
+  const [label, setLabel] = useState('')
+  const [floor, setFloor] = useState('')
+
+  return (
+    <div className="cat__detail">
+      <span className="cat__name">{row.catalogId}</span>
+      <ValueExpr
+        text={`${row.kind}${row.slot === '' ? '' : ` · ${row.slot}`} · ${row.grade} · ${String(row.minFloor)}층~`}
+        size="sm"
+        dim
+      />
+      {row.affixes.length === 0 ? null : <ValueExpr text={row.affixes.join(' · ')} size="sm" />}
+      {row.requirements.length === 0 ? null : (
+        <ValueExpr text={`요구 ${row.requirements.join(' · ')}`} size="sm" dim />
+      )}
+      {/* 굴림에 걸리는 값이라 눈에 있어야 한다 — 0 이면 등록돼 있어도 안 나온다. */}
+      <ValueExpr
+        text={
+          row.dropWeight === 0
+            ? '드롭 표에 없다 — 굴려도 안 나온다'
+            : `드롭 가중치 ${String(row.dropWeight)}`
+        }
+        size="sm"
+        dim={row.dropWeight > 0}
+      />
+
+      <label className="cat__field">
+        <span>사유</span>
+        <input
+          className="cat__input"
+          value={reason}
+          onChange={(event) => {
+            setReason(event.target.value)
+          }}
+          placeholder="왜 고치는가 (4자 이상)"
+        />
+      </label>
+
+      {/* **이름 칸이 없었다.** 「최소 층 +1」 버튼만 있어서 이름은 고칠 방법이
+        아예 없었고, 그것이 "편집이 안 된다" 의 절반이었다. */}
+      <label className="cat__field">
+        <span>이름</span>
+        <input
+          className="cat__input"
+          value={label}
+          placeholder={row.labelKo}
+          aria-label="아이템 이름"
+          onChange={(event) => {
+            setLabel(event.target.value)
+          }}
+        />
+      </label>
+      <label className="cat__field">
+        <span>최소 층</span>
+        <input
+          className="cat__input"
+          inputMode="numeric"
+          value={floor}
+          placeholder={String(row.minFloor)}
+          aria-label="최소 층"
+          onChange={(event) => {
+            setFloor(event.target.value)
+          }}
+        />
+      </label>
+
+      <div className="cat__row">
+        <Button
+          size="sm"
+          variant="primary"
+          title="이름과 최소 층을 고친다 — 나머지는 서버가 저장된 값을 그대로 쓴다"
+          onClick={() => {
+            props.onEdit(
+              row.catalogId,
+              label === '' ? row.labelKo : label,
+              Number.parseInt(floor, DECIMAL_RADIX) || row.minFloor,
+              reason,
+            )
+          }}
+        >
+          고치기
+        </Button>
+        <Button
+          size="sm"
+          variant={row.isRetired ? 'primary' : 'secondary'}
+          title={
+            row.isRetired
+              ? '다시 나오게 한다'
+              : '새로 안 나오게 한다 — 이미 나온 것은 그대로 남는다'
+          }
+          onClick={() => {
+            props.onRetire(row.catalogId, !row.isRetired, reason)
+          }}
+        >
+          {row.isRetired ? '되살리기' : '폐기'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 /**
  * 카탈로그 관리 화면을 그린다.
  *
@@ -324,7 +437,6 @@ const OFFLINE_HINT = '서버에 닿지 못했다 — 카탈로그는 서버가 �
 export function CatalogAdminPanel(props: CatalogAdminPanelProps): React.JSX.Element | null {
   const { catalog } = props
   const [picked, setPicked] = useState('')
-  const [reason, setReason] = useState('')
 
   if (catalog === undefined) {
     return (
@@ -385,66 +497,7 @@ export function CatalogAdminPanel(props: CatalogAdminPanelProps): React.JSX.Elem
         <CatalogForm grades={catalog.grades} onCreate={props.onCreate} />
 
         {row === undefined ? null : (
-          <div className="cat__detail">
-            <span className="cat__name">{row.catalogId}</span>
-            <ValueExpr
-              text={`${row.kind}${row.slot === '' ? '' : ` · ${row.slot}`} · ${row.grade} · ${String(row.minFloor)}층~`}
-              size="sm"
-              dim
-            />
-            {row.affixes.length === 0 ? null : (
-              <ValueExpr text={row.affixes.join(' · ')} size="sm" />
-            )}
-            {row.requirements.length === 0 ? null : (
-              <ValueExpr text={`요구 ${row.requirements.join(' · ')}`} size="sm" dim />
-            )}
-            {/* 굴림에 걸리는 값이라 눈에 있어야 한다 — 0 이면 등록돼 있어도 안 나온다. */}
-            <ValueExpr
-              text={row.dropWeight === 0 ? '드롭 표에 없다 — 굴려도 안 나온다' : `드롭 가중치 ${String(row.dropWeight)}`}
-              size="sm"
-              dim={row.dropWeight > 0}
-            />
-
-            <label className="cat__field">
-              <span>사유</span>
-              <input
-                className="cat__input"
-                value={reason}
-                onChange={(event) => {
-                  setReason(event.target.value)
-                }}
-                placeholder="왜 고치는가 (4자 이상)"
-              />
-            </label>
-
-            <div className="cat__row">
-              <Button
-                size="sm"
-                variant={row.isRetired ? 'primary' : 'secondary'}
-                title={
-                  row.isRetired
-                    ? '다시 나오게 한다'
-                    : '새로 안 나오게 한다 — 이미 나온 것은 그대로 남는다'
-                }
-                onClick={() => {
-                  props.onRetire(row.catalogId, !row.isRetired, reason)
-                }}
-              >
-                {row.isRetired ? '되살리기' : '폐기'}
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                title="최소 층을 한 층 올린다 — 앞으로의 굴림에만 걸린다"
-                onClick={() => {
-                  props.onRename(row.catalogId, row.labelKo, row.minFloor + 1, reason)
-                }}
-              >
-                최소 층 +1
-              </Button>
-            </div>
-
-          </div>
+          <CatalogDetail row={row} onRetire={props.onRetire} onEdit={props.onEdit} />
         )}
       </div>
     </Panel>
