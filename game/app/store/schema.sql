@@ -383,8 +383,8 @@ CREATE TABLE IF NOT EXISTS item_grade (
     code        TEXT    PRIMARY KEY,
     rank        INT     NOT NULL,
     label_ko    TEXT    NOT NULL,
-    affix_min   INT     NOT NULL DEFAULT 1,
-    affix_max   INT     NOT NULL DEFAULT 1
+    -- 이 등급이 주는 봉인 칸 수 (§17). 등급이 성능에 하는 일은 이것 하나뿐이다.
+    sealed_slots INT    NOT NULL DEFAULT 0
 );
 
 -- 카탈로그 한 줄. **지우지 않는다** — item_instance·원장·경매가 catalog_id 를 가리키므로
@@ -402,6 +402,8 @@ CREATE TABLE IF NOT EXISTS item_catalog (
     grants_skill      TEXT,
     -- 이 층부터 나온다 (D1). 1층에서 유물이 나오면 깊이 들어갈 이유가 없다.
     min_floor         INT         NOT NULL DEFAULT 1,
+    -- 무기가 정하는 사거리 (§2.2). NULL 은 「사거리를 안 정한다」다 — 0 과 다르다.
+    attack_range      INT,
     is_retired        BOOLEAN     NOT NULL DEFAULT FALSE,
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()

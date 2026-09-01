@@ -20,6 +20,7 @@ const CATALOG: AdminCatalog = {
       slot: 'WEAPON_MAIN',
       hands: 'TWO',
       grantsSkill: 'AREA_ATTACK',
+      attackRange: 4,
       affixes: ['날카로움 +3'],
       requirements: ['attack >= 10'],
     },

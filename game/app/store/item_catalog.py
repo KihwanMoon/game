@@ -14,13 +14,14 @@
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
-from game.schemas.item import ItemCatalogEntry, parse_item
+from game.schemas.item import GRADE_SEALED_SLOTS, ItemCatalogEntry, parse_item
 
-# 등급 기본 정의 (결정 #42). 접사 굴림 수를 등급이 정한다.
-DEFAULT_GRADES: tuple[tuple[str, int, str, int, int], ...] = (
-    ("COMMON", 1, "보통", 1, 1),
-    ("FINE", 2, "상급", 1, 2),
-    ("RELIC", 3, "유물", 2, 3),
+# 등급 기본 정의 (결정 #42). **표시용이다** — 등급이 성능에 하는 일인 봉인 칸 수는
+# 코드의 `GRADE_SEALED_SLOTS` 하나가 정하고 여기는 그것을 옮겨 적는다.
+DEFAULT_GRADES: tuple[tuple[str, int, str], ...] = (
+    ("COMMON", 1, "보통"),
+    ("FINE", 2, "상급"),
+    ("RELIC", 3, "유물"),
 )
 
 
@@ -31,11 +32,12 @@ def apply_grade_seed(pool: ConnectionPool) -> None:
         pool: 연결 풀.
     """
     with pool.connection() as connection:
-        for code, rank, label, low, high in DEFAULT_GRADES:
+        for code, rank, label in DEFAULT_GRADES:
             connection.execute(
-                "INSERT INTO item_grade (code, rank, label_ko, affix_min, affix_max)"
-                " VALUES (%s, %s, %s, %s, %s) ON CONFLICT (code) DO NOTHING",
-                (code, rank, label, low, high),
+                "INSERT INTO item_grade (code, rank, label_ko, sealed_slots)"
+                " VALUES (%s, %s, %s, %s) ON CONFLICT (code)"
+                " DO UPDATE SET sealed_slots = EXCLUDED.sealed_slots",
+                (code, rank, label, GRADE_SEALED_SLOTS.get(code, 0)),
             )
         connection.execute(
             "INSERT INTO catalog_generation (id, generation) VALUES (1, 1)"
@@ -56,14 +58,15 @@ def save_catalog_entry(pool: ConnectionPool, entry: ItemCatalogEntry) -> None:
     with pool.connection() as connection:
         connection.execute(
             "INSERT INTO item_catalog (catalog_id, kind, slot, hands, grade, label_ko,"
-            " tags, affixes, requirements, grants_skill, min_floor, is_retired)"
-            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            " tags, affixes, requirements, grants_skill, min_floor, is_retired, attack_range)"
+            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
             " ON CONFLICT (catalog_id) DO UPDATE SET"
             " kind = EXCLUDED.kind, slot = EXCLUDED.slot, hands = EXCLUDED.hands,"
             " grade = EXCLUDED.grade, label_ko = EXCLUDED.label_ko, tags = EXCLUDED.tags,"
             " affixes = EXCLUDED.affixes, requirements = EXCLUDED.requirements,"
             " grants_skill = EXCLUDED.grants_skill, min_floor = EXCLUDED.min_floor,"
-            " is_retired = EXCLUDED.is_retired, updated_at = now()",
+            " is_retired = EXCLUDED.is_retired, attack_range = EXCLUDED.attack_range,"
+            " updated_at = now()",
             (
                 entry.catalog_id,
                 str(entry.kind.value),
@@ -87,6 +90,7 @@ def save_catalog_entry(pool: ConnectionPool, entry: ItemCatalogEntry) -> None:
                 entry.grants_skill,
                 entry.min_floor,
                 entry.is_retired,
+                entry.attack_range,
             ),
         )
 
@@ -120,6 +124,8 @@ def build_entry_row(row: tuple) -> ItemCatalogEntry:
         raw["hands"] = row[3]
     if row[9]:
         raw["grants_skill"] = row[9]
+    if row[12] is not None:
+        raw["attack_range"] = row[12]
     return parse_item(raw)
 
 
@@ -138,7 +144,7 @@ def list_catalog(pool: ConnectionPool) -> dict[str, ItemCatalogEntry]:
     with pool.connection() as connection:
         rows = connection.execute(
             "SELECT catalog_id, kind, slot, hands, grade, label_ko, tags, affixes,"
-            " requirements, grants_skill, min_floor, is_retired FROM item_catalog"
+            " requirements, grants_skill, min_floor, is_retired, attack_range FROM item_catalog"
             " ORDER BY catalog_id"
         ).fetchall()
     return {str(row[0]): build_entry_row(row) for row in rows}

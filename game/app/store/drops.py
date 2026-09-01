@@ -16,6 +16,7 @@ from game.schemas.item import (
     GRADE_RELIC,
     ItemCatalogEntry,
     ItemKind,
+    list_grades_above,
 )
 
 # 소스 갈래. 소스별 표가 없으면 `ANY` 로 떨어진다.
@@ -128,21 +129,28 @@ def read_item_weights(
 
 
 def apply_drop_seed(pool: ConnectionPool, catalog: dict[str, ItemCatalogEntry]) -> int:
-    """`ANY` 소스의 기본 표를 채운다. 이미 있으면 두고 넘어간다.
+    """`ANY` 소스의 표에 **빠진 줄을 채운다.** 이미 있는 줄은 건드리지 않는다.
+
+    **등급마다 한 줄씩 깐다.** 예전에는 아이템을 제 등급 한 칸에만 넣어서, 카탈로그가
+    전부 보통이던 프로덕션에서 상급·유물 굴림 26건이 「그 등급에 후보가 없다」로
+    증발했다. 카탈로그의 `grade` 는 **이 등급부터** 라는 뜻이고, 같은 단검이 유물로
+    나오면 다른 점은 봉인 칸 수다 (§17).
+
+    **한 번 채우고 끝내지 않는다.** 예전에는 등급 가중치가 있으면 곧장 돌아가서, 관리자가
+    새로 등록한 아이템이 드롭 표에 영영 안 들어갔다 — 등록은 되는데 나오지는 않았다.
+    이미 있는 줄은 `ON CONFLICT DO NOTHING` 이 지키므로 조정한 가중치는 안전하다.
 
     아이템 가중치는 등급 안에서 모두 1 이다 — 아이템별 차등은 밸런스이고, 그것은
-    나중에 정한다. 지금 필요한 것은 **두 단계가 실제로 도는 것**이다.
+    나중에 정한다.
 
     Args:
         pool: 연결 풀.
         catalog: 아이템 카탈로그.
 
     Returns:
-        채운 아이템 가중치 줄 수. 이미 있었으면 0.
+        새로 채운 아이템 가중치 줄 수. 채울 것이 없었으면 0.
     """
     source_id = save_source(pool, SOURCE_ANY)
-    if read_grade_weights(pool, source_id):
-        return 0
     with pool.connection() as connection:
         for grade, weight, scale in DEFAULT_GRADE_WEIGHTS:
             if grade == GRADE_MISS:
@@ -160,12 +168,13 @@ def apply_drop_seed(pool: ConnectionPool, catalog: dict[str, ItemCatalogEntry]) 
             # 빠뜨렸고, 프로덕션에서 「봉인된 각인」이 전리품으로 나왔다.
             if entry.is_retired or entry.kind is ItemKind.QUEST:
                 continue
-            connection.execute(
-                "INSERT INTO drop_item_weight (source_id, grade, catalog_id, weight)"
-                " VALUES (%s, %s, %s, 1) ON CONFLICT DO NOTHING",
-                (source_id, entry.grade, entry.catalog_id),
-            )
-            filled += 1
+            for grade in list_grades_above(entry.grade):
+                cursor = connection.execute(
+                    "INSERT INTO drop_item_weight (source_id, grade, catalog_id, weight)"
+                    " VALUES (%s, %s, %s, 1) ON CONFLICT DO NOTHING",
+                    (source_id, grade, entry.catalog_id),
+                )
+                filled += cursor.rowcount
     return filled
 
 

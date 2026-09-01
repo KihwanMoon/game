@@ -88,14 +88,51 @@ def test_a_zero_pool_yields_nothing():
     assert get_weighted(()) is None
 
 
-def test_the_grade_decides_how_many_affixes_roll():
-    """★ 등급이 성능을 정한다 — 이름표로만 두면 등급이 뜻을 잃는다 (§15.4)."""
-    from game.app.items.drops import create_affix_rolls
-    from game.schemas.item import GRADE_COMMON, GRADE_RELIC, Affix
+def test_every_fixed_affix_reaches_the_instance():
+    """★ 고정 접사는 전부 붙는다 — 등급이 개수를 정하면 **잘리는 쪽이 늘 저주다**.
 
-    base = tuple(Affix(stat=f"s{index}", flat=index + 1) for index in range(3))
-    assert all(len(create_affix_rolls(base, GRADE_COMMON)) == 1 for _ in range(20))
-    assert max(len(create_affix_rolls(base, GRADE_RELIC)) for _ in range(60)) == 3
+    카탈로그가 좋은 접사를 먼저 적어 두므로, 앞에서 잘라 쓰면 대검의 과부하와 장궁의
+    페널티가 영원히 발급되지 않는다 (프로덕션에서 실제로 그랬다).
+    """
+    from game.app.items.drops import create_affix_rolls
+    from game.schemas.item import Affix
+
+    base = (
+        Affix(stat="attack", flat=5, label_ko="묵직함"),
+        Affix(stat="cpu_budget", percent=-25, label_ko="[과부하] 굼뜬 제어"),
+    )
+    for _try in range(40):
+        rolled = create_affix_rolls(base)
+        assert len(rolled) == len(base)
+        assert [item.stat for item in rolled] == ["attack", "cpu_budget"]
+
+
+def test_the_worst_roll_still_keeps_the_curse(monkeypatch):
+    """★ 최악으로 굴려도 저주는 저주로 남는다.
+
+    **표본에 기대지 않고 최저 굴림을 고정해 본다.** 무작위로 40번 돌면 굴림 폭의
+    바닥값이 안 걸리는 판이 대부분이라, 페널티가 0 이 되는 회귀를 놓친다.
+    """
+    from game.app.items import loot
+    from game.app.items.drops import create_affix_rolls
+    from game.schemas.item import Affix
+
+    monkeypatch.setattr(loot, "get_below", lambda _bound: 0)
+    rolled = create_affix_rolls(
+        (
+            Affix(stat="attack", flat=5, label_ko="묵직함"),
+            Affix(stat="cpu_budget", percent=-25, label_ko="[과부하] 굼뜬 제어"),
+        )
+    )
+    assert rolled[0].flat == 4  # 5 × 80% = 4
+    assert rolled[1].percent == -20  # -25 × 80% = -20. 0 이 되면 페널티가 사라진다
+
+
+def test_a_catalog_without_affixes_stays_bare():
+    """★ 접사가 없는 카탈로그에 굴림이 접사를 만들어 내지 않는다 (물약·두루마리)."""
+    from game.app.items.drops import create_affix_rolls
+
+    assert create_affix_rolls(()) == ()
 
 
 def test_the_pity_stops_at_a_ceiling():

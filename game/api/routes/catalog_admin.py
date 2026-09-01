@@ -47,7 +47,14 @@ from game.app.store.item_catalog import (
     read_generation,
     save_catalog_entry,
 )
-from game.schemas.item import Affix, ItemCatalogEntry, parse_affix
+from game.schemas.item import (
+    COMBAT_STATS,
+    Affix,
+    ItemCatalogEntry,
+    list_grades_above,
+    list_unknown_stats,
+    parse_affix,
+)
 
 router = APIRouter()
 
@@ -102,8 +109,13 @@ def build_admin_row(entry: ItemCatalogEntry, weight: int) -> CatalogAdminRow:
         min_floor=entry.min_floor,
         is_retired=entry.is_retired,
         affixes=[format_affix(a) for a in entry.affixes],
+        affix_rows=[
+            {"stat": a.stat, "flat": a.flat, "percent": a.percent, "label_ko": a.label_ko}
+            for a in entry.affixes
+        ],
         requirements=[f"{r.stat} >= {r.minimum}" for r in entry.requirements],
         grants_skill=entry.grants_skill or "",
+        attack_range=entry.attack_range or 0,
         drop_weight=weight,
     )
 
@@ -124,7 +136,8 @@ def read_catalog_items(account: CurrentAdmin) -> CatalogAdminResponse:
     return CatalogAdminResponse(
         items=[build_admin_row(catalog[key], weights.get(key, 0)) for key in sorted(catalog)],
         generation=read_generation(pool),
-        grades=[code for code, _rank, _label, _low, _high in DEFAULT_GRADES],
+        grades=[code for code, _rank, _label in DEFAULT_GRADES],
+        stats=list(COMBAT_STATS),
     )
 
 
@@ -134,18 +147,22 @@ def apply_drop_entry(catalog_id: str, grade: str) -> None:
     올리지 않으면 등록해도 **굴려서 나오지 않는다.** 등록과 드롭 표를 따로 두면 "왜 안
     나오지" 가 되고, 그 답은 화면 어디에도 없다.
 
+    **등급마다 한 줄씩 올린다.** 카탈로그의 `grade` 는 「이 등급부터」라는 뜻이므로, 한
+    칸에만 올리면 상위 등급을 뽑았을 때 후보가 없어 굴림이 증발한다 (§15.4).
+
     Args:
         catalog_id: 새 아이템.
-        grade: 그 아이템의 등급.
+        grade: 그 아이템의 최저 등급.
     """
     pool = get_pool()
     source_id = save_source(pool, SOURCE_ANY)
     with pool.connection() as connection:
-        connection.execute(
-            "INSERT INTO drop_item_weight (source_id, grade, catalog_id, weight)"
-            " VALUES (%s, %s, %s, 1) ON CONFLICT DO NOTHING",
-            (source_id, grade, catalog_id),
-        )
+        for code in list_grades_above(grade):
+            connection.execute(
+                "INSERT INTO drop_item_weight (source_id, grade, catalog_id, weight)"
+                " VALUES (%s, %s, %s, 1) ON CONFLICT DO NOTHING",
+                (source_id, code, catalog_id),
+            )
 
 
 @router.post("/api/admin/catalog/item", response_model=CatalogAdminResponse)
@@ -317,7 +334,7 @@ def create_catalog_edit(request: CatalogEditRequest, account: CurrentAdmin) -> C
         갱신된 카탈로그.
 
     Raises:
-        HTTPException: 없는 아이템인 경우.
+        HTTPException: 없는 아이템이거나, 정본에 없는 스탯에 접사를 붙인 경우.
     """
     reason = check_reason(request.reason)
     pool = get_pool()
@@ -326,6 +343,16 @@ def create_catalog_edit(request: CatalogEditRequest, account: CurrentAdmin) -> C
         raise HTTPException(status.HTTP_404_NOT_FOUND, "없는 아이템이다")
     # **접사를 안 보내면 지금 것을 그대로 둔다.** 빈 목록을 "접사를 지운다" 로 읽으면
     # 이름만 고치려던 요청이 아이템을 맹탕으로 만든다.
+    affixes = (
+        before.affixes
+        if not request.affixes
+        else tuple(parse_affix(item) for item in request.affixes)
+    )
+    # 등록과 같은 문지기를 둔다. 여기만 비면 **실제로 쓰는 경로**가 검사를 안 받는다 —
+    # 수치를 고치는 일은 등록보다 훨씬 자주 일어난다.
+    unknown = list_unknown_stats(affixes)
+    if unknown:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"모르는 스탯이다: {', '.join(unknown)}")
     save_catalog_entry(
         pool,
         replace(
@@ -333,10 +360,9 @@ def create_catalog_edit(request: CatalogEditRequest, account: CurrentAdmin) -> C
             label_ko=request.label_ko,
             min_floor=request.min_floor,
             grade=request.grade or before.grade,
-            affixes=(
-                before.affixes
-                if not request.affixes
-                else tuple(parse_affix(item) for item in request.affixes)
+            affixes=affixes,
+            attack_range=(
+                before.attack_range if request.attack_range is None else request.attack_range
             ),
         ),
     )

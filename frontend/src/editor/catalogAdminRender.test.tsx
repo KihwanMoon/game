@@ -17,13 +17,15 @@ import {
   CatalogForm,
   buildAffixPayload,
   buildAffixRows,
-  parseAffixLabel,
+  buildRowFromSpec,
+  listAffixStats,
 } from './CatalogAdminPanel'
 import type { CatalogAdminView } from '../storage'
 
 const VIEW: CatalogAdminView = {
   generation: 7,
   grades: ['COMMON', 'FINE', 'RELIC'],
+  stats: ['hp_max', 'attack', 'defense', 'attack_range', 'initiative', 'cpu_budget'],
   items: [
     {
       catalogId: 'helm_iron',
@@ -35,8 +37,10 @@ const VIEW: CatalogAdminView = {
       minFloor: 1,
       isRetired: false,
       affixes: ['튼튼함 +8'],
+      affixRows: [{ stat: 'hp_max', flat: 8, percent: 0, labelKo: '튼튼함' }],
       requirements: [],
       grantsSkill: '',
+      attackRange: 0,
       dropWeight: 1,
     },
     {
@@ -49,9 +53,27 @@ const VIEW: CatalogAdminView = {
       minFloor: 3,
       isRetired: true,
       affixes: [],
+      affixRows: [],
       requirements: [],
       grantsSkill: '',
+      attackRange: 0,
       dropWeight: 0,
+    },
+    {
+      catalogId: 'bow_long',
+      kind: 'EQUIPMENT',
+      labelKo: '장궁',
+      slot: 'WEAPON_MAIN',
+      hands: 'TWO',
+      grade: 'COMMON',
+      minFloor: 1,
+      isRetired: false,
+      affixes: ['날카로움 +3'],
+      affixRows: [{ stat: 'attack', flat: 3, percent: 0, labelKo: '날카로움' }],
+      requirements: [],
+      grantsSkill: '',
+      attackRange: 4,
+      dropWeight: 1,
     },
   ],
 }
@@ -125,7 +147,7 @@ describe('신규 등록 폼', () => {
 
   it('★ id 가 없으면 잠긴다 — 이름 없는 아이템은 원장만 더럽힌다', () => {
     const html = renderToStaticMarkup(
-      <CatalogForm grades={VIEW.grades} onCreate={() => undefined} />,
+      <CatalogForm grades={VIEW.grades} stats={VIEW.stats} onCreate={() => undefined} />,
     )
     expect(html).toContain('disabled')
   })
@@ -138,7 +160,7 @@ describe('신규 등록 폼', () => {
 describe('접사 입력 (JSON 을 손으로 치지 않는다)', () => {
   it('★ 능력치를 목록에서 고른다 — 오타 난 능력치는 아무 효과가 없다', () => {
     const html = renderToStaticMarkup(
-      <CatalogForm grades={VIEW.grades} onCreate={() => undefined} />,
+      <CatalogForm grades={VIEW.grades} stats={VIEW.stats} onCreate={() => undefined} />,
     )
     expect(html).toContain('<select')
     expect(html).toContain('attack_range')
@@ -177,7 +199,13 @@ describe('이름·최소 층 고치기', () => {
     throw new Error('픽스처가 비었다')
   }
   const picked = renderToStaticMarkup(
-    <CatalogDetail row={first} grades={VIEW.grades} onRetire={noop} onEdit={noop} />,
+    <CatalogDetail
+      row={first}
+      grades={VIEW.grades}
+      stats={VIEW.stats}
+      onRetire={noop}
+      onEdit={noop}
+    />,
   )
 
   it('★ 이름 칸이 있다 — 없어서 이름은 고칠 방법이 아예 없었다', () => {
@@ -202,7 +230,13 @@ describe('수치·특성 편집 (설계/4_아이템 §15.11)', () => {
     throw new Error('픽스처가 비었다')
   }
   const html = renderToStaticMarkup(
-    <CatalogDetail row={first} grades={VIEW.grades} onRetire={noop} onEdit={noop} />,
+    <CatalogDetail
+      row={first}
+      grades={VIEW.grades}
+      stats={VIEW.stats}
+      onRetire={noop}
+      onEdit={noop}
+    />,
   )
 
   it('★ 등급을 고를 수 있다 — 인스턴스가 자기 등급을 갖게 된 뒤로 열렸다', () => {
@@ -215,21 +249,98 @@ describe('수치·특성 편집 (설계/4_아이템 §15.11)', () => {
     expect(html).toContain('접사 고치기')
   })
 
-  it('★ 적힌 접사를 다시 칸으로 되돌린다 — 처음부터 다시 치게 하면 아무도 안 고친다', () => {
-    const row = parseAffixLabel('튼튼함 +8')
+  it('★ 편집 칸이 **능력치 축을 그대로** 받는다 — 적힌 문자열에서 되돌리면 축이 사라진다', () => {
+    // 「튼튼함 +8」 에는 hp_max 가 안 담겨 있다. 그것만 보고 칸을 채우면 축이 목록의 첫
+    // 항목으로 떨어지고, 이름만 고치려던 편집이 hp_max 접사를 attack 으로 바꿔 저장한다.
+    const row = buildRowFromSpec({ stat: 'hp_max', flat: 8, percent: 0, labelKo: '튼튼함' })
+    expect(row.stat).toBe('hp_max')
     expect(row.labelKo).toBe('튼튼함')
-    expect(row.flat).toBe('+8')
+    expect(row.flat).toBe('8')
     expect(row.percent).toBe('')
   })
 
-  it('퍼센트 접사도 되돌린다', () => {
-    const row = parseAffixLabel('굼뜬 제어 -25%')
+  it('퍼센트 접사는 퍼센트 칸으로 간다 — 둘 다 채우면 값이 두 번 붙는다', () => {
+    const row = buildRowFromSpec({ stat: 'cpu_budget', flat: 0, percent: -25, labelKo: '굼뜬 제어' })
     expect(row.percent).toBe('-25')
     expect(row.flat).toBe('')
-    expect(row.labelKo).toBe('굼뜬 제어')
+    expect(row.stat).toBe('cpu_budget')
+  })
+})
+
+describe('능력치 목록의 정본 (설계/4_아이템 §9)', () => {
+  it('★ 서버가 준 목록을 쓴다 — 화면이 정본을 들고 있으면 서버가 늘려도 안 보인다', () => {
+    expect(listAffixStats(['attack', 'defense'])).toEqual(['attack', 'defense'])
   })
 
-  it('못 읽는 표기는 이름으로 둔다 — 지우는 것보다 낫다', () => {
-    expect(parseAffixLabel('알 수 없음').labelKo).toBe('알 수 없음')
+  it('서버가 아직 안 줬으면 바닥값으로 그린다 — 빈 칸이 뜨면 아무것도 못 고른다', () => {
+    expect(listAffixStats([]).length).toBeGreaterThan(0)
+  })
+
+  it('★ 서버가 준 이름이 실제로 칸에 뜬다 — 목록만 만들고 안 쓰면 그대로다', () => {
+    const html = renderToStaticMarkup(
+      <CatalogForm grades={VIEW.grades} stats={['probe_stat']} onCreate={() => undefined} />,
+    )
+    expect(html).toContain('probe_stat')
+  })
+})
+
+
+describe('무기 사거리 (설계/4_아이템 §2.2)', () => {
+  const helm = VIEW.items[0]
+  const bow = VIEW.items[2]
+  if (helm === undefined || bow === undefined) {
+    throw new Error('픽스처가 비었다')
+  }
+
+  it('★ 무기에 사거리 칸이 있다 — 접사로 흉내내면 굴림에서 잘려 활이 근접무기가 된다', () => {
+    const html = renderToStaticMarkup(
+      <CatalogDetail
+        row={bow}
+        grades={VIEW.grades}
+        stats={VIEW.stats}
+        onRetire={noop}
+        onEdit={noop}
+      />,
+    )
+    expect(html).toContain('aria-label="사거리"')
+  })
+
+  it('★ 무기가 아니면 사거리 칸이 없다 — 투구의 사거리는 아무 뜻도 없다', () => {
+    const html = renderToStaticMarkup(
+      <CatalogDetail
+        row={helm}
+        grades={VIEW.grades}
+        stats={VIEW.stats}
+        onRetire={noop}
+        onEdit={noop}
+      />,
+    )
+    expect(html).not.toContain('aria-label="사거리"')
+  })
+
+  it('★ 빈 칸은 지금 값을 보여 준다 — 0 으로 보이면 못 때리는 무기로 읽힌다', () => {
+    const html = renderToStaticMarkup(
+      <CatalogDetail
+        row={bow}
+        grades={VIEW.grades}
+        stats={VIEW.stats}
+        onRetire={noop}
+        onEdit={noop}
+      />,
+    )
+    expect(html).toContain('placeholder="4"')
+  })
+
+  it('★ 목록 요약이 사거리를 적는다 — 무기를 고를 때 첫 번째로 궁금한 값이다', () => {
+    const html = renderToStaticMarkup(
+      <CatalogDetail
+        row={bow}
+        grades={VIEW.grades}
+        stats={VIEW.stats}
+        onRetire={noop}
+        onEdit={noop}
+      />,
+    )
+    expect(html).toContain('사거리 4')
   })
 })

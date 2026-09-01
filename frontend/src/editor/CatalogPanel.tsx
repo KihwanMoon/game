@@ -62,7 +62,7 @@ export function ItemDetail(props: { readonly row: CatalogItemRow }): React.JSX.E
     <div className="cat__detail">
       <span className="cat__name">{row.labelKo}</span>
       <ValueExpr
-        text={`${row.kind}${row.slot === '' ? '' : ` · ${row.slot}`}${row.hands === '' ? '' : ` · ${row.hands}`}`}
+        text={`${row.kind}${row.slot === '' ? '' : ` · ${row.slot}`}${row.hands === '' ? '' : ` · ${row.hands}`}${row.attackRange === 0 ? '' : ` · 사거리 ${String(row.attackRange)}`}`}
         size="sm"
         dim
       />

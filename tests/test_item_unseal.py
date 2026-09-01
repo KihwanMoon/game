@@ -45,9 +45,9 @@ def build_headers(token):
 def build_item(client, token, grade):
     """그 등급의 아이템 하나를 가방에 넣는다."""
     from game.api.deps import get_pool
-    from game.app.items.sealed import GRADE_SEALED_SLOTS
     from game.app.store.accounts import find_player_entity
     from game.app.store.items import create_item
+    from game.schemas.item import GRADE_SEALED_SLOTS
 
     account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
     entity_id = find_player_entity(get_pool(), account_id)
@@ -66,7 +66,7 @@ def read_item(entity_id, item_id):
 
 def test_the_grade_decides_how_many_slots(client, token):
     """★ 최저 등급은 고정 옵션만 갖는다 — 등급이 오를수록 하나씩 는다."""
-    from game.app.items.sealed import GRADE_SEALED_SLOTS
+    from game.schemas.item import GRADE_SEALED_SLOTS
 
     assert GRADE_SEALED_SLOTS["COMMON"] == 0
     assert GRADE_SEALED_SLOTS["FINE"] == 1
@@ -188,9 +188,9 @@ def test_a_dropped_item_carries_its_seals(client, token):
 
     from game.api.deps import get_pool
     from game.api.loot_service import create_run_drops
-    from game.app.items.sealed import GRADE_SEALED_SLOTS
     from game.app.store.accounts import find_player_entity
     from game.app.store.drops import save_monster_drop
+    from game.schemas.item import GRADE_SEALED_SLOTS
 
     account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
     entity_id = find_player_entity(get_pool(), account_id)

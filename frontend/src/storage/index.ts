@@ -110,6 +110,7 @@ export type {
   RankEntry,
   AdminCatalog,
   CatalogAdminRow,
+  CatalogAffixSpec,
   ContentAssetView,
   ContentDraftRow,
   ContentDraftView,

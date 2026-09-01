@@ -223,3 +223,51 @@ FROM item_catalog c
 WHERE c.catalog_id = i.catalog_id
   AND i.affixes = '[]'::jsonb
   AND c.affixes <> '[]'::jsonb;
+
+
+-- ── 등급이 뜻하는 것을 하나로 (설계/4_아이템 §15.4, §17) ────────────────
+--
+-- `affix_min`·`affix_max` 는 「등급이 접사 개수를 정한다」의 잔재다. 그 체계는 카탈로그가
+-- 좋은 접사를 먼저 적어 두는 탓에 **잘리는 쪽이 늘 저주였고**, 대검의 과부하와 장궁의
+-- 페널티가 한 번도 발급되지 않았다. 이제 고정 접사는 전부 붙고, 등급이 성능에 하는 일은
+-- 봉인 칸 수 하나뿐이다.
+--
+-- 두 칸은 쓰는 데가 없으면서 정본처럼 보인다 — 다음 사람이 그것을 규칙으로 읽기 전에
+-- 지운다.
+ALTER TABLE item_grade ADD COLUMN IF NOT EXISTS sealed_slots INT NOT NULL DEFAULT 0;
+ALTER TABLE item_grade DROP COLUMN IF EXISTS affix_min;
+ALTER TABLE item_grade DROP COLUMN IF EXISTS affix_max;
+
+
+-- ── 사거리를 무기의 1급 필드로 (설계/4_아이템 §2.2) ─────────────────────
+--
+-- 예전에는 사거리를 접사로 흉내냈다. 접사는 굴림에서 잘릴 수 있어 **활이 근접무기가 되는**
+-- 경로가 있었고, 실제로 장궁은 사거리 접사 하나에 목숨을 걸고 있었다. `hands` 가 손을
+-- 정하듯 사거리도 무기가 정한다.
+ALTER TABLE item_catalog ADD COLUMN IF NOT EXISTS attack_range INT;
+
+-- 씨앗 무기에 사거리를 박고, 그 일을 대신하던 접사를 뺀다. **둘 다 두면 값이 두 번
+-- 붙는다** — 장궁이 4 가 아니라 7 이 된다.
+UPDATE item_catalog SET attack_range = 4 WHERE catalog_id = 'bow_long' AND attack_range IS NULL;
+UPDATE item_catalog SET attack_range = 1
+ WHERE catalog_id IN ('sword_short', 'sword_great') AND attack_range IS NULL;
+
+-- 이미 나온 것에서도 뺀다. 안 빼면 지금 가방에 있는 장궁만 사거리 7 이 된다.
+UPDATE item_catalog
+   SET affixes = (
+       SELECT COALESCE(jsonb_agg(item), '[]'::jsonb)
+         FROM jsonb_array_elements(affixes) AS item
+        WHERE item->>'stat' <> 'attack_range'
+   )
+ WHERE attack_range IS NOT NULL AND affixes @> '[{"stat": "attack_range"}]'::jsonb;
+
+UPDATE item_instance i
+   SET affixes = (
+       SELECT COALESCE(jsonb_agg(item), '[]'::jsonb)
+         FROM jsonb_array_elements(i.affixes) AS item
+        WHERE item->>'stat' <> 'attack_range'
+   )
+  FROM item_catalog c
+ WHERE c.catalog_id = i.catalog_id
+   AND c.attack_range IS NOT NULL
+   AND i.affixes @> '[{"stat": "attack_range"}]'::jsonb;

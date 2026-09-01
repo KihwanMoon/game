@@ -20,7 +20,7 @@ from game.api.schemas import (
 )
 from game.app.items.catalog import find_item as find_catalog_item
 from game.app.items.requirements import check_requirements
-from game.app.items.sealed import GRADE_SEALED_SLOTS, compute_unseal_cost
+from game.app.items.sealed import compute_unseal_cost
 from game.app.items.stats import get_effective_slots
 from game.app.store.accounts import find_player_entity
 from game.app.store.equipment import (
@@ -33,7 +33,7 @@ from game.app.store.equipment import (
     remove_item,
 )
 from game.app.store.items import StoredItem, find_item, list_equipment, list_inventory
-from game.schemas.item import EquipSlot, ItemKind
+from game.schemas.item import GRADE_SEALED_SLOTS, EquipSlot, ItemKind
 
 router = APIRouter()
 

@@ -15,13 +15,13 @@ from fastapi import APIRouter, HTTPException, status
 from game.api.deps import CurrentAccount, get_pool
 from game.api.schemas import ItemActionRequest, WalletResponse
 from game.app.items.sealed import (
-    GRADE_SEALED_SLOTS,
     compute_unseal_cost,
     create_sealed_affix,
 )
 from game.app.store.accounts import find_player_entity
 from game.app.store.equipment import REPAIR_COST, add_currency, read_balance
 from game.app.store.items import apply_unseal, find_item, list_affix_pool, record_item_event
+from game.schemas.item import GRADE_SEALED_SLOTS
 
 router = APIRouter()
 

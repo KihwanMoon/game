@@ -16,7 +16,6 @@ from psycopg_pool import ConnectionPool
 from game.api.deps import get_item_catalog, get_pool
 from game.api.discovery_service import record_item_discovery
 from game.app.items.drops import GRADE_MISS, build_grade_pool, create_affix_rolls, get_weighted
-from game.app.items.sealed import GRADE_SEALED_SLOTS
 from game.app.store.accounts import find_player_entity
 from game.app.store.drops import (
     DEFAULT_GRADE_WEIGHTS,
@@ -32,6 +31,7 @@ from game.app.store.drops import (
 from game.app.store.item_catalog import read_generation
 from game.app.store.items import create_item
 from game.app.store.monsters import load_snapshots
+from game.schemas.item import GRADE_SEALED_SLOTS, list_grades_downward
 
 # 스냅샷에 없는 종의 기준 레벨. 방이 그때 낳은 잡몹은 개체 레벨이 없다.
 FLOOR_LEVEL_STEP = 1
@@ -68,6 +68,77 @@ def find_drop_source(pool: ConnectionPool, kind_id: str) -> tuple[int | None, st
     return find_source(pool, SOURCE_ANY), SOURCE_ANY, ""
 
 
+def find_grade_candidate(
+    pool: ConnectionPool, source_id: int, grade: str, floor: int
+) -> tuple[str, str] | None:
+    """뽑힌 등급부터 **아래로 내려가며** 후보를 찾는다.
+
+    올리지 않고 내리는 이유는 위로 올리면 그것이 공짜 승급이 되기 때문이다. 내려가는
+    것은 손해이므로 남용될 수 없다.
+
+    Args:
+        pool: 연결 풀.
+        source_id: 드롭 소스.
+        grade: 1단계가 뽑은 등급.
+        floor: 지금 층. 아직 안 열린 아이템은 후보에서 빠진다 (D1).
+
+    Returns:
+        (실제로 줄 등급, 아이템 id). 끝까지 없으면 None.
+    """
+    for candidate in list_grades_downward(grade):
+        catalog_id = get_weighted(read_item_weights(pool, source_id, candidate, floor))
+        if catalog_id is not None:
+            return candidate, catalog_id
+    return None
+
+
+def apply_grade_misses(
+    pool: ConnectionPool, account_id: int, entries: tuple[tuple[str, int], ...]
+) -> None:
+    """이번 굴림에서 안 나온 등급들의 천장을 한 칸씩 올린다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 대상 계정.
+        entries: 1단계 저울. 「안 나옴」은 등급이 아니므로 건너뛴다.
+    """
+    for name, _weight in entries:
+        if name != GRADE_MISS:
+            apply_pity(pool, account_id, name, is_hit=False)
+
+
+def create_issued_item(
+    pool: ConnectionPool, entity_id: int, catalog_id: str, context: dict
+) -> tuple[bool, str]:
+    """뽑힌 아이템을 실제로 발급한다.
+
+    Args:
+        pool: 연결 풀.
+        entity_id: 받을 개체.
+        catalog_id: 발급할 아이템.
+        context: grade 와 submission_id 를 담은 절.
+
+    Returns:
+        (손에 들어왔는가, 화면에 적을 한 줄). 가방이 가득 차면 앞이 False 다 — 문자열을
+        보고 판정하면 문구를 고치는 순간 도감이 조용히 어긋난다.
+    """
+    entry = get_item_catalog()[catalog_id]
+    grade = str(context["grade"])
+    item_id = create_item(
+        pool,
+        entity_id,
+        catalog_id,
+        create_affix_rolls(entry.affixes),
+        context.get("submission_id"),
+        grade,
+        # 등급이 봉인 칸을 준다 (§17). 최저 등급은 고정 옵션만 갖는다.
+        GRADE_SEALED_SLOTS.get(grade, 0),
+    )
+    if item_id is None:
+        return False, f"{entry.label_ko} 을(를) 놓쳤다 — 가방이 가득 찼다"
+    return True, f"{entry.label_ko}({grade}) 획득"
+
+
 def create_kill_drop(account_id: int, entity_id: int, context: dict) -> str:
     """처치 하나에 대해 굴리고, 나오면 발급한다.
 
@@ -80,10 +151,9 @@ def create_kill_drop(account_id: int, entity_id: int, context: dict) -> str:
         화면에 적을 한 줄. 아무것도 안 나왔으면 빈 문자열.
     """
     pool = get_pool()
-    kind_id = str(context["kind_id"])
     floor = int(context["floor"])
     level = int(context["level"])
-    source_id, source_kind, source_ref = find_drop_source(pool, kind_id)
+    source_id, source_kind, source_ref = find_drop_source(pool, str(context["kind_id"]))
     fields = {
         "submission_id": context.get("submission_id"),
         "source_kind": source_kind,
@@ -97,45 +167,98 @@ def create_kill_drop(account_id: int, entity_id: int, context: dict) -> str:
         return ""
 
     miss_weight = next(weight for grade, weight, _s in DEFAULT_GRADE_WEIGHTS if grade == GRADE_MISS)
-    pool_entries = build_grade_pool(
+    entries = build_grade_pool(
         read_grade_weights(pool, source_id), miss_weight, level, read_pity(pool, account_id)
     )
-    grade = get_weighted(pool_entries)
-    if grade is None or grade == GRADE_MISS:
-        for name, _weight in pool_entries:
-            if name != GRADE_MISS:
-                apply_pity(pool, account_id, name, is_hit=False)
+    rolled = get_weighted(entries)
+    if rolled is None or rolled == GRADE_MISS:
+        apply_grade_misses(pool, account_id, entries)
         record_roll(pool, account_id, {**fields, "detail": "안 나옴"})
         return ""
-
-    apply_pity(pool, account_id, grade, is_hit=True)
-    catalog_id = get_weighted(read_item_weights(pool, source_id, grade, floor))
-    if catalog_id is None:
-        record_roll(pool, account_id, {**fields, "grade": grade, "detail": "그 등급에 후보가 없다"})
-        return ""
-
-    entry = get_item_catalog()[catalog_id]
-    item_id = create_item(
+    return apply_grade_roll(
         pool,
         entity_id,
-        catalog_id,
-        create_affix_rolls(entry.affixes, grade),
-        context.get("submission_id"),
-        grade,
-        # 등급이 봉인 칸을 준다 (§17). 최저 등급은 고정 옵션만 갖는다.
-        GRADE_SEALED_SLOTS.get(grade, 0),
+        {
+            "account_id": account_id,
+            "rolled": rolled,
+            "entries": entries,
+            "source_id": source_id,
+            "floor": floor,
+            "fields": fields,
+        },
     )
-    detail = "가방이 가득 차 놓쳤다" if item_id is None else ""
+
+
+def apply_grade_roll(pool: ConnectionPool, entity_id: int, context: dict) -> str:
+    """뽑힌 등급으로 아이템을 정하고 천장을 갱신한다.
+
+    **후보가 없으면 천장을 안 태운다.** 예전에는 후보를 찾기 전에 `is_hit=True` 를 눌러,
+    표가 빈 등급을 뽑을 때마다 천장이 0 으로 돌아가고 손에는 아무것도 안 남았다 —
+    프로덕션에서 상급·유물 굴림 26건이 그렇게 사라졌다. 오래 못 받은 사람일수록 그
+    경로를 자주 밟는다.
+
+    Args:
+        pool: 연결 풀.
+        entity_id: 받을 개체.
+        context: account_id·rolled·entries·source_id·floor·fields 를 담은 절.
+
+    Returns:
+        화면에 적을 한 줄. 아무것도 안 나왔으면 빈 문자열.
+    """
+    account_id = int(context["account_id"])
+    rolled = str(context["rolled"])
+    fields = dict(context["fields"])
+    found = find_grade_candidate(pool, int(context["source_id"]), rolled, int(context["floor"]))
+    if found is None:
+        apply_grade_misses(pool, account_id, context["entries"])
+        record_roll(
+            pool, account_id, {**fields, "grade": rolled, "detail": "그 등급에 후보가 없다"}
+        )
+        return ""
+    issued, catalog_id = found
+    apply_pity(pool, account_id, issued, is_hit=True)
+    if issued != rolled:
+        # 강등해서 준 것은 뽑힌 등급을 **받은 것이 아니다.** 천장은 그대로 쌓여야 한다.
+        apply_pity(pool, account_id, rolled, is_hit=False)
+    is_kept, note = create_issued_item(
+        pool, entity_id, catalog_id, {"grade": issued, "submission_id": fields["submission_id"]}
+    )
     record_roll(
         pool,
         account_id,
-        {**fields, "grade": grade, "catalog_id": catalog_id, "detail": detail},
+        {
+            **fields,
+            "grade": issued,
+            "catalog_id": catalog_id,
+            "detail": build_roll_detail(rolled, issued, is_kept),
+        },
     )
-    if item_id is None:
-        return f"{entry.label_ko} 을(를) 놓쳤다 — 가방이 가득 찼다"
-    # 손에 들어온 것만 밝힌다. 놓친 것을 밝히면 도감이 "가진 적 없는 것" 을 연다.
-    record_item_discovery(account_id, catalog_id)
-    return f"{entry.label_ko}({grade}) 획득"
+    if is_kept:
+        # 손에 들어온 것만 밝힌다. 놓친 것을 밝히면 도감이 "가진 적 없는 것" 을 연다.
+        record_item_discovery(account_id, catalog_id)
+    return note
+
+
+def build_roll_detail(rolled: str, issued: str, is_kept: bool) -> str:
+    """원장에 남길 사유 한 줄을 만든다.
+
+    **강등을 원장에 남긴다.** 안 남기면 나중에 분포를 재 볼 때 상급이 실제보다 많이
+    나온 것처럼 보인다.
+
+    Args:
+        rolled: 1단계가 뽑은 등급.
+        issued: 실제로 준 등급.
+        is_kept: 손에 들어왔는가.
+
+    Returns:
+        사유. 특별할 것이 없으면 빈 문자열.
+    """
+    parts = []
+    if issued != rolled:
+        parts.append(f"{rolled} → {issued} 강등")
+    if not is_kept:
+        parts.append("가방이 가득 차 놓쳤다")
+    return ". ".join(parts)
 
 
 def create_run_drops(

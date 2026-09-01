@@ -147,6 +147,8 @@ class CatalogItemRequest(BaseModel):
     requirements: list[dict] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     grants_skill: str | None = None
+    # 무기가 정하는 사거리 (§2.2). None 은 「안 정한다」다 — 0 은 아무것도 못 때리는 무기다.
+    attack_range: int | None = Field(default=None, ge=0, le=20)
     stack_max: int = 1
     # 되돌릴 수 없는 조작이다. 사유 없는 개입은 나중에 아무도 설명할 수 없다.
     reason: str = ""
@@ -172,8 +174,14 @@ class CatalogAdminRow(BaseModel):
     min_floor: int = 1
     is_retired: bool = False
     affixes: list[str] = Field(default_factory=list)
+    # **고치기용 원본 절.** `affixes` 는 「튼튼함 +8」 처럼 적어 둔 것이라 능력치 축이
+    # 안 담긴다. 그것만 보고 편집 칸을 채우면 축을 알 길이 없어 첫 항목으로 떨어지고,
+    # 이름만 고치려던 편집이 `hp_max` 접사를 `attack` 으로 바꿔 저장한다.
+    affix_rows: list[dict] = Field(default_factory=list)
     requirements: list[str] = Field(default_factory=list)
     grants_skill: str = ""
+    # 무기가 정하는 사거리. 0 은 「안 정한다」다 — 화면이 「-」 로 그린다.
+    attack_range: int = 0
     # 이 아이템이 드롭 표에서 갖는 가중치. 0 이면 표에 없다 — 굴려도 안 나온다.
     drop_weight: int = 0
 
@@ -184,6 +192,9 @@ class CatalogAdminResponse(BaseModel):
     items: list[CatalogAdminRow] = Field(default_factory=list)
     generation: int = 0
     grades: list[str] = Field(default_factory=list)
+    # 접사가 붙을 수 있는 스탯. **화면이 목록을 따로 들고 있으면 정본이 둘이 된다** —
+    # 서버가 아는 이름이 늘어도 화면은 옛 목록을 내보이고, 사람은 그것이 전부라고 읽는다.
+    stats: list[str] = Field(default_factory=list)
 
 
 class ContentDraftRequest(BaseModel):
@@ -313,4 +324,7 @@ class CatalogEditRequest(BaseModel):
     min_floor: int = Field(ge=1, le=100)
     grade: str = ""
     affixes: list[dict] = Field(default_factory=list)
+    # 무기 사거리. **안 보내면 지금 값을 그대로 둔다** — 0 을 「안 정함」으로 읽으면
+    # 이름만 고치려던 요청이 활을 근접무기로 만든다.
+    attack_range: int | None = Field(default=None, ge=0, le=20)
     reason: str = ""

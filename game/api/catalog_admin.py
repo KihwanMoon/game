@@ -17,7 +17,7 @@
 
 from dataclasses import replace
 
-from game.schemas.item import ItemCatalogEntry, parse_item
+from game.schemas.item import ItemCatalogEntry, list_unknown_stats, parse_item
 
 # 제자리에서 고칠 수 있는 것. 인스턴스가 자기 접사·등급을 갖게 된 뒤로(§15.11) 목록이
 # 늘었다 — 이 값들은 앞으로 나올 것에만 걸린다.
@@ -29,6 +29,7 @@ MUTABLE_FIELDS = (
     "requirements",
     "tags",
     "grants_skill",
+    "attack_range",
     "stack_max",
     "is_retired",
 )
@@ -68,6 +69,14 @@ def build_entry_from_request(payload: dict) -> ItemCatalogEntry:
         카탈로그 항목.
 
     Raises:
-        ValueError: 장비인데 슬롯이 없는 등 절이 규격을 어긴 경우.
+        ValueError: 장비인데 슬롯이 없거나, 정본에 없는 스탯에 접사를 붙인 경우.
     """
-    return parse_item(payload)
+    entry = parse_item(payload)
+    # **모르는 스탯을 여기서 막는다.** 파서에서 막지 않는 이유는 파일이 앞서 나간
+    # 세대일 수 있어서다 — 그때 터지면 배포 순서 하나로 서버가 안 뜬다. 반면 관리자가
+    # 지금 쓰는 것은 막아야 한다. 오타 하나면 붙어도 아무 효과가 없고, 그 사실이
+    # 어디서도 안 드러난다.
+    unknown = list_unknown_stats(entry.affixes)
+    if unknown:
+        raise ValueError(f"모르는 스탯이다: {', '.join(unknown)}")
+    return entry

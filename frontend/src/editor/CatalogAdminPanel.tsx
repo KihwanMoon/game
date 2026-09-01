@@ -14,7 +14,7 @@
 import { useState } from 'react'
 
 import { Button, CellGrid, GlyphState, Panel, Thumb, ValueExpr } from '../ds'
-import type { CatalogAdminRow, CatalogAdminView } from '../storage'
+import type { CatalogAdminRow, CatalogAdminView, CatalogAffixSpec } from '../storage'
 
 export interface CatalogAdminPanelProps {
   readonly catalog: CatalogAdminView | undefined
@@ -29,6 +29,7 @@ export interface CatalogAdminPanelProps {
 /** 신규 등록 폼이 받는 props. */
 export interface CatalogFormProps {
   readonly grades: readonly string[]
+  readonly stats: readonly string[]
   readonly onCreate: (payload: Record<string, unknown>, reason: string) => void
 }
 
@@ -38,12 +39,16 @@ const SLOTS: readonly string[] = ['WEAPON_MAIN', 'WEAPON_OFF', 'HEAD', 'BODY', '
 const KINDS: readonly string[] = ['EQUIPMENT', 'CONSUMABLE', 'QUEST']
 
 /**
- * 접사가 붙을 수 있는 능력치.
+ * 접사가 붙을 수 있는 능력치의 **바닥값**.
+ *
+ * 정본은 서버가 들고 있고 카탈로그 응답에 실려 온다. 이것은 서버가 아직 안 준 순간에만
+ * 쓴다 — 화면이 목록을 정본으로 삼으면, 서버가 아는 이름이 늘어도 화면은 옛 목록을
+ * 내보이고 사람은 그것이 전부라고 읽는다.
  *
  * 이 목록은 `blocks.json` 의 `rhs_stats` 와 같아야 한다 — 규칙표가 읽지 못하는 능력치에
  * 접사를 붙이면 그 아이템은 성능이 있는데 규칙으로는 안 보인다.
  */
-const AFFIX_STATS: readonly string[] = [
+const FALLBACK_STATS: readonly string[] = [
   'attack',
   'defense',
   'hp_max',
@@ -51,6 +56,16 @@ const AFFIX_STATS: readonly string[] = [
   'cpu_budget',
   'initiative',
 ]
+
+/**
+ * 고를 수 있는 능력치 목록을 정한다.
+ *
+ * @param served 서버가 보낸 정본.
+ * @returns 서버 목록. 비어 있으면 바닥값.
+ */
+export function listAffixStats(served: readonly string[]): readonly string[] {
+  return served.length === 0 ? FALLBACK_STATS : served
+}
 
 const DECIMAL_RADIX = 10
 
@@ -109,16 +124,18 @@ export function buildAffixPayload(rows: readonly AffixRow[]): Record<string, unk
  * @returns 렌더 트리.
  */
 export function CatalogForm(props: CatalogFormProps): React.JSX.Element {
+  const statNames = listAffixStats(props.stats)
   const [id, setId] = useState('')
   const [kind, setKind] = useState('EQUIPMENT')
   const [slot, setSlot] = useState('HEAD')
   const [label, setLabel] = useState('')
   const [grade, setGrade] = useState('COMMON')
   const [minFloor, setMinFloor] = useState('1')
+  const [range, setRange] = useState('')
   // **한 줄로 시작한다.** 빈 채로 시작하면 「접사 추가」를 먼저 찾아야 하고, 그러면
   // 접사가 있다는 것 자체를 모른 채 아이템을 만든다. 안 채운 줄은 어차피 안 보내진다.
   const [affixRows, setAffixRows] = useState<readonly AffixRow[]>([
-    { stat: AFFIX_STATS[0] ?? '', flat: '', percent: '', labelKo: '' },
+    { stat: statNames[0] ?? '', flat: '', percent: '', labelKo: '' },
   ])
   const [reason, setReason] = useState('')
 
@@ -204,6 +221,23 @@ export function CatalogForm(props: CatalogFormProps): React.JSX.Element {
           }}
         />
       </label>
+      {/* 사거리는 무기의 것이다 (§2.2). 접사로 흉내내면 굴림에서 잘려 활이 근접무기가
+          된다. **비워 두면 「안 정한다」** 이고, 0 은 아무것도 못 때리는 무기다. */}
+      {!slot.startsWith('WEAPON') || kind !== 'EQUIPMENT' ? null : (
+        <label className="cat__field">
+          <span>사거리</span>
+          <input
+            className="cat__input"
+            inputMode="numeric"
+            aria-label="사거리"
+            value={range}
+            placeholder="비우면 기본 사거리"
+            onChange={(event) => {
+              setRange(event.target.value)
+            }}
+          />
+        </label>
+      )}
       {/* **접사를 칸으로 받는다.** JSON 을 손으로 치게 하면 따옴표 하나가 틀렸을 때
           서버가 거절하고, 그 사유는 아이템 이야기가 아니라 파서 이야기다. */}
       <span className="cat__name">접사</span>
@@ -217,7 +251,7 @@ export function CatalogForm(props: CatalogFormProps): React.JSX.Element {
               setAffixRows(buildAffixRows(affixRows, index, { stat: event.target.value }))
             }}
           >
-            {AFFIX_STATS.map((name) => (
+            {statNames.map((name) => (
               <option key={name} value={name}>
                 {name}
               </option>
@@ -262,7 +296,7 @@ export function CatalogForm(props: CatalogFormProps): React.JSX.Element {
         onClick={() => {
           setAffixRows([
             ...affixRows,
-            { stat: AFFIX_STATS[0] ?? '', flat: '', percent: '', labelKo: '' },
+            { stat: statNames[0] ?? '', flat: '', percent: '', labelKo: '' },
           ])
         }}
       >
@@ -294,6 +328,7 @@ export function CatalogForm(props: CatalogFormProps): React.JSX.Element {
               hands: slot.startsWith('WEAPON') ? 'ONE' : null,
               grade,
               min_floor: Number.parseInt(minFloor, 10) || 1,
+              attack_range: range.trim() === '' ? null : Number.parseInt(range, DECIMAL_RADIX),
               affixes: buildAffixPayload(affixRows),
             },
             reason,
@@ -314,6 +349,7 @@ export interface CatalogDetailProps {
   readonly onRetire: (catalogId: string, isRetired: boolean, reason: string) => void
   readonly onEdit: (catalogId: string, patch: Record<string, unknown>, reason: string) => void
   readonly grades: readonly string[]
+  readonly stats: readonly string[]
 }
 
 /**
@@ -327,9 +363,11 @@ export interface CatalogDetailProps {
  */
 export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
   const { row } = props
+  const statNames = listAffixStats(props.stats)
   const [reason, setReason] = useState('')
   const [label, setLabel] = useState('')
   const [floor, setFloor] = useState('')
+  const [range, setRange] = useState('')
   const [grade, setGrade] = useState('')
   // **안 건드리면 접사를 안 보낸다.** 서버는 빈 목록을 "안 바꾼다" 로 읽으므로, 화면이
   // "고쳤다" 와 "안 건드렸다" 를 스스로 구분해야 한다.
@@ -339,7 +377,7 @@ export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
     <div className="cat__detail">
       <span className="cat__name">{row.catalogId}</span>
       <ValueExpr
-        text={`${row.kind}${row.slot === '' ? '' : ` · ${row.slot}`} · ${row.grade} · ${String(row.minFloor)}층~`}
+        text={`${row.kind}${row.slot === '' ? '' : ` · ${row.slot}`} · ${row.grade} · ${String(row.minFloor)}층~${row.attackRange === 0 ? '' : ` · 사거리 ${String(row.attackRange)}`}`}
         size="sm"
         dim
       />
@@ -397,6 +435,23 @@ export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
           }}
         />
       </label>
+      {/* 무기만 사거리를 갖는다 (§2.2). **비워 두면 지금 값을 그대로 둔다** — 빈 칸을
+          0 으로 읽으면 이름만 고치려던 편집이 활을 아무것도 못 때리는 것으로 만든다. */}
+      {!row.slot.startsWith('WEAPON') ? null : (
+        <label className="cat__field">
+          <span>사거리</span>
+          <input
+            className="cat__input"
+            inputMode="numeric"
+            value={range}
+            placeholder={row.attackRange === 0 ? '기본 사거리' : String(row.attackRange)}
+            aria-label="사거리"
+            onChange={(event) => {
+              setRange(event.target.value)
+            }}
+          />
+        </label>
+      )}
 
       {/* 등급과 접사를 여기서 고친다 (§15.11). 인스턴스가 자기 값을 갖게 된 뒤로 이
           수정이 이미 나온 아이템에 소급하지 않는다 — 앞으로 나올 것에만 걸린다. */}
@@ -423,9 +478,9 @@ export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
           title="접사를 고친다 — 지금 값에서 시작한다"
           onClick={() => {
             setAffixRows(
-              row.affixes.length === 0
-                ? [{ stat: AFFIX_STATS[0] ?? '', flat: '', percent: '', labelKo: '' }]
-                : row.affixes.map(parseAffixLabel),
+              row.affixRows.length === 0
+                ? [{ stat: statNames[0] ?? '', flat: '', percent: '', labelKo: '' }]
+                : row.affixRows.map(buildRowFromSpec),
             )
           }}
         >
@@ -443,7 +498,7 @@ export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
                   setAffixRows(buildAffixRows(affixRows, index, { stat: event.target.value }))
                 }}
               >
-                {AFFIX_STATS.map((name) => (
+                {statNames.map((name) => (
                   <option key={name} value={name}>
                     {name}
                   </option>
@@ -487,7 +542,7 @@ export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
             onClick={() => {
               setAffixRows([
                 ...affixRows,
-                { stat: AFFIX_STATS[0] ?? '', flat: '', percent: '', labelKo: '' },
+                { stat: statNames[0] ?? '', flat: '', percent: '', labelKo: '' },
               ])
             }}
           >
@@ -508,6 +563,10 @@ export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
                 label_ko: label === '' ? row.labelKo : label,
                 min_floor: Number.parseInt(floor, DECIMAL_RADIX) || row.minFloor,
                 grade: grade === '' ? row.grade : grade,
+                // 빈 칸은 「안 바꾼다」다. 0 으로 보내면 활이 아무것도 못 때리게 된다.
+                ...(range.trim() === ''
+                  ? {}
+                  : { attack_range: Number.parseInt(range, DECIMAL_RADIX) }),
                 ...(affixRows === undefined ? {} : { affixes: buildAffixPayload(affixRows) }),
               },
               reason,
@@ -601,12 +660,17 @@ export function CatalogAdminPanel(props: CatalogAdminPanelProps): React.JSX.Elem
           emptyText="카탈로그가 비어 있다"
         />
 
-        <CatalogForm grades={catalog.grades} onCreate={props.onCreate} />
+        <CatalogForm
+          grades={catalog.grades}
+          stats={catalog.stats}
+          onCreate={props.onCreate}
+        />
 
         {row === undefined ? null : (
           <CatalogDetail
             row={row}
             grades={catalog.grades}
+            stats={catalog.stats}
             onRetire={props.onRetire}
             onEdit={props.onEdit}
           />
@@ -618,24 +682,21 @@ export function CatalogAdminPanel(props: CatalogAdminPanelProps): React.JSX.Elem
 
 
 /**
- * 화면에 적힌 접사 한 줄을 다시 칸으로 되돌린다.
+ * 서버가 보낸 접사 절을 편집 칸으로 옮긴다.
  *
- * 서버가 접사를 「튼튼함 +8」 처럼 **적어서** 보내므로, 고치려면 그것을 다시 갈라야 한다.
- * 원본 절을 함께 보내면 이 되돌리기가 필요 없지만, 그러면 목록 응답이 두 배로 무거워진다.
+ * **적어 둔 문자열에서 되돌리지 않는다.** 「튼튼함 +8」 에는 능력치 축이 안 담겨 있어,
+ * 되돌리면 축이 목록의 첫 항목으로 떨어진다 — 이름만 고치려던 편집이 `hp_max` 접사를
+ * `attack` 으로 바꿔 저장하고, 그 사실은 저장한 뒤에야 드러난다.
  *
- * @param text 「이름 +8」 또는 「이름 -25%」.
- * @returns 접사 줄. 못 읽으면 이름만 채운 줄.
+ * @param spec 서버가 보낸 접사 절.
+ * @returns 편집 칸 한 줄. 0 은 빈 칸으로 둔다 — 안 그러면 고정과 퍼센트가 둘 다 채워진
+ *   것처럼 보인다.
  */
-export function parseAffixLabel(text: string): AffixRow {
-  const matched = /^(.*)\s([+-]\d+)(%?)$/.exec(text.trim())
-  if (matched === null) {
-    return { stat: AFFIX_STATS[0] ?? '', flat: '', percent: '', labelKo: text }
-  }
-  const [, name, amount, percent] = matched
+export function buildRowFromSpec(spec: CatalogAffixSpec): AffixRow {
   return {
-    stat: AFFIX_STATS[0] ?? '',
-    flat: percent === '%' ? '' : (amount ?? ''),
-    percent: percent === '%' ? (amount ?? '') : '',
-    labelKo: (name ?? '').trim(),
+    stat: spec.stat,
+    flat: spec.flat === 0 ? '' : String(spec.flat),
+    percent: spec.percent === 0 ? '' : String(spec.percent),
+    labelKo: spec.labelKo,
   }
 }

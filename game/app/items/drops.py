@@ -16,7 +16,7 @@
 import secrets
 
 from game.app.items.loot import convert_affix_roll
-from game.schemas.item import GRADE_AFFIX_ROLLS, Affix
+from game.schemas.item import Affix
 
 # 아무것도 안 나온 몫. 등급과 같은 저울에 올리려면 이름이 하나 필요하다.
 GRADE_MISS = "MISS"
@@ -120,19 +120,19 @@ def build_grade_pool(
     return tuple(sorted(pool))
 
 
-def create_affix_rolls(affixes: tuple[Affix, ...], grade: str) -> tuple[Affix, ...]:
-    """등급이 정한 개수만큼 접사를 굴린다 (§15.4).
+def create_affix_rolls(affixes: tuple[Affix, ...]) -> tuple[Affix, ...]:
+    """카탈로그의 고정 접사를 **전부** 값만 흔들어 발급한다 (§15.4).
 
-    **등급이 접사 개수를 정한다.** 이름표로만 두면 「유물 단검」이 「보통 단검」보다
-    나은 점이 없어 등급이 뜻을 잃는다.
+    **등급을 안 받는다.** 예전에는 등급이 개수를 정해 앞에서 잘랐는데, 카탈로그가 좋은
+    접사를 먼저 적어 두므로 **잘리는 쪽이 늘 저주였다** — 대검의 과부하와 장궁의 페널티가
+    한 번도 발급되지 않았다. 고정 옵션은 고정이어야 트레이드오프가 성립한다.
+
+    등급이 성능에 하는 일은 봉인 칸 수 하나뿐이다 (§17).
 
     Args:
         affixes: 카탈로그의 기준 접사.
-        grade: 굴린 등급.
 
     Returns:
-        굴린 접사들.
+        값이 흔들린 접사들. 개수는 카탈로그와 같다.
     """
-    low, high = GRADE_AFFIX_ROLLS.get(grade, (1, 1))
-    count = low + get_below(high - low + 1)
-    return tuple(convert_affix_roll(item) for item in affixes[:count])
+    return tuple(convert_affix_roll(item) for item in affixes)

@@ -1275,6 +1275,8 @@ export interface CatalogItemRow {
   readonly slot: string
   readonly hands: string
   readonly grantsSkill: string
+  /** 무기가 정하는 사거리 (§2.2). 0 은 「안 정한다」다 — 화면이 「-」 로 그린다. */
+  readonly attackRange: number
   readonly affixes: readonly string[]
   readonly requirements: readonly string[]
 }
@@ -1434,8 +1436,23 @@ export interface CatalogAdminRow {
   readonly affixes: readonly string[]
   readonly requirements: readonly string[]
   readonly grantsSkill: string
+  /** 무기가 정하는 사거리 (§2.2). 0 은 「안 정한다」다 — 화면이 안 그린다. */
+  readonly attackRange: number
   /** 드롭 표의 가중치. 0 이면 표에 없다 — 굴려도 안 나온다. */
   readonly dropWeight: number
+  /**
+   * 고치기용 원본 절. `affixes` 는 적어 둔 것이라 능력치 축이 안 담긴다 — 그것만 보고
+   * 편집 칸을 채우면 이름만 고치려던 편집이 축까지 바꿔 저장한다.
+   */
+  readonly affixRows: readonly CatalogAffixSpec[]
+}
+
+/** 접사 한 줄의 원본 절. */
+export interface CatalogAffixSpec {
+  readonly stat: string
+  readonly flat: number
+  readonly percent: number
+  readonly labelKo: string
 }
 
 /** 카탈로그 관리 화면 하나. */
@@ -1444,6 +1461,13 @@ export interface CatalogAdminView {
   /** 카탈로그 세대. 코어 버전의 `i` 축이며, 고치면 시즌이 갈린다. */
   readonly generation: number
   readonly grades: readonly string[]
+  /**
+   * 접사가 붙을 수 있는 능력치. **서버가 정본을 들고 있다.**
+   *
+   * 화면이 목록을 따로 박아 두면 정본이 둘이 되고, 서버가 아는 이름이 늘어도 화면은 옛
+   * 목록을 내보인다 — 사람은 그것이 전부라고 읽는다.
+   */
+  readonly stats: readonly string[]
 }
 
 /**
@@ -1467,10 +1491,18 @@ function readCatalogAdmin(raw: Record<string, unknown>): CatalogAdminView {
       affixes: (row.affixes ?? []) as string[],
       requirements: (row.requirements ?? []) as string[],
       grantsSkill: String(row.grants_skill ?? ''),
+      attackRange: Number(row.attack_range ?? 0),
       dropWeight: Number(row.drop_weight ?? 0),
+      affixRows: ((row.affix_rows ?? []) as Record<string, unknown>[]).map((spec) => ({
+        stat: String(spec.stat ?? ''),
+        flat: Number(spec.flat ?? 0),
+        percent: Number(spec.percent ?? 0),
+        labelKo: String(spec.label_ko ?? ''),
+      })),
     })),
     generation: Number(raw.generation ?? 0),
     grades: (raw.grades ?? []) as string[],
+    stats: (raw.stats ?? []) as string[],
   }
 }
 
@@ -1562,6 +1594,7 @@ export async function readAdminCatalog(token: string): Promise<AdminCatalog | un
         slot: String(item.slot),
         hands: String(item.hands),
         grantsSkill: String(item.grants_skill),
+        attackRange: Number(item.attack_range ?? 0),
         affixes: [...item.affixes],
         requirements: [...item.requirements],
       }

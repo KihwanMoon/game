@@ -10,15 +10,7 @@
 """
 
 from game.app.items.drops import get_below, get_weighted
-from game.schemas.item import GRADE_COMMON, GRADE_FINE, GRADE_RELIC, Affix
-
-# 등급이 주는 봉인 칸 수. **최저 등급은 고정 옵션만 갖는다** — 등급이 오를수록 하나씩
-# 는다는 것이 등급 체계의 뜻이다.
-GRADE_SEALED_SLOTS: dict[str, int] = {
-    GRADE_COMMON: 0,
-    GRADE_FINE: 1,
-    GRADE_RELIC: 2,
-}
+from game.schemas.item import Affix
 
 # 한 칸을 여는 값. **뒤 칸이 비싸다** — 같은 값이면 유물의 두 칸이 상급의 한 칸보다
 # 싸게 먹히고, 그러면 등급이 비용에서 뜻을 잃는다. 밸런스는 나중에 정한다.

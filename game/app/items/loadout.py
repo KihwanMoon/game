@@ -10,18 +10,8 @@
 from game.app.items.stats import StatDelta, compute_final_stat, get_effective_slots
 from game.app.progression.attributes import build_attribute_bonus
 from game.app.progression.levels import build_growth
-from game.schemas.item import EquipSlot, ItemCatalogEntry
+from game.schemas.item import COMBAT_STATS, EquipSlot, ItemCatalogEntry
 from game.schemas.loadout import BASE_SKILLS, PlayerLoadout
-
-# 합산 대상 스탯. 여기 없는 스탯은 접사가 붙어도 전투에 반영되지 않는다.
-COMBAT_STATS: tuple[str, ...] = (
-    "hp_max",
-    "attack",
-    "defense",
-    "attack_range",
-    "initiative",
-    "cpu_budget",
-)
 
 PERCENT_BASE = 100
 
@@ -54,6 +44,7 @@ def build_player_loadout(
         확정된 전투 입력.
     """
     growth = build_growth(level)
+    base_stats = merge_weapon_range(base_stats, equipped)
     bonus = build_attribute_bonus(stats or {})
     totals: dict[str, StatDelta] = {}
     skills = set(BASE_SKILLS)
@@ -95,6 +86,30 @@ def build_player_loadout(
         # 정렬해서 담는다. 집합 순회 순서가 티켓에 새어 나가면 안 된다 (R5).
         skills=tuple(sorted(skills)),
     )
+
+
+def merge_weapon_range(
+    base_stats: dict[str, int], equipped: dict[EquipSlot, ItemCatalogEntry]
+) -> dict[str, int]:
+    """주무기가 정한 사거리로 기본값을 갈아 끼운다 (§2.2).
+
+    **더하지 않고 대체한다.** 더하면 활을 들었을 때 맨손 사거리가 얹혀서, 같은 활이
+    캐릭터의 기본값에 따라 다른 사거리를 낸다. 무기가 사거리를 정한다는 말은 기본값을
+    **대신한다**는 뜻이다. 접사는 그 위에 더한다 — 그것이 「먼 사거리」 접사의 자리다.
+
+    보조 무기는 안 본다. 방패가 사거리를 정하면 한 캐릭터에 사거리가 둘이 된다.
+
+    Args:
+        base_stats: balance.json 의 플레이어 기본 스탯.
+        equipped: 슬롯에서 착용 중인 항목으로의 대응표.
+
+    Returns:
+        사거리만 갈아 끼운 새 대응표. 주무기가 사거리를 안 정하면 받은 것 그대로다.
+    """
+    main = equipped.get(EquipSlot.WEAPON_MAIN)
+    if main is None or main.attack_range is None:
+        return base_stats
+    return {**base_stats, "attack_range": main.attack_range}
 
 
 def merge_consumables(base_stats: dict[str, int], carried: dict[str, int]) -> dict[str, int]:

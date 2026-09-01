@@ -60,6 +60,9 @@ def build_item_rows(catalog: dict) -> list[dict]:
                 "slot": str(entry.slot) if entry.slot else "",
                 "hands": str(entry.hands) if entry.hands else "",
                 "grants_skill": entry.grants_skill or "",
+                # 사거리는 무기를 고를 때 첫 번째로 궁금한 값이다 (§2.2). 접사였을 때는
+                # 「먼 사거리 +3」 처럼 보여서 무엇에 더하는 3 인지 알 수 없었다.
+                "attack_range": entry.attack_range or 0,
                 "affixes": [format_affix(a) for a in entry.affixes],
                 "requirements": [f"{c.stat} >= {c.minimum}" for c in entry.requirements],
             }

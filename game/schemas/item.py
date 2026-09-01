@@ -83,17 +83,82 @@ class Affix:
     label_ko: str = ""
 
 
+# **접사가 붙을 수 있는 스탯의 정본이다.** 여기 없는 이름은 접사로 붙여도 합산에
+# 들어가지 않는다 — 오타 하나가 아무 효과 없는 접사를 만들고, 그것이 어디서도 안 걸렸다.
+# 로드아웃 합산·관리자 편집·봉인 옵션 풀이 전부 이 목록 하나를 본다.
+#
+# **순서가 뜻을 갖는다.** 로드아웃이 이 순서로 최종 스탯표를 만든다 (R5).
+COMBAT_STATS: tuple[str, ...] = (
+    "hp_max",
+    "attack",
+    "defense",
+    "attack_range",
+    "initiative",
+    "cpu_budget",
+)
+
+
+def list_unknown_stats(affixes: tuple[Affix, ...]) -> tuple[str, ...]:
+    """정본에 없는 스탯 이름을 모은다.
+
+    Args:
+        affixes: 검사할 접사들.
+
+    Returns:
+        모르는 이름들. 이름 순으로 정렬돼 있고 중복이 없다. 전부 아는 이름이면 빈 튜플.
+    """
+    return tuple(sorted({item.stat for item in affixes if item.stat not in COMBAT_STATS}))
+
+
 # 등급 코드 (결정 #42). 셋을 넘기면 괘선 굵기 표기가 부족해진다.
 GRADE_COMMON = "COMMON"
 GRADE_FINE = "FINE"
 GRADE_RELIC = "RELIC"
 
-# 등급별 접사 굴림 수. 등급이 성능을 정하는 유일한 자리다 (§15.4).
-GRADE_AFFIX_ROLLS: dict[str, tuple[int, int]] = {
-    GRADE_COMMON: (1, 1),
-    GRADE_FINE: (1, 2),
-    GRADE_RELIC: (2, 3),
+# 등급이 주는 봉인 칸 수 (§17). **등급이 성능에 하는 일은 이것 하나뿐이다** — 최저
+# 등급은 고정 옵션만 갖고, 등급이 오를수록 칸이 하나씩 는다.
+GRADE_SEALED_SLOTS: dict[str, int] = {
+    GRADE_COMMON: 0,
+    GRADE_FINE: 1,
+    GRADE_RELIC: 2,
 }
+
+# 등급 순서. **낮은 것이 앞이다.** 카탈로그의 `grade` 는 「이 등급부터 나온다」이고,
+# 드롭표를 깔 때 이 순서로 위쪽 등급까지 줄을 만든다 (§15.4).
+GRADE_ORDER: tuple[str, ...] = (GRADE_COMMON, GRADE_FINE, GRADE_RELIC)
+
+
+def list_grades_above(grade: str) -> tuple[str, ...]:
+    """그 등급과 그 위 등급들을 낮은 것부터 돌려준다.
+
+    Args:
+        grade: 기준 등급. 모르는 값이면 전체를 돌려준다 — 데이터가 앞서 나갔을 때
+            아이템이 아예 안 나오는 것보다 낫다.
+
+    Returns:
+        등급 코드들. 낮은 것이 앞이다.
+    """
+    if grade not in GRADE_ORDER:
+        return GRADE_ORDER
+    return GRADE_ORDER[GRADE_ORDER.index(grade) :]
+
+
+def list_grades_downward(grade: str) -> tuple[str, ...]:
+    """그 등급부터 아래로, **높은 것부터** 돌려준다.
+
+    뽑힌 등급에 후보가 없을 때 강등해 가며 찾는 데 쓴다. 위로 올리지 않는 이유는 그것이
+    공짜 승급이 되기 때문이다.
+
+    Args:
+        grade: 뽑힌 등급. 모르는 값이면 그 하나뿐이다 — 모르는 등급에서 아무 데로나
+            내려가면 데이터 오타가 유물 지급이 된다.
+
+    Returns:
+        등급 코드들. 높은 것이 앞이다.
+    """
+    if grade not in GRADE_ORDER:
+        return (grade,)
+    return tuple(reversed(GRADE_ORDER[: GRADE_ORDER.index(grade) + 1]))
 
 
 @dataclass(frozen=True)
@@ -111,9 +176,19 @@ class ItemCatalogEntry:
     # 이 장비가 여는 스킬 (결정 #13). 장비는 전투 전에 캐릭터로 녹으므로, 스킬도
     # 규칙표가 직접 장비를 보는 것이 아니라 **캐릭터가 그것을 갖게** 되는 방식이다.
     grants_skill: str | None = None
+    # **무기가 가진 사거리** (§2.2). `hands` 와 같은 급이다 — 예전에는 접사로 흉내냈는데,
+    # 접사는 굴림에서 잘릴 수 있어 **활이 근접무기가 되는** 경로가 있었다. 주무기의 이
+    # 값이 기본 사거리를 대체하고, 접사는 그 위에 더한다.
+    #
+    # None 은 "이 아이템은 사거리를 안 정한다" 다. 0 과 구분해야 한다 — 0 은 아무것도
+    # 못 때리는 무기다.
+    attack_range: int | None = None
     tags: tuple[str, ...] = field(default_factory=tuple)
-    # 등급 (결정 #42). 접사 굴림 수를 이것이 정한다 — 이름표로만 두면 「유물 단검」이
-    # 「보통 단검」보다 나은 점이 없어 등급이 뜻을 잃는다 (설계/4_아이템 §15.4).
+    # **이 등급부터 나온다** (결정 #42). `min_floor` 가 층에 대해 하는 일을 등급에
+    # 대해 한다 — 인스턴스의 등급은 굴려서 정해지고 이것보다 낮아지지 않는다.
+    #
+    # 등급이 성능에 하는 일은 **봉인 칸 수 하나뿐이다** (§17). 접사 개수를 등급이
+    # 정하게 두면 「고정 옵션」이 무작위가 되어 봉인과 뜻이 겹친다.
     grade: str = GRADE_COMMON
     # 이 층부터 나온다 (D1). 1층에서 유물이 나오면 깊이 들어갈 이유가 없다.
     min_floor: int = 1
@@ -180,6 +255,7 @@ def parse_item(raw: dict) -> ItemCatalogEntry:
         requirements=tuple(parse_requirement(item) for item in raw.get("requirements", [])),
         stack_max=int(raw.get("stack_max", 1)),
         grants_skill=raw.get("grants_skill"),
+        attack_range=(int(raw["attack_range"]) if raw.get("attack_range") is not None else None),
         tags=tuple(raw.get("tags", [])),
         # 등급이 없는 절은 보통으로 읽는다. 스냅샷 파일이 등급 이전 세대일 수 있고,
         # 그때 터지면 배포 순서 하나로 서버가 안 뜬다.
@@ -223,6 +299,8 @@ def build_item_payload(entry: ItemCatalogEntry) -> dict:
         payload["stack_max"] = entry.stack_max
     if entry.grants_skill:
         payload["grants_skill"] = entry.grants_skill
+    if entry.attack_range is not None:
+        payload["attack_range"] = entry.attack_range
     if entry.tags:
         payload["tags"] = list(entry.tags)
     if entry.is_retired:
