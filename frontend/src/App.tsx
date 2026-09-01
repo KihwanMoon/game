@@ -32,17 +32,22 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { BattleView, checkOngoing, type BattleSetup, type ChainPosition } from './battle'
 import {
-  BALANCE,
-  BLOCK_CATALOG,
-  CONTENT_VERSIONS,
-  ENEMY_RULESETS,
   G0_RULESETS,
   ALL_ITEM_TAGS,
   ALL_SKILL_IDS,
-  ROOM_TEMPLATES,
   RULE_TEMPLATES,
   TUTORIAL_STAGES,
 } from './core/resources'
+// 지금 도는 자산은 팩에서 읽는다 (설계/4_아이템 §18). 번들은 폴백이고, 서버가
+// 발행하면 이 값들이 그쪽을 가리킨다. 예시 규칙표·튜토리얼·태그는 화면의 것이라
+// 번들에 남는다 — 발행 대상이 아니다.
+import { readActivePack } from './content/pack'
+
+const ACTIVE = readActivePack()
+const BLOCK_CATALOG = ACTIVE.catalog
+const ROOM_TEMPLATES = ACTIVE.rooms
+const ENEMY_RULESETS = ACTIVE.enemies
+const BALANCE = ACTIVE.balance
 import type { RawBalanceFile } from './core/resources'
 import { validateRuleSet } from './core/rules/validator'
 import type { RuleSet } from './core/schemas'
@@ -152,7 +157,7 @@ import {
   type MetaSave,
   type TutorialStage,
 } from './core/schemas'
-import { MAX_SEED, buildCoreVersion, createLocalTicket, type RunTicket } from './core/schemas'
+import { MAX_SEED, createLocalTicket, type RunTicket } from './core/schemas'
 import { adoptServerMeta, applyRunSummary } from './core/services/manageMeta'
 import { buildRunSummary, listEncounteredRulesets } from './core/services/runSummary'
 import { parseBalance } from './core/services/runBattle'
@@ -471,7 +476,9 @@ export function App(): React.JSX.Element {
   const balanceData = useMemo(() => parseBalance(BALANCE), [])
   // 코어 버전은 자산 여섯 세대와 엔진의 조합이다. 하나라도 바뀌면 과거 기록이
   // 재현되지 않으므로 랭킹 시즌이 갈린다 (docs/설계/1 §2).
-  const coreVersion = useMemo(() => buildCoreVersion(CONTENT_VERSIONS), [])
+  // 서버가 준 코어 버전을 그대로 쓴다. 브라우저가 다시 조립하면 두 곳이 갈리고,
+  // 갈린 티켓은 제출에서 거절된다. 번들로 돌 때는 팩이 스스로 조립한 값이다.
+  const coreVersion = useMemo(() => ACTIVE.coreVersion, [])
   const problems = useMemo(
     () => validateRuleSet(ruleset, BLOCK_CATALOG, limits.cpuBudget, limits.ruleSlots),
     [ruleset, limits],

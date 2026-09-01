@@ -82,6 +82,7 @@ export {
   readContentAdmin,
   readContentAsset,
   applyContentAdmin,
+  applyContentPublish,
   applyCatalogAdmin,
   readAdminOverview,
   readProgress,

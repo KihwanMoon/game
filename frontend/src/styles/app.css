@@ -111,3 +111,53 @@ body {
   line-height: var(--lh-data);
   color: var(--text-danger);
 }
+
+/* ── 관리 화면 (/admin.html) ────────────────────────────────────────────
+   게임 화면과 갈라 둔 이유는 폭이다 — 표와 격자가 폭을 다 써야 한다. */
+.adm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-block-size: 100vh;
+  padding: var(--sp-3);
+  background: var(--surface-base);
+}
+
+.adm__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  padding-bottom: var(--sp-2);
+  border-bottom: var(--bw) solid var(--line);
+}
+
+.adm__title {
+  color: var(--text-display);
+  font-family: var(--font-display);
+  font-size: var(--fs-display-s);
+  letter-spacing: var(--ls-display);
+}
+
+.adm__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin-left: auto;
+}
+
+.adm__notice,
+.adm__publish {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border: var(--bw) solid var(--line-accent);
+  border-radius: var(--radius);
+}
+
+.adm__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}

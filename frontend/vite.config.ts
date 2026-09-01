@@ -41,6 +41,7 @@ export default defineConfig({
         ds: fileURLToPath(new URL('ds.html', import.meta.url)),
         battle: fileURLToPath(new URL('battle.html', import.meta.url)),
         hud: fileURLToPath(new URL('hud.html', import.meta.url)),
+        admin: fileURLToPath(new URL('admin.html', import.meta.url)),
       },
     },
   },

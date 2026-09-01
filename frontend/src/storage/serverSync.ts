@@ -1558,3 +1558,35 @@ export async function readAdminCatalog(token: string): Promise<AdminCatalog | un
     },
   }
 }
+
+
+/**
+ * 쌓인 초안을 발행한다 (설계/4_아이템 §18).
+ *
+ * **세대를 받아 그대로 보낸다.** 브라우저가 정하면 관리자가 모르는 값으로 시즌이 갈린다.
+ *
+ * @param token 기기 토큰.
+ * @param generation 발행 세대.
+ * @param note 사유.
+ * @returns 갱신된 초안 목록과 거절 사유.
+ */
+export async function applyContentPublish(
+  token: string,
+  generation: number,
+  note: string,
+): Promise<{ view: ContentDraftView | undefined; detail: string }> {
+  const response = await sendRequest('/admin/content/publish', {
+    method: 'POST',
+    headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ generation, note }),
+  })
+  if (response === undefined) {
+    return { view: undefined, detail: '서버에 닿지 못했다' }
+  }
+  const raw = (await response.json()) as Record<string, unknown>
+  if (!response.ok) {
+    return { view: undefined, detail: String(raw.detail ?? '거절됐다') }
+  }
+  // 발행 뒤에는 초안이 비어 있다. 목록을 다시 읽어 화면이 그것을 알게 한다.
+  return { view: await readContentAdmin(token), detail: '' }
+}
