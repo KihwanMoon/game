@@ -95,6 +95,35 @@ DEPTH_CASES = (
     ("spring_camp", "spring_bait", 3007, 3),
 )
 
+# 새 방 20개 (로드맵 W3). **골든이 모든 방을 덮어야 한다** — 방마다 지형이 다르고,
+# 지형은 시야·경로·포위도가 갈리는 자리다. 한 방이라도 빠지면 그 방에서 두 코어가
+# 어긋나도 골든이 침묵한다.
+#
+# 각 방을 자기 `min_floor` 에서 돌린다. 그 층에서 실제로 나오는 방이므로, 층 스케일이
+# 얹힌 채로 대조하는 것이 맞다. (규칙표 id, 방 id, 시드, 층).
+NEW_ROOM_CASES = (
+    ("g0_pressure", "twin_door", 5100, 1),
+    ("g0_kite", "narrow_cross", 5137, 1),
+    ("g0_cover", "open_pit", 5174, 2),
+    ("g0_pressure", "cover_row", 5211, 2),
+    ("g0_kite", "archer_nest", 5248, 3),
+    ("g0_cover", "bomb_alley", 5285, 3),
+    ("g0_pressure", "thorn_maze", 5322, 4),
+    ("g0_kite", "spring_alcove", 5359, 4),
+    ("g0_cover", "lava_bridge", 5396, 5),
+    ("g0_pressure", "summon_pit", 5433, 5),
+    ("g0_kite", "mender_wall", 5470, 6),
+    ("g0_cover", "crossfire", 5507, 6),
+    ("g0_pressure", "veteran_hall", 5544, 7),
+    ("g0_kite", "bomb_garden", 5581, 7),
+    ("g0_cover", "long_gallery", 5618, 8),
+    ("g0_pressure", "double_summon", 5655, 8),
+    ("g0_kite", "gauntlet", 5692, 9),
+    ("g0_cover", "lava_ring", 5729, 9),
+    ("g0_pressure", "spring_trap", 5766, 10),
+    ("g0_kite", "last_gate", 5803, 10),
+)
+
 # 덧붙일 적이 없는 조합이 쓰는 빈 목록.
 NO_EXTRAS: tuple[tuple[str, int, int], ...] = ()
 
@@ -140,7 +169,11 @@ def list_case_plans() -> list[CasePlan]:
     )
     plans.extend(
         (room_id, ruleset_id, seed, floor, NO_EXTRAS)
-        for ruleset_id, room_id, seed, floor in (*ROOM_FLOOR_CASES, *DEPTH_CASES)
+        for ruleset_id, room_id, seed, floor in (
+            *ROOM_FLOOR_CASES,
+            *DEPTH_CASES,
+            *NEW_ROOM_CASES,
+        )
     )
     return plans
 

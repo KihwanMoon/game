@@ -37,10 +37,14 @@ from game.schemas.floor_map import (
 from game.schemas.room import load_room_templates
 from game.schemas.ruleset import load_rulesets
 
-# 룸 템플릿에 층 1 용 방(blast_yard)이 하나 늘면서 두 시드의 방 배정이 서로 바뀌었다.
-# 시드 자체에 뜻이 있는 것이 아니라 "이기는 층 하나 · 죽는 층 하나" 가 필요할 뿐이다.
-WINNING_SEED = 7
-LOSING_SEED = 11
+# **시드 자체에 뜻이 없다.** 필요한 것은 「이기는 층 하나 · 죽는 층 하나」뿐이고, 룸
+# 템플릿이 늘 때마다 방 배정이 바뀌어 같은 시드가 다른 결과를 낸다. 방을 10 → 30 으로
+# 늘리면서 다시 골랐다 (그 전에도 `blast_yard` 하나 때문에 한 번 바뀌었다).
+#
+# `WINNING_SEED` 는 **이기면서 피해를 입는** 시드여야 한다 — 무피해로 이기면 「방 사이에
+# HP 가 인계된다」를 못 본다.
+WINNING_SEED = 6
+LOSING_SEED = 3
 # 첫 방이 전투인 층. 규칙 편집이 그 방에는 반영되지 않는 것을 보는 데 쓴다.
 EDIT_SEED = 42
 

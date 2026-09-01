@@ -33,7 +33,7 @@ from game.schemas.room import (
     load_room_templates,
 )
 
-ROOM_TEMPLATE_COUNT = 10
+ROOM_TEMPLATE_COUNT = 30
 ROOM_WIDTH = 12
 ROOM_HEIGHT = 9
 ENEMY_KIND_COUNT = 8

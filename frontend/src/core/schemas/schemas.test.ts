@@ -37,7 +37,7 @@ import {
 } from './index'
 import type { RawBlockCatalog, RawRoomFile } from './index'
 
-const ROOM_TEMPLATE_COUNT = 10
+const ROOM_TEMPLATE_COUNT = 30
 const ROOM_WIDTH = 12
 const ROOM_HEIGHT = 9
 const ENEMY_KIND_COUNT = 8
@@ -114,7 +114,7 @@ describe('블록 카탈로그', () => {
 })
 
 describe('룸 템플릿', () => {
-  it('12x9 템플릿 10개를 읽는다', () => {
+  it('12x9 템플릿 30개를 읽는다', () => {
     expect(ROOM_TEMPLATES).toHaveLength(ROOM_TEMPLATE_COUNT)
     for (const template of ROOM_TEMPLATES) {
       expect([template.width, template.height]).toEqual([ROOM_WIDTH, ROOM_HEIGHT])

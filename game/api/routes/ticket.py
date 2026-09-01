@@ -10,10 +10,11 @@ from game.api.deps import CurrentAccount, get_context, get_core_version, get_poo
 from game.api.loadout_service import build_ticket_loadout
 from game.api.schemas import TicketRequest, TicketResponse
 from game.app.progression.floors import resolve_floor
+from game.app.services.build_chain import build_room_chain
 from game.app.store.accounts import find_player_entity
 from game.app.store.monsters import build_monster_snapshot, list_monsters, save_snapshots
 from game.app.store.progress import read_reached_floor
-from game.app.store.tickets import create_ticket
+from game.app.store.tickets import CHAIN_LENGTH, create_ticket
 from game.schemas.monster_snapshot import build_snapshot_payload, sort_snapshots
 
 router = APIRouter()
@@ -47,6 +48,9 @@ def create_run_ticket(request: TicketRequest, account: CurrentAccount) -> Ticket
         request.room_id,
         get_core_version(),
         floor=floor,
+        # **방 목록을 서버가 정한다.** 비워 두면 같은 방을 세 번 잇는다 — 방이 열 개
+        # 있어도 한 판에 한 종류만 보게 되고, 방을 늘려도 사람 눈에는 안 늘어난다.
+        room_ids=build_room_chain(context.rooms, floor, request.room_id, CHAIN_LENGTH),
         wanted_seed=request.seed,
         # 장비·레벨을 얼려 넣는다. 없으면 화면과 서버가 다른 캐릭터로 싸운다 (결정 #13).
         loadout=build_ticket_loadout(account.account_id),
