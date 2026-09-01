@@ -37,6 +37,14 @@ export interface PlanActorProps {
   readonly kind: PlanActorKind
   /** 글리프 아래 짧은 표기. */
   readonly label?: string
+  /**
+   * 일반·엘리트·보스 (설계/6_몬스터 §1).
+   *
+   * **색이 유일한 채널이 아니다.** 도면은 이미 글리프와 두 글자 표기로 종류를 가르고
+   * 있고, 등급은 거기에 색과 **테두리**를 더한다 — 색을 못 가르는 사람에게도 정예와
+   * 보스는 달라 보여야 한다.
+   */
+  readonly tier?: string
 }
 
 /**
@@ -45,13 +53,29 @@ export interface PlanActorProps {
  * @param props 좌표·종류·표기.
  * @returns 렌더 트리.
  */
+/** 도면에서 색으로 가르는 등급. 일반은 안 가른다 — 대부분이 일반이다. */
+const TIER_CLASSES: ReadonlyMap<string, string> = new Map([
+  ['ELITE', ' ds-plan-actor--elite'],
+  ['BOSS', ' ds-plan-actor--boss'],
+])
+
+/**
+ * 등급이 붙이는 class 를 정한다.
+ *
+ * @param tier 등급 코드.
+ * @returns class 조각. 일반이거나 모르는 등급이면 빈 문자열.
+ */
+export function formatTierClass(tier: string | undefined): string {
+  return TIER_CLASSES.get(tier ?? '') ?? ''
+}
+
 export function PlanActor(props: PlanActorProps): React.JSX.Element {
   const glyph = ACTOR_GLYPHS.get(props.kind) ?? ACTOR_GLYPHS.get('charge')
   const name = ACTOR_NAMES.get(props.kind) ?? props.kind
 
   return (
     <div
-      className={`ds-plan-actor ds-plan-actor--${props.kind}`}
+      className={`ds-plan-actor ds-plan-actor--${props.kind}${formatTierClass(props.tier)}`}
       style={{
         left: `calc(var(--plan-cell) * ${String(props.x)})`,
         top: `calc(var(--plan-cell) * ${String(props.y)})`,

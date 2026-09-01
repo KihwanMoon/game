@@ -156,6 +156,8 @@ export interface RawTelegraphSetting {
 
 /** balance.json 의 적 종류 한 항목. 소환물·추격자를 만들 때 그대로 읽는다. */
 export interface RawEnemyKind {
+  /** 일반·엘리트·보스. 화면이 등급을 가르는 이름표이며 전투 수식은 안 본다. */
+  readonly tier?: string
   readonly id: string
   readonly type: string
   readonly hp_max: number

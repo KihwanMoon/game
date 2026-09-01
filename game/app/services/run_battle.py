@@ -16,7 +16,7 @@ from game.app.simulation.plan import OUTCOME_ONGOING, DecisionPolicy, EngineConf
 from game.app.simulation.pressure import PressureTracker, build_pressure_rules
 from game.app.simulation.scaling import build_floor_scale, get_scaled_enemy_stats
 from game.app.simulation.springs import init_spring_pools
-from game.app.simulation.state import FACTION_ENEMY, FACTION_PLAYER, Entity, WorldState
+from game.app.simulation.state import FACTION_ENEMY, FACTION_PLAYER, TIER_NORMAL, Entity, WorldState
 from game.config import SKILLS_PATH
 from game.schemas.blocks import BlockCatalog
 from game.schemas.loadout import BASE_SKILL_POWER_PCT, PlayerLoadout
@@ -184,6 +184,8 @@ def build_engine(
             regen_base=kind["regen_base"],
             cpu_budget=cpu_budget,
             consumables={"POTION": int(kind.get("potions", 0))},
+            # 등급은 이름표로만 나른다. 전투 수식은 안 본다 — 화면이 색으로 가른다.
+            tier=str(kind.get("tier", TIER_NORMAL)),
         )
 
     config = EngineConfig(

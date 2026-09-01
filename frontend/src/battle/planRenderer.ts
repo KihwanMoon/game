@@ -575,11 +575,51 @@ function drawHazard(
  * @param actor 그릴 말.
  * @param theme 토큰 값들.
  */
+/** 등급이 두르는 고리의 굵기(선 굵기 배수). 일반은 안 두른다 — 대부분이 일반이다. */
+const TIER_RING_UNITS: ReadonlyMap<string, number> = new Map([
+  ['ELITE', 1],
+  ['BOSS', 2],
+])
+
+/** 고리 반지름. 칸 크기에 대한 비율이라 셀이 커져도 글리프를 안 가린다. */
+const TIER_RING_RATIO = 0.34
+
+/**
+ * 등급이 정하는 색을 고른다.
+ *
+ * @param tier 등급 코드.
+ * @param theme 토큰에서 읽은 값들.
+ * @returns 칠할 색. 일반이거나 모르는 등급이면 기본 적 색이다.
+ */
+export function resolveTierColor(tier: string, theme: PlanTheme): string {
+  if (tier === 'ELITE') {
+    return theme.actorElite
+  }
+  if (tier === 'BOSS') {
+    return theme.actorBoss
+  }
+  return theme.actorEnemy
+}
+
 function drawActor(ctx: CanvasRenderingContext2D, actor: PlanActorView, theme: PlanTheme): void {
   const rect = getCellRect(actor.x, actor.y, theme)
   const cx = rect.left + rect.size * HALF
   const cy = rect.top + rect.size * HALF
-  const color = actor.isSelf ? theme.actorSelf : theme.actorEnemy
+  const color = actor.isSelf ? theme.actorSelf : resolveTierColor(actor.tier, theme)
+
+  // **색이 유일한 채널이 아니다.** 등급 있는 적에게 고리를 두른다 — 색을 못 가르는
+  // 사람에게도 정예와 보스가 달라 보여야 하고, 그것이 이 저장소가 참·거짓을 색·글리프·
+  // 명도 셋으로 적는 것과 같은 규율이다.
+  const ringUnits = TIER_RING_UNITS.get(actor.tier)
+  if (ringUnits !== undefined && !actor.isSelf) {
+    ctx.save()
+    ctx.strokeStyle = color
+    ctx.lineWidth = theme.lineWidth * ringUnits
+    ctx.beginPath()
+    ctx.arc(cx, cy - rect.size * GLYPH_OFFSET_RATIO, rect.size * TIER_RING_RATIO, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.restore()
+  }
 
   ctx.save()
   ctx.fillStyle = color

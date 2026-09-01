@@ -26,6 +26,8 @@ export interface PlanActorView {
   readonly x: number
   readonly y: number
   readonly kind: PlanActorKind
+  /** 일반·엘리트·보스. 도면이 색과 테두리로 가른다. */
+  readonly tier: string
   /** 글리프 아래 두 글자 표기. 글리프가 겹치는 자리를 이것이 가른다. */
   readonly label: string
   /** 남은 체력 백분율. 말 아래 명도 막대가 이 값을 쓴다. */
@@ -80,6 +82,7 @@ function convertEntityToActor(
     y: entity.position.y,
     kind: isSelf ? 'self' : resolveActorKind(entity.kindId, kindTypes),
     label: isSelf ? '자신' : resolveActorLabel(entity.kindId),
+    tier: entity.tier,
     hpPercent: getHpPercent(entity),
     isSelf,
   }

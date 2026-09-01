@@ -24,6 +24,8 @@ export const PLAN_COLOR_TOKENS: ReadonlyMap<string, string> = new Map([
   ['hazard', '--plan-hazard'],
   ['actorSelf', '--plan-actor-self'],
   ['actorEnemy', '--plan-actor-enemy'],
+  ['actorElite', '--plan-actor-elite'],
+  ['actorBoss', '--plan-actor-boss'],
   ['dim', '--text-dim'],
 ])
 
@@ -75,6 +77,10 @@ export interface PlanTheme {
   readonly actorSelf: string
   /** 적 말. */
   readonly actorEnemy: string
+  /** 엘리트 적. 아이템 상급과 같은 색이다 — 「한 단 위」가 화면 전체에서 한 뜻이다. */
+  readonly actorElite: string
+  /** 보스. 아이템 유물과 같은 색이다. */
+  readonly actorBoss: string
   /** 보조 표기. */
   readonly dim: string
 }
@@ -190,6 +196,8 @@ export function readPlanTheme(read: TokenReader): PlanTheme {
     hazard: color('hazard'),
     actorSelf: color('actorSelf'),
     actorEnemy: color('actorEnemy'),
+    actorElite: color('actorElite'),
+    actorBoss: color('actorBoss'),
     dim: color('dim'),
   }
 }

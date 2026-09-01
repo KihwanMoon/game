@@ -19,6 +19,9 @@ import { sortByKey } from '../ordering'
 export const PERCENT_BASE = 100
 
 export const FACTION_PLAYER = 'player'
+/** 등급의 기본값. 파이썬 `simulation/state.py` 의 것과 같은 글자여야 한다. */
+export const TIER_NORMAL = 'NORMAL'
+
 export const FACTION_ENEMY = 'enemy'
 
 /** 전투에 참여하는 개체 하나 (TDD §3.1). 필드는 전투 중 바뀐다. */
@@ -34,6 +37,14 @@ export interface Entity {
   attackRange: number
   initiative: number
   regenBase: number
+  /**
+   * 일반·엘리트·보스 (설계/6_몬스터 §1).
+   *
+   * **전투 수식은 이 값을 안 본다** — 정예의 세기는 카탈로그 수치가 이미 갖고 있고,
+   * 여기에 배수를 또 걸면 손조정한 방 서른 개가 통째로 흔들린다. 화면이 등급을 가르기
+   * 위한 이름표다. 파이썬 `Entity.tier` 와 같은 자리다.
+   */
+  tier: string
   cpuBudget: number
   /**
    * 들고 있는 소모품. **종류별로 센다** (블록 v6, #54).
@@ -76,6 +87,7 @@ export interface EntityInput {
   readonly attackRange: number
   readonly initiative: number
   readonly regenBase?: number
+  readonly tier?: string
   readonly cpuBudget?: number
   readonly consumables?: ReadonlyMap<string, number>
   readonly skillPowerPct?: number
@@ -105,6 +117,7 @@ export function createEntity(input: EntityInput): Entity {
     attackRange: input.attackRange,
     initiative: input.initiative,
     regenBase: input.regenBase ?? 0,
+    tier: input.tier ?? TIER_NORMAL,
     cpuBudget: input.cpuBudget ?? 0,
     consumables: new Map(input.consumables ?? []),
     skillPowerPct: input.skillPowerPct ?? PERCENT_BASE,

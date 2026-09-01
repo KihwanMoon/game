@@ -9,6 +9,10 @@
 
 FIRST_FLOOR = 1
 
+# 보스 방. **일반 후보에서 빠지고 보스 층의 마지막 자리에만 선다** — 섞이면 보스를 두 번
+# 만나거나 보스 층이 아닌 데서 만나게 된다.
+BOSS_ROOM_ID = "boss_hall"
+
 
 def resolve_floor(wanted: int, reached: int) -> int:
     """요청한 층을 갈 수 있는 범위로 접는다.

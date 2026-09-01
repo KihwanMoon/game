@@ -56,6 +56,7 @@ import {
   buildBattleSession,
   buildLeaderPath,
   buildPlanScene,
+  resolveTierColor,
   describeScene,
   getStepTicksByStep,
   parseDurationMs,
@@ -207,6 +208,8 @@ const FAKE_TOKENS: ReadonlyMap<string, string> = new Map([
   ['--plan-hazard', '#A65A42'],
   ['--plan-actor-self', '#C89A4E'],
   ['--plan-actor-enemy', '#C6CFDC'],
+  ['--plan-actor-elite', '#D8C25E'],
+  ['--plan-actor-boss', '#D2823F'],
   ['--text-dim', '#7C889A'],
   ['--plan-cell', '64px'],
   ['--hatch-gap', '4px'],
@@ -401,6 +404,7 @@ describe('도면 렌더러', () => {
           x: 0,
           y: 0,
           kind: 'self',
+          tier: 'NORMAL',
           label: '자신',
           hpPercent: 100,
           isSelf: true,
@@ -411,6 +415,7 @@ describe('도면 렌더러', () => {
           x: 1,
           y: 0,
           kind: 'charge',
+          tier: 'NORMAL',
           label: '돌진',
           hpPercent: 50,
           isSelf: false,
@@ -904,5 +909,38 @@ describe('로드아웃 배선 (결정 #13)', () => {
   it('로드아웃이 없으면 기본 스탯이고 스킬 제한이 없다 — 오프라인 연습이 이 경우다', () => {
     const plain = buildBattleSession(SETUP, G0_RULESETS)
     expect(plain.engine.state.entities.get('player')?.skills).toBeNull()
+  })
+})
+
+
+describe('적 등급 표기 (설계/6_몬스터 §1)', () => {
+  it('★ 엘리트와 보스가 서로 다른 색을 받는다 — 같은 색이면 가른 것이 아니다', () => {
+    const normal = resolveTierColor('NORMAL', FAKE_THEME)
+    const elite = resolveTierColor('ELITE', FAKE_THEME)
+    const boss = resolveTierColor('BOSS', FAKE_THEME)
+    expect(new Set([normal, elite, boss]).size).toBe(3)
+  })
+
+  it('★ 모르는 등급은 일반으로 그린다 — 아무 색이나 주면 등급이 있는 것처럼 보인다', () => {
+    expect(resolveTierColor('MYTHIC', FAKE_THEME)).toBe(FAKE_THEME.actorEnemy)
+  })
+
+  it('★ 아이템 등급과 같은 색을 쓴다 — 「한 단 위」가 화면 전체에서 한 뜻이어야 한다', () => {
+    const css = readFileSync(`${DESIGN_DIR}tokens/colors.css`, 'utf8')
+    expect(css).toContain('--plan-actor-elite:var(--grade-fine)')
+    expect(css).toContain('--plan-actor-boss:var(--grade-relic)')
+  })
+
+  it('★ 등급이 개체에서 도면 장면까지 온다 — 중간에서 끊기면 색이 안 바뀐다', () => {
+    // 정예가 실제로 서는 방을 쓴다. 밸런스에서 `tier` 를 읽어 개체에 싣고, 개체에서
+    // 장면으로 옮기는 두 걸음 중 하나라도 빠지면 여기서 잡힌다.
+    const session = buildBattleSession(
+      { ...CHECK_SETUP, roomId: 'veteran_hall', extraEnemies: [] },
+      G0_RULESETS,
+    )
+    const scene = buildPlanScene(session.engine)
+    const tiers = scene.actors.filter((one) => !one.isSelf).map((one) => one.tier)
+    expect(tiers).toContain('ELITE')
+    expect(tiers).toContain('NORMAL')
   })
 })

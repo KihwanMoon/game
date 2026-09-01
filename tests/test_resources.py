@@ -33,10 +33,10 @@ from game.schemas.room import (
     load_room_templates,
 )
 
-ROOM_TEMPLATE_COUNT = 30
+ROOM_TEMPLATE_COUNT = 31
 ROOM_WIDTH = 12
 ROOM_HEIGHT = 9
-ENEMY_KIND_COUNT = 8
+ENEMY_KIND_COUNT = 9
 
 
 @pytest.fixture(scope="module")

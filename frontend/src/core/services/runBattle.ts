@@ -27,7 +27,7 @@ import { buildFloorScale, getScaledEnemyStats } from '../sim/scaling'
 import type { RawFloorScale } from '../sim/scaling'
 import type { RawAntiAbuse } from '../sim/pressure'
 import type { RawDamageFormula } from '../combat/damage'
-import { FACTION_ENEMY, FACTION_PLAYER, WorldState, createEntity } from '../sim/state'
+import { FACTION_ENEMY, FACTION_PLAYER, TIER_NORMAL, WorldState, createEntity } from '../sim/state'
 import type { Entity } from '../sim/state'
 import { buildEntityId, type MonsterSnapshot } from '../schemas/monsterSnapshot'
 import { BASE_SKILL_POWER_PCT, type PlayerLoadout } from '../schemas/loadout'
@@ -247,6 +247,8 @@ export function buildEngine(setup: EngineSetup): TickEngine {
         regenBase: kind.regen_base ?? 0,
         cpuBudget: found?.cpuBudget ?? kind.cpu_budget ?? 0,
         consumables: new Map([['POTION', kind.potions ?? 0]]),
+        // 등급은 이름표로만 나른다. 전투 수식은 안 본다 — 화면이 색으로 가른다.
+        tier: kind.tier ?? TIER_NORMAL,
       }),
     )
   })

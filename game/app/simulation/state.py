@@ -12,6 +12,10 @@ from game.schemas.room import RoomTemplate
 # 정수 퍼센트의 기준. 100 이 "계수 그대로" 다. 저장소의 다른 모듈들과 같이 지역 선언한다.
 PERCENT_BASE = 100
 
+# 등급의 기본값.  의 NORMAL 과 같은 글자여야 한다 — 코어가 그 모듈을
+# 안 가져오는 이유는 전투가 등급을 **읽지 않기** 때문이다. 여기 있는 것은 이름표뿐이다.
+TIER_NORMAL = "NORMAL"
+
 FACTION_PLAYER = "player"
 FACTION_ENEMY = "enemy"
 
@@ -32,6 +36,10 @@ class Entity:
     initiative: int
     regen_base: int = 0
     cpu_budget: int = 0
+    # 일반·엘리트·보스 (설계/6_몬스터 §1). **전투 수식은 이 값을 안 본다** — 정예의 세기는
+    # 카탈로그 수치가 이미 갖고 있고, 여기에 배수를 또 걸면 손조정한 방 서른 개가 통째로
+    # 흔들린다. 이것은 **화면이 등급을 가르기 위한 이름표**다.
+    tier: str = TIER_NORMAL
     # 이 개체가 내는 스킬의 위력. 정수 퍼센트이며 100 이 "계수 그대로" 다 (결정 #51).
     # 지능이 여기를 올린다. 개체마다 다르므로 스킬 카탈로그가 아니라 개체가 갖는다.
     skill_power_pct: int = PERCENT_BASE

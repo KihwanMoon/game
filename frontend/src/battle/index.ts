@@ -102,7 +102,13 @@ export type { RuleRowView, RuleRowsInput } from './ruleRows'
 export { buildPlanScene } from './planScene'
 export type { PlanActorView, PlanHazardView, PlanScene } from './planScene'
 
-export { TILE_DRAWERS, getCellRect, renderPlan, resizePlanCanvas } from './planRenderer'
+export {
+  TILE_DRAWERS,
+  getCellRect,
+  renderPlan,
+  resizePlanCanvas,
+  resolveTierColor,
+} from './planRenderer'
 export type { CellRect, TileDrawer } from './planRenderer'
 
 export {

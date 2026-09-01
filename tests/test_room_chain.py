@@ -117,3 +117,41 @@ def test_the_ticket_carries_a_varied_chain():
         ).json()
     assert issued["room_ids"][0] == "open_field"
     assert len(set(issued["room_ids"])) == len(issued["room_ids"])
+
+
+def build_boss_rooms():
+    """보스 방까지 있는 검사용 대응표.
+
+    Returns:
+        방 id 에서 템플릿으로의 대응표.
+    """
+    return build_rooms({"a": 1, "b": 1, "c": 1, "d": 1, "boss_hall": 10})
+
+
+def test_the_boss_room_comes_last_on_the_boss_floor():
+    """★ 보스가 중간에 있으면 잡고도 잡몹 방이 남아 「깼다」가 마지막 사건이 아니게 된다."""
+    for _try in range(20):
+        picked = build_room_chain(build_boss_rooms(), 10, "a", 3, "boss_hall", 10)
+        assert len(picked) == 3
+        assert picked[-1] == "boss_hall", picked
+        assert "boss_hall" not in picked[:-1]
+
+
+def test_the_boss_room_never_appears_on_other_floors():
+    """★ 보스 층이 아닌 데서 만나면 「10층에 보스」가 거짓이 된다."""
+    for floor in (1, 5, 9):
+        for _try in range(10):
+            assert "boss_hall" not in build_room_chain(
+                build_boss_rooms(), floor, "a", 3, "boss_hall", 10
+            )
+
+
+def test_the_boss_room_is_not_a_normal_candidate():
+    """★ 일반 후보에 섞이면 한 판에 보스를 두 번 만난다."""
+    assert "boss_hall" not in list_floor_rooms(build_boss_rooms(), 10, "boss_hall")
+
+
+def test_a_chain_without_a_boss_stays_the_same_length():
+    """★ 보스를 안 두는 층에서 길이가 줄면 방 하나가 통째로 사라진다."""
+    picked = build_room_chain(build_boss_rooms(), 3, "a", 3, "boss_hall", 10)
+    assert len(picked) == 3

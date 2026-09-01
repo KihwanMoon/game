@@ -193,8 +193,18 @@ def test_a_verified_run_unlocks_the_blocks_it_used(client, token):
     assert meta["unlocked_perceptions"] != []
 
 
-def test_a_win_records_the_floor(client, token):
-    """★ 최고 층이 슬롯 상한의 근거다. 이겨야 오른다."""
+def test_a_win_records_the_floor(client, token, monkeypatch):
+    """★ 최고 층이 슬롯 상한의 근거다. 이겨야 오른다.
+
+    **연쇄를 고정한다.** 서버가 층에 맞는 방을 굴려 고르게 된 뒤로는 같은 규칙표가 판마다
+    이기기도 지기도 한다 — 고정하지 않으면 이 검사가 흔들리고, 흔들리는 검사는 없는 것만
+    못하다. 고정하는 것은 방 목록뿐이고 제출·재시뮬 경로는 그대로 탄다.
+    """
+    from game.api.routes import ticket as ticket_route
+
+    monkeypatch.setattr(
+        ticket_route, "build_room_chain", lambda *_args, **_kwargs: (ROOM_ID, ROOM_ID, ROOM_ID)
+    )
     submit_once(client, token, build_winning_ruleset())
     assert read_meta(client, token)["best_floor"] >= 1
 

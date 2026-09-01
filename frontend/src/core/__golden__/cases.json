@@ -23,7 +23,7 @@
     "fired",
     "target_id"
   ],
-  "case_count": 55,
+  "case_count": 56,
   "cases": [
     {
       "case_id": "open_field__g0_pressure__1",
@@ -95323,6 +95323,272 @@
           "outcome": "player HP 0/100 사망",
           "rule": 1,
           "delta": -60,
+          "fired": true,
+          "target_id": "player"
+        }
+      ]
+    },
+    {
+      "case_id": "boss_hall__g0_kite__5840",
+      "room_id": "boss_hall",
+      "ruleset_id": "g0_kite",
+      "seed": 5840,
+      "extra_enemies": [],
+      "max_ticks": 400,
+      "floor": 10,
+      "outcome": "PLAYER_LOSS",
+      "ticks": 5,
+      "player_hp": 0,
+      "spawn_counter": 0,
+      "entities": [
+        {
+          "entity_id": "player",
+          "kind_id": "player",
+          "hp": 0,
+          "x": 4,
+          "y": 3,
+          "attack": 12,
+          "potions": 2,
+          "cooldowns": {
+            "SKILL_2": 0
+          },
+          "flags": {
+            "A": true
+          }
+        },
+        {
+          "entity_id": "stone_gatekeeper_0",
+          "kind_id": "stone_gatekeeper",
+          "hp": 586,
+          "x": 5,
+          "y": 4,
+          "attack": 44,
+          "potions": 0,
+          "cooldowns": {
+            "SKILL_1": 2
+          },
+          "flags": {}
+        }
+      ],
+      "log_count": 20,
+      "log": [
+        {
+          "tick": 1,
+          "entity_id": "player",
+          "phase": "DECIDE",
+          "expr": "모든 규칙 거짓 → DEFAULT (적거리 7)",
+          "outcome": "APPROACH @stone_gatekeeper_0",
+          "rule": null,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 1,
+          "entity_id": "stone_gatekeeper_0",
+          "phase": "DECIDE",
+          "expr": "모든 규칙 거짓 → DEFAULT (적거리 7)",
+          "outcome": "APPROACH @player",
+          "rule": null,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 1,
+          "entity_id": "player",
+          "phase": "ACT",
+          "expr": "APPROACH @stone_gatekeeper_0",
+          "outcome": "이동 (2, 4)",
+          "rule": null,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 1,
+          "entity_id": "stone_gatekeeper_0",
+          "phase": "ACT",
+          "expr": "APPROACH @player",
+          "outcome": "이동 (7, 4)",
+          "rule": null,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 2,
+          "entity_id": "player",
+          "phase": "DECIDE",
+          "expr": "모든 규칙 거짓 → DEFAULT (적거리 5)",
+          "outcome": "APPROACH @stone_gatekeeper_0",
+          "rule": null,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 2,
+          "entity_id": "stone_gatekeeper_0",
+          "phase": "DECIDE",
+          "expr": "모든 규칙 거짓 → DEFAULT (적거리 5)",
+          "outcome": "APPROACH @player",
+          "rule": null,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 2,
+          "entity_id": "player",
+          "phase": "ACT",
+          "expr": "APPROACH @stone_gatekeeper_0",
+          "outcome": "이동 (3, 4)",
+          "rule": null,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 2,
+          "entity_id": "stone_gatekeeper_0",
+          "phase": "ACT",
+          "expr": "APPROACH @player",
+          "outcome": "이동 (6, 4)",
+          "rule": null,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 3,
+          "entity_id": "player",
+          "phase": "DECIDE",
+          "expr": "대상 거리[NEAREST](3) <= 4 AND 내 쿨타임[스킬] 완료[SKILL_2](참) == 참",
+          "outcome": "SKILL_2 @stone_gatekeeper_0",
+          "rule": 4,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 3,
+          "entity_id": "stone_gatekeeper_0",
+          "phase": "DECIDE",
+          "expr": "모든 규칙 거짓 → DEFAULT (적거리 3)",
+          "outcome": "APPROACH @player",
+          "rule": null,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 3,
+          "entity_id": "stone_gatekeeper_0",
+          "phase": "ACT",
+          "expr": "APPROACH @player",
+          "outcome": "이동 (5, 4)",
+          "rule": null,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 3,
+          "entity_id": "player",
+          "phase": "ACT",
+          "expr": "SKILL_2 @stone_gatekeeper_0",
+          "outcome": "stone_gatekeeper_0 HP 584/601",
+          "rule": 4,
+          "delta": -17,
+          "fired": true,
+          "target_id": "stone_gatekeeper_0"
+        },
+        {
+          "tick": 4,
+          "entity_id": "player",
+          "phase": "DECIDE",
+          "expr": "모든 규칙 거짓 → DEFAULT (적거리 2)",
+          "outcome": "APPROACH @stone_gatekeeper_0",
+          "rule": null,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 4,
+          "entity_id": "stone_gatekeeper_0",
+          "phase": "DECIDE",
+          "expr": "내 쿨타임[스킬] 완료[SKILL_1](참) == 참 AND 대상 거리[NEAREST](2) <= 사거리(2)",
+          "outcome": "SKILL_1 @player",
+          "rule": 1,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 4,
+          "entity_id": "player",
+          "phase": "ACT",
+          "expr": "APPROACH @stone_gatekeeper_0",
+          "outcome": "이동 (4, 4)",
+          "rule": null,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 4,
+          "entity_id": "stone_gatekeeper_0",
+          "phase": "ACT",
+          "expr": "SKILL_1 @player",
+          "outcome": "player HP 32/100",
+          "rule": 1,
+          "delta": -68,
+          "fired": true,
+          "target_id": "player"
+        },
+        {
+          "tick": 5,
+          "entity_id": "player",
+          "phase": "DECIDE",
+          "expr": "대상 거리[NEAREST](1) <= 1",
+          "outcome": "RETREAT @stone_gatekeeper_0",
+          "rule": 2,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 5,
+          "entity_id": "stone_gatekeeper_0",
+          "phase": "DECIDE",
+          "expr": "대상 거리[NEAREST](1) <= 사거리(2)",
+          "outcome": "ATTACK @player",
+          "rule": 2,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 5,
+          "entity_id": "player",
+          "phase": "ACT",
+          "expr": "RETREAT @stone_gatekeeper_0",
+          "outcome": "이동 (4, 3)",
+          "rule": 2,
+          "delta": null,
+          "fired": true,
+          "target_id": null
+        },
+        {
+          "tick": 5,
+          "entity_id": "stone_gatekeeper_0",
+          "phase": "ACT",
+          "expr": "ATTACK @player",
+          "outcome": "player HP 0/100 사망",
+          "rule": 2,
+          "delta": -42,
           "fired": true,
           "target_id": "player"
         }
