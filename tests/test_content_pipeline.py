@@ -76,15 +76,42 @@ def test_a_draft_does_not_touch_the_file(client, admin):
     assert SKILLS_PATH.read_text(encoding="utf-8") == before, "초안이 파일을 고쳤다"
 
 
-def test_a_stale_version_is_refused(client, admin):
-    """★ 버전을 안 올리고 발행하면 저장된 리플레이가 조용히 거짓이 된다."""
+def test_a_draft_does_not_need_a_version_bump(client, admin):
+    """★ 초안 단계에서 버전을 요구하는 것은 이르다 (개정: 설계 §18).
+
+    자산 셋을 고치는 동안 버전을 세 번 올리게 된다. 세대는 **발행 시점에 한 번** 받고,
+    그것이 "몰아서 발행" 의 뜻이다.
+    """
     raw = read_skills()
     response = client.post(
         "/api/admin/content/draft",
         json={"asset": "skills", "payload": raw, "note": "버전 그대로"},
         headers=build_headers(admin),
     )
-    assert response.status_code == 400
+    assert response.status_code == 200
+
+
+def test_publishing_needs_a_higher_generation(client, admin):
+    """★ 세대를 안 올리고 발행하면 저장된 리플레이가 조용히 거짓이 된다."""
+    discard_all(client, admin)
+    raw = read_skills()
+    client.post(
+        "/api/admin/content/draft",
+        json={"asset": "skills", "payload": raw, "note": "검사용 초안"},
+        headers=build_headers(admin),
+    )
+    # **지금 세대와 같은 값으로 낸다.** 0 으로 내면 스키마의 ge=1 이 먼저 막아서
+    # 라우트의 세대 검사를 아무도 안 보게 된다 — 실제로 그렇게 통과했다.
+    from game.api.deps import get_pool
+    from game.app.store.content_pack import read_pack_generation
+
+    current = max(1, read_pack_generation(get_pool()))
+    response = client.post(
+        "/api/admin/content/publish",
+        json={"generation": current, "note": "세대 안 올림"},
+        headers=build_headers(admin),
+    )
+    assert response.status_code == 409
     assert "올려야" in response.json()["detail"]
 
 
@@ -156,9 +183,65 @@ def test_discarding_leaves_the_file_alone(client, admin):
     assert not [row for row in response.json()["drafts"] if row["asset"] == "skills"]
 
 
-def test_there_is_no_publish_route(client, admin):
-    """★ 발행이 라우트면 관리자가 화면에서 시즌을 가를 수 있다 — 사람 손을 타야 한다."""
-    from game.api.main import create_app
+def test_publishing_swaps_the_server_context(client, admin):
+    """★ 서버가 안 갈아 끼우면 브라우저는 새 팩으로 돌고 서버는 옛 데이터로 채점한다.
 
-    paths = [getattr(route, "path", "") for route in create_app().routes]
-    assert not [path for path in paths if "publish" in path]
+    발행을 라우트로 연 것은 콘텐츠 팩을 런타임에 내려받기로 했기 때문이다(설계 §18).
+    예전에는 "발행 라우트가 없다" 가 불변 조건이었다 — 재빌드 없이는 브라우저에 닿을
+    길이 없었으므로 자동 반영이 곧 두 코어의 분기였다. 팩이 그 분기를 없앴고, 대신
+    **세대를 명시적으로 받고 원장에 남기는 것**이 안전장치가 됐다.
+    """
+    import inspect
+
+    from game.api.routes import content_admin as module
+
+    source = inspect.getsource(module.create_content_publish)
+    assert "apply_content_reload" in source, "발행이 서버 컨텍스트를 안 갈아 끼운다"
+    assert "record_admin_action" in source, "발행이 원장에 안 남는다"
+
+
+def discard_all(client, admin):
+    """남아 있는 초안을 전부 버린다.
+
+    **발행은 초안 전부를 검증한다.** 다른 검사가 남긴 깨진 초안이 하나 있으면 발행이
+    통째로 막히고, 그것은 옳은 동작이지만 이 검사가 보려는 것은 아니다.
+    """
+    body = client.get("/api/admin/content", headers=build_headers(admin)).json()
+    for row in body["drafts"]:
+        client.post(
+            "/api/admin/content/discard",
+            json={"asset": row["asset"], "payload": {}, "note": "검사 정리"},
+            headers=build_headers(admin),
+        )
+
+
+def test_publishing_moves_the_core_version(client, admin):
+    """★ 발행으로 데이터가 바뀌면 시즌이 갈려야 한다."""
+    from game.api.deps import get_core_version, get_pool
+    from game.app.store.content_pack import read_pack_generation
+
+    discard_all(client, admin)
+    raw = read_skills()
+    client.post(
+        "/api/admin/content/draft",
+        json={"asset": "skills", "payload": raw, "note": "검사용 초안"},
+        headers=build_headers(admin),
+    )
+    before = get_core_version()
+    generation = read_pack_generation(get_pool()) + 1
+    response = client.post(
+        "/api/admin/content/publish",
+        json={"generation": generation, "note": "검사용 발행"},
+        headers=build_headers(admin),
+    )
+    assert response.status_code == 200
+    assert response.json()["core_version"] != before
+    assert get_core_version() != before
+
+
+def test_the_pack_is_open_to_everyone(client, admin):
+    """★ 관리자 전용이면 접속자마다 다른 데이터로 돈다 — 이것이 곧 게임 데이터다."""
+    token = client.post("/api/account").json()["token"]
+    body = client.get("/api/content/pack", headers=build_headers(token)).json()
+    assert set(body["assets"]) == {"balance", "blocks", "enemies", "rooms", "skills"}
+    assert body["core_version"] != ""

@@ -264,3 +264,35 @@ class MonsterDropResponse(BaseModel):
     # 소스별 표가 없으면 ANY 로 떨어진다. 그 사실이 화면에 있어야 "왜 다른 게 나오지" 를
     # 안 겪는다.
     uses_default: bool = True
+
+
+class ContentPublishRequest(BaseModel):
+    """발행. **세대를 한 번 받는다** (설계/4_아이템 §18).
+
+    여러 자산을 고쳐 두고 한 번에 낸다 — 자산마다 세대를 올리면 관리자가 셋을 고치는
+    동안 세 번 올리게 되고, 그건 이르고 불편하다.
+    """
+
+    generation: int = Field(ge=1, le=100_000)
+    note: str = ""
+
+
+class ContentPublishResponse(BaseModel):
+    """발행 결과."""
+
+    generation: int = 0
+    published: list[str] = Field(default_factory=list)
+    core_version: str = ""
+    problem: str = ""
+
+
+class ContentPackResponse(BaseModel):
+    """브라우저가 받아 가는 콘텐츠 팩.
+
+    **코어 버전을 함께 낸다.** 브라우저가 그것을 다시 조립하면 두 곳이 갈리고, 갈린
+    티켓은 제출에서 거절된다.
+    """
+
+    assets: dict = Field(default_factory=dict)
+    generation: int = 0
+    core_version: str = ""

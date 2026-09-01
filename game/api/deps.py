@@ -4,7 +4,10 @@
 읽어 여기 둔다.
 """
 
+import json
+import tempfile
 from dataclasses import replace
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, status
@@ -16,15 +19,10 @@ from game.app.services.verify_run import VerifyContext
 from game.app.store.accounts import Account, find_account
 from game.app.store.admin import check_is_admin
 from game.app.store.catalog_seed import apply_catalog_seed
+from game.app.store.content_pack import read_asset, read_pack_generation
 from game.app.store.drops import apply_drop_seed
 from game.app.store.item_catalog import list_catalog, read_generation
 from game.app.store.items import apply_affix_pool_seed
-from game.config import (
-    BALANCE_PATH,
-    BLOCKS_PATH,
-    ENEMY_RULESETS_PATH,
-    ROOM_TEMPLATES_PATH,
-)
 from game.schemas.blocks import load_block_catalog
 from game.schemas.room import load_room_templates
 from game.schemas.ruleset import load_rulesets
@@ -37,18 +35,37 @@ TOKEN_HEADER = "X-Game-Token"
 _state: dict[str, object] = {}
 
 
-def build_verify_context() -> VerifyContext:
-    """검증에 쓸 자원을 한 번 읽는다.
+def build_verify_context(pool: ConnectionPool) -> VerifyContext:
+    """검증에 쓸 자원을 읽는다. **발행된 것이 있으면 그것을 읽는다** (§18).
+
+    브라우저만 팩을 쓰고 서버가 파일을 읽으면 재시뮬이 다른 데이터로 돌고, 그것이 G3 가
+    잡으려는 바로 그 상태다.
+
+    팩을 임시 파일로 떨어뜨린 뒤 **코어가 쓰는 그 로더**로 읽는다. 로더가 경로를 받기
+    때문이고, 절을 받는 두 번째 파서를 만들면 규칙이 둘이 된다 — 발행된 콘텐츠만 다른
+    규칙으로 읽히는 날이 온다. 이 비용은 기동과 발행 때만 든다.
+
+    Args:
+        pool: 연결 풀.
 
     Returns:
         밸런스·카탈로그·방·적 규칙표가 실린 문맥.
     """
-    return VerifyContext(
-        balance=load_balance(BALANCE_PATH),
-        catalog=load_block_catalog(BLOCKS_PATH),
-        rooms={item.template_id: item for item in load_room_templates(ROOM_TEMPLATES_PATH)},
-        enemy_rulesets=load_rulesets(ENEMY_RULESETS_PATH),
-    )
+    with tempfile.TemporaryDirectory() as folder:
+        base = Path(folder)
+        paths = {}
+        for asset in ("balance", "blocks", "rooms", "enemies"):
+            probe = base / f"{asset}.json"
+            probe.write_text(
+                json.dumps(read_asset(pool, asset), ensure_ascii=False), encoding="utf-8"
+            )
+            paths[asset] = probe
+        return VerifyContext(
+            balance=load_balance(paths["balance"]),
+            catalog=load_block_catalog(paths["blocks"]),
+            rooms={item.template_id: item for item in load_room_templates(paths["rooms"])},
+            enemy_rulesets=load_rulesets(paths["enemies"]),
+        )
 
 
 def init_state(pool: ConnectionPool) -> None:
@@ -57,8 +74,8 @@ def init_state(pool: ConnectionPool) -> None:
     Args:
         pool: 열린 연결 풀.
     """
-    context = build_verify_context()
     _state["pool"] = pool
+    context = build_verify_context(pool)
     # **카탈로그 정본은 DB 다** (설계/4_아이템 §15.7). 파일은 빈 표를 채우는 씨앗이고,
     # 그 뒤로는 파생물이다 — 서버가 뜰 때마다 파일로 덮으면 관리자가 고친 것이 배포
     # 한 번에 사라진다.
@@ -71,9 +88,36 @@ def init_state(pool: ConnectionPool) -> None:
     _state["context"] = context
     # 아이템 축은 파일이 아니라 DB 세대에서 온다. 관리자가 아이템을 고치는 것은 시즌을
     # 가르는 일이고, 그 사실이 코어 버전 문자열에 남아야 한다 (§15.8).
+    apply_state_versions(pool, context)
+
+
+def apply_state_versions(pool: ConnectionPool, context: VerifyContext) -> None:
+    """문맥과 코어 버전을 세운다. 발행 뒤에도 이것을 다시 부른다.
+
+    **발행이 서버 컨텍스트도 갈아 끼운다.** 안 그러면 브라우저는 새 팩으로 돌고 서버는
+    옛 데이터로 재시뮬한다.
+
+    Args:
+        pool: 연결 풀.
+        context: 새로 읽은 문맥.
+    """
+    _state["context"] = context
+    # 아이템 축은 카탈로그 세대(DB), 팩 축은 발행 세대다. 스킬·블록·밸런스·룸·적은
+    # 팩이 정본이 됐으므로 파일 세대가 아니라 팩 세대가 시즌을 가른다 (§18).
     _state["core_version"] = build_core_version(
-        replace(read_content_versions(), items=read_generation(pool))
+        replace(read_content_versions(), items=read_generation(pool)),
+        pack=read_pack_generation(pool),
     )
+
+
+def apply_content_reload() -> None:
+    """발행 뒤 서버가 읽는 콘텐츠를 갈아 끼운다.
+
+    **여기서 안 갈면 재시뮬이 옛 데이터로 돈다.** 브라우저는 팩을 받아 새 데이터로
+    도는데 서버가 옛 것으로 채점하면, 그것이 G3 가 잡으려는 바로 그 상태다.
+    """
+    pool = get_pool()
+    apply_state_versions(pool, build_verify_context(pool))
 
 
 def get_pool() -> ConnectionPool:

@@ -72,7 +72,9 @@ def test_core_version_carries_every_generation():
 
     # 자산마다 다른 값을 준다. 같은 값을 쓰면 축 하나를 다른 축에 붙여 놓아도 통과한다.
     versions = ContentVersions(blocks=4, balance=3, items=2, skills=5, rooms=6, enemies=7)
-    assert build_core_version(versions) == f"b4.v3.i2.s5.r6.a7.e{ENGINE_VERSION}"
+    assert build_core_version(versions, 8) == f"b4.v3.i2.s5.r6.a7.p8.e{ENGINE_VERSION}"
+    # 발행한 적이 없으면 팩 축은 0 이다 — 그때는 파일 세대들이 그대로 시즌을 가른다.
+    assert build_core_version(versions) == f"b4.v3.i2.s5.r6.a7.p0.e{ENGINE_VERSION}"
 
 
 def test_seed_above_the_port_limit_is_rejected():
@@ -102,6 +104,9 @@ def test_every_content_axis_moves_the_core_version():
 
     base = ContentVersions(blocks=1, balance=1, items=1, skills=1, rooms=1, enemies=1)
     seen = {build_core_version(base)}
+    # 팩 축도 같은 규율을 받는다 — 발행으로 데이터가 바뀌면 시즌이 갈려야 한다.
+    assert build_core_version(base, 1) not in seen
+    seen.add(build_core_version(base, 1))
     for field in fields(base):
         moved = build_core_version(replace(base, **{field.name: 2}))
         assert moved not in seen, f"{field.name} 을 올려도 코어 버전이 그대로다"

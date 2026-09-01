@@ -22,6 +22,7 @@ from game.api.routes import (
     bestiary,
     catalog_admin,
     content_admin,
+    content_pack,
     discovery,
     health,
     items,
@@ -81,6 +82,7 @@ def create_app() -> FastAPI:
         admin,
         catalog_admin,
         content_admin,
+        content_pack,
     ):
         server.include_router(module.router)
     return server

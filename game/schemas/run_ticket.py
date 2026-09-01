@@ -111,7 +111,7 @@ class ContentVersions:
     enemies: int
 
 
-def build_core_version(versions: ContentVersions) -> str:
+def build_core_version(versions: ContentVersions, pack: int = 0) -> str:
     """코어 버전 문자열을 만든다.
 
     하나라도 바뀌면 과거 기록이 재현되지 않으므로 랭킹 시즌이 갈린다 (docs/설계/3 §7).
@@ -121,16 +121,21 @@ def build_core_version(versions: ContentVersions) -> str:
     조용히 거짓이 되는 길이었다. 관리자가 콘텐츠를 고칠 수 있게 되면 그 일이 상시로
     일어난다.
 
+    **팩 세대가 축 하나를 더 갖는다** (§18). 스킬·블록·밸런스·룸·적이 발행으로 바뀌면
+    파일 세대는 그대로인데 실제로 도는 데이터가 달라지므로, 그 사실이 문자열에 남아야
+    한다. 발행한 적이 없으면 0 이고, 그때는 파일 세대들이 그대로 시즌을 가른다.
+
     Args:
         versions: 자산별 세대.
+        pack: 발행 세대. 발행한 적이 없으면 0.
 
     Returns:
-        `b6.v2.i1.s2.r1.a1.e1` 형태의 버전 문자열.
+        `b6.v2.i1.s2.r1.a1.p0.e1` 형태의 버전 문자열.
     """
     return (
         f"b{versions.blocks}.v{versions.balance}.i{versions.items}"
         f".s{versions.skills}.r{versions.rooms}.a{versions.enemies}"
-        f".e{ENGINE_VERSION}"
+        f".p{pack}.e{ENGINE_VERSION}"
     )
 
 

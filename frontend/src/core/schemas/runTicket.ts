@@ -91,14 +91,18 @@ export interface ContentVersions {
  * 여섯 자산을 전부 넣는다. 예전에는 블록과 밸런스 둘만 봉인했는데, 스킬 계수나 방
  * 배치를 고치면 과거 리플레이가 달라지는데도 시즌이 안 갈렸다.
  *
+ * 팩 세대가 축 하나를 더 갖는다. 발행으로 콘텐츠가 바뀌면 파일 세대는 그대로인데 실제로
+ * 도는 데이터가 달라지므로, 그 사실이 문자열에 남아야 한다.
+ *
  * @param versions 자산별 세대.
- * @returns `b6.v2.i1.s2.r1.a1.e1` 형태의 문자열.
+ * @param pack 발행 세대. 발행한 적이 없으면 0.
+ * @returns `b6.v2.i1.s2.r1.a1.p0.e1` 형태의 문자열.
  */
-export function buildCoreVersion(versions: ContentVersions): string {
+export function buildCoreVersion(versions: ContentVersions, pack = 0): string {
   return (
     `b${String(versions.blocks)}.v${String(versions.balance)}.i${String(versions.items)}` +
     `.s${String(versions.skills)}.r${String(versions.rooms)}.a${String(versions.enemies)}` +
-    `.e${String(ENGINE_VERSION)}`
+    `.p${String(pack)}.e${String(ENGINE_VERSION)}`
   )
 }
 

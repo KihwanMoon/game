@@ -31,6 +31,8 @@ CASES: tuple[tuple[int, str, int], ...] = (
 # 실제 자산의 세대가 아니라 **고정한 표본**이다. 자산을 고칠 때마다 이 골든이 흔들리면
 # 검사하는 것이 문자열 조립이 아니라 오늘의 밸런스 수치가 된다.
 VERSIONS = ContentVersions(blocks=4, balance=3, items=2, skills=5, rooms=6, enemies=7)
+# 발행 세대. 표본이므로 0 이 아닌 값을 쓴다 — 0 이면 축이 빠져도 문자열이 같아진다.
+PACK_GENERATION = 8
 
 
 def export_ticket_golden() -> Path:
@@ -39,7 +41,7 @@ def export_ticket_golden() -> Path:
     Returns:
         쓴 파일 경로.
     """
-    core_version = build_core_version(VERSIONS)
+    core_version = build_core_version(VERSIONS, PACK_GENERATION)
     cases = []
     for seed, room_id, floor in CASES:
         ticket = create_local_ticket(seed, room_id, core_version, floor=floor)
@@ -62,6 +64,7 @@ def export_ticket_golden() -> Path:
             "rooms": VERSIONS.rooms,
             "enemies": VERSIONS.enemies,
         },
+        "pack": PACK_GENERATION,
         "core_version": core_version,
         "cases": cases,
     }

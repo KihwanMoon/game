@@ -18,31 +18,22 @@ from game.schemas.room import load_room_templates
 from game.schemas.ruleset import load_rulesets
 
 
-def check_draft(asset: str, payload: dict, current_version: int) -> str:
-    """초안이 실제로 읽히는지, 버전이 올랐는지 본다.
+def check_draft(asset: str, payload: dict) -> str:
+    """초안이 실제로 읽히는지 본다.
+
+    **버전은 여기서 안 본다.** 자산 셋을 고치는 동안 버전을 세 번 올리게 되는 것은
+    이르고 불편하다 — 세대는 발행 시점에 한 번 받는다 (§18). 여기서 막을 것은 "못 읽는
+    절이 DB 에 남는 것" 하나다.
 
     Args:
         asset: 자산 이름.
         payload: 초안 절.
-        current_version: 지금 파일의 세대.
 
     Returns:
         빈 문자열이면 통과. 아니면 사람이 읽을 사유.
     """
     if asset not in DRAFT_ASSETS:
         return f"모르는 자산이다: {asset}"
-    _path, version_key = DRAFT_ASSETS[asset]
-    if version_key not in payload:
-        return f"{version_key} 가 없다 — 버전 없이 발행하면 시즌이 안 갈린다"
-    try:
-        version = int(payload[version_key])
-    except (TypeError, ValueError):
-        return f"{version_key} 가 정수가 아니다"
-    if version <= current_version:
-        return (
-            f"{version_key} 를 올려야 한다 (지금 {current_version}) —"
-            " 안 올리면 저장된 리플레이가 조용히 거짓이 된다"
-        )
     return check_loads(asset, payload)
 
 

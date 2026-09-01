@@ -14,13 +14,15 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, status
 
-from game.api.deps import CurrentAdmin, get_pool
+from game.api.deps import CurrentAdmin, apply_content_reload, get_core_version, get_pool
 from game.api.routes.admin import check_reason
 from game.api.view_schemas import (
     ContentAssetResponse,
     ContentDraftRequest,
     ContentDraftResponse,
     ContentDraftRow,
+    ContentPublishRequest,
+    ContentPublishResponse,
 )
 from game.app.content.validate import check_draft
 from game.app.store.admin import record_admin_action
@@ -30,6 +32,11 @@ from game.app.store.content_draft import (
     read_draft,
     remove_draft,
     save_draft,
+)
+from game.app.store.content_pack import (
+    read_pack_generation,
+    save_pack_generation,
+    save_published,
 )
 
 router = APIRouter()
@@ -117,7 +124,7 @@ def create_content_draft(
     reason = check_reason(request.note)
     if request.asset not in DRAFT_ASSETS:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"모르는 자산이다: {request.asset}")
-    problem = check_draft(request.asset, request.payload, read_current_version(request.asset))
+    problem = check_draft(request.asset, request.payload)
     if problem:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, problem)
     pool = get_pool()
@@ -175,4 +182,67 @@ def read_content_asset(asset: str, account: CurrentAdmin) -> ContentAssetRespons
         draft=read_draft(pool, asset),
         note=notes.get(asset, ""),
         version_key=version_key,
+    )
+
+
+@router.post("/api/admin/content/publish", response_model=ContentPublishResponse)
+def create_content_publish(
+    request: ContentPublishRequest, account: CurrentAdmin
+) -> ContentPublishResponse:
+    """쌓인 초안을 한 번에 발행한다 (설계/4_아이템 §18).
+
+    **세대를 한 번 받는다.** 여러 자산을 고쳐 두고 한 번에 내는 것이 이 라우트의 뜻이다.
+
+    **발행 전에 전부 다시 검증한다.** 초안을 저장한 뒤로 블록 카탈로그가 바뀌었을 수
+    있고, 그러면 저장될 때 읽히던 절이 지금은 안 읽힌다.
+
+    **서버 컨텍스트도 갈아 끼운다.** 안 하면 브라우저는 새 팩으로 돌고 서버는 옛
+    데이터로 재시뮬한다 — G3 가 잡으려는 바로 그 상태다.
+
+    Args:
+        request: 세대와 사유.
+        account: 관리자.
+
+    Returns:
+        발행한 자산들과 새 코어 버전.
+
+    Raises:
+        HTTPException: 낼 초안이 없거나, 세대가 지금보다 낮거나, 읽히지 않는 절이 있는 경우.
+    """
+    reason = check_reason(request.note)
+    pool = get_pool()
+    drafts = [asset for asset, _note, _at in list_drafts(pool)]
+    if not drafts:
+        raise HTTPException(status.HTTP_409_CONFLICT, "낼 초안이 없다")
+    if request.generation <= read_pack_generation(pool):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"세대를 올려야 한다 (지금 {read_pack_generation(pool)}) —"
+            " 안 올리면 저장된 리플레이가 조용히 거짓이 된다",
+        )
+
+    for asset in drafts:
+        payload = read_draft(pool, asset)
+        problem = "초안이 사라졌다" if payload is None else check_draft(asset, payload)
+        if problem:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{asset}: {problem}")
+
+    for asset in drafts:
+        payload = read_draft(pool, asset)
+        if payload is not None:
+            save_published(pool, asset, payload, reason, account.account_id)
+            remove_draft(pool, asset)
+    save_pack_generation(pool, request.generation)
+    apply_content_reload()
+    record_admin_action(
+        pool,
+        account.account_id,
+        "content_publish",
+        ",".join(drafts),
+        f"세대 {request.generation} · {reason}",
+    )
+    return ContentPublishResponse(
+        generation=request.generation,
+        published=drafts,
+        core_version=get_core_version(),
     )

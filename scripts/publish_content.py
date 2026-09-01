@@ -75,7 +75,7 @@ def main() -> None:
             return
         path, version_key = DRAFT_ASSETS[args.asset]
         current = read_current_version(Path(path), version_key)
-        problem = check_draft(args.asset, payload, current)
+        problem = check_draft(args.asset, payload)
         if problem:
             print(f"발행할 수 없다 — {problem}")
             return

@@ -497,3 +497,32 @@ CREATE TABLE IF NOT EXISTS content_draft (
     updated_by  BIGINT      REFERENCES account(id) ON DELETE SET NULL,
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ── 발행된 콘텐츠 (설계/4_아이템 §18) ───────────────────────────────────
+--
+-- 초안(`content_draft`)과 갈라 둔다. 초안은 게임에 영향이 없고, 이쪽은 **지금 돌고 있는
+-- 것**이다.
+--
+-- **서버도 이것을 읽는다.** 브라우저만 팩을 쓰고 서버가 파일을 읽으면 재시뮬이 다른
+-- 데이터로 돌고, 그것이 G3 가 잡으려는 바로 그 상태다.
+--
+-- 파일은 씨앗이자 폴백으로 남는다 — 발행된 것이 없으면 파일이 정본이고, 브라우저가
+-- 서버에 못 닿으면 번들에 박힌 것으로 돈다. "서버가 없어도 게임은 돈다" 가 유지되는
+-- 자리다.
+CREATE TABLE IF NOT EXISTS content_published (
+    asset         TEXT        PRIMARY KEY,
+    payload       JSONB       NOT NULL,
+    note          TEXT        NOT NULL DEFAULT '',
+    published_by  BIGINT      REFERENCES account(id) ON DELETE SET NULL,
+    published_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 팩 세대. 발행할 때마다 관리자가 입력한 값으로 올라간다. 이 값이 core_version 의
+-- `p` 축이며, **여러 자산을 한 번에 발행해도 세대는 하나다** — 그것이 "몰아서 발행" 의
+-- 뜻이다.
+CREATE TABLE IF NOT EXISTS content_generation (
+    id          INT         PRIMARY KEY DEFAULT 1,
+    generation  INT         NOT NULL DEFAULT 0,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK (id = 1)
+);
