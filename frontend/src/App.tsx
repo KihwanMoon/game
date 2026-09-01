@@ -300,6 +300,30 @@ export function findLaunchBlocker(problems: readonly string[]): string {
 }
 
 /**
+ * 출격 버튼을 잠글지 정한다.
+ *
+ * **기다리는 동안 잠근다.** 눌렀는데 아무 일도 없으면 사람은 다시 누르고, 그러면 티켓이
+ * 둘 발급된다 — 하나는 안 쓴 채로 남아 티켓 상한만 먹는다.
+ *
+ * @param blocker 출격을 막는 사유. 빈 문자열이면 막는 것이 없다.
+ * @param isLaunching 티켓을 기다리는 중인가.
+ * @returns 잠가야 하면 true.
+ */
+export function checkLaunchLocked(blocker: string, isLaunching: boolean): boolean {
+  return blocker !== '' || isLaunching
+}
+
+/**
+ * 출격 버튼에 적을 글자를 고른다.
+ *
+ * @param isLaunching 티켓을 기다리는 중인가.
+ * @returns 버튼 글자.
+ */
+export function formatLaunchLabel(isLaunching: boolean): string {
+  return isLaunching ? '티켓 받는 중' : '출격'
+}
+
+/**
  * 앱 화면. 규칙 에디터와 전투 관전을 한 벌의 규칙표로 잇는다.
  *
  * @returns 렌더 트리.
@@ -481,6 +505,9 @@ export function App(): React.JSX.Element {
   // **런을 살린 채 편집기를 본다.** 하강이 서른 방이라, 고치러 갈 때마다 런이 끝나면
   // 편집이 사실상 불가능해진다 — 방 사이에서 고칠 수 있다는 것이 이 게임의 고리다.
   const [isEditing, setEditing] = useState(false)
+  // 티켓을 기다리는 중. **판을 미리 걸지 않는다** — 걸었다가 갈아 끼우면 첫 방이
+  // 스킵된 것처럼 보인다.
+  const [isLaunching, setLaunching] = useState(false)
   const [autoLeft, setAutoLeft] = useState<number | undefined>(undefined)
   // **이번 방에서만 멈춘다.** 설정을 끄는 것과 다르다 — 한 번 멈추려고 기능을 끄게 하면
   // 다음 방부터도 안 넘어간다.
@@ -873,39 +900,26 @@ export function App(): React.JSX.Element {
    * 지금 규칙표로 판을 시작한다. 방·시드·규칙표를 이 순간의 값으로 얼린다.
    */
   function startRun(): void {
-    // 시드는 티켓을 거쳐서만 전투로 들어간다. 서버가 있으면 서버가 발급하고, 없으면
-    // 로컬 연습 티켓으로 계속한다 — **서버가 없다고 게임이 멈추지 않는다.** 다만 로컬
-    // 티켓으로 돈 판은 서버에 남지 않으므로 G1 계측에서도 빠진다.
+    // **서버 티켓을 기다렸다 건다.** 예전에는 로컬 티켓으로 판을 먼저 걸고 서버 티켓이
+    // 오면 갈아 끼웠는데, 그 순간 방과 시드가 바뀌어 **첫 방이 스킵된 것처럼** 보였다 —
+    // 실제로 그렇게 신고됐다. 서버가 정본이면 정본이 올 때까지 판을 안 건다.
     setVerdict(undefined)
     setOutcome(OUTCOME_ONGOING)
     setPostState('auto')
     setEditing(false)
-    const local = createLocalTicket(session.seed, session.roomId, coreVersion)
-    setRun({
-      // 로컬 티켓에는 스냅샷이 없다 — 지속 몬스터는 서버가 아는 것이다.
-      setup: {
-        roomId: local.roomId,
-        rulesetId: ruleset.rulesetId,
-        seed: local.seed,
-        // **로컬도 하강이다.** 서버가 없어도 게임이 도는 것이 이 저장소의 규율인데,
-        // 여기만 방 셋짜리 한 층으로 두면 **다른 게임이 돈다** — 화면이 계속 1층이라고
-        // 말하고 세 방에서 끝난다. 실제로 그 증상으로 드러났다.
-        chain: buildChainPosition(session.roomId),
-        floor: local.floor,
-        roomsPerFloor: CHAIN_LENGTH,
-      },
-      rulesets: new Map([[ruleset.rulesetId, ruleset]]),
-      ticket: local,
-    })
     if (account === undefined) {
+      applyLocalRun()
       return
     }
+    setLaunching(true)
     void requestTicket(account, session.roomId, session.seed).then((issued) => {
+      setLaunching(false)
       if (issued === undefined) {
+        // **서버가 없다고 게임이 멈추지 않는다.** 다만 로컬로 돈 판은 서버에 안 남으므로
+        // G1 계측에서도 빠진다.
+        applyLocalRun()
         return
       }
-      // 서버가 준 시드로 판을 다시 건다. 연습 모드라 제안한 시드가 그대로 오지만,
-      // 순위 모드가 생기면 여기서 값이 갈리고 그때는 서버 것이 정본이다.
       setRun({
         setup: buildRunSetup(issued, ruleset.rulesetId),
         rulesets: new Map([[ruleset.rulesetId, ruleset]]),
@@ -920,6 +934,29 @@ export function App(): React.JSX.Element {
       })
     })
   }
+
+  /**
+   * 서버 없이 도는 판을 건다.
+   *
+   * 로컬 티켓에는 스냅샷이 없다 — 지속 몬스터는 서버가 아는 것이다.
+   */
+  function applyLocalRun(): void {
+    const local = createLocalTicket(session.seed, session.roomId, coreVersion)
+    setRun({
+      setup: {
+        roomId: local.roomId,
+        rulesetId: ruleset.rulesetId,
+        seed: local.seed,
+        // **로컬도 하강이다.** 여기만 방 셋짜리 한 층으로 두면 다른 게임이 돈다.
+        chain: buildChainPosition(session.roomId),
+        floor: local.floor,
+        roomsPerFloor: CHAIN_LENGTH,
+      },
+      rulesets: new Map([[ruleset.rulesetId, ruleset]]),
+      ticket: local,
+    })
+  }
+
 
   /**
    * 판 하나를 영구 기록에 반영한다 (GDD §2.3).
@@ -1242,11 +1279,12 @@ export function App(): React.JSX.Element {
         size="sm"
         variant="primary"
         glyph="▶"
-        disabled={blocker !== ''}
+        disabled={checkLaunchLocked(blocker, isLaunching)}
         title={blocker === '' ? '이 규칙표로 던전에 내보낸다' : blocker}
         onClick={startRun}
       >
-        출격
+        {/* **기다리는 중임을 말한다.** 눌렀는데 아무 일도 없으면 사람은 다시 누른다. */}
+        {formatLaunchLabel(isLaunching)}
       </Button>
     </div>
   )

@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { App, CHAIN_LENGTH, LOCAL_FLOOR_CAP, buildInitialRuleSet, checkRunOver, buildChainPosition, buildNextRoomSetup, buildRunSetup, resolvePlayerLimits, describeRunResult, findLaunchBlocker, formatLocation, readPlayerLimits } from './App'
+import { App, CHAIN_LENGTH, LOCAL_FLOOR_CAP, buildInitialRuleSet, checkLaunchLocked, checkRunOver, formatLaunchLabel, buildChainPosition, buildNextRoomSetup, buildRunSetup, resolvePlayerLimits, describeRunResult, findLaunchBlocker, formatLocation, readPlayerLimits } from './App'
 import { buildBattleSession, checkOngoing, resolveRoomFloor, type BattleSetup } from './battle'
 import { checkShouldAutoAdvance } from './editor'
 import { BALANCE, BLOCK_CATALOG, G0_RULESETS } from './core/resources'
@@ -448,5 +448,28 @@ describe('서버 없이 도는 판도 하강이다', () => {
   it('★ 로컬 마지막 층이 밸런스의 마지막 층과 같다 — 갈리면 오프라인만 다른 깊이를 돈다', () => {
     const scale = (BALANCE as { floor_scale?: { max_floor?: number } }).floor_scale
     expect(LOCAL_FLOOR_CAP).toBe(scale?.max_floor)
+  })
+})
+
+
+describe('출격 진입 (첫 방이 스킵돼 보이던 자리)', () => {
+  it('★ 티켓을 기다리는 동안 출격이 잠긴다 — 두 번 누르면 티켓이 둘 발급된다', () => {
+    expect(checkLaunchLocked('', false)).toBe(false)
+    expect(checkLaunchLocked('', true)).toBe(true)
+  })
+
+  it('★ 막는 사유가 있으면 기다리지 않아도 잠긴다', () => {
+    expect(checkLaunchLocked('CPU 초과', false)).toBe(true)
+  })
+
+  it('★ 기다리는 중임을 글자로 말한다 — 잠기기만 하면 고장으로 읽힌다', () => {
+    expect(formatLaunchLabel(true)).not.toBe(formatLaunchLabel(false))
+    expect(formatLaunchLabel(true)).toContain('티켓')
+  })
+
+  it('★ 로컬 판도 하강으로 건다 — 서버 티켓과 다른 모양이면 갈아 끼울 때 방이 바뀐다', () => {
+    // 갈아 끼우기를 없앤 것이 진짜 고침이고, 이 검사는 **두 경로가 같은 모양인지**를
+    // 본다. 길이가 다르면 로컬로 시작한 판과 서버로 시작한 판이 다른 게임이 된다.
+    expect(buildChainPosition('open_field').roomIds.length).toBe(CHAIN_LENGTH * LOCAL_FLOOR_CAP)
   })
 })

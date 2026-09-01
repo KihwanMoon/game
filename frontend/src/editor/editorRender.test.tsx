@@ -203,3 +203,25 @@ describe('토큰 규율', () => {
     expect(readStrippedCss('editor.css').match(/box-shadow/g)).toBeNull()
   })
 })
+
+
+describe('좁은 화면의 상단 조작부', () => {
+  const css = readStrippedCss('../styles/app.css')
+
+  it('★ 폰에서 두 줄로 접힌다 — 한 줄이면 오른쪽이 잘리고 층 번호가 먼저 사라진다', () => {
+    // **`.launch` 안에서 본다.** 그냥 `flex-wrap: wrap` 을 찾으면 관리 화면의 다른
+    // 규칙이 걸려 통과한다 — 실제로 그렇게 통과했다.
+    const block = /@media \(max-width: 840px\) \{[\s\S]*?\.launch \{([\s\S]*?)\}/.exec(css)
+    expect(block?.[1] ?? '').toContain('flex-wrap: wrap')
+  })
+
+  it('★ 읽는 것과 누르는 것을 가른다 — 정보가 위, 조작이 아래다', () => {
+    // `order` 로 가른다. DOM 순서를 바꾸면 탭 순서가 흔들린다.
+    expect(css).toMatch(/\.launch > \.ds-expr[\s\S]*?order: 0/)
+    expect(css).toMatch(/\.launch > \.ds-button[\s\S]*?order: 1/)
+  })
+
+  it('★ 경계가 세로 배치와 같은 840px 다 — 다르면 한 화면이 두 규칙을 받는다', () => {
+    expect(css).toContain('@media (max-width: 840px)')
+  })
+})
