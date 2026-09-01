@@ -18,6 +18,13 @@ export { ContentAdminPanel, formatDraftText } from './ContentAdminPanel'
 export type { ContentAdminPanelProps } from './ContentAdminPanel'
 export type { CatalogAdminPanelProps } from './CatalogAdminPanel'
 export { DiscoveryPanel, buildDiscoveryCells } from './DiscoveryPanel'
+export {
+  AUTO_ADVANCE_SECONDS,
+  AutoAdvanceNotice,
+  checkShouldAutoAdvance,
+  readAutoAdvance,
+  writeAutoAdvance,
+} from './AutoAdvance'
 export { EvictionNotice, EVICTION_TEXT } from './EvictionNotice'
 export type { DiscoveryPanelProps } from './DiscoveryPanel'
 export { WorldPanel } from './WorldPanel'

@@ -56,6 +56,16 @@ body {
   gap: var(--sp-2);
 }
 
+/* 자동 진행 안내. **한 덩어리로 묶는다** — 남은 초와 멈춤 버튼이 떨어져 있으면
+   무엇을 멈추는 버튼인지 알 수 없다. */
+.launch__auto {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding-inline: var(--sp-2);
+  border-inline-start: 1px solid var(--line);
+}
+
 .launch__label {
   font-family: var(--font-body);
   font-size: var(--fs-body-s);

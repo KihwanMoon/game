@@ -61,6 +61,11 @@ import {
   DiscoveryPanel,
   DrawerPanel,
   EvictionNotice,
+  AUTO_ADVANCE_SECONDS,
+  AutoAdvanceNotice,
+  checkShouldAutoAdvance,
+  readAutoAdvance,
+  writeAutoAdvance,
   type DrawerTab,
   CharacterPanel,
   TemplatePanel,
@@ -203,6 +208,9 @@ const DECIMAL_RADIX = 10
  * 고치는 동안 수십 번이 나간다.
  */
 const META_PUSH_DELAY_MS = 1500
+
+/** 1초. 자동 진행 카운트다운이 쓴다. */
+const SECOND_MS = 1000
 
 const PLAYER_SECTION = 'player'
 const CPU_BUDGET_KEY = 'cpu_budget'
@@ -432,6 +440,12 @@ export function App(): React.JSX.Element {
   // 메타 세이브는 편집 세이브와 수명이 다르다 — 규칙표는 고치면 덮어쓰지만 해금과
   // 도감은 누적이다. 그래서 저장 열쇠도 디바운스 저장기도 따로 둔다.
   const [meta, setMeta] = useState<MetaSave>(() => readMeta(getLocalStorage()) ?? createEmptyMeta())
+  // 자동 진행. 남은 초가 `undefined` 면 안 돌고 있는 것이다.
+  const [autoLeft, setAutoLeft] = useState<number | undefined>(undefined)
+  // **이번 방에서만 멈춘다.** 설정을 끄는 것과 다르다 — 한 번 멈추려고 기능을 끄게 하면
+  // 다음 방부터도 안 넘어간다.
+  const [isAutoStopped, setAutoStopped] = useState(false)
+  const [isAutoOn, setAutoOn] = useState<boolean>(() => readAutoAdvance(getLocalStorage()))
   // 서버 연결 상태. 오프라인이어도 게임은 돈다 — 코어가 브라우저 안에서 직접 돌기
   // 때문이며, 서버는 보관과 검증을 맡을 뿐이다.
   const [account, setAccount] = useState<string | undefined>(undefined)
@@ -940,8 +954,45 @@ export function App(): React.JSX.Element {
     }
     setOutcome(OUTCOME_ONGOING)
     setPostState('auto')
+    setAutoLeft(undefined)
+    // 멈춤은 **그 방에서만** 이다. 안 풀면 한 번 멈춘 뒤로 영영 안 넘어간다.
+    setAutoStopped(false)
     setRun({ ...run, setup: next })
   }
+
+  // **방을 비우면 저절로 넘어간다.** 다만 곧장은 아니다 — 방 사이는 규칙을 고치는 유일한
+  // 창이고(GDD §2.2), 곧장 넘기면 "고치려고 했는데 이미 넘어가 있다" 가 된다. 몇 초를
+  // 세어 보여 주고, 그동안 멈출 수 있다.
+  //
+  // 진 판에서는 안 넘어간다. `buildNextRoomSetup` 이 이긴 판에만 다음 방을 주므로
+  // 여기서 판정을 다시 안 봐도 된다.
+  useEffect(() => {
+    const isEligible = checkShouldAutoAdvance({
+      isFinished: !checkOngoing(outcome),
+      hasNext: run !== undefined && buildNextRoomSetup(run.setup, outcome) !== undefined,
+      isEnabled: isAutoOn,
+      isStopped: isAutoStopped,
+    })
+    if (!isEligible) {
+      setAutoLeft(undefined)
+      return undefined
+    }
+    setAutoLeft(AUTO_ADVANCE_SECONDS)
+    const timer = setInterval(() => {
+      setAutoLeft((left) => (left === undefined ? undefined : left - 1))
+    }, SECOND_MS)
+    return () => {
+      clearInterval(timer)
+    }
+  }, [outcome, run, isAutoOn, isAutoStopped])
+
+  // 세다가 0 이 되면 넘어간다. **세는 것과 넘어가는 것을 갈라 둔다** — 한 효과에 두면
+  // 넘어가면서 상태가 바뀌고 그 바뀜이 다시 타이머를 세워, 방 하나를 건너뛴다.
+  useEffect(() => {
+    if (autoLeft !== undefined && autoLeft <= 0) {
+      goToNextRoom()
+    }
+  })
 
   /**
    * 끝난 판이 지금 튜토리얼 단계를 통과시켰는지 반영한다.
@@ -1407,16 +1458,45 @@ export function App(): React.JSX.Element {
         다시
       </Button>
       {nextRoom === undefined ? null : (
-        <Button
-          size="sm"
-          variant="primary"
-          glyph="→"
-          title="체력과 포션을 그대로 들고 다음 방으로 넘어간다"
-          onClick={goToNextRoom}
-        >
-          다음 방 {String((run.setup.chain?.index ?? 0) + 2)}/
-          {String(run.setup.chain?.roomIds.length ?? 1)}
-        </Button>
+        <>
+          <Button
+            size="sm"
+            variant="primary"
+            glyph="→"
+            title="체력과 포션을 그대로 들고 다음 방으로 넘어간다"
+            onClick={goToNextRoom}
+          >
+            다음 방 {String((run.setup.chain?.index ?? 0) + 2)}/
+            {String(run.setup.chain?.roomIds.length ?? 1)}
+          </Button>
+          <AutoAdvanceNotice
+            secondsLeft={autoLeft}
+            roomNumber={(run.setup.chain?.index ?? 0) + 2}
+            roomTotal={run.setup.chain?.roomIds.length ?? 1}
+            onStop={() => {
+              setAutoStopped(true)
+            }}
+          />
+          {/* **끄기는 안내와 다른 일이다.** 멈춤은 이번 방만이고, 이것은 앞으로 계속이다.
+              둘을 한 버튼에 두면 한 번 멈추려다 기능을 꺼 버린다. */}
+          <Button
+            size="sm"
+            variant="ghost"
+            glyph={isAutoOn ? '⏩' : '⏸'}
+            title={
+              isAutoOn
+                ? '자동 진행을 끈다 — 방마다 눌러서 넘어간다'
+                : '자동 진행을 켠다 — 이기면 몇 초 뒤 저절로 넘어간다'
+            }
+            onClick={() => {
+              const next = !isAutoOn
+              setAutoOn(next)
+              writeAutoAdvance(getLocalStorage(), next)
+            }}
+          >
+            자동 진행 {isAutoOn ? '켬' : '끔'}
+          </Button>
+        </>
       )}
       <Button size="sm" variant="ghost" glyph="↰" onClick={goToEditor}>
         규칙 고치기
