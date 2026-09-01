@@ -22,8 +22,18 @@ def test_submission_request_takes_no_result():
     """★ 제출 요청은 입력만 받는다. 결과·시드·방을 받을 자리가 없다.
 
     이 검사가 붉어지면 필드를 지우기 전에 docs/설계/7_변조방지 §4 를 먼저 읽는다.
+
+    **`floor` 는 결과가 아니라 「어디까지 확인해 달라」는 주장이다.** 서버가 그 층까지
+    **처음부터** 다시 돌려 확정하므로 깊게 적어 봐야 더 많이 시뮬될 뿐이고, 얕게 적으면
+    그 층 보상만 받는다 — 어느 쪽도 이득이 없다. 결과·시드·방·스냅샷을 받을 자리는
+    여전히 없다.
     """
-    assert set(SubmissionRequest.model_fields) == {"ticket_id", "ruleset", "core_version"}
+    assert set(SubmissionRequest.model_fields) == {
+        "ticket_id",
+        "ruleset",
+        "core_version",
+        "floor",
+    }
 
 
 def test_ticket_request_seed_is_optional_and_bounded():

@@ -15,7 +15,12 @@ from game.api.deps import (
     get_pool,
 )
 from game.api.discovery_service import record_item_discovery
-from game.api.floor_service import apply_floor_outcome
+from game.api.floor_service import (
+    apply_floor_outcome,
+    check_descent_over,
+    count_claim_rooms,
+    resolve_claim,
+)
 from game.api.loot_service import create_run_drops, list_floor_defeats
 from game.api.schemas import SubmissionRequest, SubmissionResponse
 from game.app.items.loot import compute_run_currency
@@ -43,7 +48,12 @@ from game.app.store.runs import (
     save_run_result,
     save_submission,
 )
-from game.app.store.tickets import IssuedTicket, find_open_ticket, mark_ticket_consumed
+from game.app.store.tickets import (
+    IssuedTicket,
+    apply_floor_claim,
+    find_open_ticket,
+    mark_ticket_consumed,
+)
 from game.app.store.trophies import apply_recovery, create_trophy
 from game.schemas.loadout import parse_loadout
 from game.schemas.meta_save import MetaSave, build_meta_payload, parse_meta_save
@@ -251,7 +261,9 @@ def apply_trophy_transfer(account_id: int, record_id: int) -> str:
     return f"{picked.catalog_id} 를 빼앗겼다"
 
 
-def check_run_submission(request: SubmissionRequest, ticket: IssuedTicket) -> VerifiedRun:
+def check_run_submission(
+    request: SubmissionRequest, ticket: IssuedTicket, claimed: int = 0
+) -> VerifiedRun:
     """제출 하나를 판정한다.
 
     코어 버전이 다르면 결과가 재현되지 않으므로 재시뮬하지 않고 거절한다. 이것은 변조가
@@ -260,6 +272,7 @@ def check_run_submission(request: SubmissionRequest, ticket: IssuedTicket) -> Ve
     Args:
         request: 제출 요청.
         ticket: 이 제출이 쓰는 티켓.
+        claimed: 여기까지 깼다고 주장하는 층. 0 이면 하강 전체를 돈다.
 
     Returns:
         확정된 판정.
@@ -287,6 +300,9 @@ def check_run_submission(request: SubmissionRequest, ticket: IssuedTicket) -> Ve
         # 층도 티켓에서 온다. 제출이 실어 오면 1층으로 적어 보내 쉬운 판으로 검증받는다.
         ticket.floor,
         ticket.rooms_per_floor,
+        # **청구한 층까지만 돈다.** 층 단위 보상이 이것을 쓴다 — 서버는 늘 처음부터 그
+        # 층까지 다시 돌므로 인계 HP 를 클라이언트가 보고할 자리가 없다 (T9).
+        count_claim_rooms(ticket, claimed),
     )
 
 
@@ -310,12 +326,22 @@ def create_run_submission(
     ticket = find_open_ticket(pool, request.ticket_id, account.account_id)
     if ticket is None:
         raise HTTPException(status.HTTP_409_CONFLICT, "쓸 수 없는 티켓이다")
-    # 소비를 먼저 한다. 같은 티켓으로 두 번 제출하는 경쟁 상태를 여기서 끊는다 (T6).
-    if not mark_ticket_consumed(pool, ticket.ticket_id):
+    claimed = resolve_claim(ticket, request.floor)
+    # **먼저 자리를 잡는다.** 층 단위 보상 때문에 한 티켓으로 여러 번 제출하는데, 같은
+    # 층을 두 번 제출해 보상을 두 번 받는 경쟁 상태를 여기서 끊는다 — T6 의 「한 티켓
+    # 한 제출」을 「더 깊은 층으로만」으로 다시 세운 자리다.
+    if claimed > 0:
+        if not apply_floor_claim(pool, ticket.ticket_id, claimed):
+            raise HTTPException(status.HTTP_409_CONFLICT, "이미 지나온 층이다")
+    elif not mark_ticket_consumed(pool, ticket.ticket_id):
         raise HTTPException(status.HTTP_409_CONFLICT, "이미 쓴 티켓이다")
 
     submission_id = save_submission(pool, ticket.ticket_id, request.ruleset, request.core_version)
-    verified = check_run_submission(request, ticket)
+    verified = check_run_submission(request, ticket, claimed)
+    # **런이 끝났으면 티켓을 닫는다.** 졌거나 마지막 층을 깼을 때다 — 안 닫으면 죽은 뒤에도
+    # 같은 티켓으로 더 깊은 층을 청구할 수 있다.
+    if claimed > 0 and check_descent_over(ticket, claimed, verified):
+        mark_ticket_consumed(pool, ticket.ticket_id)
     save_run_result(
         pool,
         StoredResult(
@@ -333,8 +359,10 @@ def create_run_submission(
         verified,
         ticket.mode,
         ticket.core_version,
-        ticket.floor,
+        ticket.floor if claimed <= 0 else claimed,
         ticket.ticket_id,
+        ticket.floor,
+        ticket.rooms_per_floor,
     )
     world = apply_monster_outcome(ticket, submission_id, verified, account.account_id)
     if world:

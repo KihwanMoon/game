@@ -456,11 +456,14 @@ export async function submitRun(
   ticketId: string,
   ruleset: unknown,
   coreVersion: string,
+  floor = 0,
 ): Promise<RunVerdict | undefined> {
   const response = await sendRequest('/run', {
     method: 'POST',
     headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ticket_id: ticketId, ruleset, core_version: coreVersion }),
+    // **`floor` 는 「어디까지 확인해 달라」는 주장이다.** 서버가 그 층까지 처음부터 다시
+    // 돌려 확정하므로 결과를 보내는 것이 아니다. 0 은 하강 전체다.
+    body: JSON.stringify({ ticket_id: ticketId, ruleset, core_version: coreVersion, floor }),
   })
   if (response === undefined || !response.ok) {
     return undefined

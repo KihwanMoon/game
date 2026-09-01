@@ -71,7 +71,10 @@ CREATE INDEX IF NOT EXISTS run_ticket_account_idx ON run_ticket (account_id, iss
 -- 그 지름길을 낼 수 없다.
 CREATE TABLE IF NOT EXISTS run_submission (
     id            BIGSERIAL   PRIMARY KEY,
-    ticket_id     TEXT        NOT NULL UNIQUE REFERENCES run_ticket(id) ON DELETE CASCADE,
+    -- **UNIQUE 가 아니다** (로드맵 W14). 층 단위 보상 때문에 한 티켓으로 층마다 한 번씩
+    -- 제출한다. 「한 티켓 한 제출」이 막던 것(같은 판으로 보상을 두 번 받기)은
+    -- `run_ticket.cleared_floor` 가 막는다 — **더 깊은 층으로만 나아갈 수 있다.**
+    ticket_id     TEXT        NOT NULL REFERENCES run_ticket(id) ON DELETE CASCADE,
     ruleset       JSONB       NOT NULL,
     core_version  TEXT        NOT NULL,
     submitted_at  TIMESTAMPTZ NOT NULL DEFAULT now()

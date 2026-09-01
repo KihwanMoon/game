@@ -84,6 +84,11 @@ class SubmissionRequest(BaseModel):
     ticket_id: str = Field(min_length=1, max_length=128)
     ruleset: dict = Field(description="규칙표 절. 서버가 다시 파싱하고 다시 검증한다.")
     core_version: str = Field(min_length=1, max_length=32)
+    # **여기까지 깼다고 주장하는 층** (로드맵 W14). 주장일 뿐이고 서버가 처음부터 그
+    # 층까지 다시 돌려 확정한다 — 결과를 받을 자리는 여전히 없다.
+    #
+    # 0 은 「하강 전체」다. 층 개념이 없던 옛 클라이언트가 그 길로 온다.
+    floor: int = Field(default=0, ge=0, le=99)
 
 
 class SubmissionResponse(BaseModel):

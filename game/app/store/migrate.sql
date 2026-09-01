@@ -329,3 +329,13 @@ ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS rooms_per_floor INTEGER NOT NULL
 -- 인계 HP 는 여전히 클라이언트가 안 보낸다. 서버가 **매번 처음부터** 그 층까지 재시뮬해
 -- 확정하므로 "나는 만피로 시작했다" 를 적어 보낼 자리가 없다 (T9).
 ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS cleared_floor INTEGER NOT NULL DEFAULT 0;
+
+
+-- 한 티켓에 제출이 여럿이 된다 (로드맵 W14). 「한 티켓 한 제출」이 막던 것은
+-- `run_ticket.cleared_floor` 가 막는다 — 더 깊은 층으로만 나아갈 수 있다.
+--
+-- 제약 이름은 PostgreSQL 이 자동으로 붙인 것이다. 없으면 조용히 넘어간다 — 새 DB 는
+-- schema.sql 로 서므로 애초에 없다.
+ALTER TABLE run_submission DROP CONSTRAINT IF EXISTS run_submission_ticket_id_key;
+
+CREATE INDEX IF NOT EXISTS run_submission_ticket_idx ON run_submission (ticket_id, submitted_at);

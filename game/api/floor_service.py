@@ -14,6 +14,7 @@ from game.app.services.verify_run import VERDICT_VERIFIED, VerifiedRun
 from game.app.simulation.plan import OUTCOME_PLAYER_WIN
 from game.app.store.accounts import find_player_entity
 from game.app.store.progress import apply_floor_progress, read_reached_floor
+from game.app.store.tickets import IssuedTicket
 
 
 def apply_floor_outcome(
@@ -53,3 +54,59 @@ def apply_floor_outcome(
         return f"{cap}층을 깼다"
     # **열린 순간만 말한다.** 이미 지나온 층을 다시 이겼을 때도 말하면 그 줄이 뜻을 잃는다.
     return f"{after}층이 열렸다" if after > before else ""
+
+
+def check_descent_over(ticket: IssuedTicket, claimed: int, verified: VerifiedRun) -> bool:
+    """이 제출로 하강이 끝났는가.
+
+    **안 닫으면 죽은 뒤에도 같은 티켓으로 더 깊은 층을 청구할 수 있다.** 서버가 처음부터
+    다시 돌므로 결과는 또 패배로 나오지만, 그때마다 그 층의 보상이 나간다.
+
+    Args:
+        ticket: 이 제출이 쓰는 티켓.
+        claimed: 이번에 확정한 층.
+        verified: 서버가 확정한 결과.
+
+    Returns:
+        끝났으면 True.
+    """
+    if verified.verdict != VERDICT_VERIFIED:
+        return False
+    if verified.outcome != OUTCOME_PLAYER_WIN:
+        return True
+    span = len(ticket.room_ids) // max(1, ticket.rooms_per_floor)
+    return claimed >= ticket.floor + max(0, span - 1)
+
+
+def resolve_claim(ticket: IssuedTicket, wanted: int) -> int:
+    """이번 제출이 확정할 층을 정한다.
+
+    **0 은 「하강 전체」다** — 층 개념이 없던 옛 클라이언트가 그 길로 온다. 그 밖에는
+    티켓이 도는 범위 안으로 접는다: 하강에 없는 층을 주장하면 방 목록 밖을 돌게 된다.
+
+    Args:
+        ticket: 이 제출이 쓰는 티켓.
+        wanted: 클라이언트가 주장한 층.
+
+    Returns:
+        확정할 층. 0 이면 전체다.
+    """
+    if wanted <= 0 or ticket.rooms_per_floor <= 0:
+        return 0
+    span = len(ticket.room_ids) // ticket.rooms_per_floor
+    return max(ticket.floor, min(wanted, ticket.floor + max(0, span - 1)))
+
+
+def count_claim_rooms(ticket: IssuedTicket, claimed: int) -> int:
+    """그 층까지 도는 데 드는 방 수.
+
+    Args:
+        ticket: 이 제출이 쓰는 티켓.
+        claimed: 확정할 층. 0 이면 전체다.
+
+    Returns:
+        돌 방 수. 0 이면 전부 돈다.
+    """
+    if claimed <= 0 or ticket.rooms_per_floor <= 0:
+        return 0
+    return (claimed - ticket.floor + 1) * ticket.rooms_per_floor

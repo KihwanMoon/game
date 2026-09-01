@@ -104,11 +104,22 @@ def test_ticket_carries_the_snapshot(client, token, monster):
 
 
 def test_submission_does_not_take_a_snapshot():
-    """★ 제출이 스냅샷을 받으면 약한 것으로 바꿔 보낼 수 있다 (T8)."""
+    """★ 제출이 스냅샷을 받으면 약한 것으로 바꿔 보낼 수 있다 (T8).
+
+    **`floor` 는 결과가 아니라 「어디까지 확인해 달라」는 주장이다.** 서버가 그 층까지
+    **처음부터** 다시 돌려 확정하므로 깊게 적어 봐야 더 많이 시뮬될 뿐이고, 얕게 적으면
+    그 층 보상만 받는다 — 어느 쪽도 이득이 없다. 결과·시드·방·스냅샷을 받을 자리는
+    여전히 없다.
+    """
     from game.api.schemas import SubmissionRequest
 
     assert "monster_snapshot" not in SubmissionRequest.model_fields
-    assert set(SubmissionRequest.model_fields) == {"ticket_id", "ruleset", "core_version"}
+    assert set(SubmissionRequest.model_fields) == {
+        "ticket_id",
+        "ruleset",
+        "core_version",
+        "floor",
+    }
 
 
 def test_a_smuggled_snapshot_is_ignored(client, token, monster):

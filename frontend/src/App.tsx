@@ -385,6 +385,23 @@ export function checkRunOver(outcome: string, nextRoom: BattleSetup | undefined)
 }
 
 /**
+ * 방금 끝낸 방이 그 층의 마지막인가 (로드맵 W14).
+ *
+ * **층을 깬 순간 보상을 준다.** 하강으로 바꾸면서 한 런이 방 30개가 됐는데, 정산이 런
+ * 끝에 한 번뿐이면 죽거나 다 깨야만 보상을 받는다 — 주기가 열 배로 늘어난 셈이다.
+ *
+ * @param index 방금 끝낸 방의 순번. 0 부터 센다.
+ * @param roomsPerFloor 층 하나에 드는 방 수. 0 이면 층 개념이 없다.
+ * @returns 층을 깼으면 true.
+ */
+export function checkFloorCleared(index: number, roomsPerFloor: number): boolean {
+  if (roomsPerFloor <= 0) {
+    return false
+  }
+  return (index + 1) % roomsPerFloor === 0
+}
+
+/**
  * 고른 방에서 시작하는 연쇄를 만든다.
  *
  * 지금은 같은 방을 이어 붙인다 — 층 DAG(W14)가 정해지면 그쪽이 방 목록을 정한다.
@@ -980,6 +997,13 @@ export function App(): React.JSX.Element {
         ticket.ticketId,
         buildRuleSetPayload(finishedRun.ruleset),
         ticket.coreVersion,
+        // **여기서도 층을 청구한다.** 0(전체)으로 보내면 서버가 하강 전체의 보상을 다시
+        // 주고, 층마다 이미 받은 것이 두 번 나간다.
+        resolveRoomFloor(
+          run?.setup.floor ?? 1,
+          run?.setup.chain?.index ?? 0,
+          run?.setup.roomsPerFloor ?? 0,
+        ),
       ).then((result) => {
         setVerdict(result)
         // 전리품과 화폐가 여기서 들어온다. 다시 읽어야 화면이 그것을 안다.
@@ -1043,6 +1067,14 @@ export function App(): React.JSX.Element {
     const next = buildNextRoomSetup(run.setup, outcome)
     if (next === undefined) {
       return
+    }
+    // **층을 넘기 전에 그 층을 청구한다.** 넘고 나서 하면 순번이 이미 다음 층이라
+    // 앞 층의 보상을 다음 층 것으로 적게 된다.
+    if (
+      recording !== undefined &&
+      checkFloorCleared(run.setup.chain?.index ?? 0, run.setup.roomsPerFloor ?? 0)
+    ) {
+      applyFloorSettlement(recording)
     }
     setOutcome(OUTCOME_ONGOING)
     setPostState('auto')
@@ -1113,6 +1145,47 @@ export function App(): React.JSX.Element {
   /**
    * 에디터로 돌아간다. 판을 버리고 결과만 들고 나온다.
    */
+  /**
+   * 층을 깬 순간 그 층을 청구한다 (로드맵 W14).
+   *
+   * **정산이 런 끝까지 미뤄지던 자리다.** 하강으로 바꾸면서 한 런이 방 30개가 됐고, 보상
+   * 주기가 3방에서 30방으로 늘어났다 — 죽거나 다 깨야만 받게 됐다.
+   *
+   * 결과를 보내는 것이 아니다. **서버가 그 층까지 처음부터 다시 돌려 확정한다** (T9).
+   */
+  function applyFloorSettlement(finishedRun: BattleRecording): void {
+    const ticket = run?.ticket
+    const setup = run?.setup
+    if (account === undefined || ticket === undefined || setup === undefined) {
+      return
+    }
+    if (ticket.ticketId.startsWith('local:')) {
+      return
+    }
+    void submitRun(
+      account,
+      ticket.ticketId,
+      buildRuleSetPayload(finishedRun.ruleset),
+      ticket.coreVersion,
+      resolveRoomFloor(setup.floor ?? 1, setup.chain?.index ?? 0, setup.roomsPerFloor ?? 0),
+    ).then((result) => {
+      if (result === undefined) {
+        return
+      }
+      setVerdict(result)
+      // 층마다 들어오는 것이 있으므로 가방·성장·도감을 그때그때 다시 읽는다.
+      void readItemContext(account).then((context) => {
+        if (context.inventory !== undefined) {
+          setInventory(context.inventory)
+        }
+        if (context.progress !== undefined) {
+          setProgress(context.progress)
+        }
+      })
+      void readDiscovery(account).then(setDiscovery)
+    })
+  }
+
   function goToEditor(): void {
     // **런이 살아 있으면 정산하지 않는다.** 하강은 서른 방이라, 규칙을 고치러 갈 때마다
     // 런이 끝나면 편집이 사실상 불가능해진다 — 방 사이에서 고칠 수 있다는 것이 이 게임의

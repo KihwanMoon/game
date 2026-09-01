@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { App, CHAIN_LENGTH, LOCAL_FLOOR_CAP, buildInitialRuleSet, checkLaunchLocked, checkRunOver, formatLaunchLabel, buildChainPosition, buildNextRoomSetup, buildRunSetup, resolvePlayerLimits, describeRunResult, findLaunchBlocker, formatLocation, readPlayerLimits } from './App'
+import { App, CHAIN_LENGTH, LOCAL_FLOOR_CAP, buildInitialRuleSet, checkFloorCleared, checkLaunchLocked, checkRunOver, formatLaunchLabel, buildChainPosition, buildNextRoomSetup, buildRunSetup, resolvePlayerLimits, describeRunResult, findLaunchBlocker, formatLocation, readPlayerLimits } from './App'
 import { buildBattleSession, checkOngoing, resolveRoomFloor, type BattleSetup } from './battle'
 import { checkShouldAutoAdvance } from './editor'
 import { BALANCE, BLOCK_CATALOG, G0_RULESETS } from './core/resources'
@@ -471,5 +471,24 @@ describe('출격 진입 (첫 방이 스킵돼 보이던 자리)', () => {
     // 갈아 끼우기를 없앤 것이 진짜 고침이고, 이 검사는 **두 경로가 같은 모양인지**를
     // 본다. 길이가 다르면 로컬로 시작한 판과 서버로 시작한 판이 다른 게임이 된다.
     expect(buildChainPosition('open_field').roomIds.length).toBe(CHAIN_LENGTH * LOCAL_FLOOR_CAP)
+  })
+})
+
+
+describe('층 단위 보상 (로드맵 W14)', () => {
+  it('★ 층의 마지막 방을 깨면 정산한다 — 안 하면 죽거나 다 깨야만 보상을 받는다', () => {
+    // 하강으로 바꾸면서 한 런이 방 30개가 됐다. 정산이 런 끝에 한 번뿐이면 보상 주기가
+    // 3방에서 30방으로 늘어난다 — 실제로 그렇게 신고됐다.
+    expect(checkFloorCleared(2, 3)).toBe(true)
+    expect(checkFloorCleared(5, 3)).toBe(true)
+  })
+
+  it('★ 층 중간에서는 정산하지 않는다 — 매 방 청구하면 층 단위가 아니다', () => {
+    expect(checkFloorCleared(0, 3)).toBe(false)
+    expect(checkFloorCleared(1, 3)).toBe(false)
+  })
+
+  it('★ 층 개념이 없으면 정산하지 않는다 — 옛 티켓은 런 끝에 한 번이다', () => {
+    expect(checkFloorCleared(2, 0)).toBe(false)
   })
 })
