@@ -11,7 +11,12 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { CatalogAdminPanel, CatalogForm } from './CatalogAdminPanel'
+import {
+  CatalogAdminPanel,
+  CatalogForm,
+  buildAffixPayload,
+  buildAffixRows,
+} from './CatalogAdminPanel'
 import type { CatalogAdminView } from '../storage'
 
 const VIEW: CatalogAdminView = {
@@ -125,5 +130,41 @@ describe('신규 등록 폼', () => {
 
   it('★ 등록도 새 id 로 하라는 안내가 붙는다 — 수정이 막힌 이유가 여기서 이어진다', () => {
     expect(MARKUP).toContain('새로 등록하고 옛 id 를 폐기한다')
+  })
+})
+
+describe('접사 입력 (JSON 을 손으로 치지 않는다)', () => {
+  it('★ 능력치를 목록에서 고른다 — 오타 난 능력치는 아무 효과가 없다', () => {
+    const html = renderToStaticMarkup(
+      <CatalogForm grades={VIEW.grades} onCreate={() => undefined} />,
+    )
+    expect(html).toContain('<select')
+    expect(html).toContain('attack_range')
+  })
+
+  it('★ 빈 줄은 안 보낸다 — 아무 효과 없는 접사가 붙고 이름만 뜬다', () => {
+    const rows = [
+      { stat: 'attack', flat: '3', percent: '', labelKo: '예리함' },
+      { stat: 'defense', flat: '', percent: '', labelKo: '' },
+    ]
+    const payload = buildAffixPayload(rows)
+    expect(payload).toHaveLength(1)
+    expect(payload[0]).toEqual({ stat: 'attack', flat: 3, percent: 0, label_ko: '예리함' })
+  })
+
+  it('★ 이름을 안 적으면 능력치 이름을 쓴다 — 이름 없는 접사는 화면에서 사라진다', () => {
+    const payload = buildAffixPayload([{ stat: 'hp_max', flat: '8', percent: '', labelKo: '' }])
+    expect(payload[0]?.label_ko).toBe('hp_max')
+  })
+
+  it('줄 하나만 고친다 — 나머지 칸이 같이 지워지면 못 쓴다', () => {
+    const rows = [
+      { stat: 'attack', flat: '1', percent: '', labelKo: 'a' },
+      { stat: 'defense', flat: '2', percent: '', labelKo: 'b' },
+    ]
+    const next = buildAffixRows(rows, 1, { flat: '9' })
+    expect(next[0]).toBe(rows[0])
+    expect(next[1]?.flat).toBe('9')
+    expect(next[1]?.labelKo).toBe('b')
   })
 })

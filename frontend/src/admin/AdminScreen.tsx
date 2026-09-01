@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react'
 import { EnemyRuleEditor } from './EnemyRuleEditor'
 import { RoomGrid } from './RoomGrid'
 import { SkillTable } from './SkillTable'
+import { ValueTree } from './ValueTree'
 import { PublishBar } from './PublishBar'
 import { readActivePack } from '../content/pack'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
@@ -29,14 +30,16 @@ import {
   type ContentDraftView,
 } from '../storage'
 
-type Tab = 'content' | 'enemies' | 'skills' | 'rooms' | 'catalog'
+type Tab = 'balance' | 'enemies' | 'skills' | 'rooms' | 'catalog' | 'content'
 
 const TABS: readonly { readonly id: Tab; readonly label: string }[] = [
-  { id: 'content', label: '콘텐츠' },
+  { id: 'balance', label: '밸런스' },
   { id: 'enemies', label: '적 규칙표' },
   { id: 'skills', label: '스킬' },
   { id: 'rooms', label: '룸' },
   { id: 'catalog', label: '아이템' },
+  // 원문은 마지막이다. 드물고 위험한 일에 쓰는 탈출구이지 기본 도구가 아니다.
+  { id: 'content', label: '원문' },
 ]
 
 const EMPTY_HINT = '여기엔 아무것도 없다'
@@ -68,7 +71,7 @@ function readAssetFile(
  */
 export function AdminScreen(): React.JSX.Element {
   const [token, setToken] = useState<string | undefined>(undefined)
-  const [tab, setTab] = useState<Tab>('content')
+  const [tab, setTab] = useState<Tab>('balance')
   const [content, setContent] = useState<ContentDraftView | undefined>(undefined)
   const [asset, setAsset] = useState<ContentAssetView | undefined>(undefined)
   const [catalog, setCatalog] = useState<CatalogAdminView | undefined>(undefined)
@@ -146,7 +149,9 @@ export function AdminScreen(): React.JSX.Element {
                 setTab(item.id)
                 // 탭을 열 때 그 자산을 읽어 둔다. 안 읽으면 편집기가 빈 채로 뜨고,
                 // 그러면 "여기서 뭘 고치라는 거지" 가 된다.
-                if (item.id === 'enemies' || item.id === 'skills' || item.id === 'rooms') {
+                if (item.id === 'balance') {
+                  void readContentAsset(token, 'balance').then(setAsset)
+                } else if (item.id === 'enemies' || item.id === 'skills' || item.id === 'rooms') {
                   void readContentAsset(token, item.id).then(setAsset)
                 }
               }}
@@ -163,8 +168,25 @@ export function AdminScreen(): React.JSX.Element {
         </div>
       )}
 
+      <PublishBar
+        token={token}
+        drafts={content?.drafts.length ?? 0}
+        onDone={(next, said) => {
+          setDetail(said)
+          setContent(next)
+        }}
+      />
+
       <div className="adm__body">
-        {tab === 'skills' ? (
+        {tab === 'balance' ? (
+          <ValueTree
+            file={readAssetFile(asset, 'balance')}
+            title="밸런스 · 몬스터 스탯"
+            onSave={(text, note) => {
+              applyContent('/admin/content/draft', 'balance', text, note)
+            }}
+          />
+        ) : tab === 'skills' ? (
           <SkillTable
             file={readAssetFile(asset, 'skills')}
             onSave={(text, note) => {
@@ -186,16 +208,7 @@ export function AdminScreen(): React.JSX.Element {
             }}
           />
         ) : tab === 'content' ? (
-          <>
-            <PublishBar
-              token={token}
-              drafts={content?.drafts.length ?? 0}
-              onDone={(next, said) => {
-                setDetail(said)
-                setContent(next)
-              }}
-            />
-            <ContentAdminPanel
+          <ContentAdminPanel
               content={content}
               asset={asset}
               detail=""
@@ -209,7 +222,6 @@ export function AdminScreen(): React.JSX.Element {
                 applyContent('/admin/content/discard', name, '', note)
               }}
             />
-          </>
         ) : (
           <CatalogAdminPanel
             catalog={catalog}
@@ -249,16 +261,10 @@ export function AdminScreen(): React.JSX.Element {
               })
             }}
             onCreate={(payload, reason) => {
-              let affixes: unknown = []
-              try {
-                affixes = JSON.parse(String(payload.affixes ?? '[]'))
-              } catch (error) {
-                setDetail(`접사가 JSON 이 아니다 — ${String(error)}`)
-                return
-              }
+              // 접사는 폼이 이미 절로 만들어 준다 — JSON 을 손으로 치던 때는 따옴표
+              // 하나가 틀리면 파서 이야기를 사유로 받았다.
               void applyCatalogAdmin(token, '/admin/catalog/item', {
                 ...payload,
-                affixes,
                 reason,
               }).then((outcome) => {
                 setDetail(outcome.detail)

@@ -44,6 +44,67 @@ const SLOTS: readonly string[] = [
 const KINDS: readonly string[] = ['EQUIPMENT', 'CONSUMABLE', 'QUEST']
 
 /**
+ * 접사가 붙을 수 있는 능력치.
+ *
+ * 이 목록은 `blocks.json` 의 `rhs_stats` 와 같아야 한다 — 규칙표가 읽지 못하는 능력치에
+ * 접사를 붙이면 그 아이템은 성능이 있는데 규칙으로는 안 보인다.
+ */
+const AFFIX_STATS: readonly string[] = [
+  'attack',
+  'defense',
+  'hp_max',
+  'attack_range',
+  'cpu_budget',
+  'initiative',
+]
+
+const DECIMAL_RADIX = 10
+
+/** 접사 한 줄. 칸은 글자로 들고 있다가 보낼 때 숫자로 바꾼다. */
+export interface AffixRow {
+  readonly stat: string
+  readonly flat: string
+  readonly percent: string
+  readonly labelKo: string
+}
+
+/**
+ * 접사 줄 하나를 고친다.
+ *
+ * @param rows 지금 줄들.
+ * @param index 고칠 자리.
+ * @param patch 덮어쓸 값.
+ * @returns 새 줄들.
+ */
+export function buildAffixRows(
+  rows: readonly AffixRow[],
+  index: number,
+  patch: Partial<AffixRow>,
+): readonly AffixRow[] {
+  return rows.map((row, at) => (at === index ? { ...row, ...patch } : row))
+}
+
+/**
+ * 접사 줄들을 서버가 읽는 절로 바꾼다.
+ *
+ * **빈 줄은 버린다.** 능력치만 고르고 값을 안 넣은 줄을 보내면 아무 효과 없는 접사가
+ * 아이템에 붙고, 화면에는 이름만 뜬다.
+ *
+ * @param rows 접사 줄들.
+ * @returns 서버가 읽는 절들.
+ */
+export function buildAffixPayload(rows: readonly AffixRow[]): Record<string, unknown>[] {
+  return rows
+    .filter((row) => row.flat.trim() !== '' || row.percent.trim() !== '')
+    .map((row) => ({
+      stat: row.stat,
+      flat: Number.parseInt(row.flat, DECIMAL_RADIX) || 0,
+      percent: Number.parseInt(row.percent, DECIMAL_RADIX) || 0,
+      label_ko: row.labelKo === '' ? row.stat : row.labelKo,
+    }))
+}
+
+/**
  * 아이템 종류를 새로 등록하는 폼.
  *
  * **접사는 JSON 으로 받는다.** 접사는 개수가 정해져 있지 않고 stat·flat·percent·label 이
@@ -60,7 +121,11 @@ export function CatalogForm(props: CatalogFormProps): React.JSX.Element {
   const [label, setLabel] = useState('')
   const [grade, setGrade] = useState('COMMON')
   const [minFloor, setMinFloor] = useState('1')
-  const [affixes, setAffixes] = useState('[]')
+  // **한 줄로 시작한다.** 빈 채로 시작하면 「접사 추가」를 먼저 찾아야 하고, 그러면
+  // 접사가 있다는 것 자체를 모른 채 아이템을 만든다. 안 채운 줄은 어차피 안 보내진다.
+  const [affixRows, setAffixRows] = useState<readonly AffixRow[]>([
+    { stat: AFFIX_STATS[0] ?? '', flat: '', percent: '', labelKo: '' },
+  ])
   const [reason, setReason] = useState('')
 
   return (
@@ -149,17 +214,67 @@ export function CatalogForm(props: CatalogFormProps): React.JSX.Element {
           }}
         />
       </label>
-      <label className="cat__field">
-        <span>접사 (JSON)</span>
-        <input
-          className="cat__input"
-          value={affixes}
-          placeholder='[{"stat":"attack","flat":3,"label_ko":"예리함"}]'
-          onChange={(event) => {
-            setAffixes(event.target.value)
-          }}
-        />
-      </label>
+      {/* **접사를 칸으로 받는다.** JSON 을 손으로 치게 하면 따옴표 하나가 틀렸을 때
+          서버가 거절하고, 그 사유는 아이템 이야기가 아니라 파서 이야기다. */}
+      <span className="cat__name">접사</span>
+      {affixRows.map((row, index) => (
+        <div className="cat__row" key={`${String(index)}:${row.stat}`}>
+          <select
+            className="cat__input"
+            aria-label={`접사 ${String(index + 1)} 능력치`}
+            value={row.stat}
+            onChange={(event) => {
+              setAffixRows(buildAffixRows(affixRows, index, { stat: event.target.value }))
+            }}
+          >
+            {AFFIX_STATS.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+          <input
+            className="cat__input"
+            inputMode="numeric"
+            aria-label={`접사 ${String(index + 1)} 고정값`}
+            value={row.flat}
+            placeholder="고정"
+            onChange={(event) => {
+              setAffixRows(buildAffixRows(affixRows, index, { flat: event.target.value }))
+            }}
+          />
+          <input
+            className="cat__input"
+            inputMode="numeric"
+            aria-label={`접사 ${String(index + 1)} 퍼센트`}
+            value={row.percent}
+            placeholder="%"
+            onChange={(event) => {
+              setAffixRows(buildAffixRows(affixRows, index, { percent: event.target.value }))
+            }}
+          />
+          <input
+            className="cat__input"
+            aria-label={`접사 ${String(index + 1)} 이름`}
+            value={row.labelKo}
+            placeholder="예리함"
+            onChange={(event) => {
+              setAffixRows(buildAffixRows(affixRows, index, { labelKo: event.target.value }))
+            }}
+          />
+        </div>
+      ))}
+      <Button
+        size="sm"
+        variant="ghost"
+        glyph="＋"
+        title="접사 칸을 하나 더 만든다"
+        onClick={() => {
+          setAffixRows([...affixRows, { stat: AFFIX_STATS[0] ?? '', flat: '', percent: '', labelKo: '' }])
+        }}
+      >
+        접사 추가
+      </Button>
       <label className="cat__field">
         <span>사유</span>
         <input
@@ -186,7 +301,7 @@ export function CatalogForm(props: CatalogFormProps): React.JSX.Element {
               hands: slot.startsWith('WEAPON') ? 'ONE' : null,
               grade,
               min_floor: Number.parseInt(minFloor, 10) || 1,
-              affixes,
+              affixes: buildAffixPayload(affixRows),
             },
             reason,
           )
