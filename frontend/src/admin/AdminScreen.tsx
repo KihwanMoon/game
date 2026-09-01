@@ -10,6 +10,8 @@
 import { useEffect, useState } from 'react'
 
 import { EnemyRuleEditor } from './EnemyRuleEditor'
+import { RoomGrid } from './RoomGrid'
+import { SkillTable } from './SkillTable'
 import { PublishBar } from './PublishBar'
 import { readActivePack } from '../content/pack'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
@@ -27,15 +29,37 @@ import {
   type ContentDraftView,
 } from '../storage'
 
-type Tab = 'content' | 'enemies' | 'catalog'
+type Tab = 'content' | 'enemies' | 'skills' | 'rooms' | 'catalog'
 
 const TABS: readonly { readonly id: Tab; readonly label: string }[] = [
   { id: 'content', label: '콘텐츠' },
   { id: 'enemies', label: '적 규칙표' },
+  { id: 'skills', label: '스킬' },
+  { id: 'rooms', label: '룸' },
   { id: 'catalog', label: '아이템' },
 ]
 
 const EMPTY_HINT = '여기엔 아무것도 없다'
+
+/**
+ * 연 자산의 절을 꺼낸다.
+ *
+ * **초안이 있으면 초안을 준다.** 지금 파일을 주면 방금 한 편집이 사라진다 — 콘텐츠
+ * 편집기와 같은 규약이다.
+ *
+ * @param asset 서버가 준 자산 절.
+ * @param wanted 지금 탭이 원하는 자산.
+ * @returns 편집기에 넣을 절. 아직 안 읽었으면 undefined.
+ */
+function readAssetFile(
+  asset: ContentAssetView | undefined,
+  wanted: string,
+): Record<string, unknown> | undefined {
+  if (asset === undefined || asset.asset !== wanted) {
+    return undefined
+  }
+  return (asset.draft ?? asset.current) as Record<string, unknown>
+}
 
 /**
  * 관리 화면을 그린다.
@@ -122,8 +146,8 @@ export function AdminScreen(): React.JSX.Element {
                 setTab(item.id)
                 // 탭을 열 때 그 자산을 읽어 둔다. 안 읽으면 편집기가 빈 채로 뜨고,
                 // 그러면 "여기서 뭘 고치라는 거지" 가 된다.
-                if (item.id === 'enemies') {
-                  void readContentAsset(token, 'enemies').then(setAsset)
+                if (item.id === 'enemies' || item.id === 'skills' || item.id === 'rooms') {
+                  void readContentAsset(token, item.id).then(setAsset)
                 }
               }}
             >
@@ -140,11 +164,23 @@ export function AdminScreen(): React.JSX.Element {
       )}
 
       <div className="adm__body">
-        {tab === 'enemies' ? (
+        {tab === 'skills' ? (
+          <SkillTable
+            file={readAssetFile(asset, 'skills')}
+            onSave={(text, note) => {
+              applyContent('/admin/content/draft', 'skills', text, note)
+            }}
+          />
+        ) : tab === 'rooms' ? (
+          <RoomGrid
+            file={readAssetFile(asset, 'rooms')}
+            onSave={(text, note) => {
+              applyContent('/admin/content/draft', 'rooms', text, note)
+            }}
+          />
+        ) : tab === 'enemies' ? (
           <EnemyRuleEditor
-            file={(asset?.asset === 'enemies' ? (asset.draft ?? asset.current) : undefined) as
-              | Record<string, unknown>
-              | undefined}
+            file={readAssetFile(asset, 'enemies')}
             onSave={(text, note) => {
               applyContent('/admin/content/draft', 'enemies', text, note)
             }}

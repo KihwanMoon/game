@@ -1777,3 +1777,66 @@
   font-size: var(--fs-input);
   resize: vertical;
 }
+
+/* 스킬 표. 열 수가 고정이라 격자로 둔다 — 좁으면 가로로 스크롤한다. 줄바꿈하면
+   어느 값이 어느 열인지 알 수 없어져 표가 표이기를 그만둔다. */
+.skl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  overflow-x: auto;
+}
+
+.skl__head,
+.skl__row {
+  display: grid;
+  grid-template-columns: var(--sp-12) var(--sp-10) repeat(4, var(--sp-10));
+  align-items: center;
+  gap: var(--sp-2);
+  min-inline-size: max-content;
+}
+
+.skl__head {
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  border-bottom: var(--bw) solid var(--line);
+  padding-bottom: var(--sp-1);
+}
+
+.skl__cell {
+  inline-size: 100%;
+}
+
+/* 룸 격자. 칸은 정사각이고 고정폭 글자를 담는다 — 지형 문자가 곧 그림이라 폭이 흔들리면
+   격자가 그림이기를 그만둔다. */
+.rmg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-0);
+  overflow-x: auto;
+  padding: var(--sp-1);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-plan);
+  inline-size: max-content;
+  max-inline-size: 100%;
+}
+
+.rmg__row {
+  display: flex;
+  gap: var(--sp-0);
+}
+
+.rmg__cell {
+  inline-size: var(--plan-cell);
+  block-size: var(--plan-cell);
+  padding: var(--sp-0);
+  border: var(--bw) solid var(--line-grid);
+  background: none;
+  color: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: 1;
+  cursor: pointer;
+}

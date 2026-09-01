@@ -52,16 +52,13 @@ import type { RawBalanceFile } from './core/resources'
 import { validateRuleSet } from './core/rules/validator'
 import type { RuleSet } from './core/schemas'
 import { OUTCOME_ONGOING, OUTCOME_PLAYER_WIN } from './core/sim/phases'
-import { Button, GlyphState, ValueExpr } from './ds'
+import { Button, GlyphState, Panel, ValueExpr } from './ds'
 import {
   RuleEditor,
   AccountPanel,
   AdminPanel,
   BestiaryPanel,
   DiscoveryPanel,
-  CatalogAdminPanel,
-  ContentAdminPanel,
-  CatalogPanel,
   DrawerPanel,
   type DrawerTab,
   CharacterPanel,
@@ -114,12 +111,6 @@ import {
   readLeaderboard,
   applyAdminAction,
   applyMonsterLevel,
-  readAdminCatalog,
-  readAdminItems,
-  readContentAdmin,
-  readContentAsset,
-  applyCatalogAdmin,
-  applyContentAdmin,
   readAdminOverview,
   readProgress,
   readServerMeta,
@@ -136,9 +127,6 @@ import {
   type AccountState,
   type AuctionView,
   type BestiaryEntry,
-  type CatalogAdminView,
-  type ContentAssetView,
-  type ContentDraftView,
   type SaveOutcome,
   type DiscoveryView,
   type LeaderboardView,
@@ -146,7 +134,6 @@ import {
   type InventoryView,
   type RunResult,
   type RunVerdict,
-  type AdminCatalog,
   type AdminOverview,
   type ServerTicket,
   type StorageLike,
@@ -453,8 +440,6 @@ export function App(): React.JSX.Element {
   // 서버가 404 로 답하므로 그 사실 자체가 화면에 드러나지 않는다.
   const [admin, setAdmin] = useState<AdminOverview | undefined>(undefined)
   const [adminDetail, setAdminDetail] = useState('')
-  // 콘텐츠 카탈로그. 세계 현황과 달리 정적이라 접속할 때 한 번만 읽는다.
-  const [catalog, setCatalog] = useState<AdminCatalog | undefined>(undefined)
   const [run, setRun] = useState<RunSpec | undefined>(undefined)
   const [outcome, setOutcome] = useState(OUTCOME_ONGOING)
   const [postState, setPostState] = useState<PostState>('auto')
@@ -491,13 +476,6 @@ export function App(): React.JSX.Element {
   // 읽지 않아, 사파리 프라이빗 창처럼 저장소가 막힌 브라우저에서는 편집이 매번 사라지는데
   // 화면은 아무 말도 하지 않았다.
   const [saveState, setSaveState] = useState<SaveOutcome>('saved')
-  const [adminItems, setAdminItems] = useState<CatalogAdminView | undefined>(undefined)
-  // 카탈로그 조작의 결과 한 줄. 관리자 개입 결과(adminDetail)와 갈라 둔다 — 둘이 한
-  // 칸을 쓰면 방금 무엇을 눌렀는지 화면이 못 말한다.
-  const [catalogDetail, setCatalogDetail] = useState('')
-  const [contentView, setContentView] = useState<ContentDraftView | undefined>(undefined)
-  const [contentAsset, setContentAsset] = useState<ContentAssetView | undefined>(undefined)
-  const [contentDetail, setContentDetail] = useState('')
   // 저장을 몇 번 눌렀는지. 값 자체는 안 쓰고, **눌린 적이 있는가**만 본다 — 누른 적이
   // 없는데 "저장됨" 이 떠 있으면 그 표시는 아무 말도 하지 않는 것과 같다.
   const [savedAt, setSavedAt] = useState(0)
@@ -650,7 +628,6 @@ export function App(): React.JSX.Element {
     // **관리자가 아니면 undefined 로 남는다.** 서버가 404 로 답하므로 관리자 경로가
     // 있다는 사실 자체가 일반 계정 화면에 드러나지 않는다.
     void readAdminOverview(account).then(setAdmin)
-    void readAdminCatalog(account).then(setCatalog)
   }
 
   /**
@@ -716,9 +693,6 @@ export function App(): React.JSX.Element {
     setAuction(await readAuction(token))
     // 관리자가 아니면 undefined 로 남는다 — 서버가 404 로 답한다.
     setAdmin(await readAdminOverview(token))
-    setCatalog(await readAdminCatalog(token))
-    setAdminItems(await readAdminItems(token))
-    setContentView(await readContentAdmin(token))
   }
 
   /**
@@ -1086,61 +1060,7 @@ export function App(): React.JSX.Element {
     )
   }
 
-  /**
-   * 카탈로그를 고치고 결과를 화면에 싣는다.
-   *
-   * **거절 사유를 그대로 적는다.** 서버가 「새 id 로 등록하라」 고 답하는 자리라, 그
-   * 문장이 곧 관리자에게 필요한 설명이다.
-   *
-   * @param path 라우트 경로.
-   * @param body 보낼 절.
-   */
-  function applyAdminCatalog(path: string, body: unknown): void {
-    if (account === undefined) {
-      return
-    }
-    setCatalogDetail('')
-    void applyCatalogAdmin(account, path, body).then((outcome) => {
-      setCatalogDetail(outcome.detail)
-      if (outcome.view !== undefined) {
-        setAdminItems(outcome.view)
-      }
-    })
-  }
 
-  /**
-   * 콘텐츠 초안을 저장하거나 버린다.
-   *
-   * **절을 여기서 파싱한다.** 깨진 JSON 을 서버에 보내면 422 가 돌아오는데, 그 메시지는
-   * 사람이 읽을 것이 아니다 — 어디가 깨졌는지는 브라우저의 파서가 더 잘 말한다.
-   *
-   * @param path 라우트 경로.
-   * @param asset 자산 이름.
-   * @param text 절의 JSON 텍스트. 버리기는 빈 문자열을 준다.
-   * @param note 사유.
-   */
-  function applyContent(path: string, asset: string, text: string, note: string): void {
-    if (account === undefined) {
-      return
-    }
-    let payload: unknown = {}
-    if (text !== '') {
-      try {
-        payload = JSON.parse(text)
-      } catch (error) {
-        setContentDetail(`JSON 이 아니다 — ${String(error)}`)
-        return
-      }
-    }
-    setContentDetail('')
-    void applyContentAdmin(account, path, { asset, payload, note }).then((outcome) => {
-      setContentDetail(outcome.detail)
-      if (outcome.view !== undefined) {
-        setContentView(outcome.view)
-        void readContentAsset(account, asset).then(setContentAsset)
-      }
-    })
-  }
 
   /**
    * 서랍 탭을 만든다.
@@ -1330,93 +1250,43 @@ export function App(): React.JSX.Element {
         label: '관리',
         body: (
           <>
-              <AdminPanel
-                overview={admin}
-                detail={adminDetail}
-                onIntervene={(path, targetId, reason) => {
-                  if (account === undefined) {
-                    return
-                  }
-                  setAdminDetail('')
-                  void applyAdminAction(account, path, targetId, reason).then((outcome) => {
-                    setAdminDetail(outcome.detail)
-                    if (outcome.overview !== undefined) {
-                      setAdmin(outcome.overview)
-                    }
-                  })
-                }}
-                onSetMonsterLevel={(recordId, level) => {
-                  if (account === undefined) {
-                    return
-                  }
-                  setAdminDetail('')
-                  void applyMonsterLevel(account, recordId, level).then((outcome) => {
-                    setAdminDetail(outcome.detail)
-                    if (outcome.overview !== undefined) {
-                      setAdmin(outcome.overview)
-                    }
-                  })
-                }}
-              />
-            <CatalogPanel catalog={catalog} />
-            <ContentAdminPanel
-              content={contentView}
-              asset={contentAsset}
-              detail={contentDetail}
-              onOpen={(name) => {
-                if (account !== undefined) {
-                  void readContentAsset(account, name).then(setContentAsset)
-                }
-              }}
-              onSave={(name, text, note) => {
-                applyContent('/admin/content/draft', name, text, note)
-              }}
-              onDiscard={(name, note) => {
-                applyContent('/admin/content/discard', name, '', note)
-              }}
-            />
-            <CatalogAdminPanel
-              catalog={adminItems}
-              detail={catalogDetail}
-              onRetire={(catalogId, isRetired, reason) => {
-                applyAdminCatalog('/admin/catalog/retire', {
-                  catalog_id: catalogId,
-                  is_retired: isRetired,
-                  reason,
-                })
-              }}
-              onRename={(catalogId, labelKo, minFloor, reason) => {
-                // **이름과 최소 층만 보낸다.** 나머지는 지금 값을 그대로 실어야 서버의
-                // 「소급 수정 금지」 판정에 걸리지 않는다 (설계/4_아이템 §15.7).
-                const row = adminItems?.items.find((item) => item.catalogId === catalogId)
-                if (row === undefined) {
+            {/* **관리는 별도 페이지다** (`/admin.html`). 표와 격자가 폭을 다 써야 하는데
+                서랍은 좁은 열이라 게임 UI 와 공간을 다퉜다. 여기엔 세계 현황과 개입만
+                남긴다 — 판을 돌다 급히 볼 것들이다. */}
+            <AdminPanel
+              overview={admin}
+              detail={adminDetail}
+              onIntervene={(path, targetId, reason) => {
+                if (account === undefined) {
                   return
                 }
-                applyAdminCatalog('/admin/catalog/item', {
-                  id: catalogId,
-                  kind: row.kind,
-                  slot: row.slot === '' ? null : row.slot,
-                  hands: row.hands === '' ? null : row.hands,
-                  grade: row.grade,
-                  label_ko: labelKo,
-                  min_floor: minFloor,
-                  grants_skill: row.grantsSkill === '' ? null : row.grantsSkill,
-                  reason,
+                setAdminDetail('')
+                void applyAdminAction(account, path, targetId, reason).then((outcome) => {
+                  setAdminDetail(outcome.detail)
+                  if (outcome.overview !== undefined) {
+                    setAdmin(outcome.overview)
+                  }
                 })
               }}
-              onCreate={(payload, reason) => {
-                // **접사만 여기서 파싱한다.** 나머지는 서버의 파서가 본다 — 화면이 문법을
-                // 따로 알면 규칙이 둘이 되고, 관리자가 만든 아이템만 다르게 검사된다.
-                let affixes: unknown = []
-                try {
-                  affixes = JSON.parse(String(payload.affixes ?? '[]'))
-                } catch (error) {
-                  setCatalogDetail(`접사가 JSON 이 아니다 — ${String(error)}`)
+              onSetMonsterLevel={(recordId, level) => {
+                if (account === undefined) {
                   return
                 }
-                applyAdminCatalog('/admin/catalog/item', { ...payload, affixes, reason })
+                setAdminDetail('')
+                void applyMonsterLevel(account, recordId, level).then((outcome) => {
+                  setAdminDetail(outcome.detail)
+                  if (outcome.overview !== undefined) {
+                    setAdmin(outcome.overview)
+                  }
+                })
               }}
             />
+            <Panel title="콘텐츠·아이템 관리" tone="panel" padded>
+              <ValueExpr text="별도 페이지에서 연다 — 표와 격자가 폭을 다 써야 한다" size="sm" dim />
+              <a className="adm__link" href="/admin.html">
+                관리 페이지 열기
+              </a>
+            </Panel>
           </>
         ),
       })

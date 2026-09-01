@@ -161,3 +161,17 @@ body {
   flex-direction: column;
   gap: var(--sp-3);
 }
+
+/* 서랍에서 관리 페이지로 가는 문. 버튼처럼 보이되 링크여야 한다 — 새 페이지로 가는
+   것이라 가운데 클릭·새 탭이 되어야 하고, 버튼은 그것을 못 한다. */
+.adm__link {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--btn-tap-sm-h);
+  padding: var(--sp-1) var(--sp-3);
+  border: var(--bw) solid var(--line-accent);
+  border-radius: var(--radius);
+  color: var(--text-accent);
+  font-size: var(--fs-body-s);
+  text-decoration: none;
+}
