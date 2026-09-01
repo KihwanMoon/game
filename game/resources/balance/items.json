@@ -171,7 +171,8 @@
       "stack_max": 9,
       "tags": [
         "POTION"
-      ]
+      ],
+      "use_tag": "POTION"
     },
     {
       "id": "scroll_shield",
@@ -180,7 +181,8 @@
       "stack_max": 5,
       "tags": [
         "SCROLL"
-      ]
+      ],
+      "use_tag": "SCROLL"
     },
     {
       "id": "quest_seal",

@@ -28,6 +28,7 @@ MUTABLE_FIELDS = (
     "grade",
     "requirements",
     "tags",
+    "use_tag",
     "grants_skill",
     "attack_range",
     "stack_max",

@@ -1438,6 +1438,11 @@ export interface CatalogAdminRow {
   readonly grantsSkill: string
   /** 무기가 정하는 사거리 (§2.2). 0 은 「안 정한다」다 — 화면이 안 그린다. */
   readonly attackRange: number
+  /**
+   * 소모품의 쓰임새 (§4). `USE_ITEM[kind]` 의 파라미터와 같은 값이며 **코드가 읽는
+   * 유일한 태그다** — `affixes` 옆의 분류 이름표와 다르다.
+   */
+  readonly useTag: string
   /** 드롭 표의 가중치. 0 이면 표에 없다 — 굴려도 안 나온다. */
   readonly dropWeight: number
   /**
@@ -1492,6 +1497,7 @@ function readCatalogAdmin(raw: Record<string, unknown>): CatalogAdminView {
       requirements: (row.requirements ?? []) as string[],
       grantsSkill: String(row.grants_skill ?? ''),
       attackRange: Number(row.attack_range ?? 0),
+      useTag: String(row.use_tag ?? ''),
       dropWeight: Number(row.drop_weight ?? 0),
       affixRows: ((row.affix_rows ?? []) as Record<string, unknown>[]).map((spec) => ({
         stat: String(spec.stat ?? ''),

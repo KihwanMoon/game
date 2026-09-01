@@ -223,6 +223,9 @@ export class ActionExecutor {
    * **종류로 갈린다.** `USE_POTION` 은 `USE_ITEM[POTION]` 의 별칭이므로 태그가 없으면
    * 포션으로 본다 — 저장된 규칙표와 골든이 그 id 를 쓰기 때문이다.
    *
+   * **모르는 종류는 아무것도 안 쓴다.** 예전에는 포션으로 떨어졌는데, 규칙이 가리킨 것은
+   * 그 태그이고 실제로 빠지는 것은 포션이라 엉뚱한 소모품이 사라졌다.
+   *
    * @param entity 사용자.
    * @param plan 실행할 계획.
    */
@@ -232,6 +235,10 @@ export class ActionExecutor {
       const ticks = this.config.skillGuardTicks.get(GUARD_SKILL_ID) ?? 0
       const held = resolveScroll(entity, ticks)
       this.recordResult(entity.entityId, plan, held.outcome, held.healed)
+      return
+    }
+    if (kind !== ITEM_POTION) {
+      this.recordResult(entity.entityId, plan, `${kind} 쓸 줄 모른다 — 틱 낭비`, null)
       return
     }
     const { healed, outcome } = resolvePotion(entity)

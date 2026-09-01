@@ -183,6 +183,16 @@ class ItemCatalogEntry:
     # None 은 "이 아이템은 사거리를 안 정한다" 다. 0 과 구분해야 한다 — 0 은 아무것도
     # 못 때리는 무기다.
     attack_range: int | None = None
+    # **코드가 읽는 태그는 이것 하나다** (§4). 소모품이 무엇으로 쓰이는가이며,
+    # `USE_ITEM[kind]` 의 파라미터와 같은 값이다.
+    #
+    # `tags` 와 가른 이유는 둘이 하는 일이 다르기 때문이다 — 예전에는 한 목록이 둘을
+    # 겸해서, 「소모품 종류」와 「분류 이름표」가 같은 자리에 섞여 있었다. 물약에
+    # `HEAL` 을 하나 더 붙이면 가방이 그것을 소모품 종류로 세고, 무기의 `MELEE` 는
+    # 적 유형의 `MELEE` 와 글자가 같아 셀렉터와 헷갈렸다.
+    use_tag: str | None = None
+    # **표시 전용이다.** 코드는 안 읽는다 — 화면이 묶어 보여 주고 사람이 검색하는 데
+    # 쓴다. 여기에 무엇을 적어도 게임 규칙은 안 바뀐다.
     tags: tuple[str, ...] = field(default_factory=tuple)
     # **이 등급부터 나온다** (결정 #42). `min_floor` 가 층에 대해 하는 일을 등급에
     # 대해 한다 — 인스턴스의 등급은 굴려서 정해지고 이것보다 낮아지지 않는다.
@@ -255,6 +265,7 @@ def parse_item(raw: dict) -> ItemCatalogEntry:
         requirements=tuple(parse_requirement(item) for item in raw.get("requirements", [])),
         stack_max=int(raw.get("stack_max", 1)),
         grants_skill=raw.get("grants_skill"),
+        use_tag=raw.get("use_tag"),
         attack_range=(int(raw["attack_range"]) if raw.get("attack_range") is not None else None),
         tags=tuple(raw.get("tags", [])),
         # 등급이 없는 절은 보통으로 읽는다. 스냅샷 파일이 등급 이전 세대일 수 있고,
@@ -263,6 +274,15 @@ def parse_item(raw: dict) -> ItemCatalogEntry:
         min_floor=int(raw.get("min_floor", 1)),
         is_retired=bool(raw.get("is_retired", False)),
     )
+
+
+# 있을 때만 적는 필드. **빈 값을 적어 내보내면 다음 세대가 그것을 뜻으로 읽는다** —
+# 사거리 0 은 「아무것도 못 때리는 무기」이지 「안 정함」이 아니다.
+_OPTIONAL_KEYS: tuple[tuple[str, str], ...] = (
+    ("grants_skill", "grants_skill"),
+    ("attack_range", "attack_range"),
+    ("use_tag", "use_tag"),
+)
 
 
 def build_item_payload(entry: ItemCatalogEntry) -> dict:
@@ -297,12 +317,12 @@ def build_item_payload(entry: ItemCatalogEntry) -> dict:
         payload["requirements"] = [{"stat": r.stat, "min": r.minimum} for r in entry.requirements]
     if entry.stack_max != 1:
         payload["stack_max"] = entry.stack_max
-    if entry.grants_skill:
-        payload["grants_skill"] = entry.grants_skill
-    if entry.attack_range is not None:
-        payload["attack_range"] = entry.attack_range
     if entry.tags:
         payload["tags"] = list(entry.tags)
     if entry.is_retired:
         payload["is_retired"] = True
+    for key, name in _OPTIONAL_KEYS:
+        value = getattr(entry, name)
+        if value is not None:
+            payload[key] = value
     return payload

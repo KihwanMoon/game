@@ -396,6 +396,10 @@ CREATE TABLE IF NOT EXISTS item_catalog (
     hands             TEXT,
     grade             TEXT        NOT NULL REFERENCES item_grade(code),
     label_ko          TEXT        NOT NULL,
+    -- **코드가 읽는 태그는 이것 하나다** (§4). 소모품이 무엇으로 쓰이는가이며
+    -- `USE_ITEM[kind]` 의 파라미터와 같은 값이다.
+    use_tag           TEXT,
+    -- 표시 전용. 코드는 안 읽는다 — 화면이 묶어 보여 주는 데만 쓴다.
     tags              JSONB       NOT NULL DEFAULT '[]'::jsonb,
     affixes           JSONB       NOT NULL DEFAULT '[]'::jsonb,
     requirements      JSONB       NOT NULL DEFAULT '[]'::jsonb,

@@ -115,6 +115,7 @@ def build_admin_row(entry: ItemCatalogEntry, weight: int) -> CatalogAdminRow:
         ],
         requirements=[f"{r.stat} >= {r.minimum}" for r in entry.requirements],
         grants_skill=entry.grants_skill or "",
+        use_tag=entry.use_tag or "",
         attack_range=entry.attack_range or 0,
         drop_weight=weight,
     )
@@ -364,6 +365,7 @@ def create_catalog_edit(request: CatalogEditRequest, account: CurrentAdmin) -> C
             attack_range=(
                 before.attack_range if request.attack_range is None else request.attack_range
             ),
+            use_tag=before.use_tag if request.use_tag is None else (request.use_tag or None),
         ),
     )
     generation = apply_generation_bump(pool)

@@ -70,10 +70,13 @@ def _build_rolled_entry(entry: ItemCatalogEntry, affixes: tuple) -> ItemCatalogE
 
 
 def count_consumables(pool: ConnectionPool, entity_id: int, catalog: dict) -> dict[str, int]:
-    """가방에 든 소모품을 **태그별로** 센다 (#54).
+    """가방에 든 소모품을 **쓰임새별로** 센다 (#54).
 
-    태그로 세는 이유는 규칙표가 카탈로그 id 가 아니라 태그를 가리키기 때문이다 — 회복
-    물약을 여러 등급으로 늘려도 `USE_ITEM[POTION]` 이 그대로 도는 것이 그 설계다.
+    id 가 아니라 쓰임새로 세는 이유는 규칙표가 그것을 가리키기 때문이다 — 회복 물약을
+    여러 등급으로 늘려도 `USE_ITEM[POTION]` 이 그대로 도는 것이 그 설계다.
+
+    **`use_tag` 하나만 본다.** 예전에는 `tags` 전부를 돌면서 셌고, 그래서 물약에
+    분류용 이름표를 하나 더 붙이면 그 이름표까지 소모품 종류가 됐다.
 
     Args:
         pool: 연결 풀.
@@ -81,13 +84,13 @@ def count_consumables(pool: ConnectionPool, entity_id: int, catalog: dict) -> di
         catalog: 아이템 카탈로그.
 
     Returns:
-        태그에서 개수로. 소모품이 없으면 빈 딕셔너리.
+        쓰임새에서 개수로. 소모품이 없으면 빈 딕셔너리.
     """
     counts: dict[str, int] = {}
     for entry in list_inventory(pool, entity_id):
         if entry.stack_catalog_id is None or entry.stack_count <= 0:
             continue
-        item = catalog.get(entry.stack_catalog_id)
-        for tag in getattr(item, "tags", ()) or ():
-            counts[tag] = counts.get(tag, 0) + entry.stack_count
+        use_tag = getattr(catalog.get(entry.stack_catalog_id), "use_tag", None)
+        if use_tag:
+            counts[use_tag] = counts.get(use_tag, 0) + entry.stack_count
     return counts

@@ -41,6 +41,7 @@ const VIEW: CatalogAdminView = {
       requirements: [],
       grantsSkill: '',
       attackRange: 0,
+      useTag: '',
       dropWeight: 1,
     },
     {
@@ -57,7 +58,25 @@ const VIEW: CatalogAdminView = {
       requirements: [],
       grantsSkill: '',
       attackRange: 0,
+      useTag: '',
       dropWeight: 0,
+    },
+    {
+      catalogId: 'potion_heal',
+      kind: 'CONSUMABLE',
+      labelKo: '회복 물약',
+      slot: '',
+      hands: '',
+      grade: 'COMMON',
+      minFloor: 1,
+      isRetired: false,
+      affixes: [],
+      affixRows: [],
+      requirements: [],
+      grantsSkill: '',
+      attackRange: 0,
+      useTag: 'POTION',
+      dropWeight: 1,
     },
     {
       catalogId: 'bow_long',
@@ -73,9 +92,27 @@ const VIEW: CatalogAdminView = {
       requirements: [],
       grantsSkill: '',
       attackRange: 4,
+      useTag: '',
       dropWeight: 1,
     },
   ],
+}
+
+/**
+ * 픽스처에서 한 줄을 찾는다.
+ *
+ * **자리 번호로 안 찾는다.** 줄을 하나 끼우면 뒤엣것이 다 밀려서, 「사거리 검사」가 물약을
+ * 보게 된다 — 실제로 그렇게 빨개졌다.
+ *
+ * @param catalogId 찾을 id.
+ * @returns 그 줄.
+ */
+function findRow(catalogId: string) {
+  const found = VIEW.items.find((item) => item.catalogId === catalogId)
+  if (found === undefined) {
+    throw new Error(`픽스처에 없다: ${catalogId}`)
+  }
+  return found
 }
 
 const noop = () => undefined
@@ -286,11 +323,8 @@ describe('능력치 목록의 정본 (설계/4_아이템 §9)', () => {
 
 
 describe('무기 사거리 (설계/4_아이템 §2.2)', () => {
-  const helm = VIEW.items[0]
-  const bow = VIEW.items[2]
-  if (helm === undefined || bow === undefined) {
-    throw new Error('픽스처가 비었다')
-  }
+  const helm = findRow('helm_iron')
+  const bow = findRow('bow_long')
 
   it('★ 무기에 사거리 칸이 있다 — 접사로 흉내내면 굴림에서 잘려 활이 근접무기가 된다', () => {
     const html = renderToStaticMarkup(
@@ -342,5 +376,35 @@ describe('무기 사거리 (설계/4_아이템 §2.2)', () => {
       />,
     )
     expect(html).toContain('사거리 4')
+  })
+})
+
+
+describe('소모품의 쓰임새 (설계/4_아이템 §4)', () => {
+  const potion = findRow('potion_heal')
+  const bow = findRow('bow_long')
+
+  const draw = (row: (typeof VIEW.items)[number]) =>
+    renderToStaticMarkup(
+      <CatalogDetail
+        row={row}
+        grades={VIEW.grades}
+        stats={VIEW.stats}
+        onRetire={noop}
+        onEdit={noop}
+      />,
+    )
+
+  it('★ 소모품에 쓰임새 칸이 있다 — 이것이 `USE_ITEM[kind]` 가 가리키는 값이다', () => {
+    expect(draw(potion)).toContain('aria-label="쓰임새"')
+  })
+
+  it('★ 무기에는 쓰임새 칸이 없다 — 장검의 쓰임새는 아무 뜻도 없다', () => {
+    expect(draw(bow)).not.toContain('aria-label="쓰임새"')
+  })
+
+  it('★ 쓰임새가 없으면 그 사실을 말한다 — 조용히 비면 왜 못 쓰는지 알 길이 없다', () => {
+    const bare = { ...potion, useTag: '' }
+    expect(draw(bare)).toContain('어느 규칙도 못 쓴다')
   })
 })

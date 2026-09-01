@@ -146,6 +146,9 @@ class CatalogItemRequest(BaseModel):
     affixes: list[dict] = Field(default_factory=list)
     requirements: list[dict] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
+    # 소모품이 무엇으로 쓰이는가 (§4). `USE_ITEM[kind]` 의 파라미터와 같은 값이며,
+    # **코드가 읽는 유일한 태그다** — `tags` 는 표시 전용이다.
+    use_tag: str | None = None
     grants_skill: str | None = None
     # 무기가 정하는 사거리 (§2.2). None 은 「안 정한다」다 — 0 은 아무것도 못 때리는 무기다.
     attack_range: int | None = Field(default=None, ge=0, le=20)
@@ -180,6 +183,8 @@ class CatalogAdminRow(BaseModel):
     affix_rows: list[dict] = Field(default_factory=list)
     requirements: list[str] = Field(default_factory=list)
     grants_skill: str = ""
+    # 소모품의 쓰임새 (§4). 빈 문자열이면 어느 `USE_ITEM` 도 이것을 못 쓴다.
+    use_tag: str = ""
     # 무기가 정하는 사거리. 0 은 「안 정한다」다 — 화면이 「-」 로 그린다.
     attack_range: int = 0
     # 이 아이템이 드롭 표에서 갖는 가중치. 0 이면 표에 없다 — 굴려도 안 나온다.
@@ -327,4 +332,7 @@ class CatalogEditRequest(BaseModel):
     # 무기 사거리. **안 보내면 지금 값을 그대로 둔다** — 0 을 「안 정함」으로 읽으면
     # 이름만 고치려던 요청이 활을 근접무기로 만든다.
     attack_range: int | None = Field(default=None, ge=0, le=20)
+    # 소모품의 쓰임새. **안 보내면 지금 값을 그대로 둔다** — 빈 문자열을 「없앤다」로
+    # 읽으면 이름만 고치려던 요청이 물약을 못 쓰는 것으로 만든다.
+    use_tag: str | None = Field(default=None, max_length=32)
     reason: str = ""

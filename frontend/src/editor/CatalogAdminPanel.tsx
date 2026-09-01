@@ -132,6 +132,7 @@ export function CatalogForm(props: CatalogFormProps): React.JSX.Element {
   const [grade, setGrade] = useState('COMMON')
   const [minFloor, setMinFloor] = useState('1')
   const [range, setRange] = useState('')
+  const [useTag, setUseTag] = useState('')
   // **한 줄로 시작한다.** 빈 채로 시작하면 「접사 추가」를 먼저 찾아야 하고, 그러면
   // 접사가 있다는 것 자체를 모른 채 아이템을 만든다. 안 채운 줄은 어차피 안 보내진다.
   const [affixRows, setAffixRows] = useState<readonly AffixRow[]>([
@@ -221,6 +222,22 @@ export function CatalogForm(props: CatalogFormProps): React.JSX.Element {
           }}
         />
       </label>
+      {/* 소모품의 쓰임새 (§4). **코드가 읽는 유일한 태그다** — 규칙표의
+          `USE_ITEM[kind]` 가 이것을 가리킨다. 비워 두면 어느 규칙도 이 아이템을 못 쓴다. */}
+      {kind !== 'CONSUMABLE' ? null : (
+        <label className="cat__field">
+          <span>쓰임새</span>
+          <input
+            className="cat__input"
+            aria-label="쓰임새"
+            value={useTag}
+            placeholder="POTION"
+            onChange={(event) => {
+              setUseTag(event.target.value.toUpperCase())
+            }}
+          />
+        </label>
+      )}
       {/* 사거리는 무기의 것이다 (§2.2). 접사로 흉내내면 굴림에서 잘려 활이 근접무기가
           된다. **비워 두면 「안 정한다」** 이고, 0 은 아무것도 못 때리는 무기다. */}
       {!slot.startsWith('WEAPON') || kind !== 'EQUIPMENT' ? null : (
@@ -329,6 +346,7 @@ export function CatalogForm(props: CatalogFormProps): React.JSX.Element {
               grade,
               min_floor: Number.parseInt(minFloor, 10) || 1,
               attack_range: range.trim() === '' ? null : Number.parseInt(range, DECIMAL_RADIX),
+              use_tag: useTag.trim() === '' ? null : useTag.trim(),
               affixes: buildAffixPayload(affixRows),
             },
             reason,
@@ -368,6 +386,7 @@ export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
   const [label, setLabel] = useState('')
   const [floor, setFloor] = useState('')
   const [range, setRange] = useState('')
+  const [useTag, setUseTag] = useState('')
   const [grade, setGrade] = useState('')
   // **안 건드리면 접사를 안 보낸다.** 서버는 빈 목록을 "안 바꾼다" 로 읽으므로, 화면이
   // "고쳤다" 와 "안 건드렸다" 를 스스로 구분해야 한다.
@@ -435,6 +454,21 @@ export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
           }}
         />
       </label>
+      {/* 소모품만 쓰임새를 갖는다 (§4). 비워 두면 지금 값을 그대로 둔다. */}
+      {row.kind !== 'CONSUMABLE' ? null : (
+        <label className="cat__field">
+          <span>쓰임새</span>
+          <input
+            className="cat__input"
+            aria-label="쓰임새"
+            value={useTag}
+            placeholder={row.useTag === '' ? '없음 — 어느 규칙도 못 쓴다' : row.useTag}
+            onChange={(event) => {
+              setUseTag(event.target.value.toUpperCase())
+            }}
+          />
+        </label>
+      )}
       {/* 무기만 사거리를 갖는다 (§2.2). **비워 두면 지금 값을 그대로 둔다** — 빈 칸을
           0 으로 읽으면 이름만 고치려던 편집이 활을 아무것도 못 때리는 것으로 만든다. */}
       {!row.slot.startsWith('WEAPON') ? null : (
@@ -567,6 +601,7 @@ export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
                 ...(range.trim() === ''
                   ? {}
                   : { attack_range: Number.parseInt(range, DECIMAL_RADIX) }),
+                ...(useTag.trim() === '' ? {} : { use_tag: useTag.trim() }),
                 ...(affixRows === undefined ? {} : { affixes: buildAffixPayload(affixRows) }),
               },
               reason,

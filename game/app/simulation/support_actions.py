@@ -80,6 +80,10 @@ class SupportActionMixin:
         **종류로 갈린다.** `USE_POTION` 은 `USE_ITEM[POTION]` 의 별칭이므로 태그가 없으면
         포션으로 본다 — 저장된 규칙표와 골든이 그 id 를 쓰기 때문이다.
 
+        **모르는 종류는 아무것도 안 쓴다.** 예전에는 포션으로 떨어졌는데, 규칙이 가리킨
+        것은 그 태그이고 실제로 빠지는 것은 포션이라 **엉뚱한 소모품이 사라졌다.**
+        지금은 블록 파라미터가 둘뿐이라 안 걸리지만, 소모품을 하나 늘리는 순간 걸린다.
+
         Args:
             entity: 사용자.
             plan: 실행할 계획.
@@ -89,6 +93,9 @@ class SupportActionMixin:
             ticks = self.config.skill_guard_ticks.get(GUARD_SKILL_ID, 0)
             held, outcome = abilities.resolve_scroll(entity, ticks)
             self._record(entity.entity_id, plan, outcome, held)
+            return
+        if kind != abilities.ITEM_POTION:
+            self._record(entity.entity_id, plan, f"{kind} 쓸 줄 모른다 — 틱 낭비", None)
             return
         healed, outcome = abilities.resolve_potion(entity)
         self._record(entity.entity_id, plan, outcome, healed)

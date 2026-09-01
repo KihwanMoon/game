@@ -271,3 +271,20 @@ UPDATE item_instance i
  WHERE c.catalog_id = i.catalog_id
    AND c.attack_range IS NOT NULL
    AND i.affixes @> '[{"stat": "attack_range"}]'::jsonb;
+
+
+-- ── 태그를 코드용과 표시용으로 가른다 (설계/4_아이템 §4) ────────────────
+--
+-- `tags` 한 목록이 두 가지 일을 겸하고 있었다. `POTION`·`SCROLL` 은 코드가 읽어 소모품
+-- 개수를 세는 데 썼고, `MELEE`·`SHIELD`·`CURSED` 는 아무 데서도 안 읽었다. 그래서 물약에
+-- 분류용 이름표를 하나 더 붙이면 **그 이름표까지 소모품 종류가 됐다.**
+--
+-- 코드가 읽는 것을 한 칸으로 뺀다. 남은 `tags` 는 표시 전용이라 무엇을 적어도 규칙이
+-- 안 바뀐다.
+ALTER TABLE item_catalog ADD COLUMN IF NOT EXISTS use_tag TEXT;
+
+-- 지금 코드가 실제로 읽던 두 태그만 옮긴다. 나머지는 표시용이 맞다.
+UPDATE item_catalog SET use_tag = 'POTION'
+ WHERE use_tag IS NULL AND kind = 'CONSUMABLE' AND tags @> '["POTION"]'::jsonb;
+UPDATE item_catalog SET use_tag = 'SCROLL'
+ WHERE use_tag IS NULL AND kind = 'CONSUMABLE' AND tags @> '["SCROLL"]'::jsonb;
