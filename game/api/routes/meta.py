@@ -42,19 +42,19 @@ def read_meta(account: CurrentAccount) -> MetaResponse:
 
 @router.put("/api/meta", response_model=MetaResponse)
 def save_meta(request: MetaRequest, account: CurrentAccount) -> MetaResponse:
-    """계정의 프리셋을 쓴다. 성취 조각은 받지 않는다.
+    """계정의 프리셋과 편집 중인 규칙표를 쓴다. 성취 조각은 받지 않는다.
 
     보낸 절에 해금·도감·최고 층이 들어 있어도 조용히 버린다. 400 으로 거절하지 않는
     이유는 구버전 클라이언트가 그것을 함께 보내기 때문이며, 거절하면 프리셋 저장까지
     막혀 그 사람은 규칙표를 잃는다.
 
     Args:
-        request: 저장할 절. 프리셋만 읽는다.
+        request: 저장할 절. 프리셋과 초안만 읽는다.
         account: 토큰으로 푼 계정.
 
     Returns:
-        저장된 절. **서버가 아는 성취와 방금 받은 프리셋을 합친 것**이라, 보낸 것과
-        다를 수 있다.
+        저장된 절. **서버가 아는 성취와 방금 받은 프리셋·초안을 합친 것**이라, 보낸
+        것과 다를 수 있다.
 
     Raises:
         HTTPException: 세이브 형식이 아닌 경우.
@@ -67,9 +67,17 @@ def save_meta(request: MetaRequest, account: CurrentAccount) -> MetaResponse:
         ) from error
     pool = get_pool()
     stored = load_meta_payload(pool, account.account_id)
-    # **서버가 아는 성취 위에 프리셋만 얹는다.** 반대로 하면 클라이언트가 보낸 해금이
-    # 그대로 저장되고, 그것이 예전의 구멍이었다.
-    merged = replace(parse_meta_save(stored) if stored else MetaSave(), presets=incoming.presets)
+    # **서버가 아는 성취 위에 프리셋과 초안만 얹는다.** 반대로 하면 클라이언트가 보낸
+    # 해금이 그대로 저장되고, 그것이 예전의 구멍이었다.
+    #
+    # 초안(편집 중인 규칙표)은 성취가 아니라 **쓰는 사람의 것**이라 그대로 받는다.
+    # 예전에는 프리셋만 얹었고, 그래서 기기를 바꾸면 규칙이 사라졌다 — 올라오긴 했는데
+    # 여기서 버려지고 있었다.
+    merged = replace(
+        parse_meta_save(stored) if stored else MetaSave(),
+        presets=incoming.presets,
+        draft=incoming.draft,
+    )
     payload = build_meta_payload(merged)
     save_meta_payload(pool, account.account_id, payload, get_core_version())
     return MetaResponse(payload=payload, core_version=get_core_version())

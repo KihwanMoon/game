@@ -271,3 +271,49 @@ def test_forced_seed_is_server_authoritative(client, token):
         get_pool(), account_id, ROOM_ID, "b5.v2.e1", mode=RunMode.DAILY, wanted_seed=4321
     )
     assert proposed.seed != 4321
+
+
+def test_the_draft_survives_a_round_trip(client, token):
+    """★ 초안을 서버가 버리면 기기를 바꿀 때 규칙이 사라진다.
+
+    올리는 쪽·받는 쪽·화면을 다 고쳐도, 여기서 버리면 아무 소용이 없다 — 실제로 그
+    상태였다. 프리셋만 얹고 초안은 버리고 있었다.
+    """
+    import json
+
+    from game.config import G0_RULESETS_PATH
+
+    raw = json.loads(G0_RULESETS_PATH.read_text(encoding="utf-8"))
+    kite = next(item for item in raw["rulesets"] if item["ruleset_id"] == "g0_kite")
+    payload = {
+        "format": "v1",
+        "best_floor": 0,
+        "unlocked_perceptions": [],
+        "unlocked_actions": [],
+        "bestiary": [],
+        "presets": [],
+        "draft": kite,
+    }
+    headers = {"X-Game-Token": token}
+    assert client.put("/api/meta", json={"payload": payload}, headers=headers).status_code == 200
+    stored = client.get("/api/meta", headers=headers).json()["payload"]
+    assert stored["draft"] is not None, "서버가 초안을 버렸다"
+    assert len(stored["draft"]["rules"]) == len(kite["rules"])
+
+
+def test_an_achievement_is_still_refused(client, token):
+    """★ 초안을 받게 됐다고 해금까지 받으면 안 된다 — 그것이 예전의 구멍이었다."""
+    headers = {"X-Game-Token": token}
+    payload = {
+        "format": "v1",
+        "best_floor": 99,
+        "unlocked_perceptions": ["self_hp_percent"],
+        "unlocked_actions": ["ATTACK"],
+        "bestiary": [],
+        "presets": [],
+        "draft": None,
+    }
+    client.put("/api/meta", json={"payload": payload}, headers=headers)
+    stored = client.get("/api/meta", headers=headers).json()["payload"]
+    assert stored["best_floor"] != 99
+    assert stored["unlocked_actions"] == []
