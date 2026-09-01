@@ -339,6 +339,14 @@ export function buildRunSetup(issued: ServerTicket, rulesetId: string): BattleSe
 export const CHAIN_LENGTH = 3
 
 /**
+ * 서버 없이 도는 판의 마지막 층.
+ *
+ * **서버가 정본이다.** 이 값은 티켓을 못 받았을 때만 쓴다 — `balance.json` 의
+ * `floor_scale.max_floor` 와 같아야 하며, 갈리면 오프라인 판만 다른 깊이를 돈다.
+ */
+export const LOCAL_FLOOR_CAP = 10
+
+/**
  * 이 판으로 런이 끝났는가.
  *
  * **끝나야만 정산한다.** 하강은 서른 방이고, 규칙을 고치러 갈 때마다 정산하면 티켓이
@@ -362,8 +370,11 @@ export function checkRunOver(outcome: string, nextRoom: BattleSetup | undefined)
  * @param roomId 시작 방.
  * @returns 연쇄 위치.
  */
-export function buildChainPosition(roomId: string): ChainPosition {
-  return { roomIds: Array.from({ length: CHAIN_LENGTH }, () => roomId), index: 0 }
+export function buildChainPosition(roomId: string, floorCap = LOCAL_FLOOR_CAP): ChainPosition {
+  // 층마다 방 셋. 로컬은 방을 굴려 고를 근거(서버 난수)가 없으므로 고른 방을 잇는다 —
+  // **다만 길이는 하강과 같아야 한다.** 셋으로 끊으면 화면이 계속 1층이라고 말한다.
+  const total = CHAIN_LENGTH * Math.max(1, floorCap)
+  return { roomIds: Array.from({ length: total }, () => roomId), index: 0 }
 }
 
 /**
@@ -876,7 +887,12 @@ export function App(): React.JSX.Element {
         roomId: local.roomId,
         rulesetId: ruleset.rulesetId,
         seed: local.seed,
+        // **로컬도 하강이다.** 서버가 없어도 게임이 도는 것이 이 저장소의 규율인데,
+        // 여기만 방 셋짜리 한 층으로 두면 **다른 게임이 돈다** — 화면이 계속 1층이라고
+        // 말하고 세 방에서 끝난다. 실제로 그 증상으로 드러났다.
         chain: buildChainPosition(session.roomId),
+        floor: local.floor,
+        roomsPerFloor: CHAIN_LENGTH,
       },
       rulesets: new Map([[ruleset.rulesetId, ruleset]]),
       ticket: local,
@@ -1008,7 +1024,9 @@ export function App(): React.JSX.Element {
   // 여기서 판정을 다시 안 봐도 된다.
   useEffect(() => {
     const isEligible = checkShouldAutoAdvance({
-      isFinished: !checkOngoing(outcome),
+      // **편집 중에는 안 넘어간다.** 규칙을 고치는 동안 뒤에서 방이 넘어가면, 돌아왔을 때
+      // 내가 고친 규칙이 이미 지나간 방에 쓰인 것인지 알 수 없다.
+      isFinished: !isEditing && !checkOngoing(outcome),
       hasNext: run !== undefined && buildNextRoomSetup(run.setup, outcome) !== undefined,
       isEnabled: isAutoOn,
       isStopped: isAutoStopped,
@@ -1024,7 +1042,7 @@ export function App(): React.JSX.Element {
     return () => {
       clearInterval(timer)
     }
-  }, [outcome, run, isAutoOn, isAutoStopped])
+  }, [outcome, run, isAutoOn, isAutoStopped, isEditing])
 
   // 세다가 0 이 되면 넘어간다. **세는 것과 넘어가는 것을 갈라 둔다** — 한 효과에 두면
   // 넘어가면서 상태가 바뀌고 그 바뀜이 다시 타이머를 세워, 방 하나를 건너뛴다.
@@ -1108,6 +1126,21 @@ export function App(): React.JSX.Element {
   const launchControls = (
     <div className="launch">
       <EvictionNotice isEvicted={isEvicted} />
+      {/* **돌던 판으로 돌아가는 문.** 규칙을 고치러 오면 런은 살아 있는데, 돌아갈 길이
+          없으면 그 런은 버려진다 — 하강은 서른 방이라 잃는 것이 크다. */}
+      {run === undefined || !isEditing ? null : (
+        <Button
+          size="sm"
+          variant="primary"
+          glyph="▶"
+          title="고친 규칙으로 돌던 판을 이어서 본다"
+          onClick={() => {
+            setEditing(false)
+          }}
+        >
+          이어서
+        </Button>
+      )}
       {/* **저장 버튼.** 편집은 400ms 뒤에 자동으로 저장되지만, 자동은 눈에 안 보이고
           안 보이는 것은 안 일어난 것과 구별되지 않는다. 눌러서 지금 쓰고, 그 결과를
           바로 옆에 적는다. */}

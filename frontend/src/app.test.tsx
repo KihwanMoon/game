@@ -17,8 +17,9 @@ import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { App, buildInitialRuleSet, checkRunOver, buildChainPosition, buildNextRoomSetup, buildRunSetup, resolvePlayerLimits, describeRunResult, findLaunchBlocker, formatLocation, readPlayerLimits } from './App'
+import { App, CHAIN_LENGTH, LOCAL_FLOOR_CAP, buildInitialRuleSet, checkRunOver, buildChainPosition, buildNextRoomSetup, buildRunSetup, resolvePlayerLimits, describeRunResult, findLaunchBlocker, formatLocation, readPlayerLimits } from './App'
 import { buildBattleSession, checkOngoing, resolveRoomFloor, type BattleSetup } from './battle'
+import { checkShouldAutoAdvance } from './editor'
 import { BALANCE, BLOCK_CATALOG, G0_RULESETS } from './core/resources'
 import type { LogEntry } from './core/eventLog'
 import { validateRuleSet } from './core/rules/validator'
@@ -395,5 +396,57 @@ describe('연속 하강 (로드맵 W14)', () => {
 
   it('★ 층당 방 수가 0 이면 전체가 한 층이다 — 구버전 티켓이 그 길로 온다', () => {
     expect(resolveRoomFloor(4, 7, 0)).toBe(4)
+  })
+})
+
+
+describe('하강하며 층이 오른다', () => {
+  it('★ 네 번째 방부터 2층이다 — 안 오르면 화면이 계속 1층이라고 말한다', () => {
+    const ticket = {
+      ticketId: 't', seed: 1, roomId: 'open_field', floor: 1, roomsPerFloor: 3,
+      coreVersion: 'x', mode: 'PRACTICE',
+      roomIds: ['a', 'b', 'c', 'd', 'e', 'f'],
+      snapshots: [],
+      loadout: undefined,
+    }
+    let setup = buildRunSetup(ticket, 'r')
+    const floors = [resolveRoomFloor(setup.floor ?? 1, setup.chain?.index ?? 0, setup.roomsPerFloor ?? 0)]
+    for (let step = 0; step < 5; step += 1) {
+      const next = buildNextRoomSetup(setup, 'PLAYER_WIN')
+      if (next === undefined) {
+        break
+      }
+      setup = next
+      floors.push(
+        resolveRoomFloor(setup.floor ?? 1, setup.chain?.index ?? 0, setup.roomsPerFloor ?? 0),
+      )
+    }
+    expect(floors).toEqual([1, 1, 1, 2, 2, 2])
+  })
+})
+
+
+describe('런 중 편집 (GDD §2.2)', () => {
+  it('★ 편집 중에는 자동 진행이 멈춘다 — 뒤에서 방이 넘어가면 고친 규칙이 어디 쓰였는지 모른다', () => {
+    const ready = { isFinished: true, hasNext: true, isEnabled: true, isStopped: false }
+    expect(checkShouldAutoAdvance(ready)).toBe(true)
+    // 편집 중이면 「끝난 판」으로 안 친다 — App 이 그렇게 넘긴다.
+    expect(checkShouldAutoAdvance({ ...ready, isFinished: false })).toBe(false)
+  })
+})
+
+
+describe('서버 없이 도는 판도 하강이다', () => {
+  it('★ 로컬 연쇄도 층 수만큼 길다 — 셋으로 끊으면 화면이 계속 1층이라고 말한다', () => {
+    // 서버가 없어도 게임이 도는 것이 이 저장소의 규율인데, 여기만 한 층이면 **다른
+    // 게임이 돈다** — 실제로 「방 3개까지만 진행하고 계속 1층」으로 드러났다.
+    const position = buildChainPosition('open_field')
+    expect(position.roomIds.length).toBe(CHAIN_LENGTH * LOCAL_FLOOR_CAP)
+    expect(position.index).toBe(0)
+  })
+
+  it('★ 로컬 마지막 층이 밸런스의 마지막 층과 같다 — 갈리면 오프라인만 다른 깊이를 돈다', () => {
+    const scale = (BALANCE as { floor_scale?: { max_floor?: number } }).floor_scale
+    expect(LOCAL_FLOOR_CAP).toBe(scale?.max_floor)
   })
 })
