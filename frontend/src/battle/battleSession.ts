@@ -19,7 +19,7 @@ import {
   runBattle,
   type BalanceData,
 } from '../core/services/runBattle'
-import { ChainCursor } from '../core/services/runChain'
+import { ChainCursor, resolveRoomFloor } from '../core/services/runChain'
 import { buildRuleVm } from '../core/rules/ruleVm'
 import type { MonsterSnapshot, PlayerLoadout, RoomTemplate, RuleSet } from '../core/schemas'
 import type { TickEngine } from '../core/sim/engine'
@@ -65,6 +65,8 @@ export interface BattleSetup {
    * 적의 HP·공격력에 얹히므로 두 판이 갈리고, 이긴 판이 진 것으로 확정된다 (G3).
    */
   readonly floor?: number
+  /** 층 하나에 드는 방 수. 서버가 티켓에 실어 준다. */
+  readonly roomsPerFloor?: number
   /**
    * 이 판이 연쇄의 몇 번째 방인가.
    *
@@ -213,6 +215,7 @@ function buildChainRoom(
     seed: setup.seed,
     snapshots: setup.snapshots ?? [],
     floor: setup.floor ?? 1,
+    roomsPerFloor: setup.roomsPerFloor ?? 0,
     ...(setup.loadout === undefined ? {} : { loadout: setup.loadout }),
   })
   for (let index = 0; index < position.index; index += 1) {
@@ -281,3 +284,6 @@ export function buildBattleSession(
 export function checkOngoing(outcome: string): boolean {
   return outcome === OUTCOME_ONGOING
 }
+
+
+export { resolveRoomFloor }

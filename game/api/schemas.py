@@ -59,6 +59,9 @@ class TicketResponse(BaseModel):
     seed: int
     room_id: str
     floor: int
+    # 층 하나에 드는 방 수. **화면과 서버가 같은 값을 봐야 한다** — 방 순번에서 층을
+    # 파생하므로, 갈리면 화면과 서버가 다른 층으로 같은 방을 돈다 (G3).
+    rooms_per_floor: int = 3
     mode: str
     core_version: str
     # 이 런이 만날 지속 몬스터의 얼어붙은 상태 (docs/설계/6_몬스터 §5).

@@ -87,6 +87,13 @@ export interface ChainSetup {
    * 전부 반려되고, 반대면 깊은 층을 이긴 판이 진 것으로 확정된다 (G3).
    */
   readonly floor?: number
+  /**
+   * 층 하나에 드는 방 수. 0(기본)이면 연쇄 전체가 한 층이다.
+   *
+   * **파이썬 `resolve_room_floor` 와 같은 식을 써야 한다** (G3) — 층이 갈리면 적의
+   * HP·공격력이 갈리고, 화면이 이긴 판을 서버가 진 것으로 확정한다.
+   */
+  readonly roomsPerFloor?: number
 }
 
 /**
@@ -107,6 +114,28 @@ export type PlayerPolicyFactory = (engine: TickEngine, ruleset: RuleSet) => Deci
  */
 /** 층을 안 넘겼을 때의 값. 파이썬 `run_room_chain` 의 기본값과 같아야 한다 (G3). */
 const DEFAULT_FLOOR = 1
+
+/**
+ * 방 순번에서 그 방이 선 층을 낸다.
+ *
+ * 파이썬 `build_chain.resolve_room_floor` 의 이식이다. **두 코어가 같은 식을 써야 한다** —
+ * 층이 갈리면 적의 HP·공격력이 갈린다 (G3).
+ *
+ * @param startFloor 시작 층.
+ * @param index 방 순번. 0 부터 센다.
+ * @param roomsPerFloor 층 하나에 드는 방 수. 0 이면 전체가 한 층이다.
+ * @returns 그 방이 선 층.
+ */
+export function resolveRoomFloor(
+  startFloor: number,
+  index: number,
+  roomsPerFloor: number,
+): number {
+  if (roomsPerFloor <= 0) {
+    return startFloor
+  }
+  return startFloor + Math.floor(Math.max(0, index) / roomsPerFloor)
+}
 
 export class ChainCursor {
   private readonly setup: ChainSetup
@@ -177,7 +206,11 @@ export class ChainCursor {
       maxTicks: this.setup.maxTicks ?? DEFAULT_MAX_TICKS,
       pressure: this.pressure,
       snapshots: this.setup.snapshots ?? [],
-      floor: this.setup.floor ?? DEFAULT_FLOOR,
+      floor: resolveRoomFloor(
+        this.setup.floor ?? DEFAULT_FLOOR,
+        this.index,
+        this.setup.roomsPerFloor ?? 0,
+      ),
       ...(this.setup.loadout === undefined ? {} : { loadout: this.setup.loadout }),
     })
     const player = engine.state.entities.get(PLAYER_ENTITY_ID)

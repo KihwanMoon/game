@@ -26,6 +26,7 @@ export {
   buildBattleSession,
   checkOngoing,
   findRoomTemplate,
+  resolveRoomFloor,
 } from './battleSession'
 export type { BattleSession, BattleSetup, ChainPosition, ExtraEnemy } from './battleSession'
 

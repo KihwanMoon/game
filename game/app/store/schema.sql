@@ -50,6 +50,9 @@ CREATE TABLE IF NOT EXISTS run_ticket (
     seed          BIGINT      NOT NULL,
     room_id       TEXT        NOT NULL,
     floor         INTEGER     NOT NULL,
+    -- 층 하나에 드는 방 수 (로드맵 W14). **티켓에 얼린다** — 상수를 바꾸면 이미 발급한
+    -- 티켓의 방 목록이 조용히 다른 층 배치로 읽힌다. 0 은 전체가 한 층이라는 뜻이다.
+    rooms_per_floor INTEGER   NOT NULL DEFAULT 0,
     mode          TEXT        NOT NULL,
     core_version  TEXT        NOT NULL,
     issued_at     TIMESTAMPTZ NOT NULL DEFAULT now(),

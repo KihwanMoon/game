@@ -143,7 +143,7 @@ def test_only_a_verified_win_opens_the_next_floor(entity):
     """★ 반려된 제출이나 진 판이 층을 열면 제출만 하면 내려가는 길이 열린다 (T9)."""
     from dataclasses import dataclass
 
-    from game.api.routes.run import apply_floor_outcome
+    from game.api.floor_service import apply_floor_outcome
     from game.app.store.accounts import find_player_entity
     from game.app.store.progress import read_reached_floor
 
@@ -151,6 +151,7 @@ def test_only_a_verified_win_opens_the_next_floor(entity):
     class Probe:
         verdict: str
         outcome: str
+        cleared_rooms: int = 3
 
     pool, entity_id = entity
     with pool.connection() as connection:
@@ -160,11 +161,11 @@ def test_only_a_verified_win_opens_the_next_floor(entity):
     account_id = int(row[0])
     assert find_player_entity(pool, account_id) == entity_id
 
-    assert apply_floor_outcome(account_id, Probe("verified", "ENEMY_WIN"), 1) == ""
-    assert apply_floor_outcome(account_id, Probe("rejected", "PLAYER_WIN"), 1) == ""
+    assert apply_floor_outcome(account_id, Probe("verified", "ENEMY_WIN", 0), 1, 3) == ""
+    assert apply_floor_outcome(account_id, Probe("rejected", "PLAYER_WIN"), 1, 3) == ""
     assert read_reached_floor(pool, entity_id) == 1
 
-    assert "2층" in apply_floor_outcome(account_id, Probe("verified", "PLAYER_WIN"), 1)
+    assert "2층" in apply_floor_outcome(account_id, Probe("verified", "PLAYER_WIN"), 1, 3)
     assert read_reached_floor(pool, entity_id) == 2
 
 
@@ -173,12 +174,13 @@ def test_clearing_a_floor_twice_says_nothing_the_second_time(entity):
     """★ 이미 지나온 층을 다시 이겼을 때도 「열렸다」가 뜨면 그 줄이 뜻을 잃는다."""
     from dataclasses import dataclass
 
-    from game.api.routes.run import apply_floor_outcome
+    from game.api.floor_service import apply_floor_outcome
 
     @dataclass
     class Probe:
         verdict: str
         outcome: str
+        cleared_rooms: int = 3
 
     pool, entity_id = entity
     with pool.connection() as connection:
@@ -187,5 +189,5 @@ def test_clearing_a_floor_twice_says_nothing_the_second_time(entity):
         ).fetchone()
     account_id = int(row[0])
     won = Probe("verified", "PLAYER_WIN")
-    assert apply_floor_outcome(account_id, won, 1) != ""
-    assert apply_floor_outcome(account_id, won, 1) == ""
+    assert apply_floor_outcome(account_id, won, 1, 3) != ""
+    assert apply_floor_outcome(account_id, won, 1, 3) == ""

@@ -307,3 +307,14 @@ UPDATE item_instance SET grade = 'COMMON' WHERE grade IS NULL OR grade = '';
 --
 -- 도달 층을 개체에 둔다. `zone_floor` 와 가르는 이유는 뜻이 다르기 때문이다.
 ALTER TABLE entity_record ADD COLUMN IF NOT EXISTS reached_floor INTEGER NOT NULL DEFAULT 1;
+
+
+-- ── 한 런이 하강 전체가 된다 (로드맵 W14) ────────────────────────────────
+--
+-- 예전에는 한 티켓이 한 층(방 셋)이었다. 층마다 따로 제출하면 층 사이에 인계되는 HP 를
+-- 클라이언트가 보고하게 되고, 그러면 "나는 만피로 시작했다" 를 적어 보내는 것이 곧
+-- 진행이 된다 (T9). 한 티켓으로 하강 전체를 재시뮬하는 것이 그것을 막는다.
+--
+-- 층당 방 수를 티켓에 얼린다. 상수로 두면 상수를 고치는 순간 이미 발급한 티켓의 방
+-- 목록이 조용히 다른 층 배치로 읽힌다.
+ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS rooms_per_floor INTEGER NOT NULL DEFAULT 0;

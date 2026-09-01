@@ -115,8 +115,16 @@ def test_the_ticket_carries_a_varied_chain():
         issued = client.post(
             "/api/ticket", json={"room_id": "open_field"}, headers={"X-Game-Token": token}
         ).json()
+    per_floor = int(issued["rooms_per_floor"])
     assert issued["room_ids"][0] == "open_field"
-    assert len(set(issued["room_ids"])) == len(issued["room_ids"])
+    # **하강 전체가 실린다.** 1층에서 10층까지 층당 방 셋이다.
+    assert len(issued["room_ids"]) == per_floor * 10
+    # 겹치지 않는 것은 **한 층 안에서**다. 층이 다르면 같은 방이 다시 나와도 된다 —
+    # 층마다 적이 세지므로 같은 지형이 다른 판이 된다.
+    first = issued["room_ids"][:per_floor]
+    assert len(set(first)) == len(first)
+    # 마지막은 보스 방이다.
+    assert issued["room_ids"][-1] == "boss_hall"
 
 
 def build_boss_rooms():
@@ -155,3 +163,49 @@ def test_a_chain_without_a_boss_stays_the_same_length():
     """★ 보스를 안 두는 층에서 길이가 줄면 방 하나가 통째로 사라진다."""
     picked = build_room_chain(build_boss_rooms(), 3, "a", 3, "boss_hall", 10)
     assert len(picked) == 3
+
+
+def test_a_descent_covers_every_floor_to_the_boss():
+    """★ 하강이 중간에 끊기면 「10층에 보스」에 닿을 길이 없다."""
+    from game.app.services.build_chain import build_descent
+
+    picked = build_descent(build_boss_rooms(), 1, "a", 3, "boss_hall", 10)
+    assert len(picked) == 3 * 10
+    assert picked[-1] == "boss_hall"
+    assert picked.count("boss_hall") == 1
+
+
+def test_a_descent_from_a_deeper_floor_is_shorter():
+    """★ 5층에서 시작하면 5~10층만 돈다 — 지나온 층을 다시 돌면 하강이 아니다."""
+    from game.app.services.build_chain import build_descent
+
+    assert len(build_descent(build_boss_rooms(), 5, "a", 3, "boss_hall", 10)) == 3 * 6
+
+
+def test_the_chosen_room_opens_only_the_first_floor():
+    """★ 고른 방이 층마다 되풀이되면 하강이 같은 방의 반복이 된다."""
+    from game.app.services.build_chain import build_descent
+
+    picked = build_descent(build_boss_rooms(), 1, "a", 3, "boss_hall", 10)
+    assert picked[0] == "a"
+    # 2층의 첫 방까지 "a" 로 고정되면 안 된다. 서른 방 중 하나뿐일 리는 없으므로
+    # 여러 번 돌려 한 번이라도 달라지는지 본다.
+    assert any(
+        build_descent(build_boss_rooms(), 1, "a", 3, "boss_hall", 10)[3] != "a"
+        for _try in range(20)
+    )
+
+
+def test_the_room_floor_comes_from_the_index():
+    """★ 방 순번에서 층을 판다. **TS 와 같은 식이어야 한다** (G3).
+
+    갈리면 적의 HP·공격력이 갈리고, 화면이 이긴 판을 서버가 진 것으로 확정한다.
+    """
+    from game.app.services.build_chain import resolve_room_floor
+
+    assert resolve_room_floor(1, 0, 3) == 1
+    assert resolve_room_floor(1, 2, 3) == 1
+    assert resolve_room_floor(1, 3, 3) == 2
+    assert resolve_room_floor(1, 29, 3) == 10
+    # 0 이면 전체가 한 층이다 — 구버전 티켓이 그 길로 온다.
+    assert resolve_room_floor(4, 7, 0) == 4

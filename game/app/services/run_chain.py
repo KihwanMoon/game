@@ -12,6 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from game.app.rules.rule_vm import build_rule_vm
+from game.app.services.build_chain import resolve_room_floor
 from game.app.services.run_battle import (
     BattleResult,
     assign_enemy_policies,
@@ -60,6 +61,7 @@ def run_room_chain(
     snapshots: tuple[MonsterSnapshot, ...] = (),
     loadout: PlayerLoadout | None = None,
     floor: int = 1,
+    rooms_per_floor: int = 0,
 ) -> ChainResult:
     """방들을 순서대로 돌고 결과를 모은다.
 
@@ -78,9 +80,11 @@ def run_room_chain(
         snapshots: 티켓이 얼려 둔 지속 몬스터 상태.
         loadout: 티켓이 얼려 둔 플레이어 전투 입력. **첫 방에만 선다** — 이후는 인계된
             HP 로 이어지며, 그렇지 않으면 방마다 체력이 회복돼 연쇄가 뜻을 잃는다.
-        floor: 이 연쇄가 도는 층. 적의 HP·공격력에 층 스케일이 얹히고 피해 공식의 방어
-            감쇠도 이 값을 본다. **여기서 안 넘기면 재시뮬이 1층으로 돌아** 화면과 서버가
-            다른 판을 돌고 정상 제출이 전부 반려된다.
+        floor: 이 연쇄가 **시작하는** 층. 적의 HP·공격력에 층 스케일이 얹히고 피해
+            공식의 방어 감쇠도 이 값을 본다. **여기서 안 넘기면 재시뮬이 1층으로 돌아**
+            화면과 서버가 다른 판을 돌고 정상 제출이 전부 반려된다.
+        rooms_per_floor: 층 하나에 드는 방 수. 0 이면 연쇄 전체가 한 층이다 — 하강이
+            아닌 옛 호출(헤드리스 배치·골든)이 그 길로 온다.
 
     Returns:
         연쇄 결과.
@@ -109,7 +113,7 @@ def run_room_chain(
             pressure=pressure,
             snapshots=snapshots,
             loadout=loadout,
-            floor=floor,
+            floor=resolve_room_floor(floor, index, rooms_per_floor),
         )
         player = engine.state.entities["player"]
         if carried_hp is not None:

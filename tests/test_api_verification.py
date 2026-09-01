@@ -203,7 +203,7 @@ def test_a_win_records_the_floor(client, token, monkeypatch):
     from game.api.routes import ticket as ticket_route
 
     monkeypatch.setattr(
-        ticket_route, "build_room_chain", lambda *_args, **_kwargs: (ROOM_ID, ROOM_ID, ROOM_ID)
+        ticket_route, "build_descent", lambda *_args, **_kwargs: (ROOM_ID, ROOM_ID, ROOM_ID)
     )
     submit_once(client, token, build_winning_ruleset())
     assert read_meta(client, token)["best_floor"] >= 1

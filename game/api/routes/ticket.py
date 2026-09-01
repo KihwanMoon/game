@@ -10,7 +10,7 @@ from game.api.deps import CurrentAccount, get_context, get_core_version, get_poo
 from game.api.loadout_service import build_ticket_loadout
 from game.api.schemas import TicketRequest, TicketResponse
 from game.app.progression.floors import BOSS_ROOM_ID, read_boss_floor, resolve_floor
-from game.app.services.build_chain import build_room_chain
+from game.app.services.build_chain import build_descent
 from game.app.store.accounts import find_player_entity
 from game.app.store.monsters import build_monster_snapshot, list_monsters, save_snapshots
 from game.app.store.progress import read_reached_floor
@@ -50,7 +50,11 @@ def create_run_ticket(request: TicketRequest, account: CurrentAccount) -> Ticket
         floor=floor,
         # **방 목록을 서버가 정한다.** 비워 두면 같은 방을 세 번 잇는다 — 방이 열 개
         # 있어도 한 판에 한 종류만 보게 되고, 방을 늘려도 사람 눈에는 안 늘어난다.
-        room_ids=build_room_chain(
+        # **하강 전체를 얼려 넣는다.** 층마다 따로 제출하면 층 사이에 인계되는 HP 를
+        # 클라이언트가 보고하게 되고, 그러면 "나는 만피로 시작했다" 를 적어 보내는 것이
+        # 곧 진행이 된다 (T9). 한 티켓으로 전체를 재시뮬하는 것이 그것을 막는다.
+        rooms_per_floor=CHAIN_LENGTH,
+        room_ids=build_descent(
             context.rooms,
             floor,
             request.room_id,

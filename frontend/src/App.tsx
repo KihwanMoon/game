@@ -30,7 +30,13 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 
-import { BattleView, checkOngoing, type BattleSetup, type ChainPosition } from './battle'
+import {
+  BattleView,
+  checkOngoing,
+  resolveRoomFloor,
+  type BattleSetup,
+  type ChainPosition,
+} from './battle'
 import {
   G0_RULESETS,
   ALL_ITEM_TAGS,
@@ -322,13 +328,29 @@ export function buildRunSetup(issued: ServerTicket, rulesetId: string): BattleSe
     // **층도 서버가 정한다.** 기기가 정하면 1층으로 적어 보내 쉬운 판으로 검증받을 수
     // 있고, 반대로 안 받으면 화면만 1층으로 싸워 이긴 판이 진 것으로 확정된다.
     floor: issued.floor,
+    // 층 하나에 드는 방 수. 방 순번에서 층을 파생한다 — 서버와 같은 값을 써야 한다.
+    roomsPerFloor: issued.roomsPerFloor,
     ...(issued.loadout === undefined ? {} : { loadout: issued.loadout }),
     // 장비·레벨이 확정한 플레이어 전투 입력 (결정 #13).
   }
 }
 
-/** 한 런이 도는 방 수 (로드맵 W3). */
+/** 한 층이 도는 방 수 (로드맵 W3). 하강은 층마다 이만큼씩 잇는다. */
 export const CHAIN_LENGTH = 3
+
+/**
+ * 이 판으로 런이 끝났는가.
+ *
+ * **끝나야만 정산한다.** 하강은 서른 방이고, 규칙을 고치러 갈 때마다 정산하면 티켓이
+ * 소비되어 남은 층을 못 돈다 — 그것이 「방 3개까지만 진행하고 끝난다」의 반대편 실수다.
+ *
+ * @param outcome 방금 방의 판정.
+ * @param nextRoom 다음 방의 setup. 없으면 하강이 끝났다.
+ * @returns 끝났으면 true. 졌거나 더 갈 방이 없을 때다.
+ */
+export function checkRunOver(outcome: string, nextRoom: BattleSetup | undefined): boolean {
+  return outcome !== OUTCOME_PLAYER_WIN || nextRoom === undefined
+}
 
 /**
  * 고른 방에서 시작하는 연쇄를 만든다.
@@ -445,6 +467,9 @@ export function App(): React.JSX.Element {
   // 도감은 누적이다. 그래서 저장 열쇠도 디바운스 저장기도 따로 둔다.
   const [meta, setMeta] = useState<MetaSave>(() => readMeta(getLocalStorage()) ?? createEmptyMeta())
   // 자동 진행. 남은 초가 `undefined` 면 안 돌고 있는 것이다.
+  // **런을 살린 채 편집기를 본다.** 하강이 서른 방이라, 고치러 갈 때마다 런이 끝나면
+  // 편집이 사실상 불가능해진다 — 방 사이에서 고칠 수 있다는 것이 이 게임의 고리다.
+  const [isEditing, setEditing] = useState(false)
   const [autoLeft, setAutoLeft] = useState<number | undefined>(undefined)
   // **이번 방에서만 멈춘다.** 설정을 끄는 것과 다르다 — 한 번 멈추려고 기능을 끄게 하면
   // 다음 방부터도 안 넘어간다.
@@ -843,6 +868,7 @@ export function App(): React.JSX.Element {
     setVerdict(undefined)
     setOutcome(OUTCOME_ONGOING)
     setPostState('auto')
+    setEditing(false)
     const local = createLocalTicket(session.seed, session.roomId, coreVersion)
     setRun({
       // 로컬 티켓에는 스냅샷이 없다 — 지속 몬스터는 서버가 아는 것이다.
@@ -968,6 +994,7 @@ export function App(): React.JSX.Element {
     setOutcome(OUTCOME_ONGOING)
     setPostState('auto')
     setAutoLeft(undefined)
+    setEditing(false)
     // 멈춤은 **그 방에서만** 이다. 안 풀면 한 번 멈춘 뒤로 영영 안 넘어간다.
     setAutoStopped(false)
     setRun({ ...run, setup: next })
@@ -1032,7 +1059,10 @@ export function App(): React.JSX.Element {
    * 에디터로 돌아간다. 판을 버리고 결과만 들고 나온다.
    */
   function goToEditor(): void {
-    if (recording !== undefined) {
+    // **런이 살아 있으면 정산하지 않는다.** 하강은 서른 방이라, 규칙을 고치러 갈 때마다
+    // 런이 끝나면 편집이 사실상 불가능해진다 — 방 사이에서 고칠 수 있다는 것이 이 게임의
+    // 고리다 (GDD §2.2). 티켓은 그대로 살아 있고 돌아오면 이어서 돈다.
+    if (recording !== undefined && checkRunOver(recording.outcome, nextRoom)) {
       applyTutorialResult(recording.outcome, recording.playerHp)
       const result = {
         outcome: recording.outcome,
@@ -1041,9 +1071,10 @@ export function App(): React.JSX.Element {
       }
       setSession((current) => applyRunResult(current, result))
       applyRunSettlement(recording)
+      setRun(undefined)
     }
-    setRun(undefined)
     setOutcome(OUTCOME_ONGOING)
+    setEditing(true)
   }
 
   /**
@@ -1187,7 +1218,19 @@ export function App(): React.JSX.Element {
     </div>
   )
 
-  if (run === undefined) {
+  // **이른 return 앞에서 구한다.** 뒤에 두면 편집기 가지에서 `goToEditor` 가 이 값을
+  // 읽을 때 아직 초기화되지 않아 터진다.
+  const nextRoom = run === undefined ? undefined : buildNextRoomSetup(run.setup, outcome)
+  const roomFloor =
+    run === undefined
+      ? 1
+      : resolveRoomFloor(
+          run.setup.floor ?? 1,
+          run.setup.chain?.index ?? 0,
+          run.setup.roomsPerFloor ?? 0,
+        )
+
+  if (run === undefined || isEditing) {
     return (
       <div className="app">
         <RuleEditor
@@ -1444,9 +1487,14 @@ export function App(): React.JSX.Element {
     return tabs
   }
 
-  const nextRoom = run === undefined ? undefined : buildNextRoomSetup(run.setup, outcome)
   const battleControls = (
     <div className="launch">
+      {/* **지금 몇 층인지 말한다.** 하강은 층을 넘어가며 적이 세지는데, 그 사실을
+          말하는 자리가 없으면 갑자기 어려워진 이유를 알 수 없다. */}
+      <ValueExpr
+        text={`${String(roomFloor)}층 · 방 ${String((run.setup.chain?.index ?? 0) % Math.max(1, run.setup.roomsPerFloor ?? CHAIN_LENGTH) + 1)}/${String(run.setup.roomsPerFloor ?? CHAIN_LENGTH)}`}
+        size="sm"
+      />
       <ValueExpr text={`seed ${String(run.setup.seed)}`} size="sm" dim />
       {finished ? (
         <Button

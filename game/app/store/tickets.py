@@ -45,6 +45,9 @@ class IssuedTicket:
     # 이 티켓이 도는 방들 (로드맵 W3). 비어 있으면 `room_id` 한 방짜리다 — 구버전
     # 티켓이 그 경우다.
     room_ids: tuple[str, ...] = ()
+    # 층 하나에 드는 방 수 (로드맵 W14). **티켓에 얼린다** — 상수를 바꾸면 이미 발급한
+    # 티켓의 방 목록이 조용히 다른 층 배치로 읽힌다. 0 은 구버전 티켓이며 전체가 한 층이다.
+    rooms_per_floor: int = 0
 
 
 def create_seed() -> int:
@@ -71,6 +74,7 @@ def create_ticket(
     ttl: timedelta = TICKET_TTL,
     loadout: dict | None = None,
     room_ids: tuple[str, ...] = (),
+    rooms_per_floor: int = 0,
 ) -> IssuedTicket:
     """티켓을 발급한다.
 
@@ -91,6 +95,7 @@ def create_ticket(
         loadout: 장비·레벨이 확정한 전투 입력. 얼려 두지 않으면 화면과 서버가 다른
             캐릭터로 싸운다.
         room_ids: 이 티켓이 도는 방들. 비우면 `room_id` 를 `CHAIN_LENGTH` 번 잇는다.
+        rooms_per_floor: 층 하나에 드는 방 수. 0 이면 전체가 한 층이다.
 
     Returns:
         발급된 티켓.
@@ -115,8 +120,8 @@ def create_ticket(
         connection.execute(
             "INSERT INTO run_ticket"
             " (id, account_id, seed, room_id, floor, mode, core_version, expires_at,"
-            " loadout, room_ids)"
-            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            " loadout, room_ids, rooms_per_floor)"
+            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             (
                 ticket_id,
                 account_id,
@@ -128,6 +133,7 @@ def create_ticket(
                 expires_at,
                 Jsonb(loadout) if loadout is not None else None,
                 Jsonb(list(rooms)),
+                rooms_per_floor,
             ),
         )
     return IssuedTicket(
@@ -139,6 +145,7 @@ def create_ticket(
         core_version=core_version,
         loadout=loadout,
         room_ids=rooms,
+        rooms_per_floor=rooms_per_floor,
     )
 
 
@@ -172,7 +179,8 @@ def find_open_ticket(pool: ConnectionPool, ticket_id: str, account_id: int) -> I
     """
     with pool.connection() as connection:
         row = connection.execute(
-            "SELECT id, seed, room_id, floor, mode, core_version, loadout, room_ids"
+            "SELECT id, seed, room_id, floor, mode, core_version, loadout, room_ids,"
+            " rooms_per_floor"
             " FROM run_ticket"
             " WHERE id = %s AND account_id = %s"
             " AND consumed_at IS NULL AND expires_at > now()",
@@ -191,6 +199,7 @@ def find_open_ticket(pool: ConnectionPool, ticket_id: str, account_id: int) -> I
         # 구버전 티켓에는 목록이 없다. 그때는 방 하나짜리로 본다 — 없는 것을 길이 3으로
         # 채우면 그 티켓으로 돈 판과 서버 재시뮬이 갈린다.
         room_ids=tuple(read_room_ids(row[7]) or (str(row[2]),)),
+        rooms_per_floor=int(row[8] or 0),
     )
 
 

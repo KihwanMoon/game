@@ -66,6 +66,9 @@ class VerifiedRun:
     # 이 재시뮬이 뽑아낸 결산. **메타 세이브는 이것으로만 갱신된다** — 클라이언트가
     # 보낸 요약을 받으면 해금과 도감을 마음대로 채울 수 있다. 반려된 제출은 None 이다.
     summary: RunSummary | None = None
+    # 실제로 깬 방 수. **도달 층이 여기서 나온다** — 하강이 여러 층에 걸치므로 "이겼다"
+    # 하나로는 어디까지 갔는지 알 수 없고, 진 판도 몇 층까지는 깼을 수 있다.
+    cleared_rooms: int = 0
 
 
 def check_submission_version(claimed: str, server: str) -> str:
@@ -97,6 +100,7 @@ def evaluate_submission(
     loadout: PlayerLoadout | None = None,
     room_ids: tuple[str, ...] = (),
     floor: int = 1,
+    rooms_per_floor: int = 0,
 ) -> VerifiedRun:
     """제출 하나를 재시뮬해서 판정한다.
 
@@ -117,8 +121,9 @@ def evaluate_submission(
             구버전 티켓이 그 경우다. 여기가 비면 브라우저는 세 방을 도는데 서버는 한
             방만 계산해, 이긴 판이 진 것으로 확정된다.
 
-        floor: **티켓이 얼려 둔** 층. 안 넘기면 재시뮬이 1층으로 돌아, 깊은 층을 이긴
-            판이 진 것으로 확정된다 — 반려가 아니라 **틀린 결과가 기록된다.**
+        floor: **티켓이 얼려 둔** 시작 층. 안 넘기면 재시뮬이 1층으로 돌아, 깊은 층을
+            이긴 판이 진 것으로 확정된다 — 반려가 아니라 **틀린 결과가 기록된다.**
+        rooms_per_floor: 층 하나에 드는 방 수. 방 순번에서 층을 파생한다.
 
     Returns:
         확정된 결과. 규칙표가 형식이나 예산을 어기면 `rejected` 다.
@@ -168,6 +173,7 @@ def evaluate_submission(
         snapshots=snapshots,
         loadout=loadout,
         floor=floor,
+        rooms_per_floor=rooms_per_floor,
         run_room=run_and_tally,
     )
     encountered = tuple(sorted(kind for tally in tallies for kind in tally[0]))
@@ -177,6 +183,7 @@ def evaluate_submission(
         ticks=result.total_ticks,
         player_hp=result.player_hp,
         verdict=VERDICT_VERIFIED,
+        cleared_rooms=result.cleared_rooms,
         summary=build_run_summary(
             encountered,
             defeated,

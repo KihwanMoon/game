@@ -343,6 +343,8 @@ export interface ServerTicket {
   readonly seed: number
   readonly roomId: string
   readonly floor: number
+  /** 층 하나에 드는 방 수. 방 순번에서 층을 파생하는 데 쓴다. */
+  readonly roomsPerFloor: number
   readonly mode: string
   readonly coreVersion: string
   /**
@@ -397,6 +399,7 @@ export async function requestTicket(
     seed: number
     room_id: string
     floor: number
+    rooms_per_floor?: number
     mode: string
     core_version: string
     monster_snapshot?: RawMonsterSnapshot[]
@@ -415,6 +418,7 @@ export async function requestTicket(
     // 구버전 서버는 목록을 주지 않는다. 그때는 방 하나짜리다 — 없는 것을 길이 3으로
     // 채우면 서버가 계산하지 않은 방을 브라우저가 돈다.
     roomIds: body.room_ids ?? [body.room_id],
+    roomsPerFloor: body.rooms_per_floor ?? 0,
   }
 }
 

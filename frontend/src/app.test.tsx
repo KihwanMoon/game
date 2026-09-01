@@ -17,8 +17,8 @@ import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { App, buildInitialRuleSet, buildChainPosition, buildNextRoomSetup, buildRunSetup, resolvePlayerLimits, describeRunResult, findLaunchBlocker, formatLocation, readPlayerLimits } from './App'
-import { buildBattleSession, checkOngoing, type BattleSetup } from './battle'
+import { App, buildInitialRuleSet, checkRunOver, buildChainPosition, buildNextRoomSetup, buildRunSetup, resolvePlayerLimits, describeRunResult, findLaunchBlocker, formatLocation, readPlayerLimits } from './App'
+import { buildBattleSession, checkOngoing, resolveRoomFloor, type BattleSetup } from './battle'
 import { BALANCE, BLOCK_CATALOG, G0_RULESETS } from './core/resources'
 import type { LogEntry } from './core/eventLog'
 import { validateRuleSet } from './core/rules/validator'
@@ -177,6 +177,7 @@ describe('티켓 → 전투 조립 (E4, 결정 #13)', () => {
     seed: 42,
     roomId: 'corridor',
     floor: 1,
+    roomsPerFloor: 3,
     coreVersion: 'b5.v2.e1',
     mode: 'PRACTICE' as const,
     roomIds: ['corridor', 'corridor', 'corridor'],
@@ -329,6 +330,7 @@ describe('서버가 정한 방 목록 (W3)', () => {
         seed: 1,
         roomId: 'corridor',
         floor: 1,
+        roomsPerFloor: 3,
         coreVersion: 'x',
         mode: 'PRACTICE',
         snapshots: [],
@@ -365,5 +367,33 @@ describe('계정이 바뀌면 화면도 바뀐다', () => {
     for (const call of ['readProgress', 'readInventory', 'readBestiary', 'readAdminOverview']) {
       expect(body).toContain(call)
     }
+  })
+})
+
+
+describe('연속 하강 (로드맵 W14)', () => {
+  it('★ 층을 다 깨도 갈 방이 남았으면 런이 안 끝난다 — 정산하면 티켓이 소비돼 못 이어간다', () => {
+    const next = { roomId: 'corridor', rulesetId: 'x', seed: 1 }
+    expect(checkRunOver('PLAYER_WIN', next)).toBe(false)
+  })
+
+  it('★ 갈 방이 없으면 끝난다 — 하강의 마지막이다', () => {
+    expect(checkRunOver('PLAYER_WIN', undefined)).toBe(true)
+  })
+
+  it('★ 지면 끝난다 — 다음 방이 남아 있어도 죽었으면 런이다', () => {
+    const next = { roomId: 'corridor', rulesetId: 'x', seed: 1 }
+    expect(checkRunOver('ENEMY_WIN', next)).toBe(true)
+  })
+
+  it('★ 방 순번에서 층을 판다 — 파이썬과 같은 식이어야 한다 (G3)', () => {
+    expect(resolveRoomFloor(1, 0, 3)).toBe(1)
+    expect(resolveRoomFloor(1, 2, 3)).toBe(1)
+    expect(resolveRoomFloor(1, 3, 3)).toBe(2)
+    expect(resolveRoomFloor(1, 29, 3)).toBe(10)
+  })
+
+  it('★ 층당 방 수가 0 이면 전체가 한 층이다 — 구버전 티켓이 그 길로 온다', () => {
+    expect(resolveRoomFloor(4, 7, 0)).toBe(4)
   })
 })
