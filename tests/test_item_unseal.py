@@ -184,8 +184,6 @@ def test_a_dropped_item_carries_its_seals(client, token):
     드롭 경로를 안 보면 이 배선이 끊겨도 아무도 모른다 — 실제로 끊고 돌려 봤을 때
     검사가 통과했다.
     """
-    from types import SimpleNamespace
-
     from game.api.deps import get_pool
     from game.api.loot_service import create_run_drops
     from game.app.store.accounts import find_player_entity
@@ -203,8 +201,7 @@ def test_a_dropped_item_carries_its_seals(client, token):
             "UPDATE drop_grade_weight SET weight = 1000000 WHERE source_id = %s AND grade = 'FINE'",
             (source_id,),
         )
-    verified = SimpleNamespace(summary=SimpleNamespace(defeated_kinds=(kind,) * 5))
-    create_run_drops(account_id, None, verified, 1, "no-such-ticket")
+    create_run_drops(account_id, None, (kind,) * 5, 1, "no-such-ticket")
     with get_pool().connection() as connection:
         rows = connection.execute(
             "SELECT grade, sealed_slots FROM item_instance WHERE owner_entity_id = %s",

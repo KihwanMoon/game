@@ -318,3 +318,14 @@ ALTER TABLE entity_record ADD COLUMN IF NOT EXISTS reached_floor INTEGER NOT NUL
 -- 층당 방 수를 티켓에 얼린다. 상수로 두면 상수를 고치는 순간 이미 발급한 티켓의 방
 -- 목록이 조용히 다른 층 배치로 읽힌다.
 ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS rooms_per_floor INTEGER NOT NULL DEFAULT 0;
+
+
+-- ── 층 단위 보상 (로드맵 W14) ────────────────────────────────────────────
+--
+-- 층을 깰 때마다 경험치·화폐·아이템을 주려면 한 티켓으로 여러 번 제출해야 한다. T6 의
+-- 「한 티켓 한 제출」을 **「더 깊은 층으로만 나아갈 수 있다」**로 다시 세운다 — 같은 층을
+-- 두 번 제출해 보상을 두 번 받는 길을 이 값이 막는다.
+--
+-- 인계 HP 는 여전히 클라이언트가 안 보낸다. 서버가 **매번 처음부터** 그 층까지 재시뮬해
+-- 확정하므로 "나는 만피로 시작했다" 를 적어 보낼 자리가 없다 (T9).
+ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS cleared_floor INTEGER NOT NULL DEFAULT 0;

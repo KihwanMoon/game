@@ -69,6 +69,9 @@ class VerifiedRun:
     # 실제로 깬 방 수. **도달 층이 여기서 나온다** — 하강이 여러 층에 걸치므로 "이겼다"
     # 하나로는 어디까지 갔는지 알 수 없고, 진 판도 몇 층까지는 깼을 수 있다.
     cleared_rooms: int = 0
+    # 방마다 (만난 종, 잡은 종). **층 단위 보상이 이것으로 「이번 층의 처치」만 고른다** —
+    # 전체를 주면 층을 깰 때마다 지나온 층의 전리품이 다시 나온다.
+    room_kinds: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = ()
 
 
 def check_submission_version(claimed: str, server: str) -> str:
@@ -101,6 +104,7 @@ def evaluate_submission(
     room_ids: tuple[str, ...] = (),
     floor: int = 1,
     rooms_per_floor: int = 0,
+    room_limit: int = 0,
 ) -> VerifiedRun:
     """제출 하나를 재시뮬해서 판정한다.
 
@@ -124,6 +128,9 @@ def evaluate_submission(
         floor: **티켓이 얼려 둔** 시작 층. 안 넘기면 재시뮬이 1층으로 돌아, 깊은 층을
             이긴 판이 진 것으로 확정된다 — 반려가 아니라 **틀린 결과가 기록된다.**
         rooms_per_floor: 층 하나에 드는 방 수. 방 순번에서 층을 파생한다.
+        room_limit: 여기까지만 돈다. 0 이면 전부 돈다. **층 단위 보상이 이것을 쓴다** —
+            층을 깰 때마다 제출하되 서버는 늘 **처음부터** 그 층까지 다시 돌므로, 인계
+            HP 를 클라이언트가 보고할 자리가 없다 (T9).
 
     Returns:
         확정된 결과. 규칙표가 형식이나 예산을 어기면 `rejected` 다.
@@ -156,6 +163,8 @@ def evaluate_submission(
         return outcome
 
     rooms = room_ids or (room_id,)
+    if room_limit > 0:
+        rooms = rooms[:room_limit]
     missing = [name for name in rooms if name not in context.rooms]
     if missing:
         return VerifiedRun("", 0, 0, VERDICT_REJECTED, f"없는 방이다: {missing[0]}")
@@ -184,6 +193,7 @@ def evaluate_submission(
         player_hp=result.player_hp,
         verdict=VERDICT_VERIFIED,
         cleared_rooms=result.cleared_rooms,
+        room_kinds=tuple(tallies),
         summary=build_run_summary(
             encountered,
             defeated,

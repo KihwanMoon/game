@@ -53,6 +53,10 @@ CREATE TABLE IF NOT EXISTS run_ticket (
     -- 층 하나에 드는 방 수 (로드맵 W14). **티켓에 얼린다** — 상수를 바꾸면 이미 발급한
     -- 티켓의 방 목록이 조용히 다른 층 배치로 읽힌다. 0 은 전체가 한 층이라는 뜻이다.
     rooms_per_floor INTEGER   NOT NULL DEFAULT 0,
+    -- **어디까지 확정했는가** (로드맵 W14). 층 단위 보상 때문에 한 티켓으로 여러 번
+    -- 제출한다 — T6 의 「한 티켓 한 제출」을 「**더 깊은 층으로만 나아갈 수 있다**」로
+    -- 다시 세운 것이다. 같은 층을 두 번 제출해 보상을 두 번 받는 길을 이 값이 막는다.
+    cleared_floor   INTEGER   NOT NULL DEFAULT 0,
     mode          TEXT        NOT NULL,
     core_version  TEXT        NOT NULL,
     issued_at     TIMESTAMPTZ NOT NULL DEFAULT now(),

@@ -195,42 +195,32 @@ def count_rolls(account_id):
 
 def test_every_kill_rolls_once(client, token):
     """★ 처치마다 굴린다 — 런 단위로 굴리면 몬스터 레벨이 개입할 자리가 없다 (§15.3)."""
-    from types import SimpleNamespace
-
     from game.api.loot_service import create_run_drops
 
     account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
     before = count_rolls(account_id)
-    verified = SimpleNamespace(
-        summary=SimpleNamespace(defeated_kinds=("goblin_rusher", "goblin_rusher", "goblin_archer"))
-    )
-    create_run_drops(account_id, None, verified, 1, "no-such-ticket")
+    defeated = ("goblin_rusher", "goblin_rusher", "goblin_archer")
+    create_run_drops(account_id, None, defeated, 1, "no-such-ticket")
     assert count_rolls(account_id) - before == 3
 
 
 def test_nothing_defeated_rolls_nothing(client, token):
     """★ 아무도 못 잡았으면 굴리지 않는다 — 굴리면 진 판이 이긴 판과 같아진다."""
-    from types import SimpleNamespace
-
     from game.api.loot_service import create_run_drops
 
     account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
     before = count_rolls(account_id)
-    verified = SimpleNamespace(summary=SimpleNamespace(defeated_kinds=()))
-    assert create_run_drops(account_id, None, verified, 1, "t") == []
+    assert create_run_drops(account_id, None, (), 1, "t") == []
     assert count_rolls(account_id) == before
 
 
 def test_a_miss_is_written_down_too(client, token):
     """★ 안 나온 것이 데이터다 — 결과만 남기면 확률을 사후에 증명할 수 없다 (D4)."""
-    from types import SimpleNamespace
-
     from game.api.deps import get_pool
     from game.api.loot_service import create_run_drops
 
     account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
-    verified = SimpleNamespace(summary=SimpleNamespace(defeated_kinds=("goblin_rusher",) * 400))
-    create_run_drops(account_id, None, verified, 1, "t")
+    create_run_drops(account_id, None, ("goblin_rusher",) * 400, 1, "t")
     with get_pool().connection() as connection:
         row = connection.execute(
             "SELECT count(*) FROM item_roll_log WHERE account_id = %s AND catalog_id IS NULL",
@@ -241,15 +231,12 @@ def test_a_miss_is_written_down_too(client, token):
 
 def test_the_instance_carries_the_grade_it_rolled(client, token):
     """★ 카탈로그를 참조하지 않고 복사한다 (§15.5)."""
-    from types import SimpleNamespace
-
     from game.api.deps import get_pool
     from game.api.loot_service import create_run_drops
     from game.app.store.accounts import find_player_entity
 
     account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
-    verified = SimpleNamespace(summary=SimpleNamespace(defeated_kinds=("goblin_rusher",) * 400))
-    create_run_drops(account_id, None, verified, 1, "t")
+    create_run_drops(account_id, None, ("goblin_rusher",) * 400, 1, "t")
     entity_id = find_player_entity(get_pool(), account_id)
     with get_pool().connection() as connection:
         rows = connection.execute(
@@ -359,3 +346,46 @@ def test_a_monster_table_inherits_the_grade_split(client, token):
     pool = get_pool()
     source_id = save_monster_drop(pool, f"probe_kind_{account_id}", "FINE", "sword_great", 3)
     assert read_grade_weights(pool, source_id), "등급 가중치가 비어 있다 — 아무것도 안 나온다"
+
+
+def test_a_floor_reward_covers_only_that_floor():
+    """★ 층 단위 보상은 **그 층의 처치만** 준다.
+
+    서버는 층을 깰 때마다 처음부터 그 층까지 다시 돈다(T9). 그래서 결과에는 늘 지나온
+    층의 처치가 섞여 있고, 자르지 않으면 층을 깰 때마다 앞 층의 전리품이 다시 나온다.
+    """
+    from game.api.loot_service import list_floor_defeats
+
+    rooms = (
+        ((), ("a1",)),
+        ((), ("a2",)),
+        ((), ("a3",)),
+        ((), ("b1",)),
+        ((), ("b2",)),
+        ((), ("b3",)),
+    )
+    assert list_floor_defeats(rooms, 1, 1, 3) == ("a1", "a2", "a3")
+    assert list_floor_defeats(rooms, 1, 2, 3) == ("b1", "b2", "b3")
+
+
+def test_a_deeper_start_shifts_the_window():
+    """★ 5층에서 시작하면 5층이 첫 칸이다 — 안 밀면 남의 층 전리품을 준다."""
+    from game.api.loot_service import list_floor_defeats
+
+    rooms = (((), ("x",)), ((), ("y",)))
+    assert list_floor_defeats(rooms, 5, 5, 1) == ("x",)
+    assert list_floor_defeats(rooms, 5, 6, 1) == ("y",)
+
+
+def test_without_floors_everything_counts():
+    """★ 층 개념이 없는 옛 티켓은 전부 한 번에 준다 — 안 주면 보상이 통째로 사라진다."""
+    from game.api.loot_service import list_floor_defeats
+
+    assert list_floor_defeats((((), ("a",)), ((), ("b",))), 1, 1, 0) == ("a", "b")
+
+
+def test_a_kind_killed_twice_rolls_twice():
+    """★ 같은 종을 둘 잡았으면 둘이다 — 집합으로 접으면 굴림 수가 줄어든다."""
+    from game.api.loot_service import list_floor_defeats
+
+    assert list_floor_defeats((((), ("a", "a")),), 1, 1, 1) == ("a", "a")

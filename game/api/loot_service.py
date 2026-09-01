@@ -261,10 +261,39 @@ def build_roll_detail(rolled: str, issued: str, is_kept: bool) -> str:
     return ". ".join(parts)
 
 
+def list_floor_defeats(
+    room_kinds: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...],
+    start_floor: int,
+    floor: int,
+    rooms_per_floor: int,
+) -> tuple[str, ...]:
+    """그 층의 방들에서 잡은 것만 고른다.
+
+    **전체를 주면 층을 깰 때마다 지나온 층의 전리품이 다시 나온다.** 서버는 층 단위
+    보상을 줄 때마다 처음부터 그 층까지 다시 돌므로(T9), 앞 층의 처치가 결과에 늘 섞여
+    있다 — 여기서 잘라야 한 번 준 것을 또 주지 않는다.
+
+    Args:
+        room_kinds: 방마다 (만난 종, 잡은 종).
+        start_floor: 하강이 시작한 층.
+        floor: 보상을 줄 층.
+        rooms_per_floor: 층 하나에 드는 방 수. 0 이면 전체가 한 층이다.
+
+    Returns:
+        잡은 종들. 방 순서대로이며 중복이 그대로 남는다 — 같은 종을 둘 잡았으면 둘이다.
+    """
+    if rooms_per_floor <= 0:
+        return tuple(kind for _seen, killed in room_kinds for kind in killed)
+    begin = max(0, floor - start_floor) * rooms_per_floor
+    return tuple(
+        kind for _seen, killed in room_kinds[begin : begin + rooms_per_floor] for kind in killed
+    )
+
+
 def create_run_drops(
-    account_id: int, submission_id: int, verified: object, floor: int, ticket_id: str
+    account_id: int, submission_id: int, defeated: tuple[str, ...], floor: int, ticket_id: str
 ) -> list[str]:
-    """이 런의 처치를 하나씩 굴린다.
+    """이 층의 처치를 하나씩 굴린다.
 
     **재시뮬이 확정한 처치 목록만 쓴다.** 클라이언트 보고로 굴리면 "많이 잡았다" 고 적어
     보내는 것이 곧 파밍이 된다 (T9 와 같은 자리).
@@ -272,15 +301,13 @@ def create_run_drops(
     Args:
         account_id: 받을 계정.
         submission_id: 이 결과의 제출 id.
-        verified: 서버가 확정한 결과. `summary.defeated_kinds` 를 읽는다.
-        floor: 이 런의 층.
+        defeated: 이 층에서 잡은 종들. 부르는 쪽이 층으로 잘라서 넘긴다.
+        floor: 이 층.
         ticket_id: 이 런의 티켓. 스냅샷에서 개체 레벨을 찾는다.
 
     Returns:
         화면에 적을 줄들. 아무것도 안 나왔으면 빈 목록.
     """
-    summary = getattr(verified, "summary", None)
-    defeated = tuple(getattr(summary, "defeated_kinds", ()) or ())
     if not defeated:
         return []
     pool = get_pool()

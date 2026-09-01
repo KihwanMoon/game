@@ -48,6 +48,8 @@ class IssuedTicket:
     # 층 하나에 드는 방 수 (로드맵 W14). **티켓에 얼린다** — 상수를 바꾸면 이미 발급한
     # 티켓의 방 목록이 조용히 다른 층 배치로 읽힌다. 0 은 구버전 티켓이며 전체가 한 층이다.
     rooms_per_floor: int = 0
+    # 어디까지 확정했는가. 0 은 아직 한 층도 못 깬 것이다.
+    cleared_floor: int = 0
 
 
 def create_seed() -> int:
@@ -180,7 +182,7 @@ def find_open_ticket(pool: ConnectionPool, ticket_id: str, account_id: int) -> I
     with pool.connection() as connection:
         row = connection.execute(
             "SELECT id, seed, room_id, floor, mode, core_version, loadout, room_ids,"
-            " rooms_per_floor"
+            " rooms_per_floor, cleared_floor"
             " FROM run_ticket"
             " WHERE id = %s AND account_id = %s"
             " AND consumed_at IS NULL AND expires_at > now()",
@@ -200,6 +202,7 @@ def find_open_ticket(pool: ConnectionPool, ticket_id: str, account_id: int) -> I
         # 채우면 그 티켓으로 돈 판과 서버 재시뮬이 갈린다.
         room_ids=tuple(read_room_ids(row[7]) or (str(row[2]),)),
         rooms_per_floor=int(row[8] or 0),
+        cleared_floor=int(row[9] or 0),
     )
 
 
@@ -220,5 +223,30 @@ def mark_ticket_consumed(pool: ConnectionPool, ticket_id: str) -> bool:
         cursor = connection.execute(
             "UPDATE run_ticket SET consumed_at = now() WHERE id = %s AND consumed_at IS NULL",
             (ticket_id,),
+        )
+        return cursor.rowcount == 1
+
+
+def apply_floor_claim(pool: ConnectionPool, ticket_id: str, floor: int) -> bool:
+    """이 티켓으로 그 층까지 확정한 것으로 표시한다.
+
+    **조건부 갱신이다** — 이미 그 층 이상을 확정했으면 아무 행도 안 바뀐다. 층 단위
+    보상 때문에 한 티켓으로 여러 번 제출하는데, 같은 층을 두 번 제출해 보상을 두 번
+    받는 길을 여기서 끊는다. T6 의 「한 티켓 한 제출」을 **「더 깊은 층으로만」**으로
+    다시 세운 것이다.
+
+    Args:
+        pool: 연결 풀.
+        ticket_id: 티켓 id.
+        floor: 이번에 확정한 층.
+
+    Returns:
+        이번 호출이 실제로 나아갔으면 True. 이미 지나온 층이면 False.
+    """
+    with pool.connection() as connection:
+        cursor = connection.execute(
+            "UPDATE run_ticket SET cleared_floor = %s"
+            " WHERE id = %s AND consumed_at IS NULL AND cleared_floor < %s",
+            (floor, ticket_id, floor),
         )
         return cursor.rowcount == 1

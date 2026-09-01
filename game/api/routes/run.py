@@ -16,7 +16,7 @@ from game.api.deps import (
 )
 from game.api.discovery_service import record_item_discovery
 from game.api.floor_service import apply_floor_outcome
-from game.api.loot_service import create_run_drops
+from game.api.loot_service import create_run_drops, list_floor_defeats
 from game.api.schemas import SubmissionRequest, SubmissionResponse
 from game.app.items.loot import compute_run_currency
 from game.app.progression.levels import add_run_xp
@@ -97,6 +97,8 @@ def apply_run_rewards(
     core_version: str,
     floor: int = 1,
     ticket_id: str = "",
+    start_floor: int = 1,
+    rooms_per_floor: int = 0,
 ) -> str:
     """검증된 런의 보상을 준다.
 
@@ -112,6 +114,8 @@ def apply_run_rewards(
         core_version: 이 서버의 코어 버전. 시즌을 가르는 값이다.
         floor: 이 런의 층. 화폐가 이것에 비례한다 — 안 넘기면 깊이 들어가도 1층 값이다.
         ticket_id: 이 런의 티켓. 처치별 굴림이 스냅샷에서 개체 레벨을 찾는다.
+        start_floor: 하강이 시작한 층. 이번 층의 처치만 골라내는 데 쓴다.
+        rooms_per_floor: 층 하나에 드는 방 수.
 
     Returns:
         플레이어에게 보여줄 한 줄. 없으면 빈 문자열.
@@ -124,7 +128,15 @@ def apply_run_rewards(
     # **처치마다 굴린다** (설계/4_아이템 §15.3). 런 단위로 굴리면 몬스터 레벨이 개입할
     # 자리가 없다. 재시뮬이 확정한 처치 목록만 쓴다 — 클라이언트 보고로 굴리면 "많이
     # 잡았다" 고 적어 보내는 것이 곧 파밍이 된다.
-    notes.extend(create_run_drops(account_id, submission_id, verified, floor, ticket_id))
+    notes.extend(
+        create_run_drops(
+            account_id,
+            submission_id,
+            list_floor_defeats(verified.room_kinds, start_floor, floor, rooms_per_floor),
+            floor,
+            ticket_id,
+        )
+    )
     # 경험치는 **검증된 런에서만** 오른다. 클라이언트 보고로 오르면 순위표가 곧
     # 거짓이 된다 — 순위의 근거가 누적 경험치이기 때문이다.
     pool = get_pool()
