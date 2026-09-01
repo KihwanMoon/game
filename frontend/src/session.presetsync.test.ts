@@ -11,6 +11,8 @@ import { createEmptyMeta } from './core/schemas'
 import { adoptServerMeta } from './core/services/manageMeta'
 import {
   adoptDraft,
+  applyRuleSetEdit,
+  applySessionToMeta,
   adoptPresets,
   applyPresetSave,
   buildMetaFromSession,
@@ -91,5 +93,33 @@ describe('편집 중인 규칙표가 계정을 따라온다', () => {
   it('서버에 초안이 없으면 그대로 둔다', () => {
     const mine = buildSession()
     expect(adoptDraft(mine, undefined, false)).toBe(mine)
+  })
+})
+
+
+describe('규칙을 고치면 올릴 것이 생긴다', () => {
+  it('★ 슬롯이 안 바뀌어도 초안이 바뀌면 새 메타다', () => {
+    // **여기가 진짜 원인이었다.** 올리는 쪽이 슬롯만 보고 있어서, 규칙을 아무리 고쳐도
+    // 서버에는 아무것도 안 갔다 — 기기를 바꾸면 규칙이 사라진 것처럼 보였다.
+    const base = createEmptyMeta()
+    const first = applySessionToMeta(buildSession(), base)
+    expect(first).not.toBe(base)
+    expect(first.draft).toBeDefined()
+  })
+
+  it('★ 아무것도 안 바뀌면 같은 객체다 — 매번 올리면 규칙 한 줄에 수십 번이 나간다', () => {
+    const session = buildSession()
+    const once = applySessionToMeta(session, createEmptyMeta())
+    expect(applySessionToMeta(session, once)).toBe(once)
+  })
+
+  it('★ 규칙을 고치면 다시 올릴 것이 생긴다', () => {
+    const session = buildSession()
+    const once = applySessionToMeta(session, createEmptyMeta())
+    const edited = applyRuleSetEdit(session, {
+      ...getSessionRuleSet(session),
+      version: getSessionRuleSet(session).version + 1,
+    })
+    expect(applySessionToMeta(edited, once)).not.toBe(once)
   })
 })

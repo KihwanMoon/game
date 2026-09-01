@@ -315,6 +315,25 @@ export function buildMetaFromSession(session: EditorSession, meta: MetaSave): Me
 }
 
 /**
+ * 세션을 메타 세이브에 반영하되, 바뀐 것이 없으면 **같은 객체**를 돌려준다.
+ *
+ * **바뀐 것을 슬롯으로만 재면 초안이 영영 안 올라간다.** 실제로 그랬다 — 올리는 쪽이
+ * `presets` 만 보고 있어서, 규칙을 아무리 고쳐도 서버에는 아무것도 안 갔다. 기기를
+ * 바꾸면 규칙이 사라진 것처럼 보인 진짜 이유가 이것이다.
+ *
+ * @param session 세션.
+ * @param meta 지금 메타 세이브.
+ * @returns 새 메타 세이브. 바뀐 것이 없으면 받은 것 그대로.
+ */
+export function applySessionToMeta(session: EditorSession, meta: MetaSave): MetaSave {
+  const merged = buildMetaFromSession(session, meta)
+  if (merged.presets === meta.presets && merged.draft === meta.draft) {
+    return meta
+  }
+  return merged
+}
+
+/**
  * 서버에서 받은 코드 라이브러리를 세션에 싣는다.
  *
  * **이 기기에 슬롯이 하나라도 있으면 손대지 않는다.** 덮어쓰면 방금 만든 것이 사라지고,

@@ -87,7 +87,7 @@ import {
   adoptDraft,
   adoptPresets,
   applyRuleSetEdit,
-  buildMetaFromSession,
+  applySessionToMeta,
   applyRunResult,
   applySeedChoice,
   applyUndoStep,
@@ -190,6 +190,14 @@ const MIN_SEED = 0
 const SEED_LIMIT = MAX_SEED
 
 const DECIMAL_RADIX = 10
+
+/**
+ * 서버로 메타를 올리기까지 미루는 시간(ms).
+ *
+ * 로컬 저장(400ms)보다 길다 — 네트워크를 타므로, 키를 칠 때마다 보내면 규칙 한 줄을
+ * 고치는 동안 수십 번이 나간다.
+ */
+const META_PUSH_DELAY_MS = 1500
 
 const PLAYER_SECTION = 'player'
 const CPU_BUDGET_KEY = 'cpu_budget'
@@ -491,22 +499,33 @@ export function App(): React.JSX.Element {
     scheduler.schedule(buildSessionSave(session))
   }, [scheduler, session])
 
-  // **코드 라이브러리는 계정을 따라온다.** `MetaSave.presets` 는 처음부터 있었는데
-  // 아무도 채우지 않아 늘 빈 배열이었고, 그래서 슬롯에 저장한 규칙표가 기기를 바꾸면
-  // 사라졌다 — 쓰는 사람에게 그것은 "저장이 안 된다" 로 보인다.
+  // **코드 라이브러리와 편집 중인 규칙표가 계정을 따라온다.**
+  //
+  // 예전에는 이 효과가 `session.presets` 만 보고 있었다. 초안은 규칙을 고칠 때마다
+  // 바뀌는데 슬롯은 안 바뀌므로, **초안이 한 번도 서버로 안 올라갔다** — 기기를 바꾸면
+  // 규칙이 사라진 것처럼 보인 진짜 이유가 이것이다.
+  //
+  // 네트워크를 타므로 로컬 저장보다 길게 미룬다. 키를 칠 때마다 보내면 규칙 한 줄을
+  // 고치는 동안 수십 번이 나간다.
   useEffect(() => {
-    setMeta((current) => {
-      const merged = buildMetaFromSession(session, current)
-      if (merged.presets === current.presets) {
-        return current
-      }
-      writeMeta(getLocalStorage(), merged)
-      if (account !== undefined) {
+    if (account === undefined) {
+      return undefined
+    }
+    const timer = setTimeout(() => {
+      setMeta((current) => {
+        const merged = applySessionToMeta(session, current)
+        if (merged === current) {
+          return current
+        }
+        writeMeta(getLocalStorage(), merged)
         void writeServerMeta(account, merged)
-      }
-      return merged
-    })
-  }, [session.presets, account])
+        return merged
+      })
+    }, META_PUSH_DELAY_MS)
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [session, account])
 
   // 계정을 확보하고 서버 세이브를 합친다. **실패해도 아무 일도 일어나지 않는다** —
   // 서버가 없어도 게임은 돌아야 한다. 합치기는 최대값·합집합이라 몇 번을 해도 같은
