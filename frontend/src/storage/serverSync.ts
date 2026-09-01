@@ -903,6 +903,14 @@ export interface ProgressView {
   readonly bonusRuleSlots: number
   readonly bonusCpu: number
   /**
+   * 여기까지 내려가 봤다 (설계/6_몬스터 §3).
+   *
+   * **서버만 올린다.** 화면이 정하면 1층 캐릭터로 10층 보상을 뽑는다.
+   */
+  readonly reachedFloor: number
+  /** 마지막 층. 「7 / 10」 을 그리려면 끝을 알아야 한다. */
+  readonly floorCap: number
+  /**
    * 지금 이 캐릭터의 확정 전투 입력.
    *
    * **에디터가 CPU·슬롯 한도를 여기서 읽는다.** 기본값으로 두면 레벨·장비로 늘어난
@@ -996,6 +1004,8 @@ export async function readProgress(token: string): Promise<ProgressView | undefi
     spent_points: number
     bonus_rule_slots: number
     bonus_cpu: number
+    reached_floor?: number
+    floor_cap?: number
     loadout?: RawPlayerLoadout | null
   }
   return {
@@ -1009,6 +1019,8 @@ export async function readProgress(token: string): Promise<ProgressView | undefi
     spentPoints: body.spent_points,
     bonusRuleSlots: body.bonus_rule_slots,
     bonusCpu: body.bonus_cpu,
+    reachedFloor: body.reached_floor ?? 1,
+    floorCap: body.floor_cap ?? 1,
     loadout: body.loadout ? parseLoadout(body.loadout) : undefined,
   }
 }

@@ -27,6 +27,8 @@ const PROGRESS: ProgressView = {
   spentPoints: 16,
   bonusRuleSlots: 1,
   bonusCpu: 3,
+  reachedFloor: 1,
+  floorCap: 10,
   loadout: {
     hpMax: 160,
     attack: 25,

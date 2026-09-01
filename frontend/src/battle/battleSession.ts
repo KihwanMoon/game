@@ -59,6 +59,13 @@ export interface BattleSetup {
    */
   readonly loadout?: PlayerLoadout
   /**
+   * 티켓이 얼려 둔 층 (설계/6_몬스터 §3).
+   *
+   * **이것이 없으면 화면은 1층으로 싸우고 서버는 깊은 층으로 재시뮬한다.** 층 스케일이
+   * 적의 HP·공격력에 얹히므로 두 판이 갈리고, 이긴 판이 진 것으로 확정된다 (G3).
+   */
+  readonly floor?: number
+  /**
    * 이 판이 연쇄의 몇 번째 방인가.
    *
    * **앞 방들을 여기서 다시 돌린다.** 그래야 "같은 setup 이면 같은 판" (R5) 이 유지되고,
@@ -168,6 +175,7 @@ function buildSingleRoom(
     balance,
     seed: setup.seed,
     snapshots: setup.snapshots ?? [],
+    floor: setup.floor ?? 1,
     ...(setup.loadout === undefined ? {} : { loadout: setup.loadout }),
   })
   engine.policies.set(PLAYER_ENTITY_ID, buildTracer(engine, ruleset))
@@ -204,6 +212,7 @@ function buildChainRoom(
     enemyRulesets: ENEMY_RULESETS,
     seed: setup.seed,
     snapshots: setup.snapshots ?? [],
+    floor: setup.floor ?? 1,
     ...(setup.loadout === undefined ? {} : { loadout: setup.loadout }),
   })
   for (let index = 0; index < position.index; index += 1) {

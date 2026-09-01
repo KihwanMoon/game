@@ -18,9 +18,11 @@ from game.api.discovery_service import record_item_discovery
 from game.api.loot_service import create_run_drops
 from game.api.schemas import SubmissionRequest, SubmissionResponse
 from game.app.items.loot import compute_run_currency
+from game.app.progression.floors import read_floor_cap
 from game.app.progression.levels import add_run_xp
 from game.app.services.manage_meta import apply_run_result
 from game.app.services.verify_run import VerifiedRun, check_submission_version, evaluate_submission
+from game.app.simulation.plan import OUTCOME_PLAYER_WIN
 from game.app.store.accounts import find_player_entity
 from game.app.store.equipment import add_currency, mark_item_broken, remove_item
 from game.app.store.items import list_equipment, list_inventory
@@ -30,7 +32,13 @@ from game.app.store.monsters import (
     apply_monster_defeat,
     load_snapshots,
 )
-from game.app.store.progress import add_player_xp, read_progress, save_leaderboard
+from game.app.store.progress import (
+    add_player_xp,
+    apply_floor_progress,
+    read_progress,
+    read_reached_floor,
+    save_leaderboard,
+)
 from game.app.store.runs import (
     VERDICT_REJECTED,
     VERDICT_VERIFIED,
@@ -267,6 +275,8 @@ def check_run_submission(request: SubmissionRequest, ticket: IssuedTicket) -> Ve
         loadout,
         # 방 목록도 티켓에서 온다. 제출이 실어 오면 쉬운 방만 골라 담을 수 있다 (T2).
         ticket.room_ids,
+        # 층도 티켓에서 온다. 제출이 실어 오면 1층으로 적어 보내 쉬운 판으로 검증받는다.
+        ticket.floor,
     )
 
 
@@ -319,11 +329,43 @@ def create_run_submission(
     world = apply_monster_outcome(ticket, submission_id, verified, account.account_id)
     if world:
         reward = f"{reward} · {world}" if reward else world
+    depth = apply_floor_outcome(account.account_id, verified, ticket.floor)
+    if depth:
+        reward = f"{reward} · {depth}" if reward else depth
     apply_verified_meta(account.account_id, verified)
     # `summary` 는 응답에 싣지 않는다 — 서버가 무엇으로 세이브를 갱신했는지는 클라이언트가
     # 알 필요가 없고, 실으면 그것을 되보내려는 경로가 생긴다.
     fields = {key: value for key, value in vars(verified).items() if key != "summary"}
     return SubmissionResponse(submission_id=submission_id, reward=reward, **fields)
+
+
+def apply_floor_outcome(account_id: int, verified: VerifiedRun, floor: int) -> str:
+    """연쇄를 다 이겼으면 다음 층을 연다 (설계/6_몬스터 §3).
+
+    **재시뮬이 확정한 결과만 본다.** 클라이언트 보고로 열면 "10층을 깼다" 고 적어 보내는
+    것이 곧 진행이 된다 (T9 와 같은 자리). 반려된 제출은 아무것도 안 연다.
+
+    **마지막 층에서는 안 연다.** 끝이 있어야 「깼다」가 성립한다.
+
+    Args:
+        account_id: 대상 계정.
+        verified: 서버가 확정한 결과.
+        floor: 방금 돈 층.
+
+    Returns:
+        화면에 적을 한 줄. 열린 것이 없으면 빈 문자열.
+    """
+    if verified.verdict != VERDICT_VERIFIED or verified.outcome != OUTCOME_PLAYER_WIN:
+        return ""
+    cap = read_floor_cap(get_context().balance)
+    if floor >= cap:
+        return ""
+    pool = get_pool()
+    entity_id = find_player_entity(pool, account_id)
+    before = read_reached_floor(pool, entity_id)
+    after = apply_floor_progress(pool, entity_id, floor, cap)
+    # **열린 순간만 말한다.** 이미 지나온 층을 다시 이겼을 때도 말하면 그 줄이 뜻을 잃는다.
+    return f"{after}층이 열렸다" if after > before else ""
 
 
 def apply_verified_meta(account_id: int, verified: VerifiedRun) -> None:

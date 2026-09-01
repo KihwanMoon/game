@@ -298,3 +298,12 @@ UPDATE item_catalog SET use_tag = 'SCROLL'
 -- 보통으로 채운다. 그때는 등급이 하나뿐이었으므로 이것이 사실이고, 봉인 칸은 보통이
 -- 0 칸이라 이미 0 인 값과 어긋나지 않는다.
 UPDATE item_instance SET grade = 'COMMON' WHERE grade IS NULL OR grade = '';
+
+
+-- ── 층이 실제로 오르게 한다 (설계/6_몬스터 §3) ──────────────────────────
+--
+-- 층 스케일 수식(층당 HP +25% · 공격 +20%)은 처음부터 있었는데 **한 번도 발동한 적이
+-- 없었다** — 클라이언트가 티켓 요청에 층을 안 실어서 늘 1층이었다.
+--
+-- 도달 층을 개체에 둔다. `zone_floor` 와 가르는 이유는 뜻이 다르기 때문이다.
+ALTER TABLE entity_record ADD COLUMN IF NOT EXISTS reached_floor INTEGER NOT NULL DEFAULT 1;

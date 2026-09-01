@@ -128,6 +128,14 @@ CREATE TABLE IF NOT EXISTS entity_record (
     spawn_seed        BIGINT,
     -- 어디에 있는가 (PERSISTENT 만).
     zone_floor        INTEGER,
+    -- **PLAYER 만 채운다. 여기까지 내려가 봤는가** (설계/6_몬스터 §3).
+    --
+    -- `zone_floor` 와 가른 이유는 뜻이 다르기 때문이다 — 저쪽은 「지금 어느 층에 있는
+    -- 몬스터인가」이고 이쪽은 「최대 얼마나 깊이 갔는가」다. 한 칸에 담으면 층을 골라
+    -- 들어가는 순간 도달 기록이 지워진다.
+    --
+    -- **서버만 올린다.** 클라이언트가 층을 고르게 두면 1층 캐릭터로 10층 보상을 뽑는다.
+    reached_floor     INTEGER     NOT NULL DEFAULT 1,
     entity_slot       TEXT,
     alive             BOOLEAN     NOT NULL DEFAULT true,
     updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),

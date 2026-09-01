@@ -25,6 +25,8 @@ const PROGRESS: ProgressView = {
   spentPoints: 6,
   bonusRuleSlots: 1,
   bonusCpu: 1,
+  reachedFloor: 1,
+  floorCap: 10,
   loadout: undefined,
 }
 
@@ -198,5 +200,44 @@ describe('경매 — 사기 전에 알아야 할 것 (모바일 우선)', () => 
     // 세로 배치에서 버튼은 --tap-min(44px)까지 커진다. 이름·접사와 같은 줄에 두면
     // 그 높이가 줄을 밀어 올려 겹친다.
     expect(markup).toContain('wld__listing')
+  })
+})
+
+
+describe('층 깊이 (설계/6_몬스터 §3)', () => {
+  /**
+   * 도달 층만 바꿔 세계 화면을 그린다.
+   *
+   * @param reachedFloor 도달 층.
+   * @param floorCap 마지막 층.
+   * @returns 마크업.
+   */
+  function drawDepth(reachedFloor: number, floorCap: number): string {
+    return renderToStaticMarkup(
+      <WorldPanel
+        progress={{ ...PROGRESS, reachedFloor, floorCap }}
+        leaderboard={LEADERBOARD}
+        auction={AUCTION}
+        accountId={7}
+        isOnline
+        detail=""
+        onAllocate={noop}
+        onBuy={noop}
+        onCancel={noop}
+        onDaily={noop}
+      />,
+    )
+  }
+
+  it('★ 어디까지 왔는지 말한다 — 없으면 자기가 몇 층인지 모른 채 같은 판을 돈다', () => {
+    expect(drawDepth(4, 10)).toContain('4 / 10층')
+  })
+
+  it('★ 층이 무엇을 바꾸는지 말한다 — 깊이 가는 이유와 대가가 같은 줄에 있어야 한다', () => {
+    expect(drawDepth(4, 10)).toContain('HP +25%')
+  })
+
+  it('★ 끝까지 왔으면 그렇게 말한다 — 더 갈 곳이 있는 것처럼 보이면 안 된다', () => {
+    expect(drawDepth(10, 10)).toContain('끝까지 왔다')
   })
 })

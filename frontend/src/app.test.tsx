@@ -242,6 +242,8 @@ describe('규칙 한도 (결정 #51, #13)', () => {
     spentPoints: 0,
     bonusRuleSlots: 1,
     bonusCpu: 3,
+    reachedFloor: 1,
+    floorCap: 10,
   }
 
   it('★ 서버가 아는 한도를 쓴다 — 성장이 에디터에 닿는 유일한 경로다', () => {

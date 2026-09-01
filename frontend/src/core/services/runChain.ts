@@ -79,6 +79,14 @@ export interface ChainSetup {
   readonly loadout?: PlayerLoadout
   /** 방 하나를 돌리는 것. */
   readonly runRoom?: RoomRunner
+  /**
+   * 이 연쇄가 도는 층. 적의 HP·공격력에 층 스케일이 얹히고 피해 공식의 방어 감쇠도
+   * 이 값을 본다.
+   *
+   * **안 넘기면 1층으로 돈다.** 화면이 안 넘기고 서버는 넘기면 두 판이 갈려 정상 제출이
+   * 전부 반려되고, 반대면 깊은 층을 이긴 판이 진 것으로 확정된다 (G3).
+   */
+  readonly floor?: number
 }
 
 /**
@@ -97,6 +105,9 @@ export type PlayerPolicyFactory = (engine: TickEngine, ruleset: RuleSet) => Deci
  * "재현" 이 재현이 아니게 된다 — 파이썬 `run_chain.py` 가 `RoomRunner` 를 받는 것과
  * 같은 이유다.
  */
+/** 층을 안 넘겼을 때의 값. 파이썬 `run_room_chain` 의 기본값과 같아야 한다 (G3). */
+const DEFAULT_FLOOR = 1
+
 export class ChainCursor {
   private readonly setup: ChainSetup
 
@@ -166,6 +177,7 @@ export class ChainCursor {
       maxTicks: this.setup.maxTicks ?? DEFAULT_MAX_TICKS,
       pressure: this.pressure,
       snapshots: this.setup.snapshots ?? [],
+      floor: this.setup.floor ?? DEFAULT_FLOOR,
       ...(this.setup.loadout === undefined ? {} : { loadout: this.setup.loadout }),
     })
     const player = engine.state.entities.get(PLAYER_ENTITY_ID)

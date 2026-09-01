@@ -240,6 +240,10 @@ class ProgressResponse(BaseModel):
     bonus_flags: int = 0
     stat_points: int = 0
     spent_points: int = 0
+    # **여기까지 내려가 봤다** (설계/6_몬스터 §3). 서버만 올린다.
+    reached_floor: int = 1
+    # 마지막 층. 화면이 「7 / 10」 을 그리려면 끝을 알아야 한다.
+    floor_cap: int = 1
     # 배분할 수 있는 능력치. 무엇을 여는지는 `progression/attributes.py` 가 정한다 (#51).
     stat_keys: list[str] = Field(default_factory=list)
     # **지금 이 캐릭터의 확정 전투 입력.** 에디터가 CPU·슬롯 한도를 여기서 읽는다 —

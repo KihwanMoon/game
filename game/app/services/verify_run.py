@@ -96,6 +96,7 @@ def evaluate_submission(
     snapshots: tuple[MonsterSnapshot, ...] = (),
     loadout: PlayerLoadout | None = None,
     room_ids: tuple[str, ...] = (),
+    floor: int = 1,
 ) -> VerifiedRun:
     """제출 하나를 재시뮬해서 판정한다.
 
@@ -115,6 +116,9 @@ def evaluate_submission(
         room_ids: **티켓이 얼려 둔** 방 목록. 비어 있으면 `room_id` 한 방만 돈다 —
             구버전 티켓이 그 경우다. 여기가 비면 브라우저는 세 방을 도는데 서버는 한
             방만 계산해, 이긴 판이 진 것으로 확정된다.
+
+        floor: **티켓이 얼려 둔** 층. 안 넘기면 재시뮬이 1층으로 돌아, 깊은 층을 이긴
+            판이 진 것으로 확정된다 — 반려가 아니라 **틀린 결과가 기록된다.**
 
     Returns:
         확정된 결과. 규칙표가 형식이나 예산을 어기면 `rejected` 다.
@@ -163,6 +167,7 @@ def evaluate_submission(
         seed,
         snapshots=snapshots,
         loadout=loadout,
+        floor=floor,
         run_room=run_and_tally,
     )
     encountered = tuple(sorted(kind for tally in tallies for kind in tally[0]))

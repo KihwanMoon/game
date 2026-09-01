@@ -174,3 +174,48 @@ def list_leaderboard(
         }
         for index, row in enumerate(rows)
     )
+
+
+def read_reached_floor(pool: ConnectionPool, entity_id: int) -> int:
+    """이 개체가 여기까지 내려가 봤다는 층을 읽는다.
+
+    Args:
+        pool: 연결 풀.
+        entity_id: PLAYER 개체 id.
+
+    Returns:
+        도달 층. 기록이 없으면 1.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT reached_floor FROM entity_record WHERE id = %s", (entity_id,)
+        ).fetchone()
+    return max(1, int(row[0])) if row is not None and row[0] is not None else 1
+
+
+def apply_floor_progress(pool: ConnectionPool, entity_id: int, cleared_floor: int, cap: int) -> int:
+    """층 하나를 깬 것을 반영한다.
+
+    **올리기만 한다.** 낮은 층을 다시 돌았다고 도달 기록이 내려가면, 되돌아가서 편한
+    층을 도는 것이 벌이 된다 — 재도전은 자유로워야 한다.
+
+    **서버만 부른다.** 클라이언트 보고로 올리면 "10층을 깼다" 고 적어 보내는 것이 곧
+    진행이 된다 (T9 와 같은 자리).
+
+    Args:
+        pool: 연결 풀.
+        entity_id: PLAYER 개체 id.
+        cleared_floor: 방금 깬 층.
+        cap: 마지막 층. 그 위로는 안 올라간다.
+
+    Returns:
+        반영 뒤의 도달 층.
+    """
+    wanted = min(max(1, cleared_floor + 1), max(1, cap))
+    with pool.connection() as connection:
+        row = connection.execute(
+            "UPDATE entity_record SET reached_floor = GREATEST(reached_floor, %s),"
+            " updated_at = now() WHERE id = %s RETURNING reached_floor",
+            (wanted, entity_id),
+        ).fetchone()
+    return int(row[0]) if row is not None else wanted

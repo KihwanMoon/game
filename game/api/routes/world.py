@@ -26,6 +26,7 @@ from game.api.schemas import (
     ProgressResponse,
     TicketResponse,
 )
+from game.app.progression.floors import read_floor_cap
 from game.app.progression.levels import STAT_KEYS, check_allocation
 from game.app.store.accounts import find_player_entity
 from game.app.store.monsters import build_monster_snapshot, list_monsters, save_snapshots
@@ -33,6 +34,7 @@ from game.app.store.progress import (
     MODE_PRACTICE,
     list_leaderboard,
     read_progress,
+    read_reached_floor,
     save_allocation,
 )
 from game.app.store.tickets import create_ticket
@@ -81,6 +83,8 @@ def read_player_progress(account: CurrentAccount) -> ProgressResponse:
     return ProgressResponse(
         **vars(progress),
         stat_keys=list(STAT_KEYS),
+        reached_floor=read_reached_floor(pool, progress.entity_id),
+        floor_cap=read_floor_cap(get_context().balance),
         loadout=build_ticket_loadout(account.account_id),
     )
 

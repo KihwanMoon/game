@@ -70,6 +70,13 @@ const STAT_LABELS: ReadonlyMap<string, string> = new Map([
  * @param props 성장·순위·경매장과 처리기.
  * @returns 패널 요소.
  */
+/**
+ * 층이 적을 얼마나 세게 만드는지. **`balance.json` 의 `floor_scale` 과 같아야 한다** —
+ * 화면이 다른 숫자를 말하면 사람은 그 숫자로 계획을 세운다.
+ */
+const FLOOR_HP_PCT = 25
+const FLOOR_ATTACK_PCT = 20
+
 export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
   const { progress, leaderboard, auction, isOnline } = props;
   const [pending, setPending] = useState<Record<string, number>>({});
@@ -106,6 +113,25 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
               <ValueExpr
                 text={`${String(progress.level)} · ${String(progress.remainingXp)} / ${String(progress.nextXp)}`}
                 size="sm"
+              />
+            </div>
+            {/* **여기까지 내려가 봤다** (설계/6_몬스터 §3). 층이 오르면 적이 세지고
+                더 깊은 방이 열리는데, 그 사실을 말하는 자리가 없으면 사람은 자기가
+                어디까지 왔는지 모른 채 같은 판을 돈다. */}
+            <div className="wld__row">
+              <span className="wld__label">깊이</span>
+              <ValueExpr
+                text={`${String(progress.reachedFloor)} / ${String(progress.floorCap)}층`}
+                size="sm"
+              />
+              <ValueExpr
+                text={
+                  progress.reachedFloor >= progress.floorCap
+                    ? '끝까지 왔다'
+                    : `층마다 적이 HP +${String(FLOOR_HP_PCT)}% · 공격 +${String(FLOOR_ATTACK_PCT)}% 로 세진다`
+                }
+                size="sm"
+                dim
               />
             </div>
             <div className="wld__row">

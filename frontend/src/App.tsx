@@ -319,6 +319,9 @@ export function buildRunSetup(issued: ServerTicket, rulesetId: string): BattleSe
     snapshots: issued.snapshots,
     // **서버가 정한 방 목록을 쓴다.** 기기가 정하면 서버는 다른 방들을 재시뮬한다.
     chain: { roomIds: issued.roomIds, index: 0 },
+    // **층도 서버가 정한다.** 기기가 정하면 1층으로 적어 보내 쉬운 판으로 검증받을 수
+    // 있고, 반대로 안 받으면 화면만 1층으로 싸워 이긴 판이 진 것으로 확정된다.
+    floor: issued.floor,
     ...(issued.loadout === undefined ? {} : { loadout: issued.loadout }),
     // 장비·레벨이 확정한 플레이어 전투 입력 (결정 #13).
   }
