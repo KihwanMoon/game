@@ -124,8 +124,11 @@ describe('출격 차단', () => {
 })
 
 describe('표기', () => {
-  it('층과 방을 함께 적는다', () => {
-    expect(formatLocation('open_field')).toBe('1층 · open_field')
+  it('★ 층과 방을 함께 적는다 — **층이 박혀 있었다**', () => {
+    // 하강이 층을 넘어가는데 머리글은 늘 `1층` 이라고 적었다 — 화면에서 가장 크게
+    // 적히는 자리가 거짓말을 하고 있었다.
+    expect(formatLocation(4, 'open_field')).toBe('4층 · open_field')
+    expect(formatLocation(1, 'corridor')).toBe('1층 · corridor')
   })
 
   it('직전 판이 없으면 아무것도 적지 않는다', () => {

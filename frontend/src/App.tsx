@@ -224,7 +224,19 @@ const CPU_BUDGET_KEY = 'cpu_budget'
 const RULE_SLOTS_KEY = 'rule_slots'
 
 /** 상단 바의 층 표기. 층 진행(Phase 4)이 붙기 전까지는 1층 하나뿐이다. */
-const FLOOR_LABEL = '1층'
+/**
+ * 전투 화면 최상단의 층·실 표기.
+ *
+ * **층이 박혀 있었다.** 하강이 층을 넘어가는데 머리글은 늘 `1층` 이라고 적었다 — 화면에서
+ * 가장 크게 적히는 자리가 거짓말을 하고 있었다.
+ *
+ * @param floor 지금 층.
+ * @param roomId 지금 방.
+ * @returns 「4층 · pillars」.
+ */
+export function formatLocation(floor: number, roomId: string): string {
+  return `${String(floor)}층 · ${roomId}`
+}
 
 /**
  * 밸런스 파일에서 플레이어 제약을 읽는다.
@@ -268,9 +280,7 @@ export function buildInitialRuleSet(): RuleSet {
  * @param roomId 방 id.
  * @returns `1층 · open_field` 꼴의 표기.
  */
-export function formatLocation(roomId: string): string {
-  return `${FLOOR_LABEL} · ${roomId}`
-}
+
 
 /**
  * 직전 판의 결과를 한 줄로 적는다.
@@ -1721,7 +1731,7 @@ export function App(): React.JSX.Element {
         <BattleView
           setup={run.setup}
           rulesets={run.rulesets}
-          location={formatLocation(run.setup.roomId)}
+          location={formatLocation(roomFloor, run.setup.roomId)}
           controls={battleControls}
           onOutcome={setOutcome}
         />

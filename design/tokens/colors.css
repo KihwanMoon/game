@@ -75,8 +75,8 @@
    * 있다 — spacing.css 의 반응형과 같은 상태이며, 결정 #44 와 함께 역이관해야 한다.
    */
   --grade-common:var(--chalk);
-  --grade-fine:#D8C25E;
-  --grade-relic:#D2823F;
+  --grade-fine:#F2D14A;
+  --grade-relic:#F08A3C;
   --plan-actor-elite:var(--grade-fine);
   --plan-actor-boss:var(--grade-relic);
   --plan-hazard:var(--rust);

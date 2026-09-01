@@ -1266,11 +1266,14 @@
 }
 
 /* 등급 이름표. **색만으로 가르지 않는다** — 색을 못 가르는 사람에게도 등급이 보여야 한다. */
+/* 이름표. **바탕을 깐다** — 작은 글자에 색만 얹으면 한 줄 안에서 눈에 안 들어온다.
+   색·글리프·이름 셋에 바탕까지 더해 네 채널이다. */
 .inv__grade {
   font-family: var(--font-body);
   font-size: var(--fs-body-s);
   padding-inline: var(--sp-1);
-  border: var(--border);
+  border: var(--bw) solid currentcolor;
+  background: var(--surface-raised);
 }
 
 .inv__grade--common {
