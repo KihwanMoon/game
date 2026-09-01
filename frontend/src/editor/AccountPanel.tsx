@@ -23,12 +23,22 @@ export interface AccountPanelProps {
   readonly hasLocalProgress: boolean
   readonly onRegister: (loginId: string, password: string) => Promise<string>
   readonly onLogin: (loginId: string, password: string) => Promise<string>
+  /**
+   * 이 기기에서 로그아웃한다.
+   *
+   * **이 기기의 저장도 함께 지운다.** 토큰만 지우면 다음 사람이 이 기기를 열었을 때
+   * 앞사람의 규칙표를 보게 된다.
+   */
+  readonly onLogout: () => void
 }
 
 type Mode = 'idle' | 'register' | 'login'
 
 const OFFLINE_TEXT = '서버에 닿지 못했다 — 진행은 이 기기에 남는다'
 const ANONYMOUS_TEXT = '익명 — 이 기기에만 남는다'
+const SINGLE_DEVICE_HINT =
+  '한 계정은 한 기기다 — 다른 기기에서 로그인하면 이 기기는 로그아웃된다'
+
 const PROMOTE_HINT = '가입해도 지금까지의 기록은 그대로 따라온다'
 const LOGIN_WARNING = '로그인하면 이 기기의 익명 기록은 따라오지 않는다'
 
@@ -98,11 +108,25 @@ export function AccountPanel(props: AccountPanelProps): React.JSX.Element {
         {isRegistered || !isOnline ? null : (
           <ValueExpr text={PROMOTE_HINT} size="sm" dim />
         )}
+        {/* **누르기 전에 알아야 한다.** 로그인하면 다른 기기가 튕기는데, 그 사실을
+            튕긴 뒤에 알면 이미 그쪽에서 뭔가를 잃은 뒤다. */}
+        {isOnline ? <ValueExpr text={SINGLE_DEVICE_HINT} size="sm" dim /> : null}
 
         {mode === 'idle' ? (
           <div className="account__actions">
             {isRegistered ? (
-              <ValueExpr text={`계정 #${String(account?.accountId ?? 0)}`} size="sm" dim />
+              <>
+                <ValueExpr text={`계정 #${String(account?.accountId ?? 0)}`} size="sm" dim />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  glyph="⏻"
+                  title="이 기기에서 로그아웃한다 — 이 기기의 저장도 지워진다"
+                  onClick={props.onLogout}
+                >
+                  로그아웃
+                </Button>
+              </>
             ) : (
               <Button
                 size="sm"

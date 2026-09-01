@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest'
 import { createEmptyMeta } from './core/schemas'
 import { adoptServerMeta } from './core/services/manageMeta'
 import {
+  adoptAccount,
   adoptDraft,
   applyRuleSetEdit,
   applySessionToMeta,
@@ -121,5 +122,34 @@ describe('규칙을 고치면 올릴 것이 생긴다', () => {
       version: getSessionRuleSet(session).version + 1,
     })
     expect(applySessionToMeta(edited, once)).not.toBe(once)
+  })
+})
+
+describe('로그인은 서버가 이긴다', () => {
+  it('★ 이 기기에 있던 초안을 서버 것으로 갈아 끼운다', () => {
+    // **여기가 마지막 구멍이었다.** 로컬을 지키는 규칙이 mount 에는 맞지만 로그인에는
+    // 틀리다 — 모바일에서 짠 규칙이 컴퓨터에 안 보인 이유가 이것이다.
+    const mine = buildSession()
+    const server = {
+      ...createEmptyMeta(),
+      draft: { rulesetId: 'from_server', version: 1, rules: [] },
+    }
+    const adopted = adoptAccount(mine, server)
+    expect(getSessionRuleSet(adopted).rulesetId).toBe('from_server')
+  })
+
+  it('★ 서버에 초안이 없으면 지금 것을 둔다 — 새로 가입한 계정이 그 경우다', () => {
+    const mine = buildSession()
+    const adopted = adoptAccount(mine, createEmptyMeta())
+    expect(getSessionRuleSet(adopted).rulesetId).toBe(getSessionRuleSet(mine).rulesetId)
+  })
+
+  it('★ 슬롯도 계정 것으로 갈린다 — 앞 계정의 슬롯이 남으면 남의 것을 보게 된다', () => {
+    const mine = applyPresetSave(buildSession(), '내 것')
+    const server = {
+      ...createEmptyMeta(),
+      presets: applyPresetSave(buildSession(), '계정 것').presets,
+    }
+    expect(adoptAccount(mine, server).presets[0]?.name).toBe('계정 것')
   })
 })

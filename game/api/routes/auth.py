@@ -14,9 +14,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException, status
 
-from game.api.deps import TOKEN_HEADER, get_pool
+from game.api.deps import TOKEN_HEADER, CurrentAccount, get_pool
 from game.api.schemas import AccountResponse, CredentialRequest
-from game.app.store.accounts import create_account, find_account
+from game.app.store.accounts import (
+    apply_single_session,
+    create_account,
+    find_account,
+    remove_device_token,
+)
 from game.app.store.credentials import (
     check_account_has_login,
     check_credentials,
@@ -115,9 +120,39 @@ def create_login_session(request: CredentialRequest) -> AccountResponse:
     record_login_attempt(pool, folded, account is not None)
     if account is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, LOGIN_FAILED)
+    token = create_device_token(pool, account.account_id)
+    # **한 계정은 한 기기다.** 다른 기기의 토큰을 지운다 — 두 기기가 함께 돌면 같은
+    # 계정의 상태가 두 벌 돌고, 나중에 저장한 쪽이 앞의 것을 덮는다.
+    apply_single_session(pool, account.account_id, token)
     return AccountResponse(
         account_id=account.account_id,
         handle=account.handle,
-        token=create_device_token(pool, account.account_id),
+        token=token,
         login_id=read_login_id(pool, account.account_id),
+    )
+
+
+@router.post("/api/logout", response_model=AccountResponse)
+def create_logout(
+    account: CurrentAccount,
+    token: Annotated[str, Header(alias=TOKEN_HEADER)],
+) -> AccountResponse:
+    """이 기기의 토큰을 지운다.
+
+    **계정은 안 지운다.** 로그아웃은 이 기기가 그 계정을 그만 보는 것이지 계정이
+    사라지는 것이 아니다 — 다시 로그인하면 그대로 있다.
+
+    Args:
+        account: 토큰으로 푼 계정.
+        token: 지울 평문 토큰.
+
+    Returns:
+        지운 계정. 토큰 자리는 비어 있다 — 더 이상 쓸 수 없는 값을 돌려주지 않는다.
+    """
+    remove_device_token(get_pool(), token)
+    return AccountResponse(
+        account_id=account.account_id,
+        handle=account.handle,
+        token="",
+        login_id=read_login_id(get_pool(), account.account_id),
     )

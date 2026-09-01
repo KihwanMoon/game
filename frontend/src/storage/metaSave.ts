@@ -236,3 +236,20 @@ export function writeMeta(storage: StorageLike | undefined, meta: MetaSave): boo
     return false
   }
 }
+
+
+/**
+ * 메타 세이브를 지운다.
+ *
+ * 로그아웃이 부른다 — 토큰만 지우면 다음 사람이 이 기기를 열었을 때 앞사람의 도감과
+ * 슬롯을 보게 된다.
+ *
+ * @param storage 저장소.
+ */
+export function removeMeta(storage: StorageLike | undefined): void {
+  try {
+    storage?.removeItem(META_STORAGE_KEY)
+  } catch {
+    // 지우기 실패도 로그아웃을 막지 않는다.
+  }
+}

@@ -366,6 +366,28 @@ export function adoptPresets(
  * @param hasLocalSave 이 기기에 저장이 있었는가.
  * @returns 새 세션. 실을 것이 없으면 같은 객체.
  */
+/**
+ * 로그인한 계정의 것으로 세션을 갈아 끼운다.
+ *
+ * **로그인은 서버가 이긴다.** 이 기기에 있던 초안·슬롯은 다른 계정의 것이거나 옛 것이고,
+ * 로그인은 "이 기기를 그 계정으로 만든다" 는 명시적 행동이다 — 여기서 로컬을 지키면
+ * 모바일에서 짠 규칙이 컴퓨터에 안 보인다. 실제로 그렇게 보고됐다.
+ *
+ * 서버에 초안이 없으면 지금 것을 둔다. 새로 가입한 계정이 그 경우이고, 그때 비우면
+ * 방금까지 짜던 것이 사라진다.
+ *
+ * @param session 세션.
+ * @param meta 그 계정의 메타 세이브.
+ * @returns 새 세션.
+ */
+export function adoptAccount(session: EditorSession, meta: MetaSave): EditorSession {
+  return {
+    ...session,
+    presets: meta.presets.slice(0, MAX_PRESET_SLOTS),
+    history: meta.draft === undefined ? session.history : createHistory(meta.draft),
+  }
+}
+
 export function adoptDraft(
   session: EditorSession,
   draft: RuleSet | undefined,

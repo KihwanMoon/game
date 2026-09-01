@@ -18,8 +18,8 @@ import type {
   RawPlayerLoadout,
 } from '../core/schemas'
 import { parseRuleSet, parseLoadout, parseSnapshot, sortSnapshots } from '../core/schemas'
-import { buildMetaPayload, parseMetaPayload } from './metaSave'
-import type { StorageLike } from './saveStore'
+import { buildMetaPayload, parseMetaPayload, removeMeta } from './metaSave'
+import { removeSave, type StorageLike } from './saveStore'
 
 /** 기기 토큰을 담는 localStorage 열쇠. */
 export const TOKEN_STORAGE_KEY = 'game.account-token'
@@ -1589,4 +1589,26 @@ export async function applyContentPublish(
   }
   // 발행 뒤에는 초안이 비어 있다. 목록을 다시 읽어 화면이 그것을 알게 한다.
   return { view: await readContentAdmin(token), detail: '' }
+}
+
+
+/**
+ * 이 기기에서 로그아웃한다.
+ *
+ * **서버의 토큰을 지우고 이 기기의 저장도 지운다.** 토큰만 지우면 다음 사람이 이 기기를
+ * 열었을 때 앞사람의 규칙표를 보게 된다 — 로그아웃은 "이 기기가 그 계정을 그만 본다" 이고,
+ * 그 계정의 것이 화면에 남아 있으면 그만 본 것이 아니다.
+ *
+ * @param token 기기 토큰.
+ * @param storage 저장소.
+ */
+export async function applyLogout(token: string, storage: StorageLike | undefined): Promise<void> {
+  await sendRequest('/logout', { method: 'POST', headers: { [TOKEN_HEADER]: token } })
+  removeSave(storage)
+  removeMeta(storage)
+  try {
+    storage?.removeItem(TOKEN_STORAGE_KEY)
+  } catch {
+    // 지우기 실패도 로그아웃을 막지 않는다.
+  }
 }

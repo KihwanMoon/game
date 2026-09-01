@@ -39,6 +39,7 @@ describe('계정 패널 — 익명', () => {
       hasLocalProgress={false}
       onRegister={noop}
       onLogin={noop}
+      onLogout={() => undefined}
     />,
   )
 
@@ -65,6 +66,7 @@ describe('계정 패널 — 로그인됨', () => {
       hasLocalProgress
       onRegister={noop}
       onLogin={noop}
+      onLogout={() => undefined}
     />,
   )
 
@@ -86,6 +88,7 @@ describe('계정 패널 — 오프라인', () => {
       hasLocalProgress={false}
       onRegister={noop}
       onLogin={noop}
+      onLogout={() => undefined}
     />,
   )
 
@@ -140,5 +143,56 @@ describe('세이브 기준', () => {
   it('빈 세이브는 진행이 없는 것으로 읽힌다', () => {
     const empty = createEmptyMeta()
     expect(empty.bestFloor === 0 && empty.bestiary.length === 0).toBe(true)
+  })
+})
+
+describe('로그아웃과 한 기기 규율 (2026-09-01)', () => {
+  const signedIn = renderToStaticMarkup(
+    <AccountPanel
+      account={{ accountId: 7, handle: 'probe', loginId: 'sinindra' }}
+      isOnline
+      hasLocalProgress
+      onRegister={async () => ''}
+      onLogin={async () => ''}
+      onLogout={() => undefined}
+    />,
+  )
+
+  it('★ 로그인한 상태에 로그아웃이 있다 — 없으면 계정을 바꿀 방법이 없다', () => {
+    // **글리프로 본다.** 그냥 "로그아웃" 을 찾으면 한 기기 안내 문구가 그 말을 담고
+    // 있어 버튼을 지워도 검사가 통과한다 — 실제로 그렇게 통과했다.
+    expect(signedIn).toContain('⏻')
+  })
+
+  it('★ 이 기기의 저장도 지워진다고 적는다 — 모르고 누르면 잃는다', () => {
+    expect(signedIn).toContain('이 기기의 저장도 지워진다')
+  })
+
+  it('★ 한 기기 규율을 누르기 전에 말한다 — 튕긴 뒤에 알면 이미 늦다', () => {
+    const html = renderToStaticMarkup(
+      <AccountPanel
+        account={undefined}
+        isOnline
+        hasLocalProgress={false}
+        onRegister={async () => ''}
+        onLogin={async () => ''}
+        onLogout={() => undefined}
+      />,
+    )
+    expect(html).toContain('다른 기기에서 로그인하면 이 기기는 로그아웃된다')
+  })
+
+  it('로그인 전에는 로그아웃이 없다', () => {
+    const html = renderToStaticMarkup(
+      <AccountPanel
+        account={undefined}
+        isOnline
+        hasLocalProgress={false}
+        onRegister={async () => ''}
+        onLogin={async () => ''}
+        onLogout={() => undefined}
+      />,
+    )
+    expect(html).not.toContain('로그아웃한다')
   })
 })

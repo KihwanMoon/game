@@ -173,3 +173,49 @@ def check_is_active(pool: ConnectionPool, account_id: int) -> bool:
             "SELECT deactivated_at IS NULL FROM account WHERE id = %s", (account_id,)
         ).fetchone()
     return bool(row[0]) if row is not None else False
+
+
+def apply_single_session(pool: ConnectionPool, account_id: int, keep_token: str) -> int:
+    """이 토큰만 남기고 그 계정의 다른 기기 토큰을 지운다.
+
+    **한 계정은 한 기기다** (2026-09-01 결정). 예전에는 로그인이 토큰을 하나 더 붙였고
+    두 기기를 함께 쓸 수 있었는데, 그러면 같은 계정의 상태가 두 벌 돌면서 나중에 저장한
+    쪽이 앞의 것을 덮는다 — 쓰는 사람에게 그것은 "규칙이 사라졌다" 로 보인다.
+
+    지워진 토큰을 든 기기는 다음 요청에서 401 을 받는다. **그 기기가 그 사실을 말해야
+    한다** — 조용히 익명으로 떨어지면 자기 것이 남의 것처럼 보인다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 대상 계정.
+        keep_token: 남길 평문 토큰.
+
+    Returns:
+        지운 토큰 수.
+    """
+    with pool.connection() as connection:
+        cursor = connection.execute(
+            "DELETE FROM account_token WHERE account_id = %s AND token_hash <> %s",
+            (account_id, build_token_hash(keep_token)),
+        )
+    return cursor.rowcount
+
+
+def remove_device_token(pool: ConnectionPool, token: str) -> bool:
+    """이 기기의 토큰을 지운다 — 로그아웃이다.
+
+    **계정은 안 지운다.** 로그아웃은 이 기기가 그 계정을 그만 보는 것이지 계정이
+    사라지는 것이 아니다.
+
+    Args:
+        pool: 연결 풀.
+        token: 평문 토큰.
+
+    Returns:
+        지웠으면 True.
+    """
+    with pool.connection() as connection:
+        cursor = connection.execute(
+            "DELETE FROM account_token WHERE token_hash = %s", (build_token_hash(token),)
+        )
+    return cursor.rowcount == 1

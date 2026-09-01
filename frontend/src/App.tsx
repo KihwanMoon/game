@@ -84,6 +84,7 @@ import {
   applyRedoStep,
   applyRoomChoice,
   applyTutorialStage,
+  adoptAccount,
   adoptDraft,
   adoptPresets,
   applyRuleSetEdit,
@@ -99,6 +100,7 @@ import {
   type EditorSession,
 } from './session'
 import {
+  applyLogout,
   createLogin,
   createSaveScheduler,
   ensureToken,
@@ -741,10 +743,42 @@ export function App(): React.JSX.Element {
     const next = server.meta ?? createEmptyMeta()
     writeMeta(storage, next)
     setMeta(next)
+    // **로그인은 서버가 이긴다.** 이 기기에 있던 초안·슬롯은 다른 계정의 것이거나 옛
+    // 것이고, 로그인은 "이 기기를 그 계정으로 만든다" 는 명시적 행동이다 — 여기서
+    // 로컬을 지키면 모바일에서 짠 규칙이 컴퓨터에 안 보인다. 실제로 그렇게 보고됐다.
+    setSession((live) => adoptAccount(live, next))
     // **계정이 통째로 바뀐다.** 레벨·CPU·가방·권한이 전부 다른 사람의 것이 되므로
     // 하나라도 안 읽으면 화면이 앞 계정의 값을 계속 보여준다.
     await loadAccountState(outcome.token)
     return ''
+  }
+
+  /**
+   * 이 기기에서 로그아웃한다.
+   *
+   * **이 기기의 저장을 함께 지우고 화면을 처음 상태로 되돌린다.** 토큰만 지우면 다음
+   * 사람이 이 기기를 열었을 때 앞사람의 규칙표를 보게 되고, 화면에도 그 값이 남는다.
+   */
+  function applyLogoutHere(): void {
+    const storage = getLocalStorage()
+    const held = account
+    setAccount(undefined)
+    setProfile(undefined)
+    setOnline(false)
+    setMeta(createEmptyMeta())
+    setSession(
+      createSession(undefined, {
+        ruleset: buildInitialRuleSet(),
+        roomId: INITIAL_ROOM_ID,
+        seed: INITIAL_SEED,
+      }),
+    )
+    setInventory(undefined)
+    setProgress(undefined)
+    setAdmin(undefined)
+    if (held !== undefined) {
+      void applyLogout(held, storage)
+    }
   }
 
   /**
@@ -1108,6 +1142,9 @@ export function App(): React.JSX.Element {
                 hasLocalProgress={meta.bestFloor > 0 || meta.bestiary.length > 0}
                 onRegister={applyRegister}
                 onLogin={applyLogin}
+                onLogout={() => {
+                  applyLogoutHere()
+                }}
               />
               <CharacterPanel
                 progress={progress}

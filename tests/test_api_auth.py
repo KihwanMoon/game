@@ -4,8 +4,9 @@
 
 1. **익명 계정이 승격된다.** 토큰을 들고 가입하면 계정 id 가 그대로라 진행이 따라온다.
    새 계정을 만들어 옮기는 구조였다면 그 이관이 매번 필요했을 것이다.
-2. **다른 기기에서 로그인하면 그 계정을 불러온다.** 새 기기 토큰이 나오고, 기존 기기는
-   튕기지 않는다.
+2. **한 계정은 한 기기다** (개정 2026-09-01). 다른 기기에서 로그인하면 그 계정을
+   불러오고, **기존 기기는 튕긴다** — 상태가 두 벌 돌면 나중에 저장한 쪽이 앞의 것을 덮고,
+   쓰는 사람에게 그것은 "규칙이 사라졌다" 로 보인다.
 3. **아이디 존재 여부가 새지 않는다.** 모르는 아이디와 틀린 비밀번호가 같은 오류다.
 4. **비밀번호 평문이 저장되지 않는다.**
 """
@@ -172,8 +173,16 @@ def test_login_from_another_device_loads_the_account(client):
     assert [item["name"] for item in loaded["presets"]] == ["다른기기"]
 
 
-def test_the_first_device_keeps_working_after_a_second_login(client):
-    """★ 로그인했다고 다른 기기가 튕기면 두 기기를 함께 쓸 수 없다."""
+def test_a_second_login_kicks_the_first_device(client):
+    """★ 한 계정은 한 기기다 (개정 2026-09-01).
+
+    예전에는 반대였다 — 로그인이 토큰을 하나 더 붙였고 두 기기를 함께 쓸 수 있었다.
+    그런데 같은 계정의 상태가 두 벌 돌면 나중에 저장한 쪽이 앞의 것을 덮고, 쓰는 사람에게
+    그것은 **"규칙이 사라졌다"** 로 보인다. 실제로 그렇게 보고됐다.
+
+    튕긴 기기는 401 을 받는다. 그 기기가 그 사실을 말해야 한다 — 조용히 익명으로
+    떨어지면 자기 것이 남의 것처럼 보인다.
+    """
     first = client.post("/api/account").json()
     login_id = f"both{first['account_id']}"
     client.post(
@@ -181,8 +190,33 @@ def test_the_first_device_keeps_working_after_a_second_login(client):
         json={"login_id": login_id, "password": PASSWORD},
         headers=build_headers(first["token"]),
     )
-    client.post("/api/login", json={"login_id": login_id, "password": PASSWORD})
-    assert client.get("/api/account", headers=build_headers(first["token"])).status_code == 200
+    second = client.post("/api/login", json={"login_id": login_id, "password": PASSWORD}).json()
+    assert client.get("/api/account", headers=build_headers(first["token"])).status_code == 401
+    assert client.get("/api/account", headers=build_headers(second["token"])).status_code == 200
+
+
+def test_logging_out_drops_only_this_device(client):
+    """★ 로그아웃은 이 기기가 그 계정을 그만 보는 것이지 계정이 사라지는 것이 아니다."""
+    account = client.post("/api/account").json()
+    login_id = f"out{account['account_id']}"
+    client.post(
+        "/api/register",
+        json={"login_id": login_id, "password": PASSWORD},
+        headers=build_headers(account["token"]),
+    )
+    assert client.post("/api/logout", headers=build_headers(account["token"])).status_code == 200
+    assert client.get("/api/account", headers=build_headers(account["token"])).status_code == 401
+    # 계정은 그대로다 — 다시 로그인하면 돌아온다.
+    again = client.post("/api/login", json={"login_id": login_id, "password": PASSWORD})
+    assert again.status_code == 200
+    assert again.json()["account_id"] == account["account_id"]
+
+
+def test_logout_does_not_hand_back_a_usable_token(client):
+    """★ 더 이상 쓸 수 없는 값을 돌려주면 화면이 그것을 저장한다."""
+    account = client.post("/api/account").json()
+    body = client.post("/api/logout", headers=build_headers(account["token"])).json()
+    assert body["token"] == ""
 
 
 def test_wrong_password_and_unknown_id_look_the_same(client):
