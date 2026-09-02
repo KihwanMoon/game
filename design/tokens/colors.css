@@ -58,6 +58,8 @@
   --plan-wall:var(--rule-line);
   --plan-floor-dot:var(--chalk-dim);
   --plan-door:var(--chalk-dim);
+  --plan-link-self:var(--brass);       /* 내가 건 행동 — 황동은 언제나 「이것이 너다」 */
+  --plan-link-enemy:var(--rust);       /* 나에게 온 행동 — 붉은색은 언제나 「이것이 아프다」 */
   --plan-actor-self:var(--brass);
   --plan-actor-enemy:var(--chalk);
   /* 등급 (설계/4_아이템 §15.4, 설계/6_몬스터 §1).

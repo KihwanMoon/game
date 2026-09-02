@@ -198,6 +198,8 @@ function createRecordingContext(): {
 /** 토큰 이름에서 값으로. 실제 토큰과 같은 꼴의 가짜다. */
 const FAKE_TOKENS: ReadonlyMap<string, string> = new Map([
   ['--surface-plan', '#0E131C'],
+  ['--plan-link-self', '#C89A4E'],
+  ['--plan-link-enemy', '#A65A42'],
   ['--line-grid', '#2C3849'],
   ['--plan-wall', '#2C3849'],
   ['--plan-floor-dot', '#7C889A'],
@@ -284,7 +286,15 @@ describe('토큰 규율', () => {
       height: 0,
       getContext: () => null,
     }
-    const scene: PlanScene = { tick: 0, cols: 12, rows: 9, tiles: [], actors: [], hazards: [] }
+    const scene: PlanScene = {
+      tick: 0,
+      cols: 12,
+      rows: 9,
+      tiles: [],
+      actors: [],
+      hazards: [],
+      links: [],
+    }
     resizePlanCanvas(canvas as unknown as HTMLCanvasElement, scene, FAKE_THEME, 2)
     expect(canvas.style.width).toBe('calc(var(--plan-cell) * 12)')
     expect(canvas.style.height).toBe('calc(var(--plan-cell) * 9)')
@@ -361,6 +371,7 @@ describe('도면 렌더러', () => {
       tiles: [[TILE_FLOOR]],
       actors: [],
       hazards: [{ x: 0, y: 0, ticks: 2, isSensed: true }],
+      links: [],
     }
     const { ctx, calls, styles } = createRecordingContext()
     renderPlan(ctx, scene, FAKE_THEME)
@@ -381,6 +392,7 @@ describe('도면 렌더러', () => {
           tiles: [[TILE_FLOOR]],
           actors: [],
           hazards: [{ x: 0, y: 0, ticks: 3, isSensed }],
+          links: [],
         },
         FAKE_THEME,
       )
@@ -422,6 +434,7 @@ describe('도면 렌더러', () => {
         },
       ],
       hazards: [],
+      links: [],
     }
     const { ctx, calls, styles } = createRecordingContext()
     renderPlan(ctx, scene, FAKE_THEME)

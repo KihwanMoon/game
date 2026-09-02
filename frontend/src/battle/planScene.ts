@@ -17,6 +17,8 @@ import type { TickEngine } from '../core/sim/engine'
 import { PLAYER_ENTITY_ID } from '../core/services/runBattle'
 import { checkTelegraphVisible, getForesightTicks } from '../core/sim/telegraph'
 import { FACTION_PLAYER, type Entity, getHpPercent } from '../core/sim/state'
+import { PHASE_ACT } from '../core/sim/phases'
+
 import { resolveActorKind, resolveActorLabel } from './actorKind'
 
 /** 도면에 그릴 말 하나. */
@@ -52,6 +54,24 @@ export interface PlanHazardView {
   readonly isSensed: boolean
 }
 
+/**
+ * 이번 틱에 누가 누구에게 무엇을 했는가 (한 줄).
+ *
+ * **말만 봐서는 누가 누구를 때렸는지 알 수 없다.** 격자에 다섯이 서 있고 HP 가 줄면,
+ * 그것이 어느 말의 짓인지 화면 어디에도 안 적혀 있었다 — 로그를 눈으로 따라가야 했다.
+ * 조건문에 실측값을 병기하는 것과 같은 이유로, 대상이 있는 행동은 선으로 잇는다 (P1).
+ *
+ * 색은 **방향**이다. 내가 하는 것과 나에게 오는 것은 읽는 사람에게 전혀 다른 사건이다.
+ */
+export interface PlanLinkView {
+  readonly fromX: number
+  readonly fromY: number
+  readonly toX: number
+  readonly toY: number
+  /** 플레이어가 건 것인가. 황동과 녹슨 붉은색을 가르는 유일한 기준이다. */
+  readonly isFromSelf: boolean
+}
+
 /** 도면 한 장. 순수 값이며 엔진을 참조하지 않는다. */
 export interface PlanScene {
   readonly tick: number
@@ -61,6 +81,8 @@ export interface PlanScene {
   readonly tiles: readonly (readonly number[])[]
   readonly actors: readonly PlanActorView[]
   readonly hazards: readonly PlanHazardView[]
+  /** 이번 틱의 대상 있는 행동들. 없으면 빈 배열이다. */
+  readonly links: readonly PlanLinkView[]
 }
 
 /**
@@ -125,6 +147,49 @@ function collectHazards(engine: TickEngine, foresightTicks: number): readonly Pl
  * @param engine 돌고 있는 엔진. 읽기만 한다.
  * @returns 그릴 값 묶음.
  */
+/**
+ * 이번 틱의 로그에서 「누가 누구에게」를 뽑는다.
+ *
+ * **로그가 이미 알고 있다.** `target_id` 는 공격·스킬 기록에 처음부터 채워져 있었고
+ * 골든에도 들어 있다 — 코어를 건드릴 이유가 없는 자리다.
+ *
+ * 죽어서 사라진 말은 뺀다. 없는 자리로 선을 그으면 격자 밖으로 나간다.
+ *
+ * @param engine 돌고 있는 엔진.
+ * @param actors 이번 장면의 말들.
+ * @returns 그릴 선들. 로그가 없으면 빈 배열.
+ */
+export function buildLinksFromLog(
+  engine: TickEngine,
+  actors: readonly PlanActorView[],
+): readonly PlanLinkView[] {
+  const log = engine.log
+  if (log === undefined) {
+    return []
+  }
+  const spots = new Map(actors.map((actor) => [actor.entityId, actor]))
+  const links: PlanLinkView[] = []
+  for (const entry of log.filterByTick(engine.state.tick)) {
+    if (entry.phase !== PHASE_ACT || entry.targetId === null) {
+      continue
+    }
+    const from = spots.get(entry.entityId)
+    const to = spots.get(entry.targetId)
+    // 자기 자신에게 거는 것(회복 등)은 선이 점이 된다 — 그릴 것이 없다.
+    if (from === undefined || to === undefined || from === to) {
+      continue
+    }
+    links.push({
+      fromX: from.x,
+      fromY: from.y,
+      toX: to.x,
+      toY: to.y,
+      isFromSelf: from.isSelf,
+    })
+  }
+  return links
+}
+
 export function buildPlanScene(engine: TickEngine): PlanScene {
   const { room } = engine.state
   const tiles: number[][] = []
@@ -151,5 +216,6 @@ export function buildPlanScene(engine: TickEngine): PlanScene {
     tiles,
     actors,
     hazards: collectHazards(engine, foresight),
+    links: buildLinksFromLog(engine, actors),
   }
 }

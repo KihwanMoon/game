@@ -22,6 +22,8 @@ export const PLAN_COLOR_TOKENS: ReadonlyMap<string, string> = new Map([
   ['coverEdge', '--line-strong'],
   ['spring', '--state-heal'],
   ['hazard', '--plan-hazard'],
+  ['linkSelf', '--plan-link-self'],
+  ['linkEnemy', '--plan-link-enemy'],
   ['actorSelf', '--plan-actor-self'],
   ['actorEnemy', '--plan-actor-enemy'],
   ['actorElite', '--plan-actor-elite'],
@@ -74,6 +76,10 @@ export interface PlanTheme {
   /** 용암·함정·예고 타일. */
   readonly hazard: string
   /** 플레이어 말. 화면의 황동 예산 한 자리를 쓴다. */
+  /** 내가 건 행동을 잇는 선. */
+  readonly linkSelf: string
+  /** 나에게 온 행동을 잇는 선. */
+  readonly linkEnemy: string
   readonly actorSelf: string
   /** 적 말. */
   readonly actorEnemy: string
@@ -194,6 +200,8 @@ export function readPlanTheme(read: TokenReader): PlanTheme {
     coverEdge: color('coverEdge'),
     spring: color('spring'),
     hazard: color('hazard'),
+    linkSelf: color('linkSelf'),
+    linkEnemy: color('linkEnemy'),
     actorSelf: color('actorSelf'),
     actorEnemy: color('actorEnemy'),
     actorElite: color('actorElite'),

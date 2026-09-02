@@ -27,7 +27,7 @@ import {
   TILE_WALL,
 } from '../core/schemas'
 import { ACTOR_GLYPHS } from '../ds'
-import type { PlanActorView, PlanHazardView, PlanScene } from './planScene'
+import type { PlanActorView, PlanHazardView, PlanLinkView, PlanScene } from './planScene'
 import type { PlanTheme } from './planTheme'
 
 /** 셀 하나가 차지하는 화면 사각형. 단위는 CSS px 다. */
@@ -656,6 +656,78 @@ function drawActor(ctx: CanvasRenderingContext2D, actor: PlanActorView, theme: P
  * @param scene 그릴 장면.
  * @param theme 토큰에서 읽은 값들.
  */
+/** 화살촉 길이를 셀 한 변의 몇 배로 둘지. */
+const ARROW_RATIO = 0.22
+
+/** 화살촉이 벌어지는 각(라디안). 도면 화살표의 관습대로 좁게 둔다. */
+const ARROW_SPREAD = 0.42
+
+/** 선을 말의 중심에서 얼마나 띄울지. 말 글리프를 덮으면 무엇인지 못 읽는다. */
+const LINK_INSET = 0.34
+
+/**
+ * 대상이 있는 행동 하나를 선으로 잇는다.
+ *
+ * **말만 봐서는 누가 누구를 때렸는지 알 수 없다.** 격자에 다섯이 서 있고 HP 가 줄면
+ * 그것이 어느 말의 짓인지 화면 어디에도 없었다 — 로그를 눈으로 따라가야 했다.
+ *
+ * 색이 방향을 말한다. 황동은 이 화면에서 언제나 「이것이 너다」이고 녹슨 붉은색은 언제나
+ * 「이것이 아프다」라, 새 뜻을 만들지 않고 있던 뜻을 그대로 쓴다.
+ *
+ * 양 끝을 말 중심에서 띄운다. 글리프를 덮으면 무엇이 서 있는지 못 읽는다.
+ *
+ * @param ctx 그리기 문맥.
+ * @param link 이을 행동.
+ * @param theme 토큰 값들.
+ */
+function drawLink(ctx: CanvasRenderingContext2D, link: PlanLinkView, theme: PlanTheme): void {
+  const from = getCellRect(link.fromX, link.fromY, theme)
+  const to = getCellRect(link.toX, link.toY, theme)
+  const fromX = from.left + from.size / 2
+  const fromY = from.top + from.size / 2
+  const toX = to.left + to.size / 2
+  const toY = to.top + to.size / 2
+  const dx = toX - fromX
+  const dy = toY - fromY
+  const span = Math.hypot(dx, dy)
+  if (span === 0) {
+    return
+  }
+  const inset = theme.cell * LINK_INSET
+  const unitX = dx / span
+  const unitY = dy / span
+  const startX = fromX + unitX * inset
+  const startY = fromY + unitY * inset
+  const endX = toX - unitX * inset
+  const endY = toY - unitY * inset
+
+  ctx.save()
+  ctx.strokeStyle = link.isFromSelf ? theme.linkSelf : theme.linkEnemy
+  ctx.lineWidth = theme.lineWidth
+  ctx.beginPath()
+  ctx.moveTo(startX, startY)
+  ctx.lineTo(endX, endY)
+  ctx.stroke()
+
+  // 화살촉. **방향을 색만으로 말하지 않는다** — 색을 못 가르는 사람에게도 누가 누구에게
+  // 하는지가 보여야 한다 (참·거짓을 색·글리프·명도 셋으로 적는 것과 같은 규율).
+  const angle = Math.atan2(dy, dx)
+  const head = theme.cell * ARROW_RATIO
+  ctx.beginPath()
+  ctx.moveTo(endX, endY)
+  ctx.lineTo(
+    endX - head * Math.cos(angle - ARROW_SPREAD),
+    endY - head * Math.sin(angle - ARROW_SPREAD),
+  )
+  ctx.moveTo(endX, endY)
+  ctx.lineTo(
+    endX - head * Math.cos(angle + ARROW_SPREAD),
+    endY - head * Math.sin(angle + ARROW_SPREAD),
+  )
+  ctx.stroke()
+  ctx.restore()
+}
+
 export function renderPlan(
   ctx: CanvasRenderingContext2D,
   scene: PlanScene,
@@ -684,6 +756,10 @@ export function renderPlan(
 
   for (const hazard of scene.hazards) {
     drawHazard(ctx, hazard, theme)
+  }
+  // **말보다 먼저 긋는다.** 선이 글리프를 덮으면 무엇이 서 있는지 못 읽는다.
+  for (const link of scene.links) {
+    drawLink(ctx, link, theme)
   }
   for (const actor of scene.actors) {
     drawActor(ctx, actor, theme)
