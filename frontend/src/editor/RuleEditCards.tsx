@@ -34,6 +34,7 @@ import {
   listFlagNames,
   listPerceptionGroups,
   listRhsStats,
+  formatParamLabel,
   listSelectorsForAction,
 } from './blockOptions'
 import { buildDefaultRhs } from './draft'
@@ -324,6 +325,19 @@ export function ActionCard(props: ActionCardProps): React.JSX.Element {
             actions.changeAction(index, actionId)
           }}
         />
+        {action?.param == null ? null : (
+          <EditField
+            label={`${label} ${action.param.name === 'item' ? '소모품' : '스킬'}`}
+            value={rule.actionParam ?? action.param.values[0] ?? ''}
+            options={action.param.values.map((value) => ({
+              value,
+              label: formatParamLabel(value),
+            }))}
+            onChange={(actionParam) => {
+              actions.update(index, { actionParam })
+            }}
+          />
+        )}
         {targeted ? (
           <EditField
             label={`${label} 대상`}

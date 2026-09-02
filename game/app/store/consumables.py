@@ -176,14 +176,15 @@ def apply_slot_spend(
     개」만 세므로, 여기서 순서를 정해 준다. 정하지 않으면 같은 판이 실행마다 다른 칸을
     비운다 (R5).
 
-    **공짜분을 먼저 쓴 것으로 친다.** 빈 칸이 준 충전은 깎을 자리가 없으므로, 그것부터
-    쓴 것으로 봐야 한 개만 쓴 판에서 산 충전이 안 날아간다.
+    **여기서는 공짜분을 안 뺀다.** 그 셈은 부르는 쪽이 한다 — 층마다 정산이 돌고 이
+    함수는 그때마다 불리므로, 여기서 빼면 **정산 한 번마다 공짜 충전이 새로 생긴다.**
+    실제로 그렇게 돌아, 층을 깰 때마다 물약이 한 개씩 공짜였다.
 
     Args:
         pool: 연결 풀.
         entity_id: 대상 개체.
         use_tag: 쓰임새.
-        used: 쓴 충전 수.
+        used: 깎을 충전 수. **공짜분을 이미 뺀 값이어야 한다.**
         extra: 장비 접사가 더한 칸 수. **읽을 때와 같은 값이어야 한다** — 다르면 늘어난
             칸에서 쓴 것이 안 깎여 그 칸만 공짜가 된다.
 
@@ -193,10 +194,7 @@ def apply_slot_spend(
     if used <= 0:
         return 0
     slots = list_consumable_slots(pool, entity_id, extra)
-    free = sum(
-        FREE_CHARGES for slot in slots if slot.use_tag == use_tag and slot.catalog_id is None
-    )
-    remaining = used - free
+    remaining = used
     taken = 0
     for slot in slots:
         if remaining <= 0:
@@ -213,3 +211,21 @@ def apply_slot_spend(
         remaining -= amount
         taken += amount
     return taken
+
+
+def count_free_charges(slots: tuple[ConsumableSlot, ...], use_tag: str) -> int:
+    """이 쓰임새의 빈 칸이 출격 때 공짜로 주는 충전 수.
+
+    **깎을 자리가 없는 몫이다.** 정산은 이만큼을 먼저 쓴 것으로 치고 나머지만 칸에서
+    깎는다 — 그래야 한 개만 쓴 판에서 산 충전이 안 날아간다.
+
+    Args:
+        slots: 읽어 온 칸들.
+        use_tag: 쓰임새.
+
+    Returns:
+        공짜 충전 수.
+    """
+    return sum(
+        FREE_CHARGES for slot in slots if slot.use_tag == use_tag and slot.catalog_id is None
+    )

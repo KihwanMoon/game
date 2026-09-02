@@ -404,5 +404,28 @@ export function applyActionChoice(
   return updateRule(ruleset, ruleIndex, {
     action: actionId,
     target: action.targeted ? pickSelectorForAction(catalog, action, rule.target) : null,
+    actionParam: pickActionParam(action, rule.actionParam),
   })
+}
+
+/**
+ * 이 행동이 받는 인자의 값을 고른다.
+ *
+ * **인자를 안 정하면 조용히 기본값으로 떨어진다.** `USE_ITEM` 은 인자가 없으면 물약을
+ * 쓰고, 그래서 주문서를 쓰는 규칙을 지을 방법이 없었다 — 블록 데이터에는 `POTION`·
+ * `SCROLL` 이 처음부터 적혀 있었는데 편집기가 그것을 한 번도 안 물었다.
+ *
+ * 쓰던 값이 이 행동에서도 유효하면 지킨다. 행동을 바꿨다고 고른 소모품이 바뀌면
+ * 「내가 안 고친 것이 달라진다」가 된다.
+ *
+ * @param action 고른 행동.
+ * @param current 지금 값.
+ * @returns 쓸 인자 값. 인자를 안 받는 행동이면 null.
+ */
+export function pickActionParam(action: ActionBlock, current: string | null): string | null {
+  const values = action.param?.values
+  if (values === undefined || values.length === 0) {
+    return null
+  }
+  return current !== null && values.includes(current) ? current : (values[0] ?? null)
 }

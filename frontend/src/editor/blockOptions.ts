@@ -189,3 +189,34 @@ export function formatActionLabel(rule: Rule, catalog: BlockCatalog): string {
   const selector = catalog.selectors.get(rule.target)?.labelKo ?? rule.target
   return `${action} → ${selector}`
 }
+
+
+/**
+ * 행동 인자 값의 한글 이름.
+ *
+ * **id 를 그대로 적으면 `SCROLL` 이 화면에 뜬다.** 블록 목록은 전부 한글로 적히는데
+ * 인자만 영문 id 로 남으면 그 한 칸만 다른 언어가 된다.
+ *
+ * 여기 없는 값은 id 를 그대로 쓴다 — 데이터가 앞서 나갔을 때 빈칸이 되는 것보다 낫다.
+ */
+const PARAM_LABELS: ReadonlyMap<string, string> = new Map([
+  ['POTION', '물약'],
+  ['SCROLL', '주문서'],
+  ['SKILL_1', '스킬 1'],
+  ['SKILL_2', '스킬 2'],
+  ['AREA_ATTACK', '광역 공격'],
+  ['SUMMON', '소환'],
+  ['HEAL', '치유'],
+  ['ATTACK', '공격'],
+  ['GUARD_BRACE', '방어 태세'],
+])
+
+/**
+ * 행동 인자 값을 사람이 읽는 말로 바꾼다.
+ *
+ * @param value 인자 값 id.
+ * @returns 한글 이름. 모르는 값이면 id 그대로.
+ */
+export function formatParamLabel(value: string): string {
+  return PARAM_LABELS.get(value) ?? value
+}

@@ -1,8 +1,14 @@
 """소모품 칸 라우트 — 끼우고, 채우고, 판다 (설계/4_아이템 §5).
 
-**런 중에는 못 건드린다.** 로드아웃은 티켓을 낼 때 얼려지므로 지금 채워 봐야 이번
-런에는 안 실린다. 그런데 층 정산은 **지금의 충전에서** 깎으므로, 런 중에 채우면 낸
-돈이 그 자리에서 사라진다 — 그래서 막는 것이지 UX 취향이 아니다.
+**런 중에도 손댈 수 있다.** 처음에는 막았다 — 로드아웃은 티켓을 낼 때 얼려지는데 층
+정산은 지금의 충전에서 깎으므로, 런 중에 채우면 낸 돈이 그 자리에서 사라졌다.
+
+그런데 그 잠금이 **이 게임의 고리를 막았다.** 하강은 서른 방이고 방 사이에서 규칙을
+고치는 것이 핵심인데(GDD §2.2), 그 내내 칸이 잠긴다. 그래서 잠그는 대신 원인을 없앴다 —
+티켓이 이미 깎은 충전을 기억하므로 두 번 깎이지 않는다 (`floor_service`).
+
+지금 채운 것이 **이번 런에 실리지는 않는다.** 로드아웃은 얼려져 있고, 그것이 T2·T9 가
+서 있는 자리다.
 
 **빈 칸은 출격할 때 공짜로 한 번 찬다.** 예전의 `balance.player.potions` 두 개가 여기로
 왔다. 빈 물약 칸 둘이 곧 예전의 기본 지급 둘이고, 바뀐 것은 채우면 더 좋아진다는 것뿐이다.
@@ -42,8 +48,6 @@ from game.schemas.consumable import (
 from game.schemas.item import ItemKind
 
 router = APIRouter()
-
-RUN_OPEN_DETAIL = "런이 도는 중이다 — 소모품은 런 사이에만 손댈 수 있다"
 
 
 def build_slot_view(slot: ConsumableSlot, catalog: dict) -> ConsumableSlotView:
@@ -120,7 +124,8 @@ def read_consumables(account: CurrentAccount) -> ConsumableResponse:
         account: 토큰으로 푼 계정.
 
     Returns:
-        칸·후보·잔액. 런이 도는 중이면 `is_run_open` 이 참이다.
+        칸·후보·잔액. 런이 도는 중이면 `is_run_open` 이 참이다 — 지금 채운 것이 이번
+        런에는 안 실린다는 안내에 쓴다. 조작을 막지는 않는다.
     """
     pool = get_pool()
     entity_id = find_player_entity(pool, account.account_id)
@@ -137,19 +142,6 @@ def read_consumables(account: CurrentAccount) -> ConsumableResponse:
     )
 
 
-def check_run_closed(account_id: int) -> None:
-    """런이 안 도는 중인지 본다.
-
-    Args:
-        account_id: 대상 계정.
-
-    Raises:
-        HTTPException: 런이 도는 중이면 409.
-    """
-    if count_open_tickets(get_pool(), account_id) > 0:
-        raise HTTPException(status.HTTP_409_CONFLICT, RUN_OPEN_DETAIL)
-
-
 @router.post("/api/consumable/load", response_model=ConsumableResponse)
 def create_consumable_load(
     request: ConsumableSlotRequest, account: CurrentAccount
@@ -164,10 +156,8 @@ def create_consumable_load(
         갱신된 칸 화면.
 
     Raises:
-        HTTPException: 런 중이거나, 없는 소모품이거나, 칸과 쓰임새가 안 맞거나,
-            가방에 그것이 없는 경우.
+        HTTPException: 없는 소모품이거나, 칸과 쓰임새가 안 맞거나, 가방에 그것이 없는 경우.
     """
-    check_run_closed(account.account_id)
     entry = get_item_catalog().get(request.catalog_id or "")
     if entry is None or entry.kind is not ItemKind.CONSUMABLE:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "소모품이 아니다")
@@ -202,11 +192,7 @@ def create_consumable_clear(
 
     Returns:
         갱신된 칸 화면.
-
-    Raises:
-        HTTPException: 런이 도는 중인 경우.
     """
-    check_run_closed(account.account_id)
     pool = get_pool()
     entity_id = find_player_entity(pool, account.account_id)
     apply_slot_clear(pool, entity_id, request.use_tag, request.slot_index)
@@ -227,9 +213,8 @@ def create_consumable_refill(
         갱신된 칸 화면.
 
     Raises:
-        HTTPException: 런 중이거나, 빈 칸이거나, 이미 가득 찼거나, 잔액이 모자란 경우.
+        HTTPException: 빈 칸이거나, 이미 가득 찼거나, 잔액이 모자란 경우.
     """
-    check_run_closed(account.account_id)
     pool = get_pool()
     entity_id = find_player_entity(pool, account.account_id)
     catalog = get_item_catalog()

@@ -130,7 +130,7 @@ describe('소모품 칸', () => {
     expect(html).toContain('유물')
   })
 
-  it('★ 런이 도는 중이면 말한다 — 안 말하면 눌러도 안 되는 이유를 알 수 없다', () => {
+  it('★ 런 중에도 잠그지 않는다 — 잠그면 방 사이에 규칙 고치는 내내 칸을 못 건드린다', () => {
     const html = renderToStaticMarkup(
       <ConsumablePanel
         view={buildView({ isRunOpen: true })}
@@ -142,8 +142,9 @@ describe('소모품 칸', () => {
         onSell={() => undefined}
       />,
     )
-    expect(html).toContain('런 사이에만')
-    expect(html).toContain('disabled')
+    // 지금 채운 것이 이번 런에 안 실린다는 것은 **말한다.** 막지 않을 뿐이다.
+    expect(html).toContain('다음 런부터 실린다')
+    expect(html).not.toContain('disabled')
   })
 
   it('★ 실패 사유를 그대로 띄운다 — 삼키면 「서버는 아는데 화면이 말하지 않는다」가 된다', () => {

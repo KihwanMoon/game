@@ -14,9 +14,13 @@ from game.app.progression.floors import read_floor_cap
 from game.app.services.verify_run import VERDICT_VERIFIED, VerifiedRun
 from game.app.simulation.plan import OUTCOME_PLAYER_WIN
 from game.app.store.accounts import find_player_entity
-from game.app.store.consumables import apply_slot_spend
+from game.app.store.consumables import (
+    apply_slot_spend,
+    count_free_charges,
+    list_consumable_slots,
+)
 from game.app.store.progress import apply_floor_progress, read_reached_floor
-from game.app.store.tickets import IssuedTicket
+from game.app.store.tickets import IssuedTicket, apply_spent_charges, read_spent_charges
 from game.schemas.loadout import parse_loadout
 
 
@@ -121,9 +125,10 @@ def apply_charge_spend(account_id: int, ticket: IssuedTicket, verified: Verified
     쓴 수는 **티켓이 실은 수 − 재시뮬이 남긴 수**다. 클라이언트가 「세 개 썼다」고
     보고할 자리를 만들지 않는다 (T9) — 보고를 받으면 0 개 썼다고 적어 보내면 된다.
 
-    **층마다 처음부터 다시 돌므로 깎은 것을 또 깎지 않도록** 티켓이 실은 수를 기준으로
-    잡는다. 2층을 청구할 때의 「쓴 수」는 1·2층을 합친 것이고, 1층에서 이미 깎인 만큼은
-    칸에 없으므로 남은 만큼만 더 깎인다.
+    **층마다 처음부터 다시 도므로 그 수는 누적이다.** 티켓에 이미 깎은 만큼을 적어 두고
+    그 차이만 깎는다. 이것이 있어야 **런 중에 보충해도 두 번 깎이지 않는다** — 예전에는
+    그것을 막으려고 런 중 보충을 잠갔는데, 하강이 서른 방인 이 게임에서 그 잠금은 방
+    사이에 규칙을 고치는 고리 자체를 막았다 (GDD §2.2).
 
     Args:
         account_id: 대상 계정.
@@ -139,8 +144,19 @@ def apply_charge_spend(account_id: int, ticket: IssuedTicket, verified: Verified
     # **읽을 때와 같은 칸 수를 본다.** 다르면 접사로 늘어난 칸에서 쓴 것이 안 깎여
     # 그 칸만 영원히 공짜가 된다.
     bonus = count_slot_bonus(build_equipped_entries(pool, entity_id, get_item_catalog()))
+    slots = list_consumable_slots(pool, entity_id, bonus)
+    already = read_spent_charges(pool, ticket.ticket_id)
+    spent = dict(already)
     # 정렬해서 돈다 — 딕셔너리 순회 순서가 어느 칸을 먼저 비울지 정하면 안 된다 (R5).
     for use_tag in sorted(issued):
         used = issued[use_tag] - left.get(use_tag, 0)
-        if used > 0:
-            apply_slot_spend(pool, entity_id, use_tag, used, bonus)
+        # **공짜분은 누적에서 한 번만 뺀다.** 정산마다 빼면 층을 깰 때마다 공짜 충전이
+        # 새로 생긴다 — 실제로 그렇게 돌았다.
+        payable = max(0, used - count_free_charges(slots, use_tag))
+        fresh = payable - already.get(use_tag, 0)
+        if fresh > 0:
+            apply_slot_spend(pool, entity_id, use_tag, fresh, bonus)
+        if payable > 0:
+            spent[use_tag] = payable
+    if spent != already:
+        apply_spent_charges(pool, ticket.ticket_id, spent)

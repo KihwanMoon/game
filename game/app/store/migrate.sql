@@ -401,3 +401,16 @@ UPDATE item_catalog SET affixes = '[{"stat": "hp_max", "flat": 25, "percent": 0,
  WHERE catalog_id = 'potion_elixir' AND coalesce(jsonb_array_length(affixes), 0) = 0;
 UPDATE item_catalog SET affixes = '[{"stat": "defense", "flat": 3, "percent": 0, "label_ko": "지킴"}]'::jsonb
  WHERE catalog_id = 'scroll_ward' AND coalesce(jsonb_array_length(affixes), 0) = 0;
+
+
+-- ── 런 중에도 소모품을 손댈 수 있게 한다 (설계/4_아이템 §5) ─────────────────
+--
+-- 처음에는 **런 중 보충을 막았다.** 로드아웃은 티켓을 낼 때 얼려지는데 정산은 지금의
+-- 충전에서 깎으므로, 런 중에 채우면 낸 돈이 그 자리에서 사라졌기 때문이다.
+--
+-- 그런데 그 잠금이 **이 게임의 고리를 막았다.** 하강은 서른 방이고 방 사이에서 규칙을
+-- 고치는 것이 핵심인데(GDD §2.2), 그 내내 소모품 칸이 잠긴다.
+--
+-- 그래서 잠그는 대신 원인을 없앤다. 티켓이 **이미 깎은 충전**을 기억하면, 층마다 다시
+-- 돌린 결과에서 그만큼을 빼고 남은 것만 깎는다 — 중간에 채워도 두 번 깎이지 않는다.
+ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS spent_charges JSONB NOT NULL DEFAULT '{}'::jsonb;

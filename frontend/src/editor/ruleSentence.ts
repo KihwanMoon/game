@@ -13,6 +13,7 @@
  * 바뀔 때 둘이 갈린다.
  */
 import type { BlockCatalog, Comparison, Rhs, Rule, Term } from '../core/schemas'
+import { formatParamLabel } from './blockOptions'
 import { OP_OR } from '../core/schemas'
 
 /** 비교 연산자를 사람 말로. 문장 끝에 붙는 서술어라 「이면」 앞에 그대로 놓인다. */
@@ -76,7 +77,8 @@ export function formatRuleSentence(rule: Rule, catalog: BlockCatalog): string {
       ? ALWAYS_TEXT
       : `${terms.map((term) => formatTermWord(term, catalog)).join(joiner)}이면`
   const action = catalog.actions.get(rule.action)?.labelKo ?? rule.action
-  const param = rule.actionParam === null ? '' : `[${rule.actionParam}]`
+  // **한글로 적는다.** id 를 그대로 두면 문장 한가운데에 `[SCROLL]` 이 뜬다.
+  const param = rule.actionParam === null ? '' : `[${formatParamLabel(rule.actionParam)}]`
   const selector =
     rule.target === null
       ? ''

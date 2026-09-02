@@ -273,3 +273,42 @@ def count_open_tickets(pool: ConnectionPool, account_id: int) -> int:
             (account_id,),
         ).fetchone()
     return int(row[0]) if row else 0
+
+
+def read_spent_charges(pool: ConnectionPool, ticket_id: str) -> dict[str, int]:
+    """이 런이 이미 깎은 충전을 읽는다 (설계/4_아이템 §5).
+
+    Args:
+        pool: 연결 풀.
+        ticket_id: 티켓 id.
+
+    Returns:
+        쓰임새에서 이미 깎은 개수로. 없으면 빈 딕셔너리.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT spent_charges FROM run_ticket WHERE id = %s", (ticket_id,)
+        ).fetchone()
+    raw = row[0] if row else None
+    if not isinstance(raw, dict):
+        return {}
+    return {str(key): int(value) for key, value in raw.items()}
+
+
+def apply_spent_charges(pool: ConnectionPool, ticket_id: str, spent: dict[str, int]) -> None:
+    """이 런이 깎은 충전을 적어 둔다.
+
+    **덮어쓴다.** 부르는 쪽이 누적값을 넘긴다 — 서버가 층마다 처음부터 다시 돌려 내는
+    수가 이미 누적이라, 여기서 더하면 두 번 더해진다.
+
+    Args:
+        pool: 연결 풀.
+        ticket_id: 티켓 id.
+        spent: 쓰임새에서 누적 개수로. 정렬해서 담는다 (R5).
+    """
+    payload = {key: int(spent[key]) for key in sorted(spent)}
+    with pool.connection() as connection:
+        connection.execute(
+            "UPDATE run_ticket SET spent_charges = %s WHERE id = %s",
+            (Jsonb(payload), ticket_id),
+        )

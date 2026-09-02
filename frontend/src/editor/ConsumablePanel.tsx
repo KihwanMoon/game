@@ -122,7 +122,10 @@ export function findFreeConsumableSlot(
  */
 function renderSlot(slot: ConsumableSlotView, props: ConsumablePanelProps): React.JSX.Element {
   const view = props.view
-  const locked = !props.isOnline || (view?.isRunOpen ?? false)
+  // **런 중에도 잠그지 않는다.** 하강이 서른 방이라, 잠그면 방 사이에 규칙을 고치는
+  // 내내 칸을 못 건드린다 (GDD §2.2). 지금 채운 것이 이번 런에 안 실릴 뿐이고,
+  // 그 사실은 위의 안내가 말한다.
+  const locked = !props.isOnline
   const refill = formatRefillLabel(slot)
   const candidates = listSlotOptions(view?.options ?? [], slot.useTag)
   return (
@@ -200,9 +203,9 @@ export function ConsumablePanel(props: ConsumablePanelProps): React.JSX.Element 
         <ValueExpr text={`잔액 ${String(view.balance)}`} size="sm" />
         {view.isRunOpen ? (
           <GlyphState
-            state="danger"
+            state="pending"
             size="sm"
-            label="런이 도는 중 — 소모품은 런 사이에만 손댈 수 있다"
+            label="런이 도는 중 — 지금 채운 것은 다음 런부터 실린다"
           />
         ) : null}
       </div>

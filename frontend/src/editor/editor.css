@@ -1984,3 +1984,18 @@
   font-family: var(--font-data);
   font-size: var(--fs-sm);
 }
+
+/* **이름이 세로로 무너지던 자리.** 좁은 화면에서 `flex` 아이템의 기본 최소 폭은
+   내용 크기라, 뒤의 버튼이 밀면 이름 칸이 한 글자 폭까지 줄어 「보/호/주/문/서」가 된다.
+   `flex-basis` 를 주어 줄바꿈이 이름 안이 아니라 **줄 사이**에서 일어나게 한다. */
+.cns__row .inv__name {
+  flex: 1 1 calc(var(--sp-12) * 2);
+  min-width: calc(var(--sp-12) * 2);
+}
+
+
+/* 행동 인자 고르개. 대상 고르개와 같은 급이라 같은 폭 규칙을 쓴다 —
+   `USE_ITEM[물약|주문서]`, `USE_SKILL[스킬 1|…]` 이 여기로 온다. */
+.term__field--param {
+  min-width: var(--sp-16);
+}

@@ -12,7 +12,12 @@ import type { KeyboardEvent } from 'react'
 
 import { GlyphState } from '../ds'
 import { MAX_TERMS, type BlockCatalog, type Rule, type Term } from '../core/schemas'
-import { listActionGroups, listFlagNames, listSelectorsForAction } from './blockOptions'
+import {
+  formatParamLabel,
+  listActionGroups,
+  listFlagNames,
+  listSelectorsForAction,
+} from './blockOptions'
 import { FLAG_FALSE, FLAG_NONE, FLAG_TRUE, buildSetFlag, getFlagName, getFlagValue } from './flagClause'
 import { TermEditor } from './TermEditor'
 
@@ -199,6 +204,23 @@ export function RuleRowEditor(props: RuleRowEditorProps): React.JSX.Element {
             </optgroup>
           ))}
         </select>
+
+        {action?.param === null || action?.param === undefined ? null : (
+          <select
+            className="term__field term__field--param"
+            value={rule.actionParam ?? action.param.values[0] ?? ''}
+            aria-label={`규칙 ${String(rule.priority)} ${action.param.name}`}
+            onChange={(event) => {
+              actions.update(index, { actionParam: event.target.value })
+            }}
+          >
+            {action.param.values.map((value) => (
+              <option value={value} key={value}>
+                {formatParamLabel(value)}
+              </option>
+            ))}
+          </select>
+        )}
 
         {action?.targeted === true ? (
           <>

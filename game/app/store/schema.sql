@@ -61,6 +61,12 @@ CREATE TABLE IF NOT EXISTS run_ticket (
     core_version  TEXT        NOT NULL,
     issued_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     expires_at    TIMESTAMPTZ NOT NULL,
+    -- 이 런이 **이미 깎은** 소모품 충전. 쓰임새에서 개수로.
+    --
+    -- 층마다 서버가 처음부터 다시 돌려 「몇 개 썼는가」를 낸다. 그 값은 누적이라,
+    -- 이미 깎은 만큼을 빼지 않으면 3층을 청구할 때 1·2층에서 쓴 것이 또 깎인다.
+    -- 이것이 있어야 **런 중에 보충해도** 낸 돈이 안 사라진다.
+    spent_charges JSONB       NOT NULL DEFAULT '{}'::jsonb,
     consumed_at   TIMESTAMPTZ
 );
 
