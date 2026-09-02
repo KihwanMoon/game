@@ -23,6 +23,7 @@ def build_player_loadout(
     base_rule_slots: int,
     stats: dict[str, int] | None = None,
     consumables: dict[str, int] | None = None,
+    carried: tuple[ItemCatalogEntry, ...] = (),
 ) -> PlayerLoadout:
     """장비와 레벨을 합쳐 이번 런의 전투 입력을 만든다.
 
@@ -35,7 +36,10 @@ def build_player_loadout(
         level: 플레이어 레벨.
         base_rule_slots: 기본 규칙 슬롯 수.
         stats: 유저가 배분한 힘·민첩·지능. None 이면 배분이 없는 것으로 본다.
-        consumables: 가방에 든 소모품. 태그에서 개수로. None 이면 빈손이다.
+        consumables: 소모품 칸이 실어 보내는 것. 태그에서 개수로. None 이면 빈손이다.
+        carried: **칸에 끼운 소모품들.** 이것들의 접사가 장비와 같은 자리에서 합산된다
+            (§5) — 충전이 남은 칸만 부르는 쪽이 넘긴다. 다 쓴 물약은 파손된 장비와
+            같아서, 효과가 남으면 보충비가 뜻을 잃는다 (결정 #34 와 같은 규율).
 
     Returns:
         확정된 전투 입력.
@@ -45,9 +49,10 @@ def build_player_loadout(
     bonus = build_attribute_bonus(stats or {})
     totals: dict[str, StatDelta] = {}
     skills = set(BASE_SKILLS)
-    for _slot, entry in get_effective_slots(equipped):
-        if entry is None:
-            continue
+    worn = [entry for _slot, entry in get_effective_slots(equipped) if entry is not None]
+    # **소모품이 뒤에 온다.** 합산은 순서를 안 타지만(더하기뿐이다), 목록의 순서가
+    # 실행마다 달라지면 안 된다 — 부르는 쪽이 칸 순서대로 넘긴다 (R5).
+    for entry in [*worn, *carried]:
         if entry.grants_skill:
             skills.add(entry.grants_skill)
         for affix in entry.affixes:
@@ -74,9 +79,8 @@ def build_player_loadout(
         cpu_budget=final["cpu_budget"] + growth.bonus_cpu + bonus.cpu_budget,
         rule_slots=base_rule_slots + growth.bonus_rule_slots,
         skill_power_pct=bonus.skill_power_pct,
-        # **기본 지급 위에 가방을 얹는다.** balance.json 의 `potions` 는 누구나 런을
-        # 시작할 때 받는 몫이고, 가방은 그 위에 더해지는 것이다 — 가방만 쓰면 로드아웃이
-        # 생기는 순간 기본 지급이 사라진다(실제로 그렇게 회귀했다).
+        # **칸이 실어 보낸 것을 그대로 싣는다.** 여기서 더하거나 빼면 「한도 안에서
+        # 쓴다」가 성립하지 않는다 — 옛 기본 지급 두 개는 빈 칸의 공짜 충전으로 옮겨 갔다.
         #
         # 정렬해서 담는다. 딕셔너리 순회 순서가 티켓에 새어 나가면 안 된다 (R5).
         consumables=tuple(sorted(merge_consumables(consumables or {}).items())),

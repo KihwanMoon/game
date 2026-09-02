@@ -326,6 +326,9 @@ class ConsumableSlotView(BaseModel):
     charge_max: int = 0
     # 이 칸을 가득 채우는 값. 빈 칸은 0 이다 — 끼운 것이 없으면 채울 것도 없다.
     refill_cost: int = 0
+    # 끼우고 있는 동안 붙는 부가 옵션. **충전이 0 이면 비어 있다** — 다 쓴 물약은 파손된
+    # 장비와 같아서, 효과가 남으면 보충비가 뜻을 잃는다.
+    affixes: list[str] = []
 
 
 class ConsumableOption(BaseModel):
@@ -340,6 +343,8 @@ class ConsumableOption(BaseModel):
     stock: int
     # 하나를 팔면 받는 값.
     sell_price: int
+    # 끼우면 붙는 부가 옵션. 끼우기 전에 무엇이 붙는지 알아야 고를 수 있다.
+    affixes: list[str] = []
 
 
 class ConsumableResponse(BaseModel):

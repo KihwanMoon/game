@@ -27,15 +27,22 @@ class ConsumableSlot:
     charges: int
 
 
-def list_consumable_slots(pool: ConnectionPool, entity_id: int) -> tuple[ConsumableSlot, ...]:
+def list_consumable_slots(
+    pool: ConnectionPool, entity_id: int, extra: dict[str, int] | None = None
+) -> tuple[ConsumableSlot, ...]:
     """이 개체의 소모품 칸 전부를 정해진 순서로 읽는다.
 
     저장된 줄이 없는 칸은 **빈 칸으로 채워서** 돌려준다. 없는 것과 비어 있는 것을 화면이
     구분할 필요가 없고, 구분하면 「칸이 아직 안 생겼다」는 상태가 하나 더 생긴다.
 
+    **칸이 줄면 넘치는 줄은 안 읽힌다.** 칸을 늘리던 장비를 빼면 그 칸은 잠기고, 끼워
+    둔 것은 지워지지 않은 채 잠들어 있다가 다시 끼우면 돌아온다 — 지우면 장비를 잠깐
+    바꿔 낀 것이 물약을 태운다.
+
     Args:
         pool: 연결 풀.
         entity_id: 대상 개체.
+        extra: 장비 접사가 쓰임새마다 더한 칸 수. None 이면 기본 칸만이다.
 
     Returns:
         칸들. 쓰임새 순, 칸 번호 순이다 (R5).
@@ -49,7 +56,7 @@ def list_consumable_slots(pool: ConnectionPool, entity_id: int) -> tuple[Consuma
     stored = {(str(row[0]), int(row[1])): (row[2], int(row[3])) for row in rows}
     slots: list[ConsumableSlot] = []
     for use_tag in list_slot_tags():
-        for index in build_slot_rows(use_tag):
+        for index in build_slot_rows(use_tag, (extra or {}).get(use_tag, 0)):
             catalog_id, charges = stored.get((use_tag, index), (None, 0))
             slots.append(
                 ConsumableSlot(
@@ -156,7 +163,13 @@ def apply_slot_fill(
     return filled.rowcount == 1
 
 
-def apply_slot_spend(pool: ConnectionPool, entity_id: int, use_tag: str, used: int) -> int:
+def apply_slot_spend(
+    pool: ConnectionPool,
+    entity_id: int,
+    use_tag: str,
+    used: int,
+    extra: dict[str, int] | None = None,
+) -> int:
     """이번 층에서 쓴 만큼 그 쓰임새의 칸에서 깎는다.
 
     **낮은 칸부터 깎는다.** 어느 칸의 것을 썼는지는 코어가 모른다 — 코어는 「POTION 몇
@@ -171,13 +184,15 @@ def apply_slot_spend(pool: ConnectionPool, entity_id: int, use_tag: str, used: i
         entity_id: 대상 개체.
         use_tag: 쓰임새.
         used: 쓴 충전 수.
+        extra: 장비 접사가 더한 칸 수. **읽을 때와 같은 값이어야 한다** — 다르면 늘어난
+            칸에서 쓴 것이 안 깎여 그 칸만 공짜가 된다.
 
     Returns:
         실제로 깎은 수.
     """
     if used <= 0:
         return 0
-    slots = list_consumable_slots(pool, entity_id)
+    slots = list_consumable_slots(pool, entity_id, extra)
     free = sum(
         FREE_CHARGES for slot in slots if slot.use_tag == use_tag and slot.catalog_id is None
     )

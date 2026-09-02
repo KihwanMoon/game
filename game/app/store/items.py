@@ -290,29 +290,40 @@ DEFAULT_AFFIX_POOL: tuple[tuple[str, str, int, int, int, int, int], ...] = (
     ("initiative", "재빠름", 2, 8, 0, 0, 20),
     ("attack_range", "먼 사거리", 1, 1, 0, 0, 5),
     ("cpu_budget", "여유 회로", 1, 1, 0, 0, 5),
+    # 소모품 칸을 늘린다 (§5). **사거리·CPU 와 같은 무게다** — 한 칸이 곧 물약 하나가
+    # 아니라 「그 칸에 무엇을 끼울지」를 하나 더 고르는 것이라, 흔하면 한도가 흐려진다.
+    ("potion_slots", "물약 주머니", 1, 1, 0, 0, 5),
+    ("scroll_slots", "주문서 통", 1, 1, 0, 0, 5),
 )
 
 
 def apply_affix_pool_seed(pool: ConnectionPool) -> int:
-    """옵션 풀을 채운다. 이미 있으면 두고 넘어간다.
+    """파일에 있는데 풀에 없는 옵션만 심는다.
+
+    **한 번 채우고 끝내지 않는다.** 예전에는 표가 비어 있을 때만 돌아서, 옵션을 하나
+    더해도 이미 돌고 있는 서버에는 영영 안 들어갔다 — 카탈로그와 드롭 표에서 이미 두 번
+    겪은 구멍이고, 세 번째가 소모품 칸 옵션이었다.
+
+    **있는 줄은 안 고친다.** 관리자가 무게를 조정한 것이 배포 한 번에 되돌아가면
+    정본이 DB 라는 말이 거짓이 된다.
 
     Args:
         pool: 연결 풀.
 
     Returns:
-        채운 줄 수. 이미 있었으면 0.
+        새로 심은 줄 수. 심을 것이 없었으면 0.
     """
     with pool.connection() as connection:
-        row = connection.execute("SELECT count(*) FROM affix_pool").fetchone()
-        if row is not None and int(row[0]) > 0:
-            return 0
-        for entry in DEFAULT_AFFIX_POOL:
+        rows = connection.execute("SELECT stat FROM affix_pool").fetchall()
+        known = {str(row[0]) for row in rows}
+        fresh = [entry for entry in DEFAULT_AFFIX_POOL if entry[0] not in known]
+        for entry in fresh:
             connection.execute(
                 "INSERT INTO affix_pool (stat, label_ko, flat_min, flat_max,"
                 " percent_min, percent_max, weight) VALUES (%s, %s, %s, %s, %s, %s, %s)",
                 entry,
             )
-    return len(DEFAULT_AFFIX_POOL)
+    return len(fresh)
 
 
 def list_affix_pool(pool: ConnectionPool) -> tuple[tuple[str, str, int, int, int, int, int], ...]:

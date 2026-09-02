@@ -21,6 +21,8 @@ export interface ConsumableSlotView {
   readonly chargeMax: number
   /** 이 칸을 가득 채우는 값. 빈 칸은 0 이다. */
   readonly refillCost: number
+  /** 끼우고 있는 동안 붙는 부가 옵션. 충전이 0 이면 비어 있다. */
+  readonly affixes: readonly string[]
 }
 
 /** 가방에 있어 끼울 수 있는 소모품 한 종류. */
@@ -32,6 +34,8 @@ export interface ConsumableOptionView {
   readonly charges: number
   readonly stock: number
   readonly sellPrice: number
+  /** 끼우면 붙는 부가 옵션. */
+  readonly affixes: readonly string[]
 }
 
 /** 소모품 칸 화면 전체. */
@@ -53,6 +57,7 @@ interface RawSlot {
   charges: number
   charge_max: number
   refill_cost: number
+  affixes: string[]
 }
 
 interface RawOption {
@@ -63,6 +68,7 @@ interface RawOption {
   charges: number
   stock: number
   sell_price: number
+  affixes: string[]
 }
 
 interface RawBody {
@@ -90,6 +96,7 @@ export function buildConsumableView(body: RawBody): ConsumableView {
       charges: raw.charges,
       chargeMax: raw.charge_max,
       refillCost: raw.refill_cost,
+      affixes: raw.affixes,
     })),
     options: body.options.map((raw) => ({
       catalogId: raw.catalog_id,
@@ -99,6 +106,7 @@ export function buildConsumableView(body: RawBody): ConsumableView {
       charges: raw.charges,
       stock: raw.stock,
       sellPrice: raw.sell_price,
+      affixes: raw.affixes,
     })),
     balance: body.balance,
     freeCharges: body.free_charges,

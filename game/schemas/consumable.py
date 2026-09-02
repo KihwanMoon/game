@@ -25,6 +25,15 @@ BASE_CONSUMABLE_SLOTS: tuple[tuple[str, int], ...] = (("POTION", 2), ("SCROLL", 
 # 아무것도 안 끼운 칸이 출격 시 공짜로 받는 충전 수. 예전의 기본 지급을 대신한다.
 FREE_CHARGES = 1
 
+# 쓰임새마다 칸을 늘리는 능력치 이름. **`COMBAT_STATS` 에 있는 이름이어야 한다** —
+# 없으면 접사가 파싱은 되고 합산은 안 되어 조용히 무효가 된다 (§4).
+SLOT_STATS: dict[str, str] = {"POTION": "potion_slots", "SCROLL": "scroll_slots"}
+
+# 한 쓰임새가 가질 수 있는 칸 수의 상한. **접사가 무한히 쌓이는 것을 막는다** — 상한이
+# 없으면 봉인을 여러 번 연 캐릭터가 물약을 열 개 들고 다니고, 그러면 한도가 한도가
+# 아니게 된다. 늘리는 접사가 귀한 만큼 이 값은 여유롭게 둔다.
+MAX_SLOTS_PER_TAG = 5
+
 # 충전 하나를 채우는 값. **등급에 비례한다** — 센 물약은 유지비가 비싸야 「무엇을
 # 끼울까」가 공짜 선택이 아니게 된다. 싸게 가고 많이 쓸지, 비싸게 가고 아낄지다.
 GRADE_REFILL_COST: dict[str, int] = {
@@ -55,19 +64,23 @@ def check_slot_fit(use_tag: str | None, slot_tag: str) -> bool:
     return bool(use_tag) and use_tag == slot_tag
 
 
-def resolve_slot_count(use_tag: str) -> int:
-    """이 쓰임새의 기본 칸 수.
+def resolve_slot_count(use_tag: str, extra: int = 0) -> int:
+    """이 쓰임새의 칸 수 — 기본에 접사가 더한 만큼을 얹는다.
+
+    **모르는 쓰임새는 접사가 있어도 0 이다.** 데이터가 앞서 나갔을 때 칸이 저절로
+    생기면, 어디에도 안 적힌 칸에 물약이 들어간다.
 
     Args:
         use_tag: 소모품 쓰임새 (POTION·SCROLL).
+        extra: 장비 접사가 더한 칸 수. 음수는 무시한다 — 칸을 빼앗는 접사는 없고,
+            음수 접사가 실수로 들어와 칸이 사라지면 끼워 둔 것이 통째로 잠긴다.
 
     Returns:
-        칸 수. 모르는 쓰임새는 0 이다 — 데이터가 앞서 나갔을 때 칸이 저절로 생기는
-        것보다 안 생기는 쪽이 낫다.
+        칸 수. `MAX_SLOTS_PER_TAG` 를 넘지 않는다.
     """
     for tag, count in BASE_CONSUMABLE_SLOTS:
         if tag == use_tag:
-            return count
+            return min(MAX_SLOTS_PER_TAG, count + max(0, extra))
     return 0
 
 
@@ -102,16 +115,17 @@ def resolve_sell_price(grade: str, charges: int) -> int:
     return max(1, resolve_refill_cost(grade, max(1, charges)) // SELL_DIVISOR)
 
 
-def build_slot_rows(use_tag: str) -> tuple[int, ...]:
+def build_slot_rows(use_tag: str, extra: int = 0) -> tuple[int, ...]:
     """이 쓰임새가 갖는 칸 번호들.
 
     Args:
         use_tag: 소모품 쓰임새.
+        extra: 장비 접사가 더한 칸 수.
 
     Returns:
         0 부터 세는 칸 번호. 칸이 없으면 빈 값이다.
     """
-    return tuple(range(resolve_slot_count(use_tag)))
+    return tuple(range(resolve_slot_count(use_tag, extra)))
 
 
 def list_slot_tags() -> tuple[str, ...]:
@@ -127,6 +141,8 @@ __all__ = [
     "BASE_CONSUMABLE_SLOTS",
     "FREE_CHARGES",
     "GRADE_REFILL_COST",
+    "MAX_SLOTS_PER_TAG",
+    "SLOT_STATS",
     "SELL_DIVISOR",
     "build_slot_rows",
     "check_slot_fit",

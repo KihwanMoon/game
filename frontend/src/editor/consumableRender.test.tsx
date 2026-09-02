@@ -27,6 +27,7 @@ function buildSlot(over: Partial<ConsumableSlotView> = {}): ConsumableSlotView {
     charges: 0,
     chargeMax: 0,
     refillCost: 0,
+    affixes: [],
     ...over,
   }
 }
@@ -41,6 +42,7 @@ function buildView(over: Partial<ConsumableView> = {}): ConsumableView {
         charges: 1,
         chargeMax: 2,
         refillCost: 20,
+        affixes: ['든든함 · 최대체력 +4'],
       }),
       buildSlot({ slotIndex: 1 }),
       buildSlot({ useTag: 'SCROLL' }),
@@ -54,6 +56,7 @@ function buildView(over: Partial<ConsumableView> = {}): ConsumableView {
         charges: 7,
         stock: 2,
         sellPrice: 630,
+        affixes: ['든든함 · 최대체력 +25'],
       },
     ],
     balance: 1240,
@@ -170,6 +173,47 @@ describe('소모품 칸', () => {
       />,
     )
     expect(html).toContain('서버에 닿지 못했다')
+  })
+
+  it('★ 끼우면 무엇이 붙는지 적는다 — 안 적으면 부가 옵션이 있다는 것을 알 길이 없다', () => {
+    const html = renderToStaticMarkup(
+      <ConsumablePanel
+        view={buildView()}
+        isOnline
+        detail=""
+        onLoad={() => undefined}
+        onClear={() => undefined}
+        onRefill={() => undefined}
+        onSell={() => undefined}
+      />,
+    )
+    expect(html).toContain('든든함 · 최대체력 +4')
+    expect(html).toContain('든든함 · 최대체력 +25')
+  })
+
+  it('★ 다 쓴 칸은 옵션도 안 적는다 — 효과는 사라졌는데 화면이 남기면 거짓말이 된다', () => {
+    const spent = buildSlot({
+      catalogId: 'potion_heal',
+      labelKo: '회복 물약',
+      grade: 'COMMON',
+      charges: 0,
+      chargeMax: 2,
+      refillCost: 40,
+      affixes: [],
+    })
+    const html = renderToStaticMarkup(
+      <ConsumablePanel
+        view={buildView({ slots: [spent], options: [] })}
+        isOnline
+        detail=""
+        onLoad={() => undefined}
+        onClear={() => undefined}
+        onRefill={() => undefined}
+        onSell={() => undefined}
+      />,
+    )
+    expect(html).toContain('0 / 2')
+    expect(html).not.toContain('든든함')
   })
 
   it('★ 남는 것을 파는 값을 적는다 — 드롭이 곧 보충 비용이라는 것이 여기서 보인다', () => {

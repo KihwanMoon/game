@@ -11,7 +11,9 @@
 from fastapi import APIRouter, HTTPException, status
 from psycopg_pool import ConnectionPool
 
+from game.api.catalog_view import format_affix
 from game.api.deps import CurrentAccount, get_item_catalog, get_pool
+from game.api.loadout_service import build_equipped_entries, count_slot_bonus
 from game.api.schemas import (
     ConsumableOption,
     ConsumableResponse,
@@ -67,6 +69,9 @@ def build_slot_view(slot: ConsumableSlot, catalog: dict) -> ConsumableSlotView:
         charges=slot.charges,
         charge_max=charge_max,
         refill_cost=resolve_refill_cost(entry.grade, charge_max - slot.charges),
+        # **다 쓴 칸은 옵션도 없다.** 로드아웃이 충전 남은 칸만 합산하므로, 화면이
+        # 그대로 적으면 실제로 붙는 것과 다른 말을 한다.
+        affixes=[format_affix(affix) for affix in entry.affixes] if slot.charges > 0 else [],
     )
 
 
@@ -102,6 +107,7 @@ def list_bag_options(pool: ConnectionPool, entity_id: int, catalog: dict) -> lis
                 charges=max(1, item.charges),
                 stock=stock[catalog_id],
                 sell_price=resolve_sell_price(item.grade, max(1, item.charges)),
+                affixes=[format_affix(affix) for affix in item.affixes],
             )
         )
     return options
@@ -121,7 +127,10 @@ def read_consumables(account: CurrentAccount) -> ConsumableResponse:
     entity_id = find_player_entity(pool, account.account_id)
     catalog = get_item_catalog()
     return ConsumableResponse(
-        slots=[build_slot_view(slot, catalog) for slot in list_consumable_slots(pool, entity_id)],
+        slots=[
+            build_slot_view(slot, catalog)
+            for slot in list_consumable_slots(pool, entity_id, read_slot_bonus(pool, entity_id))
+        ],
         options=list_bag_options(pool, entity_id, catalog),
         balance=read_balance(pool, account.account_id),
         free_charges=FREE_CHARGES,
@@ -167,6 +176,8 @@ def create_consumable_load(
         raise HTTPException(status.HTTP_409_CONFLICT, f"{request.use_tag} 칸에 못 넣는다")
     pool = get_pool()
     entity_id = find_player_entity(pool, account.account_id)
+    if find_slot(pool, entity_id, request.use_tag, request.slot_index) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "없는 칸이다")
     if not apply_stack_take(pool, entity_id, entry.catalog_id, 1):
         raise HTTPException(status.HTTP_409_CONFLICT, "가방에 없다")
     apply_slot_load(
@@ -238,6 +249,22 @@ def create_consumable_refill(
     return read_consumables(account)
 
 
+def read_slot_bonus(pool: ConnectionPool, entity_id: int) -> dict[str, int]:
+    """장비 접사가 이 개체의 소모품 칸을 몇 개 늘렸는지 읽는다.
+
+    **읽는 쪽과 깎는 쪽이 같은 값을 봐야 한다** (§5). 다르면 늘어난 칸에서 쓴 것이 안
+    깎여 그 칸만 공짜가 된다.
+
+    Args:
+        pool: 연결 풀.
+        entity_id: 대상 개체.
+
+    Returns:
+        쓰임새에서 늘어난 칸 수로.
+    """
+    return count_slot_bonus(build_equipped_entries(pool, entity_id, get_item_catalog()))
+
+
 def find_slot(
     pool: ConnectionPool, entity_id: int, use_tag: str, slot_index: int
 ) -> ConsumableSlot | None:
@@ -252,7 +279,7 @@ def find_slot(
     Returns:
         찾은 칸. 없는 칸이면 None.
     """
-    for slot in list_consumable_slots(pool, entity_id):
+    for slot in list_consumable_slots(pool, entity_id, read_slot_bonus(pool, entity_id)):
         if slot.use_tag == use_tag and slot.slot_index == slot_index:
             return slot
     return None

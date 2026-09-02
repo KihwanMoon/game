@@ -173,7 +173,14 @@
         "POTION"
       ],
       "use_tag": "POTION",
-      "charges": 2
+      "charges": 2,
+      "affixes": [
+        {
+          "stat": "hp_max",
+          "flat": 4,
+          "label_ko": "든든함"
+        }
+      ]
     },
     {
       "id": "scroll_shield",
@@ -184,7 +191,14 @@
         "SCROLL"
       ],
       "use_tag": "SCROLL",
-      "charges": 1
+      "charges": 1,
+      "affixes": [
+        {
+          "stat": "defense",
+          "flat": 1,
+          "label_ko": "지킴"
+        }
+      ]
     },
     {
       "id": "quest_seal",
@@ -595,7 +609,14 @@
       "tags": [
         "POTION"
       ],
-      "use_tag": "POTION"
+      "use_tag": "POTION",
+      "affixes": [
+        {
+          "stat": "hp_max",
+          "flat": 12,
+          "label_ko": "든든함"
+        }
+      ]
     },
     {
       "id": "potion_elixir",
@@ -608,7 +629,14 @@
       "tags": [
         "POTION"
       ],
-      "use_tag": "POTION"
+      "use_tag": "POTION",
+      "affixes": [
+        {
+          "stat": "hp_max",
+          "flat": 25,
+          "label_ko": "든든함"
+        }
+      ]
     },
     {
       "id": "scroll_ward",
@@ -621,7 +649,14 @@
       "tags": [
         "SCROLL"
       ],
-      "use_tag": "SCROLL"
+      "use_tag": "SCROLL",
+      "affixes": [
+        {
+          "stat": "defense",
+          "flat": 3,
+          "label_ko": "지킴"
+        }
+      ]
     }
   ]
 }

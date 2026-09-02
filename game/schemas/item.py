@@ -95,6 +95,11 @@ COMBAT_STATS: tuple[str, ...] = (
     "attack_range",
     "initiative",
     "cpu_budget",
+    # 소모품 칸을 늘린다 (§5). **전투 수치가 아닌데 여기 있는 이유**는 이 표가
+    # 「접사가 가리킬 수 있는 것」의 정본이기 때문이다 — 여기 없는 stat 은 파싱은 되고
+    # 합산은 안 되어 **조용히 무효**가 된다. 그 침묵이 이 저장소에서 이미 사고를 냈다.
+    "potion_slots",
+    "scroll_slots",
 )
 
 
@@ -110,6 +115,8 @@ STAT_LABELS: dict[str, str] = {
     "attack_range": "사거리",
     "initiative": "선공권",
     "cpu_budget": "CPU",
+    "potion_slots": "물약 칸",
+    "scroll_slots": "주문서 칸",
 }
 
 

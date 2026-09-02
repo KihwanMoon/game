@@ -111,6 +111,9 @@ function renderSlot(slot: ConsumableSlotView, props: ConsumablePanelProps): Reac
       </span>
       {renderGrade(slot.grade)}
       <ValueExpr text={formatCharges(slot, view?.freeCharges ?? 0)} size="sm" />
+      {slot.affixes.map((affix) => (
+        <ValueExpr key={affix} text={affix} size="sm" dim />
+      ))}
       {refill === '' ? null : (
         <Button
           size="sm"
@@ -145,7 +148,9 @@ function renderSlot(slot: ConsumableSlotView, props: ConsumablePanelProps): Reac
             props.onLoad(slot.useTag, slot.slotIndex, option.catalogId)
           }}
         >
-          {`${option.labelKo} 끼우기 (${String(option.charges)}충전 ×${String(option.stock)})`}
+          {`${option.labelKo} 끼우기 (${String(option.charges)}충전${
+            option.affixes.length === 0 ? '' : ` · ${option.affixes.join(' · ')}`
+          } ×${String(option.stock)})`}
         </Button>
       ))}
     </li>
@@ -188,6 +193,9 @@ export function ConsumablePanel(props: ConsumablePanelProps): React.JSX.Element 
               <span className={`inv__name${formatGradeClass(option.grade)}`}>{option.labelKo}</span>
               {renderGrade(option.grade)}
               <ValueExpr text={`가방 ${String(option.stock)}개`} size="sm" dim />
+              {option.affixes.map((affix) => (
+                <ValueExpr key={affix} text={affix} size="sm" dim />
+              ))}
               <Button
                 size="sm"
                 variant="ghost"

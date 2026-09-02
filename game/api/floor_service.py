@@ -8,7 +8,8 @@
 진행이 된다 (T9 와 같은 자리).
 """
 
-from game.api.deps import get_context, get_pool
+from game.api.deps import get_context, get_item_catalog, get_pool
+from game.api.loadout_service import build_equipped_entries, count_slot_bonus
 from game.app.progression.floors import read_floor_cap
 from game.app.services.verify_run import VERDICT_VERIFIED, VerifiedRun
 from game.app.simulation.plan import OUTCOME_PLAYER_WIN
@@ -135,8 +136,11 @@ def apply_charge_spend(account_id: int, ticket: IssuedTicket, verified: Verified
     left = dict(verified.remaining_consumables)
     pool = get_pool()
     entity_id = find_player_entity(pool, account_id)
+    # **읽을 때와 같은 칸 수를 본다.** 다르면 접사로 늘어난 칸에서 쓴 것이 안 깎여
+    # 그 칸만 영원히 공짜가 된다.
+    bonus = count_slot_bonus(build_equipped_entries(pool, entity_id, get_item_catalog()))
     # 정렬해서 돈다 — 딕셔너리 순회 순서가 어느 칸을 먼저 비울지 정하면 안 된다 (R5).
     for use_tag in sorted(issued):
         used = issued[use_tag] - left.get(use_tag, 0)
         if used > 0:
-            apply_slot_spend(pool, entity_id, use_tag, used)
+            apply_slot_spend(pool, entity_id, use_tag, used, bonus)
