@@ -4,6 +4,7 @@
 
     uv run python -m scripts.run_batch --runs 1000                 # 고정 3방 연쇄
     uv run python -m scripts.run_batch --runs 300 --mode floor     # 시드마다 새 층
+    uv run python -m scripts.run_batch --runs 50 --mode descent    # 1층→보스 하강
 
 `-m` 로 부르는 이유는 그래야 저장소 루트가 import 경로에 들어가기 때문이다.
 이 프로토타입은 설치 가능한 패키지로 만들지 않는다 (TDD §1.2 — 버릴 코드).
@@ -19,8 +20,11 @@ import sys
 import time
 from dataclasses import dataclass
 
+from game.app.progression.floors import BOSS_ROOM_ID, read_boss_floor
 from game.app.services.run_batch import BatchStats, run_batch, run_floor_batch
 from game.app.services.run_battle import load_balance
+from game.app.services.run_descent import DescentStats, run_descent_batch
+from game.app.store.tickets import CHAIN_LENGTH
 from game.config import (
     BALANCE_PATH,
     BENCHMARK_RULESETS_PATH,
@@ -35,8 +39,14 @@ from game.schemas.ruleset import RuleSet, load_rulesets
 
 CHAIN_ROOM_IDS = ("open_field", "corridor", "pillars")
 MILLISECONDS = 1000
+PERCENT_BASE = 100
 MODE_CHAIN = "chain"
 MODE_FLOOR = "floor"
+MODE_DESCENT = "descent"
+
+# 하강의 첫 방. 실제 런에서 편집기가 고르는 자리이고, 여기서는 고정해 둔다 —
+# 규칙표 사이의 차이만 남기려면 출발선이 같아야 한다.
+DESCENT_FIRST_ROOM = "open_field"
 FALLBACK_ID = "fallback"
 
 
@@ -65,11 +75,14 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=1, help="시작 시드")
     parser.add_argument(
         "--mode",
-        choices=(MODE_CHAIN, MODE_FLOOR),
+        choices=(MODE_CHAIN, MODE_FLOOR, MODE_DESCENT),
         default=MODE_CHAIN,
-        help="chain 은 고정 3방 연쇄, floor 는 시드마다 새로 만든 층",
+        help="chain 은 고정 3방, floor 는 시드마다 새 층, descent 는 1층→보스 하강",
     )
     parser.add_argument("--floor", type=int, default=FIRST_FLOOR, help="floor 모드의 층 번호")
+    parser.add_argument(
+        "--rooms-per-floor", type=int, default=CHAIN_LENGTH, help="descent 모드의 층당 방 수"
+    )
     return parser.parse_args(argv)
 
 
@@ -124,6 +137,74 @@ def run_one_batch(
     return run_batch(name, chain, **common)
 
 
+def run_one_descent(
+    name: str,
+    ruleset: RuleSet | None,
+    resources: BatchResources,
+    arguments: argparse.Namespace,
+) -> DescentStats:
+    """규칙표 하나로 하강을 돌린다.
+
+    Args:
+        name: 통계에 붙일 이름.
+        ruleset: 플레이어 규칙표. None 이면 폴백.
+        resources: 자원 묶음.
+        arguments: 해석된 명령행 인자.
+
+    Returns:
+        그 규칙표의 도달 층 분포.
+    """
+    return run_descent_batch(
+        name,
+        {template.template_id: template for template in resources.templates},
+        resources.balance,
+        resources.catalog,
+        ruleset,
+        resources.enemy_rulesets,
+        arguments.runs,
+        arguments.seed,
+        DESCENT_FIRST_ROOM,
+        arguments.rooms_per_floor,
+        BOSS_ROOM_ID,
+        read_boss_floor(resources.balance),
+    )
+
+
+def format_descent_report(rows: list, boss_floor: int) -> str:
+    """하강 통계를 표로 편다.
+
+    **승률을 안 적는다.** 대부분 0% 로 나오고, 그러면 1층에서 죽은 것과 9층에서 죽은
+    것이 같은 줄로 보인다 — 재야 하는 것은 어디까지 갔는가다.
+
+    Args:
+        rows: DescentStats 목록.
+        boss_floor: 보스가 서는 층.
+
+    Returns:
+        출력할 문자열.
+    """
+    width = max([len(stats.ruleset_id) for stats in rows] + [len("규칙표")])
+    floors = "".join(f"{floor:>3}" for floor in range(1, boss_floor + 1))
+    lines = [
+        f"{'규칙표':<{width}} {'런':>4} {'평균층':>7} {'최고':>4} {'완주':>4}  {floors}  최악시드",
+        "-" * (width + 30 + boss_floor * 3),
+    ]
+    for stats in rows:
+        bars = "".join(
+            f"{count * PERCENT_BASE // stats.runs if stats.runs else 0:>3}"
+            for count in stats.cleared_by_floor
+        )
+        lines.append(
+            f"{stats.ruleset_id:<{width}} {stats.runs:>4} {stats.average_floor_pct / 100:>7.2f} "
+            f"{stats.deepest_floor:>4} {stats.finished:>4}  {bars}  "
+            f"{stats.worst_seed}(층 {stats.worst_floor})"
+        )
+    lines.append("")
+    lines.append("층 칸은 **그 층을 깬 런의 비율(%)** 이다. 100 이면 전부 지났다는 뜻이고,")
+    lines.append("  0 이 나오는 첫 칸이 그 규칙표가 멈추는 벽이다.")
+    return "\n".join(lines)
+
+
 def format_report(rows: list) -> str:
     """통계를 표로 편다.
 
@@ -169,6 +250,8 @@ def format_scope(arguments: argparse.Namespace) -> str:
     Returns:
         표 위에 붙일 머리글.
     """
+    if arguments.mode == MODE_DESCENT:
+        return f"하강: 1층 → 보스 (층당 {arguments.rooms_per_floor}방, 첫 방 {DESCENT_FIRST_ROOM})"
     if arguments.mode == MODE_FLOOR:
         return f"층 {arguments.floor} — 시드마다 새로 만든 층 (클리어는 노드 수)"
     return f"방 연쇄: {' → '.join(CHAIN_ROOM_IDS)}"
@@ -184,13 +267,23 @@ def main() -> int:
     resources = load_batch_resources()
 
     started = time.perf_counter()
-    rows = [
-        run_one_batch(name, ruleset, resources, arguments) for name, ruleset in resources.candidates
-    ]
-    elapsed = time.perf_counter() - started
-
-    print(format_scope(arguments))
-    print(format_report(rows))
+    if arguments.mode == MODE_DESCENT:
+        descents = [
+            run_one_descent(name, ruleset, resources, arguments)
+            for name, ruleset in resources.candidates
+        ]
+        elapsed = time.perf_counter() - started
+        print(format_scope(arguments))
+        print(format_descent_report(descents, read_boss_floor(resources.balance)))
+        rows = []
+    else:
+        rows = [
+            run_one_batch(name, ruleset, resources, arguments)
+            for name, ruleset in resources.candidates
+        ]
+        elapsed = time.perf_counter() - started
+        print(format_scope(arguments))
+        print(format_report(rows))
     total_runs = arguments.runs * len(resources.candidates)
     print(
         f"\n{total_runs}런 {elapsed:.1f}초 "

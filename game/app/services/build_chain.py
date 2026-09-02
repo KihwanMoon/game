@@ -17,8 +17,17 @@
 """
 
 import secrets
+from collections.abc import Callable
 
 from game.schemas.room import RoomTemplate
+
+# 후보 하나를 고르는 것. 상한을 받아 `[0, 상한)` 을 돌려준다.
+#
+# **기본값은 `secrets` 다.** 방 고르기는 티켓을 낼 때 딱 한 번 돌고 그 결과가 얼려지므로
+# 시드가 필요 없고, 오히려 시드에서 파생하면 시드를 아는 클라이언트가 방 목록을 미리
+# 알게 된다. 갈아 끼울 수 있게 둔 것은 **밸런스 배치** 때문이다 — 최악 시드를 적어 놓고
+# 재현할 수 없으면 그 숫자로 고칠 곳을 못 찾는다 (P1).
+PickBelow = Callable[[int], int]
 
 
 def list_floor_rooms(
@@ -50,6 +59,7 @@ def build_room_chain(
     length: int,
     boss_room_id: str = "",
     boss_floor: int = 0,
+    pick: PickBelow = secrets.randbelow,
 ) -> tuple[str, ...]:
     """이 런이 돌 방 목록을 만든다.
 
@@ -70,6 +80,8 @@ def build_room_chain(
         length: 이을 방 수.
         boss_room_id: 보스 방. 보스 층의 마지막 자리에 선다.
         boss_floor: 보스가 서는 층. 0 이면 보스를 안 둔다.
+        pick: 후보를 고르는 것. 기본은 `secrets` 이고, 밸런스 배치가 재현 가능한 것으로
+            갈아 끼운다.
 
     Returns:
         방 id 들. 길이는 `length` 이며, 후보가 하나도 없으면 고른 방을 그대로 잇는다.
@@ -79,15 +91,11 @@ def build_room_chain(
     candidates = list_floor_rooms(rooms, floor, boss_room_id)
     if not candidates:
         return tuple(first_room_id for _step in range(max(1, length)))
-    picked = [
-        first_room_id
-        if first_room_id in candidates
-        else candidates[secrets.randbelow(len(candidates))]
-    ]
+    picked = [first_room_id if first_room_id in candidates else candidates[pick(len(candidates))]]
     while len(picked) < normal_length:
         fresh = [name for name in candidates if name not in picked]
         pool = fresh or [name for name in candidates if name != picked[-1]] or list(candidates)
-        picked.append(pool[secrets.randbelow(len(pool))])
+        picked.append(pool[pick(len(pool))])
     if is_boss_run:
         picked.append(boss_room_id)
     return tuple(picked)
@@ -100,6 +108,7 @@ def build_descent(
     rooms_per_floor: int,
     boss_room_id: str = "",
     boss_floor: int = 0,
+    pick: PickBelow = secrets.randbelow,
 ) -> tuple[str, ...]:
     """시작 층부터 마지막 층까지의 방을 한 줄로 잇는다.
 
@@ -114,6 +123,7 @@ def build_descent(
         rooms_per_floor: 층 하나에 드는 방 수.
         boss_room_id: 보스 방.
         boss_floor: 보스가 서는 층. 여기가 하강의 끝이다.
+        pick: 후보를 고르는 것. 기본은 `secrets` 다.
 
     Returns:
         방 id 들. 길이는 `(끝 층 - 시작 층 + 1) * rooms_per_floor` 다.
@@ -125,7 +135,7 @@ def build_descent(
         # 되풀이되면 하강이 같은 방의 반복이 된다.
         opener = first_room_id if floor == start_floor else ""
         picked.extend(
-            build_room_chain(rooms, floor, opener, rooms_per_floor, boss_room_id, boss_floor)
+            build_room_chain(rooms, floor, opener, rooms_per_floor, boss_room_id, boss_floor, pick)
         )
     return tuple(picked)
 
