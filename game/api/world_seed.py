@@ -57,3 +57,27 @@ def apply_floor_seed(
             if record is not None:
                 planted += 1
     return planted
+
+
+def list_floor_range_monsters(
+    pool: ConnectionPool, start_floor: int, room_ids: tuple[str, ...], rooms_per_floor: int
+) -> list:
+    """하강이 도는 **모든 층**의 지속 몬스터를 모은다.
+
+    시작 층만 보면 2층부터는 스냅샷이 비어, 깊은 층의 지속 개체가 전투에도 정산에도
+    안 나온다 — 「2층 정산에 레벨 1→1」이 찍히던 자리다.
+
+    Args:
+        pool: 연결 풀.
+        start_floor: 하강이 시작한 층.
+        room_ids: 하강 전체의 방 목록.
+        rooms_per_floor: 층 하나에 드는 방 수.
+
+    Returns:
+        층 순서대로의 레코드들.
+    """
+    span = max(1, len(room_ids) // max(1, rooms_per_floor))
+    found = []
+    for step in range(span):
+        found.extend(list_monsters(pool, start_floor + step))
+    return found

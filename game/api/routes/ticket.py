@@ -9,11 +9,11 @@ from fastapi import APIRouter, HTTPException, status
 from game.api.deps import CurrentAccount, get_context, get_core_version, get_pool
 from game.api.loadout_service import build_ticket_loadout
 from game.api.schemas import TicketRequest, TicketResponse
-from game.api.world_seed import apply_floor_seed
+from game.api.world_seed import apply_floor_seed, list_floor_range_monsters
 from game.app.progression.floors import BOSS_ROOM_ID, read_boss_floor, resolve_floor
 from game.app.services.build_chain import build_descent
 from game.app.store.accounts import find_player_entity
-from game.app.store.monsters import build_monster_snapshot, list_monsters, save_snapshots
+from game.app.store.monsters import build_monster_snapshot, save_snapshots
 from game.app.store.progress import read_reached_floor
 from game.app.store.tickets import CHAIN_LENGTH, create_ticket
 from game.schemas.monster_snapshot import build_snapshot_payload, sort_snapshots
@@ -71,12 +71,21 @@ def create_run_ticket(request: TicketRequest, account: CurrentAccount) -> Ticket
     # f(시드, 규칙표, 코어버전, 스냅샷) 으로 유지되고, 서버가 같은 상태로 재시뮬할 수 있다.
     # **없으면 심는다.** 이 길이 없어 깊은 층이 영영 비어 있었다 — 스냅샷·도감·되찾기가
     # 전부 그 위에 서 있는데 바닥이 없었다.
-    apply_floor_seed(pool, context.rooms, ticket.room_ids[:CHAIN_LENGTH], floor)
+    # **하강이 도는 모든 층을 심는다.** 티켓 하나가 1층부터 보스층까지 돌므로 시작
+    # 층만 심으면 2층부터는 지속 몬스터가 영영 없다 — 정산이 「레벨 1→1」로 찍히던
+    # 자리다(실제 신고).
+    for step, offset in enumerate(range(0, len(ticket.room_ids), CHAIN_LENGTH)):
+        apply_floor_seed(
+            pool,
+            context.rooms,
+            ticket.room_ids[offset : offset + CHAIN_LENGTH],
+            floor + step,
+        )
     balance_by_id = {kind["id"]: kind for kind in context.balance["enemies"]}
     snapshots = sort_snapshots(
         tuple(
             build_monster_snapshot(record, balance_by_id[record.catalog_id])
-            for record in list_monsters(pool, floor)
+            for record in list_floor_range_monsters(pool, floor, ticket.room_ids, CHAIN_LENGTH)
             if record.catalog_id in balance_by_id
         )
     )
