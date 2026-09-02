@@ -179,7 +179,11 @@ const COOLDOWN_LABELS: ReadonlyMap<string, string> = new Map([
  * @returns 스킬 id 들. 정렬돼 있다.
  */
 export function listRulesetSkills(
-  rules: readonly { action: string; actionParam: string | null }[],
+  rules: readonly {
+    action: string
+    actionParam: string | null
+    conditions?: { terms: readonly { lhs: string; lhsParam?: string | null }[] }
+  }[],
 ): readonly string[] {
   const skills = new Set<string>()
   for (const rule of rules) {
@@ -188,6 +192,16 @@ export function listRulesetSkills(
     } else if (COOLDOWN_LABELS.has(rule.action)) {
       // 별칭 시절의 규칙표 — SKILL_2 가 행동 id 로 직접 적혀 있다.
       skills.add(rule.action)
+    }
+    // **조건도 훑는다.** 「쿨타임 완료[SKILL_1] == 참」처럼 조건에서만 스킬을 읽는
+    // 규칙이 있다 — 행동만 보면 그 스킬의 쿨타임이 줄에서 빠진다(실제 신고).
+    for (const term of rule.conditions?.terms ?? []) {
+      if (
+        (term.lhs === 'self_cooldown_ready' || term.lhs === 'self_skill_ready') &&
+        term.lhsParam
+      ) {
+        skills.add(term.lhsParam)
+      }
     }
   }
   skills.delete('ATTACK')

@@ -236,7 +236,7 @@ describe('수치 이펙트 (간단한 표시)', () => {
 describe('쿨타임 줄', () => {
   it('★ 잠긴 것만 남은 틱과 함께 적는다 — 0 까지 적으면 무엇이 잠겼는지 안 보인다', async () => {
     const { formatCooldowns, listRulesetSkills } = await import('./BattleView')
-    const totals = new Map([['AREA_ATTACK', 10], ['HEAL', 6], ['SKILL_2', 4]])
+    const totals = new Map([['AREA_ATTACK', 10], ['HEAL', 6], ['SKILL_2', 4], ['SKILL_1', 6]])
     const table = new Map([['AREA_ATTACK', 3]])
     // **규칙표가 부르는 스킬만** — 들고만 있는 스킬은 이 판의 정보가 아니다 (실제 요청).
     const skills = listRulesetSkills([
@@ -244,12 +244,18 @@ describe('쿨타임 줄', () => {
       { action: 'SKILL_2', actionParam: null },
       { action: 'ATTACK', actionParam: null },
       { action: 'USE_ITEM', actionParam: 'POTION' },
+      // 조건에서만 스킬을 읽는 규칙 — 행동만 보면 이 스킬이 줄에서 빠진다 (실제 신고).
+      {
+        action: 'ATTACK',
+        actionParam: null,
+        conditions: { terms: [{ lhs: 'self_cooldown_ready', lhsParam: 'SKILL_1' }] },
+      },
     ])
-    expect(skills).toEqual(['AREA_ATTACK', 'SKILL_2'])
+    expect(skills).toEqual(['AREA_ATTACK', 'SKILL_1', 'SKILL_2'])
     // 남은틱/전체틱 — 0/10 이 곧 「준비됨」이다.
-    expect(formatCooldowns(table, skills, totals)).toBe('쿨 — 광역 3/10틱 · 스킬 2 0/4틱')
+    expect(formatCooldowns(table, skills, totals)).toBe('쿨 — 광역 3/10틱 · 스킬 1 0/6틱 · 스킬 2 0/4틱')
     // **안 쓴 틱에도 줄이 산다** — 사라지면 「정보가 없어졌다」로 읽힌다 (실제 신고).
-    expect(formatCooldowns(undefined, skills, totals)).toBe('쿨 — 광역 0/10틱 · 스킬 2 0/4틱')
+    expect(formatCooldowns(undefined, skills, totals)).toBe('쿨 — 광역 0/10틱 · 스킬 1 0/6틱 · 스킬 2 0/4틱')
     expect(formatCooldowns(undefined, [], totals)).toBe('')
   })
 })
