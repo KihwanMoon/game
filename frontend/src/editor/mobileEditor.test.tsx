@@ -102,6 +102,7 @@ function buildActions(): RuleRowActions {
     changeLhs: vi.fn(),
     changeTerm: vi.fn(),
     changeAction: vi.fn(),
+    changeParam: vi.fn(),
     addTerm: vi.fn(),
     removeTerm: vi.fn(),
     addRule: vi.fn(),
