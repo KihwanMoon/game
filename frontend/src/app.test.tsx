@@ -368,7 +368,9 @@ describe('계정이 바뀌면 화면도 바뀐다', () => {
     const source = readFileSync(fileURLToPath(new URL('./App.tsx', import.meta.url)), 'utf8')
     const loader = source.slice(source.indexOf('async function loadAccountState'))
     const body = loader.slice(0, loader.indexOf('\n  }'))
-    for (const call of ['readProgress', 'readInventory', 'readBestiary', 'readAdminOverview']) {
+    // `readBagState` 는 가방과 소모품 칸을 함께 읽는 하나뿐인 문이다. 여기서 가방만
+    // 읽던 시절에 소모품 칸이 영원히 「서버에 닿지 못했다」로 굳어 있었다.
+    for (const call of ['readProgress', 'readBagState', 'readBestiary', 'readAdminOverview']) {
       expect(body).toContain(call)
     }
   })

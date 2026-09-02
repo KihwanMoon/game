@@ -138,8 +138,7 @@ import {
   applyConsumableAction,
   applyItemAction,
   buildRuleSetPayload,
-  readConsumables,
-  readInventory,
+  readBagState,
   readItemContext,
   registerAccount,
   requestTicket,
@@ -154,6 +153,7 @@ import {
   type DiscoveryView,
   type LeaderboardView,
   type ProgressView,
+  type BagState,
   type ConsumableView,
   type InventoryView,
   type RunResult,
@@ -778,7 +778,11 @@ export function App(): React.JSX.Element {
       // **가방만 다시 읽으면 「내 정보」가 옛 값으로 남는다.** 장착·해제·복구·봉인 해제는
       // 전부 캐릭터 시트의 숫자를 바꾸는데, 그 숫자는 `progress.loadout` 에서 온다 —
       // 응답이 실어 주는 것은 가방뿐이다.
-      void readConsumables(account).then(setConsumables)
+      void readBagState(account).then((bag) => {
+        if (bag.consumables !== undefined) {
+          setConsumables(bag.consumables)
+        }
+      })
       void readItemContext(account).then((context) => {
         if (context.inventory !== undefined) {
           setInventory(context.inventory)
@@ -828,8 +832,17 @@ export function App(): React.JSX.Element {
    * @param token 기기 토큰.
    */
   function refreshBag(token: string): void {
-    void readInventory(token).then(setInventory)
-    void readConsumables(token).then(setConsumables)
+    void readBagState(token).then(applyBagState)
+  }
+
+  /**
+   * 읽어 온 가방 상태를 화면에 붙인다.
+   *
+   * @param bag 가방과 소모품 칸.
+   */
+  function applyBagState(bag: BagState): void {
+    setInventory(bag.inventory)
+    setConsumables(bag.consumables)
   }
 
   /**
@@ -924,7 +937,9 @@ export function App(): React.JSX.Element {
    */
   async function loadAccountState(token: string): Promise<void> {
     setProfile(await readAccount(token))
-    setInventory(await readInventory(token))
+    // **가방과 칸을 함께 읽는다.** 여기서 가방만 읽어 소모품 칸이 영원히 「서버에
+    // 닿지 못했다」로 굳어 있었다 — 칸은 뜨는데 아무것도 끼울 수 없었다.
+    applyBagState(await readBagState(token))
     setBestiary(await readBestiary(token))
     setDiscovery(await readDiscovery(token))
     setProgress(await readProgress(token))
@@ -1261,7 +1276,11 @@ export function App(): React.JSX.Element {
         reward: result.reward,
       })
       // 층마다 들어오는 것이 있으므로 가방·성장·도감을 그때그때 다시 읽는다.
-      void readConsumables(account).then(setConsumables)
+      void readBagState(account).then((bag) => {
+        if (bag.consumables !== undefined) {
+          setConsumables(bag.consumables)
+        }
+      })
       void readItemContext(account).then((context) => {
         if (context.inventory !== undefined) {
           setInventory(context.inventory)

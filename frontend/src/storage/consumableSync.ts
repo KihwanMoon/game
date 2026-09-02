@@ -7,7 +7,8 @@
  * `serverSync.ts` 에서 갈라 나온 것이 아니라 처음부터 따로 둔다 — 저쪽은 이미 길고,
  * 이쪽은 라우트 넷과 값 하나만 안다.
  */
-import { TOKEN_HEADER, readErrorDetail, sendRequest } from './serverSync'
+import type { InventoryView } from './serverSync'
+import { TOKEN_HEADER, readErrorDetail, readInventory, sendRequest } from './serverSync'
 
 /** 칸 하나. */
 export interface ConsumableSlotView {
@@ -156,4 +157,31 @@ export async function applyConsumableAction(
     return { view: undefined, detail: await readErrorDetail(response) }
   }
   return { view: buildConsumableView((await response.json()) as RawBody), detail: '' }
+}
+
+
+/** 가방과 소모품 칸을 함께 담은 값. */
+export interface BagState {
+  readonly inventory: InventoryView | undefined
+  readonly consumables: ConsumableView | undefined
+}
+
+/**
+ * 가방과 소모품 칸을 **한 번에** 읽는다.
+ *
+ * **문을 하나로 둔 이유가 있다.** 둘을 따로 읽으면 어느 한 경로에서 하나를 빠뜨리기
+ * 쉽고, 실제로 부팅 경로가 가방만 읽어 소모품 칸이 영원히 「서버에 닿지 못했다」로
+ * 굳어 있었다 — 화면에는 칸이 뜨는데 아무것도 끼울 수 없었다.
+ *
+ * 둘은 한 몸이다. 끼우면 가방에서 빠지고 칸이 차며, 팔면 가방이 줄고 지갑이 는다.
+ *
+ * @param token 기기 토큰.
+ * @returns 가방과 칸. 서버에 못 닿은 쪽은 undefined 다.
+ */
+export async function readBagState(token: string): Promise<BagState> {
+  const [inventory, consumables] = await Promise.all([
+    readInventory(token),
+    readConsumables(token),
+  ])
+  return { inventory, consumables }
 }
