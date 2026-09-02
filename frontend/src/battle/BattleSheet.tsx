@@ -155,6 +155,8 @@ export interface BattleSheetProps {
   readonly rules: readonly RuleRowView[]
   readonly onToggleRule: (priority: number) => void
   readonly entries: readonly LogRowProps[]
+  /** 스킬 쿨타임 한 줄. 비어 있으면 안 그린다 — 도는 쿨이 없을 때 빈 줄은 자리 낭비다. */
+  readonly cooldowns?: string
   /** 탭 본문 아래 고정되는 하단. 배치마다 배열이 달라 슬롯으로 받는다. */
   readonly foot?: ReactNode
   /**
@@ -177,6 +179,9 @@ export function BattleSheet(props: BattleSheetProps): React.JSX.Element {
   return (
     <div className="battle__sheet">
       <SheetTabs active={props.tab} counts={props.counts} onChange={props.onTabChange} />
+      {props.cooldowns === undefined || props.cooldowns === '' ? null : (
+        <div className="battle__cooldowns">{props.cooldowns}</div>
+      )}
       <div className="battle__sheet-body" ref={props.bodyRef}>
         {props.tab === 'log' ? (
           <LogPanel entries={props.entries} />

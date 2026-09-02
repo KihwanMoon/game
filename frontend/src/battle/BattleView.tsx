@@ -149,6 +149,37 @@ function readCarried(setup: BattleSetup, kind: string): number {
   return 0
 }
 
+/** 쿨타임 줄에 적을 스킬 이름. 규칙 편집기의 인자 이름과 같은 말이다. */
+const COOLDOWN_LABELS: ReadonlyMap<string, string> = new Map([
+  ['ATTACK', '공격'],
+  ['SKILL_1', '스킬 1'],
+  ['SKILL_2', '스킬 2'],
+  ['AREA_ATTACK', '광역'],
+  ['HEAL', '치유'],
+  ['SUMMON', '소환'],
+  ['GUARD_BRACE', '방어'],
+])
+
+/**
+ * 도는 쿨타임을 한 줄로 적는다.
+ *
+ * **0 은 안 적는다.** 전부 적으면 매 틱 같은 줄이 서서 「지금 무엇이 잠겼는가」가
+ * 안 보인다 — 잠긴 것만 남은 틱과 함께 적는다 (P1).
+ *
+ * @param cooldowns 플레이어의 쿨타임 표.
+ * @returns 화면에 적을 한 줄. 도는 쿨이 없으면 빈 문자열.
+ */
+export function formatCooldowns(cooldowns: ReadonlyMap<string, number> | undefined): string {
+  if (cooldowns === undefined) {
+    return ''
+  }
+  const parts = [...cooldowns.entries()]
+    .filter(([, left]) => left > 0)
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([skill, left]) => `${COOLDOWN_LABELS.get(skill) ?? skill} ${String(left)}틱`)
+  return parts.length === 0 ? '' : `쿨타임 — ${parts.join(' · ')}`
+}
+
 export function BattleView(props: BattleViewProps): React.JSX.Element {
   const mode = useViewportMode()
   const [speed, setSpeed] = useState(INITIAL_SPEED)
@@ -371,6 +402,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         potionsMax={readCarried(props.setup, 'POTION')}
         scrolls={player === undefined ? 0 : countItem(player, 'SCROLL')}
         scrollsMax={readCarried(props.setup, 'SCROLL')}
+        cooldowns={formatCooldowns(player?.cooldowns)}
         tab={tab}
         onTabChange={setTab}
         bodyRef={sheetRef}
@@ -406,6 +438,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         potionsMax={readCarried(props.setup, 'POTION')}
         scrolls={player === undefined ? 0 : countItem(player, 'SCROLL')}
         scrollsMax={readCarried(props.setup, 'SCROLL')}
+        cooldowns={formatCooldowns(player?.cooldowns)}
         tab={tab}
         onTabChange={setTab}
         bodyRef={sheetRef}

@@ -222,8 +222,8 @@ describe('도면은 고정이고 스크롤되지 않는다', () => {
     // 짜부라지고, 바닥만 깔면 화면이 통째로 스크롤된다 — 스크롤되는 화면은 보이는
     // 화면이 아니다(실제 피드백 두 번).
     const block = cutRule('.battle--portrait')
-    expect(block).toContain('minmax(calc(var(--plan-cell) * 5), 1fr) var(--bar-status)')
-    expect(block).toContain('0.6fr')
+    expect(block).toContain('minmax(calc(var(--plan-cell) * 5), calc(var(--plan-cell) * 8))')
+    expect(block).toContain('1fr var(--bar-bottom)')
     expect(block).toContain('var(--bar-bottom)')
   })
 
@@ -236,7 +236,7 @@ describe('도면은 고정이고 스크롤되지 않는다', () => {
 
   it('상단 묶음에 상한이 있다 — 층 정산 문구가 길어도 도면·시트를 못 밀어낸다', () => {
     const block = cutRule('.battle--portrait .battle__bar--top')
-    expect(block).toContain('max-height: calc(var(--bar-top) * 3)')
+    expect(block).toContain('max-height: calc(var(--bar-top) * 2)')
     expect(block).toContain('overflow-y: auto')
   })
 

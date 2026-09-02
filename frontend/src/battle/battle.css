@@ -172,12 +172,12 @@
      한 몫을 받는다. */
   /* **섹션마다 바닥이 있다** (실제 피드백). 도면은 다섯 칸 높이, 시트는 로그 다섯 줄 +
      탭 줄 아래로는 안 줄어든다 — 어느 한 줄이 다른 줄을 0 으로 밀 수 없다. */
+  /* **남는 높이는 전부 규칙·로그의 것이다** (실제 피드백). 도면은 다섯~여덟 칸 사이로
+     상한이 있고, 시트만 1fr 이다 — 다른 어떤 줄도 시트를 밀어낼 수 없다. */
   grid-template-rows:
-    auto var(--bar-speed) minmax(calc(var(--plan-cell) * 5), 1fr) var(--bar-status)
-    minmax(
-      calc(var(--log-row-h) * 4 + var(--sheet-tab-h) + var(--btn-tap-h) * 2 + var(--sp-8)),
-      0.6fr
-    ) var(--bar-bottom);
+    auto var(--bar-speed)
+    minmax(calc(var(--plan-cell) * 5), calc(var(--plan-cell) * 8)) var(--bar-status)
+    1fr var(--bar-bottom);
 
   /* 그래도 모자라면(가로로 눕힌 낮은 화면 등) 화면이 통째로 흐른다 — 마지막 안전판이다. */
   overflow-y: auto;
@@ -625,7 +625,7 @@
 .battle--portrait .battle__bar--top {
   /* **상단이 화면을 다 먹던 자리.** 층 정산 문구가 길어지면 상단 auto 행이 대여섯 줄로
      자라 도면·시트를 밀어냈다(실제 스크린샷). 바 세 개 높이에서 멈추고 안에서 흐른다. */
-  max-height: calc(var(--bar-top) * 3);
+  max-height: calc(var(--bar-top) * 2);
   overflow-y: auto;
   height: auto;
   min-height: var(--bar-top);
@@ -640,4 +640,24 @@
 .battle--portrait .battle__controls {
   order: 1;
   flex-basis: 100%;
+}
+
+
+/* 세로에서 자원 눈금(핍)을 숨긴다 — 숫자가 이미 말한다. 핍까지 그리면 하단 바가 세
+   줄로 자라 시트를 민다 (실제 스크린샷). */
+.battle--portrait .battle__bar--bottom .ds-resource__pips {
+  display: none;
+}
+
+/* 스킬 쿨타임 줄. 시트 탭 바로 아래 한 줄 — 규칙이 「불가」인 이유가 여기 있다. */
+.battle__cooldowns {
+  flex: 0 0 auto;
+  padding: var(--sp-1) var(--plan-pad);
+  overflow: hidden;
+  border-bottom: var(--border);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }

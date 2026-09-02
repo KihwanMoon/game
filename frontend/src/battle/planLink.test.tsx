@@ -232,3 +232,13 @@ describe('수치 이펙트 (간단한 표시)', () => {
     ])
   })
 })
+
+describe('쿨타임 줄', () => {
+  it('★ 잠긴 것만 남은 틱과 함께 적는다 — 0 까지 적으면 무엇이 잠겼는지 안 보인다', async () => {
+    const { formatCooldowns } = await import('./BattleView')
+    const table = new Map([['AREA_ATTACK', 3], ['HEAL', 0], ['SKILL_1', 1]])
+    expect(formatCooldowns(table)).toBe('쿨타임 — 광역 3틱 · 스킬 1 1틱')
+    expect(formatCooldowns(new Map([['HEAL', 0]]))).toBe('')
+    expect(formatCooldowns(undefined)).toBe('')
+  })
+})

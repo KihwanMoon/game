@@ -104,6 +104,7 @@ export interface BattlePortraitProps {
   /** 남은 주문서와 실은 수. 물약과 같은 자리다 — 소모품 현황이 플레이 중에 보여야 한다. */
   readonly scrolls: number
   readonly scrollsMax: number
+  readonly cooldowns?: string
   readonly tab: SheetTab
   readonly onTabChange: (tab: SheetTab) => void
   /** 시트 본문. 로그를 마지막 줄에 붙여 두려고 밖에서 잡는다. */
@@ -165,6 +166,7 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
         rules={props.rows}
         onToggleRule={props.onToggleRule}
         entries={props.entries}
+        cooldowns={props.cooldowns ?? ''}
         bodyRef={props.bodyRef}
         foot={
           <SheetFoot

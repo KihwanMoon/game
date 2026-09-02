@@ -80,6 +80,7 @@ export interface BattleLandscapeProps {
   /** 남은 주문서와 실은 수. 물약과 같은 자리다 — 소모품 현황이 플레이 중에 보여야 한다. */
   readonly scrolls: number
   readonly scrollsMax: number
+  readonly cooldowns?: string
   /** 코어가 낸 OUTCOME_* 값. 문구는 `outcomeText` 한 곳이 만든다. */
   readonly outcome: string
   /** 지금 걸린 예고 문구. 없으면 위협 칸을 그리지 않는다. */
