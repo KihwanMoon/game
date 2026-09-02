@@ -59,15 +59,15 @@ def save_catalog_entry(pool: ConnectionPool, entry: ItemCatalogEntry) -> None:
         connection.execute(
             "INSERT INTO item_catalog (catalog_id, kind, slot, hands, grade, label_ko,"
             " tags, affixes, requirements, grants_skill, min_floor, is_retired, attack_range,"
-            " use_tag)"
-            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            " use_tag, stack_max)"
+            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
             " ON CONFLICT (catalog_id) DO UPDATE SET"
             " kind = EXCLUDED.kind, slot = EXCLUDED.slot, hands = EXCLUDED.hands,"
             " grade = EXCLUDED.grade, label_ko = EXCLUDED.label_ko, tags = EXCLUDED.tags,"
             " affixes = EXCLUDED.affixes, requirements = EXCLUDED.requirements,"
             " grants_skill = EXCLUDED.grants_skill, min_floor = EXCLUDED.min_floor,"
             " is_retired = EXCLUDED.is_retired, attack_range = EXCLUDED.attack_range,"
-            " use_tag = EXCLUDED.use_tag,"
+            " use_tag = EXCLUDED.use_tag, stack_max = EXCLUDED.stack_max,"
             " updated_at = now()",
             (
                 entry.catalog_id,
@@ -94,6 +94,7 @@ def save_catalog_entry(pool: ConnectionPool, entry: ItemCatalogEntry) -> None:
                 entry.is_retired,
                 entry.attack_range,
                 entry.use_tag,
+                entry.stack_max,
             ),
         )
 
@@ -131,6 +132,8 @@ def build_entry_row(row: tuple) -> ItemCatalogEntry:
         raw["attack_range"] = row[12]
     if row[13]:
         raw["use_tag"] = row[13]
+    if row[14]:
+        raw["stack_max"] = row[14]
     return parse_item(raw)
 
 
@@ -149,8 +152,8 @@ def list_catalog(pool: ConnectionPool) -> dict[str, ItemCatalogEntry]:
     with pool.connection() as connection:
         rows = connection.execute(
             "SELECT catalog_id, kind, slot, hands, grade, label_ko, tags, affixes,"
-            " requirements, grants_skill, min_floor, is_retired, attack_range, use_tag"
-            " FROM item_catalog"
+            " requirements, grants_skill, min_floor, is_retired, attack_range, use_tag,"
+            " stack_max FROM item_catalog"
             " ORDER BY catalog_id"
         ).fetchall()
     return {str(row[0]): build_entry_row(row) for row in rows}

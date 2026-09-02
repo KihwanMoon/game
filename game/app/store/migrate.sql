@@ -339,3 +339,36 @@ ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS cleared_floor INTEGER NOT NULL D
 ALTER TABLE run_submission DROP CONSTRAINT IF EXISTS run_submission_ticket_id_key;
 
 CREATE INDEX IF NOT EXISTS run_submission_ticket_idx ON run_submission (ticket_id, submitted_at);
+
+
+-- ── 가방에 쌓이지 않은 소모품을 스택으로 옮긴다 (설계/4_아이템 §5) ──────
+--
+-- 소모품 발급이 인스턴스로 들어가고 있었다. **세는 쪽은 스택만 본다** — 그래서 물약을
+-- 여섯 개 들고도 전투에는 기본 지급 두 개만 나갔다. 「가방에 있는 소모품을 못 쓴다」의
+-- 정체다.
+--
+-- 이미 들어와 있는 것을 옮긴다. 한 칸에 하나씩이라 칸 수는 그대로이고, 세는 쪽이
+-- 비로소 그것을 본다. 스택 상한을 넘겨 합치지는 않는다 — 합치려면 칸을 비워야 하고,
+-- 그 조작이 실패하면 아이템이 사라진다.
+UPDATE inventory_slot s
+   SET stack_catalog_id = i.catalog_id,
+       stack_count = 1,
+       item_id = NULL
+  FROM item_instance i, item_catalog c
+ WHERE i.id = s.item_id
+   AND c.catalog_id = i.catalog_id
+   AND c.kind = 'CONSUMABLE';
+
+-- 옮기고 난 인스턴스는 어느 칸도 안 가리키므로 화면에 안 뜬다. **지우지 않는다** —
+-- 원장(`item_event`)과 굴림 기록이 그 id 를 가리키므로 지우면 과거를 못 읽는다.
+
+
+-- ── 스택 상한이 DB 로 안 넘어와 있었다 (설계/4_아이템 §5) ────────────────
+--
+-- 카탈로그가 파일에서 DB 로 옮겨 올 때 `stack_max` 가 빠졌다. 그래서 상한이 1 로 읽혀
+-- **소모품이 칸마다 하나씩 흩어졌다** — 물약 여섯 개가 가방 스무 칸 중 여섯을 먹는다.
+ALTER TABLE item_catalog ADD COLUMN IF NOT EXISTS stack_max INTEGER NOT NULL DEFAULT 1;
+
+-- 씨앗의 값을 채운다. 소모품만 1 보다 크다.
+UPDATE item_catalog SET stack_max = 9 WHERE catalog_id = 'potion_heal' AND stack_max <= 1;
+UPDATE item_catalog SET stack_max = 5 WHERE catalog_id = 'scroll_shield' AND stack_max <= 1;

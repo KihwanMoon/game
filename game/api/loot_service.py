@@ -29,9 +29,9 @@ from game.app.store.drops import (
     record_roll,
 )
 from game.app.store.item_catalog import read_generation
-from game.app.store.items import create_item
+from game.app.store.items import apply_stack_grant, create_item
 from game.app.store.monsters import load_snapshots
-from game.schemas.item import GRADE_SEALED_SLOTS, list_grades_downward
+from game.schemas.item import GRADE_SEALED_SLOTS, ItemKind, list_grades_downward
 
 # 스냅샷에 없는 종의 기준 레벨. 방이 그때 낳은 잡몹은 개체 레벨이 없다.
 FLOOR_LEVEL_STEP = 1
@@ -124,6 +124,11 @@ def create_issued_item(
     """
     entry = get_item_catalog()[catalog_id]
     grade = str(context["grade"])
+    # **소모품은 쌓는다.** 인스턴스로 넣으면 세는 쪽이 못 보고, 들고도 못 쓰는 물약이 된다.
+    if entry.kind is ItemKind.CONSUMABLE:
+        if not apply_stack_grant(pool, entity_id, catalog_id, max(1, entry.stack_max)):
+            return False, f"{entry.label_ko} 을(를) 놓쳤다 — 가방이 가득 찼다"
+        return True, f"{entry.label_ko} 획득"
     item_id = create_item(
         pool,
         entity_id,

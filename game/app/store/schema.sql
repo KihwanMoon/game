@@ -417,6 +417,9 @@ CREATE TABLE IF NOT EXISTS item_catalog (
     -- **코드가 읽는 태그는 이것 하나다** (§4). 소모품이 무엇으로 쓰이는가이며
     -- `USE_ITEM[kind]` 의 파라미터와 같은 값이다.
     use_tag           TEXT,
+    -- 한 칸에 쌓을 수 있는 개수 (§5). **소모품이 스택으로 들어가려면 이 값이 필요하다** —
+    -- 없으면 1 로 읽혀 물약 여섯 개가 여섯 칸을 먹는다.
+    stack_max         INTEGER     NOT NULL DEFAULT 1,
     -- 표시 전용. 코드는 안 읽는다 — 화면이 묶어 보여 주는 데만 쓴다.
     tags              JSONB       NOT NULL DEFAULT '[]'::jsonb,
     affixes           JSONB       NOT NULL DEFAULT '[]'::jsonb,
