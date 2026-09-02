@@ -356,6 +356,13 @@ def apply_monster_defeat(pool: ConnectionPool, record_id: int, zone_floor: int) 
         level, _ = compute_level(current, zone_floor)
         total_xp = compute_defeat_xp(current, level, zone_floor)
         level, _ = compute_level(total_xp, zone_floor)
+        # **층이 바닥이다** (난이도 개편: 층 = 최소 레벨). 태어날 때 층만큼 받았는데
+        # 죽을 때마다 그 밑으로 깎이면, 몇 번 잡힌 깊은 층 몬스터가 1층 것보다 약해져
+        # 「층 = 레벨」이 거짓이 된다. 감쇠는 층 위로 자란 몫에만 닿는다.
+        floor_level = max(1, int(zone_floor))
+        if level < floor_level:
+            level = floor_level
+            total_xp = max(total_xp, compute_level_xp(floor_level))
         connection.execute(
             "UPDATE entity_record SET total_xp = %s, level = %s, updated_at = now() WHERE id = %s",
             (total_xp, level, record_id),

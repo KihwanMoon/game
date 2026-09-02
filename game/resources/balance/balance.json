@@ -21,7 +21,7 @@
     "정보는 룸 템플릿의 min_floor 로 옮겼다 — 어느 층에 나오는가는 방 배치가 정한다",
     "(docs/04 P-2)."
   ],
-  "balance_version": 8,
+  "balance_version": 9,
   "damage_formula": {
     "_note": "TDD §8 을 정수 연산으로 옮긴 것. // 는 내림 나눗셈이다.",
     "defense_denominator": "defense + soft_cap_base + soft_cap_per_floor * floor",
@@ -295,11 +295,11 @@
     }
   ],
   "floor_scale": {
-    "_note": "층 깊이 스케일. **복리다** — 한 층 내려갈 때마다 HP·공격력에 mult/100 을 곱하고 층마다 정수 내림으로 접는다 (R5, e3). 예전의 합산(pct*(층-1))은 깊은 층에서 기울기가 일정해 체감이 죽었다 — 150 이면 10층 적이 1층의 약 38배다 — 장비·레벨 없이는 못 내려가는 것이 의도다. 적용 지점은 개체를 만드는 세 자리 전부다: 방 배치·소환물·추격자 (game/app/simulation/scaling.py). anti_abuse 의 층 체류 스케일과는 다른 축이며 둘은 곱해진다. **끝이 있다** — max_floor 가 마지막 층이고 boss_floor 에 보스가 선다.",
+    "_note": "층 깊이 스케일. **복리다** — 한 층 내려갈 때마다 HP·공격력에 mult/100 을 곱하고 층마다 정수 내림으로 접는다 (R5, e3). 예전의 합산(pct*(층-1))은 깊은 층에서 기울기가 일정해 체감이 죽었다 — 120 이면 10층 적이 1층의 약 5.1배다 (150 은 38배라 가팔라서 하향). 적용 지점은 개체를 만드는 세 자리 전부다: 방 배치·소환물·추격자 (game/app/simulation/scaling.py). anti_abuse 의 층 체류 스케일과는 다른 축이며 둘은 곱해진다. **끝이 있다** — max_floor 가 마지막 층이고 boss_floor 에 보스가 선다.",
     "max_floor": 10,
     "boss_floor": 10,
     "floor_heal_pct": 30,
-    "enemy_mult_pct_per_floor": 150
+    "enemy_mult_pct_per_floor": 120
   },
   "anti_abuse": {
     "_note": "GDD §7. v1 수식의 최적해가 '회복 타일 위 무한 대기' 였던 것을 막는다. 등장 시점 40 -> 20 은 W6 통합의 조정이다. 40 틱은 방 하나가 대개 끝나는 시간이라 추격자가 한 번도 나오지 않았고, 그래서 시간을 끄는 규칙표(spring_camp 135틱)가 아무 대가도 치르지 않았다. 20 에서 그 전략이 처음 무너진다 (실측 docs/05 의 등장 시점 표).",
