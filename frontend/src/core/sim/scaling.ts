@@ -22,8 +22,7 @@
 
 import { FIRST_FLOOR } from '../schemas'
 
-export const DEFAULT_HP_PCT_PER_FLOOR = 25
-export const DEFAULT_ATTACK_PCT_PER_FLOOR = 20
+export const DEFAULT_MULT_PCT_PER_FLOOR = 110
 
 // 층 번호의 시작값은 schemas/room 이 정본이다 — min_floor 의 기본값과 같은 값이어야
 // 하므로 여기서 다시 적지 않는다. 층 1 의 보너스는 0 이다.
@@ -32,20 +31,17 @@ const PERCENT_BASE = 100
 
 /** balance.json 의 floor_scale 절을 그대로 담는 값. */
 export interface FloorScale {
-  readonly hpPctPerFloor: number
-  readonly attackPctPerFloor: number
+  readonly multPctPerFloor: number
 }
 
 /** balance.json 의 floor_scale 절 원시 형태. */
 export interface RawFloorScale {
-  readonly enemy_hp_pct_per_floor?: number
-  readonly enemy_attack_pct_per_floor?: number
-}
+  readonly enemy_mult_pct_per_floor?: number
+  }
 
 /** 절이 통째로 빠졌을 때의 안전망. 값을 바꿀 자리가 아니다. */
 export const DEFAULT_FLOOR_SCALE: FloorScale = {
-  hpPctPerFloor: DEFAULT_HP_PCT_PER_FLOOR,
-  attackPctPerFloor: DEFAULT_ATTACK_PCT_PER_FLOOR,
+  multPctPerFloor: DEFAULT_MULT_PCT_PER_FLOOR,
 }
 
 /**
@@ -57,36 +53,30 @@ export const DEFAULT_FLOOR_SCALE: FloorScale = {
  *   보상이 된다.
  */
 export function buildFloorScale(floorScale: RawFloorScale | undefined): FloorScale {
-  const hpPct = floorScale?.enemy_hp_pct_per_floor ?? DEFAULT_HP_PCT_PER_FLOOR
-  const attackPct = floorScale?.enemy_attack_pct_per_floor ?? DEFAULT_ATTACK_PCT_PER_FLOOR
-  if (hpPct < 0 || attackPct < 0) {
-    throw new RangeError(`층 스케일 퍼센트는 0 이상이어야 한다: ${hpPct}, ${attackPct}`)
+  const mult = Math.trunc(Number(floorScale?.enemy_mult_pct_per_floor ?? DEFAULT_MULT_PCT_PER_FLOOR))
+  if (mult < PERCENT_BASE) {
+    throw new Error(`층 스케일 배율은 100 이상이어야 한다: ${String(mult)}`)
   }
-  return { hpPctPerFloor: hpPct, attackPctPerFloor: attackPct }
+  return { multPctPerFloor: mult }
 }
 
 /**
- * 층 깊이가 만드는 보너스 퍼센트.
+ * 층 깊이를 복리로 얹은 능력치 (e3).
  *
- * @param pctPerFloor 한 층 내려갈 때마다 얹을 퍼센트.
- * @param floor 현재 층. 1 이 첫 층이다.
- * @returns 보너스 퍼센트. 층 1 에서는 0 이다.
- */
-export function calculateDepthBonusPct(pctPerFloor: number, floor: number): number {
-  return Math.max(0, floor - FIRST_FLOOR) * pctPerFloor
-}
-
-/**
- * 층 깊이 보너스를 얹은 능력치.
+ * **층마다 내림으로 접는다** — 파이썬과 같은 줄이다. 거듭제곱을 한 번에 계산하면
+ * 부동소수가 끼어 두 코어가 마지막 자리에서 갈린다 (R5).
  *
- * @param base balance.json 에 적힌 층 1 기준값.
- * @param pctPerFloor 한 층 내려갈 때마다 얹을 퍼센트.
+ * @param base 층 1 기준값.
+ * @param multPctPerFloor 한 층 내려갈 때마다 곱할 퍼센트 (110 = ×1.1).
  * @param floor 현재 층.
  * @returns 내림 정수로 접은 능력치.
  */
-export function calculateScaledStat(base: number, pctPerFloor: number, floor: number): number {
-  const bonusPct = calculateDepthBonusPct(pctPerFloor, floor)
-  return Math.floor((base * (PERCENT_BASE + bonusPct)) / PERCENT_BASE)
+export function calculateScaledStat(base: number, multPctPerFloor: number, floor: number): number {
+  let value = base
+  for (let step = 0; step < Math.max(0, floor - FIRST_FLOOR); step += 1) {
+    value = Math.floor((value * multPctPerFloor) / PERCENT_BASE)
+  }
+  return value
 }
 
 /** 층 스케일을 거친 최대 HP 와 공격력. */
@@ -118,7 +108,7 @@ export function getScaledEnemyStats(
   floor: number,
 ): ScaledEnemyStats {
   return {
-    hpMax: calculateScaledStat(stats.hp_max, scale.hpPctPerFloor, floor),
-    attack: calculateScaledStat(stats.attack, scale.attackPctPerFloor, floor),
+    hpMax: calculateScaledStat(stats.hp_max, scale.multPctPerFloor, floor),
+    attack: calculateScaledStat(stats.attack, scale.multPctPerFloor, floor),
   }
 }

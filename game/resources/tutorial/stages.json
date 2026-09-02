@@ -277,7 +277,7 @@
         {
           "priority": 2,
           "cpu_cost": 2,
-          "action": "SKILL_2",
+          "action": "SKILL_1",
           "target": "NEAREST",
           "set_flag": "A=false",
           "conditions": {
@@ -293,7 +293,7 @@
                 "lhs": "self_cooldown_ready",
                 "cmp": "==",
                 "rhs": true,
-                "lhs_param": "SKILL_2"
+                "lhs_param": "SKILL_1"
               }
             ]
           }
@@ -440,7 +440,7 @@
         {
           "priority": 2,
           "cpu_cost": 2,
-          "action": "SKILL_2",
+          "action": "SKILL_1",
           "target": "NEAREST",
           "set_flag": "A=false",
           "conditions": {
@@ -456,7 +456,7 @@
                 "lhs": "self_cooldown_ready",
                 "cmp": "==",
                 "rhs": true,
-                "lhs_param": "SKILL_2"
+                "lhs_param": "SKILL_1"
               }
             ]
           }
@@ -589,7 +589,7 @@
         {
           "priority": 2,
           "cpu_cost": 2,
-          "action": "SKILL_2",
+          "action": "SKILL_1",
           "target": "NEAREST",
           "set_flag": "A=false",
           "conditions": {
@@ -605,7 +605,7 @@
                 "lhs": "self_cooldown_ready",
                 "cmp": "==",
                 "rhs": true,
-                "lhs_param": "SKILL_2"
+                "lhs_param": "SKILL_1"
               }
             ]
           }

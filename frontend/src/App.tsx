@@ -384,7 +384,7 @@ export function buildRunSetup(issued: ServerTicket, rulesetId: string): BattleSe
 }
 
 /** 한 층이 도는 방 수 (로드맵 W3). 하강은 층마다 이만큼씩 잇는다. */
-export const CHAIN_LENGTH = 3
+export const CHAIN_LENGTH = 5
 
 /**
  * 서버 없이 도는 판의 마지막 층.

@@ -112,9 +112,10 @@ def test_a_run_that_dies_mid_floor_does_not_clear_it():
     """
     from game.config import BENCHMARK_RULESETS_PATH
 
-    partial = load_rulesets(BENCHMARK_RULESETS_PATH)["kite_summoner"]
+    partial = load_rulesets(BENCHMARK_RULESETS_PATH)["focus_threat_guard"]
     stats = run_probe(runs=3, ruleset=partial)
-    # 실측 (room v4): 시드 1~3 중 둘이 1층을, 하나가 2층을 깬다 — 셋 다 **층 중간에서**
-    # 죽으므로, 올림으로 세는 순간 층별 합계가 어긋난다.
-    assert stats.cleared_by_floor[:3] == (2, 1, 0), stats
+    # 실측 (난이도 개편: 층당 5방·스킬 v3): 시드 1~3 이 2·2·1방에서 죽는다 — 셋 다
+    # **층 중간**이라, 올림으로 세는 순간 1층 합계가 3 이 되어 어긋난다.
+    assert stats.cleared_by_floor[:3] == (0, 0, 0), stats
+    assert stats.deepest_floor == 0
     assert stats.finished == 0

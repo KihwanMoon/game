@@ -19,19 +19,18 @@
 에서나 층 5 에서나 같은 절대량이 되어, 정작 시간을 끌고 싶어지는 깊은 층에서 압력이
 희석된다 — GDD §7 이 막으려던 바로 그 방향이다.
 
-## 층 1 이 기준이다
+## 층 1 이 기준이다 — 그리고 복리다 (e3)
 
-보너스는 `pct_per_floor * (floor - 1)` 이다. 층 1 에서 아무것도 곱하지 않아야
-balance.json 의 적 스탯이 "층 1 의 그 적" 이라는 뜻을 그대로 갖는다. 전부 정수 퍼센트
-연산이며 내림 나눗셈으로 접는다 (R5).
+한 층 내려갈 때마다 `mult/100` 을 곱하고 **층마다 내림으로 접는다** (R5 — 거듭제곱을
+부동소수로 계산하면 두 코어가 마지막 자리에서 갈린다). 예전의 합산(pct*(층-1))은 깊은
+층에서 기울기가 일정해 체감이 죽었다 — 110 이면 10층 적이 1층의 약 2.36배다.
 """
 
 from dataclasses import dataclass
 
 from game.schemas.room import FIRST_FLOOR
 
-DEFAULT_HP_PCT_PER_FLOOR = 25
-DEFAULT_ATTACK_PCT_PER_FLOOR = 20
+DEFAULT_MULT_PCT_PER_FLOOR = 110
 
 # 층 번호의 시작값(FIRST_FLOOR)은 schemas.room 이 정본이다 — min_floor 의 기본값과
 # 같은 값이어야 하므로 여기서 다시 적지 않는다. 층 1 의 보너스는 0 이다.
@@ -43,8 +42,7 @@ PERCENT_BASE = 100
 class FloorScale:
     """balance.json 의 floor_scale 절을 그대로 담는 값."""
 
-    hp_pct_per_floor: int = DEFAULT_HP_PCT_PER_FLOOR
-    attack_pct_per_floor: int = DEFAULT_ATTACK_PCT_PER_FLOOR
+    mult_pct_per_floor: int = DEFAULT_MULT_PCT_PER_FLOOR
 
 
 def build_floor_scale(floor_scale: dict) -> FloorScale:
@@ -60,39 +58,31 @@ def build_floor_scale(floor_scale: dict) -> FloorScale:
         ValueError: 퍼센트가 음수인 경우. 층이 깊어질수록 적이 약해지면 층 진행이
             난이도가 아니라 보상이 된다.
     """
-    hp_pct = int(floor_scale.get("enemy_hp_pct_per_floor", DEFAULT_HP_PCT_PER_FLOOR))
-    attack_pct = int(floor_scale.get("enemy_attack_pct_per_floor", DEFAULT_ATTACK_PCT_PER_FLOOR))
-    if hp_pct < 0 or attack_pct < 0:
-        raise ValueError(f"층 스케일 퍼센트는 0 이상이어야 한다: {hp_pct}, {attack_pct}")
-    return FloorScale(hp_pct_per_floor=hp_pct, attack_pct_per_floor=attack_pct)
+    mult = int(floor_scale.get("enemy_mult_pct_per_floor", DEFAULT_MULT_PCT_PER_FLOOR))
+    if mult < PERCENT_BASE:
+        raise ValueError(f"층 스케일 배율은 100 이상이어야 한다: {mult}")
+    return FloorScale(mult_pct_per_floor=mult)
 
 
-def calculate_depth_bonus_pct(pct_per_floor: int, floor: int) -> int:
-    """층 깊이가 만드는 보너스 퍼센트.
+def calculate_scaled_stat(base: int, mult_pct_per_floor: int, floor: int) -> int:
+    """층 깊이를 복리로 얹은 능력치 (e3).
 
-    Args:
-        pct_per_floor: 한 층 내려갈 때마다 얹을 퍼센트.
-        floor: 현재 층. 1 이 첫 층이다.
-
-    Returns:
-        보너스 퍼센트. 층 1 에서는 0 이다.
-    """
-    return max(0, floor - FIRST_FLOOR) * pct_per_floor
-
-
-def calculate_scaled_stat(base: int, pct_per_floor: int, floor: int) -> int:
-    """층 깊이 보너스를 얹은 능력치.
+    **층마다 내림으로 접는다.** `base * mult^(floor-1) / 100^(floor-1)` 을 한 번에
+    계산하면 큰 정수가 되고, 부동소수로 하면 두 코어가 마지막 자리에서 갈린다 — 층을
+    한 층씩 내려가며 곱하고 접는 것이 TS 와 비트 단위로 같은 유일한 길이다.
 
     Args:
         base: balance.json 에 적힌 층 1 기준값.
-        pct_per_floor: 한 층 내려갈 때마다 얹을 퍼센트.
+        mult_pct_per_floor: 한 층 내려갈 때마다 곱할 퍼센트 (110 = ×1.1).
         floor: 현재 층.
 
     Returns:
         내림 정수로 접은 능력치.
     """
-    bonus_pct = calculate_depth_bonus_pct(pct_per_floor, floor)
-    return base * (PERCENT_BASE + bonus_pct) // PERCENT_BASE
+    value = base
+    for _step in range(max(0, floor - FIRST_FLOOR)):
+        value = value * mult_pct_per_floor // PERCENT_BASE
+    return value
 
 
 def get_scaled_enemy_stats(stats: dict, scale: FloorScale, floor: int) -> tuple[int, int]:
@@ -110,6 +100,6 @@ def get_scaled_enemy_stats(stats: dict, scale: FloorScale, floor: int) -> tuple[
         (최대 HP, 공격력).
     """
     return (
-        calculate_scaled_stat(stats["hp_max"], scale.hp_pct_per_floor, floor),
-        calculate_scaled_stat(stats["attack"], scale.attack_pct_per_floor, floor),
+        calculate_scaled_stat(stats["hp_max"], scale.mult_pct_per_floor, floor),
+        calculate_scaled_stat(stats["attack"], scale.mult_pct_per_floor, floor),
     )

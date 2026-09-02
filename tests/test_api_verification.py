@@ -202,9 +202,16 @@ def test_a_win_records_the_floor(client, token, monkeypatch):
     """
     from game.api.routes import ticket as ticket_route
 
+    from game.app.store import tickets as tickets_store
+    from game.app.store.tickets import CHAIN_LENGTH
+
+    # 층당 방 수를 따라간다 — 3 으로 고정하면 5방 개편에서 3//5 = 0층이 된다.
     monkeypatch.setattr(
-        ticket_route, "build_descent", lambda *_args, **_kwargs: (ROOM_ID, ROOM_ID, ROOM_ID)
+        ticket_route, "build_descent", lambda *_args, **_kwargs: (ROOM_ID,) * CHAIN_LENGTH
     )
+    # **시드도 고정한다.** 난이도 개편 뒤 같은 규칙표가 시드에 따라 지기도 한다 —
+    # 이 검사가 재는 것은 「이기면 층이 오른다」이지 승률이 아니다.
+    monkeypatch.setattr(tickets_store, "create_seed", lambda: 7)
     submit_once(client, token, build_winning_ruleset())
     assert read_meta(client, token)["best_floor"] >= 1
 

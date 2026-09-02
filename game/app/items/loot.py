@@ -36,8 +36,10 @@ AFFIX_MAX_PERCENT = 120
 PERCENT_BASE = 100
 
 # 승리 보상 화폐. 층이 깊을수록 는다.
-WIN_CURRENCY = 40
-LOSS_CURRENCY = 10
+# 난이도 개편(층당 5방·스킬 v3·복리 스케일)과 함께 올렸다 — 층이 5/3배 길어지고
+# 적이 세졌으므로, 층 하나의 값도 그만큼 커야 보충·복구 경제가 돌아간다.
+WIN_CURRENCY = 80
+LOSS_CURRENCY = 20
 
 
 @dataclass(frozen=True)

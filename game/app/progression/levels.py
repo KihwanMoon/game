@@ -41,8 +41,9 @@ STAT_KEYS: tuple[str, ...] = ("str", "dex", "int")
 
 # 검증된 런이 주는 경험치. 이기는 것이 확실히 낫지만 진 판도 빈손은 아니다 —
 # "실패한 런조차 자산을 남긴다"(GDD §2.3)를 경험치에도 얇게 건다.
-XP_WIN = 80
-XP_LOSS = 20
+# 난이도 개편과 함께 올렸다 — 층이 5/3배 길어졌다.
+XP_WIN = 160
+XP_LOSS = 40
 
 
 @dataclass(frozen=True)

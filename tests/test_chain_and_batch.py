@@ -21,7 +21,9 @@ from game.schemas.blocks import load_block_catalog
 from game.schemas.room import load_room_templates
 from game.schemas.ruleset import load_rulesets
 
-CHAIN_IDS = ("open_field", "corridor", "pillars")
+# 스킬 v3(쿨타임 2배) 뒤 기준 카이팅이 pillars 를 못 깨서, 표본 연쇄를 실측으로
+# 다시 골랐다 — kite 100% · pressure 0% · sniper 0% (12런, 시드 1).
+CHAIN_IDS = ("open_field", "twin_door", "corridor")
 BATCH_RUNS = 12
 
 
@@ -292,12 +294,15 @@ def test_the_margin_separates_two_kinds_of_loss(parts):
     # 소환사를 노리는 규칙표인데 첫 방에는 소환사가 없다 — 네 규칙이 전부 거짓이라
     # 가만히 서서 죽는다.
     idle = run_batch("focus_summoner", player_ruleset=bench["focus_summoner"], **common)
-    # 끝까지 싸우고 아깝게 진다 — 적 HP 를 한 자리수만 남긴다.
+    # 끝까지 싸우고 진다 — 적 HP 를 39% 까지 깎는다 (스킬 v3 실측).
     #
-    # 예전에는 `spring_camp` 이었는데, **시야에 막힌 원거리 공격이 굳던 것을 고치자
-    # 이겨 버렸다.** 지는 쪽 표본은 밸런스가 바뀔 때마다 다시 골라야 한다 — 그것이 이
-    # 검사가 재는 것(전략 공간의 모양)이 실제로 움직인다는 뜻이기도 하다.
-    close = run_batch("focus_lowest_guard", player_ruleset=bench["focus_lowest_guard"], **common)
+    # 표본이 두 번 갈렸다: `spring_camp` → 시야 고침으로 이겨 버렸고,
+    # `focus_lowest_guard` → 스킬 v3 개편에서 이겨 버렸다. 지는 쪽 표본은 밸런스가
+    # 바뀔 때마다 다시 골라야 한다 — 그것이 이 검사가 재는 것(전략 공간의 모양)이
+    # 실제로 움직인다는 뜻이기도 하다.
+    close = run_batch(
+        "focus_summoner_guard", player_ruleset=bench["focus_summoner_guard"], **common
+    )
 
     assert idle.win_rate_pct == close.win_rate_pct == 0, "둘 다 져야 이 검사가 뜻을 갖는다"
     assert idle.enemy_hp_left_pct == 100, idle

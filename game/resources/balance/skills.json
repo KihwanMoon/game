@@ -1,6 +1,6 @@
 {
   "_comment": "스킬 정의. balance.json 에서 갈라 나왔다 — 스킬은 종류가 늘어나는 것이고 밸런스 수치는 조정되는 것이라 수명이 다르다 (docs/설계/5_스킬 §9). family·shape·target_faction·telegraph·tags 는 아직 아무도 읽지 않는 서술 필드이며, 블록 v5 의 USE_SKILL[skill_id] 와 계열별 실행기가 이것을 읽는다. coef_pct·cooldown·range·heal_pct 는 값이 그대로이므로 골든 리플레이가 바뀌지 않는다. v2: GUARD 계열을 더했다(결정 #16) — 방패를 들었는데 막는 행동이 없으면 방패는 그냥 방어력 숫자이고 '양손무기 vs 한손+방패' 선택이 성립하지 않는다 (P3).",
-  "skill_list_version": 2,
+  "skill_list_version": 3,
   "skills": [
     {
       "id": "ATTACK",
@@ -26,7 +26,7 @@
       },
       "target_faction": "enemy",
       "coef_pct": 160,
-      "cooldown": 3,
+      "cooldown": 6,
       "range": null,
       "telegraph": 0,
       "tags": [
@@ -42,7 +42,7 @@
       },
       "target_faction": "enemy",
       "coef_pct": 150,
-      "cooldown": 2,
+      "cooldown": 4,
       "range": 4,
       "telegraph": 0,
       "tags": [
@@ -59,7 +59,7 @@
       },
       "target_faction": "enemy",
       "coef_pct": 90,
-      "cooldown": 5,
+      "cooldown": 10,
       "range": 2,
       "telegraph": 0,
       "tags": [
@@ -76,7 +76,7 @@
       },
       "target_faction": "ally",
       "coef_pct": 0,
-      "cooldown": 3,
+      "cooldown": 6,
       "range": null,
       "heal_pct": 30,
       "telegraph": 0,
@@ -94,7 +94,7 @@
       },
       "target_faction": "self",
       "coef_pct": 0,
-      "cooldown": 4,
+      "cooldown": 8,
       "range": null,
       "guard_pct": 50,
       "guard_ticks": 2,

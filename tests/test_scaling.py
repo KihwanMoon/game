@@ -22,7 +22,6 @@ from game.app.simulation.scaling import (
     PERCENT_BASE,
     FloorScale,
     build_floor_scale,
-    calculate_depth_bonus_pct,
     calculate_scaled_stat,
     get_scaled_enemy_stats,
 )
@@ -49,39 +48,40 @@ def templates():
 def test_balance_declares_floor_scale(balance):
     # 값이 있어도 읽는 코드가 없으면 층이 올라가도 적이 강해지지 않는다.
     scale = build_floor_scale(balance["floor_scale"])
-    assert scale.hp_pct_per_floor > 0
-    assert scale.attack_pct_per_floor > 0
+    assert scale.mult_pct_per_floor > PERCENT_BASE
 
 
-def test_negative_percentages_are_rejected():
+def test_a_weakening_multiplier_is_rejected():
     # 층이 깊어질수록 적이 약해지면 층 진행이 난이도가 아니라 보상이 된다.
-    with pytest.raises(ValueError, match="0 이상"):
-        build_floor_scale({"enemy_hp_pct_per_floor": -1})
+    with pytest.raises(ValueError, match="100 이상"):
+        build_floor_scale({"enemy_mult_pct_per_floor": 90})
 
 
 def test_first_floor_is_the_baseline():
     # 층 1 에서 곱하면 balance.json 의 값이 "층 1 의 그 적" 이라는 뜻을 잃는다.
-    assert calculate_depth_bonus_pct(25, FIRST_FLOOR) == 0
-    assert calculate_scaled_stat(RUSHER_HP, 25, FIRST_FLOOR) == RUSHER_HP
+    assert calculate_scaled_stat(RUSHER_HP, 110, FIRST_FLOOR) == RUSHER_HP
 
 
-def test_depth_bonus_is_linear_in_floors():
-    assert calculate_depth_bonus_pct(25, 2) == 25
-    assert calculate_depth_bonus_pct(25, DEEP_FLOOR) == 50
+def test_depth_compounds_per_floor():
+    # **복리다** (e3). 층마다 곱하고 내림으로 접는다 — 10층이면 1층의 약 2.36배다.
+    assert calculate_scaled_stat(100, 110, 2) == 110
+    assert calculate_scaled_stat(100, 110, DEEP_FLOOR) == 121
+    assert calculate_scaled_stat(100, 110, 10) == 233
 
 
 def test_scaling_stays_integer_and_rounds_down():
-    # 부동소수를 쓰면 플랫폼마다 결과가 갈려 리플레이가 깨진다 (R5).
-    scaled = calculate_scaled_stat(RUSHER_ATTACK, 20, DEEP_FLOOR)
-    assert scaled == RUSHER_ATTACK * (PERCENT_BASE + 40) // PERCENT_BASE
-    assert isinstance(scaled, int)
+    # 부동소수를 쓰면 플랫폼마다 결과가 갈려 리플레이가 깨진다 (R5). **층마다 접는다** —
+    # 한 번에 거듭제곱하면 TS 와 마지막 자리가 갈린다: 9→9(9.9 의 내림)→9 처럼, 작은
+    # 값은 몇 층을 내려가도 안 자랄 수 있다. 그것이 계약이다.
+    assert calculate_scaled_stat(9, 110, DEEP_FLOOR) == 9
+    assert isinstance(calculate_scaled_stat(9, 110, DEEP_FLOOR), int)
 
 
 def test_enemy_stats_scale_both_axes(balance):
     scale = build_floor_scale(balance["floor_scale"])
     rusher = next(kind for kind in balance["enemies"] if kind["id"] == "goblin_rusher")
     assert get_scaled_enemy_stats(rusher, scale, FIRST_FLOOR) == (RUSHER_HP, RUSHER_ATTACK)
-    assert get_scaled_enemy_stats(rusher, scale, DEEP_FLOOR) == (60, 11)
+    assert get_scaled_enemy_stats(rusher, scale, DEEP_FLOOR) == (48, 8)
 
 
 def test_room_spawns_carry_the_floor_scale(balance, templates):
@@ -91,7 +91,7 @@ def test_room_spawns_carry_the_floor_scale(balance, templates):
     weak = shallow.state.entities["goblin_rusher_0"]
     strong = deep.state.entities["goblin_rusher_0"]
     assert (weak.hp_max, weak.attack) == (RUSHER_HP, RUSHER_ATTACK)
-    assert (strong.hp_max, strong.attack) == (60, 11)
+    assert (strong.hp_max, strong.attack) == (48, 8)
     # 스케일은 최대 HP 를 올리는 것이지 다친 채로 시작시키는 것이 아니다.
     assert strong.hp == strong.hp_max
 
@@ -103,7 +103,7 @@ def test_summoned_minions_carry_the_floor_scale(balance, templates):
     summoner = engine.state.entities["goblin_summoner_1"]
     minion, _ = resolve_summon(engine.state, engine.config, summoner)
     assert minion is not None
-    assert (minion.hp_max, minion.attack) == (60, 11)
+    assert (minion.hp_max, minion.attack) == (48, 8)
 
 
 def test_hunters_carry_the_floor_scale(balance, templates):
@@ -111,7 +111,7 @@ def test_hunters_carry_the_floor_scale(balance, templates):
     engine = build_engine(templates["open_field"], balance, seed=1, floor=DEEP_FLOOR)
     hunter = engine.pressure.create_hunter(engine.state)
     assert hunter is not None
-    assert (hunter.hp_max, hunter.attack) == (60, 11)
+    assert (hunter.hp_max, hunter.attack) == (48, 8)
 
 
 def test_depth_and_dwell_scales_multiply(balance, templates):
@@ -122,7 +122,7 @@ def test_depth_and_dwell_scales_multiply(balance, templates):
     tracker.floor_ticks = STALL_TICKS
     bonus_pct = tracker.apply_scale(engine.state)
     rusher = engine.state.entities["goblin_rusher_0"]
-    depth_scaled = calculate_scaled_stat(RUSHER_ATTACK, 20, DEEP_FLOOR)
+    depth_scaled = calculate_scaled_stat(RUSHER_ATTACK, 110, DEEP_FLOOR)
     assert rusher.attack == calculate_scaled_attack(depth_scaled, bonus_pct)
 
 
@@ -160,4 +160,4 @@ def test_extra_entities_can_be_scaled_by_hand():
         attack_range=1,
         initiative=0,
     )
-    assert (entity.hp_max, entity.attack) == (60, 11)
+    assert (entity.hp_max, entity.attack) == (48, 8)

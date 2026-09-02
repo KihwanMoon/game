@@ -150,7 +150,7 @@
         {
           "priority": 3,
           "cpu_cost": 2,
-          "action": "SKILL_2",
+          "action": "SKILL_1",
           "target": "NEAREST",
           "set_flag": "A=false",
           "conditions": {
@@ -164,7 +164,7 @@
               },
               {
                 "lhs": "self_cooldown_ready",
-                "lhs_param": "SKILL_2",
+                "lhs_param": "SKILL_1",
                 "cmp": "==",
                 "rhs": true
               }
