@@ -133,7 +133,9 @@ export function buildBagCells(inventory: InventoryView | undefined): readonly Gr
     if (entry?.item) {
       return {
         key: `bag:${String(index)}`,
-        code: String(index + 1),
+        // **칸 번호가 아니라 부위 코드다.** 「이게 어디에 끼는 물건인가」가 칸에서 바로
+        // 보여야 한다 — 번호는 아무것도 말해 주지 않는다(실제 요청).
+        code: EQUIP_CELL_CODES.get(entry.item.slot ?? '') ?? 'IT',
         label: clipCellLabel(entry.item.labelKo),
         grade: entry.item.grade,
         marks: listCellMarks(entry),
@@ -145,7 +147,8 @@ export function buildBagCells(inventory: InventoryView | undefined): readonly Gr
     if (entry !== undefined && entry.stackCatalogId !== null) {
       return {
         key: `bag:${String(index)}`,
-        code: String(index + 1),
+        // 소모품은 부위가 없다 — 쓰임새 그대로 CS 다.
+        code: 'CS',
         label: clipCellLabel(entry.stackLabelKo === '' ? entry.stackCatalogId : entry.stackLabelKo),
         grade: entry.stackGrade,
         marks: [],

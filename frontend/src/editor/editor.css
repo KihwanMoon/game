@@ -2117,3 +2117,44 @@
   color: var(--text-body);
   font-family: var(--font-data);
 }
+
+/* ── 소모품 칸 카드 ────────────────────────────────────────────────────────
+   한 칸이 한 카드다: 머리(칸 이름·내용물·등급) / 충전 눈금 / 옵션 줄들 / 도구줄.
+   행 하나에 전부 늘어놓던 것을 세로 결로 갈랐다 — 좁은 화면에서 꺾이지 않는다. */
+.cns__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border: var(--border);
+  background: var(--surface-panel);
+}
+
+.cns__card-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+.cns__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.cns__head-label {
+  margin-block: var(--sp-2) var(--sp-1);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+
+/* 옵션 줄 목록. 상세와 같은 결이다 — 옵션 하나에 한 줄. */
+.invd__affixes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

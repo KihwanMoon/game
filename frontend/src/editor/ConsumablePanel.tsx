@@ -11,7 +11,7 @@
  * 훅을 안 쓴다. 고를 것을 전부 버튼으로 펴 두었으므로 상태가 필요 없고, 이 저장소의
  * 렌더 검사는 jsdom 없이 돌아 훅 안의 문구를 못 본다.
  */
-import { Button, GlyphState, Panel, ValueExpr } from '../ds'
+import { Button, GlyphState, Panel, SegmentedGauge, ValueExpr } from '../ds'
 import type { ConsumableOptionView, ConsumableSlotView, ConsumableView } from '../storage'
 
 import { formatGradeClass, renderGrade } from './gradeBadge'
@@ -148,39 +148,57 @@ function renderSlot(slot: ConsumableSlotView, props: ConsumablePanelProps): Reac
   const locked = !props.isOnline
   const refill = formatRefillLabel(slot)
   return (
-    <li className="cns__row" key={`${slot.useTag}-${String(slot.slotIndex)}`}>
-      <span className="cns__slot">{formatSlotName(slot)}</span>
-      <span className={`inv__name${formatGradeClass(slot.grade)}`}>
-        {slot.catalogId === '' ? '—' : slot.labelKo}
-      </span>
-      {renderGrade(slot.grade)}
-      <ValueExpr text={formatCharges(slot, view?.freeCharges ?? 0)} size="sm" />
-      {slot.affixes.map((affix) => (
-        <ValueExpr key={affix} text={affix} size="sm" dim />
-      ))}
-      {refill === '' ? null : (
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={locked}
-          onClick={() => {
-            props.onRefill(slot.useTag, slot.slotIndex)
-          }}
-        >
-          {refill}
-        </Button>
+    <li className="cns__card" key={`${slot.useTag}-${String(slot.slotIndex)}`}>
+      <div className="cns__card-head">
+        <span className="cns__slot">{formatSlotName(slot)}</span>
+        <span className={`inv__name${formatGradeClass(slot.grade)}`}>
+          {slot.catalogId === '' ? '빈 칸' : slot.labelKo}
+        </span>
+        {renderGrade(slot.grade)}
+      </div>
+      {slot.catalogId === '' ? (
+        <ValueExpr text={formatCharges(slot, view?.freeCharges ?? 0)} size="sm" dim />
+      ) : (
+        // **충전을 눈금으로 그린다.** 체력·CPU 와 같은 부품이다 — 숫자를 함께 적으므로
+        // 색을 못 보는 경로도 남는다.
+        <SegmentedGauge value={slot.charges} max={slot.chargeMax} readout />
+      )}
+      {slot.affixes.length === 0 ? null : (
+        <ul className="invd__affixes">
+          {slot.affixes.map((affix) => (
+            <li className="invd__affix" key={affix}>
+              <ValueExpr text={affix} size="sm" dim />
+            </li>
+          ))}
+        </ul>
       )}
       {slot.catalogId === '' ? null : (
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={locked}
-          onClick={() => {
-            props.onClear(slot.useTag, slot.slotIndex)
-          }}
-        >
-          {formatClearLabel(slot)}
-        </Button>
+        <div className="cns__tools">
+          {refill === '' ? null : (
+            <Button
+              size="sm"
+              variant="secondary"
+              glyph="✚"
+              disabled={locked}
+              onClick={() => {
+                props.onRefill(slot.useTag, slot.slotIndex)
+              }}
+            >
+              {refill}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            glyph="↥"
+            disabled={locked}
+            onClick={() => {
+              props.onClear(slot.useTag, slot.slotIndex)
+            }}
+          >
+            {formatClearLabel(slot)}
+          </Button>
+        </div>
       )}
     </li>
   )
@@ -216,15 +234,32 @@ export function ConsumablePanel(props: ConsumablePanelProps): React.JSX.Element 
       {props.detail === '' ? null : <ValueExpr text={props.detail} size="sm" />}
       <ul className="cns__list">{view.slots.map((slot) => renderSlot(slot, props))}</ul>
       {view.options.length === 0 ? null : (
-        <ul className="cns__list">
-          {view.options.map((option) => (
-            <li className="cns__row" key={`sell-${option.catalogId}`}>
-              <span className={`inv__name${formatGradeClass(option.grade)}`}>{option.labelKo}</span>
-              {renderGrade(option.grade)}
-              <ValueExpr text={`가방 ${String(option.stock)}개`} size="sm" dim />
-              {option.affixes.map((affix) => (
-                <ValueExpr key={affix} text={affix} size="sm" dim />
-              ))}
+        <>
+          <div className="cns__head-label">보유 재고 — 끼우면 가방에서 하나가 나간다</div>
+          <ul className="cns__list">
+            {view.options.map((option) => (
+              <li className="cns__card" key={`sell-${option.catalogId}`}>
+                <div className="cns__card-head">
+                  <span className={`inv__name${formatGradeClass(option.grade)}`}>
+                    {option.labelKo}
+                  </span>
+                  {renderGrade(option.grade)}
+                  <ValueExpr
+                    text={`x${String(option.stock)} · ${String(option.charges)}충전`}
+                    size="sm"
+                    dim
+                  />
+                </div>
+                {option.affixes.length === 0 ? null : (
+                  <ul className="invd__affixes">
+                    {option.affixes.map((affix) => (
+                      <li className="invd__affix" key={affix}>
+                        <ValueExpr text={affix} size="sm" dim />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="cns__tools">
               <Button
                 size="sm"
                 variant="primary"
@@ -247,9 +282,11 @@ export function ConsumablePanel(props: ConsumablePanelProps): React.JSX.Element 
               >
                 {`팔기 ${String(option.sellPrice)}`}
               </Button>
-            </li>
-          ))}
-        </ul>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </Panel>
   )

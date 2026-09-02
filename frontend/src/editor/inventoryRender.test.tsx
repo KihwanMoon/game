@@ -125,6 +125,16 @@ describe('셀 모델', () => {
     expect(marked?.marks).toEqual(['◈', '◇2', '▨'])
   })
 
+  it('★ 장비 칸은 번호가 아니라 부위 코드를 적는다 — 번호는 아무것도 말해 주지 않는다', () => {
+    const cells = buildBagCells(INVENTORY)
+    // 0번 칸의 유물 단검은 주무기다 — 칸 구석에 WM 이 선다.
+    expect(cells[0]?.code).toBe('WM')
+    // 소모품은 부위가 없다.
+    expect(cells[3]?.code).toBe('CS')
+    // 빈 칸은 번호 그대로다 — 부위가 없는데 코드를 지어내면 거짓말이다.
+    expect(cells[1]?.code).toBe('2')
+  })
+
   it('칸 글자는 공백을 빼고 두 자다 — 도면 말의 두 글자 표기와 같은 규칙이다', () => {
     expect(clipCellLabel('큰 회복 물약')).toBe('큰회')
     expect(clipCellLabel('단검')).toBe('단검')
@@ -238,6 +248,29 @@ describe('상세와 도구줄', () => {
     const html = renderDetail('bag', buildSlot({ item: buildItem({ isBound: true }) }))
     expect(html).toContain('귀속')
     expect(html).not.toContain('호가')
+  })
+
+  it('★ 옵션 하나에 한 줄이다 — 가운뎃점으로 이으면 어디까지가 한 옵션인지 눈으로 갈라야 한다', () => {
+    const html = renderDetail(
+      'bag',
+      buildSlot({
+        item: buildItem({
+          affixes: [
+            { stat: 'attack', flat: 3, percent: 0, labelKo: '예리함', statLabel: '공격력' },
+            { stat: 'defense', flat: 2, percent: 0, labelKo: '단단함', statLabel: '방어력' },
+          ],
+        }),
+      }),
+    )
+    const rows = html.match(/invd__affix"/g) ?? []
+    // 사거리 1 + 접사 둘 = li 세 줄. 한 줄로 이으면 여기 하나만 남는다.
+    expect(rows.length).toBe(3)
+    expect(html).not.toContain('예리함 · 공격력 +3 · 단단함')
+  })
+
+  it('★ 가방 상세가 부위를 말한다 — 격자 코드 두 글자의 온전한 이름이다', () => {
+    const html = renderDetail('bag', buildSlot({ item: buildItem({ slot: 'BODY' }) }))
+    expect(html).toContain('부위 · 갑옷')
   })
 
   it('★ 요구조건에 실측값을 병기한다 (P1)', () => {

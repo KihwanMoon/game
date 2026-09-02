@@ -231,7 +231,7 @@ describe('소모품 칸', () => {
       />,
     )
     expect(html).toContain('팔기 630')
-    expect(html).toContain('가방 2개')
+    expect(html).toContain('x2 · 7충전')
   })
 })
 

@@ -217,9 +217,20 @@ describe('도면은 고정이고 스크롤되지 않는다', () => {
     // **상단이 `auto` 인 것은 두 줄을 받기 위해서다** — 층·틱은 헤더로 고정하고 조작을
     // 아래 줄로 내린다. 치수는 여전히 토큰이 정한다: `min-height: var(--bar-top)` 이
     // 한 줄일 때의 높이를 지키고, 늘어난 만큼 줄어드는 것은 로그(`1fr`)뿐이다.
+    // 시트 행에는 바닥이 깔린다 — 도면이 큰 방에서 시트가 0 까지 짜부라지면 로그가
+    // 있는데 보이지 않는다. 스크롤할 자리 자체가 없었다(실제 신고).
     const block = cutRule('.battle--portrait')
     expect(block).toContain('auto var(--bar-speed) auto var(--bar-status)')
-    expect(block).toContain('1fr var(--bar-bottom)')
+    expect(block).toContain('minmax(calc(var(--log-row-h) * 5 + var(--sheet-tab-h)), 1fr)')
+    expect(block).toContain('var(--bar-bottom)')
+  })
+
+  it('시트가 바닥을 지켜도 모자라면 화면이 통째로 흐른다 — 닿을 수 없는 줄을 안 만든다', () => {
+    expect(cutRule('.battle--portrait')).toContain('overflow-y: auto')
+  })
+
+  it('주소창이 접히는 모바일을 따라간다 — 100vh 는 접히기 전 높이다', () => {
+    expect(cutRule('.battle')).toContain('100dvh')
   })
 })
 

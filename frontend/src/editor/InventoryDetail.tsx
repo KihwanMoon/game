@@ -56,7 +56,17 @@ function renderAffixes(item: ItemView): React.JSX.Element | null {
   if (lines.length === 0) {
     return null
   }
-  return <ValueExpr text={lines.join(' · ')} size="sm" />
+  // **옵션 하나에 한 줄이다.** 가운뎃점으로 이으면 옵션 넷이 문장 하나가 되어, 어디까지가
+  // 한 옵션인지 눈으로 갈라야 한다(실제 요청).
+  return (
+    <ul className="invd__affixes">
+      {lines.map((line) => (
+        <li className="invd__affix" key={line}>
+          <ValueExpr text={line} size="sm" />
+        </li>
+      ))}
+    </ul>
+  )
 }
 
 /**
@@ -170,7 +180,9 @@ export function InventoryDetail(props: InventoryDetailProps): React.JSX.Element 
             size="sm"
             dim
           />
-        ) : null}
+        ) : item.slot === null ? null : (
+          <ValueExpr text={`부위 · ${EQUIP_CELL_LABELS.get(item.slot) ?? item.slot}`} size="sm" dim />
+        )}
         {item.isBroken ? <GlyphState state="danger" size="sm" label="파손 · 효과 없음" /> : null}
         {item.sealedSlots > 0 ? (
           <GlyphState state="pending" size="sm" label={`봉인 ${String(item.sealedSlots)}칸`} />
