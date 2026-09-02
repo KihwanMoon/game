@@ -202,6 +202,31 @@ describe('연결선 그리기', () => {
     expect(strokes(linked) - strokes(plain)).toBe(2)
   })
 
+  it('★ 이펙트가 수치·이름표를 그린다 — 고리만으로는 얼마나였는지 모른다 (P1)', async () => {
+    const { renderPlan } = await import('./planRenderer')
+    const { readPlanTheme } = await import('./planTheme')
+    const fake = buildFakeContext()
+    renderPlan(
+      fake.ctx as never,
+      {
+        tick: 1,
+        cols: 6,
+        rows: 6,
+        tiles: [],
+        actors: [PLAYER, FOE],
+        hazards: [],
+        links: [],
+        pulses: [
+          { x: 4, y: 3, isGain: false, delta: -7, label: '' },
+          { x: 1, y: 1, isGain: true, delta: null, label: '방어' },
+        ],
+      },
+      readPlanTheme(readFake),
+    )
+    expect(fake.calls).toContain('text:-7')
+    expect(fake.calls).toContain('text:방어')
+  })
+
   it('★ 이을 것이 없으면 아무 선도 안 긋는다', async () => {
     expect(await render([])).not.toContain('stroke=--plan-link-self')
   })
