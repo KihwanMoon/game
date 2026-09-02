@@ -641,8 +641,6 @@
   color: var(--text-dim);
   font-family: var(--font-mono);
   font-size: var(--fs-mono-s);
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 

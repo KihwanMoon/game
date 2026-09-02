@@ -169,15 +169,23 @@ const COOLDOWN_LABELS: ReadonlyMap<string, string> = new Map([
  * @param cooldowns 플레이어의 쿨타임 표.
  * @returns 화면에 적을 한 줄. 도는 쿨이 없으면 빈 문자열.
  */
-export function formatCooldowns(cooldowns: ReadonlyMap<string, number> | undefined): string {
-  if (cooldowns === undefined) {
+export function formatCooldowns(
+  cooldowns: ReadonlyMap<string, number> | undefined,
+  skills: readonly string[] = [],
+): string {
+  // **늘 보인다.** 도는 쿨만 적으면 스킬을 아직 안 쓴 틱에 줄이 사라져 「정보가
+  // 없어졌다」로 읽힌다(실제 신고). 실은 스킬 전부를 준비/남은 틱으로 적는다 —
+  // 기본 공격은 쿨이 없어 뺀다.
+  const owned = [...skills].filter((skill) => skill !== 'ATTACK').sort()
+  if (owned.length === 0) {
     return ''
   }
-  const parts = [...cooldowns.entries()]
-    .filter(([, left]) => left > 0)
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([skill, left]) => `${COOLDOWN_LABELS.get(skill) ?? skill} ${String(left)}틱`)
-  return parts.length === 0 ? '' : `쿨타임 — ${parts.join(' · ')}`
+  const parts = owned.map((skill) => {
+    const left = cooldowns?.get(skill) ?? 0
+    const name = COOLDOWN_LABELS.get(skill) ?? skill
+    return left > 0 ? `${name} ${String(left)}틱` : `${name} 준비`
+  })
+  return `쿨 — ${parts.join(' · ')}`
 }
 
 export function BattleView(props: BattleViewProps): React.JSX.Element {
@@ -402,7 +410,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         potionsMax={readCarried(props.setup, 'POTION')}
         scrolls={player === undefined ? 0 : countItem(player, 'SCROLL')}
         scrollsMax={readCarried(props.setup, 'SCROLL')}
-        cooldowns={formatCooldowns(player?.cooldowns)}
+        cooldowns={formatCooldowns(player?.cooldowns, props.setup.loadout?.skills ?? [])}
         tab={tab}
         onTabChange={setTab}
         bodyRef={sheetRef}
@@ -438,7 +446,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         potionsMax={readCarried(props.setup, 'POTION')}
         scrolls={player === undefined ? 0 : countItem(player, 'SCROLL')}
         scrollsMax={readCarried(props.setup, 'SCROLL')}
-        cooldowns={formatCooldowns(player?.cooldowns)}
+        cooldowns={formatCooldowns(player?.cooldowns, props.setup.loadout?.skills ?? [])}
         tab={tab}
         onTabChange={setTab}
         bodyRef={sheetRef}

@@ -237,8 +237,10 @@ describe('쿨타임 줄', () => {
   it('★ 잠긴 것만 남은 틱과 함께 적는다 — 0 까지 적으면 무엇이 잠겼는지 안 보인다', async () => {
     const { formatCooldowns } = await import('./BattleView')
     const table = new Map([['AREA_ATTACK', 3], ['HEAL', 0], ['SKILL_1', 1]])
-    expect(formatCooldowns(table)).toBe('쿨타임 — 광역 3틱 · 스킬 1 1틱')
-    expect(formatCooldowns(new Map([['HEAL', 0]]))).toBe('')
-    expect(formatCooldowns(undefined)).toBe('')
+    const skills = ['ATTACK', 'AREA_ATTACK', 'HEAL', 'SKILL_1']
+    expect(formatCooldowns(table, skills)).toBe('쿨 — 광역 3틱 · 치유 준비 · 스킬 1 1틱')
+    // **안 쓴 틱에도 줄이 산다** — 사라지면 「정보가 없어졌다」로 읽힌다 (실제 신고).
+    expect(formatCooldowns(undefined, skills)).toBe('쿨 — 광역 준비 · 치유 준비 · 스킬 1 준비')
+    expect(formatCooldowns(undefined, ['ATTACK'])).toBe('')
   })
 })
