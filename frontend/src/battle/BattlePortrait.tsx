@@ -48,6 +48,9 @@ const HP_BAR_WIDTH = 90
 
 /** 물약 칸의 글리프와 라벨. ds `StatusBar` 와 같은 것을 쓴다. */
 const POTION_GLYPH = '◍'
+
+/** 주문서 글리프. 도면의 다른 글리프들처럼 유니코드 도형이다. */
+const SCROLL_GLYPH = '▤'
 const POTION_LABEL = '물약'
 
 /** 틱 표기 앞의 도형. 색은 --chalk-dim 이며 황동 예산에 들지 않는다. */
@@ -98,6 +101,9 @@ export interface BattlePortraitProps {
   readonly hpMax: number
   readonly potions: number
   readonly potionsMax: number
+  /** 남은 주문서와 실은 수. 물약과 같은 자리다 — 소모품 현황이 플레이 중에 보여야 한다. */
+  readonly scrolls: number
+  readonly scrollsMax: number
   readonly tab: SheetTab
   readonly onTabChange: (tab: SheetTab) => void
   /** 시트 본문. 로그를 마지막 줄에 붙여 두려고 밖에서 잡는다. */
@@ -177,6 +183,12 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
           count={props.potions}
           max={props.potionsMax}
           glyph={POTION_GLYPH}
+        />
+        <ResourceCount
+          label="주문서"
+          count={props.scrolls}
+          max={props.scrollsMax}
+          glyph={SCROLL_GLYPH}
         />
       </footer>
     </div>

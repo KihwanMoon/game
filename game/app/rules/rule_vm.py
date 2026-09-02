@@ -11,11 +11,13 @@ DEFAULT 인 '가장 가까운 적에게 접근' 이 나간다 (TDD §5.2).
 무한 루프가 원천 차단된다. 플래그 기록 같은 상태 변경은 계획에만 담아 ACT 로 넘긴다.
 """
 
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
 
 from game.app.grid.geometry import get_manhattan_distance
 from game.app.grid.vision import VisionGrid, check_line_of_sight
+from game.app.rules.rhs_readers import RHS_STAT_READERS
+from game.app.simulation.abilities import ITEM_POTION
 from game.app.simulation.perception import PerceptionSnapshot
 from game.app.simulation.plan import (
     ATTACK_ACTIONS,
@@ -33,17 +35,6 @@ from game.schemas.ruleset import OP_OR, Condition, Rule, RuleSet, StatRef, Term
 # 대상이 정해져야 값이 나오는 인지 변수. 스냅샷이 아니라 해석된 대상에서 읽는다.
 TARGET_BLOCKS = frozenset({"target_hp_percent", "target_is_casting"})
 
-# 조건 우변에 둘 수 있는 자기 스탯에서 그 값을 읽는 함수로 (F-2). 허용 목록의 정본은
-# blocks.json 의 rhs_stats 이며, 여기 키와 짝이 맞는지는 테스트가 지킨다.
-RHS_STAT_READERS: dict[str, Callable[[Entity], int]] = {
-    "attack_range": lambda actor: actor.attack_range,
-    "attack": lambda actor: actor.attack,
-    "defense": lambda actor: actor.defense,
-    "hp_max": lambda actor: actor.hp_max,
-    "cpu_budget": lambda actor: actor.cpu_budget,
-    "potions": lambda actor: actor.count_item("POTION"),
-    "scrolls": lambda actor: actor.count_item("SCROLL"),
-}
 
 DEFAULT_ACTION = "APPROACH"
 DEFAULT_SELECTOR = "NEAREST"
@@ -284,12 +275,17 @@ class RuleVm:
                 continue
             # 소모품도 같다 — 조건은 참인데 수단이 없다. 이것이 「거짓」과 다르다는 것이
             # 이 게임의 규칙 상태 4종 중 하나다 (결정 #04).
-            if rule.action == USE_ITEM_ACTION and entity.count_item(rule.action_param or "") <= 0:
+            # **인자가 없으면 물약이다.** `USE_POTION` 별칭과 같은 규약이고, 실행부
+            # (`apply_item`)도 그렇게 떨어진다 — 예전에는 문지기만 빈 문자열의 개수를
+            # 세서(늘 0) **인자 없는 소모품 규칙이 영원히 「불가」였다.** 인자 고르개가
+            # 생기기 전에 지은 규칙 전부가 그 상태였다 (e2).
+            item_kind = rule.action_param or ITEM_POTION
+            if rule.action == USE_ITEM_ACTION and entity.count_item(item_kind) <= 0:
                 blocked.append(
                     BlockedRule(
                         rule_index=rule.priority,
                         expr=expr,
-                        reason=f"{rule.action_param} 없음",
+                        reason=f"{item_kind} 없음",
                     )
                 )
                 continue
@@ -310,7 +306,9 @@ class RuleVm:
                 expr=expr,
                 set_flag=rule.set_flag,
                 skill_id=rule.action_param if rule.action == USE_SKILL_ACTION else None,
-                item_kind=rule.action_param if rule.action == USE_ITEM_ACTION else None,
+                item_kind=(rule.action_param or ITEM_POTION)
+                if rule.action == USE_ITEM_ACTION
+                else None,
                 blocked=tuple(blocked),
             )
         return replace(self._build_default_action(entity, state), blocked=tuple(blocked))

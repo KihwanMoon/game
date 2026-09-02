@@ -170,8 +170,10 @@
      아니다(실제 피드백). 그래서 도면 행이 남는 높이를 받고(`minmax(0, 1fr)`) 캔버스가
      그 안에 축소되어 들어가며, 시트는 로그 다섯 줄 + 탭 줄의 바닥을 지키고 남는 높이의
      한 몫을 받는다. */
+  /* **섹션마다 바닥이 있다** (실제 피드백). 도면은 다섯 칸 높이, 시트는 로그 다섯 줄 +
+     탭 줄 아래로는 안 줄어든다 — 어느 한 줄이 다른 줄을 0 으로 밀 수 없다. */
   grid-template-rows:
-    auto var(--bar-speed) minmax(var(--sp-0), 1fr) var(--bar-status)
+    auto var(--bar-speed) minmax(calc(var(--plan-cell) * 5), 1fr) var(--bar-status)
     minmax(calc(var(--log-row-h) * 5 + var(--sheet-tab-h)), 0.6fr) var(--bar-bottom);
 
   /* 그래도 모자라면(가로로 눕힌 낮은 화면 등) 화면이 통째로 흐른다 — 마지막 안전판이다. */
@@ -180,12 +182,16 @@
 
 /* 도면을 남는 높이에 맞춰 줄인다. 인라인 크기(`resizePlanCanvas` 가 박는 width/height)는
    max-* 가 이긴다 — 백버퍼 해상도는 그대로라 흐려지지 않고, object-fit 이 비율을 지킨다. */
+/* **높이 100% 가 사슬로 이어져야 캔버스가 줄어든다.** max-height 만 주면 frame 의 제
+   높이가 내용 크기라 100% 가 아무것도 못 잡고, 캔버스는 제 크기를 고집한 채 잘려
+   나갔다 — 축소가 아니라 절단이었다(실제 피드백). */
 .battle--portrait .battle__frame {
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
   min-height: var(--sp-0);
-  max-height: 100%;
+  height: 100%;
 }
 
 .battle--portrait .battle__frame canvas {
@@ -321,7 +327,9 @@
    가운데 열이 가변이다), 세로에서는 도면이 고정이고 시트만 바뀐다. 규칙을 보면서도
    유닛 위치를 계속 읽을 수 있어야 하므로 도면이 밀려 나가면 배치의 뜻이 사라진다. */
 .battle--portrait .battle__col--plan {
+  display: flex;
   gap: var(--sp-0);
+  min-height: var(--sp-0);
   padding: var(--plan-pad);
   overflow: hidden;
   background: var(--surface-plan);

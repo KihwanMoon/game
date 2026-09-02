@@ -102,6 +102,8 @@ function buildProps(patch: Partial<BattlePortraitProps> = {}): BattlePortraitPro
     hpMax: 100,
     potions: 2,
     potionsMax: 3,
+    scrolls: 1,
+    scrollsMax: 1,
     tab: 'rules',
     onTabChange: () => undefined,
     ...patch,
@@ -220,7 +222,7 @@ describe('도면은 고정이고 스크롤되지 않는다', () => {
     // 짜부라지고, 바닥만 깔면 화면이 통째로 스크롤된다 — 스크롤되는 화면은 보이는
     // 화면이 아니다(실제 피드백 두 번).
     const block = cutRule('.battle--portrait')
-    expect(block).toContain('minmax(var(--sp-0), 1fr) var(--bar-status)')
+    expect(block).toContain('minmax(calc(var(--plan-cell) * 5), 1fr) var(--bar-status)')
     expect(block).toContain('minmax(calc(var(--log-row-h) * 5 + var(--sheet-tab-h)), 0.6fr)')
     expect(block).toContain('var(--bar-bottom)')
   })
@@ -230,6 +232,10 @@ describe('도면은 고정이고 스크롤되지 않는다', () => {
     expect(block).toContain('max-width: 100%')
     expect(block).toContain('max-height: 100%')
     expect(block).toContain('object-fit: contain')
+  })
+
+  it('높이 100% 가 사슬로 이어진다 — 끊기면 축소가 아니라 절단이 된다', () => {
+    expect(cutRule('.battle--portrait .battle__frame')).toContain('height: 100%')
   })
 
   it('시트가 바닥을 지켜도 모자라면 화면이 통째로 흐른다 — 닿을 수 없는 줄을 안 만든다', () => {

@@ -414,3 +414,24 @@ UPDATE item_catalog SET affixes = '[{"stat": "defense", "flat": 3, "percent": 0,
 -- 그래서 잠그는 대신 원인을 없앤다. 티켓이 **이미 깎은 충전**을 기억하면, 층마다 다시
 -- 돌린 결과에서 그만큼을 빼고 남은 것만 깎는다 — 중간에 채워도 두 번 깎이지 않는다.
 ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS spent_charges JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+
+-- ── 정비 규칙이 스위치에서 행 목록이 됐다 (설계/4_아이템 §5) ─────────────────
+--
+-- 전투 규칙처럼 조립하고 싶다는 요청. 켜져 있던 스위치를 같은 뜻의 행으로 옮긴다 —
+-- 순서(버리기 → 복구 → 보충)가 스위치 시절의 고정 순서와 같다.
+ALTER TABLE maintenance_rule ADD COLUMN IF NOT EXISTS rows JSONB NOT NULL DEFAULT '[]'::jsonb;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name = 'maintenance_rule' AND column_name = 'refill_on') THEN
+    UPDATE maintenance_rule SET rows =
+        (CASE WHEN discard_grade <> '' THEN jsonb_build_array(jsonb_build_object('action','DISCARD','grade',discard_grade)) ELSE '[]'::jsonb END)
+        || (CASE WHEN repair_on THEN jsonb_build_array(jsonb_build_object('action','REPAIR','grade','')) ELSE '[]'::jsonb END)
+        || (CASE WHEN refill_on THEN jsonb_build_array(jsonb_build_object('action','REFILL','grade','')) ELSE '[]'::jsonb END)
+      WHERE rows = '[]'::jsonb AND (refill_on OR repair_on OR discard_grade <> '');
+    ALTER TABLE maintenance_rule DROP COLUMN refill_on;
+    ALTER TABLE maintenance_rule DROP COLUMN repair_on;
+    ALTER TABLE maintenance_rule DROP COLUMN discard_grade;
+  END IF;
+END $$;

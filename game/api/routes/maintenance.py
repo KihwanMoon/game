@@ -7,10 +7,10 @@
 from fastapi import APIRouter, HTTPException, status
 
 from game.api.deps import CurrentAccount, get_pool
-from game.api.schemas import MaintenanceView
+from game.api.schemas import MaintenanceRowView, MaintenanceView
 from game.app.store.maintenance import (
-    DISCARD_CHOICES,
-    MaintenanceRule,
+    MaintenanceRow,
+    check_rows,
     read_maintenance,
     save_maintenance,
 )
@@ -20,46 +20,38 @@ router = APIRouter()
 
 @router.get("/api/maintenance", response_model=MaintenanceView)
 def read_maintenance_rule(account: CurrentAccount) -> MaintenanceView:
-    """정비 규칙을 읽는다.
+    """정비 행들을 읽는다.
 
     Args:
         account: 토큰으로 푼 계정.
 
     Returns:
-        지금 규칙. 저장한 적이 없으면 전부 꺼짐이다.
+        지금 행들. 저장한 적이 없으면 빈 목록이다.
     """
-    rule = read_maintenance(get_pool(), account.account_id)
+    rows = read_maintenance(get_pool(), account.account_id)
     return MaintenanceView(
-        is_refill_on=rule.is_refill_on,
-        is_repair_on=rule.is_repair_on,
-        discard_grade=rule.discard_grade,
+        rows=[MaintenanceRowView(action=row.action, grade=row.grade) for row in rows]
     )
 
 
 @router.put("/api/maintenance", response_model=MaintenanceView)
 def save_maintenance_rule(request: MaintenanceView, account: CurrentAccount) -> MaintenanceView:
-    """정비 규칙을 저장한다.
+    """정비 행들을 저장한다. 순서 그대로다.
 
     Args:
-        request: 새 규칙.
+        request: 새 행들.
         account: 토큰으로 푼 계정.
 
     Returns:
-        저장된 규칙.
+        저장된 행들.
 
     Raises:
-        HTTPException: 버리기 등급이 닫힌 목록 밖인 경우 — 오타가 조용히 「안 버림」이
-            되면 켰다고 믿은 사람의 가방이 안 비워진다.
+        HTTPException: 닫힌 어휘 밖의 행이 있는 경우 — 오타가 조용히 「안 함」이 되면
+            켰다고 믿은 정비가 안 돈다.
     """
-    if request.discard_grade not in DISCARD_CHOICES:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "버릴 수 없는 등급이다")
-    save_maintenance(
-        get_pool(),
-        account.account_id,
-        MaintenanceRule(
-            is_refill_on=request.is_refill_on,
-            is_repair_on=request.is_repair_on,
-            discard_grade=request.discard_grade,
-        ),
-    )
+    rows = tuple(MaintenanceRow(action=row.action, grade=row.grade) for row in request.rows)
+    problem = check_rows(rows)
+    if problem:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, problem)
+    save_maintenance(get_pool(), account.account_id, rows)
     return request

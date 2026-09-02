@@ -128,6 +128,27 @@ export interface BattleViewProps {
  * @param props 전투 설정·규칙표 대응표·위치 표기·덧붙일 조작부.
  * @returns 렌더 트리.
  */
+/**
+ * 티켓이 실어 보낸 소모품 수를 읽는다.
+ *
+ * **밸런스의 기본 지급이 아니다.** `balance.player.potions` 는 소모품 칸이 생기기 전의
+ * 값이라, 그것을 분모로 쓰면 영약 일곱 충전을 들고도 「n / 2」 로 그려진다 — 실은 수는
+ * 로드아웃이 안다.
+ *
+ * @param setup 판을 특정하는 값들.
+ * @param kind 소모품 태그.
+ * @returns 실은 수. 로드아웃이 없으면(구버전 티켓) 0 이고, 화면은 분모를 안 그린다.
+ */
+function readCarried(setup: BattleSetup, kind: string): number {
+  const carried = setup.loadout?.consumables ?? []
+  for (const [tag, count] of carried) {
+    if (tag === kind) {
+      return count
+    }
+  }
+  return 0
+}
+
 export function BattleView(props: BattleViewProps): React.JSX.Element {
   const mode = useViewportMode()
   const [speed, setSpeed] = useState(INITIAL_SPEED)
@@ -347,7 +368,9 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         hp={player?.hp ?? 0}
         hpMax={player?.hpMax ?? 1}
         potions={player === undefined ? 0 : countItem(player, 'POTION')}
-        potionsMax={session.balance.player.potions}
+        potionsMax={readCarried(props.setup, 'POTION')}
+        scrolls={player === undefined ? 0 : countItem(player, 'SCROLL')}
+        scrollsMax={readCarried(props.setup, 'SCROLL')}
         tab={tab}
         onTabChange={setTab}
         bodyRef={sheetRef}
@@ -380,7 +403,9 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         hp={player?.hp ?? 0}
         hpMax={player?.hpMax ?? 1}
         potions={player === undefined ? 0 : countItem(player, 'POTION')}
-        potionsMax={session.balance.player.potions}
+        potionsMax={readCarried(props.setup, 'POTION')}
+        scrolls={player === undefined ? 0 : countItem(player, 'SCROLL')}
+        scrollsMax={readCarried(props.setup, 'SCROLL')}
         tab={tab}
         onTabChange={setTab}
         bodyRef={sheetRef}
@@ -454,7 +479,9 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         hp={player?.hp ?? 0}
         hpMax={player?.hpMax ?? 1}
         potions={player === undefined ? 0 : countItem(player, 'POTION')}
-        potionsMax={session.balance.player.potions}
+        potionsMax={readCarried(props.setup, 'POTION')}
+        scrolls={player === undefined ? 0 : countItem(player, 'SCROLL')}
+        scrollsMax={readCarried(props.setup, 'SCROLL')}
         {...(threatText === undefined ? {} : { threat: threatText })}
       />
 

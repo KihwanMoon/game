@@ -297,6 +297,8 @@ describe('상세와 도구줄', () => {
       }),
     )
     expect(html).toContain('소모품 칸에서 한다')
+    // 상급 물약에 봉인 해제가 없는 것은 설계다 — 화면이 말해야 「없는데?」가 안 나온다.
+    expect(html).toContain('봉인 칸은 장비의 것')
     expect(html).not.toContain('버리기')
     expect(html).not.toContain('호가')
   })

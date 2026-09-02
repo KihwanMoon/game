@@ -38,6 +38,9 @@ const HP_BAR_WIDTH = 150
 /** 물약 칸의 글리프. ds `StatusBar` 와 같은 도형을 쓴다. */
 const POTION_GLYPH = '◍'
 
+/** 주문서 글리프. 도면의 다른 글리프들처럼 유니코드 도형이다. */
+const SCROLL_GLYPH = '▤'
+
 /** 물약 칸의 라벨. */
 const POTION_LABEL = '물약'
 
@@ -74,6 +77,9 @@ export interface BattleLandscapeProps {
   readonly hpMax: number
   readonly potions: number
   readonly potionsMax: number
+  /** 남은 주문서와 실은 수. 물약과 같은 자리다 — 소모품 현황이 플레이 중에 보여야 한다. */
+  readonly scrolls: number
+  readonly scrollsMax: number
   /** 코어가 낸 OUTCOME_* 값. 문구는 `outcomeText` 한 곳이 만든다. */
   readonly outcome: string
   /** 지금 걸린 예고 문구. 없으면 위협 칸을 그리지 않는다. */
@@ -150,6 +156,12 @@ export function BattleLandscape(props: BattleLandscapeProps): React.JSX.Element 
           count={props.potions}
           max={props.potionsMax}
           glyph={POTION_GLYPH}
+        />
+        <ResourceCount
+          label="주문서"
+          count={props.scrolls}
+          max={props.scrollsMax}
+          glyph={SCROLL_GLYPH}
         />
         <span className="battle-ls__gap" />
         <span

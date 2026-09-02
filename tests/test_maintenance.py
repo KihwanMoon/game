@@ -70,23 +70,59 @@ def find_ids(client, token):
 
 
 def test_the_default_does_nothing(client, token):
-    """★ 저장한 적 없는 계정의 정비는 전부 꺼져 있고, 실행해도 아무 일도 없다."""
+    """★ 저장한 적 없는 계정의 정비는 빈 목록이고, 실행해도 아무 일도 없다."""
     from game.api.maintenance_service import apply_maintenance
 
     body = client.get("/api/maintenance", headers=build_headers(token)).json()
-    assert body == {"is_refill_on": False, "is_repair_on": False, "discard_grade": ""}
+    assert body == {"rows": []}
     account_id, _entity_id = find_ids(client, token)
     assert apply_maintenance(account_id) == ""
 
 
-def test_an_unknown_discard_grade_is_refused(client, token):
-    """★ 오타가 조용히 「안 버림」이 되면, 켰다고 믿은 사람의 가방이 안 비워진다."""
-    refused = client.put(
-        "/api/maintenance",
-        json={"discard_grade": "COMMOM"},
-        headers=build_headers(token),
-    )
-    assert refused.status_code == 422
+def test_rows_keep_their_order(client, token):
+    """★ 행 순서가 실행 순서다 — 저장이 흔들면 「버리고 복구」가 「복구하고 버리기」가 된다."""
+    rows = [
+        {"action": "REPAIR", "grade": ""},
+        {"action": "DISCARD", "grade": "COMMON"},
+        {"action": "SELL_STOCK", "grade": ""},
+    ]
+    saved = client.put("/api/maintenance", json={"rows": rows}, headers=build_headers(token)).json()
+    assert saved["rows"] == rows
+    again = client.get("/api/maintenance", headers=build_headers(token)).json()
+    assert again["rows"] == rows
+
+
+def test_an_unknown_row_is_refused(client, token):
+    """★ 오타가 조용히 「안 함」이 되면, 켰다고 믿은 정비가 안 돈다."""
+    headers = build_headers(token)
+    for rows in (
+        [{"action": "DISCARD", "grade": "COMMOM"}],
+        [{"action": "EXPLODE", "grade": ""}],
+        [{"action": "REPAIR", "grade": "COMMON"}],
+        [{"action": "DISCARD", "grade": "RELIC"}],
+    ):
+        refused = client.put("/api/maintenance", json={"rows": rows}, headers=headers)
+        assert refused.status_code == 422, rows
+
+
+def test_sell_stock_leaves_loaded_slots_alone(client, token):
+    """★ 재고 판매가 끼운 칸까지 팔면, 정비 한 번에 들고 갈 것이 사라진다."""
+    from game.api.deps import get_pool
+    from game.api.maintenance_service import apply_sell_rule
+    from game.app.store.consumables import apply_slot_load, list_consumable_slots
+    from game.app.store.equipment import read_balance
+    from game.app.store.inventory_slots import apply_stack_grant
+
+    account_id, entity_id = find_ids(client, token)
+    pool = get_pool()
+    apply_slot_load(pool, entity_id, "POTION", 0, "potion_heal", 2)
+    apply_stack_grant(pool, entity_id, "potion_heal", 9)
+    apply_stack_grant(pool, entity_id, "potion_heal", 9)
+    sold, earned = apply_sell_rule(pool, account_id, entity_id)
+    assert (sold, earned) == (2, 40)
+    assert read_balance(pool, account_id) >= 40
+    loaded = [s for s in list_consumable_slots(pool, entity_id) if s.catalog_id]
+    assert loaded and loaded[0].charges == 2, "끼운 칸이 사라졌다"
 
 
 def test_discard_takes_only_that_grade_from_the_bag(client, token):

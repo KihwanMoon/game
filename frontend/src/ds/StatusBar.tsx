@@ -12,6 +12,7 @@ import { ThreatNotice } from './ThreatNotice'
 const HP_BAR_WIDTH = 160
 
 /** 물약 칸의 글리프. */
+const SCROLL_GLYPH = '▤'
 const POTION_GLYPH = '◍'
 
 /** StatusBar 가 받는 props. */
@@ -20,6 +21,9 @@ export interface StatusBarProps {
   readonly hpMax: number
   readonly potions: number
   readonly potionsMax: number
+  /** 남은 주문서와 실은 수. 물약과 같은 자리다 — 소모품 현황이 플레이 중에 보여야 한다. */
+  readonly scrolls?: number
+  readonly scrollsMax?: number
   /** 지금 걸린 위협 문구. 없으면 위협 칸을 그리지 않는다. */
   readonly threat?: string
 }
@@ -41,6 +45,14 @@ export function StatusBar(props: StatusBarProps): React.JSX.Element {
         max={props.potionsMax}
         glyph={POTION_GLYPH}
       />
+      {props.scrolls === undefined ? null : (
+        <ResourceCount
+          label="주문서"
+          count={props.scrolls}
+          max={props.scrollsMax ?? 0}
+          glyph={SCROLL_GLYPH}
+        />
+      )}
       {props.threat === undefined ? null : (
         <span className="ds-statusbar__threat">
           <ThreatNotice text={props.threat} tone="danger" />

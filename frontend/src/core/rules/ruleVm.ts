@@ -402,11 +402,15 @@ export class RuleVm implements DecisionPolicy {
       }
       // 소모품도 같다 — 조건은 참인데 수단이 없다. 이것이 「거짓」과 다르다는 것이
       // 이 게임의 규칙 상태 4종 중 하나다 (결정 #04).
-      if (rule.action === USE_ITEM_ACTION && countItem(entity, rule.actionParam ?? '') <= 0) {
+      // **인자가 없으면 물약이다.** USE_POTION 별칭과 같은 규약이고 실행부도 그렇게
+      // 떨어진다 — 예전에는 문지기만 빈 문자열을 세서(늘 0) 인자 없는 소모품 규칙이
+      // 영원히 「불가」였다 (e2).
+      const itemKind = rule.action === USE_ITEM_ACTION ? (rule.actionParam ?? 'POTION') : null
+      if (rule.action === USE_ITEM_ACTION && countItem(entity, itemKind ?? '') <= 0) {
         blocked.push({
           ruleIndex: rule.priority,
           expr,
-          reason: `${String(rule.actionParam)} 없음`,
+          reason: `${String(itemKind)} 없음`,
         })
         continue
       }
@@ -427,7 +431,7 @@ export class RuleVm implements DecisionPolicy {
         expr,
         setFlag: rule.setFlag,
         skillId: rule.action === USE_SKILL_ACTION ? rule.actionParam : null,
-        itemKind: rule.action === USE_ITEM_ACTION ? rule.actionParam : null,
+        itemKind,
         blocked,
       })
     }

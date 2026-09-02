@@ -380,10 +380,14 @@ class ConsumableSellRequest(BaseModel):
     count: int = 1
 
 
-class MaintenanceView(BaseModel):
-    """정비 규칙 화면·요청 겸용."""
+class MaintenanceRowView(BaseModel):
+    """정비 규칙 한 행."""
 
-    is_refill_on: bool = False
-    is_repair_on: bool = False
-    # 버릴 등급. 빈 문자열이면 안 버린다. 서버가 닫힌 목록으로 검증한다.
-    discard_grade: str = ""
+    action: str
+    grade: str = ""
+
+
+class MaintenanceView(BaseModel):
+    """정비 규칙 화면·요청 겸용. 행 순서가 실행 순서다."""
+
+    rows: list[MaintenanceRowView] = []

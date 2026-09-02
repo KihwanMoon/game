@@ -235,7 +235,7 @@ export function ConsumablePanel(props: ConsumablePanelProps): React.JSX.Element 
       <ul className="cns__list">{view.slots.map((slot) => renderSlot(slot, props))}</ul>
       {view.options.length === 0 ? null : (
         <>
-          <div className="cns__head-label">보유 재고 — 끼우면 가방에서 하나가 나간다</div>
+          <div className="cns__head-label">보유 재고 — 끼우면 가방에서 하나가 나간다 · 등급은 충전 용량이다 (봉인 칸은 장비의 것)</div>
           <ul className="cns__list">
             {view.options.map((option) => (
               <li className="cns__card" key={`sell-${option.catalogId}`}>

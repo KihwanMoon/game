@@ -1,7 +1,8 @@
 """정비 규칙 실행 — 티켓이 닫힐 때 서버가 손본다 (설계/4_아이템 §5).
 
-순서가 뜻을 갖는다. **버리기 → 복구 → 보충.** 버릴 것을 먼저 치워야 곧 버릴 장비를
-복구하는 데 돈을 안 쓰고, 복구가 보충보다 앞서는 것은 장비가 소모품보다 비싼 자산이라서다.
+**행 순서가 실행 순서다.** 전투 규칙표와 같은 규약이라, 「버리고 나서 복구」와 「복구하고
+나서 버리기」를 사람이 조립으로 가른다 — 곧 버릴 장비에 복구비를 쓸지는 이제 배치의
+문제다.
 
 무엇을 했는지 **한 줄로 돌려준다.** 조용한 자동화는 「왜 돈이 줄었지」가 된다 (P1).
 """
@@ -13,9 +14,17 @@ from game.api.loadout_service import build_equipped_entries, count_slot_bonus
 from game.app.store.accounts import find_player_entity
 from game.app.store.consumables import apply_slot_fill, list_consumable_slots
 from game.app.store.equipment import add_currency, apply_repair, read_balance, remove_item
+from game.app.store.inventory_slots import apply_stack_take
 from game.app.store.items import list_equipment, list_inventory
-from game.app.store.maintenance import read_maintenance
-from game.schemas.consumable import resolve_refill_cost
+from game.app.store.maintenance import (
+    ACTION_DISCARD,
+    ACTION_REFILL,
+    ACTION_REPAIR,
+    ACTION_SELL_STOCK,
+    MaintenanceRow,
+    read_maintenance,
+)
+from game.schemas.consumable import resolve_refill_cost, resolve_sell_price
 from game.schemas.item import ItemKind
 
 
@@ -105,11 +114,70 @@ def apply_refill_rule(pool: ConnectionPool, account_id: int, entity_id: int) -> 
     return filled, paid
 
 
-def apply_maintenance(account_id: int) -> str:
-    """이 계정의 정비 규칙을 실행한다.
+def apply_sell_rule(pool: ConnectionPool, account_id: int, entity_id: int) -> tuple[int, int]:
+    """가방의 소모품 재고를 전부 판다.
 
-    **티켓이 닫힐 때만 부른다.** 층 청구마다 돌면 런 중에 가방이 바뀌는 것이라, 죽기
-    전에 주운 것이 층 정산 한 번에 사라질 수 있다.
+    끼운 칸은 안 건드린다 — 파는 것은 **남는** 재고다. 값은 수동 팔기와 같다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 값을 받을 계정.
+        entity_id: 대상 개체.
+
+    Returns:
+        (판 개수, 받은 값).
+    """
+    catalog = get_item_catalog()
+    sold = 0
+    earned = 0
+    for entry in list_inventory(pool, entity_id):
+        if entry.stack_catalog_id is None or entry.stack_count <= 0:
+            continue
+        item = catalog.get(entry.stack_catalog_id)
+        if item is None or item.kind is not ItemKind.CONSUMABLE:
+            continue
+        count = entry.stack_count
+        if not apply_stack_take(pool, entity_id, entry.stack_catalog_id, count):
+            continue
+        price = resolve_sell_price(item.grade, max(1, item.charges)) * count
+        add_currency(pool, account_id, price)
+        sold += count
+        earned += price
+    return sold, earned
+
+
+def apply_row(pool: ConnectionPool, account_id: int, entity_id: int, row: MaintenanceRow) -> str:
+    """정비 행 하나를 실행한다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 대상 계정.
+        entity_id: 대상 개체.
+        row: 실행할 행.
+
+    Returns:
+        무슨 일이 있었는지. 한 일이 없으면 빈 문자열.
+    """
+    if row.action == ACTION_DISCARD:
+        dropped = apply_discard_rule(pool, entity_id, row.grade)
+        return f"{row.grade} 장비 {dropped}개 버림" if dropped else ""
+    if row.action == ACTION_REPAIR:
+        fixed = apply_repair_rule(pool, account_id, entity_id)
+        return f"파손 {fixed}개 복구" if fixed else ""
+    if row.action == ACTION_REFILL:
+        filled, paid = apply_refill_rule(pool, account_id, entity_id)
+        return f"충전 {filled}개 보충 (-{paid})" if filled else ""
+    if row.action == ACTION_SELL_STOCK:
+        sold, earned = apply_sell_rule(pool, account_id, entity_id)
+        return f"재고 {sold}개 판매 (+{earned})" if sold else ""
+    return ""
+
+
+def apply_maintenance(account_id: int) -> str:
+    """이 계정의 정비 행들을 순서대로 실행한다.
+
+    **티켓이 닫힐 때만 부른다.** 층 청구마다 돌면 런 중에 가방이 바뀐다 — 죽기 전에
+    주운 것이 층 정산 한 번에 사라질 수 있다.
 
     Args:
         account_id: 대상 계정.
@@ -118,21 +186,9 @@ def apply_maintenance(account_id: int) -> str:
         무엇을 했는지 한 줄. 한 일이 없으면 빈 문자열.
     """
     pool = get_pool()
-    rule = read_maintenance(pool, account_id)
-    if not rule.is_refill_on and not rule.is_repair_on and rule.discard_grade == "":
+    rows = read_maintenance(pool, account_id)
+    if not rows:
         return ""
     entity_id = find_player_entity(pool, account_id)
-    notes: list[str] = []
-    if rule.discard_grade:
-        dropped = apply_discard_rule(pool, entity_id, rule.discard_grade)
-        if dropped:
-            notes.append(f"정비: {rule.discard_grade} 장비 {dropped}개 버림")
-    if rule.is_repair_on:
-        fixed = apply_repair_rule(pool, account_id, entity_id)
-        if fixed:
-            notes.append(f"정비: 파손 {fixed}개 복구")
-    if rule.is_refill_on:
-        filled, paid = apply_refill_rule(pool, account_id, entity_id)
-        if filled:
-            notes.append(f"정비: 충전 {filled}개 보충 (-{paid})")
-    return " · ".join(notes)
+    notes = [note for row in rows if (note := apply_row(pool, account_id, entity_id, row))]
+    return f"정비: {' · '.join(notes)}" if notes else ""

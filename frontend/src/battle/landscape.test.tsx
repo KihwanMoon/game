@@ -145,6 +145,8 @@ function buildProps(patch: Partial<BattleLandscapeProps> = {}): BattleLandscapeP
     hpMax: 100,
     potions: 2,
     potionsMax: 3,
+    scrolls: 1,
+    scrollsMax: 1,
     tab: 'rules',
     onTabChange: () => undefined,
     ...patch,

@@ -202,10 +202,9 @@ CREATE TABLE IF NOT EXISTS inventory_slot (
 --
 -- **기본은 전부 꺼짐이다.** 돈이 나가고 아이템이 사라지는 일은 사람이 켠 것이어야 한다.
 CREATE TABLE IF NOT EXISTS maintenance_rule (
-    account_id    BIGINT  PRIMARY KEY REFERENCES account(id) ON DELETE CASCADE,
-    refill_on     BOOLEAN NOT NULL DEFAULT FALSE,
-    repair_on     BOOLEAN NOT NULL DEFAULT FALSE,
-    discard_grade TEXT    NOT NULL DEFAULT ''
+    account_id BIGINT PRIMARY KEY REFERENCES account(id) ON DELETE CASCADE,
+    -- 정렬된 행 목록 [{action, grade}] — 전투 규칙표처럼 위에서 아래로 돈다.
+    rows       JSONB  NOT NULL DEFAULT '[]'::jsonb
 );
 
 -- 소모품 칸 (설계/4_아이템 §5). 물약 둘·주문서 하나가 기본이다.

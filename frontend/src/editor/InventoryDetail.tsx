@@ -164,6 +164,10 @@ export function InventoryDetail(props: InventoryDetailProps): React.JSX.Element 
           <ValueExpr text={`x${String(choice.entry.stackCount)}`} size="sm" />
         </div>
         <ValueExpr text="소모품이다 — 끼우기·팔기는 아래 소모품 칸에서 한다" size="sm" dim />
+        {/* **소모품 등급에는 봉인 칸이 없다.** 장비의 등급이 봉인 칸을 정하듯 소모품의
+            등급은 충전 용량을 정한다 (§5) — 상급 물약에 봉인 해제가 없는 것은 빠진 것이
+            아니라 그렇게 설계된 것이고, 화면이 그 사실을 말해야 「없는데?」가 안 나온다. */}
+        <ValueExpr text="등급은 충전 용량을 정한다 — 봉인 칸은 장비의 것" size="sm" dim />
       </div>
     )
   }
