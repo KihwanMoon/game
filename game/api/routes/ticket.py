@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, status
 from game.api.deps import CurrentAccount, get_context, get_core_version, get_pool
 from game.api.loadout_service import build_ticket_loadout
 from game.api.schemas import TicketRequest, TicketResponse
+from game.api.world_seed import apply_floor_seed
 from game.app.progression.floors import BOSS_ROOM_ID, read_boss_floor, resolve_floor
 from game.app.services.build_chain import build_descent
 from game.app.store.accounts import find_player_entity
@@ -68,6 +69,9 @@ def create_run_ticket(request: TicketRequest, account: CurrentAccount) -> Ticket
     )
     # 지속 몬스터를 **얼려 넣는다** (docs/설계/6_몬스터 §5). 이것이 있어야 런 등식이
     # f(시드, 규칙표, 코어버전, 스냅샷) 으로 유지되고, 서버가 같은 상태로 재시뮬할 수 있다.
+    # **없으면 심는다.** 이 길이 없어 깊은 층이 영영 비어 있었다 — 스냅샷·도감·되찾기가
+    # 전부 그 위에 서 있는데 바닥이 없었다.
+    apply_floor_seed(pool, context.rooms, ticket.room_ids[:CHAIN_LENGTH], floor)
     balance_by_id = {kind["id"]: kind for kind in context.balance["enemies"]}
     snapshots = sort_snapshots(
         tuple(
