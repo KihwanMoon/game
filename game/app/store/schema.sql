@@ -192,6 +192,27 @@ CREATE TABLE IF NOT EXISTS inventory_slot (
     CHECK ((item_id IS NULL) <> (stack_catalog_id IS NULL))
 );
 
+-- 소모품 칸 (설계/4_아이템 §5). 물약 둘·주문서 하나가 기본이다.
+--
+-- **가방과 다른 것이다.** 가방은 「가진 것」이고 이 표는 「들고 갈 것」이다. 예전에는
+-- 가방에 든 소모품을 전부 세서 들고 갔고, 그래서 「몇 개를 들고 갈까」가 선택이
+-- 아니었다 — 주운 만큼이 답이었다.
+--
+-- `catalog_id` 가 NULL 인 줄은 **빈 칸**이며 출격할 때 한 개가 공짜로 찬다. 예전의
+-- `balance.player.potions` 를 대신하는 자리다.
+--
+-- 칸 수는 코드가 정한다 (`schemas/consumable.py`). 여기 줄이 없어도 빈 칸으로 읽는다 —
+-- 계정마다 미리 깔아 두면 칸 수를 늘릴 때 기존 계정만 안 늘어난다.
+CREATE TABLE IF NOT EXISTS consumable_slot (
+    entity_id   BIGINT   NOT NULL REFERENCES entity_record(id) ON DELETE CASCADE,
+    use_tag     TEXT     NOT NULL,
+    slot_index  INTEGER  NOT NULL,
+    catalog_id  TEXT     REFERENCES item_catalog(catalog_id),
+    charges     INTEGER  NOT NULL DEFAULT 0,
+    PRIMARY KEY (entity_id, use_tag, slot_index),
+    CHECK (charges >= 0)
+);
+
 -- 장비 슬롯 여섯. 양손무기의 보조 봉인은 **저장하지 않는다** — 파생값이며, 저장하면
 -- 착용·해제 순서에 따라 갈린다 (docs/설계/4_아이템 §2.1).
 CREATE TABLE IF NOT EXISTS equipment_slot (

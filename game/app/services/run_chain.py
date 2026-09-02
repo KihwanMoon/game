@@ -47,6 +47,10 @@ class ChainResult:
     total_ticks: int
     player_hp: int
     per_room: tuple[BattleResult, ...]
+    # 마지막 방을 끝냈을 때 남은 소모품. **서버가 몇 개를 깎을지 여기서 나온다** —
+    # 클라이언트가 「세 개 썼다」고 보고할 자리를 만들지 않는다 (T9). 정렬된 쌍으로
+    # 담는 이유는 딕셔너리 순회 순서가 결과에 새어 나가면 안 되기 때문이다 (R5).
+    remaining_consumables: tuple[tuple[str, int], ...] = ()
 
 
 def run_room_chain(
@@ -91,6 +95,8 @@ def run_room_chain(
     """
     carried_hp: int | None = None
     carried_potions: dict[str, int] | None = None
+    # 방을 하나도 못 돌면 쓴 것도 없다.
+    left: dict[str, int] = {}
     results: list[BattleResult] = []
     cleared = 0
     outcome = OUTCOME_PLAYER_WIN
@@ -128,6 +134,9 @@ def run_room_chain(
         result = run_room(engine)
         results.append(result)
         outcome = result.outcome
+        # **진 방에서도 센다.** 죽기 전에 마신 물약은 이미 마신 것이므로, 이긴 방까지만
+        # 세면 마지막 방에서 쓴 것이 공짜가 된다.
+        left = dict(player.consumables)
         if result.outcome != OUTCOME_PLAYER_WIN:
             break
         cleared += 1
@@ -140,4 +149,5 @@ def run_room_chain(
         total_ticks=sum(r.ticks for r in results),
         player_hp=results[-1].player_hp if results else 0,
         per_room=tuple(results),
+        remaining_consumables=tuple(sorted(left.items())),
     )

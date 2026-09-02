@@ -41,9 +41,9 @@ def build_headers(token):
 def test_a_dropped_consumable_stacks_instead_of_taking_a_slot(client, token):
     """★ **소모품이 인스턴스로 들어가면 세는 쪽이 못 본다.**
 
-    가방을 세는 쪽(`count_consumables`)은 스택만 본다. 인스턴스로 넣으면 물약을 여섯 개
-    들고도 전투에는 기본 지급 두 개만 나가고, 사람 눈에는 「가방에 있는데 못 쓴다」로
-    보인다 — 실제로 그렇게 신고됐다.
+    소모품을 다루는 쪽은 스택만 본다. 인스턴스로 넣으면 물약을 여섯 개 들고도 칸에
+    끼울 후보로 안 뜨고, 사람 눈에는 「가방에 있는데 못 쓴다」로 보인다 — 실제로 그렇게
+    신고됐다.
     """
     from game.api.deps import get_pool
     from game.api.loot_service import create_issued_item
@@ -63,21 +63,23 @@ def test_a_dropped_consumable_stacks_instead_of_taking_a_slot(client, token):
     assert [entry for entry in bag if entry.item is not None] == []
 
 
-def test_a_stacked_consumable_reaches_the_battle(client, token):
-    """★ 쌓아 둔 것이 전투 입력에 실려야 「들고 있는 것을 쓴다」가 성립한다."""
-    from game.api.deps import get_item_catalog, get_pool
-    from game.api.loadout_service import count_consumables
+def test_a_stacked_consumable_can_be_loaded_into_a_slot(client, token):
+    """★ 주운 것이 칸에 끼울 후보로 떠야 「주운 것을 들고 간다」가 성립한다.
+
+    **전투에 실리는 것은 가방이 아니라 칸이다** (§5). 예전에는 가방을 통째로 세서
+    들고 갔고, 그래서 「몇 개를 들고 갈까」가 선택이 아니었다.
+    """
+    from game.api.deps import get_pool
     from game.api.loot_service import create_issued_item
     from game.app.store.accounts import find_player_entity
 
-    account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
+    headers = build_headers(token)
+    account_id = client.get("/api/account", headers=headers).json()["account_id"]
     entity_id = find_player_entity(get_pool(), account_id)
     create_issued_item(
         get_pool(), entity_id, "potion_heal", {"grade": "COMMON", "submission_id": None}
     )
-    create_issued_item(
-        get_pool(), entity_id, "scroll_shield", {"grade": "COMMON", "submission_id": None}
-    )
-    counted = count_consumables(get_pool(), entity_id, get_item_catalog())
-    assert counted.get("POTION") == 1
-    assert counted.get("SCROLL") == 1
+    offered = client.get("/api/consumables", headers=headers).json()["options"]
+    assert [option["catalog_id"] for option in offered] == ["potion_heal"]
+    assert offered[0]["use_tag"] == "POTION"
+    assert offered[0]["charges"] > 1, "카탈로그의 칸 용량이 안 실렸다"

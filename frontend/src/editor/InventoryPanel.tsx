@@ -84,7 +84,7 @@ export function formatGradeClass(grade: string): string {
  * @param grade 등급 코드.
  * @returns 요소. 모르는 등급이면 아무것도 안 그린다.
  */
-function renderGrade(grade: string): React.JSX.Element | null {
+export function renderGrade(grade: string): React.JSX.Element | null {
   const label = GRADE_LABELS.get(grade)
   if (label === undefined) {
     return null

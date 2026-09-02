@@ -11,6 +11,8 @@
  */
 export { formatBase64Url, parseBase64Url, BASE64_BLOCK } from './base64'
 export { formatCanonicalJson, parseJsonText } from './canonicalJson'
+export { readConsumables, applyConsumableAction, buildConsumableView } from './consumableSync'
+export type { ConsumableView, ConsumableSlotView, ConsumableOptionView } from './consumableSync'
 export type { JsonObject, JsonValue } from './canonicalJson'
 export { buildGzip, computeCrc32, parseGzip } from './gzip'
 export { deflateRaw } from './deflate'

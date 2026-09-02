@@ -72,7 +72,7 @@ def build_taken_item(client, token, monster, catalog_id="helm_iron"):
         (계정 id, 개체 id).
     """
     from game.api.deps import get_pool
-    from game.api.routes.run import apply_trophy_transfer
+    from game.api.monster_service import apply_trophy_transfer
     from game.app.store.accounts import find_player_entity
     from game.app.store.items import create_item
 

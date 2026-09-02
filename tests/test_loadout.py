@@ -101,25 +101,25 @@ def test_skills_are_sorted(catalog):
     assert list(loadout.skills) == sorted(loadout.skills)
 
 
-def test_the_base_potions_survive_a_loadout(catalog):
-    """★ **로드아웃이 생겼다고 기본 지급이 사라지면 안 된다.**
+def test_nothing_is_granted_for_free_here(catalog):
+    """★ **기본 지급을 여기서 얹으면 「한도 내에서 쓴다」가 성립하지 않는다.**
 
-    balance.json 의 `potions` 는 누구나 런을 시작할 때 받는 몫이고, 가방은 그 위에
-    더해지는 것이다. 가방만 쓰면 로드아웃이 붙는 순간 모두가 빈손이 된다 — 실제로 그렇게
-    회귀했고, 이기던 규칙표가 지기 시작해서 드러났다.
+    예전에는 `balance.player.potions` 두 개가 매 판 공짜로 얹혔다. 그러면 소모품 칸을
+    아무리 비워 둬도 두 개는 늘 있고, 칸도 보충비도 뜻을 잃는다.
+
+    그 두 개는 **빈 칸이 출격 때 채우는 공짜 충전**으로 옮겨 갔다. 옮긴 것이지 없앤 것이
+    아니라는 것은 `test_consumable_slots.py` 가 지킨다.
     """
     loadout = build_player_loadout(BASE, {}, level=1, base_rule_slots=BASE_SLOTS)
-    assert dict(loadout.consumables)["POTION"] == BASE["potions"]
+    assert dict(loadout.consumables) == {}
 
 
-def test_the_bag_adds_on_top(catalog):
-    """★ 가방이 기본 지급을 덮으면 물약을 주울 이유가 없다."""
+def test_the_slots_decide_what_is_carried(catalog):
+    """★ 칸이 실어 보낸 수를 그대로 싣는다 — 여기서 더하거나 빼면 한도가 한도가 아니다."""
     loadout = build_player_loadout(
         BASE, {}, level=1, base_rule_slots=BASE_SLOTS, consumables={"POTION": 3, "SCROLL": 2}
     )
-    counts = dict(loadout.consumables)
-    assert counts["POTION"] == BASE["potions"] + 3
-    assert counts["SCROLL"] == 2
+    assert dict(loadout.consumables) == {"POTION": 3, "SCROLL": 2}
 
 
 def test_empty_kinds_are_not_carried(catalog):

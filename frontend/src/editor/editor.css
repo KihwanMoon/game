@@ -1948,3 +1948,39 @@
 .vtr__input {
   inline-size: var(--sp-12);
 }
+
+/* ── 소모품 칸 (설계/4_아이템 §5) ────────────────────────────────────────
+   가방과 다른 화면이다. 가방은 「가진 것」, 여기는 「들고 갈 것」이다.
+   행 구조를 인벤토리와 같게 두어 등급 색·글리프가 같은 자리에 온다. */
+.cns__head {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+  margin-block-end: var(--sp-2);
+}
+
+.cns__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cns__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+  padding-block: var(--sp-1);
+  border-block-end: var(--border);
+}
+
+/* 칸 이름. 너비를 고정해 세로로 줄이 맞는다 — 기계 도면의 성격이다. */
+.cns__slot {
+  min-width: var(--sp-12);
+  color: var(--text-dim);
+  font-family: var(--font-data);
+  font-size: var(--fs-sm);
+}

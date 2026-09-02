@@ -172,7 +172,8 @@
       "tags": [
         "POTION"
       ],
-      "use_tag": "POTION"
+      "use_tag": "POTION",
+      "charges": 2
     },
     {
       "id": "scroll_shield",
@@ -182,7 +183,8 @@
       "tags": [
         "SCROLL"
       ],
-      "use_tag": "SCROLL"
+      "use_tag": "SCROLL",
+      "charges": 1
     },
     {
       "id": "quest_seal",
@@ -581,6 +583,45 @@
         "CURSED"
       ],
       "_note": "표현력의 끝. CPU 를 무한히 주지 않는 이유는 표현력이 무한하면 정교한 로직의 가치가 사라지기 때문이다 (결정 #51 과 같은 이유)."
+    },
+    {
+      "id": "potion_greater",
+      "kind": "CONSUMABLE",
+      "label_ko": "큰 회복 물약",
+      "grade": "FINE",
+      "min_floor": 3,
+      "stack_max": 5,
+      "charges": 4,
+      "tags": [
+        "POTION"
+      ],
+      "use_tag": "POTION"
+    },
+    {
+      "id": "potion_elixir",
+      "kind": "CONSUMABLE",
+      "label_ko": "영약",
+      "grade": "RELIC",
+      "min_floor": 6,
+      "stack_max": 3,
+      "charges": 7,
+      "tags": [
+        "POTION"
+      ],
+      "use_tag": "POTION"
+    },
+    {
+      "id": "scroll_ward",
+      "kind": "CONSUMABLE",
+      "label_ko": "수호 주문서",
+      "grade": "FINE",
+      "min_floor": 4,
+      "stack_max": 3,
+      "charges": 3,
+      "tags": [
+        "SCROLL"
+      ],
+      "use_tag": "SCROLL"
     }
   ]
 }

@@ -372,3 +372,12 @@ ALTER TABLE item_catalog ADD COLUMN IF NOT EXISTS stack_max INTEGER NOT NULL DEF
 -- 씨앗의 값을 채운다. 소모품만 1 보다 크다.
 UPDATE item_catalog SET stack_max = 9 WHERE catalog_id = 'potion_heal' AND stack_max <= 1;
 UPDATE item_catalog SET stack_max = 5 WHERE catalog_id = 'scroll_shield' AND stack_max <= 1;
+
+
+-- ── 소모품이 「가진 것」에서 「들고 갈 것」이 됐다 (설계/4_아이템 §5) ────────
+--
+-- 칸 하나가 담는 충전 수는 카탈로그가 정한다. 등급이 장비에서 봉인 칸을 정하듯,
+-- 소모품에서는 이것을 정한다.
+ALTER TABLE item_catalog ADD COLUMN IF NOT EXISTS charges INTEGER NOT NULL DEFAULT 1;
+
+UPDATE item_catalog SET charges = 2 WHERE catalog_id = 'potion_heal' AND charges <= 1;

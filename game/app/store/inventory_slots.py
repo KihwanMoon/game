@@ -80,3 +80,70 @@ def apply_stack_grant(pool: ConnectionPool, entity_id: int, catalog_id: str, cap
             (entity_id, slot, catalog_id),
         )
     return True
+
+
+def apply_stack_take(pool: ConnectionPool, entity_id: int, catalog_id: str, count: int) -> bool:
+    """가방에서 소모품 몇 개를 뺀다.
+
+    **높은 칸부터 뺀다.** 낮은 칸부터 빼면 쌓기가 채우는 칸(`apply_stack_grant` 는 가장
+    낮은 칸을 채운다)과 맞물려 같은 칸이 계속 비었다 찼다 한다.
+
+    Args:
+        pool: 연결 풀.
+        entity_id: 대상 개체.
+        catalog_id: 뺄 소모품.
+        count: 뺄 개수.
+
+    Returns:
+        전부 뺐으면 True. 모자라면 아무것도 안 빼고 False 다 — 반쯤 빼면 화면은
+        「실패」를 보는데 가방은 줄어 있다.
+    """
+    if count <= 0:
+        return False
+    with pool.connection() as connection:
+        rows = connection.execute(
+            "SELECT slot_index, stack_count FROM inventory_slot"
+            " WHERE entity_id = %s AND stack_catalog_id = %s AND stack_count > 0"
+            " ORDER BY slot_index DESC",
+            (entity_id, catalog_id),
+        ).fetchall()
+        if sum(int(row[1]) for row in rows) < count:
+            return False
+        left = count
+        for slot_index, stack_count in rows:
+            if left <= 0:
+                break
+            amount = min(int(stack_count), left)
+            if amount >= int(stack_count):
+                connection.execute(
+                    "DELETE FROM inventory_slot WHERE entity_id = %s AND slot_index = %s",
+                    (entity_id, int(slot_index)),
+                )
+            else:
+                connection.execute(
+                    "UPDATE inventory_slot SET stack_count = stack_count - %s"
+                    " WHERE entity_id = %s AND slot_index = %s",
+                    (amount, entity_id, int(slot_index)),
+                )
+            left -= amount
+    return True
+
+
+def count_stack(pool: ConnectionPool, entity_id: int, catalog_id: str) -> int:
+    """가방에 그 소모품이 몇 개 있는지 센다.
+
+    Args:
+        pool: 연결 풀.
+        entity_id: 대상 개체.
+        catalog_id: 셀 소모품.
+
+    Returns:
+        개수. 없으면 0.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT coalesce(sum(stack_count), 0) FROM inventory_slot"
+            " WHERE entity_id = %s AND stack_catalog_id = %s",
+            (entity_id, catalog_id),
+        ).fetchone()
+    return int(row[0]) if row else 0

@@ -78,6 +78,7 @@ import {
   TemplatePanel,
   TutorialPanel,
   WorldPanel,
+  ConsumablePanel,
   InventoryPanel,
   MetaPanel,
   RuleLibrary,
@@ -133,8 +134,10 @@ import {
   readProgress,
   readServerMeta,
   applyAuctionAction,
+  applyConsumableAction,
   applyItemAction,
   buildRuleSetPayload,
+  readConsumables,
   readInventory,
   readItemContext,
   registerAccount,
@@ -150,6 +153,7 @@ import {
   type DiscoveryView,
   type LeaderboardView,
   type ProgressView,
+  type ConsumableView,
   type InventoryView,
   type RunResult,
   type RunVerdict,
@@ -553,6 +557,8 @@ export function App(): React.JSX.Element {
   const [verdict, setVerdict] = useState<RunVerdict | undefined>(undefined)
   // 아이템은 **서버가 발급한다** (결정 #02). 화면은 받아서 보여줄 뿐이다.
   const [inventory, setInventory] = useState<InventoryView | undefined>(undefined)
+  const [consumables, setConsumables] = useState<ConsumableView | undefined>(undefined)
+  const [consumableDetail, setConsumableDetail] = useState('')
   const [itemDetail, setItemDetail] = useState('')
   // 도감. 세계의 몬스터는 서버가 알므로 오프라인에서는 비어 있다.
   const [bestiary, setBestiary] = useState<readonly BestiaryEntry[] | undefined>(undefined)
@@ -786,6 +792,31 @@ export function App(): React.JSX.Element {
   }
 
   /**
+   * 소모품 칸을 조작한다.
+   *
+   * **로드아웃이 함께 바뀐다.** 칸이 실어 보내는 충전 수가 곧 이번 런에 들고 가는 것이라,
+   * 「내 정보」의 소모품 줄이 여기서 갈린다.
+   *
+   * @param path `/consumable/load` 같은 경로.
+   * @param body 보낼 절.
+   */
+  function applyConsumable(path: string, body: Record<string, unknown>): void {
+    if (account === undefined) {
+      return
+    }
+    setConsumableDetail('')
+    void applyConsumableAction(account, path, body).then((outcome) => {
+      if (outcome.view === undefined) {
+        setConsumableDetail(outcome.detail)
+        return
+      }
+      setConsumables(outcome.view)
+      // 끼우면 가방에서 하나 빠지고, 팔면 지갑이 는다 — 가방 화면도 옛 값으로 두면 안 된다.
+      void readInventory(account).then(setInventory)
+    })
+  }
+
+  /**
    * 세계를 다시 읽는다. 성장·순위·경매장이 함께 바뀌는 일이 많다.
    */
   function refreshWorld(): void {
@@ -796,6 +827,7 @@ export function App(): React.JSX.Element {
     void readLeaderboard(account).then(setLeaderboard)
     void readAuction(account).then(setAuction)
     void readInventory(account).then(setInventory)
+    void readConsumables(account).then(setConsumables)
     // **관리자가 아니면 undefined 로 남는다.** 서버가 404 로 답하므로 관리자 경로가
     // 있다는 사실 자체가 일반 계정 화면에 드러나지 않는다.
     void readAdminOverview(account).then(setAdmin)
@@ -1484,6 +1516,33 @@ export function App(): React.JSX.Element {
                   if (account !== undefined) {
                     void readInventory(account).then(setInventory)
                   }
+                }}
+              />
+              <ConsumablePanel
+                view={consumables}
+                isOnline={isOnline}
+                detail={consumableDetail}
+                onLoad={(useTag, slotIndex, catalogId) => {
+                  applyConsumable('/consumable/load', {
+                    use_tag: useTag,
+                    slot_index: slotIndex,
+                    catalog_id: catalogId,
+                  })
+                }}
+                onClear={(useTag, slotIndex) => {
+                  applyConsumable('/consumable/clear', {
+                    use_tag: useTag,
+                    slot_index: slotIndex,
+                  })
+                }}
+                onRefill={(useTag, slotIndex) => {
+                  applyConsumable('/consumable/refill', {
+                    use_tag: useTag,
+                    slot_index: slotIndex,
+                  })
+                }}
+                onSell={(catalogId) => {
+                  applyConsumable('/consumable/sell', { catalog_id: catalogId, count: 1 })
                 }}
               />
           </>

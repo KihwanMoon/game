@@ -96,7 +96,10 @@ function checkHasToken(init: RequestInit): boolean {
  * @param init fetch 설정.
  * @returns 응답. 실패하면 undefined.
  */
-async function sendRequest(path: string, init: RequestInit): Promise<Response | undefined> {
+export async function sendRequest(
+  path: string,
+  init: RequestInit,
+): Promise<Response | undefined> {
   const controller = new AbortController()
   const timer = setTimeout(() => {
     controller.abort()
@@ -226,7 +229,7 @@ function readAccountState(body: {
  * @param response 실패한 응답.
  * @returns 사람이 읽을 사유.
  */
-async function readErrorDetail(response: Response): Promise<string> {
+export async function readErrorDetail(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as { detail?: unknown }
     return typeof body.detail === 'string' ? body.detail : `서버가 거절했다 (${response.status})`

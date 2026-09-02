@@ -201,6 +201,13 @@ class ItemCatalogEntry:
     affixes: tuple[Affix, ...] = ()
     requirements: tuple[Requirement, ...] = ()
     stack_max: int = 1
+    # **소모품 하나를 칸에 끼웠을 때 그 칸이 담는 충전 수** (§5). 등급이 성능에 하는
+    # 일이 장비에서는 봉인 칸이고, 소모품에서는 이것이다.
+    #
+    # 세기(회복량)로 가르지 않은 이유는 그것이 코어 계약을 건드리기 때문이다 — 지금
+    # 코어는 「POTION 몇 개」만 받고 한 개가 하는 일은 고정이다. 충전 수로 가르면 같은
+    # 계약 안에서 등급 차이가 생긴다.
+    charges: int = 1
     # 이 장비가 여는 스킬 (결정 #13). 장비는 전투 전에 캐릭터로 녹으므로, 스킬도
     # 규칙표가 직접 장비를 보는 것이 아니라 **캐릭터가 그것을 갖게** 되는 방식이다.
     grants_skill: str | None = None
@@ -292,6 +299,7 @@ def parse_item(raw: dict) -> ItemCatalogEntry:
         affixes=tuple(parse_affix(item) for item in raw.get("affixes", [])),
         requirements=tuple(parse_requirement(item) for item in raw.get("requirements", [])),
         stack_max=int(raw.get("stack_max", 1)),
+        charges=int(raw.get("charges", 1)),
         grants_skill=raw.get("grants_skill"),
         use_tag=raw.get("use_tag"),
         attack_range=(int(raw["attack_range"]) if raw.get("attack_range") is not None else None),
@@ -311,6 +319,23 @@ _OPTIONAL_KEYS: tuple[tuple[str, str], ...] = (
     ("attack_range", "attack_range"),
     ("use_tag", "use_tag"),
 )
+
+
+def build_default_payload(entry: ItemCatalogEntry) -> dict:
+    """기본값과 다를 때만 적는 수치들.
+
+    **기본값이면 안 적는다.** 전부 적으면 `items.json` 에서 「이 아이템이 무엇이 다른가」가
+    안 보인다 — 스물다섯 줄이 전부 `stack_max: 1` 을 달고 있으면 소모품만 다르다는 사실이
+    묻힌다.
+
+    Args:
+        entry: 카탈로그 항목.
+
+    Returns:
+        적을 것만 담은 절. 전부 기본값이면 빈 딕셔너리다.
+    """
+    defaults = (("stack_max", entry.stack_max, 1), ("charges", entry.charges, 1))
+    return {key: value for key, value, base in defaults if value != base}
 
 
 def build_item_payload(entry: ItemCatalogEntry) -> dict:
@@ -343,12 +368,11 @@ def build_item_payload(entry: ItemCatalogEntry) -> dict:
         ]
     if entry.requirements:
         payload["requirements"] = [{"stat": r.stat, "min": r.minimum} for r in entry.requirements]
-    if entry.stack_max != 1:
-        payload["stack_max"] = entry.stack_max
     if entry.tags:
         payload["tags"] = list(entry.tags)
     if entry.is_retired:
         payload["is_retired"] = True
+    payload.update(build_default_payload(entry))
     for key, name in _OPTIONAL_KEYS:
         value = getattr(entry, name)
         if value is not None:

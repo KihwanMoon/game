@@ -38,42 +38,34 @@ def build_potion(use_tag="POTION", tags=("POTION",)):
     )
 
 
-class _Stack:
-    """가방 한 칸. 저장 층을 안 거치고 세는 부분만 본다."""
-
-    def __init__(self, catalog_id, count):
-        self.stack_catalog_id = catalog_id
-        self.stack_count = count
-
-
-def count_with(monkeypatch, entry, count=3):
-    """그 항목을 가방에 넣고 세어 본다.
+def fit_into(entry, slot_tag="POTION"):
+    """그 항목을 그 칸에 끼워 본다.
 
     Args:
-        monkeypatch: pytest 픽스처.
         entry: 카탈로그 항목.
-        count: 가진 개수.
+        slot_tag: 칸의 쓰임새.
 
     Returns:
-        쓰임새에서 개수로.
+        끼울 수 있으면 True.
     """
-    from game.api import loadout_service
+    from game.schemas.consumable import check_slot_fit
 
-    monkeypatch.setattr(
-        loadout_service, "list_inventory", lambda _pool, _entity: [_Stack(entry.catalog_id, count)]
-    )
-    return loadout_service.count_consumables(None, 1, {entry.catalog_id: entry})
+    return check_slot_fit(entry.use_tag, slot_tag)
 
 
-def test_only_the_use_tag_is_counted(monkeypatch):
-    """★ 표시용 이름표를 하나 더 붙였다고 소모품 종류가 늘면 안 된다."""
-    counted = count_with(monkeypatch, build_potion(tags=("POTION", "HEAL", "STARTER")))
-    assert counted == {"POTION": 3}
+def test_only_the_use_tag_opens_a_slot():
+    """★ 표시용 이름표로 칸이 열리면, 물약에 이름표를 붙여 주문서 칸에 끼울 수 있다."""
+    potion = build_potion(tags=("POTION", "HEAL", "SCROLL"))
+    assert fit_into(potion, "POTION")
+    # `tags` 에 SCROLL 이 있어도 주문서 칸은 안 열린다.
+    assert not fit_into(potion, "SCROLL")
 
 
-def test_an_item_without_a_use_tag_is_not_counted(monkeypatch):
-    """★ 쓰임새가 없는 것은 어느 `USE_ITEM` 도 못 쓴다 — 세면 규칙이 「가능」으로 보인다."""
-    assert count_with(monkeypatch, build_potion(use_tag=None, tags=("TRINKET",))) == {}
+def test_an_item_without_a_use_tag_fits_nowhere():
+    """★ 쓰임새가 없는 것은 어느 `USE_ITEM` 도 못 가리킨다 — 끼우면 못 쓰는 칸이 된다."""
+    blank = build_potion(use_tag=None, tags=("TRINKET",))
+    assert not fit_into(blank, "POTION")
+    assert not fit_into(blank, "TRINKET")
 
 
 def test_the_use_tag_survives_the_json_round_trip():

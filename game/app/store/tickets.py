@@ -250,3 +250,26 @@ def apply_floor_claim(pool: ConnectionPool, ticket_id: str, floor: int) -> bool:
             (floor, ticket_id, floor),
         )
         return cursor.rowcount == 1
+
+
+def count_open_tickets(pool: ConnectionPool, account_id: int) -> int:
+    """아직 안 닫힌 티켓 수를 센다.
+
+    **보충을 막는 데 쓴다** (설계/4_아이템 §5). 런 중에 채우면 이미 얼린 로드아웃은 안
+    바뀌는데 층 정산은 새 충전에서 깎아, **낸 돈이 그 자리에서 사라진다.**
+
+    Args:
+        pool: 연결 풀.
+        account_id: 대상 계정.
+
+    Returns:
+        열린 티켓 수. 만료된 것은 세지 않는다 — 안 그러면 켜 두고 나간 티켓 하나가
+        계정을 영원히 잠근다.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT count(*) FROM run_ticket"
+            " WHERE account_id = %s AND consumed_at IS NULL AND expires_at > now()",
+            (account_id,),
+        ).fetchone()
+    return int(row[0]) if row else 0

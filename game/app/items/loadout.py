@@ -15,9 +15,6 @@ from game.schemas.loadout import BASE_SKILLS, PlayerLoadout
 
 PERCENT_BASE = 100
 
-# 기본 지급이 들어가는 태그. balance.json 이 `potions` 라는 이름으로 적어 둔 것이다.
-POTION_TAG = "POTION"
-
 
 def build_player_loadout(
     base_stats: dict[str, int],
@@ -82,7 +79,7 @@ def build_player_loadout(
         # 생기는 순간 기본 지급이 사라진다(실제로 그렇게 회귀했다).
         #
         # 정렬해서 담는다. 딕셔너리 순회 순서가 티켓에 새어 나가면 안 된다 (R5).
-        consumables=tuple(sorted(merge_consumables(base_stats, consumables or {}).items())),
+        consumables=tuple(sorted(merge_consumables(consumables or {}).items())),
         # 정렬해서 담는다. 집합 순회 순서가 티켓에 새어 나가면 안 된다 (R5).
         skills=tuple(sorted(skills)),
     )
@@ -112,17 +109,18 @@ def merge_weapon_range(
     return {**base_stats, "attack_range": main.attack_range}
 
 
-def merge_consumables(base_stats: dict[str, int], carried: dict[str, int]) -> dict[str, int]:
-    """기본 지급과 가방을 합친다.
+def merge_consumables(carried: dict[str, int]) -> dict[str, int]:
+    """이 런에 실어 보낼 소모품을 정리한다.
+
+    **기본 지급을 더하지 않는다.** 예전에는 `balance.player.potions` 두 개가 매 판 공짜로
+    얹혔고, 그래서 소모품 칸을 아무리 채워도 두 개는 늘 공짜였다 — 「한도 내에서 쓴다」가
+    성립하지 않는다. 그 두 개는 이제 **빈 칸이 출격 때 채우는 공짜 충전**으로 옮겨 갔고
+    (`store/consumables.count_slot_charges`), 그래서 새 계정의 손에 든 것은 그대로다.
 
     Args:
-        base_stats: balance.json 의 플레이어 절. `potions` 를 기본 지급으로 읽는다.
-        carried: 가방에 든 소모품. 태그에서 개수로.
+        carried: 소모품 칸이 실어 보내는 것. 태그에서 개수로.
 
     Returns:
         태그에서 개수로. 0개인 종류는 담지 않는다 — 티켓이 쓸데없이 길어진다.
     """
-    merged = {POTION_TAG: int(base_stats.get("potions", 0))}
-    for kind, count in carried.items():
-        merged[kind] = merged.get(kind, 0) + int(count)
-    return {kind: count for kind, count in merged.items() if count > 0}
+    return {kind: int(count) for kind, count in carried.items() if int(count) > 0}

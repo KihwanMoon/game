@@ -312,3 +312,59 @@ class ListingAction(BaseModel):
     """매물 하나를 대상으로 하는 요청."""
 
     listing_id: int
+
+
+class ConsumableSlotView(BaseModel):
+    """소모품 칸 하나."""
+
+    use_tag: str
+    slot_index: int
+    catalog_id: str | None = None
+    label_ko: str = ""
+    grade: str = ""
+    charges: int = 0
+    charge_max: int = 0
+    # 이 칸을 가득 채우는 값. 빈 칸은 0 이다 — 끼운 것이 없으면 채울 것도 없다.
+    refill_cost: int = 0
+
+
+class ConsumableOption(BaseModel):
+    """가방에 있어 칸에 끼울 수 있는 소모품 한 종류."""
+
+    catalog_id: str
+    label_ko: str
+    grade: str
+    use_tag: str
+    charges: int
+    # 가방에 몇 개 있는가. 끼우면 하나 줄어든다.
+    stock: int
+    # 하나를 팔면 받는 값.
+    sell_price: int
+
+
+class ConsumableResponse(BaseModel):
+    """소모품 칸 화면 전체."""
+
+    slots: list[ConsumableSlotView]
+    options: list[ConsumableOption]
+    balance: int
+    # 빈 칸이 출격 때 공짜로 받는 충전 수.
+    free_charges: int
+    # 런이 도는 중이면 참. 이때는 끼우기·보충이 막힌다 (§5).
+    is_run_open: bool = False
+
+
+class ConsumableSlotRequest(BaseModel):
+    """칸 하나를 가리키는 요청."""
+
+    use_tag: str
+    slot_index: int
+    # 끼울 소모품. 비우기·보충에는 없다.
+    catalog_id: str | None = None
+
+
+class ConsumableSellRequest(BaseModel):
+    """가방의 소모품을 판다."""
+
+    catalog_id: str
+    count: int = 1

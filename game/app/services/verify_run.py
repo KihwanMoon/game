@@ -72,6 +72,9 @@ class VerifiedRun:
     # 방마다 (만난 종, 잡은 종). **층 단위 보상이 이것으로 「이번 층의 처치」만 고른다** —
     # 전체를 주면 층을 깰 때마다 지나온 층의 전리품이 다시 나온다.
     room_kinds: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = ()
+    # 이 재시뮬이 끝났을 때 남은 소모품. **충전을 여기서 깎는다** — 클라이언트가 몇 개를
+    # 썼다고 보고할 자리를 만들지 않는다 (T9). 쓴 수는 「티켓이 실은 수 − 이것」이다.
+    remaining_consumables: tuple[tuple[str, int], ...] = ()
 
 
 def check_submission_version(claimed: str, server: str) -> str:
@@ -194,6 +197,7 @@ def evaluate_submission(
         verdict=VERDICT_VERIFIED,
         cleared_rooms=result.cleared_rooms,
         room_kinds=tuple(tallies),
+        remaining_consumables=result.remaining_consumables,
         summary=build_run_summary(
             encountered,
             defeated,
