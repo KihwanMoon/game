@@ -65,6 +65,22 @@ export function formatCharges(slot: ConsumableSlotView, freeCharges: number): st
 }
 
 /**
+ * 빼기 버튼에 적을 말.
+ *
+ * **가득 찬 칸은 가방으로 돌아가고, 쓴 칸은 남은 충전이 버려진다.** 그 차이를 누르기
+ * 전에 말해야 한다 — 눌러 보고 알게 하면 「아이템이 사라졌다」가 된다(실제 신고).
+ *
+ * @param slot 칸.
+ * @returns 버튼 글자.
+ */
+export function formatClearLabel(slot: ConsumableSlotView): string {
+  if (slot.charges >= slot.chargeMax) {
+    return '빼기 (가방으로)'
+  }
+  return `빼기 (남은 ${String(slot.charges)}충전 버려짐)`
+}
+
+/**
  * 보충 버튼에 적을 말.
  *
  * @param slot 칸.
@@ -160,7 +176,7 @@ function renderSlot(slot: ConsumableSlotView, props: ConsumablePanelProps): Reac
             props.onClear(slot.useTag, slot.slotIndex)
           }}
         >
-          빼기
+          {formatClearLabel(slot)}
         </Button>
       )}
       {candidates.map((option) => (

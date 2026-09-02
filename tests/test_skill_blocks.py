@@ -21,7 +21,7 @@ from game.config import BLOCKS_PATH
 from game.schemas.blocks import ACTION_COUNT, PERCEPTION_COUNT, load_block_catalog
 from game.schemas.ruleset import parse_ruleset
 
-BLOCK_LIST_VERSION = 6
+BLOCK_LIST_VERSION = 7  # v7: self_scroll_count·scrolls (§5 소모품 칸)
 LEGACY_ACTIONS = ("SKILL_1", "SKILL_2", "AREA_ATTACK", "HEAL", "SUMMON")
 
 
@@ -62,7 +62,7 @@ def build_skill_ruleset(skill_id: str):
 # ── 카탈로그 (§4) ────────────────────────────────────────────────────────
 
 
-def test_catalog_is_v6(raw_blocks):
+def test_catalog_is_v7(raw_blocks):
     assert raw_blocks["block_list_version"] == BLOCK_LIST_VERSION
 
 

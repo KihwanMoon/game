@@ -89,6 +89,7 @@ def test_rhs_stats_are_a_closed_list(catalog):
         "hp_max",
         "cpu_budget",
         "potions",
+        "scrolls",
     }
     for stat in catalog.rhs_stats.values():
         assert stat.label_ko, f"{stat.block_id} 의 한글 라벨이 비어 있다"

@@ -65,6 +65,7 @@ export const RHS_STAT_READERS: ReadonlyMap<string, (actor: Entity) => number> = 
   ['hp_max', (actor: Entity) => actor.hpMax],
   ['cpu_budget', (actor: Entity) => actor.cpuBudget],
   ['potions', (actor: Entity) => countItem(actor, 'POTION')],
+  ['scrolls', (actor: Entity) => countItem(actor, 'SCROLL')],
 ])
 
 export const DEFAULT_ACTION = 'APPROACH'

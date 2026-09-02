@@ -1,6 +1,6 @@
 {
   "_comment": "블록 카탈로그 v5. 스킬을 액션마다 더하지 않고 USE_SKILL[skill_id] 파라미터 하나로 묶었다 — 스킬이 늘어도 액션 종류가 고정이라 랭킹 시즌이 갈리지 않는다 (docs/설계/5_스킬 §4). 기존 SKILL_1·SKILL_2·AREA_ATTACK·HEAL·SUMMON 과 self_cooldown_ready 는 지우지 않고 별칭으로 남긴다: 지우면 저장된 규칙표와 골든 리플레이가 전부 깨진다. 장비 전용 블록은 만들지 않는다 — 장비는 전투 전에 캐릭터 능력치·스킬로 녹고 규칙표는 캐릭터만 읽는다 (결정 #13). v6: USE_ITEM[kind] 를 더했다 (#54). 보호 주문서가 카탈로그에 있는데 그것을 쓸 수 있는 행동이 없어, 얻어도 영영 쓰지 못했다. USE_POTION 은 별칭으로 남는다.",
-  "block_list_version": 6,
+  "block_list_version": 7,
   "perceptions": [
     {
       "id": "self_hp_percent",
@@ -17,6 +17,13 @@
       "category": "self",
       "returns": "int",
       "label_ko": "내 포션 수"
+    },
+    {
+      "id": "self_scroll_count",
+      "category": "self",
+      "returns": "int",
+      "label_ko": "내 주문서 수",
+      "_note": "v7. 물약(self_potion_count)과 짝이다. 주문서에 전용 칸을 주고 나니 「마지막 주문서는 보스까지 아낀다」를 지을 수단이 물약에만 있었다 — 자원 관리를 만들어 놓고 규칙표가 한쪽 자원만 읽는 비대칭을 닫는다."
     },
     {
       "id": "self_on_heal_tile",
@@ -385,6 +392,10 @@
     {
       "id": "potions",
       "label_ko": "포션 수"
+    },
+    {
+      "id": "scrolls",
+      "label_ko": "주문서 수"
     }
   ],
   "selectors": [

@@ -321,3 +321,41 @@ def test_selling_a_spare_pays_out(client, token):
     ).json()
     assert body["balance"] > before
     assert not [o for o in body["options"] if o["catalog_id"] == "potion_heal"]
+
+
+@pytestmark_db
+def test_clearing_a_full_slot_returns_the_item(client, token):
+    """★ **끼웠다 뺀 것만으로 아이템이 사라졌다** — 실제로 그렇게 신고됐다.
+
+    끼우기는 가방에서 하나를 빼는 조작이므로, 아무것도 안 쓴 채 빼면 그 하나가
+    돌아와야 한다.
+    """
+    headers = build_headers(token)
+    load_potion(client, token, slot_index=0)
+    body = client.post(
+        "/api/consumable/clear",
+        json={"use_tag": "POTION", "slot_index": 0},
+        headers=headers,
+    ).json()
+    assert all(s["catalog_id"] is None for s in body["slots"] if s["use_tag"] == "POTION")
+    back = [o for o in body["options"] if o["catalog_id"] == "potion_heal"]
+    assert back and back[0]["stock"] == 1, "가방으로 안 돌아왔다"
+
+
+@pytestmark_db
+def test_clearing_a_used_slot_returns_nothing(client, token):
+    """★ 쓴 칸까지 돌려주면 「뺐다 다시 끼우기」가 가득 찬 새 것이 된다 — 공짜 보충이다."""
+    from game.api.deps import get_pool
+    from game.app.store.accounts import find_player_entity
+    from game.app.store.consumables import apply_slot_fill
+
+    headers = build_headers(token)
+    load_potion(client, token, slot_index=0)
+    account_id = client.get("/api/account", headers=headers).json()["account_id"]
+    apply_slot_fill(get_pool(), find_player_entity(get_pool(), account_id), "POTION", 0, 1)
+    body = client.post(
+        "/api/consumable/clear",
+        json={"use_tag": "POTION", "slot_index": 0},
+        headers=headers,
+    ).json()
+    assert not [o for o in body["options"] if o["catalog_id"] == "potion_heal"]

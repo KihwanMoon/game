@@ -36,7 +36,7 @@ from game.app.store.consumables import (
     list_consumable_slots,
 )
 from game.app.store.equipment import add_currency, read_balance
-from game.app.store.inventory_slots import apply_stack_take, count_stack
+from game.app.store.inventory_slots import apply_stack_grant, apply_stack_take, count_stack
 from game.app.store.items import list_inventory
 from game.app.store.tickets import count_open_tickets
 from game.schemas.consumable import (
@@ -184,7 +184,15 @@ def create_consumable_load(
 def create_consumable_clear(
     request: ConsumableSlotRequest, account: CurrentAccount
 ) -> ConsumableResponse:
-    """칸을 비운다. **남은 충전은 안 돌려준다** — 돌려주면 끼웠다 빼기로 옮길 수 있다.
+    """칸을 비우고, 가득 찬 칸이면 소모품을 가방으로 돌려준다.
+
+    처음에는 아무것도 안 돌려줬다 — 그래서 끼웠다 뺀 것만으로 아이템이 사라졌고,
+    그것은 사람 눈에 버그다(실제로 그렇게 신고됐다). 끼우기는 가방에서 하나를 빼는
+    조작이므로, 아무것도 안 쓴 채 빼면 그 하나가 돌아오는 것이 맞다.
+
+    **한 모금이라도 썼으면 안 돌려준다.** 돌려주면 「쓰던 것을 뺐다 다시 끼우기」가
+    가득 찬 새 것이 되어 보충비가 뜻을 잃는다. 남은 충전이 버려진다는 것은 화면이
+    빼기 전에 말한다.
 
     Args:
         request: 비울 칸.
@@ -192,9 +200,22 @@ def create_consumable_clear(
 
     Returns:
         갱신된 칸 화면.
+
+    Raises:
+        HTTPException: 돌려줄 소모품이 들어갈 가방 칸이 없는 경우 — 그때는 칸을
+            비우지 않는다. 비우면 아이템이 그 자리에서 증발한다.
     """
     pool = get_pool()
     entity_id = find_player_entity(pool, account.account_id)
+    slot = find_slot(pool, entity_id, request.use_tag, request.slot_index)
+    entry = get_item_catalog().get(slot.catalog_id) if slot and slot.catalog_id else None
+    is_untouched = slot is not None and entry is not None and slot.charges >= max(1, entry.charges)
+    if (
+        is_untouched
+        and entry is not None
+        and not apply_stack_grant(pool, entity_id, entry.catalog_id, max(1, entry.stack_max))
+    ):
+        raise HTTPException(status.HTTP_409_CONFLICT, "가방이 가득 찼다 — 자리를 비우고 빼야 한다")
     apply_slot_clear(pool, entity_id, request.use_tag, request.slot_index)
     return read_consumables(account)
 

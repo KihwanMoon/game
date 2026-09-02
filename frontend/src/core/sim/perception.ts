@@ -211,6 +211,9 @@ export function buildSnapshot(input: SnapshotInput): PerceptionSnapshot {
   // 태그를 받는 인지 변수는 아직 없다. 규칙표는 소모품이 없을 때 「불가」로 알게
   // 되며, 그것이 스킬 미장착과 같은 방식이다.
   values.set('self_potion_count', countItem(entity, 'POTION'))
+  // 주문서에 전용 칸을 주고 나니(§5) 「마지막 하나는 아낀다」를 지을 수단이 물약에만
+  // 있었다 — 한쪽 자원만 읽는 비대칭을 닫는다 (블록 v7).
+  values.set('self_scroll_count', countItem(entity, 'SCROLL'))
   values.set('self_on_heal_tile', state.getTile(entity.position.x, entity.position.y) === TILE_SPRING)
   // 여기에 방 전체 적 수를 남겨 두지 않는다. 실제 값은 addVisionValues 가 LOS 로 좁혀
   // 넣으며(파이썬 정본과 같다), 미리 깔아 두면 두 가지가 어긋난다 — 격자를 넘기지 않은

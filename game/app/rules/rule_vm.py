@@ -42,6 +42,7 @@ RHS_STAT_READERS: dict[str, Callable[[Entity], int]] = {
     "hp_max": lambda actor: actor.hp_max,
     "cpu_budget": lambda actor: actor.cpu_budget,
     "potions": lambda actor: actor.count_item("POTION"),
+    "scrolls": lambda actor: actor.count_item("SCROLL"),
 }
 
 DEFAULT_ACTION = "APPROACH"

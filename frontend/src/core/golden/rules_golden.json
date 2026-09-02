@@ -481,6 +481,10 @@
           2
         ],
         [
+          "self_scroll_count",
+          0
+        ],
+        [
           "self_on_heal_tile",
           false
         ],
@@ -685,6 +689,10 @@
         [
           "self_potion_count",
           2
+        ],
+        [
+          "self_scroll_count",
+          0
         ],
         [
           "self_on_heal_tile",
@@ -893,6 +901,10 @@
           2
         ],
         [
+          "self_scroll_count",
+          0
+        ],
+        [
           "self_on_heal_tile",
           true
         ],
@@ -1097,6 +1109,10 @@
         [
           "self_potion_count",
           2
+        ],
+        [
+          "self_scroll_count",
+          0
         ],
         [
           "self_on_heal_tile",
@@ -1305,6 +1321,10 @@
           2
         ],
         [
+          "self_scroll_count",
+          0
+        ],
+        [
           "self_on_heal_tile",
           false
         ],
@@ -1509,6 +1529,10 @@
         [
           "self_potion_count",
           2
+        ],
+        [
+          "self_scroll_count",
+          0
         ],
         [
           "self_on_heal_tile",
