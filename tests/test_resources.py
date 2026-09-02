@@ -36,7 +36,7 @@ from game.schemas.room import (
 ROOM_TEMPLATE_COUNT = 31
 ROOM_WIDTH = 12
 ROOM_HEIGHT = 9
-ENEMY_KIND_COUNT = 9
+ENEMY_KIND_COUNT = 13  # +4: 늑대·골렘·저주 사수·역병 사제 (게임 변수 확장)
 
 
 @pytest.fixture(scope="module")

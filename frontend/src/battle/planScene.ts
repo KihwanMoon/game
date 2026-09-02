@@ -17,6 +17,7 @@ import type { TickEngine } from '../core/sim/engine'
 import { PLAYER_ENTITY_ID } from '../core/services/runBattle'
 import { checkTelegraphVisible, getForesightTicks } from '../core/sim/telegraph'
 import { FACTION_PLAYER, type Entity, getHpPercent } from '../core/sim/state'
+import type { LogEntry } from '../core/eventLog'
 import { PHASE_ACT } from '../core/sim/phases'
 
 import { resolveActorKind, resolveActorLabel } from './actorKind'
@@ -162,6 +163,31 @@ function collectHazards(engine: TickEngine, foresightTicks: number): readonly Pl
  * @param engine 돌고 있는 엔진. 읽기만 한다.
  * @returns 그릴 값 묶음.
  */
+/** 이펙트가 화면에 머무는 틱 수. 한 틱은 배속에서 안 보인다 — 두 틱이면 눈이 따라온다. */
+const EFFECT_LINGER_TICKS = 2
+
+/**
+ * 이펙트가 살아 있는 최근 틱들의 로그 줄.
+ *
+ * **두 틱을 본다** (실제 요청 — 가시성). 이번 틱만 그리면 ×2 배속에서 타격·회복 고리가
+ * 한 프레임 번쩍이고 사라져 무슨 일이 있었는지 못 읽는다. 렌더 전용이라 코어·리플레이는
+ * 안 흔들린다.
+ *
+ * @param engine 돌고 있는 엔진.
+ * @returns 최근 두 틱의 로그 줄들.
+ */
+function listRecentEntries(engine: TickEngine): readonly LogEntry[] {
+  const log = engine.log
+  if (log === undefined) {
+    return []
+  }
+  const entries: LogEntry[] = []
+  for (let back = EFFECT_LINGER_TICKS - 1; back >= 0; back -= 1) {
+    entries.push(...log.filterByTick(engine.state.tick - back))
+  }
+  return entries
+}
+
 /**
  * 이번 틱의 로그에서 「누가 누구에게」를 뽑는다.
  *
@@ -178,13 +204,9 @@ export function buildLinksFromLog(
   engine: TickEngine,
   actors: readonly PlanActorView[],
 ): readonly PlanLinkView[] {
-  const log = engine.log
-  if (log === undefined) {
-    return []
-  }
   const spots = new Map(actors.map((actor) => [actor.entityId, actor]))
   const links: PlanLinkView[] = []
-  for (const entry of log.filterByTick(engine.state.tick)) {
+  for (const entry of listRecentEntries(engine)) {
     if (entry.phase !== PHASE_ACT || entry.targetId === null) {
       continue
     }
@@ -216,13 +238,9 @@ export function buildPulsesFromLog(
   engine: TickEngine,
   actors: readonly PlanActorView[],
 ): readonly PlanPulseView[] {
-  const log = engine.log
-  if (log === undefined) {
-    return []
-  }
   const spots = new Map(actors.map((actor) => [actor.entityId, actor]))
   const pulses: PlanPulseView[] = []
-  for (const entry of log.filterByTick(engine.state.tick)) {
+  for (const entry of listRecentEntries(engine)) {
     if (entry.delta === null || entry.delta === 0) {
       continue
     }

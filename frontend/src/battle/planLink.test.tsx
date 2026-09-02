@@ -208,6 +208,22 @@ describe('연결선 그리기', () => {
 })
 
 describe('수치 이펙트 (간단한 표시)', () => {
+  it('★ 두 틱을 머문다 — 한 틱만 그리면 배속에서 번쩍이고 사라져 못 읽는다 (실제 요청)', async () => {
+    const { buildPulsesFromLog } = await import('./planScene')
+    const { EventLog, createLogEntry } = await import('../core/eventLog')
+    const { PHASE_ACT } = await import('../core/sim/phases')
+    const log = new EventLog()
+    // 지난 틱(2)의 타격이 이번 틱(3) 장면에도 남는다. 그 전 틱(1)은 남지 않는다.
+    for (const tick of [1, 2]) {
+      log.record(createLogEntry({
+        tick, entityId: 'player', phase: PHASE_ACT, expr: 'ATTACK', outcome: '',
+        targetId: 'goblin_0', delta: -tick,
+      }))
+    }
+    const pulses = buildPulsesFromLog({ log, state: { tick: 3 } } as never, [PLAYER, FOE])
+    expect(pulses).toEqual([{ x: 4, y: 3, isGain: false }])
+  })
+
   it('★ 피해는 대상에게 붉게, 회복은 자신에게 초록으로 — 뜻은 기존 색 그대로다', async () => {
     const { buildPulsesFromLog } = await import('./planScene')
     const { EventLog, createLogEntry } = await import('../core/eventLog')

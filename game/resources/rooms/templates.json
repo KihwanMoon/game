@@ -1,5 +1,5 @@
 {
-  "room_list_version": 4,
+  "room_list_version": 5,
   "_comment": [
     "손으로 그린 룸 템플릿 (로드맵 Phase 0). 순수 랜덤 그리드를 쓰지 않는 이유는",
     "TDD §7.2 에 있다 — 전술적으로 무의미한 공간을 대량 생산하기 때문이다.",
@@ -522,7 +522,7 @@
           ]
         },
         {
-          "kind": "goblin_archer",
+          "kind": "hex_archer",
           "pos": [
             10,
             2
@@ -565,7 +565,7 @@
           ]
         },
         {
-          "kind": "goblin_rusher",
+          "kind": "dire_wolf",
           "pos": [
             6,
             4
@@ -831,7 +831,7 @@
       ],
       "enemy_spawns": [
         {
-          "kind": "mender_acolyte",
+          "kind": "plague_mender",
           "pos": [
             9,
             4
@@ -917,7 +917,7 @@
       ],
       "enemy_spawns": [
         {
-          "kind": "veteran_rusher",
+          "kind": "shield_golem",
           "pos": [
             9,
             2
@@ -1003,7 +1003,7 @@
       ],
       "enemy_spawns": [
         {
-          "kind": "longbow_archer",
+          "kind": "hex_archer",
           "pos": [
             10,
             2
@@ -1089,7 +1089,7 @@
       ],
       "enemy_spawns": [
         {
-          "kind": "veteran_rusher",
+          "kind": "shield_golem",
           "pos": [
             6,
             1
