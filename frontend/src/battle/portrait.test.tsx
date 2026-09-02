@@ -132,8 +132,9 @@ function collectElements(node: ReactNode): readonly ReactElement[] {
 }
 
 describe('세로 시트 — 탭과 카운트 (명세 A·D)', () => {
-  it('탭은 규칙표와 로그 둘뿐이다', () => {
-    expect(SHEET_TABS).toEqual(['rules', 'log'])
+  it('★ 탭은 셋이다 — 정산이 로그와 같은 급으로 붙었다', () => {
+    // 층 정산이 상단 알림이던 때는 뜰 때마다 도면·규칙표·로그가 전부 밀렸다.
+    expect(SHEET_TABS).toEqual(['rules', 'log', 'reward'])
   })
 
   it('탭 라벨에 카운트를 함께 적는다', () => {
@@ -183,11 +184,11 @@ describe('세로 시트 — 탭과 카운트 (명세 A·D)', () => {
     const tabs = elements.filter(
       (element) => (element.props as { role?: string }).role === 'tab',
     )
-    expect(tabs).toHaveLength(2)
+    expect(tabs).toHaveLength(3)
     for (const tab of tabs) {
       ;(tab.props as { onClick: () => void }).onClick()
     }
-    expect(picked).toEqual(['rules', 'log'])
+    expect(picked).toEqual(['rules', 'log', 'reward'])
   })
 
   it('지금 탭만 눌린 상태로 나간다', () => {

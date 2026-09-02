@@ -652,3 +652,51 @@
   min-height: 100dvh;
   overflow: visible;
 }
+
+/* ── 정산 탭 ──────────────────────────────────────────────────────────────
+   **한 줄에 정보 하나.** 서버가 ` · ` 로 이어 보내는 것을 끊어 세로로 쌓는다 — 가로로
+   길면 무엇이 들어왔는지 훑을 수 없다 (실제 요청).
+
+   층 머리글에만 괘선을 긋고 항목에는 안 긋는다. 줄마다 선을 그으면 표가 되고, 이것은
+   표가 아니라 목록이다. */
+.settle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--plan-pad);
+}
+
+.settle__floor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.settle__head {
+  padding-bottom: var(--sp-1);
+  border-bottom: var(--border);
+  color: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+}
+
+.settle__row {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+}
+
+/* 도형은 자리표시일 뿐이라 흐리게 둔다. 황동 예산에 들지 않는다. */
+.settle__glyph {
+  flex: 0 0 auto;
+  color: var(--text-dim);
+}
+
+.settle__text {
+  flex: 1 1 auto;
+  color: var(--text-body);
+  /* 항목 하나가 길어도 줄이 끊기지 않게 둔다 — 잘리면 무엇을 받았는지 사라진다. */
+  overflow-wrap: anywhere;
+}

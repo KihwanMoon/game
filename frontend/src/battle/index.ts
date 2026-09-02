@@ -133,3 +133,12 @@ export {
   formatPendingCondition,
 } from './ruleTrace'
 export type { RuleTrace, RuleTraceRow } from './ruleTrace'
+
+export { SettlementPanel } from './SettlementPanel'
+export type { SettlementPanelProps } from './SettlementPanel'
+export {
+  appendSettlement,
+  formatSettlementTabCount,
+  splitRewardNotes,
+  type FloorSettlement,
+} from './settlement'

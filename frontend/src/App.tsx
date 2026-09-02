@@ -32,10 +32,12 @@ import { useEffect, useMemo, useState } from 'react'
 
 import {
   BattleView,
+  appendSettlement,
   checkOngoing,
   resolveRoomFloor,
   type BattleSetup,
   type ChainPosition,
+  type FloorSettlement,
 } from './battle'
 import {
   G0_RULESETS,
@@ -67,7 +69,6 @@ import {
   DiscoveryPanel,
   DrawerPanel,
   EvictionNotice,
-  FloorRewardNotice,
   AUTO_ADVANCE_SECONDS,
   AutoAdvanceNotice,
   checkShouldAutoAdvance,
@@ -553,7 +554,9 @@ export function App(): React.JSX.Element {
   const [isLaunching, setLaunching] = useState(false)
   // 방금 정산한 층과 그 벌이. **전투 화면이 말한다** — 편집기로 나가야 보이면
   // 플레이 중에는 무엇을 벌었는지 알 수 없다.
-  const [floorReward, setFloorReward] = useState({ floor: 0, reward: '' })
+  // 층별 정산. **뜨고 사라지는 알림이 아니라 쌓이는 기록이다** — 상단에 한 줄이
+  // 나타날 때마다 도면·규칙표·로그가 전부 밀려 화면이 흔들렸다 (실제 신고).
+  const [settlements, setSettlements] = useState<readonly FloorSettlement[]>([])
   const [autoLeft, setAutoLeft] = useState<number | undefined>(undefined)
   // **이번 방에서만 멈춘다.** 설정을 끄는 것과 다르다 — 한 번 멈추려고 기능을 끄게 하면
   // 다음 방부터도 안 넘어간다.
@@ -1037,7 +1040,7 @@ export function App(): React.JSX.Element {
     setOutcome(OUTCOME_ONGOING)
     setPostState('auto')
     setEditing(false)
-    setFloorReward({ floor: 0, reward: '' })
+    setSettlements([])
     if (account === undefined) {
       applyLocalRun()
       return
@@ -1297,10 +1300,13 @@ export function App(): React.JSX.Element {
         return
       }
       setVerdict(result)
-      setFloorReward({
-        floor: resolveRoomFloor(setup.floor ?? 1, setup.chain?.index ?? 0, setup.roomsPerFloor ?? 0),
-        reward: result.reward,
-      })
+      setSettlements((current) =>
+        appendSettlement(
+          current,
+          resolveRoomFloor(setup.floor ?? 1, setup.chain?.index ?? 0, setup.roomsPerFloor ?? 0),
+          result.reward,
+        ),
+      )
       // 층마다 들어오는 것이 있으므로 가방·성장·도감을 그때그때 다시 읽는다.
       void readBagState(account).then((bag) => {
         if (bag.consumables !== undefined) {
@@ -1842,7 +1848,6 @@ export function App(): React.JSX.Element {
         text={`${String(roomFloor)}층 · 방 ${String((run.setup.chain?.index ?? 0) % Math.max(1, run.setup.roomsPerFloor ?? CHAIN_LENGTH) + 1)}/${String(run.setup.roomsPerFloor ?? CHAIN_LENGTH)}`}
         size="sm"
       />
-      <FloorRewardNotice floor={floorReward.floor} reward={floorReward.reward} />
       <ValueExpr text={`seed ${String(run.setup.seed)}`} size="sm" dim />
       {finished ? (
         <Button
@@ -1927,6 +1932,7 @@ export function App(): React.JSX.Element {
           rulesets={run.rulesets}
           location={formatLocation(roomFloor, run.setup.roomId)}
           controls={battleControls}
+          settlements={settlements}
           onOutcome={setOutcome}
         />
         {showPost && recording !== undefined ? (

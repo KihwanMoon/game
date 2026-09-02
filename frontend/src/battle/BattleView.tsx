@@ -57,6 +57,7 @@ import { buildThreatNotice, getForesightTicks } from '../core/sim/telegraph'
 import type { RuleSet } from '../core/schemas'
 import { readBatchIntervalMs, useBattleClock } from './battleClock'
 import { BattleLandscape } from './BattleLandscape'
+import type { FloorSettlement } from './settlement'
 import { BattlePortrait } from './BattlePortrait'
 import { buildBattleSession, checkOngoing, type BattleSetup } from './battleSession'
 import { buildRunRulesets, toggleRulePriority, type SheetTab } from './portraitSheet'
@@ -120,6 +121,13 @@ export interface BattleViewProps {
    * 들어도 관전 중에 다시 그려지지 않는다.
    */
   readonly onOutcome?: (outcome: string) => void
+  /**
+   * 층별 정산. **상단 알림이 아니라 탭이다.**
+   *
+   * 층을 깰 때마다 상단 바에 한 줄이 나타났다 사라지면서 도면·규칙표·로그가 전부 밀렸다.
+   * 정산은 사라지는 알림이 아니라 쌓이는 기록이므로 로그와 같은 급의 탭으로 옮겼다.
+   */
+  readonly settlements?: readonly FloorSettlement[]
 }
 
 /**
@@ -443,6 +451,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         cpuUsed={cpuUsed}
         cpuBudget={cpuBudget}
         entries={session.engine.log.entries.slice(-LOG_TAIL)}
+        settlements={props.settlements ?? []}
         hp={player?.hp ?? 0}
         hpMax={player?.hpMax ?? 1}
         potions={player === undefined ? 0 : countItem(player, 'POTION')}
@@ -483,6 +492,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         cpuUsed={cpuUsed}
         cpuBudget={cpuBudget}
         entries={session.engine.log.entries.slice(-LOG_TAIL)}
+        settlements={props.settlements ?? []}
         hp={player?.hp ?? 0}
         hpMax={player?.hpMax ?? 1}
         potions={player === undefined ? 0 : countItem(player, 'POTION')}

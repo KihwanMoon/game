@@ -22,6 +22,7 @@ import type { ReactNode, Ref } from 'react'
 import { HpGauge, ThreatNotice } from '../ds'
 import type { LogRowProps } from '../ds'
 import { BattleSheet, SheetFoot } from './BattleSheet'
+import { formatSettlementTabCount, type FloorSettlement } from './settlement'
 import { formatOutcomeNotice, resolveOutcomeTone } from './outcomeText'
 import {
   formatLogTabCount,
@@ -66,6 +67,8 @@ export interface BattleLandscapeProps {
   readonly rows: readonly RuleRowView[]
   readonly onToggleRule: (priority: number) => void
   readonly entries: readonly LogRowProps[]
+  /** 층별 정산. 상단 알림이 아니라 탭이다 — 알림은 뜰 때마다 아래 전부를 밀었다. */
+  readonly settlements?: readonly FloorSettlement[]
   /** 켜진 규칙들의 누적 CPU. */
   readonly cpuUsed: number
   readonly cpuBudget: number
@@ -96,6 +99,7 @@ export function BattleLandscape(props: BattleLandscapeProps): React.JSX.Element 
   const counts: ReadonlyMap<SheetTab, string> = new Map([
     ['rules' as SheetTab, formatRulesTabCount(enabledRules, props.rows.length)],
     ['log' as SheetTab, formatLogTabCount(props.tick)],
+    ['reward' as SheetTab, formatSettlementTabCount(props.settlements ?? [])],
   ])
 
   return (
@@ -131,6 +135,7 @@ export function BattleLandscape(props: BattleLandscapeProps): React.JSX.Element 
             rules={props.rows}
             onToggleRule={props.onToggleRule}
             entries={props.entries}
+            settlements={props.settlements ?? []}
             cooldowns={props.cooldowns ?? ''}
             potions={props.potions}
             potionsMax={props.potionsMax}

@@ -418,7 +418,7 @@ describe('시트 — 탭과 규칙 토글은 세로와 같은 부품이다', () 
       const props = one.props as { readonly role?: string }
       return props.role === 'tab'
     })
-    expect(tabs).toHaveLength(2)
+    expect(tabs).toHaveLength(3)
     ;(tabs[1]?.props as { readonly onClick?: () => void }).onClick?.()
     expect(onTabChange).toHaveBeenCalledWith('log')
   })

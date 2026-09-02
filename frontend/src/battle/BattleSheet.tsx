@@ -22,6 +22,8 @@ import type { ReactNode, Ref } from 'react'
 import { Button, LogPanel, RuleRow, RuleTable, SegmentedGauge } from '../ds'
 import type { LogRowProps } from '../ds'
 import { SHEET_TABS, SHEET_TAB_LABELS, formatRuleCondition, type SheetTab } from './portraitSheet'
+import type { FloorSettlement } from './settlement'
+import { SettlementPanel } from './SettlementPanel'
 import type { RuleRowView } from './ruleRows'
 
 /** CPU 게이지의 라벨. */
@@ -155,6 +157,8 @@ export interface BattleSheetProps {
   readonly rules: readonly RuleRowView[]
   readonly onToggleRule: (priority: number) => void
   readonly entries: readonly LogRowProps[]
+  /** 층별 정산. 로그와 같은 급의 탭으로 선다. */
+  readonly settlements?: readonly FloorSettlement[]
   /** 스킬 쿨타임 한 줄. 비어 있으면 안 그린다 — 도는 쿨이 없을 때 빈 줄은 자리 낭비다. */
   readonly cooldowns?: string
   /** 남은 물약·주문서와 실은 수. 로그 바로 위에 선다 — 규칙이 「없음」으로 떨어진
@@ -218,6 +222,8 @@ export function BattleSheet(props: BattleSheetProps): React.JSX.Element {
       <div className="battle__sheet-body" ref={props.bodyRef}>
         {props.tab === 'log' ? (
           <LogPanel entries={props.entries} />
+        ) : props.tab === 'reward' ? (
+          <SettlementPanel settlements={props.settlements ?? []} />
         ) : (
           <RuleSheet rules={props.rules} onToggle={props.onToggleRule} />
         )}

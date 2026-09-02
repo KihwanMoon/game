@@ -28,6 +28,7 @@ import type { ReactNode, Ref } from 'react'
 import { HpGauge, ThreatNotice } from '../ds'
 import type { LogRowProps } from '../ds'
 import { BattleSheet, SheetFoot } from './BattleSheet'
+import { formatSettlementTabCount, type FloorSettlement } from './settlement'
 import { formatOutcomeNotice, resolveOutcomeTone } from './outcomeText'
 import {
   formatLogTabCount,
@@ -93,6 +94,8 @@ export interface BattlePortraitProps {
   readonly cpuBudget: number
   /** 로그 줄들. 코어의 `engine.log.entries` 를 그대로 받는다. */
   readonly entries: readonly LogRowProps[]
+  /** 층별 정산. 상단 알림이 아니라 탭이다 — 알림은 뜰 때마다 아래 전부를 밀었다. */
+  readonly settlements?: readonly FloorSettlement[]
   readonly hp: number
   readonly hpMax: number
   readonly potions: number
@@ -118,6 +121,7 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
   const counts: ReadonlyMap<SheetTab, string> = new Map([
     ['rules' as SheetTab, formatRulesTabCount(enabledRules, props.rows.length)],
     ['log' as SheetTab, formatLogTabCount(props.tick)],
+    ['reward' as SheetTab, formatSettlementTabCount(props.settlements ?? [])],
   ])
 
   return (
@@ -162,6 +166,7 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
         rules={props.rows}
         onToggleRule={props.onToggleRule}
         entries={props.entries}
+        settlements={props.settlements ?? []}
         cooldowns={props.cooldowns ?? ''}
         potions={props.potions}
         potionsMax={props.potionsMax}

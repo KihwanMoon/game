@@ -17,16 +17,22 @@
 
 import type { RuleSet } from '../core/schemas'
 
-/** 시트가 보여 줄 수 있는 것. 규칙표와 로그 둘뿐이다. */
-export type SheetTab = 'rules' | 'log'
+/**
+ * 시트가 보여 줄 수 있는 것.
+ *
+ * 정산이 셋째로 붙었다. 층을 깰 때마다 상단에 뜨던 알림이 아래 전부를 밀어 화면이
+ * 흔들렸는데, 정산은 **사라지는 알림이 아니라 쌓이는 기록**이라 로그와 같은 급이다.
+ */
+export type SheetTab = 'rules' | 'log' | 'reward'
 
 /** 탭 순서. 배열 순서가 화면 순서다. */
-export const SHEET_TABS: readonly SheetTab[] = ['rules', 'log']
+export const SHEET_TABS: readonly SheetTab[] = ['rules', 'log', 'reward']
 
 /** 탭 라벨. 카운트는 따로 붙인다. */
 export const SHEET_TAB_LABELS: ReadonlyMap<SheetTab, string> = new Map([
   ['rules', '규칙표'],
   ['log', '실행 로그'],
+  ['reward', '정산'],
 ])
 
 /**
