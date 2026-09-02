@@ -348,3 +348,26 @@ def test_the_settlement_sees_the_extra_slot(client):
     # 여섯을 싣고 하나를 남겼으니 다섯을 썼다. 낮은 칸부터 2·2·1 로 빠진다 —
     # 세 번째 칸이 2 로 남아 있으면 정산이 그 칸을 안 본 것이다.
     assert left == [0, 0, 1], left
+
+
+def test_a_spent_potion_still_grants_its_bonus():
+    """★ **다 쓰면 옵션이 사라지게 두면 안 마시는 것이 이득이 된다.**
+
+    영약 둘을 끼우면 최대체력 +50 이고, 그걸 지키려면 마시면 안 된다 — 물약의 존재
+    이유와 정반대다. 보충은 능력치를 되찾으려고가 아니라 다시 마실 수 있으려고 한다.
+    """
+    from game.api.loadout_service import list_loaded_consumables
+    from game.app.store.consumables import ConsumableSlot
+
+    spent = ConsumableSlot(use_tag="POTION", slot_index=0, catalog_id="probe_potion", charges=0)
+    catalog = {"probe_potion": build_potion()}
+    assert list_loaded_consumables((spent,), catalog) == (catalog["probe_potion"],)
+
+
+def test_an_empty_slot_grants_nothing():
+    """★ 빈 칸까지 옵션을 주면 아무것도 안 끼운 캐릭터가 공짜 능력치를 받는다."""
+    from game.api.loadout_service import list_loaded_consumables
+    from game.app.store.consumables import ConsumableSlot
+
+    empty = ConsumableSlot(use_tag="POTION", slot_index=0, catalog_id=None, charges=0)
+    assert list_loaded_consumables((empty,), {"probe_potion": build_potion()}) == ()

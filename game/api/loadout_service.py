@@ -82,9 +82,15 @@ def count_slot_bonus(equipped: dict[EquipSlot, ItemCatalogEntry]) -> dict[str, i
 def list_loaded_consumables(
     slots: tuple[ConsumableSlot, ...], catalog: dict
 ) -> tuple[ItemCatalogEntry, ...]:
-    """칸에 끼운 소모품 중 **충전이 남은 것**들을 칸 순서대로 모은다.
+    """칸에 끼운 소모품들을 칸 순서대로 모은다.
 
-    다 쓴 물약은 파손된 장비와 같다 — 효과가 남으면 보충비가 뜻을 잃는다.
+    **충전이 0 이어도 옵션은 붙는다.** 처음에는 파손된 장비에 빗대 「다 쓰면 사라진다」로
+    뒀는데, 그 비유가 틀렸다 — 파손된 장비는 못 쓰는 물건이지만 다 쓴 물약 칸은 **여전히
+    그 물약을 차고 있는 상태**다.
+
+    그렇게 두면 **안 마시는 것이 이득**이 된다. 영약 둘을 끼우면 최대체력 +50 이고, 그걸
+    지키려면 마시면 안 된다 — 물약의 존재 이유와 정반대다. 보충은 능력치를 되찾으려고가
+    아니라 **다시 마실 수 있으려고** 하는 것이다.
 
     Args:
         slots: 읽어 온 소모품 칸들.
@@ -95,7 +101,7 @@ def list_loaded_consumables(
     """
     loaded: list[ItemCatalogEntry] = []
     for slot in slots:
-        if slot.catalog_id is None or slot.charges <= 0:
+        if slot.catalog_id is None:
             continue
         entry = catalog.get(slot.catalog_id)
         if entry is not None:

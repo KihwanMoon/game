@@ -69,9 +69,8 @@ def build_slot_view(slot: ConsumableSlot, catalog: dict) -> ConsumableSlotView:
         charges=slot.charges,
         charge_max=charge_max,
         refill_cost=resolve_refill_cost(entry.grade, charge_max - slot.charges),
-        # **다 쓴 칸은 옵션도 없다.** 로드아웃이 충전 남은 칸만 합산하므로, 화면이
-        # 그대로 적으면 실제로 붙는 것과 다른 말을 한다.
-        affixes=[format_affix(affix) for affix in entry.affixes] if slot.charges > 0 else [],
+        # **다 써도 붙는다.** 안 그러면 안 마시는 것이 이득이 된다 (§5).
+        affixes=[format_affix(affix) for affix in entry.affixes],
     )
 
 
