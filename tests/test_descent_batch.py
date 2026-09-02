@@ -114,6 +114,7 @@ def test_a_run_that_dies_mid_floor_does_not_clear_it():
 
     partial = load_rulesets(BENCHMARK_RULESETS_PATH)["kite_summoner"]
     stats = run_probe(runs=3, ruleset=partial)
-    # 실측: 시드 1~3 은 2~4방에서 끝난다. 4방이면 1층만 깬 것이다 — 2층으로 세면 틀렸다.
-    assert stats.deepest_floor == 1, stats
+    # 실측 (room v4): 시드 1~3 중 둘이 1층을, 하나가 2층을 깬다 — 셋 다 **층 중간에서**
+    # 죽으므로, 올림으로 세는 순간 층별 합계가 어긋난다.
+    assert stats.cleared_by_floor[:3] == (2, 1, 0), stats
     assert stats.finished == 0

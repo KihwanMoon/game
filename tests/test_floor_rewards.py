@@ -43,8 +43,9 @@ from game.schemas.ruleset import load_rulesets
 #
 # `WINNING_SEED` 는 **이기면서 피해를 입는** 시드여야 한다 — 무피해로 이기면 「방 사이에
 # HP 가 인계된다」를 못 본다.
+# 실측 재배치(room v4) 뒤 다시 잰 값이다 — 층 풀이 바뀌면 시드의 뜻도 바뀐다.
 WINNING_SEED = 6
-LOSING_SEED = 3
+LOSING_SEED = 2
 # 첫 방이 전투인 층. 규칙 편집이 그 방에는 반영되지 않는 것을 보는 데 쓴다.
 EDIT_SEED = 42
 
