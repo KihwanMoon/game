@@ -46,6 +46,9 @@ const INVENTORY: InventoryView = {
       slot: null,
       isSealed: false,
       stackCatalogId: null,
+    stackLabelKo: '',
+    stackGrade: '',
+    stackUseTag: '',
       stackCount: 0,
       item: {
         itemId: 1,
@@ -74,6 +77,9 @@ const INVENTORY: InventoryView = {
       slot: 'WEAPON_OFF',
       isSealed: true,
       stackCatalogId: null,
+    stackLabelKo: '',
+    stackGrade: '',
+    stackUseTag: '',
       stackCount: 0,
       item: null,
     },
@@ -82,6 +88,9 @@ const INVENTORY: InventoryView = {
       slot: 'WEAPON_MAIN',
       isSealed: false,
       stackCatalogId: null,
+    stackLabelKo: '',
+    stackGrade: '',
+    stackUseTag: '',
       stackCount: 0,
       item: {
         itemId: 2,
@@ -133,6 +142,7 @@ describe('인벤토리 패널', () => {
       onList={noop}
       feePercent={5}
       onUnseal={() => undefined}
+      onLoadConsumable={() => undefined}
     />,
   )
 
@@ -176,6 +186,7 @@ describe('인벤토리 패널 — 서버 없음', () => {
         onList={noop}
         feePercent={5}
         onUnseal={() => undefined}
+        onLoadConsumable={() => undefined}
       />,
     )
     expect(markup).toContain('서버에 닿지 못했다')
@@ -216,6 +227,7 @@ describe('귀속 표시 (결정 #07)', () => {
         onList={() => undefined}
         feePercent={5}
         onUnseal={() => undefined}
+        onLoadConsumable={() => undefined}
       />,
     )
     expect(html).toContain('귀속')
@@ -234,6 +246,7 @@ describe('귀속 표시 (결정 #07)', () => {
         onList={() => undefined}
         feePercent={5}
         onUnseal={() => undefined}
+        onLoadConsumable={() => undefined}
       />,
     )
     expect(html).not.toContain('귀속')
@@ -255,6 +268,7 @@ describe('아이템이 주는 것 (기존 화면 보완)', () => {
         onList={() => undefined}
         feePercent={5}
         onUnseal={() => undefined}
+        onLoadConsumable={() => undefined}
       />,
     )
     expect(html).toContain('튼튼함')
@@ -295,7 +309,19 @@ describe('소모품 스택 (#54)', () => {
       inventory={
         {
           ...INVENTORY,
-          slots: [{ slotIndex: 0, slot: null, isSealed: false, stackCatalogId: 'potion_small', stackCount: 3, item: null }],
+          slots: [
+            {
+              slotIndex: 0,
+              slot: null,
+              isSealed: false,
+              stackCatalogId: 'potion_small',
+              stackCount: 3,
+              stackLabelKo: '작은 물약',
+              stackGrade: 'COMMON',
+              stackUseTag: 'POTION',
+              item: null,
+            },
+          ],
         } as InventoryView
       }
       isOnline
@@ -307,6 +333,7 @@ describe('소모품 스택 (#54)', () => {
       onList={noop}
       feePercent={5}
       onUnseal={() => undefined}
+      onLoadConsumable={() => undefined}
     />,
   )
 
@@ -335,6 +362,7 @@ describe('되찾음 (`설계/6_몬스터` §5)', () => {
         onList={noop}
         feePercent={5}
         onUnseal={() => undefined}
+        onLoadConsumable={() => undefined}
       />,
     )
     expect(html).toContain('되찾음')
@@ -353,6 +381,7 @@ describe('되찾음 (`설계/6_몬스터` §5)', () => {
         onList={noop}
         feePercent={5}
         onUnseal={() => undefined}
+        onLoadConsumable={() => undefined}
       />,
     )
     expect(html).not.toContain('되찾음')
@@ -431,6 +460,7 @@ describe('봉인된 옵션 (설계/4_아이템 §17)', () => {
         onList={() => undefined}
         feePercent={5}
         onUnseal={() => undefined}
+        onLoadConsumable={() => undefined}
       />,
     )
 
@@ -473,6 +503,9 @@ describe('무기 사거리 (설계/4_아이템 §2.2)', () => {
               slot: null,
               isSealed: false,
               stackCatalogId: null,
+    stackLabelKo: '',
+    stackGrade: '',
+    stackUseTag: '',
               stackCount: 0,
               item: {
                 itemId: 91,
@@ -505,6 +538,7 @@ describe('무기 사거리 (설계/4_아이템 §2.2)', () => {
         onList={noop}
         feePercent={5}
         onUnseal={() => undefined}
+        onLoadConsumable={() => undefined}
       />,
     )
   }
@@ -541,6 +575,7 @@ function drawPanel(): string {
       onList={noop}
       feePercent={5}
       onUnseal={() => undefined}
+      onLoadConsumable={() => undefined}
     />,
   )
 }
@@ -609,6 +644,9 @@ describe('낀 채로 고치고 연다', () => {
               slot: 'WEAPON_MAIN',
               isSealed: false,
               stackCatalogId: null,
+    stackLabelKo: '',
+    stackGrade: '',
+    stackUseTag: '',
               stackCount: 0,
               item,
             },
@@ -623,6 +661,7 @@ describe('낀 채로 고치고 연다', () => {
         onList={noop}
         feePercent={5}
         onUnseal={() => undefined}
+        onLoadConsumable={() => undefined}
       />,
     )
   }
@@ -674,5 +713,53 @@ describe('등급 색이 실제로 이기는가', () => {
     const html = drawPanel()
     expect(html).toContain('◆')
     expect(html).toContain('·')
+  })
+})
+
+describe('가방의 소모품 (설계/4_아이템 §5)', () => {
+  const bag = {
+    ...INVENTORY,
+    slots: [
+      {
+        slotIndex: 0,
+        slot: null,
+        isSealed: false,
+        stackCatalogId: 'potion_greater',
+        stackCount: 2,
+        stackLabelKo: '큰 회복 물약',
+        stackGrade: 'FINE',
+        stackUseTag: 'POTION',
+        item: null,
+      },
+    ],
+  } as InventoryView
+  const html = renderToStaticMarkup(
+    <InventoryPanel
+      inventory={bag}
+      isOnline
+      detail=""
+      onEquip={noop}
+      onUnequip={noop}
+      onDiscard={noop}
+      onRepair={noop}
+      onList={noop}
+      feePercent={5}
+      onUnseal={() => undefined}
+      onLoadConsumable={() => undefined}
+    />,
+  )
+
+  it('★ 한글 이름을 적는다 — id 를 그대로 적으면 `potion_greater` 가 화면에 뜬다', () => {
+    expect(html).toContain('큰 회복 물약')
+    expect(html).not.toContain('potion_greater<')
+  })
+
+  it('★ 등급을 색·글리프·이름으로 적는다 — 가방에서도 장비와 같은 규율이다', () => {
+    expect(html).toContain('inv__name--fine')
+    expect(html).toContain('◇')
+  })
+
+  it('★ 끼우는 길이 가방 행에 있다 — 장비에는 「착용」이 있는데 소모품에 없으면 못 찾는다', () => {
+    expect(html).toContain('끼우기')
   })
 })

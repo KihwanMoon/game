@@ -110,6 +110,29 @@ def build_item_view(
     )
 
 
+def build_stack_view(catalog_id: str | None, catalog: dict) -> dict[str, str]:
+    """쌓인 소모품의 표시 정보를 찾는다.
+
+    **id 를 그대로 적으면 화면에 `potion_heal` 이 뜬다.** 이름은 카탈로그가 아는데 가방
+    응답이 안 실어 보내던 자리이며, 「서버는 아는데 화면이 말하지 않는다」의 또 한 번이다.
+
+    Args:
+        catalog_id: 쌓인 소모품 id. 장비 칸이면 None.
+        catalog: 아이템 카탈로그.
+
+    Returns:
+        `InventorySlotView` 에 펼칠 절. 소모품이 아니면 빈 값들이다.
+    """
+    entry = catalog.get(catalog_id) if catalog_id else None
+    if entry is None:
+        return {"stack_label_ko": "", "stack_grade": "", "stack_use_tag": ""}
+    return {
+        "stack_label_ko": entry.label_ko,
+        "stack_grade": entry.grade,
+        "stack_use_tag": entry.use_tag or "",
+    }
+
+
 @router.get("/api/inventory", response_model=InventoryResponse)
 def read_inventory(account: CurrentAccount) -> InventoryResponse:
     """인벤토리·장비·지갑을 함께 읽는다.
@@ -139,6 +162,7 @@ def read_inventory(account: CurrentAccount) -> InventoryResponse:
                 else build_item_view(entry.item, catalog, base_stats),
                 stack_catalog_id=entry.stack_catalog_id,
                 stack_count=entry.stack_count,
+                **build_stack_view(entry.stack_catalog_id, catalog),
             )
             for entry in list_inventory(pool, entity_id)
         ],

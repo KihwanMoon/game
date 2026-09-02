@@ -40,6 +40,13 @@ export interface InventoryPanelProps {
   /** 걸 때 떼는 수수료율(%). 걸기 전에 얼마가 나가는지 알아야 한다. */
   readonly feePercent: number
   readonly onRepair: (itemId: number) => void
+  /**
+   * 가방의 소모품을 빈 소모품 칸에 끼운다.
+   *
+   * **가방 행에 있어야 한다.** 장비 행에는 「착용」이 있는데 소모품 행에는 아무것도
+   * 없으면, 끼우는 길이 다른 패널에만 있다는 것을 알 방법이 없다 — 실제로 못 찾았다.
+   */
+  readonly onLoadConsumable: (catalogId: string) => void
 }
 
 /**
@@ -394,8 +401,24 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
                       <li className="inv__bag" key={entry.slotIndex}>
                         <div className="inv__row">
                           <Thumb kind="CONSUMABLE" label={entry.stackCatalogId} size="sm" />
-                          <span className="inv__name">{entry.stackCatalogId}</span>
+                          <span className={`inv__name${formatGradeClass(entry.stackGrade)}`}>
+                            {entry.stackLabelKo === '' ? entry.stackCatalogId : entry.stackLabelKo}
+                          </span>
+                          {renderGrade(entry.stackGrade)}
                           <ValueExpr text={`x${String(entry.stackCount)}`} size="sm" />
+                          {entry.stackUseTag === '' ? null : (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              glyph="↧"
+                              disabled={!props.isOnline}
+                              onClick={() => {
+                                props.onLoadConsumable(entry.stackCatalogId ?? '')
+                              }}
+                            >
+                              끼우기
+                            </Button>
+                          )}
                         </div>
                       </li>
                     )

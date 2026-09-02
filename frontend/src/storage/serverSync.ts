@@ -580,6 +580,12 @@ export interface SlotView {
    */
   readonly stackCatalogId: string | null
   readonly stackCount: number
+  /** 쌓인 소모품의 한글 이름. 비어 있으면 소모품 칸이 아니다. */
+  readonly stackLabelKo: string
+  /** 쌓인 소모품의 등급. 가방에서도 색이 갈려야 한다. */
+  readonly stackGrade: string
+  /** 쌓인 소모품의 쓰임새. 어느 칸에 끼울 수 있는지가 여기서 나온다. */
+  readonly stackUseTag: string
 }
 
 /** 인벤토리·장비·지갑. */
@@ -633,6 +639,9 @@ interface RawSlot {
   is_sealed: boolean
   stack_catalog_id?: string | null
   stack_count?: number
+  stack_label_ko?: string
+  stack_grade?: string
+  stack_use_tag?: string
 }
 
 /**
@@ -648,6 +657,9 @@ function readSlot(raw: RawSlot): SlotView {
     isSealed: raw.is_sealed,
     stackCatalogId: raw.stack_catalog_id ?? null,
     stackCount: raw.stack_count ?? 0,
+    stackLabelKo: raw.stack_label_ko ?? '',
+    stackGrade: raw.stack_grade ?? '',
+    stackUseTag: raw.stack_use_tag ?? '',
     item:
       raw.item === null
         ? null

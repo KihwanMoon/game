@@ -13,6 +13,9 @@ FIRST_FLOOR = 1
 # 만나거나 보스 층이 아닌 데서 만나게 된다.
 BOSS_ROOM_ID = "boss_hall"
 
+# 퍼센트의 밑값. 정수 내림 나눗셈으로만 쓴다 (R5).
+PERCENT_BASE = 100
+
 
 def resolve_floor(wanted: int, reached: int) -> int:
     """요청한 층을 갈 수 있는 범위로 접는다.
@@ -50,3 +53,37 @@ def read_boss_floor(balance: dict) -> int:
         보스 층. 안 적혀 있으면 마지막 층.
     """
     return int(balance.get("floor_scale", {}).get("boss_floor", read_floor_cap(balance)))
+
+
+def read_floor_heal_pct(balance: dict) -> int:
+    """층을 깰 때 돌려주는 최대체력의 퍼센트를 읽는다.
+
+    Args:
+        balance: balance.json 을 읽은 딕셔너리.
+
+    Returns:
+        퍼센트. 안 적혀 있으면 0 이다 — **모르면 안 준다.** 넘겨짚어 주면 저장된
+        리플레이가 조용히 다른 판이 된다.
+    """
+    return max(0, int(balance.get("floor_scale", {}).get("floor_heal_pct", 0)))
+
+
+def resolve_floor_heal(hp: int, hp_max: int, heal_pct: int) -> int:
+    """층을 깬 직후의 HP 를 정한다.
+
+    **정수 내림 나눗셈이다** (R5). 부동소수를 쓰면 두 코어가 마지막 자리에서 갈리고,
+    그 한 점이 30방을 도는 동안 다른 판으로 벌어진다.
+
+    이 회복이 있는 이유는 실측이다 — 없을 때 18개 규칙표 중 **아무도 2층을 못 넘었다.**
+    회복 수단이 물약 두 개뿐이라 30방을 도는 동안 소진이 벽이 된다. 반대로 전부
+    돌려주면 층마다 새 판이 되어 「앞 층을 얼마나 깔끔하게 깼는가」가 뜻을 잃는다.
+
+    Args:
+        hp: 층을 끝냈을 때의 HP.
+        hp_max: 최대체력.
+        heal_pct: 돌려줄 퍼센트.
+
+    Returns:
+        다음 층을 여는 HP. 최대체력을 안 넘는다.
+    """
+    return min(hp_max, hp + hp_max * heal_pct // PERCENT_BASE)

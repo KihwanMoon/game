@@ -79,6 +79,7 @@ import {
   TutorialPanel,
   WorldPanel,
   ConsumablePanel,
+  findFreeConsumableSlot,
   InventoryPanel,
   MetaPanel,
   RuleLibrary,
@@ -777,6 +778,7 @@ export function App(): React.JSX.Element {
       // **가방만 다시 읽으면 「내 정보」가 옛 값으로 남는다.** 장착·해제·복구·봉인 해제는
       // 전부 캐릭터 시트의 숫자를 바꾸는데, 그 숫자는 `progress.loadout` 에서 온다 —
       // 응답이 실어 주는 것은 가방뿐이다.
+      void readConsumables(account).then(setConsumables)
       void readItemContext(account).then((context) => {
         if (context.inventory !== undefined) {
           setInventory(context.inventory)
@@ -812,7 +814,42 @@ export function App(): React.JSX.Element {
       }
       setConsumables(outcome.view)
       // 끼우면 가방에서 하나 빠지고, 팔면 지갑이 는다 — 가방 화면도 옛 값으로 두면 안 된다.
-      void readInventory(account).then(setInventory)
+      refreshBag(account)
+    })
+  }
+
+  /**
+   * 가방과 소모품 칸을 함께 다시 읽는다.
+   *
+   * **둘은 한 몸이다.** 끼우면 가방에서 빠지고 칸이 차며, 팔면 가방이 줄고 지갑이 는다 —
+   * 한쪽만 읽으면 다른 쪽이 옛 값으로 남는다. 마운트에서 칸을 안 읽어 패널이 「서버에
+   * 닿지 못했다」로 굳어 있던 자리이기도 하다.
+   *
+   * @param token 기기 토큰.
+   */
+  function refreshBag(token: string): void {
+    void readInventory(token).then(setInventory)
+    void readConsumables(token).then(setConsumables)
+  }
+
+  /**
+   * 가방의 소모품 하나를 **빈 칸부터** 끼운다.
+   *
+   * **가방 행에서 바로 끼운다.** 칸을 고르라고 하면 어느 칸이 비었는지 사람이 세어야
+   * 하고, 그 전에 소모품 칸 패널을 먼저 찾아야 한다 — 실제로 못 찾았다.
+   *
+   * @param catalogId 끼울 소모품.
+   */
+  function loadConsumableStack(catalogId: string): void {
+    const target = findFreeConsumableSlot(consumables, catalogId)
+    if (target === undefined) {
+      setItemDetail('끼울 칸이 없다 — 소모품 칸에서 하나를 비워야 한다')
+      return
+    }
+    applyConsumable('/consumable/load', {
+      use_tag: target.useTag,
+      slot_index: target.slotIndex,
+      catalog_id: catalogId,
     })
   }
 
@@ -826,8 +863,7 @@ export function App(): React.JSX.Element {
     void readProgress(account).then(setProgress)
     void readLeaderboard(account).then(setLeaderboard)
     void readAuction(account).then(setAuction)
-    void readInventory(account).then(setInventory)
-    void readConsumables(account).then(setConsumables)
+    refreshBag(account)
     // **관리자가 아니면 undefined 로 남는다.** 서버가 404 로 답하므로 관리자 경로가
     // 있다는 사실 자체가 일반 계정 화면에 드러나지 않는다.
     void readAdminOverview(account).then(setAdmin)
@@ -847,7 +883,7 @@ export function App(): React.JSX.Element {
     void applyAuctionAction(account, path, body).then((outcome) => {
       if (outcome.auction !== undefined) {
         setAuction(outcome.auction)
-        void readInventory(account).then(setInventory)
+        refreshBag(account)
         return
       }
       setWorldDetail(outcome.detail)
@@ -1054,7 +1090,7 @@ export function App(): React.JSX.Element {
       ).then((result) => {
         setVerdict(result)
         // 전리품과 화폐가 여기서 들어온다. 다시 읽어야 화면이 그것을 안다.
-        void readInventory(account).then(setInventory)
+        refreshBag(account)
         // 판이 끝나면 몬스터가 컸거나 내 장비를 가져갔을 수 있다.
         void readBestiary(account).then(setBestiary)
         // 전리품이 들어왔으면 도감이 열린다 — 그 순간 안 읽으면 다음 접속까지 잠겨 보인다.
@@ -1225,6 +1261,7 @@ export function App(): React.JSX.Element {
         reward: result.reward,
       })
       // 층마다 들어오는 것이 있으므로 가방·성장·도감을 그때그때 다시 읽는다.
+      void readConsumables(account).then(setConsumables)
       void readItemContext(account).then((context) => {
         if (context.inventory !== undefined) {
           setInventory(context.inventory)
@@ -1509,12 +1546,15 @@ export function App(): React.JSX.Element {
                 onUnseal={(itemId) => {
                   applyItem('/item/unseal', { item_id: itemId })
                 }}
+                onLoadConsumable={(catalogId) => {
+                  loadConsumableStack(catalogId)
+                }}
                 onList={(itemId, price) => {
                   // **경매에 걸면 가방과 지갑이 함께 바뀐다.** 아이템이 빠지고 수수료가
                   // 나가므로 둘 다 다시 읽어야 화면이 그것을 안다.
                   applyAuction('/auction/list', { item_id: itemId, price })
                   if (account !== undefined) {
-                    void readInventory(account).then(setInventory)
+                    refreshBag(account)
                   }
                 }}
               />

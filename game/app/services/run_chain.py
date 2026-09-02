@@ -11,6 +11,7 @@ Room Loop 정식판(노드 그래프·보상 선택·방 사이 규칙 편집)�
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from game.app.progression.floors import read_floor_heal_pct, resolve_floor_heal
 from game.app.rules.rule_vm import build_rule_vm
 from game.app.services.build_chain import resolve_room_floor
 from game.app.services.run_battle import (
@@ -107,6 +108,7 @@ def run_room_chain(
         enemy_stats={kind["id"]: kind for kind in balance["enemies"]},
     )
 
+    heal_pct = read_floor_heal_pct(balance)
     for index, template in enumerate(templates):
         # 방을 넘어가면 방 체류 틱과 기준 공격력을 지운다. entity_id 가 방마다 다시
         # 붙으므로(어느 방에나 goblin_rusher_0 이 있다) 남기면 남의 기준값을 읽는다.
@@ -123,7 +125,17 @@ def run_room_chain(
         )
         player = engine.state.entities["player"]
         if carried_hp is not None:
-            player.hp = carried_hp
+            # **층을 넘을 때만 회복한다** (결정 #21). 방마다 주면 방 수가 곧 회복량이
+            # 되어 긴 층이 오히려 쉬워지고, 안 주면 30방을 한 HP 바로 간다 — 실측으로
+            # 그때는 18개 규칙표 중 아무도 2층을 못 넘었다.
+            is_new_floor = index > 0 and resolve_room_floor(
+                floor, index, rooms_per_floor
+            ) != resolve_room_floor(floor, index - 1, rooms_per_floor)
+            player.hp = (
+                resolve_floor_heal(carried_hp, player.hp_max, heal_pct)
+                if is_new_floor
+                else carried_hp
+            )
             player.consumables = dict(carried_potions or {})
         if player_ruleset is not None:
             engine.policies["player"] = build_rule_vm(

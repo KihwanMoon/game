@@ -169,6 +169,11 @@ class InventorySlotView(BaseModel):
     item: ItemView | None = None
     stack_catalog_id: str | None = None
     stack_count: int = 0
+    # 쌓인 소모품의 이름·등급·쓰임새. **없으면 화면이 `potion_heal` 을 그대로 적는다** —
+    # 서버는 아는데 화면이 말하지 않는 자리이며, 이 저장소에서 아홉 번째다.
+    stack_label_ko: str = ""
+    stack_grade: str = ""
+    stack_use_tag: str = ""
     slot: str | None = None
     # 양손무기가 막은 자리. **저장된 상태가 아니라 계산값이다** (§2.1).
     is_sealed: bool = False

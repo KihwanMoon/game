@@ -13,6 +13,7 @@ import {
   ConsumablePanel,
   formatCharges,
   formatRefillLabel,
+  findFreeConsumableSlot,
   formatSlotName,
   listSlotOptions,
 } from './ConsumablePanel'
@@ -230,5 +231,34 @@ describe('소모품 칸', () => {
     )
     expect(html).toContain('팔기 630')
     expect(html).toContain('가방 2개')
+  })
+})
+
+describe('가방에서 칸으로', () => {
+  it('★ 빈 칸을 고른다 — 찬 칸을 덮으면 남의 충전이 되돌릴 수 없이 날아간다', () => {
+    const picked = findFreeConsumableSlot(buildView(), 'potion_elixir')
+    // 0번 칸은 이미 회복 물약이 차 있다. 1번이 빈 칸이다.
+    expect(picked?.slotIndex).toBe(1)
+  })
+
+  it('★ 쓰임새가 맞는 칸만 고른다 — 물약이 주문서 칸에 들어가면 규칙표가 엉뚱한 것을 쓴다', () => {
+    const scrollOnly = buildView({
+      slots: [buildSlot({ useTag: 'SCROLL' })],
+    })
+    expect(findFreeConsumableSlot(scrollOnly, 'potion_elixir')).toBeUndefined()
+  })
+
+  it('★ 빈 칸이 없으면 안 고른다 — 조용히 덮으면 「왜 물약이 바뀌었지」가 된다', () => {
+    const full = buildView({
+      slots: [
+        buildSlot({ catalogId: 'potion_heal', charges: 2, chargeMax: 2 }),
+        buildSlot({ slotIndex: 1, catalogId: 'potion_heal', charges: 2, chargeMax: 2 }),
+      ],
+    })
+    expect(findFreeConsumableSlot(full, 'potion_elixir')).toBeUndefined()
+  })
+
+  it('★ 칸을 못 읽었으면 안 고른다 — 서버에 못 닿았는데 끼운 척하면 안 된다', () => {
+    expect(findFreeConsumableSlot(undefined, 'potion_elixir')).toBeUndefined()
   })
 })

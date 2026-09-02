@@ -92,6 +92,28 @@ export function listSlotOptions(
 }
 
 /**
+ * 이 소모품을 끼울 칸을 고른다.
+ *
+ * **빈 칸이 먼저다.** 찬 칸을 먼저 고르면 끼우는 순간 남의 충전이 날아가고, 그것은
+ * 되돌릴 수 없다. 빈 칸이 없으면 undefined 를 돌려 부르는 쪽이 말하게 한다 — 조용히
+ * 아무 칸이나 덮으면 「왜 물약이 바뀌었지」가 된다.
+ *
+ * @param view 소모품 칸 화면. 없으면 고를 수 없다.
+ * @param catalogId 끼울 소모품.
+ * @returns 끼울 칸. 맞는 빈 칸이 없으면 undefined.
+ */
+export function findFreeConsumableSlot(
+  view: ConsumableView | undefined,
+  catalogId: string,
+): ConsumableSlotView | undefined {
+  const option = view?.options.find((entry) => entry.catalogId === catalogId)
+  if (view === undefined || option === undefined) {
+    return undefined
+  }
+  return view.slots.find((slot) => slot.useTag === option.useTag && slot.catalogId === '')
+}
+
+/**
  * 칸 한 줄을 그린다.
  *
  * @param slot 칸.
