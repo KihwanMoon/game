@@ -211,3 +211,39 @@ def test_a_dropped_item_carries_its_seals(client, token):
     assert any(str(grade) == "FINE" for grade, _slots in rows), "상급이 하나도 안 나왔다"
     for grade, slots in rows:
         assert int(slots) == GRADE_SEALED_SLOTS.get(str(grade), 0), f"{grade} 의 칸 수가 다르다"
+
+
+def test_the_bag_and_the_equipment_carry_the_grade(client, token):
+    """★ **가방 목록이 등급을 안 실어 화면이 색도 이름표도 못 붙였다.**
+
+    `find_item` 만 `grade` 를 읽고 `list_inventory`·`list_equipment` 는 안 읽었다. 봉인
+    칸(`sealed_slots`)은 같은 줄에서 읽고 있었으므로 **「봉인 1칸」은 뜨는데 등급만 안
+    뜨는** 모양이 됐고, 그것이 「상급인데 흰색」의 정체다.
+
+    저장 층 검사만으로는 못 잡는다 — 저장은 맞고 **읽는 질의가 빠뜨린** 것이라, 실제
+    응답을 봐야 드러난다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.accounts import find_player_entity
+    from game.app.store.items import create_item
+
+    account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
+    entity_id = find_player_entity(get_pool(), account_id)
+    item_id = create_item(get_pool(), entity_id, "helm_iron", (), None, "FINE", 1)
+
+    body = client.get("/api/inventory", headers=build_headers(token)).json()
+    bagged = next(
+        row["item"] for row in body["slots"] if (row["item"] or {}).get("item_id") == item_id
+    )
+    assert bagged["grade"] == "FINE"
+
+    client.post(
+        "/api/equip",
+        json={"item_id": item_id, "slot": "HEAD"},
+        headers=build_headers(token),
+    )
+    body = client.get("/api/inventory", headers=build_headers(token)).json()
+    worn = next(
+        row["item"] for row in body["equipment"] if (row["item"] or {}).get("item_id") == item_id
+    )
+    assert worn["grade"] == "FINE", "낀 것도 등급을 잃으면 안 된다"

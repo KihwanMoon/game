@@ -204,7 +204,10 @@ def list_inventory(pool: ConnectionPool, entity_id: int) -> tuple[InventoryEntry
     with pool.connection() as connection:
         rows = connection.execute(
             "SELECT s.slot_index, s.item_id, s.stack_catalog_id, s.stack_count,"
-            " i.catalog_id, i.affixes, i.is_broken, i.is_bound, i.taken_from, i.sealed_slots"
+            " i.catalog_id, i.affixes, i.is_broken, i.is_bound, i.taken_from, i.sealed_slots,"
+            # **등급을 읽는다.** 안 읽으면 모든 줄이 빈 등급으로 나가고, 화면은 색도
+            # 이름표도 못 붙인다 — 봉인 칸은 뜨는데 등급만 안 뜨던 것이 이 자리다.
+            " i.grade"
             " FROM inventory_slot s LEFT JOIN item_instance i ON i.id = s.item_id"
             " WHERE s.entity_id = %s ORDER BY s.slot_index",
             (entity_id,),
@@ -224,6 +227,7 @@ def list_inventory(pool: ConnectionPool, entity_id: int) -> tuple[InventoryEntry
                 # 몬스터가 들고 있는 동안에는 그 개체가 소유자다.
                 is_recovered=row[8] is not None,
                 sealed_slots=int(row[9] or 0),
+                grade=str(row[10] or ""),
             ),
             stack_catalog_id=None if row[2] is None else str(row[2]),
             stack_count=int(row[3] or 0),
@@ -245,7 +249,7 @@ def list_equipment(pool: ConnectionPool, entity_id: int) -> dict[EquipSlot, Stor
     with pool.connection() as connection:
         rows = connection.execute(
             "SELECT e.slot, i.id, i.catalog_id, i.affixes, i.is_broken, i.is_bound,"
-            " i.taken_from, i.sealed_slots"
+            " i.taken_from, i.sealed_slots, i.grade"
             " FROM equipment_slot e JOIN item_instance i ON i.id = e.item_id"
             " WHERE e.entity_id = %s ORDER BY e.slot",
             (entity_id,),
@@ -259,6 +263,7 @@ def list_equipment(pool: ConnectionPool, entity_id: int) -> dict[EquipSlot, Stor
             is_bound=bool(row[5]),
             is_recovered=row[6] is not None,
             sealed_slots=int(row[7] or 0),
+            grade=str(row[8] or ""),
         )
         for row in rows
     }
