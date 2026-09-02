@@ -216,13 +216,20 @@ describe('도면은 고정이고 스크롤되지 않는다', () => {
   it('여섯 줄 골격을 토큰으로 짠다 — 상단과 도면만 내용 높이다', () => {
     // **상단이 `auto` 인 것은 두 줄을 받기 위해서다** — 층·틱은 헤더로 고정하고 조작을
     // 아래 줄로 내린다. 치수는 여전히 토큰이 정한다: `min-height: var(--bar-top)` 이
-    // 한 줄일 때의 높이를 지키고, 늘어난 만큼 줄어드는 것은 로그(`1fr`)뿐이다.
-    // 시트 행에는 바닥이 깔린다 — 도면이 큰 방에서 시트가 0 까지 짜부라지면 로그가
-    // 있는데 보이지 않는다. 스크롤할 자리 자체가 없었다(실제 신고).
+    // **도면이 줄어들고 시트가 바닥을 지킨다.** 도면이 제 크기를 고집하면 시트가 0 까지
+    // 짜부라지고, 바닥만 깔면 화면이 통째로 스크롤된다 — 스크롤되는 화면은 보이는
+    // 화면이 아니다(실제 피드백 두 번).
     const block = cutRule('.battle--portrait')
-    expect(block).toContain('auto var(--bar-speed) auto var(--bar-status)')
-    expect(block).toContain('minmax(calc(var(--log-row-h) * 5 + var(--sheet-tab-h)), 1fr)')
+    expect(block).toContain('minmax(var(--sp-0), 1fr) var(--bar-status)')
+    expect(block).toContain('minmax(calc(var(--log-row-h) * 5 + var(--sheet-tab-h)), 0.6fr)')
     expect(block).toContain('var(--bar-bottom)')
+  })
+
+  it('도면 캔버스가 남는 높이에 맞춰 줄어든다 — 인라인 크기는 max-* 가 이긴다', () => {
+    const block = cutRule('.battle--portrait .battle__frame canvas')
+    expect(block).toContain('max-width: 100%')
+    expect(block).toContain('max-height: 100%')
+    expect(block).toContain('object-fit: contain')
   })
 
   it('시트가 바닥을 지켜도 모자라면 화면이 통째로 흐른다 — 닿을 수 없는 줄을 안 만든다', () => {

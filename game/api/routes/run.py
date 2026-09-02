@@ -22,6 +22,7 @@ from game.api.floor_service import (
     resolve_claim,
 )
 from game.api.loot_service import create_run_drops, list_floor_defeats
+from game.api.maintenance_service import apply_maintenance
 from game.api.monster_service import apply_monster_outcome
 from game.api.schemas import SubmissionRequest, SubmissionResponse
 from game.app.items.loot import compute_run_currency
@@ -253,7 +254,8 @@ def create_run_submission(
     verified = check_run_submission(request, ticket, claimed)
     # **런이 끝났으면 티켓을 닫는다.** 졌거나 마지막 층을 깼을 때다 — 안 닫으면 죽은 뒤에도
     # 같은 티켓으로 더 깊은 층을 청구할 수 있다.
-    if claimed > 0 and check_descent_over(ticket, claimed, verified):
+    is_run_closed = claimed <= 0 or check_descent_over(ticket, claimed, verified)
+    if claimed > 0 and is_run_closed:
         mark_ticket_consumed(pool, ticket.ticket_id)
     save_run_result(
         pool,
@@ -285,6 +287,13 @@ def create_run_submission(
     if depth:
         reward = f"{reward} · {depth}" if reward else depth
     apply_verified_meta(account.account_id, verified)
+    # **닫힐 때만 정비한다.** 층 청구마다 돌면 런 중에 가방이 바뀐다 — 죽기 전에 주운
+    # 것이 층 정산 한 번에 사라질 수 있다. 보상·전리품이 다 들어온 뒤라야 새로 주운
+    # 것까지 버리기 규칙이 본다.
+    if is_run_closed and verified.verdict == VERDICT_VERIFIED:
+        upkeep = apply_maintenance(account.account_id)
+        if upkeep:
+            reward = f"{reward} · {upkeep}" if reward else upkeep
     # `summary` 는 응답에 싣지 않는다 — 서버가 무엇으로 세이브를 갱신했는지는 클라이언트가
     # 알 필요가 없고, 실으면 그것을 되보내려는 경로가 생긴다.
     fields = {key: value for key, value in vars(verified).items() if key != "summary"}

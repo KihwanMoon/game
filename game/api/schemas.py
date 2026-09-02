@@ -378,3 +378,12 @@ class ConsumableSellRequest(BaseModel):
 
     catalog_id: str
     count: int = 1
+
+
+class MaintenanceView(BaseModel):
+    """정비 규칙 화면·요청 겸용."""
+
+    is_refill_on: bool = False
+    is_repair_on: bool = False
+    # 버릴 등급. 빈 문자열이면 안 버린다. 서버가 닫힌 목록으로 검증한다.
+    discard_grade: str = ""

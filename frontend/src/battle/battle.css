@@ -162,18 +162,36 @@
      · 시트 하단의 gap 10 → `--sp-3`(12). 10 은 4px 모듈에 없는 수다. */
 
 .battle--portrait {
-  /* 첫 행이 `auto` 다. 상단이 두 줄이 될 수 있고(층·틱 / 조작), 늘어난 만큼 줄어드는
-     것은 로그(`1fr`)뿐이다 — 도면 행은 `auto` 라 제 크기를 지킨다.
+  /* 첫 행이 `auto` 다. 상단이 두 줄이 될 수 있다(층·틱 / 조작).
 
-     시트 행에 **바닥을 깐다** (로그 다섯 줄 + 탭 줄). 도면이 큰 방에서 시트가 0 까지
-     짜부라지면 로그가 있는데 보이지 않는다 — 스크롤할 자리 자체가 없었다. */
+     **도면이 줄어들고 시트가 바닥을 지킨다.** 처음에는 도면 행이 `auto` 라 제 크기를
+     고집했고, 큰 방에서 시트가 0 까지 짜부라져 로그가 있는데 보이지 않았다. 바닥만
+     깔았더니 이번에는 화면이 통째로 스크롤됐다 — 스크롤되는 화면은 보이는 화면이
+     아니다(실제 피드백). 그래서 도면 행이 남는 높이를 받고(`minmax(0, 1fr)`) 캔버스가
+     그 안에 축소되어 들어가며, 시트는 로그 다섯 줄 + 탭 줄의 바닥을 지키고 남는 높이의
+     한 몫을 받는다. */
   grid-template-rows:
-    auto var(--bar-speed) auto var(--bar-status)
-    minmax(calc(var(--log-row-h) * 5 + var(--sheet-tab-h)), 1fr) var(--bar-bottom);
+    auto var(--bar-speed) minmax(var(--sp-0), 1fr) var(--bar-status)
+    minmax(calc(var(--log-row-h) * 5 + var(--sheet-tab-h)), 0.6fr) var(--bar-bottom);
 
-  /* 그래도 모자라면 화면이 통째로 흐른다. 도면 고정이 원칙이지만, 원칙이 로그를
-     닿을 수 없게 만들면 원칙이 진 것이다. */
+  /* 그래도 모자라면(가로로 눕힌 낮은 화면 등) 화면이 통째로 흐른다 — 마지막 안전판이다. */
   overflow-y: auto;
+}
+
+/* 도면을 남는 높이에 맞춰 줄인다. 인라인 크기(`resizePlanCanvas` 가 박는 width/height)는
+   max-* 가 이긴다 — 백버퍼 해상도는 그대로라 흐려지지 않고, object-fit 이 비율을 지킨다. */
+.battle--portrait .battle__frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--sp-0);
+  max-height: 100%;
+}
+
+.battle--portrait .battle__frame canvas {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 /* 위아래 바 — 데스크톱과 달리 TopBar·StatusBar 를 쓰지 않는다. 명세가 정한 것이

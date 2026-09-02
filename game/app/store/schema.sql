@@ -198,6 +198,16 @@ CREATE TABLE IF NOT EXISTS inventory_slot (
     CHECK ((item_id IS NULL) <> (stack_catalog_id IS NULL))
 );
 
+-- 정비 규칙 (설계/4_아이템 §5). 런이 닫힐 때 서버가 실행하는 자동화 스위치들.
+--
+-- **기본은 전부 꺼짐이다.** 돈이 나가고 아이템이 사라지는 일은 사람이 켠 것이어야 한다.
+CREATE TABLE IF NOT EXISTS maintenance_rule (
+    account_id    BIGINT  PRIMARY KEY REFERENCES account(id) ON DELETE CASCADE,
+    refill_on     BOOLEAN NOT NULL DEFAULT FALSE,
+    repair_on     BOOLEAN NOT NULL DEFAULT FALSE,
+    discard_grade TEXT    NOT NULL DEFAULT ''
+);
+
 -- 소모품 칸 (설계/4_아이템 §5). 물약 둘·주문서 하나가 기본이다.
 --
 -- **가방과 다른 것이다.** 가방은 「가진 것」이고 이 표는 「들고 갈 것」이다. 예전에는

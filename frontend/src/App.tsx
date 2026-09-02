@@ -81,6 +81,7 @@ import {
   ConsumablePanel,
   findFreeConsumableSlot,
   InventoryPanel,
+  MaintenancePanel,
   MetaPanel,
   RuleLibrary,
   checkCanRedo,
@@ -139,6 +140,8 @@ import {
   applyItemAction,
   buildRuleSetPayload,
   readBagState,
+  readMaintenance,
+  saveMaintenance,
   readItemContext,
   registerAccount,
   requestTicket,
@@ -154,6 +157,7 @@ import {
   type LeaderboardView,
   type ProgressView,
   type BagState,
+  type MaintenanceView,
   type ConsumableView,
   type InventoryView,
   type RunResult,
@@ -560,6 +564,8 @@ export function App(): React.JSX.Element {
   const [inventory, setInventory] = useState<InventoryView | undefined>(undefined)
   const [consumables, setConsumables] = useState<ConsumableView | undefined>(undefined)
   const [consumableDetail, setConsumableDetail] = useState('')
+  const [upkeep, setUpkeep] = useState<MaintenanceView | undefined>(undefined)
+  const [upkeepDetail, setUpkeepDetail] = useState('')
   const [itemDetail, setItemDetail] = useState('')
   // 도감. 세계의 몬스터는 서버가 알므로 오프라인에서는 비어 있다.
   const [bestiary, setBestiary] = useState<readonly BestiaryEntry[] | undefined>(undefined)
@@ -947,6 +953,7 @@ export function App(): React.JSX.Element {
     setAuction(await readAuction(token))
     // 관리자가 아니면 undefined 로 남는다 — 서버가 404 로 답한다.
     setAdmin(await readAdminOverview(token))
+    setUpkeep(await readMaintenance(token))
   }
 
   /**
@@ -1572,6 +1579,26 @@ export function App(): React.JSX.Element {
                   if (account !== undefined) {
                     refreshBag(account)
                   }
+                }}
+              />
+              <MaintenancePanel
+                view={upkeep}
+                isOnline={isOnline}
+                detail={upkeepDetail}
+                onChange={(next) => {
+                  if (account === undefined) {
+                    return
+                  }
+                  // **낙관하지 않는다.** 서버가 저장한 값을 화면에 앉힌다 — 저장이
+                  // 실패했는데 켜진 것으로 보이면, 껐다고 믿은 정비가 돈을 쓴다.
+                  setUpkeepDetail('')
+                  void saveMaintenance(account, next).then((outcome) => {
+                    if (outcome.view === undefined) {
+                      setUpkeepDetail(outcome.detail)
+                      return
+                    }
+                    setUpkeep(outcome.view)
+                  })
                 }}
               />
               <ConsumablePanel

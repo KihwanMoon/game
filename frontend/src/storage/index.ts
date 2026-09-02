@@ -11,6 +11,8 @@
  */
 export { formatBase64Url, parseBase64Url, BASE64_BLOCK } from './base64'
 export { formatCanonicalJson, parseJsonText } from './canonicalJson'
+export { readMaintenance, saveMaintenance } from './maintenanceSync'
+export type { MaintenanceView } from './maintenanceSync'
 export {
   readConsumables,
   applyConsumableAction,
