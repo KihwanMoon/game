@@ -280,3 +280,79 @@ def test_selling_a_spare_pays_out(client, token):
     ).json()
     assert body["balance"] > before
     assert not [o for o in body["options"] if o["catalog_id"] == "potion_heal"]
+
+
+@pytestmark_db
+def test_a_settlement_spends_what_the_resim_used(client, token):
+    """★ 정산이 안 깎으면 물약은 무한이다 — 한도도 보충비도 뜻을 잃는다.
+
+    쓴 수는 **티켓이 실은 수 − 재시뮬이 남긴 수**로 나온다. 클라이언트가 「세 개 썼다」고
+    보고할 자리를 만들지 않는다 (T9).
+
+    빈 물약 칸 하나가 공짜 1을 주므로, 그것을 넘겨 쓴 만큼만 끼운 칸에서 빠진다.
+    """
+    from game.api.deps import get_pool
+    from game.api.floor_service import apply_charge_spend
+    from game.app.services.verify_run import VERDICT_VERIFIED, VerifiedRun
+    from game.app.store.accounts import find_player_entity
+    from game.app.store.consumables import list_consumable_slots
+    from game.app.store.tickets import find_open_ticket
+    from game.schemas.loadout import parse_loadout
+
+    load_potion(client, token, slot_index=0)
+    headers = build_headers(token)
+    account_id = client.get("/api/account", headers=headers).json()["account_id"]
+    pool = get_pool()
+    entity_id = find_player_entity(pool, account_id)
+    issued = client.post("/api/ticket", json={"room_id": "open_field"}, headers=headers).json()
+    ticket = find_open_ticket(pool, issued["ticket_id"], account_id)
+    assert ticket is not None
+
+    before = [s for s in list_consumable_slots(pool, entity_id) if s.catalog_id][0].charges
+    carried = dict(parse_loadout(ticket.loadout).consumables)["POTION"]
+    apply_charge_spend(
+        account_id,
+        ticket,
+        VerifiedRun(
+            outcome="PLAYER_WIN",
+            ticks=1,
+            player_hp=1,
+            verdict=VERDICT_VERIFIED,
+            remaining_consumables=(("POTION", 1),),
+        ),
+    )
+    after = [s for s in list_consumable_slots(pool, entity_id) if s.catalog_id][0].charges
+    # 실은 것 중 하나만 남겼으니 `carried - 1` 개를 썼고, 그중 공짜 1개는 깎을 자리가
+    # 없으므로 칸에서는 `carried - 2` 개가 빠진다.
+    assert after == before - (carried - 2)
+    assert after < before, "재시뮬이 쓴 만큼 안 깎였다"
+
+
+@pytestmark_db
+def test_a_rejected_submission_spends_nothing(client, token):
+    """★ 반려된 제출이 충전을 깎으면, 코어 버전 시차 한 번이 물약을 태운다."""
+    from game.api.deps import get_pool
+    from game.api.floor_service import apply_charge_spend
+    from game.app.services.verify_run import VerifiedRun
+    from game.app.store.accounts import find_player_entity
+    from game.app.store.consumables import list_consumable_slots
+    from game.app.store.runs import VERDICT_REJECTED
+    from game.app.store.tickets import find_open_ticket
+
+    load_potion(client, token, slot_index=0)
+    headers = build_headers(token)
+    account_id = client.get("/api/account", headers=headers).json()["account_id"]
+    pool = get_pool()
+    entity_id = find_player_entity(pool, account_id)
+    issued = client.post("/api/ticket", json={"room_id": "open_field"}, headers=headers).json()
+    ticket = find_open_ticket(pool, issued["ticket_id"], account_id)
+    assert ticket is not None
+
+    before = [s for s in list_consumable_slots(pool, entity_id) if s.catalog_id][0].charges
+    apply_charge_spend(
+        account_id,
+        ticket,
+        VerifiedRun(outcome="", ticks=0, player_hp=0, verdict=VERDICT_REJECTED),
+    )
+    after = [s for s in list_consumable_slots(pool, entity_id) if s.catalog_id][0].charges
+    assert after == before
