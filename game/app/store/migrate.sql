@@ -381,3 +381,23 @@ UPDATE item_catalog SET stack_max = 5 WHERE catalog_id = 'scroll_shield' AND sta
 ALTER TABLE item_catalog ADD COLUMN IF NOT EXISTS charges INTEGER NOT NULL DEFAULT 1;
 
 UPDATE item_catalog SET charges = 2 WHERE catalog_id = 'potion_heal' AND charges <= 1;
+
+
+-- ── 소모품의 부가 옵션이 DB 로 안 넘어와 있었다 (설계/4_아이템 §5) ──────────
+--
+-- 카탈로그 씨앗은 **없는 줄만 심고 있는 줄은 안 고친다** — 관리자가 DB 에서 고친 것이
+-- 배포 한 번에 사라지면 정본이 DB 라는 말이 거짓이 되기 때문이다. 그래서 이미 있는
+-- 소모품에 옵션을 더하면 파일에만 남는다.
+--
+-- **비어 있을 때만 채운다.** 관리자가 손댄 줄은 그대로 둔다. `stack_max`·`charges` 와
+-- 같은 자리이며, 「파일에 있는데 DB 에 없다」는 이 저장소에서 네 번째다.
+UPDATE item_catalog SET affixes = '[{"stat": "hp_max", "flat": 4, "percent": 0, "label_ko": "든든함"}]'::jsonb
+ WHERE catalog_id = 'potion_heal' AND coalesce(jsonb_array_length(affixes), 0) = 0;
+UPDATE item_catalog SET affixes = '[{"stat": "defense", "flat": 1, "percent": 0, "label_ko": "지킴"}]'::jsonb
+ WHERE catalog_id = 'scroll_shield' AND coalesce(jsonb_array_length(affixes), 0) = 0;
+UPDATE item_catalog SET affixes = '[{"stat": "hp_max", "flat": 12, "percent": 0, "label_ko": "든든함"}]'::jsonb
+ WHERE catalog_id = 'potion_greater' AND coalesce(jsonb_array_length(affixes), 0) = 0;
+UPDATE item_catalog SET affixes = '[{"stat": "hp_max", "flat": 25, "percent": 0, "label_ko": "든든함"}]'::jsonb
+ WHERE catalog_id = 'potion_elixir' AND coalesce(jsonb_array_length(affixes), 0) = 0;
+UPDATE item_catalog SET affixes = '[{"stat": "defense", "flat": 3, "percent": 0, "label_ko": "지킴"}]'::jsonb
+ WHERE catalog_id = 'scroll_ward' AND coalesce(jsonb_array_length(affixes), 0) = 0;
