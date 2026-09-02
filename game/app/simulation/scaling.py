@@ -30,7 +30,7 @@ from dataclasses import dataclass
 
 from game.schemas.room import FIRST_FLOOR
 
-DEFAULT_MULT_PCT_PER_FLOOR = 110
+DEFAULT_MULT_PCT_PER_FLOOR = 120
 
 # 층 번호의 시작값(FIRST_FLOOR)은 schemas.room 이 정본이다 — min_floor 의 기본값과
 # 같은 값이어야 하므로 여기서 다시 적지 않는다. 층 1 의 보너스는 0 이다.

@@ -48,7 +48,10 @@ def parts():
 def run_stage(parts, stage, rules):
     """그 단계를 이 규칙표로 한 번 돌린다."""
     ruleset = parse_ruleset(stage.build_ruleset(rules))
-    engine = build_engine(parts["rooms"][stage.room_id], parts["balance"], seed=stage.seed)
+    # 가르치는 판은 배치가 고정이다 — 같은 자리에서 같은 교훈이 나와야 한다.
+    engine = build_engine(
+        parts["rooms"][stage.room_id], parts["balance"], seed=stage.seed, is_varied=False
+    )
     engine.policies[PLAYER_ID] = build_rule_vm(ruleset, parts["catalog"], engine.config.kind_types)
     assign_enemy_policies(engine, parts["balance"], parts["catalog"], parts["enemies"])
     return run_battle(engine)

@@ -17,6 +17,7 @@ from game.app.simulation.pressure import PressureTracker, build_pressure_rules
 from game.app.simulation.scaling import build_floor_scale, get_scaled_enemy_stats
 from game.app.simulation.springs import init_spring_pools
 from game.app.simulation.state import FACTION_ENEMY, FACTION_PLAYER, TIER_NORMAL, Entity, WorldState
+from game.app.simulation.variance import resolve_elite_kind, resolve_spawn_spot
 from game.config import SKILLS_PATH
 from game.schemas.blocks import BlockCatalog
 from game.schemas.loadout import BASE_SKILL_POWER_PCT, PlayerLoadout
@@ -96,6 +97,7 @@ def build_engine(
     pressure: PressureTracker | None = None,
     snapshots: tuple[MonsterSnapshot, ...] = (),
     loadout: PlayerLoadout | None = None,
+    is_varied: bool = True,
 ) -> TickEngine:
     """방 템플릿과 밸런스 값으로 엔진을 조립한다.
 
@@ -112,6 +114,9 @@ def build_engine(
         snapshots: 티켓이 얼려 둔 지속 몬스터 상태. 해당 자리의 층 스케일을 대체한다.
         loadout: 티켓이 얼려 둔 플레이어 전투 입력 (장비·레벨). 없으면 balance.json 의
             기본값으로 선다 — 오프라인 연습이 그 경우다.
+        is_varied: 배치 흔들기·정예 승격을 켤지. **가르치는 판과 골든은 끈다** —
+            튜토리얼은 같은 자리에서 같은 교훈이 나와야 하고, 골든은 흔들리면 대조가
+            성립하지 않는다.
 
     Returns:
         첫 틱을 돌릴 준비가 된 엔진.
@@ -154,9 +159,32 @@ def build_engine(
     # 스냅샷은 entity_id 로 겹친다. 방 배치가 `{kind}_{index}` 로 붙이므로 그 이름을
     # 겨냥하며, 이름이 갈리면 스냅샷이 아무에게도 적용되지 않고 그 사실이 조용히 넘어간다.
     overrides = {item.entity_id: item for item in snapshots}
+    # **변수 축을 따로 판다** (R5). 흔들기·승격 호출 횟수가 바뀌어도 전투 난수가 안
+    # 흔들린다 — 두 코어가 같은 순서로 같은 수를 뽑아야 하므로 순회 순서를 안 바꾼다.
+    # **끌 수 있어야 한다.** 튜토리얼은 가르치는 배치가 고정이어야 하고(같은 자리에서
+    # 같은 교훈이 나와야 한다), 골든은 흔들리면 대조가 성립하지 않는다.
+    variance = rng.create_stream("variance")
+    taken: set[tuple[int, int]] = {tuple(template.player_spawn)}
     for index, spawn in enumerate(template.enemy_spawns):
-        kind = by_id[spawn.kind]
-        entity_id = build_entity_id(kind["id"], index)
+        # 지속 몬스터가 앉은 자리는 안 흔들고 안 바꾼다 — 스냅샷이 그 개체를 덮어야
+        # 하는데 종이나 자리가 갈리면 얼려 둔 상태가 아무에게도 안 붙는다.
+        slot_id = build_entity_id(spawn.kind, index)
+        is_persistent = slot_id in overrides
+        kind_id = (
+            spawn.kind
+            if is_persistent or not is_varied
+            else resolve_elite_kind(spawn.kind, floor, variance)
+        )
+        spot = (
+            tuple(spawn.position)
+            if is_persistent or not is_varied
+            else resolve_spawn_spot(template, tuple(spawn.position), taken, variance)
+        )
+        taken.add(spot)
+        kind = by_id[kind_id]
+        # **자리 이름은 템플릿의 종으로 짓는다.** 승격으로 종이 바뀌어도 스냅샷·
+        # 도감이 겨냥하는 이름이 그대로여야 한다.
+        entity_id = slot_id
         hp_max, attack = get_scaled_enemy_stats(kind, scale, floor)
         defense = kind["defense"]
         cpu_budget = kind.get("cpu_budget", 0)
@@ -174,7 +202,7 @@ def build_engine(
             entity_id=entity_id,
             kind_id=kind["id"],
             faction=FACTION_ENEMY,
-            position=spawn.position,
+            position=spot,
             hp=hp_max,
             hp_max=hp_max,
             attack=attack,

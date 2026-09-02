@@ -94,6 +94,8 @@ export interface ChainSetup {
    * HP·공격력이 갈리고, 화면이 이긴 판을 서버가 진 것으로 확정한다.
    */
   readonly roomsPerFloor?: number
+  /** 배치 흔들기·정예 승격. 기본은 켬 — 골든 대조가 끈다 (G3). */
+  readonly isVaried?: boolean
 }
 
 /**
@@ -206,6 +208,7 @@ export class ChainCursor {
       maxTicks: this.setup.maxTicks ?? DEFAULT_MAX_TICKS,
       pressure: this.pressure,
       snapshots: this.setup.snapshots ?? [],
+      isVaried: this.setup.isVaried ?? true,
       floor: resolveRoomFloor(
         this.setup.floor ?? DEFAULT_FLOOR,
         this.index,

@@ -30,6 +30,7 @@ import type { RawDamageFormula } from '../combat/damage'
 import { FACTION_ENEMY, FACTION_PLAYER, TIER_NORMAL, WorldState, createEntity } from '../sim/state'
 import type { Entity } from '../sim/state'
 import { buildEntityId, type MonsterSnapshot } from '../schemas/monsterSnapshot'
+import { resolveEliteKind, resolveSpawnSpot } from '../sim/variance'
 import { BASE_SKILL_POWER_PCT, type PlayerLoadout } from '../schemas/loadout'
 
 /** 이 틱을 넘기면 시간 초과로 끝낸다. */
@@ -148,6 +149,11 @@ export interface EngineSetup {
   readonly maxTicks?: number
   readonly floor?: number
   /**
+   * 배치 흔들기·정예 승격을 켤지. 기본은 켬 — **골든과 튜토리얼이 끈다**.
+   * 파이썬의 `is_varied` 와 같은 뜻이다 (G3).
+   */
+  readonly isVaried?: boolean
+  /**
    * 층 단위 압력 추적기. 방마다 새로 만들면 층 체류 스케일이 매 방 0 으로 돌아가므로
    * 연쇄 실행은 하나를 만들어 계속 넘긴다.
    */
@@ -223,21 +229,39 @@ export function buildEngine(setup: EngineSetup): TickEngine {
   // 스냅샷은 entityId 로 겹친다. 방 배치가 `{kind}_{index}` 로 붙이므로 그 이름을
   // 겨냥하며, 이름이 갈리면 스냅샷이 아무에게도 적용되지 않고 조용히 넘어간다.
   const overrides = new Map((setup.snapshots ?? []).map((item) => [item.entityId, item]))
+  // **변수 축을 따로 판다** (R5) — 파이썬과 같은 라벨·같은 순서다 (G3).
+  // **끌 수 있어야 한다** — 파이썬의 `is_varied` 와 같은 뜻이다 (G3). 골든·튜토리얼이 끈다.
+  const isVaried = setup.isVaried ?? true
+  const variance = rng.createStream('variance')
+  const taken = new Set<string>([
+    `${String(template.playerSpawn.x)},${String(template.playerSpawn.y)}`,
+  ])
   template.enemySpawns.forEach((spawn, index) => {
-    const kind = byId.get(spawn.kind)
+    // 지속 몬스터가 앉은 자리는 안 흔들고 안 바꾼다 — 스냅샷이 그 개체를 덮어야 하는데
+    // 종이나 자리가 갈리면 얼려 둔 상태가 아무에게도 안 붙는다.
+    const entityId = buildEntityId(spawn.kind, index)
+    const found = overrides.get(entityId)
+    const kindId =
+      found === undefined && isVaried
+        ? resolveEliteKind(spawn.kind, floor, variance)
+        : spawn.kind
+    const spot =
+      found === undefined && isVaried
+        ? resolveSpawnSpot(template, spawn.position, taken, variance)
+        : spawn.position
+    taken.add(`${String(spot.x)},${String(spot.y)}`)
+    const kind = byId.get(kindId)
     if (kind === undefined) {
-      throw new Error(`balance.json 에 없는 적 종류다: ${spawn.kind}`)
+      throw new Error(`balance.json 에 없는 적 종류다: ${kindId}`)
     }
     const scaled = getScaledEnemyStats(kind, scale, floor)
-    const entityId = buildEntityId(kind.id, index)
-    const found = overrides.get(entityId)
     state.entities.set(
       entityId,
       createEntity({
         entityId,
         kindId: kind.id,
         faction: FACTION_ENEMY,
-        position: spawn.position,
+        position: spot,
         hp: found?.hpMax ?? scaled.hpMax,
         hpMax: found?.hpMax ?? scaled.hpMax,
         attack: found?.attack ?? scaled.attack,

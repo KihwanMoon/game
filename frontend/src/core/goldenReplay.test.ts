@@ -150,6 +150,8 @@ function buildCaseEngine(goldenCase: GoldenCase): TickEngine {
     seed: goldenCase.seed,
     maxTicks: goldenCase.max_ticks,
     floor: goldenCase.floor,
+    // 골든은 변수를 끈다 — 파이썬 내보내기와 같은 조건이라야 대조가 성립한다 (G3).
+    isVaried: false,
   })
   engine.policies.set(
     PLAYER_ID,

@@ -22,7 +22,7 @@
 
 import { FIRST_FLOOR } from '../schemas'
 
-export const DEFAULT_MULT_PCT_PER_FLOOR = 110
+export const DEFAULT_MULT_PCT_PER_FLOOR = 120
 
 // 층 번호의 시작값은 schemas/room 이 정본이다 — min_floor 의 기본값과 같은 값이어야
 // 하므로 여기서 다시 적지 않는다. 층 1 의 보너스는 0 이다.

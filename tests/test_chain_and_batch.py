@@ -266,8 +266,11 @@ def test_a_win_leaves_no_enemy_hp(parts):
         runs=BATCH_RUNS,
         base_seed=1,
     )
-    assert stats.win_rate_pct == 100
-    assert stats.enemy_hp_left_pct == 0
+    # **절대값이 아니라 관계로 본다** (e4). 배치가 판마다 흔들리도록 바뀌면서 같은
+    # 규칙표도 시드에 따라 진다 — 그것이 이 기능의 목적이다. 재는 것은 「거의 이기고,
+    # 이긴 판에서는 적을 다 지운다」이지 100% 라는 숫자가 아니다.
+    assert stats.win_rate_pct >= 80, stats
+    assert stats.enemy_hp_left_pct <= 10, stats
 
 
 def test_the_margin_separates_two_kinds_of_loss(parts):
@@ -381,7 +384,9 @@ def test_the_guard_actually_lands_hits(parts):
     )
     bare = run_batch("focus_lowest", player_ruleset=bench["focus_lowest"], **common)
     guarded = run_batch("focus_lowest_guard", player_ruleset=bench["focus_lowest_guard"], **common)
-    assert bare.enemy_hp_left_pct == 100, "폴백 없는 쪽이 한 대도 못 때려야 대비가 성립한다"
+    # 배치가 흔들리면서(e4) 폴백 없는 쪽도 가끔 적과 붙는다 — 재는 것은 「폴백 한 줄이
+    # 실제로 때리게 만든다」는 대비이지 100 이라는 숫자가 아니다.
+    assert bare.enemy_hp_left_pct > guarded.enemy_hp_left_pct, (bare, guarded)
     assert guarded.enemy_hp_left_pct < bare.enemy_hp_left_pct, (guarded, bare)
     assert guarded.average_cleared > bare.average_cleared
 

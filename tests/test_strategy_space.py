@@ -66,13 +66,13 @@ def test_floor_batch_does_not_collapse_to_zero_or_hundred(parts):
     #
     # **프로브는 중간 성적의 규칙표여야 한다.** 실측 재배치(room v4)로 1층이 순해져
     # g0_kite 는 98% 를 이긴다 — 20런 표본에서는 100% 로 접혀 이 검사가 못 본다.
-    # g0_pressure 는 pillars 가 섞인 판만 지므로 분포가 표본 안에 들어온다.
+    # e4(배치 흔들기) 뒤 g0_kite 가 30% 라 분포가 표본 안에 들어온다.
     stats = run_floor_batch(
-        "g0_pressure",
+        "g0_kite",
         parts["templates"],
         parts["balance"],
         parts["catalog"],
-        parts["player"]["g0_pressure"],
+        parts["player"]["g0_kite"],
         parts["enemy"],
         runs=FLOOR_BATCH_RUNS,
         base_seed=1,

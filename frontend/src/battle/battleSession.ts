@@ -75,6 +75,8 @@ export interface BattleSetup {
    * 손으로 고쳐 강한 판을 만들 수 있다.
    */
   readonly chain?: ChainPosition
+  /** 배치 흔들기·정예 승격. 기본은 켬 — 골든 대조 하네스가 끈다 (G3). */
+  readonly isVaried?: boolean
 }
 
 /** 연쇄에서의 위치. */
@@ -178,6 +180,7 @@ function buildSingleRoom(
     seed: setup.seed,
     snapshots: setup.snapshots ?? [],
     floor: setup.floor ?? 1,
+    isVaried: setup.isVaried ?? true,
     ...(setup.loadout === undefined ? {} : { loadout: setup.loadout }),
   })
   engine.policies.set(PLAYER_ENTITY_ID, buildTracer(engine, ruleset))
@@ -215,6 +218,7 @@ function buildChainRoom(
     seed: setup.seed,
     snapshots: setup.snapshots ?? [],
     floor: setup.floor ?? 1,
+    isVaried: setup.isVaried ?? true,
     roomsPerFloor: setup.roomsPerFloor ?? 0,
     ...(setup.loadout === undefined ? {} : { loadout: setup.loadout }),
   })

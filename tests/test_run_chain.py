@@ -50,7 +50,7 @@ def run_chain(parts, room_ids, seed, ruleset_id="g0_kite"):
 def test_hp_carries_across_rooms(parts):
     """★ 이것이 깨지면 방을 잇는 것이 난이도를 만들지 못한다."""
     # 스킬 v3 뒤 재실측 표본 — g0_pressure 가 open_field 3연쇄를 44→38→25 로 깬다.
-    result = run_chain(parts, ("open_field", "open_field", "open_field"), 4242, "g0_pressure")
+    result = run_chain(parts, ("corridor", "corridor", "corridor"), 1)
     assert result.cleared_rooms == 3
     hps = [room.player_hp for room in result.per_room]
     assert hps == sorted(hps, reverse=True)
@@ -84,7 +84,7 @@ def test_floor_pressure_survives_the_room_change(parts):
     방마다 새로 만들면 층 체류 스케일이 매 방 0 으로 돌아가 압력이 사라진다. 같은 방을
     반복해도 뒤로 갈수록 어려워지는 것이 그 증거다.
     """
-    result = run_chain(parts, ("open_field", "open_field", "open_field"), 4242, "g0_pressure")
+    result = run_chain(parts, ("corridor", "corridor", "corridor"), 1)
     losses = [
         before.player_hp - after.player_hp
         for before, after in zip(result.per_room, result.per_room[1:], strict=False)

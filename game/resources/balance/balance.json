@@ -237,8 +237,8 @@
       "regen_base": 0,
       "initiative": 78,
       "_note": "척후형. 약하지만 선공권(78)이 판에서 제일 높아 늘 먼저 문다 — 「가장 약한 적부터」와 「제일 아픈 적부터」가 갈리는 변수다.",
-      "cpu_budget": 3,
-      "rule_slots": 2,
+      "cpu_budget": 4,
+      "rule_slots": 3,
       "ruleset_id": "ai_rusher",
       "tier": "NORMAL"
     },
@@ -254,8 +254,8 @@
       "regen_base": 1,
       "initiative": 20,
       "_note": "벽형. 느리고 안 아프지만 방어 8 이 잔타를 흡수한다 — 오래 붙잡히면 층 체류 압력이 먼저 온다. 화력을 모으거나 지나쳐 가라는 요구다.",
-      "cpu_budget": 3,
-      "rule_slots": 2,
+      "cpu_budget": 4,
+      "rule_slots": 3,
       "ruleset_id": "ai_veteran",
       "tier": "ELITE"
     },

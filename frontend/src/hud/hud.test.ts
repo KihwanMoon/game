@@ -73,7 +73,7 @@ const CASES = golden.cases as readonly GoldenCase[]
  * @returns 같은 판을 내는 설정.
  */
 function buildSetup(one: GoldenCase): BattleSetup {
-  return {
+  return { isVaried: false,
     roomId: one.room_id,
     rulesetId: one.ruleset_id,
     seed: one.seed,

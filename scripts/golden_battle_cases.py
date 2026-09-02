@@ -248,7 +248,11 @@ def build_case_engine(
     Returns:
         첫 틱을 돌릴 준비가 된 엔진.
     """
-    engine = build_engine(template, balance, seed=seed, max_ticks=MAX_TICKS, floor=floor)
+    # **골든은 변수를 끈다.** 배치가 흔들리면 두 코어 대조가 「같은 입력 같은 출력」을
+    # 못 세운다 — 흔들기 자체는 별도 검사가 본다.
+    engine = build_engine(
+        template, balance, seed=seed, max_ticks=MAX_TICKS, floor=floor, is_varied=False
+    )
     engine.policies[PLAYER_ID] = build_rule_vm(player_ruleset, catalog, engine.config.kind_types)
     assign_enemy_policies(engine, balance, catalog, enemy_rulesets)
     return engine
