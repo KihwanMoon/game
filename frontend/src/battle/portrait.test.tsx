@@ -223,7 +223,7 @@ describe('도면은 고정이고 스크롤되지 않는다', () => {
     // 화면이 아니다(실제 피드백 두 번).
     const block = cutRule('.battle--portrait')
     expect(block).toContain('minmax(calc(var(--plan-cell) * 5), 1fr) var(--bar-status)')
-    expect(block).toContain('minmax(calc(var(--log-row-h) * 5 + var(--sheet-tab-h)), 0.6fr)')
+    expect(block).toContain('0.6fr')
     expect(block).toContain('var(--bar-bottom)')
   })
 
@@ -232,6 +232,21 @@ describe('도면은 고정이고 스크롤되지 않는다', () => {
     expect(block).toContain('max-width: 100%')
     expect(block).toContain('max-height: 100%')
     expect(block).toContain('object-fit: contain')
+  })
+
+  it('상단 묶음에 상한이 있다 — 층 정산 문구가 길어도 도면·시트를 못 밀어낸다', () => {
+    const block = cutRule('.battle--portrait .battle__bar--top')
+    expect(block).toContain('max-height: calc(var(--bar-top) * 3)')
+    expect(block).toContain('overflow-y: auto')
+  })
+
+  it('시트 몸통에 바닥이 있다 — 탭·CPU·발이 규칙표·로그를 0 으로 밀 수 없다', () => {
+    expect(cutRule('.battle__sheet-body')).toContain('min-height: calc(var(--log-row-h) * 4)')
+  })
+
+  it('하단 바는 줄을 바꾼다 — 폭을 쥐어짜면 글자가 세로로 부서진다', () => {
+    const block = cutRule('.battle__bar--bottom')
+    expect(block).toContain('flex-wrap: wrap')
   })
 
   it('높이 100% 가 사슬로 이어진다 — 끊기면 축소가 아니라 절단이 된다', () => {

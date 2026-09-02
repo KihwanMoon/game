@@ -72,6 +72,19 @@ export interface PlanLinkView {
   readonly isFromSelf: boolean
 }
 
+/**
+ * 이번 틱에 수치가 움직인 자리 (간단한 이펙트).
+ *
+ * 로그의 `delta` 에서 나온다 — 피해는 붉게, 회복·방어는 초록으로 그 말을 고리로 감싼다.
+ * 화려한 연출이 아니라 **무슨 일이 일어났는지의 표시**다 (P1).
+ */
+export interface PlanPulseView {
+  readonly x: number
+  readonly y: number
+  /** 좋은 일(회복·방어)이면 참. 색이 갈린다 — verdigris 대 rust. */
+  readonly isGain: boolean
+}
+
 /** 도면 한 장. 순수 값이며 엔진을 참조하지 않는다. */
 export interface PlanScene {
   readonly tick: number
@@ -83,6 +96,8 @@ export interface PlanScene {
   readonly hazards: readonly PlanHazardView[]
   /** 이번 틱의 대상 있는 행동들. 없으면 빈 배열이다. */
   readonly links: readonly PlanLinkView[]
+  /** 이번 틱에 수치가 움직인 자리들. */
+  readonly pulses: readonly PlanPulseView[]
 }
 
 /**
@@ -190,6 +205,36 @@ export function buildLinksFromLog(
   return links
 }
 
+/**
+ * 이번 틱의 로그에서 수치가 움직인 자리를 뽑는다.
+ *
+ * @param engine 돌고 있는 엔진.
+ * @param actors 이번 장면의 말들.
+ * @returns 고리를 그릴 자리들.
+ */
+export function buildPulsesFromLog(
+  engine: TickEngine,
+  actors: readonly PlanActorView[],
+): readonly PlanPulseView[] {
+  const log = engine.log
+  if (log === undefined) {
+    return []
+  }
+  const spots = new Map(actors.map((actor) => [actor.entityId, actor]))
+  const pulses: PlanPulseView[] = []
+  for (const entry of log.filterByTick(engine.state.tick)) {
+    if (entry.delta === null || entry.delta === 0) {
+      continue
+    }
+    // 피해는 대상에게, 회복·방어는 행위자 자신에게 적힌다.
+    const spot = spots.get(entry.targetId ?? entry.entityId)
+    if (spot !== undefined) {
+      pulses.push({ x: spot.x, y: spot.y, isGain: entry.delta > 0 })
+    }
+  }
+  return pulses
+}
+
 export function buildPlanScene(engine: TickEngine): PlanScene {
   const { room } = engine.state
   const tiles: number[][] = []
@@ -217,5 +262,6 @@ export function buildPlanScene(engine: TickEngine): PlanScene {
     actors,
     hazards: collectHazards(engine, foresight),
     links: buildLinksFromLog(engine, actors),
+    pulses: buildPulsesFromLog(engine, actors),
   }
 }

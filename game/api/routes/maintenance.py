@@ -7,7 +7,7 @@
 from fastapi import APIRouter, HTTPException, status
 
 from game.api.deps import CurrentAccount, get_pool
-from game.api.schemas import MaintenanceRowView, MaintenanceView
+from game.api.schemas_gear import MaintenanceRowView, MaintenanceView
 from game.app.store.maintenance import (
     MaintenanceRow,
     check_rows,

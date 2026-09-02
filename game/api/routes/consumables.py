@@ -20,7 +20,7 @@ from psycopg_pool import ConnectionPool
 from game.api.catalog_view import format_affix
 from game.api.deps import CurrentAccount, get_item_catalog, get_pool
 from game.api.loadout_service import build_equipped_entries, count_slot_bonus
-from game.api.schemas import (
+from game.api.schemas_gear import (
     ConsumableOption,
     ConsumableResponse,
     ConsumableSellRequest,

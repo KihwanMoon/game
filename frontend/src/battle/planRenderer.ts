@@ -27,7 +27,13 @@ import {
   TILE_WALL,
 } from '../core/schemas'
 import { ACTOR_GLYPHS } from '../ds'
-import type { PlanActorView, PlanHazardView, PlanLinkView, PlanScene } from './planScene'
+import type {
+  PlanActorView,
+  PlanHazardView,
+  PlanLinkView,
+  PlanPulseView,
+  PlanScene,
+} from './planScene'
 import type { PlanTheme } from './planTheme'
 
 /** 셀 하나가 차지하는 화면 사각형. 단위는 CSS px 다. */
@@ -728,6 +734,36 @@ function drawLink(ctx: CanvasRenderingContext2D, link: PlanLinkView, theme: Plan
   ctx.restore()
 }
 
+/** 이펙트 고리의 반지름 비율. 지시선 고리보다 조금 크다 — 겹쳐도 구분된다. */
+const PULSE_RATIO = 0.46
+
+/**
+ * 수치가 움직인 자리에 고리를 그린다 (간단한 이펙트).
+ *
+ * 피해는 붉게, 회복·방어는 초록으로 — 화면의 기존 뜻(rust=아프다, verdigris=참·회복)을
+ * 그대로 쓴다. 채우지 않는 이유는 말 글리프를 덮으면 안 되기 때문이다.
+ *
+ * @param ctx 그리기 문맥.
+ * @param pulse 그릴 자리.
+ * @param theme 토큰 값들.
+ */
+function drawPulse(ctx: CanvasRenderingContext2D, pulse: PlanPulseView, theme: PlanTheme): void {
+  const rect = getCellRect(pulse.x, pulse.y, theme)
+  ctx.save()
+  ctx.strokeStyle = pulse.isGain ? theme.spring : theme.hazard
+  ctx.lineWidth = theme.lineWidth * 2
+  ctx.beginPath()
+  ctx.arc(
+    rect.left + rect.size / 2,
+    rect.top + rect.size / 2,
+    theme.cell * PULSE_RATIO,
+    0,
+    Math.PI * 2,
+  )
+  ctx.stroke()
+  ctx.restore()
+}
+
 export function renderPlan(
   ctx: CanvasRenderingContext2D,
   scene: PlanScene,
@@ -760,6 +796,9 @@ export function renderPlan(
   // **말보다 먼저 긋는다.** 선이 글리프를 덮으면 무엇이 서 있는지 못 읽는다.
   for (const link of scene.links) {
     drawLink(ctx, link, theme)
+  }
+  for (const pulse of scene.pulses) {
+    drawPulse(ctx, pulse, theme)
   }
   for (const actor of scene.actors) {
     drawActor(ctx, actor, theme)

@@ -12,6 +12,8 @@
 export { formatBase64Url, parseBase64Url, BASE64_BLOCK } from './base64'
 export { formatCanonicalJson, parseJsonText } from './canonicalJson'
 export { readMaintenance, saveMaintenance } from './maintenanceSync'
+export { readSkillPrefs, saveSkillPrefs } from './skillSync'
+export type { SkillPrefView, SkillRowView } from './skillSync'
 export type { MaintenanceView, MaintenanceRowView } from './maintenanceSync'
 export {
   readConsumables,

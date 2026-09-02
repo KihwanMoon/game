@@ -250,3 +250,19 @@ describe('편집 조작으로 만든 규칙표', () => {
     expect(draft.rules[0]?.conditions.terms).toHaveLength(3)
   })
 })
+
+
+describe('별칭 정리 (규칙 재정비)', () => {
+  it('★ USE_POTION 은 고르는 목록에 없다 — 「소모품 사용」과 같은 일이 둘 보이면 헷갈린다', async () => {
+    const { listActionGroups } = await import('./blockOptions')
+    const { loadBlockCatalog } = await import('../core/schemas')
+    const raw = await import('../../../game/resources/balance/blocks.json')
+    const catalog = loadBlockCatalog(raw.default as never)
+    const ids = listActionGroups(catalog).flatMap((group) =>
+      group.blocks.map((block) => block.blockId),
+    )
+    expect(ids).not.toContain('USE_POTION')
+    // 별칭만 뺀 것이다 — 소모품 사용 자체는 있어야 한다.
+    expect(ids).toContain('USE_ITEM')
+  })
+})

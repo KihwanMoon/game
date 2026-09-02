@@ -169,7 +169,7 @@ describe('연결선 그리기', () => {
     const fake = buildFakeContext()
     renderPlan(
       fake.ctx as never,
-      { tick: 1, cols: 6, rows: 6, tiles: [], actors: [PLAYER, FOE], hazards: [], links },
+      { tick: 1, cols: 6, rows: 6, tiles: [], actors: [PLAYER, FOE], hazards: [], links, pulses: [] },
       readPlanTheme(readFake),
     )
     return fake.calls
@@ -204,5 +204,31 @@ describe('연결선 그리기', () => {
 
   it('★ 이을 것이 없으면 아무 선도 안 긋는다', async () => {
     expect(await render([])).not.toContain('stroke=--plan-link-self')
+  })
+})
+
+describe('수치 이펙트 (간단한 표시)', () => {
+  it('★ 피해는 대상에게 붉게, 회복은 자신에게 초록으로 — 뜻은 기존 색 그대로다', async () => {
+    const { buildPulsesFromLog } = await import('./planScene')
+    const { EventLog, createLogEntry } = await import('../core/eventLog')
+    const { PHASE_ACT } = await import('../core/sim/phases')
+    const log = new EventLog()
+    log.record(createLogEntry({
+      tick: 3, entityId: 'player', phase: PHASE_ACT, expr: 'ATTACK', outcome: '',
+      targetId: 'goblin_0', delta: -7,
+    }))
+    log.record(createLogEntry({
+      tick: 3, entityId: 'goblin_0', phase: PHASE_ACT, expr: 'USE_ITEM', outcome: '',
+      delta: 12,
+    }))
+    // delta 없는 줄은 이펙트가 아니다 — 전부 그리면 매 틱 온 화면이 고리가 된다.
+    log.record(createLogEntry({
+      tick: 3, entityId: 'player', phase: PHASE_ACT, expr: 'MOVE_TO', outcome: '',
+    }))
+    const pulses = buildPulsesFromLog({ log, state: { tick: 3 } } as never, [PLAYER, FOE])
+    expect(pulses).toEqual([
+      { x: 4, y: 3, isGain: false },
+      { x: 4, y: 3, isGain: true },
+    ])
   })
 })

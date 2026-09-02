@@ -98,7 +98,11 @@ export function listPerceptionGroups(catalog: BlockCatalog): readonly BlockGroup
  * @returns 카테고리 그룹 목록.
  */
 export function listActionGroups(catalog: BlockCatalog): readonly BlockGroup<ActionBlock>[] {
-  return buildGroups([...catalog.actions.values()], (block) => block.category, ACTION_CATEGORY_LABELS)
+  // **별칭은 목록에서 숨긴다.** `USE_POTION` 은 `USE_ITEM[물약]` 과 같은 일이라 둘 다
+  // 보이면 「소모품 사용이 둘인데 뭐가 다르지」가 된다 — 저장된 규칙표와 골든이 쓰므로
+  // 코어에서는 안 지우고, 고르는 자리에서만 뺀다.
+  const visible = [...catalog.actions.values()].filter((block) => block.blockId !== 'USE_POTION')
+  return buildGroups(visible, (block) => block.category, ACTION_CATEGORY_LABELS)
 }
 
 /**

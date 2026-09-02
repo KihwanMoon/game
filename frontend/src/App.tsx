@@ -82,6 +82,7 @@ import {
   findFreeConsumableSlot,
   InventoryPanel,
   MaintenancePanel,
+  SkillPanel,
   MetaPanel,
   RuleLibrary,
   checkCanRedo,
@@ -141,7 +142,9 @@ import {
   buildRuleSetPayload,
   readBagState,
   readMaintenance,
+  readSkillPrefs,
   saveMaintenance,
+  saveSkillPrefs,
   readItemContext,
   registerAccount,
   requestTicket,
@@ -158,6 +161,7 @@ import {
   type ProgressView,
   type BagState,
   type MaintenanceView,
+  type SkillPrefView,
   type ConsumableView,
   type InventoryView,
   type RunResult,
@@ -566,6 +570,8 @@ export function App(): React.JSX.Element {
   const [consumableDetail, setConsumableDetail] = useState('')
   const [upkeep, setUpkeep] = useState<MaintenanceView | undefined>(undefined)
   const [upkeepDetail, setUpkeepDetail] = useState('')
+  const [skillPrefs, setSkillPrefs] = useState<SkillPrefView | undefined>(undefined)
+  const [skillDetail, setSkillDetail] = useState('')
   const [itemDetail, setItemDetail] = useState('')
   // 도감. 세계의 몬스터는 서버가 알므로 오프라인에서는 비어 있다.
   const [bestiary, setBestiary] = useState<readonly BestiaryEntry[] | undefined>(undefined)
@@ -954,6 +960,7 @@ export function App(): React.JSX.Element {
     // 관리자가 아니면 undefined 로 남는다 — 서버가 404 로 답한다.
     setAdmin(await readAdminOverview(token))
     setUpkeep(await readMaintenance(token))
+    setSkillPrefs(await readSkillPrefs(token))
   }
 
   /**
@@ -1579,6 +1586,25 @@ export function App(): React.JSX.Element {
                   if (account !== undefined) {
                     refreshBag(account)
                   }
+                }}
+              />
+              <SkillPanel
+                view={skillPrefs}
+                isOnline={isOnline}
+                detail={skillDetail}
+                onChange={(next) => {
+                  if (account === undefined) {
+                    return
+                  }
+                  // 낙관하지 않는다 — 서버가 확정한 값을 앉힌다 (정비 규칙과 같은 규율).
+                  setSkillDetail('')
+                  void saveSkillPrefs(account, next).then((outcome) => {
+                    if (outcome.view === undefined) {
+                      setSkillDetail(outcome.detail)
+                      return
+                    }
+                    setSkillPrefs(outcome.view)
+                  })
                 }}
               />
               <MaintenancePanel

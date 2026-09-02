@@ -23,6 +23,7 @@ from game.app.store.consumables import (
 )
 from game.app.store.items import list_equipment
 from game.app.store.progress import read_progress
+from game.app.store.skill_prefs import read_disabled_skills
 from game.schemas.consumable import SLOT_STATS, list_slot_tags
 from game.schemas.item import EquipSlot, ItemCatalogEntry
 from game.schemas.loadout import build_loadout_payload
@@ -133,6 +134,7 @@ def build_ticket_loadout(account_id: int) -> dict:
         progress.stats,
         count_slot_charges(slots),
         list_loaded_consumables(slots, catalog),
+        read_disabled_skills(pool, account_id),
     )
     return build_loadout_payload(loadout)
 

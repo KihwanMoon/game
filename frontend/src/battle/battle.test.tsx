@@ -294,6 +294,7 @@ describe('토큰 규율', () => {
       actors: [],
       hazards: [],
       links: [],
+      pulses: [],
     }
     resizePlanCanvas(canvas as unknown as HTMLCanvasElement, scene, FAKE_THEME, 2)
     expect(canvas.style.width).toBe('calc(var(--plan-cell) * 12)')
@@ -372,6 +373,7 @@ describe('도면 렌더러', () => {
       actors: [],
       hazards: [{ x: 0, y: 0, ticks: 2, isSensed: true }],
       links: [],
+      pulses: [],
     }
     const { ctx, calls, styles } = createRecordingContext()
     renderPlan(ctx, scene, FAKE_THEME)
@@ -393,6 +395,7 @@ describe('도면 렌더러', () => {
           actors: [],
           hazards: [{ x: 0, y: 0, ticks: 3, isSensed }],
           links: [],
+          pulses: [],
         },
         FAKE_THEME,
       )
@@ -435,6 +438,7 @@ describe('도면 렌더러', () => {
       ],
       hazards: [],
       links: [],
+      pulses: [],
     }
     const { ctx, calls, styles } = createRecordingContext()
     renderPlan(ctx, scene, FAKE_THEME)

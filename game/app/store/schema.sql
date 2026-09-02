@@ -198,6 +198,13 @@ CREATE TABLE IF NOT EXISTS inventory_slot (
     CHECK ((item_id IS NULL) <> (stack_catalog_id IS NULL))
 );
 
+-- 스킬 세팅 (결정 #13 확장). 장비가 연 스킬을 **빼기만** 한다 — 더하기가 되면
+-- 장비 없이 스킬을 켜는 길이 생긴다.
+CREATE TABLE IF NOT EXISTS skill_pref (
+    account_id BIGINT PRIMARY KEY REFERENCES account(id) ON DELETE CASCADE,
+    disabled   JSONB  NOT NULL DEFAULT '[]'::jsonb
+);
+
 -- 정비 규칙 (설계/4_아이템 §5). 런이 닫힐 때 서버가 실행하는 자동화 스위치들.
 --
 -- **기본은 전부 꺼짐이다.** 돈이 나가고 아이템이 사라지는 일은 사람이 켠 것이어야 한다.

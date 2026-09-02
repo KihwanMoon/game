@@ -24,6 +24,7 @@ def build_player_loadout(
     stats: dict[str, int] | None = None,
     consumables: dict[str, int] | None = None,
     carried: tuple[ItemCatalogEntry, ...] = (),
+    disabled_skills: tuple[str, ...] = (),
 ) -> PlayerLoadout:
     """장비와 레벨을 합쳐 이번 런의 전투 입력을 만든다.
 
@@ -40,6 +41,8 @@ def build_player_loadout(
         carried: **칸에 끼운 소모품들.** 이것들의 접사가 장비와 같은 자리에서 합산된다
             (§5) — 충전이 남은 칸만 부르는 쪽이 넘긴다. 다 쓴 물약은 파손된 장비와
             같아서, 효과가 남으면 보충비가 뜻을 잃는다 (결정 #34 와 같은 규율).
+        disabled_skills: 계정이 꺼 둔 스킬들. **빼기만 한다** — 장비가 안 연 스킬은
+            여기 있어도 아무 일도 없다. 기본 공격은 저장 층이 이미 걸렀다.
 
     Returns:
         확정된 전투 입력.
@@ -85,7 +88,7 @@ def build_player_loadout(
         # 정렬해서 담는다. 딕셔너리 순회 순서가 티켓에 새어 나가면 안 된다 (R5).
         consumables=tuple(sorted(merge_consumables(consumables or {}).items())),
         # 정렬해서 담는다. 집합 순회 순서가 티켓에 새어 나가면 안 된다 (R5).
-        skills=tuple(sorted(skills)),
+        skills=tuple(sorted(skills - set(disabled_skills))),
     )
 
 
