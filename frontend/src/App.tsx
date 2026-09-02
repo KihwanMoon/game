@@ -67,6 +67,7 @@ import {
   DiscoveryPanel,
   DrawerPanel,
   EvictionNotice,
+  FloorRewardNotice,
   AUTO_ADVANCE_SECONDS,
   AutoAdvanceNotice,
   checkShouldAutoAdvance,
@@ -535,6 +536,9 @@ export function App(): React.JSX.Element {
   // 티켓을 기다리는 중. **판을 미리 걸지 않는다** — 걸었다가 갈아 끼우면 첫 방이
   // 스킵된 것처럼 보인다.
   const [isLaunching, setLaunching] = useState(false)
+  // 방금 정산한 층과 그 벌이. **전투 화면이 말한다** — 편집기로 나가야 보이면
+  // 플레이 중에는 무엇을 벌었는지 알 수 없다.
+  const [floorReward, setFloorReward] = useState({ floor: 0, reward: '' })
   const [autoLeft, setAutoLeft] = useState<number | undefined>(undefined)
   // **이번 방에서만 멈춘다.** 설정을 끄는 것과 다르다 — 한 번 멈추려고 기능을 끄게 하면
   // 다음 방부터도 안 넘어간다.
@@ -934,6 +938,7 @@ export function App(): React.JSX.Element {
     setOutcome(OUTCOME_ONGOING)
     setPostState('auto')
     setEditing(false)
+    setFloorReward({ floor: 0, reward: '' })
     if (account === undefined) {
       applyLocalRun()
       return
@@ -1183,6 +1188,10 @@ export function App(): React.JSX.Element {
         return
       }
       setVerdict(result)
+      setFloorReward({
+        floor: resolveRoomFloor(setup.floor ?? 1, setup.chain?.index ?? 0, setup.roomsPerFloor ?? 0),
+        reward: result.reward,
+      })
       // 층마다 들어오는 것이 있으므로 가방·성장·도감을 그때그때 다시 읽는다.
       void readItemContext(account).then((context) => {
         if (context.inventory !== undefined) {
@@ -1649,6 +1658,7 @@ export function App(): React.JSX.Element {
         text={`${String(roomFloor)}층 · 방 ${String((run.setup.chain?.index ?? 0) % Math.max(1, run.setup.roomsPerFloor ?? CHAIN_LENGTH) + 1)}/${String(run.setup.roomsPerFloor ?? CHAIN_LENGTH)}`}
         size="sm"
       />
+      <FloorRewardNotice floor={floorReward.floor} reward={floorReward.reward} />
       <ValueExpr text={`seed ${String(run.setup.seed)}`} size="sm" dim />
       {finished ? (
         <Button

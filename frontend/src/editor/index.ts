@@ -25,6 +25,7 @@ export {
   readAutoAdvance,
   writeAutoAdvance,
 } from './AutoAdvance'
+export { FloorRewardNotice, formatFloorReward } from './FloorRewardNotice'
 export { EvictionNotice, EVICTION_TEXT } from './EvictionNotice'
 export type { DiscoveryPanelProps } from './DiscoveryPanel'
 export { WorldPanel } from './WorldPanel'
