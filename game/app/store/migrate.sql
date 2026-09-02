@@ -435,3 +435,15 @@ BEGIN
     ALTER TABLE maintenance_rule DROP COLUMN discard_grade;
   END IF;
 END $$;
+
+
+-- ── 지속 몬스터의 레벨을 층에 맞춘다 (난이도 개편: 층 = 최소 레벨) ─────────────
+--
+-- 깊은 층의 몬스터가 레벨 1 로 살고 있으면 층 스케일과 무관하게 도감·스냅샷 성장이
+-- 1층과 같다. 이미 층보다 높이 자란 개체는 그대로 둔다 — 내리면 잡아 키운 성장이
+-- 배포 한 번에 사라진다. 경험치는 파이썬 정본 `compute_level_xp` 의 값을 층 1~10 으로
+-- 펼쳐 맞춘다 — 어긋나게 낮으면 다음 경험치 한 점에 레벨이 도로 떨어진다.
+UPDATE entity_record
+   SET level = zone_floor,
+       total_xp = GREATEST(total_xp, CASE zone_floor WHEN 1 THEN 0 WHEN 2 THEN 100 WHEN 3 THEN 235 WHEN 4 THEN 417 WHEN 5 THEN 662 WHEN 6 THEN 992 WHEN 7 THEN 1437 WHEN 8 THEN 2037 WHEN 9 THEN 2847 WHEN 10 THEN 3940 ELSE total_xp END)
+ WHERE kind = 'MONSTER' AND zone_floor > level;

@@ -90,11 +90,16 @@ def create_monster(
     Returns:
         만들어진 레코드. 이미 있으면 None.
     """
+    # **층이 곧 레벨이다** (난이도 개편). 깊은 층의 지속 몬스터가 레벨 1 로 태어나면
+    # 층 스케일과 무관하게 도감·스냅샷 성장이 1층과 같다. 경험치도 함께 맞춘다 —
+    # 레벨만 세우면 다음 경험치 한 점에 되돌아간다.
+    born_level = max(1, int(zone_floor))
     with pool.connection() as connection:
         row = connection.execute(
             "INSERT INTO entity_record"
-            " (kind, catalog_id, tier, zone_floor, entity_slot, spawn_seed, ruleset_json)"
-            " VALUES ('MONSTER', %s, %s, %s, %s, %s, %s)"
+            " (kind, catalog_id, tier, zone_floor, entity_slot, spawn_seed, ruleset_json,"
+            " level, total_xp)"
+            " VALUES ('MONSTER', %s, %s, %s, %s, %s, %s, %s, %s)"
             " ON CONFLICT (zone_floor, entity_slot) DO NOTHING"
             " RETURNING id, catalog_id, tier, zone_floor, entity_slot, total_xp, level, alive,"
             " spawn_seed, ruleset_json",
@@ -105,6 +110,8 @@ def create_monster(
                 entity_slot,
                 spawn_seed if spawn_seed is not None else secrets.randbelow(MAX_SPAWN_SEED),
                 Jsonb(ruleset_json) if ruleset_json is not None else None,
+                born_level,
+                compute_level_xp(born_level),
             ),
         ).fetchone()
     return None if row is None else _build_record(row)
