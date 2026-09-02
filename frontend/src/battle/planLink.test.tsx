@@ -235,12 +235,43 @@ describe('수치 이펙트 (간단한 표시)', () => {
 
 describe('쿨타임 줄', () => {
   it('★ 잠긴 것만 남은 틱과 함께 적는다 — 0 까지 적으면 무엇이 잠겼는지 안 보인다', async () => {
-    const { formatCooldowns } = await import('./BattleView')
-    const table = new Map([['AREA_ATTACK', 3], ['HEAL', 0], ['SKILL_1', 1]])
-    const skills = ['ATTACK', 'AREA_ATTACK', 'HEAL', 'SKILL_1']
-    expect(formatCooldowns(table, skills)).toBe('쿨 — 광역 3틱 · 치유 준비 · 스킬 1 1틱')
+    const { formatCooldowns, listRulesetSkills } = await import('./BattleView')
+    const totals = new Map([['AREA_ATTACK', 10], ['HEAL', 6], ['SKILL_2', 4]])
+    const table = new Map([['AREA_ATTACK', 3]])
+    // **규칙표가 부르는 스킬만** — 들고만 있는 스킬은 이 판의 정보가 아니다 (실제 요청).
+    const skills = listRulesetSkills([
+      { action: 'USE_SKILL', actionParam: 'AREA_ATTACK' },
+      { action: 'SKILL_2', actionParam: null },
+      { action: 'ATTACK', actionParam: null },
+      { action: 'USE_ITEM', actionParam: 'POTION' },
+    ])
+    expect(skills).toEqual(['AREA_ATTACK', 'SKILL_2'])
+    // 남은틱/전체틱 — 0/10 이 곧 「준비됨」이다.
+    expect(formatCooldowns(table, skills, totals)).toBe('쿨 — 광역 3/10틱 · 스킬 2 0/4틱')
     // **안 쓴 틱에도 줄이 산다** — 사라지면 「정보가 없어졌다」로 읽힌다 (실제 신고).
-    expect(formatCooldowns(undefined, skills)).toBe('쿨 — 광역 준비 · 치유 준비 · 스킬 1 준비')
-    expect(formatCooldowns(undefined, ['ATTACK'])).toBe('')
+    expect(formatCooldowns(undefined, skills, totals)).toBe('쿨 — 광역 0/10틱 · 스킬 2 0/4틱')
+    expect(formatCooldowns(undefined, [], totals)).toBe('')
+  })
+})
+
+describe('장비줄 자리', () => {
+  it('★ 탭보다 위다 — 어느 탭을 보고 있든 소모품·쿨타임이 보인다 (실제 요청)', async () => {
+    const { renderToStaticMarkup } = await import('react-dom/server')
+    const { BattleSheet } = await import('./BattleSheet')
+    const html = renderToStaticMarkup(
+      <BattleSheet
+        tab="rules"
+        counts={new Map()}
+        onTabChange={() => undefined}
+        rules={[]}
+        onToggleRule={() => undefined}
+        entries={[]}
+        cooldowns="쿨 — 광역 0/10틱"
+        potionsMax={4}
+        potions={4}
+        foot={null}
+      />,
+    )
+    expect(html.indexOf('battle__cooldowns')).toBeLessThan(html.indexOf('battle__tabs'))
   })
 })

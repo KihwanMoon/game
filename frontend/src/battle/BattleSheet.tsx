@@ -210,10 +210,11 @@ export function formatGearLine(props: {
 export function BattleSheet(props: BattleSheetProps): React.JSX.Element {
   return (
     <div className="battle__sheet">
-      <SheetTabs active={props.tab} counts={props.counts} onChange={props.onTabChange} />
+      {/* **탭보다 위다** (실제 요청). 어느 탭을 보고 있든 소모품·쿨타임은 보인다. */}
       {formatGearLine(props) === '' ? null : (
         <div className="battle__cooldowns">{formatGearLine(props)}</div>
       )}
+      <SheetTabs active={props.tab} counts={props.counts} onChange={props.onTabChange} />
       <div className="battle__sheet-body" ref={props.bodyRef}>
         {props.tab === 'log' ? (
           <LogPanel entries={props.entries} />

@@ -169,21 +169,46 @@ const COOLDOWN_LABELS: ReadonlyMap<string, string> = new Map([
  * @param cooldowns 플레이어의 쿨타임 표.
  * @returns 화면에 적을 한 줄. 도는 쿨이 없으면 빈 문자열.
  */
+/**
+ * 규칙표가 부르는 스킬들을 모은다.
+ *
+ * **로드아웃이 아니라 규칙표다** (실제 요청). 들고는 있어도 규칙이 안 부르는 스킬의
+ * 쿨타임은 이 판의 정보가 아니다.
+ *
+ * @param rules 활성 규칙표의 규칙들.
+ * @returns 스킬 id 들. 정렬돼 있다.
+ */
+export function listRulesetSkills(
+  rules: readonly { action: string; actionParam: string | null }[],
+): readonly string[] {
+  const skills = new Set<string>()
+  for (const rule of rules) {
+    if (rule.action === 'USE_SKILL' && rule.actionParam !== null) {
+      skills.add(rule.actionParam)
+    } else if (COOLDOWN_LABELS.has(rule.action)) {
+      // 별칭 시절의 규칙표 — SKILL_2 가 행동 id 로 직접 적혀 있다.
+      skills.add(rule.action)
+    }
+  }
+  skills.delete('ATTACK')
+  return [...skills].sort()
+}
+
 export function formatCooldowns(
   cooldowns: ReadonlyMap<string, number> | undefined,
   skills: readonly string[] = [],
+  totals: ReadonlyMap<string, number> | undefined = undefined,
 ): string {
   // **늘 보인다.** 도는 쿨만 적으면 스킬을 아직 안 쓴 틱에 줄이 사라져 「정보가
-  // 없어졌다」로 읽힌다(실제 신고). 실은 스킬 전부를 준비/남은 틱으로 적는다 —
-  // 기본 공격은 쿨이 없어 뺀다.
-  const owned = [...skills].filter((skill) => skill !== 'ATTACK').sort()
-  if (owned.length === 0) {
+  // 없어졌다」로 읽힌다(실제 신고). 남은틱/전체틱으로 적는다 — 0/6 이 곧 「준비됨」이다.
+  if (skills.length === 0) {
     return ''
   }
-  const parts = owned.map((skill) => {
+  const parts = skills.map((skill) => {
     const left = cooldowns?.get(skill) ?? 0
+    const total = totals?.get(skill) ?? 0
     const name = COOLDOWN_LABELS.get(skill) ?? skill
-    return left > 0 ? `${name} ${String(left)}틱` : `${name} 준비`
+    return `${name} ${String(left)}/${String(total)}틱`
   })
   return `쿨 — ${parts.join(' · ')}`
 }
@@ -410,7 +435,11 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         potionsMax={readCarried(props.setup, 'POTION')}
         scrolls={player === undefined ? 0 : countItem(player, 'SCROLL')}
         scrollsMax={readCarried(props.setup, 'SCROLL')}
-        cooldowns={formatCooldowns(player?.cooldowns, props.setup.loadout?.skills ?? [])}
+        cooldowns={formatCooldowns(
+          player?.cooldowns,
+          listRulesetSkills(session.ruleset.rules),
+          session.engine.config.skillCooldowns,
+        )}
         tab={tab}
         onTabChange={setTab}
         bodyRef={sheetRef}
@@ -446,7 +475,11 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         potionsMax={readCarried(props.setup, 'POTION')}
         scrolls={player === undefined ? 0 : countItem(player, 'SCROLL')}
         scrollsMax={readCarried(props.setup, 'SCROLL')}
-        cooldowns={formatCooldowns(player?.cooldowns, props.setup.loadout?.skills ?? [])}
+        cooldowns={formatCooldowns(
+          player?.cooldowns,
+          listRulesetSkills(session.ruleset.rules),
+          session.engine.config.skillCooldowns,
+        )}
         tab={tab}
         onTabChange={setTab}
         bodyRef={sheetRef}
