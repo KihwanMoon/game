@@ -10,33 +10,47 @@
 
 import secrets
 
+from psycopg_pool import ConnectionPool
+
 from game.api.deps import get_pool
 from game.api.discovery_service import record_item_discovery
 from game.app.services.verify_run import VERDICT_VERIFIED, VerifiedRun
 from game.app.simulation.plan import OUTCOME_PLAYER_WIN as OUTCOME_WIN
 from game.app.store.accounts import find_player_entity
 from game.app.store.items import list_equipment, list_inventory
-from game.app.store.monsters import add_monster_xp, apply_monster_defeat, load_snapshots
+from game.app.store.monsters import (
+    add_monster_xp,
+    apply_monster_defeat,
+    find_monster,
+    load_snapshots,
+)
 from game.app.store.tickets import IssuedTicket
 from game.app.store.trophies import apply_recovery, create_trophy
 from game.schemas.monster_snapshot import MonsterSnapshot
 
 
-def resolve_home_floor(snapshot: MonsterSnapshot, ticket: IssuedTicket) -> int:
-    """이 스냅샷 개체가 사는 층.
+def resolve_home_floor(
+    pool: ConnectionPool, snapshot: MonsterSnapshot, ticket: IssuedTicket
+) -> int:
+    """이 스냅샷 개체가 사는 층을 **개체 기록에서** 읽는다.
 
-    **스냅샷이 제 층을 안 싣는다.** 지금은 티켓의 시작 층에서 파생할 수밖에 없는데,
-    레벨이 곧 층이라는 규약(난이도 개편)을 역으로 쓰면 정확하다 — 층 = 레벨로 태어나고
-    감쇠도 층 아래로 안 내려가므로, 레벨이 그 개체의 층 하한이다.
+    한때 `max(티켓 층, 레벨)` 로 파생했는데, 그것이 **되먹임 고리**를 만들었다 — 레벨이
+    층을 올리고, 오른 층이 상한(`층 × 5`)을 올리고, 올라간 상한이 레벨을 더 올린다.
+    상한이 영영 안 걸려서 1층 개체가 레벨 12까지 자랐다(검사가 잡았다). 층은 파생할
+    것이 아니라 **적혀 있는 것**이며, 적혀 있지 않을 때만 티켓의 층으로 물러선다.
 
     Args:
+        pool: 연결 풀.
         snapshot: 얼려 둔 개체.
         ticket: 이 런의 티켓.
 
     Returns:
         판정에 쓸 층.
     """
-    return max(ticket.floor, snapshot.level)
+    record = find_monster(pool, snapshot.record_id)
+    if record is None or not record.zone_floor:
+        return ticket.floor
+    return record.zone_floor
 
 
 def apply_monster_outcome(
@@ -70,7 +84,8 @@ def apply_monster_outcome(
         for item in snapshots:
             # **그 개체가 사는 층으로 판정한다.** 티켓의 시작 층을 쓰면 3층에서 잡은
             # 개체가 1층 기준으로 감쇠해 「레벨 1→1」이 된다 (실제 신고).
-            level = apply_monster_defeat(pool, item.record_id, resolve_home_floor(item, ticket))
+            home = resolve_home_floor(pool, item, ticket)
+            level = apply_monster_defeat(pool, item.record_id, home)
             # **바뀐 것만 적는다.** 하강이 열 층을 돌아 스냅샷이 서른 마리가 되면서,
             # 「레벨 6→6」 서른 줄이 화폐·전리품을 밀어냈다(실제 신고). 감쇠가 층
             # 하한에 걸려 그대로인 경우가 대부분이라 그 줄은 아무것도 안 말한다.
@@ -87,7 +102,7 @@ def apply_monster_outcome(
     # 졌으면 그 층의 몬스터가 경험치를 얻고, 하나가 장비 사본을 가져간다 (결정 #34).
     for item in snapshots:
         level = add_monster_xp(
-            pool, item.record_id, resolve_home_floor(item, ticket), "PLAYER", submission_id
+            pool, item.record_id, resolve_home_floor(pool, item, ticket), "PLAYER", submission_id
         )
         if level > item.level:
             notes.append(f"{item.kind_id} 레벨 {item.level}→{level}")

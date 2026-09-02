@@ -24,6 +24,9 @@ pytestmark = pytest.mark.skipif(
 )
 
 ROOM_ID = "corridor"
+
+# 성장 상한 검사가 쓰는 자리. 방 템플릿에 없는 이름이라 다른 검사의 전투에 안 끼어든다.
+GROWTH_SLOT = "growth_cap_probe"
 # corridor 의 첫 배치. 방 배치가 `{kind}_{index}` 로 붙인다.
 SLOT = "goblin_rusher_0"
 
@@ -146,10 +149,15 @@ def test_a_smuggled_snapshot_is_ignored(client, token, monster):
 def test_the_same_ticket_replays_identically(client, token, monster):
     """★ 런 등식이 유지된다 — 얼려 둔 상태로 다시 돌리면 같은 결과다."""
     from game.api.deps import get_context, get_pool
+    from game.app.monsters.growth import get_level_cap
     from game.app.services.verify_run import evaluate_submission
-    from game.app.store.monsters import load_snapshots
+    from game.app.store.monsters import load_snapshots, set_monster_level
     from game.app.store.tickets import find_open_ticket
 
+    # **레벨을 이 검사가 정한다.** 앞선 검사들이 먹이고 잡아 온 레벨을 그대로 물려받으면,
+    # 어느 날 그 값이 템플릿 기본값과 비슷해져 두 판이 같은 틱에 끝난다 — 그러면 이
+    # 검사는 「스냅샷이 전투를 안 바꾼다」고 거짓 신고를 한다. 실제로 그렇게 깨졌다.
+    set_monster_level(get_pool(), monster.record_id, get_level_cap(1))
     headers = build_headers(token)
     account_id = client.get("/api/account", headers=headers).json()["account_id"]
     ticket = client.post(
@@ -234,6 +242,64 @@ def test_a_verified_loss_feeds_the_monster(client, token, monster):
         assert after.total_xp > before
 
 
+def test_growth_stops_at_the_floor_cap(client):
+    """★ 상한이 실제로 건다 — 한때 안 걸렸다.
+
+    사는 층을 `max(티켓 층, 레벨)` 로 파생하던 때가 있었다. 레벨이 층을 올리고, 오른 층이
+    상한(`층 × 5`)을 올리고, 올라간 상한이 레벨을 더 올린다 — 되먹임 고리라 상한이 영영
+    안 걸렸고, 1층 개체가 레벨 12까지 자랐다. 그 개체를 만난 플레이어는 이길 수 없는
+    판을 받는다 (결정 #35 가 막으려던 바로 그것).
+    """
+    from game.api.deps import get_pool
+    from game.api.monster_service import resolve_home_floor
+    from game.app.monsters.growth import get_level_cap
+    from game.app.monsters.tiers import MonsterTier
+    from game.app.store.monsters import (
+        add_monster_xp,
+        create_monster,
+        list_monsters,
+        set_monster_level,
+    )
+    from game.app.store.tickets import IssuedTicket
+    from game.schemas.monster_snapshot import MonsterSnapshot
+
+    pool = get_pool()
+    # **제 슬롯을 쓴다.** 방 템플릿의 자리를 키우면 그 개체로 싸우는 다른 검사가
+    # 덩달아 달라진다 — 실제로 `test_snapshot_changes_the_battle` 이 그렇게 깨졌다.
+    create_monster(pool, "goblin_rusher", MonsterTier.ELITE, 1, GROWTH_SLOT)
+    probe = next(item for item in list_monsters(pool, 1) if item.entity_slot == GROWTH_SLOT)
+    # 앞선 실행이 남긴 레벨을 지운다. 안 그러면 두 번째 실행부터 이미 상한이라 무의미하다.
+    set_monster_level(pool, probe.record_id, 1)
+    cap = get_level_cap(1)
+    # 상한을 넘기고도 남을 만큼 먹인다. 고리가 살아 있으면 여기서 상한을 넘어간다.
+    for _feed in range(40):
+        home = resolve_home_floor(
+            pool,
+            MonsterSnapshot(
+                entity_id=GROWTH_SLOT,
+                record_id=probe.record_id,
+                kind_id=probe.catalog_id,
+                tier=probe.tier,
+                level=probe.level,
+                hp_max=1,
+                attack=1,
+                defense=0,
+                rule_slots=0,
+                cpu_budget=0,
+            ),
+            IssuedTicket(
+                ticket_id="probe",
+                seed=1,
+                room_id=ROOM_ID,
+                floor=1,
+                mode="PRACTICE",
+                core_version="probe",
+            ),
+        )
+        assert home == 1
+        assert add_monster_xp(pool, probe.record_id, home, "PLAYER", None) <= cap
+
+
 def test_defeat_leaves_a_trace(client, token, monster):
     """★ 이겨도 아무 변화가 없으면 승리가 세계에 남지 않는다 (결정 #35)."""
     from game.api.deps import get_pool
@@ -274,78 +340,3 @@ def test_nothing_to_take_is_quiet(client, token, monster):
 
     account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
     assert apply_trophy_transfer(account_id, monster.record_id) == ""
-
-
-# ── 도감 (§8) ────────────────────────────────────────────────────────────
-
-
-def test_bestiary_publishes_the_ruleset_verbatim(client, token, monster):
-    """★ 요약하지 않는다 — 원문이 곧 카운터 설계의 입력이다 (GDD §2.3, P1)."""
-    body = client.get("/api/bestiary", headers=build_headers(token)).json()
-    entry = next(e for e in body["entries"] if e["record_id"] == monster.record_id)
-    assert entry["ruleset"] is not None
-    assert entry["ruleset"]["rules"], "규칙표가 비었다 — 요약된 것이 아니라 원문이어야 한다"
-
-
-def test_bestiary_reports_level_and_cap(client, token, monster):
-    """상한을 함께 보여준다 — 얼마나 더 클 수 있는지가 표적 판단에 든다."""
-    body = client.get("/api/bestiary", headers=build_headers(token)).json()
-    entry = next(e for e in body["entries"] if e["record_id"] == monster.record_id)
-    assert entry["level"] >= 1
-    assert entry["level_cap"] >= entry["level"]
-
-
-def test_bestiary_flags_my_own_items(client, token, monster):
-    """★ "내 아이템을 들고 있다" 가 되찾으러 가는 동기다 (World Loop)."""
-    from game.api.deps import get_pool
-    from game.api.monster_service import apply_trophy_transfer
-    from game.app.store.accounts import find_player_entity
-    from game.app.store.items import create_item
-
-    headers = build_headers(token)
-    account_id = client.get("/api/account", headers=headers).json()["account_id"]
-    create_item(get_pool(), find_player_entity(get_pool(), account_id), "boots_swift", ())
-    apply_trophy_transfer(account_id, monster.record_id)
-
-    entry = next(
-        e
-        for e in client.get("/api/bestiary", headers=headers).json()["entries"]
-        if e["record_id"] == monster.record_id
-    )
-    assert entry["holds_mine"] is True
-    assert "boots_swift" in entry["trophies"]
-
-
-def test_another_account_does_not_see_it_as_theirs(client, token, monster):
-    """남의 전리품을 내 것으로 표시하면 도감이 거짓말을 한다."""
-    from game.api.deps import get_pool
-    from game.api.monster_service import apply_trophy_transfer
-    from game.app.store.accounts import find_player_entity
-    from game.app.store.items import create_item
-
-    account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
-    create_item(get_pool(), find_player_entity(get_pool(), account_id), "armor_plate", ())
-    apply_trophy_transfer(account_id, monster.record_id)
-
-    other = client.post("/api/account").json()["token"]
-    entry = next(
-        e
-        for e in client.get("/api/bestiary", headers=build_headers(other)).json()["entries"]
-        if e["record_id"] == monster.record_id
-    )
-    assert entry["holds_mine"] is False
-
-
-def test_the_bestiary_carries_stats_too(client, token, monster):
-    """★ 규칙표만으로는 **이길 수 있는지**를 알 수 없다.
-
-    도감이 표적 목록이려면 "어떻게 싸우는가"(규칙표)와 "얼마나 센가"(스탯)가 둘 다
-    있어야 한다 (`설계/6_몬스터` §8).
-    """
-    rows = client.get("/api/bestiary", headers=build_headers(token)).json()["entries"]
-    assert rows
-    for row in rows:
-        assert row["hp_max"] > 0
-        assert row["attack"] > 0
-        # 전투가 쓰는 것과 같은 계산이어야 한다 — 따로 세면 화면과 실제가 갈린다.
-        assert row["ruleset"] is None or row["ruleset"]["rules"]

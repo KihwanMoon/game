@@ -36,6 +36,11 @@ export interface EditorSession {
   readonly presets: readonly RulePreset[]
   readonly roomId: string
   readonly seed: number
+  /**
+   * 시드를 고정했는가. **기본은 거짓이고 저장하지 않는다** — 판마다 다른 시드가 나오는
+   * 것이 기본값이어야 한다. 참일 때만 `seed` 를 서버에 제안한다(연습 재현용).
+   */
+  readonly isSeedPinned: boolean
   readonly lastResult: RunResult | undefined
 }
 
@@ -60,6 +65,7 @@ export function createSession(save: EditorSave | undefined, fallback: SessionSee
       presets: [],
       roomId: fallback.roomId,
       seed: fallback.seed,
+      isSeedPinned: false,
       lastResult: undefined,
     }
   }
@@ -68,6 +74,7 @@ export function createSession(save: EditorSave | undefined, fallback: SessionSee
     presets: save.presets,
     roomId: save.roomId === '' ? fallback.roomId : save.roomId,
     seed: save.seed,
+    isSeedPinned: false,
     lastResult: save.lastResult,
   }
 }
@@ -155,6 +162,19 @@ export function applyRoomChoice(session: EditorSession, roomId: string): EditorS
  */
 export function applySeedChoice(session: EditorSession, seed: number): EditorSession {
   return { ...session, seed }
+}
+
+/**
+ * 시드 고정을 켜고 끈다.
+ *
+ * 끄면 판마다 새 시드가 나온다 — 서버가 발급하고, 서버가 없으면 기기가 굴린다.
+ *
+ * @param session 세션.
+ * @param isSeedPinned 고정할 것인가.
+ * @returns 새 세션.
+ */
+export function applySeedPin(session: EditorSession, isSeedPinned: boolean): EditorSession {
+  return { ...session, isSeedPinned }
 }
 
 /**

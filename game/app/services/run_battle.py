@@ -164,7 +164,7 @@ def build_engine(
     # **끌 수 있어야 한다.** 튜토리얼은 가르치는 배치가 고정이어야 하고(같은 자리에서
     # 같은 교훈이 나와야 한다), 골든은 흔들리면 대조가 성립하지 않는다.
     variance = rng.create_stream("variance")
-    taken: set[tuple[int, int]] = {tuple(template.player_spawn)}
+    taken: set[tuple[int, int]] = {template.player_spawn}
     for index, spawn in enumerate(template.enemy_spawns):
         # 지속 몬스터가 앉은 자리는 안 흔들고 안 바꾼다 — 스냅샷이 그 개체를 덮어야
         # 하는데 종이나 자리가 갈리면 얼려 둔 상태가 아무에게도 안 붙는다.
@@ -176,9 +176,9 @@ def build_engine(
             else resolve_elite_kind(spawn.kind, floor, variance)
         )
         spot = (
-            tuple(spawn.position)
+            spawn.position
             if is_persistent or not is_varied
-            else resolve_spawn_spot(template, tuple(spawn.position), taken, variance)
+            else resolve_spawn_spot(template, spawn.position, taken, variance)
         )
         taken.add(spot)
         kind = by_id[kind_id]

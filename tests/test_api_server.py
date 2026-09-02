@@ -73,6 +73,19 @@ def test_ticket_carries_a_server_seed(client, token):
     assert body["mode"] == "PRACTICE"
 
 
+def test_two_tickets_without_a_seed_get_different_seeds(client, token):
+    """★ 시드를 안 보내면 판마다 다른 던전이 나온다.
+
+    `seed >= 0` 만 보면 서버가 늘 0 을 줘도 통과한다 — 그러면 모두가 같은 판을 돈다.
+    """
+    headers = build_headers(token)
+    seeds = {
+        client.post("/api/ticket", json={"room_id": ROOM_ID}, headers=headers).json()["seed"]
+        for _try in range(5)
+    }
+    assert len(seeds) == 5
+
+
 def test_unknown_room_is_rejected(client, token):
     response = client.post("/api/ticket", json={"room_id": "nope"}, headers=build_headers(token))
     assert response.status_code == 400

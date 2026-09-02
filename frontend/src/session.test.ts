@@ -33,6 +33,7 @@ import {
   applyRuleSetEdit,
   applyRunResult,
   applySeedChoice,
+  applySeedPin,
   applyUndoStep,
   buildSessionSave,
   createSession,
@@ -279,5 +280,28 @@ describe('공유 코드', () => {
 
   it('깨진 코드는 사유와 함께 던진다 — 화면이 그것을 그대로 적는다', () => {
     expect(() => applyPresetImport(createFresh(), '아무 글자')).toThrow(/v<버전>/)
+  })
+})
+
+describe('시드 고정', () => {
+  it('★ 기본은 꺼져 있다 — 판마다 새 시드가 나오는 것이 기본값이어야 한다', () => {
+    expect(createFresh().isSeedPinned).toBe(false)
+  })
+
+  it('★ 저장에서 세워도 꺼져 있다 — 한 번 고정하면 영영 같은 판을 도는 사고를 막는다', () => {
+    const pinned = applySeedPin(applySeedChoice(createFresh(), 777), true)
+    const restored = createSession(buildSessionSave(pinned), {
+      ruleset: getSessionRuleSet(pinned),
+      roomId: 'corridor',
+      seed: 1,
+    })
+    expect(restored.seed).toBe(777)
+    expect(restored.isSeedPinned).toBe(false)
+  })
+
+  it('켜고 끌 수 있다', () => {
+    const on = applySeedPin(createFresh(), true)
+    expect(on.isSeedPinned).toBe(true)
+    expect(applySeedPin(on, false).isSeedPinned).toBe(false)
   })
 })

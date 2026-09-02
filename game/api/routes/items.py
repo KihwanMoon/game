@@ -6,6 +6,8 @@
 **봉인은 응답을 만들 때 계산한다.** 저장하면 착용·해제 순서에 따라 갈린다 (§2.1).
 """
 
+from typing import TypedDict
+
 from fastapi import APIRouter, HTTPException, status
 
 from game.api.catalog_view import build_affix_view
@@ -110,7 +112,19 @@ def build_item_view(
     )
 
 
-def build_stack_view(catalog_id: str | None, catalog: dict) -> dict[str, str]:
+class StackView(TypedDict):
+    """`InventorySlotView` 에 펼칠 소모품 표시 절.
+
+    **`dict[str, str]` 로 두면 안 된다.** 그러면 어떤 키든 들어갈 수 있다고 읽혀서
+    `is_sealed` 같은 다른 자리에 문자열이 꽂히는 것을 타입 검사가 못 잡는다.
+    """
+
+    stack_label_ko: str
+    stack_grade: str
+    stack_use_tag: str
+
+
+def build_stack_view(catalog_id: str | None, catalog: dict) -> StackView:
     """쌓인 소모품의 표시 정보를 찾는다.
 
     **id 를 그대로 적으면 화면에 `potion_heal` 이 뜬다.** 이름은 카탈로그가 아는데 가방
@@ -125,12 +139,12 @@ def build_stack_view(catalog_id: str | None, catalog: dict) -> dict[str, str]:
     """
     entry = catalog.get(catalog_id) if catalog_id else None
     if entry is None:
-        return {"stack_label_ko": "", "stack_grade": "", "stack_use_tag": ""}
-    return {
-        "stack_label_ko": entry.label_ko,
-        "stack_grade": entry.grade,
-        "stack_use_tag": entry.use_tag or "",
-    }
+        return StackView(stack_label_ko="", stack_grade="", stack_use_tag="")
+    return StackView(
+        stack_label_ko=entry.label_ko,
+        stack_grade=entry.grade,
+        stack_use_tag=entry.use_tag or "",
+    )
 
 
 @router.get("/api/inventory", response_model=InventoryResponse)

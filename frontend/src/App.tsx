@@ -108,6 +108,7 @@ import {
   applySessionToMeta,
   applyRunResult,
   applySeedChoice,
+  applySeedPin,
   applyUndoStep,
   buildSessionSave,
   createSession,
@@ -177,6 +178,7 @@ import {
   type TutorialStage,
 } from './core/schemas'
 import { MAX_SEED, createLocalTicket, type RunTicket } from './core/schemas'
+import { rollSeed } from './seedRoll'
 import { adoptServerMeta, applyRunSummary } from './core/services/manageMeta'
 import { buildRunSummary, listEncounteredRulesets } from './core/services/runSummary'
 import { parseBalance } from './core/services/runBattle'
@@ -211,8 +213,8 @@ const INITIAL_RULESET_ID = 'g0_pressure'
 const INITIAL_ROOM_ID = 'open_field'
 const INITIAL_SEED = 1
 
-/** 시드를 한 칸 옮기는 폭. Math.random 을 쓰지 않는다 — 판은 늘 사람이 고른 수에서 나온다. */
-const SEED_STEP = 1
+/** 시드 칸이 비활성일 때 대신 적는 말. 숫자를 흐리게 두면 그 수로 도는 줄 안다. */
+const RANDOM_SEED_LABEL = '판마다 새로'
 
 /** 시드가 음수로 내려가지 않게 막는 하한. */
 const MIN_SEED = 0
@@ -1041,7 +1043,11 @@ export function App(): React.JSX.Element {
       return
     }
     setLaunching(true)
-    void requestTicket(account, session.roomId, session.seed).then((issued) => {
+    // **시드를 제안하지 않는 것이 기본이다.** 서버가 굴린다 — 그래야 판마다 다른
+    // 던전이 나오고, 「유리한 시드」를 골라 담을 자리도 없다 (T2). 고정을 켠 때만
+    // 이 기기의 수를 제안하고, 서버는 그것을 연습 모드에서만 받아들인다.
+    const wanted = session.isSeedPinned ? session.seed : undefined
+    void requestTicket(account, session.roomId, wanted).then((issued) => {
       setLaunching(false)
       if (issued === undefined) {
         // **서버가 없다고 게임이 멈추지 않는다.** 다만 로컬로 돈 판은 서버에 안 남으므로
@@ -1049,6 +1055,9 @@ export function App(): React.JSX.Element {
         applyLocalRun()
         return
       }
+      // **굴려 나온 수를 화면에 되돌려 적는다.** 방금 돈 판이 어느 시드였는지 모르면
+      // 「이 판 다시」가 불가능하다 — 고정을 켜면 그 수가 그대로 다음 판이 된다.
+      setSession((current) => applySeedChoice(current, issued.seed))
       setRun({
         setup: buildRunSetup(issued, ruleset.rulesetId),
         rulesets: new Map([[ruleset.rulesetId, ruleset]]),
@@ -1070,7 +1079,10 @@ export function App(): React.JSX.Element {
    * 로컬 티켓에는 스냅샷이 없다 — 지속 몬스터는 서버가 아는 것이다.
    */
   function applyLocalRun(): void {
-    const local = createLocalTicket(session.seed, session.roomId, coreVersion)
+    // 서버가 없어도 판마다 다른 시드가 나와야 한다. 기기가 굴린다.
+    const chosen = session.isSeedPinned ? session.seed : rollSeed()
+    setSession((current) => applySeedChoice(current, chosen))
+    const local = createLocalTicket(chosen, session.roomId, coreVersion)
     setRun({
       setup: {
         roomId: local.roomId,
@@ -1445,29 +1457,37 @@ export function App(): React.JSX.Element {
       <label className="launch__label" htmlFor="launch-seed">
         시드
       </label>
-      <input
-        id="launch-seed"
-        className="launch__field launch__field--number"
-        type="number"
-        min={MIN_SEED}
-        value={session.seed}
-        onChange={(event) => {
-          const parsed = Number.parseInt(event.target.value, DECIMAL_RADIX)
-          const bounded = Number.isNaN(parsed) ? MIN_SEED : Math.max(MIN_SEED, parsed)
-          const seed = Math.min(SEED_LIMIT, Math.trunc(bounded))
-          setSession((current) => applySeedChoice(current, seed))
-        }}
-      />
+      {session.isSeedPinned ? (
+        <input
+          id="launch-seed"
+          className="launch__field launch__field--number"
+          type="number"
+          min={MIN_SEED}
+          value={session.seed}
+          onChange={(event) => {
+            const parsed = Number.parseInt(event.target.value, DECIMAL_RADIX)
+            const bounded = Number.isNaN(parsed) ? MIN_SEED : Math.max(MIN_SEED, parsed)
+            const seed = Math.min(SEED_LIMIT, Math.trunc(bounded))
+            setSession((current) => applySeedChoice(current, seed))
+          }}
+        />
+      ) : (
+        <ValueExpr text={RANDOM_SEED_LABEL} size="sm" dim />
+      )}
       <Button
         size="sm"
-        variant="ghost"
-        glyph="＋"
-        title="다음 시드 — 같은 규칙표를 다른 판에서 시험한다"
+        variant={session.isSeedPinned ? 'primary' : 'ghost'}
+        glyph={session.isSeedPinned ? '◉' : '○'}
+        title={
+          session.isSeedPinned
+            ? `시드 ${String(session.seed)} 로 고정했다 — 끄면 판마다 새 던전이 나온다`
+            : '판마다 새 시드가 나온다 — 켜면 방금 돈 판을 그대로 다시 돈다'
+        }
         onClick={() => {
-          setSession((current) => applySeedChoice(current, current.seed + SEED_STEP))
+          setSession((current) => applySeedPin(current, !current.isSeedPinned))
         }}
       >
-        시드
+        고정
       </Button>
       <Button
         size="sm"

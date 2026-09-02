@@ -210,6 +210,22 @@ describe('티켓 — 지속 몬스터 스냅샷 (E4)', () => {
     expect(ticket?.snapshots[0]?.hpMax).toBe(140)
   })
 
+  it('★ 시드를 안 주면 요청에 시드 칸이 없다 — 서버가 굴려야 판마다 다른 던전이 나온다', async () => {
+    const spy = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(RAW) })
+    vi.stubGlobal('fetch', spy)
+    await requestTicket('token', 'corridor')
+    const sent = JSON.parse(String(spy.mock.calls[0]?.[1]?.body)) as Record<string, unknown>
+    expect('seed' in sent).toBe(false)
+  })
+
+  it('★ 시드를 주면 그대로 제안한다 — 「이 판 다시」가 이 길로 간다', async () => {
+    const spy = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(RAW) })
+    vi.stubGlobal('fetch', spy)
+    await requestTicket('token', 'corridor', 4242)
+    const sent = JSON.parse(String(spy.mock.calls[0]?.[1]?.body)) as Record<string, unknown>
+    expect(sent['seed']).toBe(4242)
+  })
+
   it('entityId 순으로 정렬해서 준다 — 순서가 흔들리면 재현이 흔들린다', async () => {
     vi.stubGlobal(
       'fetch',

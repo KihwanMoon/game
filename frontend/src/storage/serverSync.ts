@@ -381,18 +381,22 @@ export interface ServerTicket {
  *
  * @param token 기기 토큰.
  * @param roomId 방 id.
- * @param seed 제안할 시드. 서버가 연습 모드에서만 받아들인다.
+ * @param seed 제안할 시드. **없으면 서버가 굴린다** — 그것이 기본이고, 값이 있는
+ *   경우는 사람이 「시드 고정」을 켠 때뿐이다. 서버는 연습 모드에서만 받아들인다.
  * @returns 발급된 티켓. 서버에 닿지 못했으면 undefined.
  */
 export async function requestTicket(
   token: string,
   roomId: string,
-  seed: number,
+  seed?: number,
 ): Promise<ServerTicket | undefined> {
+  // **칸을 아예 만들지 않는다.** `seed: undefined` 를 넘겨도 JSON 에서는 사라지지만,
+  // 그것에 기대면 다음 사람이 `null` 로 고쳤을 때 조용히 0번 시드가 된다.
+  const wanted = seed === undefined ? {} : { seed }
   const response = await sendRequest('/ticket', {
     method: 'POST',
     headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ room_id: roomId, seed }),
+    body: JSON.stringify({ room_id: roomId, ...wanted }),
   })
   if (response === undefined || !response.ok) {
     return undefined

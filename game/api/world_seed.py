@@ -10,7 +10,8 @@
 
 from psycopg_pool import ConnectionPool
 
-from game.app.store.monsters import create_monster, list_monsters
+from game.app.monsters.tiers import MonsterTier
+from game.app.store.monsters import MonsterRecord, create_monster, list_monsters
 from game.schemas.monster_snapshot import build_entity_id
 from game.schemas.room import RoomTemplate
 
@@ -50,7 +51,7 @@ def apply_floor_seed(
             record = create_monster(
                 pool,
                 spawn.kind,
-                "NORMAL",
+                MonsterTier.NORMAL,
                 floor,
                 build_entity_id(spawn.kind, index),
             )
@@ -77,7 +78,7 @@ def list_floor_range_monsters(
         층 순서대로의 레코드들.
     """
     span = max(1, len(room_ids) // max(1, rooms_per_floor))
-    found = []
+    found: list[MonsterRecord] = []
     for step in range(span):
         found.extend(list_monsters(pool, start_floor + step))
     return found

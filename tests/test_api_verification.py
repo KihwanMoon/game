@@ -45,6 +45,10 @@ def build_ruleset():
     return {"ruleset_id": "probe", "version": 1, "rules": []}
 
 
+# 「이기는 판」을 찾을 때 던져 볼 시드들. 하나가 이기면 거기서 멈춘다.
+SEED_TRIES = (2, 7, 8, 9, 3, 5, 11, 13)
+
+
 def build_winning_ruleset():
     """방을 실제로 이기는 규칙표. 연쇄 검사는 이것이라야 뒷 방까지 돈다."""
     import json
@@ -201,7 +205,6 @@ def test_a_win_records_the_floor(client, token, monkeypatch):
     못하다. 고정하는 것은 방 목록뿐이고 제출·재시뮬 경로는 그대로 탄다.
     """
     from game.api.routes import ticket as ticket_route
-
     from game.app.store import tickets as tickets_store
     from game.app.store.tickets import CHAIN_LENGTH
 
@@ -209,11 +212,18 @@ def test_a_win_records_the_floor(client, token, monkeypatch):
     monkeypatch.setattr(
         ticket_route, "build_descent", lambda *_args, **_kwargs: (ROOM_ID,) * CHAIN_LENGTH
     )
-    # **시드도 고정한다.** 난이도 개편 뒤 같은 규칙표가 시드에 따라 지기도 한다 —
-    # 이 검사가 재는 것은 「이기면 층이 오른다」이지 승률이 아니다.
-    monkeypatch.setattr(tickets_store, "create_seed", lambda: 7)
-    submit_once(client, token, build_winning_ruleset())
-    assert read_meta(client, token)["best_floor"] >= 1
+    # **세계 상태를 빼놓는다.** 지속 몬스터는 검사용 DB 에 쌓인 것을 그대로 끌어오는데,
+    # 거기엔 예전 검사가 남긴 레벨 10 엘리트가 1층에 앉아 있었다 — 그 하나 때문에
+    # 「이기는 규칙표」가 영영 못 이기고, 이 검사는 「층이 안 오른다」고 거짓 신고를 했다.
+    # 재는 것은 **이긴 판이 층을 남기는가** 이지 1층의 난이도가 아니다.
+    monkeypatch.setattr(ticket_route, "list_floor_range_monsters", lambda *_a, **_k: ())
+    # 시드도 하나로 못 박지 않는다. 배치가 흔들리게 된 뒤로는 어떤 시드도 언젠가 진다.
+    for candidate in SEED_TRIES:
+        monkeypatch.setattr(tickets_store, "create_seed", lambda value=candidate: value)
+        submit_once(client, token, build_winning_ruleset())
+        if read_meta(client, token)["best_floor"] >= 1:
+            return
+    pytest.fail(f"{len(SEED_TRIES)}개 시드에서 한 번도 이기지 못했다 — 규칙표나 난이도를 본다")
 
 
 def test_a_loss_does_not_record_a_floor(client, token):

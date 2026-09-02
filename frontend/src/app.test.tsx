@@ -65,7 +65,13 @@ describe('첫 화면', () => {
   it('출격 조작부가 상단 바에 붙는다', () => {
     expect(markup).toContain('출격')
     expect(markup).toContain('launch__field')
-    expect(markup).toContain('id="launch-seed"')
+  })
+
+  it('★ 시드 칸이 처음에는 숫자가 아니다 — 기본은 판마다 새 시드다', () => {
+    // 숫자 칸이 처음부터 보이면 그 수로 도는 줄 알고, 실제로 늘 1번 판만 돌았다.
+    expect(markup).not.toContain('id="launch-seed"')
+    expect(markup).toContain('판마다 새로')
+    expect(markup).toContain('고정')
   })
 
   it('처음 실린 규칙표는 검증을 통과하므로 출격 버튼이 잠기지 않는다', () => {
