@@ -149,7 +149,7 @@
             {
               "priority": 3,
               "cpu_cost": 2,
-              "action": "SKILL_2",
+              "action": "SKILL_1",
               "target": "NEAREST",
               "set_flag": "A=false",
               "conditions": {
@@ -165,7 +165,7 @@
                     "lhs": "self_cooldown_ready",
                     "cmp": "==",
                     "rhs": true,
-                    "lhs_param": "SKILL_2"
+                    "lhs_param": "SKILL_1"
                   }
                 ]
               }
@@ -197,8 +197,8 @@
           ]
         }
       },
-      "canonical_json": "{\"name\":\"원거리 견제\",\"ruleset\":{\"rules\":[{\"action\":\"USE_POTION\",\"conditions\":{\"op\":\"AND\",\"terms\":[{\"cmp\":\"<\",\"lhs\":\"self_hp_percent\",\"rhs\":30},{\"cmp\":\">\",\"lhs\":\"self_potion_count\",\"rhs\":0}]},\"cpu_cost\":2,\"priority\":1,\"set_flag\":null,\"target\":null},{\"action\":\"RETREAT\",\"conditions\":{\"op\":\"SINGLE\",\"terms\":[{\"cmp\":\"<=\",\"lhs\":\"target_distance\",\"lhs_param\":\"NEAREST\",\"rhs\":1}]},\"cpu_cost\":1,\"priority\":2,\"set_flag\":\"A=true\",\"target\":\"NEAREST\"},{\"action\":\"SKILL_2\",\"conditions\":{\"op\":\"AND\",\"terms\":[{\"cmp\":\"==\",\"lhs\":\"flag_state\",\"lhs_param\":\"A\",\"rhs\":true},{\"cmp\":\"==\",\"lhs\":\"self_cooldown_ready\",\"lhs_param\":\"SKILL_2\",\"rhs\":true}]},\"cpu_cost\":2,\"priority\":3,\"set_flag\":\"A=false\",\"target\":\"NEAREST\"},{\"action\":\"SKILL_2\",\"conditions\":{\"op\":\"AND\",\"terms\":[{\"cmp\":\"<=\",\"lhs\":\"target_distance\",\"lhs_param\":\"NEAREST\",\"rhs\":4},{\"cmp\":\"==\",\"lhs\":\"self_cooldown_ready\",\"lhs_param\":\"SKILL_2\",\"rhs\":true}]},\"cpu_cost\":2,\"priority\":4,\"set_flag\":null,\"target\":\"NEAREST\"}],\"ruleset_id\":\"g0_kite\",\"version\":1}}",
-      "code": "v2:H4sIAAAAAAACA72TT0vDMBjGv4rk3MO67VScULDIcHSy1pOMENJsC6ZNSFJljH4H73rw5GkH9WPNfQiTlbZbmYKC3tr37-95n3YFMpQS4IHt48Pm7fXjZX2yeV9vn5-AA2TOiCIaeKvyEXg3K4CwpjwzDddRAK_G8XAcmlLMs4TahLLVXJi8H56bhCYyLRtxaqOnJsYWJgIUYTO4EFAQiUmm7T4b73UKpyo-OywW3G6AmOdNeaeYFma9yE1YGdSuA4SkXFK9BJ7rmEYNZwzNgZfljBkeJOdWkn2zi2o5kyCeBH58XEs0DC9GwTE5gxqxnAwTqjTKMCnjUCCJUpMNA38SRHGF7baw3X3s7j428Ada5nZchV7POuCPLoejEez-xItBA293QQOu29x-RWwhGmf2WnfWYM5Zwu8zKAlKlq0ZDVoz6RvXei35M8TUn-j_rXn9_7lD_-uvtznBtP5NIU1MYt6Bt3Tn4h2Rancatyg-Ab-1EInmAwAA"
+      "canonical_json": "{\"name\":\"원거리 견제\",\"ruleset\":{\"rules\":[{\"action\":\"USE_POTION\",\"conditions\":{\"op\":\"AND\",\"terms\":[{\"cmp\":\"<\",\"lhs\":\"self_hp_percent\",\"rhs\":30},{\"cmp\":\">\",\"lhs\":\"self_potion_count\",\"rhs\":0}]},\"cpu_cost\":2,\"priority\":1,\"set_flag\":null,\"target\":null},{\"action\":\"RETREAT\",\"conditions\":{\"op\":\"SINGLE\",\"terms\":[{\"cmp\":\"<=\",\"lhs\":\"target_distance\",\"lhs_param\":\"NEAREST\",\"rhs\":1}]},\"cpu_cost\":1,\"priority\":2,\"set_flag\":\"A=true\",\"target\":\"NEAREST\"},{\"action\":\"SKILL_1\",\"conditions\":{\"op\":\"AND\",\"terms\":[{\"cmp\":\"==\",\"lhs\":\"flag_state\",\"lhs_param\":\"A\",\"rhs\":true},{\"cmp\":\"==\",\"lhs\":\"self_cooldown_ready\",\"lhs_param\":\"SKILL_1\",\"rhs\":true}]},\"cpu_cost\":2,\"priority\":3,\"set_flag\":\"A=false\",\"target\":\"NEAREST\"},{\"action\":\"SKILL_2\",\"conditions\":{\"op\":\"AND\",\"terms\":[{\"cmp\":\"<=\",\"lhs\":\"target_distance\",\"lhs_param\":\"NEAREST\",\"rhs\":4},{\"cmp\":\"==\",\"lhs\":\"self_cooldown_ready\",\"lhs_param\":\"SKILL_2\",\"rhs\":true}]},\"cpu_cost\":2,\"priority\":4,\"set_flag\":null,\"target\":\"NEAREST\"}],\"ruleset_id\":\"g0_kite\",\"version\":1}}",
+      "code": "v2:H4sIAAAAAAACA6WTT0-DMBjGv4rpmcNgOxFnQiIxiwszA09maZrSbY2lJaVoloXv4F0PnjztoH6suQ9hOwJsZJpNb_D-_T3vA0vAUUKACzbPT-uP96-31dn6c7V5fQEWkDkjGVHAXZaPwL1bAoQVFVw33IY-vBlFg1GgS7HgMTWJzFSLVOe94FInFJFJ2YgTEz3XMTbXEZARNoXzFKZEYsKV2Wfi3U5hVcUX-8WpMBsgFnlT3ikmhV6f5jqcaVTHAqmkQlK1AK5t6UYFpwzNgMtzxjQPkjMjybyZRbWcsR-NfS86rCUcBFdD_5Ccfo1YToYxzRTimJRxmCKJEp0NfG_sh1GFbbew7V1sZxcbeH0lczOuQq9n7fGH14PhENqneNFv4M0uqMFVm9uriA1E48xO69YaLASLxSOHkqB40ZrRoDWTfnGt25I_RSw7Vr9z0rf4R_N6_7qDc-wdej9_vc0JJvVvCmmsE7MOvKdbFx-IzLansYviG4oBadHmAwAA"
     },
     {
       "name": "엄폐 우선",

@@ -227,6 +227,37 @@ describe('연결선 그리기', () => {
     expect(fake.calls).toContain('text:방어')
   })
 
+  it('★ 한 방에 죽인 적의 자리에도 이펙트가 남는다 — 마지막 타격이 안 보이면 안 된다', async () => {
+    const { buildPulsesFromLog } = await import('./planScene')
+    const { EventLog, createLogEntry } = await import('../core/eventLog')
+    const { PHASE_ACT } = await import('../core/sim/phases')
+    const log = new EventLog()
+    log.record(
+      createLogEntry({
+        tick: 3,
+        entityId: 'player',
+        phase: PHASE_ACT,
+        expr: 'SKILL_1 @goblin_0',
+        outcome: 'goblin_0 HP 0/40 사망',
+        targetId: 'goblin_0',
+        delta: -40,
+        fired: true,
+      }),
+    )
+    // 죽은 말은 `listActors()` 에서 빠진다 — 엔진의 엔티티 표에는 남아 있다.
+    const engine = {
+      log,
+      state: {
+        tick: 3,
+        entities: new Map([['goblin_0', { position: { x: 4, y: 3 } }]]),
+      },
+    }
+    // actors 에 적이 없어도(죽어서) 그 자리에 이펙트가 선다.
+    expect(buildPulsesFromLog(engine as never, [PLAYER])).toEqual([
+      { x: 4, y: 3, isGain: false, delta: -40, label: '스킬1' },
+    ])
+  })
+
   it('★ 이을 것이 없으면 아무 선도 안 긋는다', async () => {
     expect(await render([])).not.toContain('stroke=--plan-link-self')
   })

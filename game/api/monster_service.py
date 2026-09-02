@@ -71,7 +71,11 @@ def apply_monster_outcome(
             # **그 개체가 사는 층으로 판정한다.** 티켓의 시작 층을 쓰면 3층에서 잡은
             # 개체가 1층 기준으로 감쇠해 「레벨 1→1」이 된다 (실제 신고).
             level = apply_monster_defeat(pool, item.record_id, resolve_home_floor(item, ticket))
-            notes.append(f"{item.kind_id} 레벨 {item.level}→{level}")
+            # **바뀐 것만 적는다.** 하강이 열 층을 돌아 스냅샷이 서른 마리가 되면서,
+            # 「레벨 6→6」 서른 줄이 화폐·전리품을 밀어냈다(실제 신고). 감쇠가 층
+            # 하한에 걸려 그대로인 경우가 대부분이라 그 줄은 아무것도 안 말한다.
+            if level != item.level:
+                notes.append(f"{item.kind_id} 레벨 {item.level}→{level}")
             # 그 개체가 들고 있던 **내 것**을 되찾는다 (`설계/6_몬스터` §5). 도감이
             # "내 아이템을 들고 있다" 고 말해 놓고 잡아도 못 돌려받으면, World Loop 의
             # 동기가 화면에만 있고 세계에는 없다.

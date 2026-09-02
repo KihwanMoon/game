@@ -261,7 +261,16 @@ export function buildPulsesFromLog(
   engine: TickEngine,
   actors: readonly PlanActorView[],
 ): readonly PlanPulseView[] {
-  const spots = new Map(actors.map((actor) => [actor.entityId, actor]))
+  // **죽은 말의 자리도 안다.** `listActors()` 는 죽은 것을 빼므로, 한 방에 죽인 적은
+  // 이펙트가 붙을 자리를 잃어 마지막 타격이 화면에 안 보였다(실제 신고). 엔진의
+  // 엔티티 표는 죽은 것도 들고 있으므로 그 좌표를 받침으로 쓴다.
+  const spots = new Map<string, { x: number; y: number }>()
+  for (const [entityId, entity] of engine.state.entities ?? []) {
+    spots.set(entityId, { x: entity.position.x, y: entity.position.y })
+  }
+  for (const actor of actors) {
+    spots.set(actor.entityId, { x: actor.x, y: actor.y })
+  }
   const pulses: PlanPulseView[] = []
   for (const entry of listRecentEntries(engine)) {
     if (entry.phase !== PHASE_ACT || !entry.fired) {

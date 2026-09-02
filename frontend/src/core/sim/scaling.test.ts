@@ -73,7 +73,7 @@ describe('층 깊이 스케일', () => {
       buildFloorScale(BALANCE_DATA.floorScale),
       DEEP_FLOOR,
     )
-    expect(scaled).toEqual({ hpMax: 48, attack: 8 })
+    expect(scaled).toEqual({ hpMax: 57, attack: 10 })
   })
 
   it('방 배치가 층 스케일을 거친다', () => {
@@ -83,7 +83,7 @@ describe('층 깊이 스케일', () => {
     const weak = shallow.state.entities.get('goblin_rusher_0')
     const strong = deep.state.entities.get('goblin_rusher_0')
     expect([weak?.hpMax, weak?.attack]).toEqual([RUSHER_HP, RUSHER_ATTACK])
-    expect([strong?.hpMax, strong?.attack]).toEqual([48, 8])
+    expect([strong?.hpMax, strong?.attack]).toEqual([57, 10])
     // 스케일은 최대 HP 를 올리는 것이지 다친 채로 시작시키는 것이 아니다.
     expect(strong?.hp).toBe(strong?.hpMax)
   })
@@ -96,7 +96,7 @@ describe('층 깊이 스케일', () => {
       floor: DEEP_FLOOR,
     })
     const hunter = engine.pressure.createHunter(engine.state)
-    expect([hunter?.hpMax, hunter?.attack]).toEqual([48, 8])
+    expect([hunter?.hpMax, hunter?.attack]).toEqual([57, 10])
   })
 
   it('층 깊이와 층 체류 스케일은 곱해진다', () => {
@@ -109,7 +109,7 @@ describe('층 깊이 스케일', () => {
     })
     engine.pressure.floorTicks = STALL_TICKS
     const bonusPct = engine.pressure.applyScale(engine.state)
-    const depthScaled = calculateScaledStat(RUSHER_ATTACK, 110, DEEP_FLOOR)
+    const depthScaled = calculateScaledStat(RUSHER_ATTACK, 120, DEEP_FLOOR)
     expect(engine.state.entities.get('goblin_rusher_0')?.attack).toBe(
       calculateScaledAttack(depthScaled, bonusPct),
     )
