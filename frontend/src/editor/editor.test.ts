@@ -223,10 +223,12 @@ describe('편집 조작으로 만든 규칙표', () => {
     const attack = BLOCK_CATALOG.actions.get('ATTACK')
     expect(listSelectorsForAction(BLOCK_CATALOG, heal).map((item) => item.blockId)).toEqual([
       'ALLY_WOUNDED',
+      // v8: 자기 회복을 지을 자리. 적 대상 행동 목록에는 안 나온다 — 자해를 문법으로 막는다.
+      'SELF',
     ])
-    expect(listSelectorsForAction(BLOCK_CATALOG, attack).map((item) => item.blockId)).not.toContain(
-      'ALLY_WOUNDED',
-    )
+    const attackable = listSelectorsForAction(BLOCK_CATALOG, attack).map((item) => item.blockId)
+    expect(attackable).not.toContain('ALLY_WOUNDED')
+    expect(attackable).not.toContain('SELF')
   })
 
   it('예산을 넘겨도 편집이 막히지 않는다', () => {

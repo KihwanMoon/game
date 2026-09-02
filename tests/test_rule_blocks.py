@@ -295,3 +295,15 @@ def test_stat_readers_cover_the_declared_list(catalog):
     # blocks.json 이 허용 목록의 정본이다. VM 이 읽지 못하는 스탯이 목록에 있으면
     # 그 스탯을 쓴 규칙이 검증은 통과하고 실행에서 조용히 거짓이 된다.
     assert set(RHS_STAT_READERS) == set(catalog.rhs_stats)
+
+
+def test_self_selector_targets_the_actor(probe_world):
+    """★ 자기 자신 셀렉터 (v8) — 만피여도 자신을 고른다.
+
+    거르면 「참인데 대상 없음」과 「거짓」이 섞여 로그가 거짓말한다. ALLY_WOUNDED 가
+    자신을 빼는 것과 짝이다 — 자기 회복·자기 강화를 지을 자리가 없었다.
+    """
+    from game.app.simulation.selectors import resolve_target
+
+    world, player = probe_world(skills=())
+    assert resolve_target("SELF", player, world, {}) is player

@@ -1,6 +1,6 @@
 {
   "_comment": "블록 카탈로그 v5. 스킬을 액션마다 더하지 않고 USE_SKILL[skill_id] 파라미터 하나로 묶었다 — 스킬이 늘어도 액션 종류가 고정이라 랭킹 시즌이 갈리지 않는다 (docs/설계/5_스킬 §4). 기존 SKILL_1·SKILL_2·AREA_ATTACK·HEAL·SUMMON 과 self_cooldown_ready 는 지우지 않고 별칭으로 남긴다: 지우면 저장된 규칙표와 골든 리플레이가 전부 깨진다. 장비 전용 블록은 만들지 않는다 — 장비는 전투 전에 캐릭터 능력치·스킬로 녹고 규칙표는 캐릭터만 읽는다 (결정 #13). v6: USE_ITEM[kind] 를 더했다 (#54). 보호 주문서가 카탈로그에 있는데 그것을 쓸 수 있는 행동이 없어, 얻어도 영영 쓰지 못했다. USE_POTION 은 별칭으로 남는다.",
-  "block_list_version": 7,
+  "block_list_version": 8,
   "perceptions": [
     {
       "id": "self_hp_percent",
@@ -445,6 +445,12 @@
       "faction": "ally",
       "label_ko": "부상한 아군 (HP 최저)",
       "_note": "v4 추가. DSL 최초의 아군 셀렉터다. HP 가 가득 찬 아군과 자기 자신은 후보가 아니다 — 이름이 그렇게 말하고 있고, 후보가 없으면 규칙이 발동하지 않는다는 F-1 규칙이 치유형을 회복 한 줄에 굳지 않게 한다. 자기 자신을 뺀 이유는 자기 회복이 이미 USE_POTION 의 자리이기 때문이다."
+    },
+    {
+      "id": "SELF",
+      "faction": "ally",
+      "label_ko": "자기 자신",
+      "_note": "v8. ALLY_WOUNDED 가 자신을 빼므로 자기 회복·자기 강화를 지을 자리가 없었다. 진영이 ally 라 적 대상 행동에는 검증기가 거절한다 — 자기를 때리는 규칙을 문법으로 막는다."
     }
   ]
 }

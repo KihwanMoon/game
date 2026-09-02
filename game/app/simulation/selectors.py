@@ -21,6 +21,7 @@ SELECTOR_TYPE_HEALER = "TYPE_HEALER"
 SELECTOR_CASTING = "CASTING"
 SELECTOR_BOSS = "BOSS"
 SELECTOR_ALLY_WOUNDED = "ALLY_WOUNDED"
+SELECTOR_SELF = "SELF"
 
 # 순서는 blocks.json 의 selectors 절과 같다. 인지 스냅샷이 이 순서로 거리를 푼다.
 ALL_SELECTORS = (
@@ -33,6 +34,7 @@ ALL_SELECTORS = (
     SELECTOR_CASTING,
     SELECTOR_BOSS,
     SELECTOR_ALLY_WOUNDED,
+    SELECTOR_SELF,
 )
 
 # 적 유형을 직접 가리키는 셀렉터들. BOSS 도 유형 하나이므로 같은 표에 둔다.
@@ -61,6 +63,11 @@ def list_candidates(
     Returns:
         후보들. 순서는 list_actors 와 같다.
     """
+    if selector_id == SELECTOR_SELF:
+        # 자기 자신은 늘 후보다 (v8). ALLY_WOUNDED 가 자신을 빼는 것과 짝이다 — 자기
+        # 회복·자기 강화를 규칙으로 지을 자리가 없었다. 만피여도 고른다: 거르면
+        # 「참인데 대상 없음」과 「거짓」이 섞여 로그가 거짓말한다.
+        return (actor,)
     if selector_id == SELECTOR_ALLY_WOUNDED:
         # 만피인 아군은 회복 대상이 아니다. 여기서 거르지 않으면 HEAL 규칙이 참인데
         # 회복량 0 으로 끝나 쿨타임도 걸리지 않고, 그 규칙에 치유형이 굳는다.

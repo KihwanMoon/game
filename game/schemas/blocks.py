@@ -25,7 +25,7 @@ from pathlib import Path
 # 콘텐츠 범위. 동결 대상이므로 상수로 박아 로드 때마다 대조한다.
 PERCEPTION_COUNT = 21  # v7 에서 self_scroll_count 가 들어왔다 (§5 소모품 칸)
 ACTION_COUNT = 16  # v6 에서 USE_ITEM 이 들어왔다 (#54)
-SELECTOR_COUNT = 9
+SELECTOR_COUNT = 10  # v8 에서 SELF 가 들어왔다
 RHS_STAT_COUNT = 7  # v7 에서 scrolls 가 들어왔다 — potions 와 짝
 
 # 셀렉터가 고르는 진영. 행동의 target_faction 도 이 둘 중 하나다.

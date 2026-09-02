@@ -23,6 +23,7 @@ export const SELECTOR_TYPE_HEALER = 'TYPE_HEALER'
 export const SELECTOR_CASTING = 'CASTING'
 export const SELECTOR_BOSS = 'BOSS'
 export const SELECTOR_ALLY_WOUNDED = 'ALLY_WOUNDED'
+export const SELECTOR_SELF = 'SELF'
 
 /** 셀렉터 9종. 순서는 blocks.json 과 같고, 인지 스냅샷이 이 순서로 거리를 푼다. */
 export const ALL_SELECTORS: readonly string[] = [
@@ -35,6 +36,7 @@ export const ALL_SELECTORS: readonly string[] = [
   SELECTOR_CASTING,
   SELECTOR_BOSS,
   SELECTOR_ALLY_WOUNDED,
+  SELECTOR_SELF,
 ]
 
 /** 적 유형을 직접 가리키는 셀렉터들. BOSS 도 유형 하나이므로 같은 표에 둔다. */
@@ -66,6 +68,10 @@ export function listCandidates(
   state: WorldState,
   kindTypes: ReadonlyMap<string, string>,
 ): readonly Entity[] {
+  if (selectorId === SELECTOR_SELF) {
+    // 자기 자신은 늘 후보다 (v8). 만피여도 고른다 — 파이썬과 같은 줄이다.
+    return [actor]
+  }
   if (selectorId === SELECTOR_ALLY_WOUNDED) {
     // 만피인 아군은 회복 대상이 아니다. 여기서 거르지 않으면 HEAL 규칙이 참인데 회복량
     // 0 으로 끝나 쿨타임도 걸리지 않고, 그 규칙에 치유형이 굳는다.

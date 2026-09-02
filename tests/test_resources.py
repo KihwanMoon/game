@@ -182,6 +182,7 @@ def test_selector_ids_match_gdd(catalog):
         "CASTING",
         "BOSS",
         "ALLY_WOUNDED",
+        "SELF",
     }
 
 
@@ -189,8 +190,11 @@ def test_only_one_selector_crosses_to_the_ally_side(catalog):
     # 아군 축을 최소한으로 연다는 v4 의 결정(docs/04 H-3)을 기계로 못박는다.
     # 셀렉터마다 진영 인자를 주면 대상 공간이 두 배가 되고 늘어난 칸의
     # 대부분이 뜻 없는 조합이 된다 — P3 가 먼저 무너진다.
+    #
+    # v8 에서 SELF 가 더해졌다 — ALLY_WOUNDED 가 자신을 빼므로 자기 회복을 지을 자리가
+    # 없었다. 진영을 ally 로 둔 것은 적 대상 행동(자해)을 검증기가 거절하게 하기 위해서다.
     ally = {s.block_id for s in catalog.selectors.values() if s.faction == FACTION_ALLY}
-    assert ally == {"ALLY_WOUNDED"}
+    assert ally == {"ALLY_WOUNDED", "SELF"}
 
 
 # ── 룸 템플릿 ────────────────────────────────────────────────────────────────

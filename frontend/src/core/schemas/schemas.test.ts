@@ -82,7 +82,8 @@ describe('블록 카탈로그', () => {
     const ally = [...BLOCK_CATALOG.selectors.values()].filter(
       (item) => item.faction === FACTION_ALLY,
     )
-    expect(ally.map((item) => item.blockId)).toEqual(['ALLY_WOUNDED'])
+    // v8: SELF — 자기 회복·자기 강화를 지을 자리. 적 대상 행동에는 검증기가 거절한다.
+    expect(ally.map((item) => item.blockId)).toEqual(['ALLY_WOUNDED', 'SELF'])
   })
 
   it('값 범위가 붙은 인지 변수는 두 값으로 읽힌다', () => {
