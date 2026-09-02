@@ -281,10 +281,13 @@ describe('규칙 한도 (결정 #51, #13)', () => {
 
 describe('층 사슬 진행 (W3)', () => {
   const SETUP: BattleSetup = {
-    roomId: 'corridor',
-    rulesetId: 'g0_kite',
+    // 스킬 v3(쿨타임 2배) 뒤 g0_kite 는 corridor 1방을 무피해로 깨서 인계가 안
+    // 보인다 — 깨면서 다치는 (g0_pressure, open_field, 4242) 로 갈았다. 연쇄 골든과
+    // 같은 표본이다.
+    roomId: 'open_field',
+    rulesetId: 'g0_pressure',
     seed: 4242,
-    chain: buildChainPosition('corridor'),
+    chain: buildChainPosition('open_field'),
   }
 
   it('★ 이기면 다음 방으로 넘어간다 — 이게 없으면 한 판이 방 하나로 끝난다', () => {

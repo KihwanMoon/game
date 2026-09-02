@@ -19,7 +19,7 @@
  */
 import type { ReactNode, Ref } from 'react'
 
-import { HpGauge, ResourceCount, ThreatNotice } from '../ds'
+import { HpGauge, ThreatNotice } from '../ds'
 import type { LogRowProps } from '../ds'
 import { BattleSheet, SheetFoot } from './BattleSheet'
 import { formatOutcomeNotice, resolveOutcomeTone } from './outcomeText'
@@ -36,13 +36,9 @@ import { SpeedBox } from './SpeedBox'
 const HP_BAR_WIDTH = 150
 
 /** 물약 칸의 글리프. ds `StatusBar` 와 같은 도형을 쓴다. */
-const POTION_GLYPH = '◍'
 
-/** 주문서 글리프. 도면의 다른 글리프들처럼 유니코드 도형이다. */
-const SCROLL_GLYPH = '▤'
 
 /** 물약 칸의 라벨. */
-const POTION_LABEL = '물약'
 
 /** 틱 표기 앞의 도형. 색은 --chalk-dim 이며 황동 예산에 들지 않는다. */
 const TICK_GLYPH = '◆'
@@ -135,6 +131,11 @@ export function BattleLandscape(props: BattleLandscapeProps): React.JSX.Element 
             rules={props.rows}
             onToggleRule={props.onToggleRule}
             entries={props.entries}
+            cooldowns={props.cooldowns ?? ''}
+            potions={props.potions}
+            potionsMax={props.potionsMax}
+            scrolls={props.scrolls}
+            scrollsMax={props.scrollsMax}
             bodyRef={props.bodyRef}
             foot={
               <SheetFoot
@@ -152,18 +153,6 @@ export function BattleLandscape(props: BattleLandscapeProps): React.JSX.Element 
         <span className="ds-label">hp</span>
         <HpGauge value={props.hp} max={props.hpMax} width={HP_BAR_WIDTH} />
         <span className="battle-ls__rule-line" aria-hidden="true" />
-        <ResourceCount
-          label={POTION_LABEL}
-          count={props.potions}
-          max={props.potionsMax}
-          glyph={POTION_GLYPH}
-        />
-        <ResourceCount
-          label="주문서"
-          count={props.scrolls}
-          max={props.scrollsMax}
-          glyph={SCROLL_GLYPH}
-        />
         <span className="battle-ls__gap" />
         <span
           className={`battle-ls__verdict battle__verdict--${resolveOutcomeTone(props.outcome)}`}

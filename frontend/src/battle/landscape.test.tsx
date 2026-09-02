@@ -346,11 +346,13 @@ describe('상단 바 (명세 B)', () => {
 })
 
 describe('하단 바가 상태줄을 겸한다 (명세 B·D)', () => {
-  it('체력 · 구분선 · 물약 · 판정이 한 줄에 선다', () => {
+  it('체력 · 구분선 · 판정이 한 줄에 선다 — 자원은 로그 위 장비줄로 갔다 (실제 요청)', () => {
     const html = renderToStaticMarkup(<BattleLandscape {...buildProps()} />)
     expect(html).toContain('ds-hp')
     expect(html).toContain('battle-ls__rule-line')
-    expect(html).toContain('ds-resource')
+    expect(html).not.toContain('ds-resource')
+    // 장비줄이 물약·주문서를 잇는다 — 하단 바에서 사라진 것이 아니라 옮겨 간 것이다.
+    expect(html).toContain('물약')
     expect(html).toContain(formatOutcomeNotice(OUTCOME_ONGOING))
   })
 

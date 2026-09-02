@@ -157,6 +157,12 @@ export interface BattleSheetProps {
   readonly entries: readonly LogRowProps[]
   /** 스킬 쿨타임 한 줄. 비어 있으면 안 그린다 — 도는 쿨이 없을 때 빈 줄은 자리 낭비다. */
   readonly cooldowns?: string
+  /** 남은 물약·주문서와 실은 수. 로그 바로 위에 선다 — 규칙이 「없음」으로 떨어진
+      이유가 로그와 같은 눈높이에 있어야 한다 (실제 요청). */
+  readonly potions?: number
+  readonly potionsMax?: number
+  readonly scrolls?: number
+  readonly scrollsMax?: number
   /** 탭 본문 아래 고정되는 하단. 배치마다 배열이 달라 슬롯으로 받는다. */
   readonly foot?: ReactNode
   /**
@@ -175,12 +181,38 @@ export interface BattleSheetProps {
  * @param props 탭 상태·규칙 줄·로그 줄·하단 슬롯.
  * @returns 렌더 트리.
  */
+/**
+ * 로그 위 장비줄 — 소모품 잔량과 도는 쿨타임을 한 줄로 적는다.
+ *
+ * @param props 시트 props.
+ * @returns 화면에 적을 한 줄. 적을 것이 없으면 빈 문자열.
+ */
+export function formatGearLine(props: {
+  readonly cooldowns?: string
+  readonly potions?: number
+  readonly potionsMax?: number
+  readonly scrolls?: number
+  readonly scrollsMax?: number
+}): string {
+  const parts: string[] = []
+  if (props.potionsMax !== undefined) {
+    parts.push(`◍ 물약 ${String(props.potions ?? 0)}/${String(props.potionsMax)}`)
+  }
+  if (props.scrollsMax !== undefined) {
+    parts.push(`▤ 주문서 ${String(props.scrolls ?? 0)}/${String(props.scrollsMax)}`)
+  }
+  if (props.cooldowns !== undefined && props.cooldowns !== '') {
+    parts.push(props.cooldowns)
+  }
+  return parts.join(' · ')
+}
+
 export function BattleSheet(props: BattleSheetProps): React.JSX.Element {
   return (
     <div className="battle__sheet">
       <SheetTabs active={props.tab} counts={props.counts} onChange={props.onTabChange} />
-      {props.cooldowns === undefined || props.cooldowns === '' ? null : (
-        <div className="battle__cooldowns">{props.cooldowns}</div>
+      {formatGearLine(props) === '' ? null : (
+        <div className="battle__cooldowns">{formatGearLine(props)}</div>
       )}
       <div className="battle__sheet-body" ref={props.bodyRef}>
         {props.tab === 'log' ? (

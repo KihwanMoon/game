@@ -34,9 +34,10 @@ GOLDEN_PATH = Path(__file__).resolve().parents[1] / "frontend/src/core/golden/ch
 # 그래서 실제로 방을 넘어가는 규칙표를 쓴다 — 이기지 못하는 골든은 연쇄를 검증하지
 # 못한다.
 CHAIN_CASES: tuple[tuple[str | None, tuple[str, ...], int], ...] = (
-    # HP 인계. 같은 방을 세 번 도는데 체력이 100→82→64→46 으로 줄어야 한다 —
-    # 방마다 회복되면 연쇄가 뜻을 잃는다.
-    ("g0_kite", ("corridor", "corridor", "corridor"), 4242),
+    # HP 인계. 같은 방을 세 번 도는데 체력이 44→38→25 로 줄어야 한다 —
+    # 방마다 회복되면 연쇄가 뜻을 잃는다. (스킬 v3 쿨타임 2배 뒤 g0_kite 는 이 방
+    # 3연쇄를 못 깨서, 깨면서 다치는 표본을 g0_pressure 로 갈았다.)
+    ("g0_pressure", ("open_field", "open_field", "open_field"), 4242),
     # 방마다 다른 템플릿 + 시드가 결과를 바꾸는 사례. 시드를 방마다 가르지 않으면
     # 여기서 갈린다.
     ("g0_kite", ("open_field", "corridor", "pillars"), 8080),

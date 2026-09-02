@@ -25,7 +25,7 @@
  */
 import type { ReactNode, Ref } from 'react'
 
-import { HpGauge, ResourceCount, ThreatNotice } from '../ds'
+import { HpGauge, ThreatNotice } from '../ds'
 import type { LogRowProps } from '../ds'
 import { BattleSheet, SheetFoot } from './BattleSheet'
 import { formatOutcomeNotice, resolveOutcomeTone } from './outcomeText'
@@ -47,11 +47,7 @@ import { SpeedBox } from './SpeedBox'
 const HP_BAR_WIDTH = 90
 
 /** 물약 칸의 글리프와 라벨. ds `StatusBar` 와 같은 것을 쓴다. */
-const POTION_GLYPH = '◍'
 
-/** 주문서 글리프. 도면의 다른 글리프들처럼 유니코드 도형이다. */
-const SCROLL_GLYPH = '▤'
-const POTION_LABEL = '물약'
 
 /** 틱 표기 앞의 도형. 색은 --chalk-dim 이며 황동 예산에 들지 않는다. */
 const TICK_GLYPH = '◆'
@@ -167,6 +163,10 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
         onToggleRule={props.onToggleRule}
         entries={props.entries}
         cooldowns={props.cooldowns ?? ''}
+        potions={props.potions}
+        potionsMax={props.potionsMax}
+        scrolls={props.scrolls}
+        scrollsMax={props.scrollsMax}
         bodyRef={props.bodyRef}
         foot={
           <SheetFoot
@@ -180,18 +180,6 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
 
       <footer className="battle__bar battle__bar--bottom">
         <HpGauge value={props.hp} max={props.hpMax} width={HP_BAR_WIDTH} />
-        <ResourceCount
-          label={POTION_LABEL}
-          count={props.potions}
-          max={props.potionsMax}
-          glyph={POTION_GLYPH}
-        />
-        <ResourceCount
-          label="주문서"
-          count={props.scrolls}
-          max={props.scrollsMax}
-          glyph={SCROLL_GLYPH}
-        />
       </footer>
     </div>
   )

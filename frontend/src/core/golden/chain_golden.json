@@ -3,32 +3,32 @@
   "seed_stride": 1000,
   "chains": [
     {
-      "ruleset_id": "g0_kite",
+      "ruleset_id": "g0_pressure",
       "room_ids": [
-        "corridor",
-        "corridor",
-        "corridor"
+        "open_field",
+        "open_field",
+        "open_field"
       ],
       "seed": 4242,
       "cleared_rooms": 3,
       "outcome": "PLAYER_WIN",
-      "total_ticks": 42,
-      "player_hp": 46,
+      "total_ticks": 35,
+      "player_hp": 39,
       "per_room": [
         {
           "outcome": "PLAYER_WIN",
-          "ticks": 14,
-          "player_hp": 82
+          "ticks": 11,
+          "player_hp": 51
         },
         {
           "outcome": "PLAYER_WIN",
-          "ticks": 14,
-          "player_hp": 64
+          "ticks": 12,
+          "player_hp": 45
         },
         {
           "outcome": "PLAYER_WIN",
-          "ticks": 14,
-          "player_hp": 46
+          "ticks": 12,
+          "player_hp": 39
         }
       ]
     },
