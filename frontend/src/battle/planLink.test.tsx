@@ -217,11 +217,11 @@ describe('수치 이펙트 (간단한 표시)', () => {
     for (const tick of [1, 2]) {
       log.record(createLogEntry({
         tick, entityId: 'player', phase: PHASE_ACT, expr: 'ATTACK', outcome: '',
-        targetId: 'goblin_0', delta: -tick,
+        targetId: 'goblin_0', delta: -tick, fired: true,
       }))
     }
     const pulses = buildPulsesFromLog({ log, state: { tick: 3 } } as never, [PLAYER, FOE])
-    expect(pulses).toEqual([{ x: 4, y: 3, isGain: false }])
+    expect(pulses).toEqual([{ x: 4, y: 3, isGain: false, delta: -2, label: '' }])
   })
 
   it('★ 피해는 대상에게 붉게, 회복은 자신에게 초록으로 — 뜻은 기존 색 그대로다', async () => {
@@ -231,20 +231,20 @@ describe('수치 이펙트 (간단한 표시)', () => {
     const log = new EventLog()
     log.record(createLogEntry({
       tick: 3, entityId: 'player', phase: PHASE_ACT, expr: 'ATTACK', outcome: '',
-      targetId: 'goblin_0', delta: -7,
+      targetId: 'goblin_0', delta: -7, fired: true,
     }))
     log.record(createLogEntry({
       tick: 3, entityId: 'goblin_0', phase: PHASE_ACT, expr: 'USE_ITEM', outcome: '',
-      delta: 12,
+      delta: 12, fired: true,
     }))
     // delta 없는 줄은 이펙트가 아니다 — 전부 그리면 매 틱 온 화면이 고리가 된다.
     log.record(createLogEntry({
-      tick: 3, entityId: 'player', phase: PHASE_ACT, expr: 'MOVE_TO', outcome: '',
+      tick: 3, entityId: 'player', phase: PHASE_ACT, expr: 'MOVE_TO', outcome: '', fired: true,
     }))
     const pulses = buildPulsesFromLog({ log, state: { tick: 3 } } as never, [PLAYER, FOE])
     expect(pulses).toEqual([
-      { x: 4, y: 3, isGain: false },
-      { x: 4, y: 3, isGain: true },
+      { x: 4, y: 3, isGain: false, delta: -7, label: '' },
+      { x: 4, y: 3, isGain: true, delta: 12, label: '소모품' },
     ])
   })
 })
@@ -277,6 +277,20 @@ describe('쿨타임 줄', () => {
 })
 
 describe('장비줄 자리', () => {
+  it('★ 수치 없는 스킬도 이름표를 남긴다 — 방어·소환이 아무 표시 없이 지나가면 안 했다로 읽힌다', async () => {
+    const { buildPulsesFromLog } = await import('./planScene')
+    const { EventLog, createLogEntry } = await import('../core/eventLog')
+    const { PHASE_ACT } = await import('../core/sim/phases')
+    const log = new EventLog()
+    log.record(createLogEntry({
+      tick: 3, entityId: 'player', phase: PHASE_ACT, expr: 'GUARD_BRACE', outcome: '방어 50% / 8틱',
+      fired: true,
+    }))
+    const pulses = buildPulsesFromLog({ log, state: { tick: 3 } } as never, [PLAYER, FOE])
+    expect(pulses).toEqual([{ x: 1, y: 1, isGain: true, delta: null, label: '방어' }])
+  })
+
+
   it('★ 탭보다 위다 — 어느 탭을 보고 있든 소모품·쿨타임이 보인다 (실제 요청)', async () => {
     const { renderToStaticMarkup } = await import('react-dom/server')
     const { BattleSheet } = await import('./BattleSheet')

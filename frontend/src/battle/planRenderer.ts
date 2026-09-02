@@ -749,8 +749,9 @@ const PULSE_RATIO = 0.46
  */
 function drawPulse(ctx: CanvasRenderingContext2D, pulse: PlanPulseView, theme: PlanTheme): void {
   const rect = getCellRect(pulse.x, pulse.y, theme)
+  const color = pulse.isGain ? theme.spring : theme.hazard
   ctx.save()
-  ctx.strokeStyle = pulse.isGain ? theme.spring : theme.hazard
+  ctx.strokeStyle = color
   ctx.lineWidth = theme.lineWidth * 2
   ctx.beginPath()
   ctx.arc(
@@ -761,6 +762,21 @@ function drawPulse(ctx: CanvasRenderingContext2D, pulse: PlanPulseView, theme: P
     Math.PI * 2,
   )
   ctx.stroke()
+  // **수치를 병기한다** (P1). 고리만으로는 얼마나였는지 모른다 — 맞은 자리에 -7,
+  // 회복에 +12. 수치 없는 스킬(방어·소환)은 이름표가 그 자리를 맡는다.
+  ctx.fillStyle = color
+  ctx.font = `${String(theme.labelSize)}px ${theme.font}`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'bottom'
+  const centerX = rect.left + rect.size / 2
+  const top = rect.top - theme.lineWidth
+  if (pulse.delta !== null) {
+    const sign = pulse.delta > 0 ? '+' : ''
+    const suffix = pulse.label === '' ? '' : ` ${pulse.label}`
+    ctx.fillText(`${sign}${String(pulse.delta)}${suffix}`, centerX, top)
+  } else if (pulse.label !== '') {
+    ctx.fillText(pulse.label, centerX, top)
+  }
   ctx.restore()
 }
 

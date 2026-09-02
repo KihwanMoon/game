@@ -84,6 +84,13 @@ export interface PlanPulseView {
   readonly y: number
   /** 좋은 일(회복·방어)이면 참. 색이 갈린다 — verdigris 대 rust. */
   readonly isGain: boolean
+  /**
+   * 움직인 수치. **고리만으로는 얼마나였는지 모른다** — 조건문에 실측값을 병기하는
+   * 규율(P1) 그대로, 맞은 자리에 -7, 회복에 +12 를 적는다. 수치 없는 스킬은 null.
+   */
+  readonly delta: number | null
+  /** 무슨 스킬이었는지 두세 글자. 방어·소환처럼 수치가 없는 스킬은 이것만 남는다. */
+  readonly label: string
 }
 
 /** 도면 한 장. 순수 값이며 엔진을 참조하지 않는다. */
@@ -163,6 +170,22 @@ function collectHazards(engine: TickEngine, foresightTicks: number): readonly Pl
  * @param engine 돌고 있는 엔진. 읽기만 한다.
  * @returns 그릴 값 묶음.
  */
+/** 행동 id 에서 이펙트 이름표로. 여기 없는 행동은 수치만 적는다. */
+const PULSE_LABELS: ReadonlyMap<string, string> = new Map([
+  ['ATTACK', ''],
+  ['SKILL_1', '스킬1'],
+  ['SKILL_2', '스킬2'],
+  ['AREA_ATTACK', '광역'],
+  ['HEAL', '치유'],
+  ['GUARD_BRACE', '방어'],
+  ['SUMMON', '소환'],
+  ['USE_ITEM', '소모품'],
+  ['USE_POTION', '물약'],
+])
+
+/** 수치가 없어도 이펙트를 남기는 행동들 — 방어 태세·소환은 delta 가 없다. */
+const SILENT_PULSE_ACTIONS: ReadonlySet<string> = new Set(['GUARD_BRACE', 'SUMMON'])
+
 /** 이펙트가 화면에 머무는 틱 수. 한 틱은 배속에서 안 보인다 — 두 틱이면 눈이 따라온다. */
 const EFFECT_LINGER_TICKS = 2
 
@@ -241,13 +264,23 @@ export function buildPulsesFromLog(
   const spots = new Map(actors.map((actor) => [actor.entityId, actor]))
   const pulses: PlanPulseView[] = []
   for (const entry of listRecentEntries(engine)) {
-    if (entry.delta === null || entry.delta === 0) {
+    if (entry.phase !== PHASE_ACT || !entry.fired) {
       continue
     }
-    // 피해는 대상에게, 회복·방어는 행위자 자신에게 적힌다.
-    const spot = spots.get(entry.targetId ?? entry.entityId)
-    if (spot !== undefined) {
-      pulses.push({ x: spot.x, y: spot.y, isGain: entry.delta > 0 })
+    const action = entry.expr.split(' @')[0] ?? ''
+    const label = PULSE_LABELS.get(action) ?? ''
+    if (entry.delta !== null && entry.delta !== 0) {
+      // 피해는 대상에게, 회복·방어는 행위자 자신에게 적힌다.
+      const spot = spots.get(entry.targetId ?? entry.entityId)
+      if (spot !== undefined) {
+        pulses.push({ x: spot.x, y: spot.y, isGain: entry.delta > 0, delta: entry.delta, label })
+      }
+    } else if (SILENT_PULSE_ACTIONS.has(action)) {
+      // 방어 태세·소환은 수치가 없다 — 이름표라도 남겨야 「뭔가 했다」가 보인다.
+      const spot = spots.get(entry.entityId)
+      if (spot !== undefined) {
+        pulses.push({ x: spot.x, y: spot.y, isGain: true, delta: null, label })
+      }
     }
   }
   return pulses
