@@ -644,3 +644,13 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+
+/* **껍데기가 문서를 가두면 흐름의 아래가 없는 화면이 된다** (실제 피드백: 상한은
+   풀렸는데 스크롤이 안 된다). 앱 껍데기는 고정 프레임(100dvh · overflow hidden)이
+   원칙이지만 — 세로 전투는 문서 흐름이라, 그때만 껍데기도 함께 흐른다. */
+.app:has(.battle--portrait) {
+  height: auto;
+  min-height: 100dvh;
+  overflow: visible;
+}

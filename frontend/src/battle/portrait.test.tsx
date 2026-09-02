@@ -216,6 +216,12 @@ describe('상한이 아니라 흐름이다 (실제 피드백)', () => {
     expect(block).toContain('height: auto')
   })
 
+  it('★ 껍데기도 함께 흐른다 — 가두면 흐름의 아래가 없는 화면이 된다', () => {
+    const block = cutRule('.app:has(.battle--portrait)')
+    expect(block).toContain('height: auto')
+    expect(block).toContain('overflow: visible')
+  })
+
   it('★ 안에서 흐르는 곳은 시트 몸통 하나다 — 로그는 수백 줄이다', () => {
     const block = cutRule('.battle__sheet-body')
     expect(block).toContain('min-height: calc(var(--log-row-h) * 10)')
