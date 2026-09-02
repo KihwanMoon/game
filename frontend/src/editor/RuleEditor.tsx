@@ -30,6 +30,7 @@ import {
   addRule,
   addTerm,
   applyActionChoice,
+  applyParamChoice,
   applyLhsChoice,
   calculateTotalCpu,
   duplicateRule,
@@ -209,6 +210,9 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
     },
     changeAction: (ruleIndex: number, actionId: string) => {
       commit(applyActionChoice(ruleset, catalog, ruleIndex, actionId))
+    },
+    changeParam: (ruleIndex: number, actionParam: string) => {
+      commit(applyParamChoice(ruleset, catalog, ruleIndex, actionParam))
     },
     addTerm: (ruleIndex: number) => { commit(addTerm(ruleset, catalog, ruleIndex)) },
     removeTerm: (ruleIndex: number, termIndex: number) => {

@@ -467,9 +467,9 @@ describe('세로 배치의 상단 (층·틱은 헤더, 조작은 아래 줄)', (
     expect(css).toMatch(/\.battle--portrait \.battle__controls \{[\s\S]*?flex-basis: 100%/)
   })
 
-  it('★ 상단 행이 두 줄을 받는다 — 44px 로 고정하면 둘째 줄이 밖으로 나간다', () => {
+  it('★ 상단이 제 내용 높이를 온전히 갖는다 — 문서 흐름이라 격자 행 배정이 없다', () => {
     const block = /\.battle--portrait \{([\s\S]*?)\}/.exec(css)
-    expect(block?.[1] ?? '').toContain('auto var(--bar-speed)')
+    expect(block?.[1] ?? '').toContain('display: block')
   })
 
   it('★ 그래도 44px 아래로는 안 줄어든다 — 층·틱 한 줄은 늘 그 높이다', () => {

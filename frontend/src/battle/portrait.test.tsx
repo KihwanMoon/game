@@ -197,68 +197,29 @@ describe('세로 시트 — 탭과 카운트 (명세 A·D)', () => {
   })
 })
 
-describe('도면은 고정이고 스크롤되지 않는다', () => {
-  it('세로 도면 칸은 overflow 를 잠근다', () => {
-    const block = cutRule('.battle--portrait .battle__col--plan')
-    expect(block, '세로 도면 칸 규칙을 찾지 못했다').not.toBe('')
-    expect(block).toContain('overflow: hidden')
-    expect(block).toContain('padding: var(--plan-pad)')
-  })
-
-  it('도면은 시트 밖에 있다 — 시트가 바뀌어도 도면이 밀리지 않는다', () => {
-    const html = renderToStaticMarkup(<BattlePortrait {...buildProps()} />)
-    const plan = html.indexOf('battle__col--plan')
-    const sheet = html.indexOf('battle__sheet')
-    expect(plan).toBeGreaterThan(-1)
-    expect(sheet).toBeGreaterThan(plan)
-    // 시트 본문만 스크롤 영역이다.
-    expect(cutRule('.battle__sheet-body')).toContain('overflow-y: auto')
-  })
-
-  it('여섯 줄 골격을 토큰으로 짠다 — 상단과 도면만 내용 높이다', () => {
-    // **상단이 `auto` 인 것은 두 줄을 받기 위해서다** — 층·틱은 헤더로 고정하고 조작을
-    // 아래 줄로 내린다. 치수는 여전히 토큰이 정한다: `min-height: var(--bar-top)` 이
-    // **도면이 줄어들고 시트가 바닥을 지킨다.** 도면이 제 크기를 고집하면 시트가 0 까지
-    // 짜부라지고, 바닥만 깔면 화면이 통째로 스크롤된다 — 스크롤되는 화면은 보이는
-    // 화면이 아니다(실제 피드백 두 번).
+describe('상한이 아니라 흐름이다 (실제 피드백)', () => {
+  it('★ 세로는 문서 흐름이다 — 격자 상한이 구역을 자르거나 짜부라뜨리면 안 된다', () => {
     const block = cutRule('.battle--portrait')
-    expect(block).toContain('minmax(calc(var(--plan-cell) * 5), calc(var(--plan-cell) * 8))')
-    expect(block).toContain('1fr var(--bar-bottom)')
-    expect(block).toContain('var(--bar-bottom)')
+    expect(block).toContain('display: block')
+    expect(block).toContain('min-height: 100dvh')
+    expect(block).not.toContain('grid-template-rows')
   })
 
-  it('도면 캔버스가 남는 높이에 맞춰 줄어든다 — 인라인 크기는 max-* 가 이긴다', () => {
+  it('★ 상단·캔버스에 max-height 가 없다 — 잘린 문구는 「짧은 문구」로 읽힌다', () => {
+    expect(cutRule('.battle--portrait .battle__bar--top')).not.toContain('max-height')
+    expect(cutRule('.battle--portrait .battle__frame canvas')).not.toContain('max-height')
+  })
+
+  it('★ 캔버스는 가로만 화면에 맞춘다 — 세로는 자연 높이다', () => {
     const block = cutRule('.battle--portrait .battle__frame canvas')
     expect(block).toContain('max-width: 100%')
-    expect(block).toContain('max-height: 100%')
-    expect(block).toContain('object-fit: contain')
+    expect(block).toContain('height: auto')
   })
 
-  it('상단 묶음에 상한이 있다 — 층 정산 문구가 길어도 도면·시트를 못 밀어낸다', () => {
-    const block = cutRule('.battle--portrait .battle__bar--top')
-    expect(block).toContain('max-height: calc(var(--bar-top) * 2)')
+  it('★ 안에서 흐르는 곳은 시트 몸통 하나다 — 로그는 수백 줄이다', () => {
+    const block = cutRule('.battle__sheet-body')
+    expect(block).toContain('min-height: calc(var(--log-row-h) * 10)')
     expect(block).toContain('overflow-y: auto')
-  })
-
-  it('시트 몸통에 바닥이 있다 — 탭·CPU·발이 규칙표·로그를 0 으로 밀 수 없다', () => {
-    expect(cutRule('.battle__sheet-body')).toContain('min-height: calc(var(--log-row-h) * 4)')
-  })
-
-  it('하단 바는 줄을 바꾼다 — 폭을 쥐어짜면 글자가 세로로 부서진다', () => {
-    const block = cutRule('.battle__bar--bottom')
-    expect(block).toContain('flex-wrap: wrap')
-  })
-
-  it('높이 100% 가 사슬로 이어진다 — 끊기면 축소가 아니라 절단이 된다', () => {
-    expect(cutRule('.battle--portrait .battle__frame')).toContain('height: 100%')
-  })
-
-  it('시트가 바닥을 지켜도 모자라면 화면이 통째로 흐른다 — 닿을 수 없는 줄을 안 만든다', () => {
-    expect(cutRule('.battle--portrait')).toContain('overflow-y: auto')
-  })
-
-  it('주소창이 접히는 모바일을 따라간다 — 100vh 는 접히기 전 높이다', () => {
-    expect(cutRule('.battle')).toContain('100dvh')
   })
 })
 

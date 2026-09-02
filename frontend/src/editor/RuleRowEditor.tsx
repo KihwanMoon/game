@@ -28,6 +28,7 @@ export interface RuleRowActions {
   readonly changeLhs: (ruleIndex: number, termIndex: number, blockId: string) => void
   readonly changeTerm: (ruleIndex: number, termIndex: number, patch: Partial<Term>) => void
   readonly changeAction: (ruleIndex: number, actionId: string) => void
+  readonly changeParam: (ruleIndex: number, actionParam: string) => void
   readonly addTerm: (ruleIndex: number) => void
   readonly removeTerm: (ruleIndex: number, termIndex: number) => void
   readonly addRule: (index: number) => void
@@ -211,7 +212,7 @@ export function RuleRowEditor(props: RuleRowEditorProps): React.JSX.Element {
             value={rule.actionParam ?? action.param.values[0] ?? ''}
             aria-label={`규칙 ${String(rule.priority)} ${action.param.name}`}
             onChange={(event) => {
-              actions.update(index, { actionParam: event.target.value })
+              actions.changeParam(index, event.target.value)
             }}
           >
             {action.param.values.map((value) => (
@@ -231,7 +232,7 @@ export function RuleRowEditor(props: RuleRowEditorProps): React.JSX.Element {
               aria-label={`규칙 ${String(rule.priority)} 대상`}
               onChange={(event) => { actions.update(index, { target: event.target.value }) }}
             >
-              {listSelectorsForAction(catalog, action).map((item) => (
+              {listSelectorsForAction(catalog, action, rule.actionParam).map((item) => (
                 <option value={item.blockId} key={item.blockId}>
                   {item.labelKo}
                 </option>

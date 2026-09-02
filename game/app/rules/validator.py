@@ -4,6 +4,9 @@
 오해한다. 무엇이 왜 거부됐는지 문자열로 돌려주는 이유가 그것이다 (P1).
 """
 
+import json
+
+from game.config import SKILLS_PATH
 from game.schemas.blocks import ActionBlock, BlockCatalog, PerceptionBlock
 from game.schemas.ruleset import (
     COMPARISONS,
@@ -102,6 +105,51 @@ def _check_terms(rule: Rule, catalog: BlockCatalog, unlocked: frozenset[str]) ->
     return problems
 
 
+# 스킬별 대상 진영. **행동이 아니라 스킬이 정한다** — USE_SKILL 은 한 겹의 지시일
+# 뿐이라, 행동의 진영(enemy)으로 검사하면 치유·방어 태세를 자신에게 거는 규칙이
+# 문법에서 반려된다(실제로 그랬다). 정본은 skills.json 이다.
+_SKILL_FACTIONS: dict[str, str] | None = None
+
+
+def _read_skill_faction(skill_id: str | None) -> str | None:
+    """스킬의 대상 진영을 정본에서 읽는다.
+
+    Args:
+        skill_id: 스킬 id. 모르면 None.
+
+    Returns:
+        진영. 스킬이 안 정하면 None.
+    """
+    global _SKILL_FACTIONS  # noqa: PLW0603 — 정본 파일 캐시. 요청마다 읽으면 I/O 가 검증 시간을 먹는다.
+    if _SKILL_FACTIONS is None:
+        raw = json.loads(SKILLS_PATH.read_text(encoding="utf-8"))
+        _SKILL_FACTIONS = {
+            str(item["id"]): str(item.get("target_faction") or "") for item in raw["skills"]
+        }
+    return _SKILL_FACTIONS.get(skill_id or "") or None
+
+
+def resolve_wanted_faction(rule: Rule, action: ActionBlock) -> str | None:
+    """이 규칙이 요구하는 셀렉터 진영.
+
+    `self` 진영 스킬(방어 태세)은 아군 셀렉터를 받는다 — SELF 가 아군 진영이고, 실행은
+    어차피 대상을 안 본다.
+
+    Args:
+        rule: 검사할 규칙.
+        action: 그 규칙의 행동 블록.
+
+    Returns:
+        요구 진영. 없으면 None.
+    """
+    wanted = action.target_faction
+    if rule.action == "USE_SKILL":
+        skill_faction = _read_skill_faction(rule.action_param)
+        if skill_faction is not None:
+            wanted = "ally" if skill_faction == "self" else skill_faction
+    return wanted
+
+
 def _check_target_faction(
     rule: Rule, action: ActionBlock, catalog: BlockCatalog, label: str
 ) -> list[str]:
@@ -120,11 +168,12 @@ def _check_target_faction(
         위반 메시지 목록.
     """
     selector = catalog.selectors.get(rule.target or "")
-    if selector is None or action.target_faction is None:
+    wanted = resolve_wanted_faction(rule, action)
+    if selector is None or wanted is None:
         return []
-    if selector.faction == action.target_faction:
+    if selector.faction == wanted:
         return []
-    want = FACTION_LABELS.get(action.target_faction, action.target_faction)
+    want = FACTION_LABELS.get(wanted, wanted)
     got = FACTION_LABELS.get(selector.faction, selector.faction)
     return [f"{label} {rule.action} 는 {want} 셀렉터가 필요하다 — {rule.target} 는 {got} 셀렉터다"]
 

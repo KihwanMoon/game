@@ -54,6 +54,39 @@ const FACTION_LABELS: ReadonlyMap<string, string> = new Map([
  * @param param 항의 인자. 고르지 않았으면 null.
  * @returns 메시지에 넣을 표기.
  */
+import skillsRaw from '@resources/balance/skills.json'
+
+// 스킬별 대상 진영. 행동이 아니라 **스킬이 정한다** — 파이썬 검증기와 같은 정본을 읽는다.
+const SKILL_FACTIONS: ReadonlyMap<string, string> = new Map(
+  ((skillsRaw as { skills: { id: string; target_faction?: string }[] }).skills ?? []).map(
+    (skill) => [skill.id, skill.target_faction ?? ''],
+  ),
+)
+
+/**
+ * 이 규칙이 요구하는 셀렉터 진영.
+ *
+ * `self` 진영 스킬(방어 태세)은 아군 셀렉터를 받는다 — SELF 가 아군 진영이고, 실행은
+ * 어차피 대상을 안 본다.
+ *
+ * @param rule 검사할 규칙.
+ * @param action 행동 블록.
+ * @returns 요구 진영. 없으면 null.
+ */
+export function resolveWantedFaction(
+  rule: { action: string; actionParam: string | null },
+  action: { targetFaction: string | null },
+): string | null {
+  let wanted = action.targetFaction
+  if (rule.action === 'USE_SKILL') {
+    const skillFaction = SKILL_FACTIONS.get(rule.actionParam ?? '') ?? ''
+    if (skillFaction !== '') {
+      wanted = skillFaction === 'self' ? 'ally' : skillFaction
+    }
+  }
+  return wanted
+}
+
 function formatMissingParam(param: string | null): string {
   return param ?? 'None'
 }
@@ -184,13 +217,14 @@ function checkTargetFaction(
   label: string,
 ): string[] {
   const selector = catalog.selectors.get(rule.target ?? '')
-  if (selector === undefined || action.targetFaction === null) {
+  const wanted = resolveWantedFaction(rule, action)
+  if (selector === undefined || wanted === null) {
     return []
   }
-  if (selector.faction === action.targetFaction) {
+  if (selector.faction === wanted) {
     return []
   }
-  const want = FACTION_LABELS.get(action.targetFaction) ?? action.targetFaction
+  const want = FACTION_LABELS.get(wanted) ?? wanted
   const got = FACTION_LABELS.get(selector.faction) ?? selector.faction
   return [`${label} ${rule.action} 는 ${want} 셀렉터가 필요하다 — ${rule.target} 는 ${got} 셀렉터다`]
 }

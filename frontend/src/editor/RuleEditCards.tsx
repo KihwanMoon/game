@@ -334,7 +334,7 @@ export function ActionCard(props: ActionCardProps): React.JSX.Element {
               label: formatParamLabel(value),
             }))}
             onChange={(actionParam) => {
-              actions.update(index, { actionParam })
+              actions.changeParam(index, actionParam)
             }}
           />
         )}
@@ -342,7 +342,7 @@ export function ActionCard(props: ActionCardProps): React.JSX.Element {
           <EditField
             label={`${label} 대상`}
             value={rule.target ?? ''}
-            options={listSelectorsForAction(catalog, action).map((item) => ({
+            options={listSelectorsForAction(catalog, action, rule.actionParam).map((item) => ({
               value: item.blockId,
               label: item.labelKo,
             }))}

@@ -18,6 +18,7 @@ import type {
   SelectorBlock,
   StatBlock,
 } from '../core/schemas'
+import { resolveWantedFaction } from '../core/rules/validator'
 
 /** 카테고리 하나로 묶인 블록들. 팔레트가 이 단위로 접히고 펼쳐진다. */
 export interface BlockGroup<BlockT> {
@@ -128,8 +129,16 @@ export function listSelectors(catalog: BlockCatalog): readonly SelectorBlock[] {
 export function listSelectorsForAction(
   catalog: BlockCatalog,
   action: ActionBlock | undefined,
+  actionParam: string | null = null,
 ): readonly SelectorBlock[] {
-  const wanted = action?.targetFaction
+  // **진영은 스킬이 정한다.** USE_SKILL 을 행동의 진영(enemy)으로 거르면 치유를
+  // 자신·아군에게 거는 규칙을 지을 방법이 없다 — 검증기와 같은 셈이다.
+  const wanted =
+    action === undefined
+      ? undefined
+      : resolveWantedFaction({ action: action.blockId, actionParam }, {
+          targetFaction: action.targetFaction,
+        })
   if (wanted === undefined || wanted === null) {
     return listSelectors(catalog)
   }

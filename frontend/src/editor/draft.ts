@@ -375,8 +375,9 @@ function pickSelectorForAction(
   catalog: BlockCatalog,
   action: ActionBlock,
   current: string | null,
+  actionParam: string | null = null,
 ): string {
-  const allowed = listSelectorsForAction(catalog, action)
+  const allowed = listSelectorsForAction(catalog, action, actionParam)
   const kept = allowed.find((item) => item.blockId === current)
   return kept?.blockId ?? allowed[0]?.blockId ?? DEFAULT_SELECTOR_ID
 }
@@ -401,10 +402,45 @@ export function applyActionChoice(
   if (rule === undefined || action === undefined) {
     return ruleset
   }
+  const actionParam = pickActionParam(action, rule.actionParam)
   return updateRule(ruleset, ruleIndex, {
     action: actionId,
-    target: action.targeted ? pickSelectorForAction(catalog, action, rule.target) : null,
-    actionParam: pickActionParam(action, rule.actionParam),
+    target: action.targeted
+      ? pickSelectorForAction(catalog, action, rule.target, actionParam)
+      : null,
+    actionParam,
+  })
+}
+
+/**
+ * 행동 인자를 바꾸고, 그 인자에서 못 쓰는 대상이면 함께 바꾼다.
+ *
+ * **진영은 스킬이 정한다.** 치유(아군)에서 스킬 1(적)로 바꾸면 SELF 대상이 그대로
+ * 남아 검증에서 반려된다 — 인자를 바꾼 사람은 대상을 안 바꿨으므로, 조용한 반려 대신
+ * 유효한 첫 후보로 갈아 끼운다.
+ *
+ * @param ruleset 지금 규칙표.
+ * @param catalog 블록 카탈로그.
+ * @param ruleIndex 바꿀 규칙 자리.
+ * @param actionParam 새 인자.
+ * @returns 새 규칙표.
+ */
+export function applyParamChoice(
+  ruleset: RuleSet,
+  catalog: BlockCatalog,
+  ruleIndex: number,
+  actionParam: string,
+): RuleSet {
+  const rule = ruleset.rules[ruleIndex]
+  const action = rule === undefined ? undefined : catalog.actions.get(rule.action)
+  if (rule === undefined || action === undefined) {
+    return ruleset
+  }
+  return updateRule(ruleset, ruleIndex, {
+    actionParam,
+    target: action.targeted
+      ? pickSelectorForAction(catalog, action, rule.target, actionParam)
+      : null,
   })
 }
 
