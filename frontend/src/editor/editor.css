@@ -1999,3 +1999,121 @@
 .term__field--param {
   min-width: var(--sp-16);
 }
+
+/* ── 도면 격자 (장비 6칸 + 가방 20칸) ─────────────────────────────────────
+   칸은 상태만 그린다. 조작은 고른 칸의 상세 한 곳에 모인다 — 예전에는 행마다 모든
+   버튼이 펴져 있어 좁은 화면에서 행 하나가 서너 줄로 꺾였다. */
+.invg {
+  display: grid;
+  gap: var(--sp-1);
+  margin-block-end: var(--sp-2);
+}
+
+/* 장비는 3열 2행 — 슬롯 순서(주무기·보조·머리 / 갑옷·신발·장갑)가 줄을 맞춘다. */
+.invg--equip {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* 가방은 5열 4행. */
+.invg--bag {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.invg__cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  align-items: center;
+  justify-content: center;
+  /* 탭 최소 높이. 칸이 곧 버튼이다. */
+  min-height: var(--btn-tap-h);
+  padding: var(--sp-1);
+  border: var(--border);
+  background: var(--surface-panel);
+  color: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  cursor: pointer;
+}
+
+.invg__cell:hover {
+  background: var(--surface-hover);
+}
+
+/* 고른 칸. 황동은 예산이 있으므로 명도와 굵은 괘선으로 가른다. */
+.invg__cell--picked {
+  border-color: var(--line-strong);
+  outline: var(--bw) solid var(--line-strong);
+  background: var(--surface-raised);
+}
+
+/* 양손무기가 막은 자리 — 「불가」와 같은 해칭 뜻이다. */
+.invg__cell--sealed {
+  color: var(--text-dim);
+  background: var(--surface-base);
+}
+
+.invg__code {
+  position: absolute;
+  top: var(--sp-0);
+  left: var(--sp-1);
+  color: var(--text-dim);
+  font-size: var(--fs-label);
+}
+
+.invg__empty {
+  color: var(--text-dim);
+}
+
+.invg__count {
+  position: absolute;
+  right: var(--sp-1);
+  bottom: var(--sp-0);
+  color: var(--text-dim);
+  font-size: var(--fs-label);
+}
+
+.invg__mark {
+  color: var(--text-dim);
+}
+
+.invg__marks {
+  position: absolute;
+  top: var(--sp-0);
+  right: var(--sp-1);
+  color: var(--text-danger);
+  font-size: var(--fs-label);
+}
+
+/* ── 고른 칸의 상세 ── */
+.invd {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border: var(--border);
+  background: var(--surface-raised);
+}
+
+.invd__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+.invd__reqs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.invd__price {
+  width: calc(var(--sp-12) * 2);
+  padding: var(--sp-1) var(--sp-2);
+  border: var(--border);
+  background: var(--surface-panel);
+  color: var(--text-body);
+  font-family: var(--font-data);
+}

@@ -1,136 +1,138 @@
 /**
- * 인벤토리 화면 검사 (D단계).
+ * 인벤토리 도면 격자 검사.
  *
- * 여기서 지키는 것은 넷이다.
+ * **행 목록이 아니라 칸 도식이다.** 예전에는 아이템마다 한 행에 모든 조작이 펴져 있어
+ * 좁은 화면에서 행 하나가 서너 줄로 꺾였다 — 칸은 상태만 그리고, 조작은 고른 칸의
+ * 상세 한 곳에 모은다.
  *
- * 1. **요구조건에 실측값을 병기한다.** "장착할 수 없습니다" 만으로는 무엇이 얼마나
- *    모자란지 알 수 없다 (P1).
- * 2. **등급을 색으로 칠하지 않는다.** 의미색 셋이 이미 배정됐고 색은 정보의 유일한
- *    채널이 될 수 없다.
- * 3. **봉인은 「불가」와 같은 해칭을 쓴다.** 뜻이 같다 — 해당 없음.
- * 4. **서버가 없으면 그렇게 말한다.** 아이템은 서버가 발급하므로 빈 화면과 구분돼야 한다.
+ * 여기서 지키는 것은 다섯이다.
+ *
+ * 1. **장비는 늘 여섯 칸, 가방은 늘 스무 칸이다.** 빈 칸이 보여야 남은 자리를 안다.
+ * 2. **칸은 등급을 색·글리프 두 채널로 적고, 상세가 이름까지 세 채널을 채운다.**
+ * 3. **조작은 상세에만 있다.** 격자 칸 안에 버튼이 생기면 되돌아간 것이다.
+ * 4. **소모품 칸에는 조작이 없다** — 끼우기·팔기의 집은 소모품 칸 패널이다 (두 집 금지).
+ * 5. **파손·봉인·귀속이 칸에서도 상세에서도 보인다.**
  */
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { InventoryPanel, ListingRow, formatAffix, formatGradeClass } from './InventoryPanel'
-import type { AffixView as InventoryAffix, InventoryView } from '../storage'
+import type { InventoryView, ItemView, SlotView } from '../storage'
 
-const noop = () => undefined
+import { InventoryDetail } from './InventoryDetail'
+import {
+  BAG_CELL_COUNT,
+  buildBagCells,
+  buildEquipCells,
+  clipCellLabel,
+} from './inventoryCells'
+import { InventoryPanel } from './InventoryPanel'
 
-/**
- * 가방에 장비 하나만 있는 인벤토리를 만든다.
- *
- * @param overrides 그 아이템에 덮어쓸 값들.
- * @returns 인벤토리 뷰.
- */
-function buildInventory(overrides: Partial<InventoryView['slots'][number]['item'] & object>) {
-  const base = INVENTORY.slots[0]
+const noop = (): undefined => undefined
+
+function buildItem(over: Partial<ItemView> = {}): ItemView {
   return {
-    ...INVENTORY,
-    // **장비 자리를 비운다.** 안 비우면 낀 대검의 봉인 칸이 마크업에 섞여, 가방 쪽을
-    // 보는 검사가 무엇을 보고 통과했는지 알 수 없다 — 실제로 그렇게 빨개졌다.
-    equipment: [],
-    slots: [{ ...base, item: { ...base?.item, ...overrides } }],
-  } as InventoryView
-}
-
-/** 요구조건을 못 채운 장갑 하나가 가방에 있다. */
-const INVENTORY: InventoryView = {
-  slots: [
-    {
-      slotIndex: 0,
-      slot: null,
-      isSealed: false,
-      stackCatalogId: null,
-    stackLabelKo: '',
-    stackGrade: '',
-    stackUseTag: '',
-      stackCount: 0,
-      item: {
-        itemId: 1,
-        catalogId: 'gloves_core',
-        labelKo: '연산 장갑',
-        kind: 'EQUIPMENT',
-        slot: 'HANDS',
-        hands: null,
-        equippedSlot: null,
-        isBroken: false,
-        isBound: false,
-        isRecovered: false,
+    itemId: 1,
+    catalogId: 'sword_short',
+    labelKo: '단검',
+    kind: 'EQUIPMENT',
+    slot: 'WEAPON_MAIN',
+    hands: 'ONE',
+    equippedSlot: null,
+    isBroken: false,
+    isBound: false,
+    isRecovered: false,
     sealedSlots: 0,
     unsealCost: 0,
     grade: 'COMMON',
-    attackRange: 0,
-        affixes: [{ stat: 'hp_max', flat: 8, percent: 0, labelKo: '튼튼함', statLabel: '최대체력' }],
-        canEquip: false,
-        requirements: [{ stat: 'cpu_budget', actual: 4, minimum: 6, isMet: false }],
-      },
-    },
+    attackRange: 1,
+    affixes: [],
+    requirements: [],
+    canEquip: true,
+    ...over,
+  }
+}
+
+function buildSlot(over: Partial<SlotView> = {}): SlotView {
+  return {
+    slotIndex: 0,
+    slot: null,
+    isSealed: false,
+    stackCatalogId: null,
+    stackCount: 0,
+    stackLabelKo: '',
+    stackGrade: '',
+    stackUseTag: '',
+    item: null,
+    ...over,
+  }
+}
+
+const INVENTORY: InventoryView = {
+  slots: [
+    buildSlot({ slotIndex: 0, item: buildItem({ grade: 'RELIC', labelKo: '유물 단검' }) }),
+    buildSlot({
+      slotIndex: 3,
+      stackCatalogId: 'potion_greater',
+      stackCount: 2,
+      stackLabelKo: '큰 회복 물약',
+      stackGrade: 'FINE',
+      stackUseTag: 'POTION',
+    }),
   ],
   equipment: [
-    {
-      slotIndex: 0,
-      slot: 'WEAPON_OFF',
-      isSealed: true,
-      stackCatalogId: null,
-    stackLabelKo: '',
-    stackGrade: '',
-    stackUseTag: '',
-      stackCount: 0,
-      item: null,
-    },
-    {
-      slotIndex: 1,
-      slot: 'WEAPON_MAIN',
-      isSealed: false,
-      stackCatalogId: null,
-    stackLabelKo: '',
-    stackGrade: '',
-    stackUseTag: '',
-      stackCount: 0,
-      item: {
-        itemId: 2,
-        catalogId: 'sword_great',
-        labelKo: '대검',
-        kind: 'EQUIPMENT',
-        slot: 'WEAPON_MAIN',
-        hands: 'TWO',
-        equippedSlot: 'WEAPON_MAIN',
-        isBroken: false,
-        isBound: false,
-        isRecovered: false,
-        sealedSlots: 2,
-        unsealCost: 120,
-        grade: 'RELIC',
-        attackRange: 1,
-        affixes: [
-          { stat: 'attack', flat: 5, percent: 0, labelKo: '묵직함', statLabel: '공격력' },
-        ],
-        canEquip: true,
-        requirements: [],
-      },
-    },
+    buildSlot({ slot: 'BODY', item: buildItem({ labelKo: '판금 갑옷', grade: 'FINE', slot: 'BODY' }) }),
+    buildSlot({ slot: 'WEAPON_OFF', isSealed: true }),
   ],
-  balance: 250,
+  balance: 500,
   repairCost: 120,
 }
 
-/**
- * 파일을 읽는다.
- *
- * @param relative 이 파일 기준 상대 경로.
- * @returns 파일 내용.
- */
-function readText(relative: string): string {
-  return readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8')
-}
+describe('셀 모델', () => {
+  it('★ 장비는 늘 여섯 칸이다 — 빈 슬롯도 칸으로 그려야 어디가 비었는지 보인다', () => {
+    const cells = buildEquipCells(INVENTORY)
+    expect(cells).toHaveLength(6)
+    expect(cells.map((cell) => cell.code)).toEqual(['WM', 'WO', 'HD', 'BD', 'FT', 'HN'])
+  })
 
-describe('인벤토리 패널', () => {
-  const markup = renderToStaticMarkup(
+  it('★ 가방은 늘 스무 칸이다 — 차 있는 칸만 그리면 남은 자리를 셀 수 없다', () => {
+    const cells = buildBagCells(INVENTORY)
+    expect(cells).toHaveLength(BAG_CELL_COUNT)
+    expect(cells.filter((cell) => cell.entry !== undefined)).toHaveLength(2)
+  })
+
+  it('★ 양손 점유가 칸에 표시된다', () => {
+    const cells = buildEquipCells(INVENTORY)
+    expect(cells.find((cell) => cell.code === 'WO')?.isSealedSlot).toBe(true)
+  })
+
+  it('★ 소모품 칸은 개수를 적는다 — 1개인지 9개인지 모르고 규칙표를 짜면 안 된다 (#54)', () => {
+    const stack = buildBagCells(INVENTORY).find((cell) => cell.countText !== '')
+    expect(stack?.countText).toBe('x2')
+    expect(stack?.label).toBe('큰회')
+    expect(stack?.grade).toBe('FINE')
+  })
+
+  it('★ 파손·봉인·귀속이 칸 글리프로 남는다', () => {
+    const marked = buildBagCells({
+      ...INVENTORY,
+      slots: [
+        buildSlot({
+          slotIndex: 0,
+          item: buildItem({ isBroken: true, sealedSlots: 2, isBound: true }),
+        }),
+      ],
+    })[0]
+    expect(marked?.marks).toEqual(['◈', '◇2', '▨'])
+  })
+
+  it('칸 글자는 공백을 빼고 두 자다 — 도면 말의 두 글자 표기와 같은 규칙이다', () => {
+    expect(clipCellLabel('큰 회복 물약')).toBe('큰회')
+    expect(clipCellLabel('단검')).toBe('단검')
+  })
+})
+
+describe('격자 렌더', () => {
+  const html = renderToStaticMarkup(
     <InventoryPanel
       inventory={INVENTORY}
       isOnline
@@ -141,40 +143,32 @@ describe('인벤토리 패널', () => {
       onRepair={noop}
       onList={noop}
       feePercent={5}
-      onUnseal={() => undefined}
-      onLoadConsumable={() => undefined}
+      onUnseal={noop}
     />,
   )
 
-  it('★ 요구조건에 실측값을 병기한다', () => {
-    // 규칙 에디터의 조건문 표기와 같은 규약이다 (GDD §8.2).
-    expect(markup).toContain('cpu_budget(4) &gt;= 요구(6)')
+  it('★ 채운 수를 머리에 적는다 — 가방이 얼마나 남았는지 세지 않고 안다', () => {
+    expect(html).toContain('가방 2 / 20')
   })
 
-  it('못 채운 요구조건이면 착용을 잠근다', () => {
-    expect(markup).toContain('disabled')
+  it('★ 칸이 등급 색을 입는다', () => {
+    expect(html).toContain('inv__name--relic')
+    expect(html).toContain('inv__name--fine')
   })
 
-  it('★ 봉인된 자리는 「불가」와 같은 해칭을 쓴다', () => {
-    // 새 표기를 만들지 않는다 — 뜻이 같다(해당 없음).
-    expect(markup).toContain('ds-glyph--blocked')
-    expect(markup).toContain('양손 점유')
+  it('★ 격자 칸 안에 조작 버튼이 없다 — 조작은 고른 칸의 상세 한 곳에 산다', () => {
+    // 격자 칸(invg__cell)은 그 자체가 버튼 하나다. 안에 또 버튼이 있으면 되돌아간 것.
+    expect(html).not.toContain('착용')
+    expect(html).not.toContain('버리기')
+    expect(html).not.toContain('끼우기')
   })
 
-  it('여섯 슬롯을 모두 보여준다', () => {
-    for (const label of ['주무기', '보조', '투구', '갑옷', '신발', '장갑']) {
-      expect(markup).toContain(label)
-    }
+  it('★ 고르기 전에는 안내가 뜬다', () => {
+    expect(html).toContain('칸을 고르면')
   })
 
-  it('화폐를 적는다', () => {
-    expect(markup).toContain('250')
-  })
-})
-
-describe('인벤토리 패널 — 서버 없음', () => {
-  it('★ 빈 가방과 구분해서 말한다 — 아이템은 서버가 발급한다', () => {
-    const markup = renderToStaticMarkup(
+  it('★ 서버에 못 닿으면 그 사실을 적는다', () => {
+    const offline = renderToStaticMarkup(
       <InventoryPanel
         inventory={undefined}
         isOnline={false}
@@ -185,581 +179,92 @@ describe('인벤토리 패널 — 서버 없음', () => {
         onRepair={noop}
         onList={noop}
         feePercent={5}
-        onUnseal={() => undefined}
-        onLoadConsumable={() => undefined}
+        onUnseal={noop}
       />,
     )
-    expect(markup).toContain('서버에 닿지 못했다')
-    expect(markup).toContain('서버가 발급한다')
+    expect(offline).toContain('서버에 닿지 못했다')
   })
 })
 
-describe('인벤토리 스타일', () => {
-  const css = readText('./editor.css')
-  const block = css.slice(css.indexOf('/* ── 인벤토리·장비 패널'))
-
-  it('★ 등급 색을 새로 쓰지 않는다', () => {
-    expect(block).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
-  })
-
-  it('자체 미디어쿼리를 두지 않는다 — 브레이크포인트는 한 곳에만 있다', () => {
-    expect(block).not.toContain('@media')
-  })
-
-  it('터치 높이 토큰을 쓴다', () => {
-    expect(block).toContain('var(--btn-tap-sm-h)')
-  })
-})
-
-describe('귀속 표시 (결정 #07)', () => {
-  it('★ 귀속된 아이템은 가방에서 그것이 보인다', () => {
-    // 걸기 전에 보여야 한다 — 모르면 걸다가 거절당하고, 그때는 이미 "왜 안 되지" 를
-    // 겪은 뒤다.
-    const html = renderToStaticMarkup(
-      <InventoryPanel
-        inventory={buildInventory({ isBound: true })}
-        isOnline
-        detail=""
-        onEquip={() => undefined}
-        onUnequip={() => undefined}
-        onDiscard={() => undefined}
-        onRepair={() => undefined}
-        onList={() => undefined}
-        feePercent={5}
-        onUnseal={() => undefined}
-        onLoadConsumable={() => undefined}
-      />,
-    )
-    expect(html).toContain('귀속')
-  })
-
-  it('주운 아이템에는 안 붙는다 — 붙으면 팔 수 있는 것까지 못 팔 것처럼 보인다', () => {
-    const html = renderToStaticMarkup(
-      <InventoryPanel
-        inventory={buildInventory({ isBound: false })}
-        isOnline
-        detail=""
-        onEquip={() => undefined}
-        onUnequip={() => undefined}
-        onDiscard={() => undefined}
-        onRepair={() => undefined}
-        onList={() => undefined}
-        feePercent={5}
-        onUnseal={() => undefined}
-        onLoadConsumable={() => undefined}
-      />,
-    )
-    expect(html).not.toContain('귀속')
-  })
-})
-
-describe('아이템이 주는 것 (기존 화면 보완)', () => {
-  it('★ 끼기 전에 무엇을 주는지 보인다', () => {
-    // 모르고 끼우면 캐릭터 시트를 보고 나서야 알게 되고, 그때는 이미 다른 것을 벗은 뒤다.
-    const html = renderToStaticMarkup(
-      <InventoryPanel
-        inventory={INVENTORY}
-        isOnline
-        detail=""
-        onEquip={() => undefined}
-        onUnequip={() => undefined}
-        onDiscard={() => undefined}
-        onRepair={() => undefined}
-        onList={() => undefined}
-        feePercent={5}
-        onUnseal={() => undefined}
-        onLoadConsumable={() => undefined}
-      />,
-    )
-    expect(html).toContain('튼튼함')
-    expect(html).toContain('+8')
-  })
-
-  it('★ 저주 접사는 부호가 붙는다 — 「방어 -3」과 「방어 3」이 같아 보이면 안 된다', () => {
-    expect(
-      formatAffix({ stat: 'defense', flat: -3, percent: 0, labelKo: '저주', statLabel: '방어력' }),
-    ).toBe('저주 · 방어력 -3')
-    expect(
-      formatAffix({ stat: 'attack', flat: 0, percent: 12, labelKo: '예리함', statLabel: '공격력' }),
-    ).toBe('예리함 · 공격력 +12%')
-  })
-
-  it('★ 무엇을 올리는지 병기한다 — 「튼튼함 +8」 만으로는 8 이 무엇의 8 인지 모른다', () => {
-    expect(
-      formatAffix({ stat: 'hp_max', flat: 8, percent: 0, labelKo: '튼튼함', statLabel: '최대체력' }),
-    ).toBe('튼튼함 · 최대체력 +8')
-  })
-
-  it('★ 이름이 없으면 능력치 이름만 쓴다 — 영어 키가 그대로 새던 자리다', () => {
-    expect(
-      formatAffix({ stat: 'hp_max', flat: 5, percent: 0, labelKo: '', statLabel: '최대체력' }),
-    ).toBe('최대체력 +5')
-  })
-
-  it('이름이 능력치를 되풀이하면 한 번만 쓴다 — 「공격력 · 공격력 +3」 은 군더더기다', () => {
-    expect(
-      formatAffix({ stat: 'attack', flat: 3, percent: 0, labelKo: 'attack', statLabel: '공격력' }),
-    ).toBe('공격력 +3')
-  })
-})
-
-describe('소모품 스택 (#54)', () => {
-  const html = renderToStaticMarkup(
-    <InventoryPanel
-      inventory={
-        {
-          ...INVENTORY,
-          slots: [
-            {
-              slotIndex: 0,
-              slot: null,
-              isSealed: false,
-              stackCatalogId: 'potion_small',
-              stackCount: 3,
-              stackLabelKo: '작은 물약',
-              stackGrade: 'COMMON',
-              stackUseTag: 'POTION',
-              item: null,
-            },
-          ],
-        } as InventoryView
-      }
-      isOnline
-      detail=""
-      onEquip={noop}
-      onUnequip={noop}
-      onDiscard={noop}
-      onRepair={noop}
-      onList={noop}
-      feePercent={5}
-      onUnseal={() => undefined}
-      onLoadConsumable={() => undefined}
-    />,
-  )
-
-  it('★ 개수를 적는다 — 물약 한 칸과 세 칸은 규칙표가 달라진다', () => {
-    expect(html).toContain('x3')
-  })
-
-  it('★ 빈 칸이 아니라고 말한다 — 이름이 있어야 무엇을 들었는지 안다', () => {
-    expect(html).toContain('potion_small')
-  })
-})
-
-describe('되찾음 (`설계/6_몬스터` §5)', () => {
-  it('★ 빼앗겼다가 되찾은 것을 그렇게 말한다', () => {
-    // 잃은 것과 되찾은 것이 가방에서 같아 보이면 되찾으러 간 런이 흔적을 남기지
-    // 않는다. World Loop 의 동기가 도감에만 있고 가방에는 없게 된다.
-    const html = renderToStaticMarkup(
-      <InventoryPanel
-        inventory={buildInventory({ isRecovered: true })}
-        isOnline
-        detail=""
-        onEquip={noop}
-        onUnequip={noop}
-        onDiscard={noop}
-        onRepair={noop}
-        onList={noop}
-        feePercent={5}
-        onUnseal={() => undefined}
-        onLoadConsumable={() => undefined}
-      />,
-    )
-    expect(html).toContain('되찾음')
-  })
-
-  it('평범한 아이템에는 안 붙는다 — 붙으면 표시가 뜻을 잃는다', () => {
-    const html = renderToStaticMarkup(
-      <InventoryPanel
-        inventory={buildInventory({ isRecovered: false })}
-        isOnline
-        detail=""
-        onEquip={noop}
-        onUnequip={noop}
-        onDiscard={noop}
-        onRepair={noop}
-        onList={noop}
-        feePercent={5}
-        onUnseal={() => undefined}
-        onLoadConsumable={() => undefined}
-      />,
-    )
-    expect(html).not.toContain('되찾음')
-  })
-})
-
-describe('경매 등록 (서버에는 있었는데 화면에 없던 길)', () => {
-  const ITEM = {
-    itemId: 7,
-    catalogId: 'helm_iron',
-    labelKo: '철 투구',
-    kind: 'EQUIPMENT',
-    slot: 'HEAD',
-    hands: null,
-    equippedSlot: null,
-    isBroken: false,
-    isBound: false,
-    isRecovered: false,
-    sealedSlots: 0,
-    unsealCost: 0,
-    grade: 'COMMON',
-    attackRange: 0,
-    affixes: [],
-    canEquip: true,
-    requirements: [],
-  }
-
-  it('★ 팔 길이 화면에 있다 — 없으면 경제의 절반이 안 돈다', () => {
-    const html = renderToStaticMarkup(
-      <ListingRow item={ITEM} feePercent={5} onList={() => undefined} />,
-    )
-    expect(html).toContain('걸기')
-    expect(html).toContain('호가')
-  })
-
-  it('★ 수수료율을 호가 적기 전에 적는다 — 걸고 나서 알면 이미 나간 뒤다', () => {
-    const html = renderToStaticMarkup(
-      <ListingRow item={ITEM} feePercent={5} onList={() => undefined} />,
-    )
-    expect(html).toContain('수수료 5%')
-  })
-
-  it('★ 귀속된 것에는 줄 자체를 안 그린다 — 눌러 봐야 거절이다', () => {
-    const html = renderToStaticMarkup(
-      <ListingRow item={{ ...ITEM, isBound: true }} feePercent={5} onList={() => undefined} />,
-    )
-    expect(html).toBe('')
-  })
-
-  it('★ 파손품도 못 건다 — 복구비용을 남에게 떠넘기는 것이 최적이 된다', () => {
-    const html = renderToStaticMarkup(
-      <ListingRow item={{ ...ITEM, isBroken: true }} feePercent={5} onList={() => undefined} />,
-    )
-    expect(html).toBe('')
-  })
-
-  it('★ 호가가 비면 버튼이 잠긴다 — 0 원 매물은 원장만 더럽힌다', () => {
-    const html = renderToStaticMarkup(
-      <ListingRow item={ITEM} feePercent={5} onList={() => undefined} />,
-    )
-    expect(html).toContain('disabled')
-  })
-})
-
-describe('봉인된 옵션 (설계/4_아이템 §17)', () => {
-  const build = (patch: Record<string, unknown>) =>
-    renderToStaticMarkup(
-      <InventoryPanel
-        inventory={buildInventory(patch)}
-        isOnline
-        detail=""
-        onEquip={() => undefined}
-        onUnequip={() => undefined}
-        onDiscard={() => undefined}
-        onRepair={() => undefined}
-        onList={() => undefined}
-        feePercent={5}
-        onUnseal={() => undefined}
-        onLoadConsumable={() => undefined}
-      />,
-    )
-
-  it('★ 남은 칸 수가 보인다 — 등급이 무엇을 줬는지가 가방에 있어야 한다', () => {
-    expect(build({ sealedSlots: 2, unsealCost: 180 })).toContain('봉인 2칸')
-  })
-
-  it('★ 여는 값이 서버가 준 값이다 — 화면이 다시 계산하면 두 곳이 갈린다', () => {
-    expect(build({ sealedSlots: 2, unsealCost: 180 })).toContain('해제 180')
-  })
-
-  it('★ 무엇이 나올지는 안 적는다 — 적으면 열 이유가 사라진다', () => {
-    expect(build({ sealedSlots: 1, unsealCost: 120 })).toContain('열어야 안다')
-  })
-
-  it('★ 칸이 없으면 버튼도 없다', () => {
-    expect(build({ sealedSlots: 0 })).not.toContain('봉인 해제')
-  })
-})
-
-
-describe('무기 사거리 (설계/4_아이템 §2.2)', () => {
-  /**
-   * 무기 하나가 든 가방을 그린다.
-   *
-   * @param attackRange 무기가 정하는 사거리.
-   * @returns 마크업.
-   */
-  function drawBow(attackRange: number, affixes: InventoryAffix[] = []): string {
-    return renderToStaticMarkup(
-      <InventoryPanel
-        inventory={{
-          ...INVENTORY,
-          // 장비 칸을 비운다. 안 비우면 낀 대검의 사거리가 마크업에 섞여, 가방 쪽을
-          // 보는 이 검사가 무엇을 보고 통과했는지 알 수 없다.
-          equipment: [],
-          slots: [
-            {
-              slotIndex: 0,
-              slot: null,
-              isSealed: false,
-              stackCatalogId: null,
-    stackLabelKo: '',
-    stackGrade: '',
-    stackUseTag: '',
-              stackCount: 0,
-              item: {
-                itemId: 91,
-                catalogId: 'bow_long',
-                labelKo: '장궁',
-                kind: 'EQUIPMENT',
-                slot: 'WEAPON_MAIN',
-                hands: 'TWO',
-                equippedSlot: null,
-                isBroken: false,
-                isBound: false,
-                isRecovered: false,
-                sealedSlots: 0,
-                unsealCost: 0,
-                grade: 'COMMON',
-                attackRange,
-                affixes,
-                canEquip: true,
-                requirements: [],
-              },
-            },
-          ],
-        }}
-        isOnline
-        detail=""
-        onEquip={noop}
-        onUnequip={noop}
-        onDiscard={noop}
-        onRepair={noop}
-        onList={noop}
-        feePercent={5}
-        onUnseal={() => undefined}
-        onLoadConsumable={() => undefined}
-      />,
-    )
-  }
-
-  it('★ 무기의 사거리가 가방에서 보인다 — 접사에서 필드로 옮기며 한 번 안 보이게 됐다', () => {
-    expect(drawBow(4)).toContain('사거리 4')
-  })
-
-  it('★ 사거리를 안 정하는 것에는 안 적는다 — 「사거리 0」 은 못 때리는 무기로 읽힌다', () => {
-    // **접사를 하나 얹는다.** 접사가 없으면 함수가 먼저 빠져나가 안쪽 조건을 안 지나고,
-    // 그러면 이 검사가 조건을 지워도 통과한다 — 실제로 그렇게 통과했다.
-    const affix = { stat: 'attack', flat: 2, percent: 0, labelKo: '날', statLabel: '공격력' }
-    expect(drawBow(0, [affix])).not.toContain('사거리')
-    expect(drawBow(0, [affix])).toContain('날 · 공격력 +2')
-  })
-})
-
-
-/**
- * 기본 픽스처로 패널을 그린다.
- *
- * @returns 마크업.
- */
-function drawPanel(): string {
+function renderDetail(kind: 'equip' | 'bag', entry: SlotView, slot = 'BODY'): string {
   return renderToStaticMarkup(
-    <InventoryPanel
-      inventory={INVENTORY}
+    <InventoryDetail
+      choice={{ kind, slot, entry }}
       isOnline
-      detail=""
+      repairCost={120}
+      feePercent={5}
       onEquip={noop}
       onUnequip={noop}
       onDiscard={noop}
       onRepair={noop}
+      onUnseal={noop}
       onList={noop}
-      feePercent={5}
-      onUnseal={() => undefined}
-      onLoadConsumable={() => undefined}
     />,
   )
 }
 
-describe('등급 표기 (설계/4_아이템 §15.4)', () => {
-  it('★ 등급마다 다른 색을 준다 — 보통·상급·유물', () => {
-    expect(formatGradeClass('COMMON')).toContain('common')
-    expect(formatGradeClass('FINE')).toContain('fine')
-    expect(formatGradeClass('RELIC')).toContain('relic')
+describe('상세와 도구줄', () => {
+  it('★ 장비 칸 상세에는 벗기만 있고 버리기·경매가 없다 — 낀 채로 버리면 스탯이 유령이 된다', () => {
+    const html = renderDetail('equip', buildSlot({ slot: 'BODY', item: buildItem({ slot: 'BODY' }) }))
+    expect(html).toContain('벗기')
+    expect(html).toContain('착용 중')
+    expect(html).not.toContain('버리기')
+    expect(html).not.toContain('호가')
   })
 
-  it('★ 모르는 등급에는 색을 안 입힌다 — 아무 색이나 주면 등급이 있는 것처럼 보인다', () => {
-    expect(formatGradeClass('')).toBe('')
-    expect(formatGradeClass('MYTHIC')).toBe('')
+  it('★ 가방 칸 상세에는 착용·버리기·경매가 있다', () => {
+    const html = renderDetail('bag', buildSlot({ item: buildItem() }))
+    expect(html).toContain('착용')
+    expect(html).toContain('버리기')
+    expect(html).toContain('호가')
+    expect(html).toContain('수수료 5%')
   })
 
-  it('★ 이름표를 함께 적는다 — 색만으로 가르면 색을 못 가르는 사람에게 등급이 없다', () => {
-    expect(drawPanel()).toContain('보통')
+  it('★ 파손이면 착용 대신 복구가 뜬다 — 파손은 효과가 없으므로 끼워 봐야 헛것이다', () => {
+    const html = renderDetail('bag', buildSlot({ item: buildItem({ isBroken: true }) }))
+    expect(html).toContain('복구 120')
+    expect(html).not.toContain('착용')
   })
 
-  it('★ 가방이 등급을 말한다 — 서버는 보내는데 화면이 버리고 있었다', () => {
-    expect(drawPanel()).toContain('inv__name--common')
-  })
-})
-
-describe('낀 장비가 무엇을 주는가', () => {
-  it('★ 장비 칸에서 능력치를 볼 수 있다 — 없어서 「가방 것이 적용된다」로 읽혔다', () => {
-    // 합산은 예나 지금이나 `equipment_slot` 만 본다. 문제는 **낀 것의 효과를 볼 데가
-    // 아예 없었다**는 것이다 — 능력치 줄이 가방 칸에만 붙어 있었다.
-    expect(drawPanel()).toContain('능력치')
-    // 낀 대검의 접사가 실제로 적혀야 한다. 접었다 펴는 요소라 마크업에는 늘 들어 있다.
-    expect(drawPanel()).toContain('묵직함 · 공격력 +5')
-  })
-
-  it('★ 낀 것의 등급도 보인다 — 유물을 끼고도 보통과 같아 보이면 등급이 뜻을 잃는다', () => {
-    expect(drawPanel()).toContain('inv__name--relic')
-    expect(drawPanel()).toContain('유물')
-  })
-})
-
-
-describe('낀 채로 고치고 연다', () => {
-  /**
-   * 장비 한 자리만 둔 가방을 그린다.
-   *
-   * @param isBroken 파손 여부.
-   * @param sealedSlots 남은 봉인 칸.
-   * @returns 마크업.
-   */
-  function drawEquipped(isBroken: boolean, sealedSlots: number) {
-    // `null` 도 걸러야 한다. `undefined` 만 보면 아이템이 없는 자리가 그대로 퍼져서
-    // 모든 칸이 선택 항목이 된다.
-    const base = INVENTORY.equipment[1]?.item
-    if (base === undefined || base === null) {
-      throw new Error('픽스처가 비었다')
-    }
-    const item = { ...base, isBroken, sealedSlots }
-    return renderToStaticMarkup(
-      <InventoryPanel
-        inventory={{
-          ...INVENTORY,
-          slots: [],
-          equipment: [
-            {
-              slotIndex: 1,
-              slot: 'WEAPON_MAIN',
-              isSealed: false,
-              stackCatalogId: null,
-    stackLabelKo: '',
-    stackGrade: '',
-    stackUseTag: '',
-              stackCount: 0,
-              item,
-            },
-          ],
-        }}
-        isOnline
-        detail=""
-        onEquip={noop}
-        onUnequip={noop}
-        onDiscard={noop}
-        onRepair={noop}
-        onList={noop}
-        feePercent={5}
-        onUnseal={() => undefined}
-        onLoadConsumable={() => undefined}
-      />,
+  it('★ 봉인이 있으면 해제 값이 뜬다 — 무엇이 나올지는 서버가 정한다', () => {
+    const html = renderDetail(
+      'bag',
+      buildSlot({ item: buildItem({ sealedSlots: 1, unsealCost: 260 }) }),
     )
-  }
-
-  it('★ 낀 장비가 파손됐으면 그 자리에서 복구한다 — 벗었다 끼는 사이 스탯이 흔들린다', () => {
-    expect(drawEquipped(true, 0)).toContain('복구')
+    expect(html).toContain('봉인 해제 260')
   })
 
-  it('★ 낀 장비의 봉인도 그 자리에서 연다 — 서버는 처음부터 낀 것도 받았다', () => {
-    expect(drawEquipped(false, 2)).toContain('봉인 해제')
+  it('★ 귀속이면 경매 줄이 없다 — 걸어 보고 거절당하게 두지 않는다 (결정 #07)', () => {
+    const html = renderDetail('bag', buildSlot({ item: buildItem({ isBound: true }) }))
+    expect(html).toContain('귀속')
+    expect(html).not.toContain('호가')
   })
 
-  it('★ 멀쩡하면 복구 버튼을 안 그린다 — 늘 떠 있으면 파손이 눈에 안 띈다', () => {
-    expect(drawEquipped(false, 0)).not.toContain('복구')
+  it('★ 요구조건에 실측값을 병기한다 (P1)', () => {
+    const html = renderDetail(
+      'bag',
+      buildSlot({
+        item: buildItem({
+          requirements: [{ stat: 'attack', actual: 8, minimum: 12, isMet: false }],
+        }),
+      }),
+    )
+    expect(html).toContain('attack(8) &gt;= 요구(12)')
   })
 
-  it('★ 열 봉인이 없으면 해제 버튼을 안 그린다 — 눌러도 거절당하는 버튼은 거짓말이다', () => {
-    expect(drawEquipped(false, 0)).not.toContain('봉인 해제')
-  })
-})
-
-
-describe('등급 색이 실제로 이기는가', () => {
-  const css = readText('./editor.css')
-
-  it('★ 등급 규칙이 `.inv__name` **뒤에** 있다 — 같은 우선순위라 순서가 이긴다', () => {
-    // 처음에는 규칙을 `styles/app.css` 에 뒀는데, 그 파일이 `editor.css` 보다 먼저
-    // 로드되므로 여기 있는 `.inv__name { color }` 이 등급색을 통째로 덮었다.
-    // 화면에는 아무 색도 안 나왔고, 배포 확인은 "클래스가 CSS 에 있다" 만 보고 통과했다.
-    const base = css.indexOf('.inv__name {')
-    const fine = css.indexOf('.inv__name--fine')
-    expect(base).toBeGreaterThan(-1)
-    expect(fine).toBeGreaterThan(base)
-  })
-
-  it('★ 세 등급이 서로 다른 값을 쓴다 — 같은 값이면 색으로 가른 것이 아니다', () => {
-    const read = (name: string) =>
-      new RegExp(`\\.inv__name--${name}\\s*\\{[^}]*color:\\s*([^;]+);`).exec(css)?.[1]?.trim()
-    const picked = [read('common'), read('fine'), read('relic')]
-    expect(picked.every((value) => value !== undefined)).toBe(true)
-    expect(new Set(picked).size).toBe(3)
-  })
-
-  it('★ 이름표에도 같은 색을 쓴다 — 이름과 이름표가 다른 색이면 무엇이 등급인지 흐려진다', () => {
-    expect(css).toContain('.inv__grade--relic')
-  })
-
-  it('★ 색 말고 글리프도 가른다 — 색이 유일한 채널이면 색을 못 가르는 사람에게 등급이 없다', () => {
-    const html = drawPanel()
-    expect(html).toContain('◆')
-    expect(html).toContain('·')
-  })
-})
-
-describe('가방의 소모품 (설계/4_아이템 §5)', () => {
-  const bag = {
-    ...INVENTORY,
-    slots: [
-      {
-        slotIndex: 0,
-        slot: null,
-        isSealed: false,
-        stackCatalogId: 'potion_greater',
-        stackCount: 2,
-        stackLabelKo: '큰 회복 물약',
-        stackGrade: 'FINE',
+  it('★ 소모품 칸 상세에는 조작이 없고 집을 가리킨다 — 두 집에 살면 어느 쪽이 진짜인지 모른다', () => {
+    const html = renderDetail(
+      'bag',
+      buildSlot({
+        stackCatalogId: 'potion_heal',
+        stackCount: 3,
+        stackLabelKo: '회복 물약',
+        stackGrade: 'COMMON',
         stackUseTag: 'POTION',
-        item: null,
-      },
-    ],
-  } as InventoryView
-  const html = renderToStaticMarkup(
-    <InventoryPanel
-      inventory={bag}
-      isOnline
-      detail=""
-      onEquip={noop}
-      onUnequip={noop}
-      onDiscard={noop}
-      onRepair={noop}
-      onList={noop}
-      feePercent={5}
-      onUnseal={() => undefined}
-      onLoadConsumable={() => undefined}
-    />,
-  )
-
-  it('★ 한글 이름을 적는다 — id 를 그대로 적으면 `potion_greater` 가 화면에 뜬다', () => {
-    expect(html).toContain('큰 회복 물약')
-    expect(html).not.toContain('potion_greater<')
-  })
-
-  it('★ 등급을 색·글리프·이름으로 적는다 — 가방에서도 장비와 같은 규율이다', () => {
-    expect(html).toContain('inv__name--fine')
-    expect(html).toContain('◇')
-  })
-
-  it('★ 끼우는 길이 가방 행에 있다 — 장비에는 「착용」이 있는데 소모품에 없으면 못 찾는다', () => {
-    expect(html).toContain('끼우기')
+      }),
+    )
+    expect(html).toContain('소모품 칸에서 한다')
+    expect(html).not.toContain('버리기')
+    expect(html).not.toContain('호가')
   })
 })

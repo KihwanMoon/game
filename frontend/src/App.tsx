@@ -1565,9 +1565,6 @@ export function App(): React.JSX.Element {
                 onUnseal={(itemId) => {
                   applyItem('/item/unseal', { item_id: itemId })
                 }}
-                onLoadConsumable={(catalogId) => {
-                  loadConsumableStack(catalogId)
-                }}
                 onList={(itemId, price) => {
                   // **경매에 걸면 가방과 지갑이 함께 바뀐다.** 아이템이 빠지고 수수료가
                   // 나가므로 둘 다 다시 읽어야 화면이 그것을 안다.
@@ -1581,13 +1578,6 @@ export function App(): React.JSX.Element {
                 view={consumables}
                 isOnline={isOnline}
                 detail={consumableDetail}
-                onLoad={(useTag, slotIndex, catalogId) => {
-                  applyConsumable('/consumable/load', {
-                    use_tag: useTag,
-                    slot_index: slotIndex,
-                    catalog_id: catalogId,
-                  })
-                }}
                 onClear={(useTag, slotIndex) => {
                   applyConsumable('/consumable/clear', {
                     use_tag: useTag,
@@ -1602,6 +1592,9 @@ export function App(): React.JSX.Element {
                 }}
                 onSell={(catalogId) => {
                   applyConsumable('/consumable/sell', { catalog_id: catalogId, count: 1 })
+                }}
+                onLoadStock={(catalogId) => {
+                  loadConsumableStack(catalogId)
                 }}
               />
           </>

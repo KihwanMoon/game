@@ -102,7 +102,7 @@ describe('소모품 칸', () => {
         view={buildView()}
         isOnline
         detail=""
-        onLoad={() => undefined}
+        onLoadStock={() => undefined}
         onClear={() => undefined}
         onRefill={() => undefined}
         onSell={() => undefined}
@@ -119,7 +119,7 @@ describe('소모품 칸', () => {
         view={buildView()}
         isOnline
         detail=""
-        onLoad={() => undefined}
+        onLoadStock={() => undefined}
         onClear={() => undefined}
         onRefill={() => undefined}
         onSell={() => undefined}
@@ -136,7 +136,7 @@ describe('소모품 칸', () => {
         view={buildView({ isRunOpen: true })}
         isOnline
         detail=""
-        onLoad={() => undefined}
+        onLoadStock={() => undefined}
         onClear={() => undefined}
         onRefill={() => undefined}
         onSell={() => undefined}
@@ -153,7 +153,7 @@ describe('소모품 칸', () => {
         view={buildView()}
         isOnline
         detail="240 이 필요하다"
-        onLoad={() => undefined}
+        onLoadStock={() => undefined}
         onClear={() => undefined}
         onRefill={() => undefined}
         onSell={() => undefined}
@@ -168,7 +168,7 @@ describe('소모품 칸', () => {
         view={undefined}
         isOnline={false}
         detail=""
-        onLoad={() => undefined}
+        onLoadStock={() => undefined}
         onClear={() => undefined}
         onRefill={() => undefined}
         onSell={() => undefined}
@@ -183,7 +183,7 @@ describe('소모품 칸', () => {
         view={buildView()}
         isOnline
         detail=""
-        onLoad={() => undefined}
+        onLoadStock={() => undefined}
         onClear={() => undefined}
         onRefill={() => undefined}
         onSell={() => undefined}
@@ -208,7 +208,7 @@ describe('소모품 칸', () => {
         view={buildView({ slots: [spent], options: [] })}
         isOnline
         detail=""
-        onLoad={() => undefined}
+        onLoadStock={() => undefined}
         onClear={() => undefined}
         onRefill={() => undefined}
         onSell={() => undefined}
@@ -224,7 +224,7 @@ describe('소모품 칸', () => {
         view={buildView()}
         isOnline
         detail=""
-        onLoad={() => undefined}
+        onLoadStock={() => undefined}
         onClear={() => undefined}
         onRefill={() => undefined}
         onSell={() => undefined}

@@ -14,7 +14,7 @@
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import type { ConsumableOptionView, ConsumableSlotView, ConsumableView } from '../storage'
 
-import { formatGradeClass, renderGrade } from './InventoryPanel'
+import { formatGradeClass, renderGrade } from './gradeBadge'
 
 /** 칸 쓰임새의 한글 이름. */
 const TAG_LABELS: ReadonlyMap<string, string> = new Map([
@@ -26,14 +26,18 @@ export interface ConsumablePanelProps {
   readonly view: ConsumableView | undefined
   readonly isOnline: boolean
   readonly detail: string
-  /** 가방의 소모품을 칸에 끼운다. */
-  readonly onLoad: (useTag: string, slotIndex: number, catalogId: string) => void
   /** 칸을 비운다. 남은 충전은 안 돌아온다. */
   readonly onClear: (useTag: string, slotIndex: number) => void
   /** 돈을 내고 빈 충전을 채운다. */
   readonly onRefill: (useTag: string, slotIndex: number) => void
   /** 남는 것을 판다. */
   readonly onSell: (catalogId: string) => void
+  /**
+   * 보유 재고 하나를 **빈 칸부터** 끼운다.
+   *
+   * 가방 격자에서 소모품 조작을 뺐으므로(두 집 금지) 여기가 유일한 끼우기 자리다.
+   */
+  readonly onLoadStock: (catalogId: string) => void
 }
 
 /**
@@ -143,7 +147,6 @@ function renderSlot(slot: ConsumableSlotView, props: ConsumablePanelProps): Reac
   // 그 사실은 위의 안내가 말한다.
   const locked = !props.isOnline
   const refill = formatRefillLabel(slot)
-  const candidates = listSlotOptions(view?.options ?? [], slot.useTag)
   return (
     <li className="cns__row" key={`${slot.useTag}-${String(slot.slotIndex)}`}>
       <span className="cns__slot">{formatSlotName(slot)}</span>
@@ -179,21 +182,6 @@ function renderSlot(slot: ConsumableSlotView, props: ConsumablePanelProps): Reac
           {formatClearLabel(slot)}
         </Button>
       )}
-      {candidates.map((option) => (
-        <Button
-          key={option.catalogId}
-          size="sm"
-          variant="ghost"
-          disabled={locked}
-          onClick={() => {
-            props.onLoad(slot.useTag, slot.slotIndex, option.catalogId)
-          }}
-        >
-          {`${option.labelKo} 끼우기 (${String(option.charges)}충전${
-            option.affixes.length === 0 ? '' : ` · ${option.affixes.join(' · ')}`
-          } ×${String(option.stock)})`}
-        </Button>
-      ))}
     </li>
   )
 }
@@ -237,6 +225,18 @@ export function ConsumablePanel(props: ConsumablePanelProps): React.JSX.Element 
               {option.affixes.map((affix) => (
                 <ValueExpr key={affix} text={affix} size="sm" dim />
               ))}
+              <Button
+                size="sm"
+                variant="primary"
+                glyph="↧"
+                disabled={!props.isOnline}
+                title={`${String(option.charges)}충전 — 빈 칸부터 채운다`}
+                onClick={() => {
+                  props.onLoadStock(option.catalogId)
+                }}
+              >
+                끼우기
+              </Button>
               <Button
                 size="sm"
                 variant="ghost"
