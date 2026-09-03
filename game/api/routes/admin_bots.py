@@ -18,11 +18,20 @@ from pydantic import BaseModel, Field
 from game.api.deps import CurrentAdmin, get_pool
 from game.api.schemas import AdminBotOverviewResponse, AdminBotView, AdminDoppelView
 from game.app.bots.personas import MAX_RUNS_PER_HOUR, MIN_CADENCE_SEC
+from game.app.store.accounts import find_player_entity
 from game.app.store.admin import record_admin_action
 from game.app.store.bot_view import list_bot_rows, list_doppel_rows
 from game.app.store.bots import MAX_SKILL_PCT, MIN_SKILL_PCT, apply_bot_settings
+from game.app.store.gifts import apply_bot_gift
 
 router = APIRouter()
+
+
+class BotGiftRequest(BaseModel):
+    """내 아이템 하나를 봇에게 넘기는 요청."""
+
+    account_id: int = Field(ge=1)
+    item_id: int = Field(ge=1)
 
 
 class BotSettingsRequest(BaseModel):
@@ -101,5 +110,43 @@ def apply_admin_bot(request: BotSettingsRequest, account: CurrentAdmin) -> Admin
         f"#{request.account_id} {found.handle}",
         f"{found.ruleset_id}/{found.skill_pct}% → {request.ruleset_id}/{request.skill_pct}%"
         f" · {'돌림' if request.is_active else '멈춤'}",
+    )
+    return build_bot_overview(account)
+
+
+@router.post("/api/admin/bot/gift", response_model=AdminBotOverviewResponse)
+def create_bot_gift(request: BotGiftRequest, account: CurrentAdmin) -> AdminBotOverviewResponse:
+    """내 가방의 아이템 하나를 봇에게 넘긴다.
+
+    **한 방향이다.** 도착하는 순간 귀속되고(결정 #07), 귀속된 물건은 경매에 못 걸린다 —
+    한 번 봇에게 간 것은 어떤 경로로도 사람에게 돌아오지 않는다. 봇 → 사람이 열리면
+    그것은 봇 파밍이 최적 전략이 되는 길이다 (T11, 결정 #02).
+
+    낀 것은 못 준다. 가방에 있는 것만 넘어간다 — 장착 중인 물건을 빼내면 그 봇도 아니고
+    이 사람도 아닌 상태가 한 틱 생긴다.
+
+    Args:
+        request: 받을 봇과 넘길 아이템.
+        account: 관리자 계정. **주는 쪽은 이 계정 자신이다.**
+
+    Returns:
+        넘긴 뒤의 현황.
+
+    Raises:
+        HTTPException: 봇이 아니거나, 가진 물건이 아니거나, 봇의 가방이 찬 경우.
+    """
+    pool = get_pool()
+    try:
+        catalog_id = apply_bot_gift(
+            pool, request.item_id, find_player_entity(pool, account.account_id), request.account_id
+        )
+    except ValueError as error:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
+    record_admin_action(
+        pool,
+        account.account_id,
+        "bot.gift",
+        f"#{request.account_id}",
+        f"{catalog_id} (#{request.item_id}) 넘김 — 귀속됨",
     )
     return build_bot_overview(account)

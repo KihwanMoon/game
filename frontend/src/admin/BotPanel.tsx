@@ -77,6 +77,8 @@ export interface BotPanelProps {
     cadenceSec: number
     isActive: boolean
   }) => void
+  /** 내 가방의 아이템 하나를 이 봇에게 넘긴다. **한 방향이다** — 돌아오는 길은 없다. */
+  readonly onGift?: (accountId: number, itemId: number) => void
 }
 
 /**
@@ -166,6 +168,7 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
                 rulesetIds={props.rulesetIds}
                 minCadenceSec={props.overview?.minCadenceSec ?? 0}
                 onSave={props.onSave}
+                onGift={props.onGift}
               />
             )}
           </>
@@ -206,6 +209,7 @@ interface BotEditorProps {
   readonly rulesetIds: readonly string[]
   readonly minCadenceSec: number
   readonly onSave: BotPanelProps['onSave']
+  readonly onGift?: BotPanelProps['onGift']
 }
 
 /**
@@ -282,6 +286,37 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
         size="sm"
         dim
       />
+      {props.onGift === undefined ? null : (
+        <>
+          <label className="bots__label" htmlFor={`gift-${String(bot.accountId)}`}>
+            아이템 id
+          </label>
+          <input
+            id={`gift-${String(bot.accountId)}`}
+            className="bots__field bots__field--num"
+            type="number"
+            min={1}
+            placeholder="내 가방"
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            glyph="→"
+            title="내 가방의 그 아이템을 이 봇에게 넘긴다. 도착하면 귀속되어 되돌릴 수 없다"
+            onClick={() => {
+              const field = document.getElementById(`gift-${String(bot.accountId)}`)
+              const wanted = Number.parseInt((field as HTMLInputElement | null)?.value ?? '', 10)
+              if (Number.isFinite(wanted) && wanted > 0) {
+                props.onGift?.(bot.accountId, wanted)
+              }
+            }}
+          >
+            넘기기
+          </Button>
+          {/* **되돌릴 수 없다고 먼저 말한다.** 귀속은 눌러 본 뒤에 알면 늦다. */}
+          <ValueExpr text="넘기면 귀속된다 — 되돌릴 수 없다" size="sm" dim />
+        </>
+      )}
     </div>
   )
 }

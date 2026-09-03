@@ -18,7 +18,12 @@ import { readActivePack } from '../content/pack'
 import { BENCHMARK_RULESETS, G0_RULESETS } from '../core/resources'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import { BotPanel } from './BotPanel'
-import { applyBotSettings, readBotAdmin, type BotOverview } from '../storage/botAdmin'
+import {
+  applyBotGift,
+  applyBotSettings,
+  readBotAdmin,
+  type BotOverview,
+} from '../storage/botAdmin'
 import { CatalogAdminPanel, ContentAdminPanel } from '../editor'
 import {
   applyCatalogAdmin,
@@ -231,6 +236,16 @@ export function AdminScreen(): React.JSX.Element {
           <BotPanel
             overview={bots}
             rulesetIds={RULESET_IDS}
+            onGift={(accountId, itemId) => {
+              void applyBotGift(token, accountId, itemId).then((updated) => {
+                if (updated === undefined) {
+                  setDetail('넘기지 못했다 — 내 가방에 없거나, 받는 쪽이 봇이 아니다')
+                  return
+                }
+                setBots(updated)
+                setDetail('넘겼다 — 그 아이템은 귀속되어 돌아오지 않는다')
+              })
+            }}
             onSave={(next) => {
               void applyBotSettings(token, next).then((updated) => {
                 if (updated === undefined) {

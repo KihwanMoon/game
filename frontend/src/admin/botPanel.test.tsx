@@ -128,6 +128,25 @@ describe('봇 패널', () => {
     expect(shown).toContain('3층')
   })
 
+  it('★ 넘기기는 되돌릴 수 없다고 먼저 말한다 — 귀속은 눌러 본 뒤에 알면 늦다', () => {
+    const shown = renderToStaticMarkup(
+      <BotPanel
+        overview={OVERVIEW}
+        rulesetIds={[]}
+        onSave={() => undefined}
+        onGift={() => undefined}
+      />,
+    )
+    // 줄을 안 골랐으면 조작이 없다. 고른 뒤에 뜨는 것이 맞다.
+    expect(shown).not.toContain('넘기면 귀속된다')
+  })
+
+  it('★ 넘기는 길만 있고 되받는 길이 없다 — 한 방향이어야 성립한다', async () => {
+    const source = await import('../storage/botAdmin')
+    expect(Object.keys(source)).toContain('applyBotGift')
+    expect(Object.keys(source).join(' ')).not.toMatch(/takeFromBot|reclaim/)
+  })
+
   it('현황이 없어도 안 터진다 — 서버에 못 닿는 것은 흔한 일이다', () => {
     const shown = renderToStaticMarkup(
       <BotPanel overview={undefined} rulesetIds={[]} onSave={() => undefined} />,

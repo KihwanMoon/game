@@ -158,3 +158,31 @@ export async function applyBotSettings(
   }
   return parseBotOverview((await response.json()) as Parameters<typeof parseBotOverview>[0])
 }
+
+/**
+ * 내 가방의 아이템 하나를 봇에게 넘긴다.
+ *
+ * **한 방향이다.** 도착하는 순간 귀속되고(결정 #07), 귀속된 물건은 경매에 못 걸린다 —
+ * 한 번 봇에게 간 것은 어떤 경로로도 사람에게 돌아오지 않는다. 되받는 함수를 여기에
+ * 만들지 않는 이유가 그것이다.
+ *
+ * @param token 기기 토큰.
+ * @param accountId 받을 봇.
+ * @param itemId 넘길 아이템.
+ * @returns 넘긴 뒤의 현황. 실패하면 undefined.
+ */
+export async function applyBotGift(
+  token: string,
+  accountId: number,
+  itemId: number,
+): Promise<BotOverview | undefined> {
+  const response = await sendRequest('/admin/bot/gift', {
+    method: 'POST',
+    headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ account_id: accountId, item_id: itemId }),
+  })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  return parseBotOverview((await response.json()) as Parameters<typeof parseBotOverview>[0])
+}
