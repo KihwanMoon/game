@@ -28,6 +28,10 @@ NOT_COMPONENTS = frozenset({"ds.test", "gallery", "galleryMain", "index"})
 # `readonly name?: Type` 한 줄에서 이름만 집는다.
 PROP_PATTERN = re.compile(r"^\s*readonly\s+([A-Za-z0-9_]+)\??\s*:")
 
+# `['armed', '◆'],` 한 줄에서 이름과 글리프를 집는다. 저장소 쪽 표는 전부 이 꼴의
+# `ReadonlyMap` 리터럴이다 — 순회 순서가 상태에 안 들어가므로 Map 을 쓴다 (R5).
+GLYPH_PATTERN = re.compile(r"\[\s*'([A-Za-z0-9_]+)'\s*,\s*'([^']+)'\s*\]")
+
 
 def read_contract() -> dict:
     """기록해 둔 정본 계약을 읽는다.
@@ -155,3 +159,32 @@ def test_every_missing_component_carries_a_reason():
     """정본에 없는 것도 왜 필요한지 적어 둔다 — 올릴 때 그 문장이 명세가 된다."""
     for name, why in read_contract()["missing_in_design"].items():
         assert why.strip(), f"사유가 없다: {name}"
+
+
+def read_repo_glyphs(filename: str) -> dict[str, str]:
+    """저장소 컴포넌트가 그리는 글리프 표를 뽑는다.
+
+    이름이 `_GLYPHS` 로 끝나는 상수 하나만 본다. 같은 파일의 이름 표(`*_NAMES`)까지
+    집으면 글리프가 아닌 것이 섞인다.
+
+    Args:
+        filename: `frontend/src/ds` 아래 파일 이름.
+
+    Returns:
+        상태·종류에서 글리프로의 표.
+    """
+    text = (DS_DIR / filename).read_text(encoding="utf-8")
+    block = re.search(r"_GLYPHS: ReadonlyMap<[^>]+> = new Map\(\[(.*?)\]\)", text, re.S)
+    assert block is not None, f"글리프 표를 못 찾았다: {filename}"
+    return {found.group(1): found.group(2) for found in GLYPH_PATTERN.finditer(block.group(1))}
+
+
+def test_glyphs_match_the_design_system():
+    """★ **정본과 앱이 같은 기호를 그린다.**
+
+    프롭 검사가 못 보는 자리다. 이름이 같고 글리프만 갈리면 계약은 통과하는데 시트를
+    보는 사람과 앱을 쓰는 사람이 다른 기호를 본다 — 2026-09-03 에 그런 자리가 셋
+    있었고(발동 ✓/◆, 수단 없음 ⊘/⧅, 플레이어 ◆/◉), 셋 다 프롭 검사를 통과했다.
+    """
+    for filename, design_glyphs in read_contract()["glyphs"].items():
+        assert read_repo_glyphs(filename) == design_glyphs, f"글리프가 정본과 다르다: {filename}"
