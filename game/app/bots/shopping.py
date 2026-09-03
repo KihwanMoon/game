@@ -13,6 +13,15 @@
 **봇은 마지막 구매자다.** 열리자마자 채가면 열 봇이 초당 한 번 훑는 시장에서 사람은
 아무것도 못 산다 — 시장을 채우려던 것이 시장을 봇의 것으로 만든다. 그래서 **오래
 걸려 있던 것만** 산다: 사람이 먼저 볼 시간을 주고, 아무도 안 가져간 것에 값을 매긴다.
+
+**그것만으로는 부족했다.** 한 봇이 한 번에 하나만 사도, 열 봇이 시간당 다섯 판을 돌면
+기회가 시간당 쉰 번이다. 매물이 서른 건이면 아무 일도 아니지만 두 건이면 여섯 시간을
+넘긴 그 순간 사라진다 — 실제로 **경매 열림이 0 이었다.** 규칙 하나하나는 지켜졌는데
+총량이 시장을 비웠다.
+
+그래서 마지막 규율이 하나 더 있다: **봇은 넘치는 것만 산다.** 열린 매물이 몇 건
+아래로 내려가면 아무것도 안 산다. 봇은 유동성을 더하러 온 것이지 재고를 지우러 온
+것이 아니고, 「사람이 열어 봤을 때 아무것도 없다」가 이 시스템의 실패 모습이다.
 """
 
 from dataclasses import dataclass
@@ -28,6 +37,11 @@ FIRST_LOOK_MINUTES = 6 * 60
 
 # 잔액을 이만큼은 남긴다(%). 전부 털어 사면 다음에 더 좋은 것이 떠도 못 산다.
 KEEP_PERCENT = 20
+
+# 시장에 이만큼은 남겨 둔다. 열린 매물이 이 수 이하면 봇은 아무것도 안 산다 —
+# 봇은 **넘치는 것만** 사는 마지막 구매자다. 이 값이 0 이면 규칙 하나하나가 지켜져도
+# 시간당 쉰 번의 기회가 시장을 비운다(실측: 경매 열림 0).
+MIN_OPEN_LISTINGS = 3
 
 PERCENT_BASE = 100
 
@@ -76,6 +90,11 @@ def find_purchase(listings: tuple[Listing, ...], balance: int) -> int:
     유동성이 아니라 청소다. 값이 같으면 id 가 작은 쪽 — 순서가 실행마다 흔들리면 같은
     상황에서 다른 일이 벌어진다 (R5 와 같은 결의 규율).
 
+    **넘치는 것만 산다.** 열린 매물이 `MIN_OPEN_LISTINGS` 이하면 아무것도 안 산다 —
+    사람이 열어 봤을 때 아무것도 없는 것이 이 시스템의 실패 모습이고, 규칙 하나하나가
+    지켜져도 시간당 쉰 번의 기회가 시장을 그렇게 만든다. 세는 것은 **사람이 볼 수 있는
+    전량**이지 봇이 살 수 있는 것이 아니다: 봇이 못 사는 매물도 사람에게는 재고다.
+
     Args:
         listings: 지금 열려 있는 매물들.
         balance: 봇의 화폐.
@@ -83,9 +102,12 @@ def find_purchase(listings: tuple[Listing, ...], balance: int) -> int:
     Returns:
         살 매물 id. 살 것이 없으면 0.
     """
+    for_sale = [item for item in listings if not item.is_mine]
+    if len(for_sale) <= MIN_OPEN_LISTINGS:
+        return 0
     budget = resolve_budget(balance)
     affordable = [
-        item for item in listings if check_is_open_to_bots(item) and 0 < item.price <= budget
+        item for item in for_sale if check_is_open_to_bots(item) and 0 < item.price <= budget
     ]
     if not affordable:
         return 0
@@ -129,6 +151,36 @@ def list_equippable(bag: tuple[BagItem, ...], filled_slots: frozenset[str]) -> t
         picked[item.slot] = item
     # 자리 이름 순으로 낸다. 순서가 흔들리면 같은 가방에서 다른 일이 벌어진다.
     return tuple(picked[slot] for slot in sorted(picked))
+
+
+def list_repairable(bag: tuple[BagItem, ...], balance: int, cost: int) -> tuple[BagItem, ...]:
+    """고칠 수 있는 것들을 고른다.
+
+    **안 고치면 장비가 한 방향으로만 준다.** 사망 페널티가 장착 중인 것을 부수는데
+    (결정 #34), 부순 것을 아무도 안 고치면 봇의 장비는 죽을 때마다 줄기만 하고 절대
+    늘지 않는다 — 그러면 「끼는 것이 지키는 것이다」의 뒷부분(복구 가능)이 봇에게는
+    거짓이 되고, 몬스터가 뺏어 갈 것도 사라진다.
+
+    **낄 수 있는 것만 고친다.** 못 끼는 것을 고치면 화폐가 나가고 아무것도 안 바뀐다.
+
+    **낼 수 있는 만큼만 고른다.** 잔액을 넘겨 보내면 서버가 거절하고, 그것은 실패를
+    로그로 옮길 뿐이다. 자리 이름 순으로 세어 나가므로 같은 가방에서 같은 결과가 나온다.
+
+    Args:
+        bag: 가방과 장비를 통틀어 본 물건들.
+        balance: 봇의 화폐.
+        cost: 한 번 고치는 값.
+
+    Returns:
+        고칠 것들. 낼 수 있는 만큼에서 끊는다.
+    """
+    if cost <= 0:
+        return ()
+    broken = sorted(
+        (item for item in bag if item.is_broken and item.can_equip and item.slot),
+        key=lambda item: (item.slot, item.item_id),
+    )
+    return tuple(broken[: max(0, balance // cost)])
 
 
 def build_allocation(level: int, ruleset_id: str, spent: dict[str, int]) -> dict[str, int]:

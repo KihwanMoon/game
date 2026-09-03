@@ -18,6 +18,7 @@ from game.app.bots.shopping import (
     find_purchase,
     list_equippable,
     list_loadable,
+    list_repairable,
     parse_consumables,
 )
 from game.app.store.bots import BotProfile
@@ -97,6 +98,47 @@ def apply_bot_gear(api_url: str, bot: BotProfile) -> str:
         if done is not None:
             worn.append(item.slot)
     return "" if not worn else f"{'·'.join(worn)} 착용"
+
+
+def apply_bot_repair(api_url: str, bot: BotProfile) -> str:
+    """부서진 장비를 고친다.
+
+    **안 고치면 장비가 한 방향으로만 준다.** 사망 페널티가 장착 중인 것을 부수는데
+    (결정 #34), 아무도 안 고치면 봇의 장비는 죽을 때마다 줄기만 한다 — 「끼는 것이
+    지키는 것이다」의 뒷부분(복구 가능)이 봇에게는 거짓이 되고, 몬스터가 뺏어 갈 것도
+    사라진다.
+
+    **끼기 전에 고친다.** 부서진 것은 낄 수 없으므로, 순서가 반대면 고친 것이 이번
+    차례에는 안 끼이고 다음 판을 맨몸으로 돈다.
+
+    Args:
+        api_url: 백엔드 주소.
+        bot: 이 봇의 성격.
+
+    Returns:
+        무슨 일이 있었는지. 고칠 것이 없었으면 빈 문자열.
+    """
+    bag = send_request(f"{api_url}/api/inventory", bot.token, None)
+    if bag is None:
+        return ""
+    # 장착 중인 것도 함께 본다 — 사망 페널티가 부수는 것이 주로 그쪽이다.
+    rows = [row for row in bag.get("slots", []) if row.get("item")]
+    rows += [row for row in bag.get("equipment", []) if row.get("item")]
+    items = tuple(
+        BagItem(
+            item_id=int(row["item"]["item_id"]),
+            slot=str(row["item"].get("slot") or ""),
+            can_equip=bool(row["item"].get("can_equip")),
+            is_broken=bool(row["item"].get("is_broken")),
+        )
+        for row in rows
+    )
+    fixed = []
+    for item in list_repairable(items, int(bag.get("balance", 0)), int(bag.get("repair_cost", 0))):
+        done = send_request(f"{api_url}/api/item/repair", bot.token, {"item_id": item.item_id})
+        if done is not None:
+            fixed.append(str(item.item_id))
+    return "" if not fixed else f"#{'·#'.join(fixed)} 고쳤다"
 
 
 def apply_bot_supplies(api_url: str, bot: BotProfile) -> str:

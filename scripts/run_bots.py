@@ -50,6 +50,7 @@ from game.schemas.ruleset import load_rulesets, parse_ruleset
 from scripts.bot_chores import (
     apply_bot_gear,
     apply_bot_growth,
+    apply_bot_repair,
     apply_bot_shopping,
     apply_bot_supplies,
 )
@@ -199,6 +200,11 @@ def apply_bot_round(pool: ConnectionPool, api_url: str, parts: dict) -> int:
             bought = apply_bot_shopping(api_url, bot)
             if bought:
                 note = f"{note} · {bought}"
+            # **끼기 전에 고친다.** 부서진 것은 낄 수 없으므로, 순서가 반대면 고친
+            # 것이 이번 차례에는 안 끼이고 다음 판을 맨몸으로 돈다.
+            fixed = apply_bot_repair(api_url, bot)
+            if fixed:
+                note = f"{note} · {fixed}"
             # **산 뒤에 낀다.** 가방에 둔 채로 다음 판에 나가면 사망 페널티가 그것을 지운다.
             worn = apply_bot_gear(api_url, bot)
             if worn:
