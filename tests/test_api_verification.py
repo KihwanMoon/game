@@ -235,8 +235,16 @@ def test_a_loss_does_not_record_a_floor(client, token):
     assert [row["kind_id"] for row in meta["bestiary"]] != []
 
 
-def test_the_bestiary_counts_defeats_separately(client, token):
-    """★ "만났다" 와 "통했다" 를 가르는 것이 도감의 쓸모다."""
+def test_the_bestiary_counts_defeats_separately(client, token, monkeypatch):
+    """★ "만났다" 와 "통했다" 를 가르는 것이 도감의 쓸모다.
+
+    **세계의 세기를 빼놓는다.** 뺏은 장비가 몬스터에 붙게 된 뒤로는, 검사용 DB 에 쌓인
+    전리품 때문에 아무것도 안 죽는 상태가 될 수 있다 — 그러면 이 검사가 「도감이 처치를
+    안 센다」고 거짓 신고를 한다. 재는 것은 도감의 구분이지 그 판의 난이도가 아니다.
+    """
+    from game.api.routes import ticket as ticket_route
+
+    monkeypatch.setattr(ticket_route, "list_spoil_deltas", lambda *_a, **_k: {})
     submit_once(client, token, build_winning_ruleset())
     rows = read_meta(client, token)["bestiary"]
     assert any(row["defeats"] > 0 for row in rows)

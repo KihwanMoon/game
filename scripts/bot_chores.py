@@ -13,13 +13,12 @@
 
 from game.app.bots.shopping import (
     BagItem,
-    ConsumableOption,
-    ConsumableSlot,
     Listing,
     build_allocation,
     find_purchase,
     list_equippable,
     list_loadable,
+    parse_consumables,
 )
 from game.app.store.bots import BotProfile
 from scripts.bot_client import send_request
@@ -130,22 +129,7 @@ def apply_bot_supplies(api_url: str, bot: BotProfile) -> str:
     stock = send_request(f"{api_url}/api/consumables", bot.token, None)
     if stock is None:
         return ""
-    slots = tuple(
-        ConsumableSlot(
-            use_tag=str(row["use_tag"]),
-            slot_index=int(row["slot_index"]),
-            catalog_id=str(row.get("catalog_id") or ""),
-        )
-        for row in stock.get("slots", [])
-    )
-    options = tuple(
-        ConsumableOption(
-            catalog_id=str(row["catalog_id"]),
-            use_tag=str(row.get("use_tag") or ""),
-            count=int(row.get("count", 0)),
-        )
-        for row in stock.get("options", [])
-    )
+    slots, options = parse_consumables(stock)
     loaded = []
     for slot, catalog_id in list_loadable(slots, options):
         done = send_request(

@@ -229,3 +229,38 @@ def list_loadable(
         left[found] -= 1
         picked.append((slot, found))
     return tuple(picked)
+
+
+def parse_consumables(
+    payload: dict,
+) -> tuple[tuple[ConsumableSlot, ...], tuple[ConsumableOption, ...]]:
+    """`/api/consumables` 응답을 읽는다.
+
+    **이름을 여기 한 곳에만 적는다.** 러너 안에 인라인으로 두었더니 재고 열쇠를 `count`
+    로 적었는데 서버는 `stock` 이라, 후보가 늘 0개로 읽혀 아무것도 장전되지 않았다 —
+    조용히 아무 일도 안 일어나는 종류의 결함이다. 파싱이 함수로 나와 있어야 응답 모양을
+    그대로 넣어 보는 검사를 쓸 수 있다.
+
+    Args:
+        payload: 서버 응답.
+
+    Returns:
+        (칸들, 가방 후보들).
+    """
+    slots = tuple(
+        ConsumableSlot(
+            use_tag=str(row.get("use_tag", "")),
+            slot_index=int(row.get("slot_index", 0)),
+            catalog_id=str(row.get("catalog_id") or ""),
+        )
+        for row in payload.get("slots", [])
+    )
+    options = tuple(
+        ConsumableOption(
+            catalog_id=str(row.get("catalog_id", "")),
+            use_tag=str(row.get("use_tag") or ""),
+            count=int(row.get("stock", 0)),
+        )
+        for row in payload.get("options", [])
+    )
+    return slots, options

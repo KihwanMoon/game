@@ -15,6 +15,7 @@ from game.app.services.build_chain import build_descent
 from game.app.store.accounts import find_player_entity
 from game.app.store.monsters import build_monster_snapshot, save_snapshots
 from game.app.store.progress import read_reached_floor
+from game.app.store.spoils import list_spoil_deltas
 from game.app.store.tickets import CHAIN_LENGTH, create_ticket
 from game.schemas.monster_snapshot import build_snapshot_payload, sort_snapshots
 
@@ -84,7 +85,13 @@ def create_run_ticket(request: TicketRequest, account: CurrentAccount) -> Ticket
     balance_by_id = {kind["id"]: kind for kind in context.balance["enemies"]}
     snapshots = sort_snapshots(
         tuple(
-            build_monster_snapshot(record, balance_by_id[record.catalog_id])
+            # **전투로 가는 스냅샷만 뺏은 장비를 판다.** 도감은 「무엇을 들고 있다」만
+            # 말하면 되고, 그것 때문에 개체마다 조회를 한 번 더 돌 이유가 없다.
+            build_monster_snapshot(
+                record,
+                balance_by_id[record.catalog_id],
+                list_spoil_deltas(pool, record.record_id),
+            )
             for record in list_floor_range_monsters(pool, floor, ticket.room_ids, CHAIN_LENGTH)
             if record.catalog_id in balance_by_id
         )

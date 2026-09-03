@@ -23,6 +23,7 @@ from game.app.monsters.growth import (
     compute_level_xp,
 )
 from game.app.monsters.tiers import MonsterTier, compute_tier_stat
+from game.app.store.spoils import compute_spoiled_stat
 from game.schemas.monster_snapshot import (
     MonsterSnapshot,
     build_snapshot_payload,
@@ -208,7 +209,9 @@ def set_monster_level(pool: ConnectionPool, record_id: int, level: int) -> None:
         )
 
 
-def build_monster_snapshot(record: MonsterRecord, base: dict) -> MonsterSnapshot:
+def build_monster_snapshot(
+    record: MonsterRecord, base: dict, spoils: dict[str, tuple[int, int]] | None = None
+) -> MonsterSnapshot:
     """레코드와 카탈로그 값으로 스냅샷 한 줄을 만든다.
 
     **스탯을 직접 담는다.** 레벨과 곡선만 담고 클라이언트가 계산하게 하면, 곡선을 고치는
@@ -217,11 +220,14 @@ def build_monster_snapshot(record: MonsterRecord, base: dict) -> MonsterSnapshot
     Args:
         record: 몬스터 레코드.
         base: balance.json 의 그 적 절.
+        spoils: 뺏어 든 장비의 보정. 없으면 안 건다 — 도감처럼 전투가 아닌 자리는
+            굳이 조회하지 않는다.
 
     Returns:
         만들어진 스냅샷.
     """
     tier = MonsterTier(record.tier)
+    taken = spoils or {}
     growth = build_growth(record.level)
     # 엘리트 접사는 spawn_seed 에서 파생한다 — 조회할 때마다 굴리면 도감과 전투가 다른
     # 적을 보게 된다 (docs/설계/6_몬스터 §1).
@@ -233,18 +239,30 @@ def build_monster_snapshot(record: MonsterRecord, base: dict) -> MonsterSnapshot
         kind_id=record.catalog_id,
         tier=record.tier,
         level=record.level,
-        hp_max=compute_affixed_stat(
-            compute_tier_stat(int(base["hp_max"]), tier) * growth.stat_percent // PERCENT_BASE,
+        # **뺏은 장비를 맨 뒤에 건다.** 등급 → 레벨 → 정예 접사 → 뺏은 것 순이다.
+        # 가장 나중이어야 「그 장비 덕에 이만큼 더 단단하다」가 그대로 읽힌다.
+        hp_max=compute_spoiled_stat(
+            compute_affixed_stat(
+                compute_tier_stat(int(base["hp_max"]), tier) * growth.stat_percent // PERCENT_BASE,
+                "hp_max",
+                affixes,
+            ),
             "hp_max",
-            affixes,
+            taken,
         ),
-        attack=compute_affixed_stat(
-            compute_tier_stat(int(base["attack"]), tier) * growth.stat_percent // PERCENT_BASE,
+        attack=compute_spoiled_stat(
+            compute_affixed_stat(
+                compute_tier_stat(int(base["attack"]), tier) * growth.stat_percent // PERCENT_BASE,
+                "attack",
+                affixes,
+            ),
             "attack",
-            affixes,
+            taken,
         ),
-        defense=compute_affixed_stat(
-            compute_tier_stat(int(base["defense"]), tier), "defense", affixes
+        defense=compute_spoiled_stat(
+            compute_affixed_stat(compute_tier_stat(int(base["defense"]), tier), "defense", affixes),
+            "defense",
+            taken,
         ),
         rule_slots=int(base.get("rule_slots", 0)) + growth.bonus_rule_slots,
         cpu_budget=int(base.get("cpu_budget", 0)) + growth.bonus_cpu,
