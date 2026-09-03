@@ -172,3 +172,60 @@ def build_allocation(level: int, ruleset_id: str, spent: dict[str, int]) -> dict
     # 아무것도 안 버린다 — 닿지 않는 갈래를 방어라고 두면 검사할 수 없는 코드가 된다.
     # 둘 중 하나가 바뀌면 「남는 포인트가 없다」 검사가 그 자리에서 걸린다.
     return next_stats
+
+
+@dataclass(frozen=True)
+class ConsumableSlot:
+    """소모품 칸 하나."""
+
+    use_tag: str
+    slot_index: int
+    catalog_id: str
+
+
+@dataclass(frozen=True)
+class ConsumableOption:
+    """가방에 있는, 칸에 끼울 수 있는 소모품."""
+
+    catalog_id: str
+    use_tag: str
+    count: int
+
+
+def list_loadable(
+    slots: tuple[ConsumableSlot, ...], options: tuple[ConsumableOption, ...]
+) -> tuple[tuple[ConsumableSlot, str], ...]:
+    """빈 칸에 끼울 것을 짝지어 낸다.
+
+    **끼워야 보충이 돈다.** 정비의 REFILL 은 이미 끼운 것을 채우기만 한다 — 칸이 비어
+    있으면 채울 대상이 없어서 아무 일도 일어나지 않는다. 그래서 봇이 소모품을 주워도
+    가방에 쌓이기만 하고, 죽을 때 사망 페널티가 그것을 지운다.
+
+    쓰임새가 맞아야 들어간다. POTION 칸에 SCROLL 을 밀어 넣으면 서버가 거절하므로,
+    보내기 전에 여기서 거른다 — 거절당할 요청을 보내는 것은 실패를 로그로 옮길 뿐이다.
+
+    Args:
+        slots: 지금 칸 상태.
+        options: 가방에 있는 소모품들.
+
+    Returns:
+        (빈 칸, 끼울 소모품 id) 짝들. 한 후보를 여러 칸에 나눠 쓰지 않는다.
+    """
+    left = {item.catalog_id: item.count for item in options}
+    by_tag: dict[str, list[str]] = {}
+    for item in options:
+        by_tag.setdefault(item.use_tag, []).append(item.catalog_id)
+    picked: list[tuple[ConsumableSlot, str]] = []
+    # 칸 순서대로 채운다. 순서가 흔들리면 같은 가방에서 다른 몸이 나간다.
+    for slot in sorted(slots, key=lambda item: (item.use_tag, item.slot_index)):
+        if slot.catalog_id:
+            continue
+        found = next(
+            (item for item in sorted(by_tag.get(slot.use_tag, [])) if left.get(item, 0) > 0),
+            "",
+        )
+        if not found:
+            continue
+        left[found] -= 1
+        picked.append((slot, found))
+    return tuple(picked)

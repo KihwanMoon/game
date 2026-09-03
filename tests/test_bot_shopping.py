@@ -100,7 +100,10 @@ def test_the_runner_never_lists_anything():
     아이템의 문을 검증된 런 하나로 묶은 결정 #02 가 막으려던 것이다. 다음 사람이 편의를
     위해 한 줄 넣는 것을 여기서 막는다 — 주석은 안 읽히지만 검사는 걸린다.
     """
-    source = Path("scripts/run_bots.py").read_text(encoding="utf-8")
+    source = "".join(
+        Path(name).read_text(encoding="utf-8")
+        for name in ("scripts/run_bots.py", "scripts/bot_chores.py", "scripts/bot_client.py")
+    )
     assert "auction/list" not in source
     assert "auction/cancel" not in source
 
@@ -233,3 +236,108 @@ def test_the_allocation_passes_the_server_check():
     for level in range(1, 12):
         stats = build_allocation(level, "kite_summoner", {})
         assert check_allocation(stats, level) == "", (level, stats)
+
+
+def build_slot(use_tag, slot_index, catalog_id=""):
+    """소모품 칸 하나.
+
+    Args:
+        use_tag: 쓰임새.
+        slot_index: 칸 번호.
+        catalog_id: 끼워져 있는 것. 비었으면 빈 칸이다.
+
+    Returns:
+        칸.
+    """
+    from game.app.bots.shopping import ConsumableSlot
+
+    return ConsumableSlot(use_tag=use_tag, slot_index=slot_index, catalog_id=catalog_id)
+
+
+def build_option(catalog_id, use_tag, count=1):
+    """가방 속 소모품 하나.
+
+    Args:
+        catalog_id: 소모품 id.
+        use_tag: 쓰임새.
+        count: 가진 수.
+
+    Returns:
+        후보.
+    """
+    from game.app.bots.shopping import ConsumableOption
+
+    return ConsumableOption(catalog_id=catalog_id, use_tag=use_tag, count=count)
+
+
+def test_an_empty_slot_gets_loaded():
+    """★ **끼워야 보충이 돈다.**
+
+    정비의 REFILL 은 이미 끼운 것을 채우기만 한다 — 칸이 비어 있으면 채울 대상이 없어서
+    아무 일도 안 일어나고, 주운 소모품은 가방에 쌓이다가 죽을 때 사라진다.
+    """
+    from game.app.bots.shopping import list_loadable
+
+    picked = list_loadable((build_slot("POTION", 0),), (build_option("potion_heal", "POTION", 3),))
+    assert [(slot.use_tag, catalog_id) for slot, catalog_id in picked] == [
+        ("POTION", "potion_heal")
+    ]
+
+
+def test_a_loaded_slot_is_left_alone():
+    """이미 끼운 칸은 안 건드린다 — 갈아 끼우면 남은 충전이 버려진다."""
+    from game.app.bots.shopping import list_loadable
+
+    slots = (build_slot("POTION", 0, "potion_greater"),)
+    assert list_loadable(slots, (build_option("potion_heal", "POTION", 3),)) == ()
+
+
+def test_the_use_tag_must_match():
+    """★ POTION 칸에 SCROLL 을 밀어 넣지 않는다 — 서버가 거절할 요청을 안 보낸다."""
+    from game.app.bots.shopping import list_loadable
+
+    assert list_loadable((build_slot("POTION", 0),), (build_option("scroll_ward", "SCROLL"),)) == ()
+
+
+def test_one_stack_does_not_fill_two_slots():
+    """★ 하나뿐인 것을 두 칸에 나눠 쓰지 않는다 — 둘째 요청은 「가방에 없다」로 걸린다."""
+    from game.app.bots.shopping import list_loadable
+
+    picked = list_loadable(
+        (build_slot("POTION", 0), build_slot("POTION", 1)),
+        (build_option("potion_heal", "POTION", 1),),
+    )
+    assert len(picked) == 1
+
+
+def test_two_stacks_fill_two_slots():
+    """넉넉하면 다 채운다."""
+    from game.app.bots.shopping import list_loadable
+
+    picked = list_loadable(
+        (build_slot("POTION", 0), build_slot("POTION", 1)),
+        (build_option("potion_heal", "POTION", 2),),
+    )
+    assert len(picked) == 2
+
+
+def test_the_order_is_fixed_for_slots():
+    """순서가 흔들리면 같은 가방에서 다른 몸이 나간다."""
+    from game.app.bots.shopping import list_loadable
+
+    slots = (build_slot("SCROLL", 0), build_slot("POTION", 1), build_slot("POTION", 0))
+    picked = list_loadable(
+        slots, (build_option("potion_heal", "POTION", 2), build_option("scroll_ward", "SCROLL", 1))
+    )
+    assert [(slot.use_tag, slot.slot_index) for slot, _id in picked] == [
+        ("POTION", 0),
+        ("POTION", 1),
+        ("SCROLL", 0),
+    ]
+
+
+def test_an_empty_bag_loads_nothing():
+    """가방이 비면 아무것도 안 끼운다 — 지금 봇들이 그 상태다."""
+    from game.app.bots.shopping import list_loadable
+
+    assert list_loadable((build_slot("POTION", 0),), ()) == ()

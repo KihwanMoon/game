@@ -18,20 +18,11 @@ import json
 import os
 import sys
 import time
-import urllib.error
-import urllib.request
 
 from psycopg_pool import ConnectionPool
 
 from game.app.bots.personas import BOT_PERSONAS
 from game.app.bots.play import build_played_ruleset, list_persona_specs, resolve_claim_floors
-from game.app.bots.shopping import (
-    BagItem,
-    Listing,
-    build_allocation,
-    find_purchase,
-    list_equippable,
-)
 from game.app.services.run_battle import load_balance
 from game.app.services.run_chain import run_room_chain
 from game.app.store.bots import (
@@ -56,55 +47,19 @@ from game.schemas.loadout import parse_loadout
 from game.schemas.monster_snapshot import parse_snapshot, sort_snapshots
 from game.schemas.room import load_room_templates
 from game.schemas.ruleset import load_rulesets, parse_ruleset
-
-# 백엔드 주소. 컨테이너 안에서는 서비스 이름으로 닿는다.
-API_URL_ENV = "GAME_API_URL"
-DEFAULT_API_URL = "http://backend:8000"
-
-# 토큰 헤더. 브라우저가 쓰는 것과 같다.
-TOKEN_HEADER = "X-Game-Token"
+from scripts.bot_chores import (
+    apply_bot_gear,
+    apply_bot_growth,
+    apply_bot_shopping,
+    apply_bot_supplies,
+)
+from scripts.bot_client import API_URL_ENV, DEFAULT_API_URL, send_request
 
 # 루프가 깨어나는 간격(초). 상한(720초)보다 촘촘해야 차례를 놓치지 않는다.
 TICK_SEC = 30
 
-# HTTP 대기 상한(초). 재시뮬이 하강 전체를 도는 제출이 가장 오래 걸린다.
-TIMEOUT_SEC = 60
-
 # 봇이 출발하는 방. 서버가 여기서부터 하강을 짠다.
 START_ROOM_ID = "corridor"
-
-
-def send_request(url: str, token: str, payload: dict | None, method: str = "") -> dict | None:
-    """백엔드에 한 번 부른다.
-
-    Args:
-        url: 전체 주소.
-        token: 기기 토큰. 빈 문자열이면 헤더를 안 붙인다.
-        payload: 보낼 절. None 이면 GET 이다.
-        method: 강제할 메서드. 비우면 payload 유무로 정한다 — 배분은 PUT 이다.
-
-    Returns:
-        응답 절. 닿지 못했거나 4xx·5xx 면 None — **봇이 죽지 않는다**. 백엔드가 잠깐
-        내려가도 루프가 멈추면 안 되고, 다음 차례에 다시 시도하면 그만이다.
-
-        **사유는 반드시 적는다.** 삼키면 「티켓을 못 받았다」만 남아 무엇이 잘못됐는지
-        알 수 없다 — 실제로 그 상태로 배포해 한 번 헤맸다.
-    """
-    body = None if payload is None else json.dumps(payload).encode("utf-8")
-    verb = method or ("GET" if body is None else "POST")
-    request = urllib.request.Request(url, data=body, method=verb)
-    request.add_header("Content-Type", "application/json")
-    if token:
-        request.add_header(TOKEN_HEADER, token)
-    try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT_SEC) as response:  # noqa: S310 내부 주소만 부른다
-            return dict(json.loads(response.read().decode("utf-8")))
-    except urllib.error.HTTPError as error:
-        print(f"[봇] {url} → {error.code} {error.read()[:200]!r}", file=sys.stderr, flush=True)
-        return None
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValueError) as error:
-        print(f"[봇] {url} → {error}", file=sys.stderr, flush=True)
-        return None
 
 
 def build_parts() -> dict:
@@ -223,110 +178,6 @@ def run_one_bot(pool: ConnectionPool, api_url: str, bot: BotProfile, parts: dict
     return f"{depth} · " + (" · ".join(rewards) if rewards else "정산 없음")
 
 
-def apply_bot_shopping(api_url: str, bot: BotProfile) -> str:
-    """판이 끝난 뒤 시장을 한 번 본다.
-
-    사람도 판이 끝나면 가방과 시장을 본다. 봇이 그것을 안 하면 번 화폐가 영영 안 쓰이고,
-    그러면 봇은 경제에 들어와 있지 않은 것이다.
-
-    **사기만 한다.** 거는 길은 여기 없다 — 봇이 물건을 걸면 「봇이 파밍해서 사람에게
-    넘기는」 통로가 열린다 (T11, 결정 #02).
-
-    Args:
-        api_url: 백엔드 주소.
-        bot: 이 봇의 성격.
-
-    Returns:
-        무슨 일이 있었는지. 아무것도 안 샀으면 빈 문자열.
-    """
-    market = send_request(f"{api_url}/api/auction", bot.token, None)
-    if market is None:
-        return ""
-    listings = tuple(
-        Listing(
-            listing_id=int(row["listing_id"]),
-            price=int(row["price"]),
-            is_mine=bool(row.get("is_mine")),
-            expires_in_minutes=int(row.get("expires_in_minutes", 0)),
-        )
-        for row in market.get("listings", [])
-    )
-    wanted = find_purchase(listings, int(market.get("balance", 0)))
-    if wanted == 0:
-        return ""
-    bought = send_request(f"{api_url}/api/auction/buy", bot.token, {"listing_id": wanted})
-    return "" if bought is None else f"경매 #{wanted} 샀다"
-
-
-def apply_bot_gear(api_url: str, bot: BotProfile) -> str:
-    """가방에 있는 것을 빈 자리에 낀다.
-
-    **끼는 것이 지키는 것이다.** 사망 페널티는 장착·가방을 통틀어 하나를 뽑는데, 뽑힌
-    것이 장착 중이었으면 파손(복구 가능)이고 가방에 있었으면 삭제다 (결정 #34). 봇이
-    아무것도 안 끼면 그 유인의 반대편만 받는다 — 실제로 봇 열이 스무 개를 그렇게 잃었다.
-
-    Args:
-        api_url: 백엔드 주소.
-        bot: 이 봇의 성격.
-
-    Returns:
-        무슨 일이 있었는지. 아무것도 안 꼈으면 빈 문자열.
-    """
-    bag = send_request(f"{api_url}/api/inventory", bot.token, None)
-    if bag is None:
-        return ""
-    filled = frozenset(
-        str(row.get("slot") or "") for row in bag.get("equipment", []) if row.get("item")
-    )
-    items = tuple(
-        BagItem(
-            item_id=int(row["item"]["item_id"]),
-            slot=str(row["item"].get("slot") or ""),
-            can_equip=bool(row["item"].get("can_equip")),
-            is_broken=bool(row["item"].get("is_broken")),
-        )
-        for row in bag.get("slots", [])
-        if row.get("item")
-    )
-    worn = []
-    for item in list_equippable(items, filled):
-        done = send_request(
-            f"{api_url}/api/equip", bot.token, {"item_id": item.item_id, "slot": item.slot}
-        )
-        if done is not None:
-            worn.append(item.slot)
-    return "" if not worn else f"{'·'.join(worn)} 착용"
-
-
-def apply_bot_growth(api_url: str, bot: BotProfile) -> str:
-    """레벨이 준 능력치 포인트를 쓴다.
-
-    **안 쓰면 없는 것과 같다.** 포인트는 레벨과 함께 쌓이기만 하고 배분해야 몸에 붙는다 —
-    실제로 열 봇 전부 레벨 4 에 배분표가 비어 있었고, 9점씩 놀고 있었다. 사람은 레벨이
-    오르면 찍는다.
-
-    Args:
-        api_url: 백엔드 주소.
-        bot: 이 봇의 성격.
-
-    Returns:
-        무슨 일이 있었는지. 쓸 것이 없었으면 빈 문자열.
-    """
-    progress = send_request(f"{api_url}/api/progress", bot.token, None)
-    if progress is None:
-        return ""
-    spent = {key: int(value) for key, value in (progress.get("stats") or {}).items()}
-    wanted = build_allocation(int(progress.get("level", 1)), bot.ruleset_id, spent)
-    if wanted == spent:
-        return ""
-    done = send_request(f"{api_url}/api/progress/stats", bot.token, {"stats": wanted}, method="PUT")
-    return (
-        ""
-        if done is None
-        else "능력치 " + " ".join(f"{key}{wanted[key]}" for key in sorted(wanted) if wanted[key])
-    )
-
-
 def apply_bot_round(pool: ConnectionPool, api_url: str, parts: dict) -> int:
     """차례가 된 봇들을 한 번씩 내보낸다.
 
@@ -355,6 +206,9 @@ def apply_bot_round(pool: ConnectionPool, api_url: str, parts: dict) -> int:
             grown = apply_bot_growth(api_url, bot)
             if grown:
                 note = f"{note} · {grown}"
+            stocked = apply_bot_supplies(api_url, bot)
+            if stocked:
+                note = f"{note} · {stocked}"
         except (KeyError, ValueError, TypeError) as error:
             note = f"판이 깨졌다: {error}"
         print(f"[봇] {bot.label} — {note}", flush=True)
