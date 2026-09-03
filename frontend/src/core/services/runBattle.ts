@@ -182,6 +182,34 @@ export interface EngineSetup {
  * @returns 첫 틱을 돌릴 준비가 된 엔진.
  * @throws 템플릿이 부르는 적 종류가 balance.json 에 없는 경우.
  */
+/**
+ * 이 층에 얹을 스냅샷만 골라 이름으로 건다.
+ *
+ * **이름이 층을 구분하지 않는다.** 자리 이름은 `{종}_{순번}` 이라 `goblin_rusher_0` 이
+ * 1층부터 9층까지 따로 살고, 하강 티켓은 그 전부를 싣는다. 층을 안 보고 이름만으로
+ * 겹치면 나중 것이 이기는데 그것이 가장 깊은 층의 개체다 — **1층 방에 9층 레벨 10 짜리가
+ * 섰다.** 신규 계정이 첫 방에서 그것을 만났다.
+ *
+ * **층을 모르는 스냅샷(0)은 그대로 얹는다.** 층을 싣기 전에 발급된 티켓이 그 값이고,
+ * 발급 당시와 다르게 재시뮬하면 정상 제출이 반려된다 (R5).
+ *
+ * @param snapshots 티켓이 얼려 둔 개체들. 하강 전체의 층이 섞여 있다.
+ * @param floor 지금 도는 방의 층.
+ * @returns entityId → 스냅샷. 이 층 것과 층을 모르는 것만 들어 있다.
+ */
+export function buildFloorOverrides(
+  snapshots: readonly MonsterSnapshot[],
+  floor: number,
+): ReadonlyMap<string, MonsterSnapshot> {
+  const picked = new Map<string, MonsterSnapshot>()
+  for (const item of snapshots) {
+    if (item.zoneFloor === 0 || item.zoneFloor === floor) {
+      picked.set(item.entityId, item)
+    }
+  }
+  return picked
+}
+
 export function buildEngine(setup: EngineSetup): TickEngine {
   const { template, balance } = setup
   const rng = new DeterministicRng(setup.seed)
@@ -228,7 +256,7 @@ export function buildEngine(setup: EngineSetup): TickEngine {
   const scale = buildFloorScale(balance.floorScale)
   // 스냅샷은 entityId 로 겹친다. 방 배치가 `{kind}_{index}` 로 붙이므로 그 이름을
   // 겨냥하며, 이름이 갈리면 스냅샷이 아무에게도 적용되지 않고 조용히 넘어간다.
-  const overrides = new Map((setup.snapshots ?? []).map((item) => [item.entityId, item]))
+  const overrides = buildFloorOverrides(setup.snapshots ?? [], floor)
   // **변수 축을 따로 판다** (R5) — 파이썬과 같은 라벨·같은 순서다 (G3).
   // **끌 수 있어야 한다** — 파이썬의 `is_varied` 와 같은 뜻이다 (G3). 골든·튜토리얼이 끈다.
   const isVaried = setup.isVaried ?? true

@@ -88,6 +88,33 @@ class BattleResult:
     log_lines: tuple[str, ...]
 
 
+def build_floor_overrides(
+    snapshots: tuple[MonsterSnapshot, ...], floor: int
+) -> dict[str, MonsterSnapshot]:
+    """이 층에 얹을 스냅샷만 골라 이름으로 건다.
+
+    **이름이 층을 구분하지 않는다.** 자리 이름은 `{종}_{순번}` 이라 `goblin_rusher_0` 이
+    1층부터 9층까지 따로 살고, 하강 티켓은 그 전부를 싣는다. 층을 안 보고 이름만으로
+    겹치면 나중 것이 이기는데 그것이 가장 깊은 층의 개체다 — **1층 방에 9층 레벨 10 짜리가
+    섰다.** 신규 계정이 첫 방에서 그것을 만났고, 규칙표 17개 어느 것으로도 1층을 못
+    깼다(실측 136판, 돌파 0).
+
+    두 코어가 같은 값을 썼기 때문에 검증은 어긋나지 않았다. 어긋난 것은 검증이 아니라
+    게임이며, 그래서 조용했다.
+
+    **층을 모르는 스냅샷(0)은 그대로 얹는다.** 층을 싣기 전에 발급된 티켓이 그 값이고,
+    발급 당시와 다르게 재시뮬하면 정상 제출이 반려된다 (R5).
+
+    Args:
+        snapshots: 티켓이 얼려 둔 개체들. 하강 전체의 층이 섞여 있다.
+        floor: 지금 도는 방의 층.
+
+    Returns:
+        entity_id → 스냅샷. 이 층 것과 층을 모르는 것만 들어 있다.
+    """
+    return {item.entity_id: item for item in snapshots if item.zone_floor in (0, floor)}
+
+
 def build_engine(
     template: RoomTemplate,
     balance: dict,
@@ -158,7 +185,7 @@ def build_engine(
     scale = build_floor_scale(balance.get("floor_scale", {}))
     # 스냅샷은 entity_id 로 겹친다. 방 배치가 `{kind}_{index}` 로 붙이므로 그 이름을
     # 겨냥하며, 이름이 갈리면 스냅샷이 아무에게도 적용되지 않고 그 사실이 조용히 넘어간다.
-    overrides = {item.entity_id: item for item in snapshots}
+    overrides = build_floor_overrides(snapshots, floor)
     # **변수 축을 따로 판다** (R5). 흔들기·승격 호출 횟수가 바뀌어도 전투 난수가 안
     # 흔들린다 — 두 코어가 같은 순서로 같은 수를 뽑아야 하므로 순회 순서를 안 바꾼다.
     # **끌 수 있어야 한다.** 튜토리얼은 가르치는 배치가 고정이어야 하고(같은 자리에서

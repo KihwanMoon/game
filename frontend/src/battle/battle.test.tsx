@@ -852,6 +852,7 @@ describe('지속 몬스터 스냅샷 배선 (E4)', () => {
     defense: 5,
     ruleSlots: 4,
     cpuBudget: 7,
+    zoneFloor: 1,
   }
 
   it('★ 조립이 스냅샷을 실제로 반영한다', () => {

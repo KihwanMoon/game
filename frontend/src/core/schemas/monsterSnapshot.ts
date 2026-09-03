@@ -30,6 +30,15 @@ export interface MonsterSnapshot {
   readonly defense: number
   readonly ruleSlots: number
   readonly cpuBudget: number
+  /**
+   * 이 개체가 사는 층. **자리 이름이 층을 구분하지 않는다** — `goblin_rusher_0` 이
+   * 1층부터 9층까지 따로 살고, 하강 티켓은 그 전부를 싣는다. 층이 없으면 방에 얹을 때
+   * 이름만 보고 겹쳐 **1층 방에 9층 개체가 선다**.
+   *
+   * 0 은 「모른다」다. 층을 싣기 전에 발급된 티켓이 그 값이며, 그 티켓은 예전처럼 층을
+   * 안 보고 얹는다 — 발급 당시와 다르게 재시뮬하면 정상 제출이 반려된다 (R5).
+   */
+  readonly zoneFloor: number
 }
 
 /** 서버가 주는 절. 파이썬 `build_snapshot_payload` 와 같은 열쇠다. */
@@ -44,6 +53,8 @@ export interface RawMonsterSnapshot {
   readonly defense: number
   readonly rule_slots: number
   readonly cpu_budget: number
+  /** 구버전 서버는 안 보낸다. 그때는 0 — 층을 모른다는 뜻이다. */
+  readonly zone_floor?: number
 }
 
 /**
@@ -75,20 +86,33 @@ export function parseSnapshot(raw: RawMonsterSnapshot): MonsterSnapshot {
     defense: raw.defense,
     ruleSlots: raw.rule_slots,
     cpuBudget: raw.cpu_budget,
+    zoneFloor: raw.zone_floor ?? 0,
   }
 }
 
 /**
- * 스냅샷을 entityId 순으로 정렬한다.
+ * 스냅샷을 순서대로 세운다.
  *
  * 순서가 실행마다 다르면 같은 티켓이 다른 글자로 저장되고, 그 위에서 만든 검증이
  * 흔들린다 (R5).
  *
+ * **entityId 만으로는 순서가 정해지지 않는다.** 같은 이름이 층마다 있어서 동률이 생기고,
+ * 동률에서는 들어온 순서가 남는다 — 그것은 DB 조회 순서이지 계약이 아니다. 층과 레코드
+ * id 까지 넣어 전순서로 만든다.
+ *
  * @param snapshots 정렬할 스냅샷들.
- * @returns 정렬된 스냅샷들.
+ * @returns (entityId, 층, recordId) 순으로 정렬된 스냅샷들.
  */
 export function sortSnapshots(
   snapshots: readonly MonsterSnapshot[],
 ): readonly MonsterSnapshot[] {
-  return [...snapshots].sort((left, right) => (left.entityId < right.entityId ? -1 : 1))
+  return [...snapshots].sort((left, right) => {
+    if (left.entityId !== right.entityId) {
+      return left.entityId < right.entityId ? -1 : 1
+    }
+    if (left.zoneFloor !== right.zoneFloor) {
+      return left.zoneFloor - right.zoneFloor
+    }
+    return left.recordId - right.recordId
+  })
 }

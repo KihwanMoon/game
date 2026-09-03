@@ -228,6 +228,7 @@ def build_monster_snapshot(record: MonsterRecord, base: dict) -> MonsterSnapshot
     affixes = list_monster_affixes(record.spawn_seed, tier)
     return MonsterSnapshot(
         entity_id=record.entity_slot,
+        zone_floor=int(record.zone_floor or 0),
         record_id=record.record_id,
         kind_id=record.catalog_id,
         tier=record.tier,
