@@ -105,14 +105,30 @@
       "cpuMax",
       "onEdit",
       "onSelect"
+    ],
+    "PlanActor": [
+      "x",
+      "y",
+      "kind",
+      "label",
+      "tier"
+    ],
+    "Thumb": [
+      "kind",
+      "label",
+      "art",
+      "size",
+      "state",
+      "grade"
+    ],
+    "CellGrid": [
+      "cells",
+      "onSelect",
+      "emptyText"
     ]
   },
-  "_missing_note": "저장소에는 있는데 정본에 없는 것. 셋 다 오늘 올린 등급·연결선 토큰을 쓰는 쪽이라, 정본에 없다는 사실이 그 토큰이 아무 데도 안 쓰이는 이유다.",
-  "missing_in_design": {
-    "CellGrid": "가방·장비·소모품이 쓰는 도면 격자. 관리 화면의 봇 가방도 같은 것을 쓴다",
-    "Thumb": "아이템·몬스터 썸네일. 등급색(--grade-*)과 미해금 상태를 든다",
-    "PlanActor": "도면 위의 말 하나. tier 로 정예·보스를 가른다 (--plan-actor-elite)"
-  },
+  "_missing_note": "저장소에는 있는데 정본에 없는 것. 2026-09-03 에 셋(CellGrid·Thumb·PlanActor)을 올려 비었다 — 그 셋이 등급·연결선 토큰을 쓰는 쪽이었고, 그래서 정본에서 그 토큰이 아무 데도 안 쓰이고 있었다.",
+  "missing_in_design": {},
   "_divergence_note": "정본과 저장소가 다른 자리. 여기 적힌 것만 허용되고, 새로 생기면 검사가 잡는다. 고칠 때는 정본을 고치고 이 항목을 지우는 것이 정답이며, 남겨 둘 이유가 있으면 사유를 적는다.",
   "divergences": {
     "StatusBar": {
@@ -175,6 +191,12 @@
     },
     "LogRow": {
       "why": "tick 이 문자열(T027)에서 숫자로 바뀌었다. 표현은 같아 실질 격차가 아니다"
+    },
+    "Thumb": {
+      "design_only": [
+        "grade"
+      ],
+      "why": "정본은 등급을 prop 으로 받아 --grade-* 로 칠한다. 저장소는 아직 등급을 안 받는다 — 저장소가 따라와야 한다"
     }
   }
 }

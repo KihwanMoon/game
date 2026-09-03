@@ -542,3 +542,27 @@ describe('CellGrid — 격자', () => {
     expect(html).toContain('등록된 아이템이 없다')
   })
 })
+
+describe('도면 말의 등급', () => {
+  const css = readFileSync(new URL('./ds.css', import.meta.url), 'utf-8')
+
+  it('★ 등급이 색과 테두리를 **함께** 바꾼다 — 색만이면 색을 못 가르는 사람에게 사라진다', () => {
+    // 블록을 잘라 보지 않는다. 결합 선택자(`--elite, --boss { }`)에 걸려 엉뚱한 블록을
+    // 재게 되고, 실제로 그렇게 한 번 틀렸다 — border-radius 만 있는 블록을 봤다.
+    for (const tier of ['elite', 'boss']) {
+      expect(css).toContain(`color: var(--plan-actor-${tier})`)
+      expect(css).toMatch(new RegExp(`border: var\\(--bw[a-z-]*\\) solid var\\(--plan-actor-${tier}\\)`))
+    }
+  })
+
+  it('★ 정예와 보스의 테두리 굵기가 다르다 — 색을 빼고도 둘이 갈려야 한다', () => {
+    expect(css).toContain('border: var(--bw) solid var(--plan-actor-elite)')
+    expect(css).toContain('border: var(--bw-accent) solid var(--plan-actor-boss)')
+  })
+
+  it('일반에는 테두리를 안 두른다 — 전부에 두른 테두리는 아무것도 아니다', () => {
+    const html = renderToStaticMarkup(<PlanActor x={1} y={1} kind="charge" />)
+    expect(html).not.toContain('--elite')
+    expect(html).not.toContain('--boss')
+  })
+})
