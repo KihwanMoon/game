@@ -116,6 +116,9 @@ def test_there_is_no_route_that_grants_admin(client):
         "/api/admin/content/draft",
         "/api/admin/content/publish",
         "/api/admin/content/{asset}",
+        # 도플갱어가 끼고 있던 것. **가진 아이템이 아니라 얼려 둔 기록이다** — 그 개체는
+        # 어떤 아이템도 소유하지 않는다.
+        "/api/admin/doppel/gear",
         "/api/admin/drops",
         "/api/admin/drops/{kind_id}",
         "/api/admin/item/recall",

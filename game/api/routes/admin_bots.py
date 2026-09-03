@@ -15,13 +15,15 @@
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from game.api.deps import CurrentAdmin, get_pool
+from game.api.deps import CurrentAdmin, get_item_catalog, get_pool
 from game.api.routes.items import build_inventory_response
 from game.api.schemas import (
     AdminBotOverviewResponse,
     AdminBotView,
     AdminDoppelView,
     InventoryResponse,
+    InventorySlotView,
+    ItemView,
 )
 from game.app.bots.personas import MAX_RUNS_PER_HOUR, MIN_CADENCE_SEC
 from game.app.store.accounts import find_player_entity
@@ -33,6 +35,7 @@ from game.app.store.bots import (
     apply_bot_settings,
     check_is_bot,
 )
+from game.app.store.doppels import read_doppel_gear
 from game.app.store.gifts import apply_bot_gift
 
 router = APIRouter()
@@ -151,6 +154,41 @@ def read_bot_bag(account_id: int, account: CurrentAdmin) -> InventoryResponse:
     return build_inventory_response(account_id)
 
 
+@router.get("/api/admin/doppel/gear", response_model=InventoryResponse)
+def read_doppel_bag(record_id: int, account: CurrentAdmin) -> InventoryResponse:
+    """도플갱어가 끼고 있던 장비를 본다.
+
+    **가진 아이템이 아니라 얼려 둔 기록이다.** 도플갱어는 어떤 아이템도 소유하지 않는다 —
+    그것이 전리품 차단의 뿌리이고(잡아도 떨어질 것이 없다), 그래서 여기 뜨는 것에는
+    `item_id` 가 없다. 사람 가방과 같은 모양으로 내는 이유는 화면이 같은 격자를 쓰기
+    때문이다 — 같은 것을 두 모양으로 그리면 답이 갈린다.
+
+    Args:
+        record_id: 볼 개체.
+        account: 관리자 계정.
+
+    Returns:
+        장비 자리에 얼려 둔 것을 채운 인벤토리. 가방은 늘 비어 있다.
+
+    Raises:
+        HTTPException: 도플갱어가 아니면 404.
+    """
+    pool = get_pool()
+    gear = read_doppel_gear(pool, record_id)
+    if not gear and not any(row.record_id == record_id for row in list_doppel_rows(pool)):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"없는 도플갱어다: {record_id}")
+    catalog = get_item_catalog()
+    return InventoryResponse(
+        size=0,
+        slots=[],
+        equipment=[
+            AdminDoppelGearView(index, item, catalog).build() for index, item in enumerate(gear)
+        ],
+        balance=0,
+        repair_cost=0,
+    )
+
+
 @router.post("/api/admin/bot/gift", response_model=AdminBotOverviewResponse)
 def create_bot_gift(request: BotGiftRequest, account: CurrentAdmin) -> AdminBotOverviewResponse:
     """내 가방의 아이템 하나를 봇에게 넘긴다.
@@ -187,3 +225,50 @@ def create_bot_gift(request: BotGiftRequest, account: CurrentAdmin) -> AdminBotO
         f"{catalog_id} (#{request.item_id}) 넘김 — 귀속됨",
     )
     return build_bot_overview(account)
+
+
+class AdminDoppelGearView:
+    """얼려 둔 장비 한 벌을 인벤토리 칸 모양으로 옮긴다.
+
+    **`item_id` 가 0 이다.** 이것은 아이템이 아니라 기록이고, 0 은 「가리킬 행이 없다」는
+    뜻이다 — 진짜 id 를 지어내면 화면이 그것으로 조작을 걸 수 있다.
+    """
+
+    def __init__(self, index: int, gear: dict, catalog: dict) -> None:
+        """옮길 값을 받는다.
+
+        Args:
+            index: 칸 번호.
+            gear: 얼려 둔 장비 한 건.
+            catalog: 아이템 카탈로그. 이름을 여기서 찾는다.
+        """
+        self.index = index
+        self.gear = gear
+        self.catalog = catalog
+
+    def build(self) -> InventorySlotView:
+        """칸 하나를 만든다.
+
+        Returns:
+            인벤토리 칸.
+        """
+        catalog_id = str(self.gear.get("catalog_id", ""))
+        entry = self.catalog.get(catalog_id)
+        slot = str(self.gear.get("slot", ""))
+        return InventorySlotView(
+            slot_index=self.index,
+            item=ItemView(
+                item_id=0,
+                catalog_id=catalog_id,
+                label_ko=getattr(entry, "label_ko", "") or catalog_id,
+                kind="EQUIPMENT",
+                slot=slot,
+                equipped_slot=slot,
+                is_broken=bool(self.gear.get("is_broken")),
+                grade=getattr(entry, "grade", "") or "",
+                affixes=list(self.gear.get("affixes") or []),
+            ),
+            stack_catalog_id=None,
+            stack_count=0,
+            slot=slot,
+        )

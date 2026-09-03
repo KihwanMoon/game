@@ -87,6 +87,10 @@ export interface BotPanelProps {
   readonly myBag?: InventoryView | undefined
   /** 줄을 골랐을 때 부른다. 그 봇의 가방을 읽어 오라는 신호다. */
   readonly onPickBot?: (accountId: number) => void
+  /** 도플갱어 줄을 골랐을 때 부른다. */
+  readonly onPickDoppel?: (recordId: number) => void
+  /** 고른 도플갱어가 끼고 있던 것. 아이템이 아니라 얼려 둔 기록이다. */
+  readonly doppelGear?: InventoryView | undefined
 }
 
 /**
@@ -136,6 +140,8 @@ function renderRow(
  */
 export function BotPanel(props: BotPanelProps): React.JSX.Element {
   const [pickedId, setPickedId] = useState(0)
+  const [pickedDoppel, setPickedDoppel] = useState(0)
+  const [gearKey, setGearKey] = useState('')
   const bots = props.overview?.bots ?? []
   const picked = bots.find((bot) => bot.accountId === pickedId)
   const active = bots.filter((bot) => bot.isActive).length
@@ -208,7 +214,18 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
         ) : (
           <div className="bots__grid">
             {(props.overview?.doppels ?? []).map((item) => (
-              <div className="botrow" key={item.recordId}>
+              <button
+                type="button"
+                className={`botrow${item.recordId === pickedDoppel ? ' botrow--picked' : ''}`}
+                key={item.recordId}
+                onClick={() => {
+                  const next = pickedDoppel === item.recordId ? 0 : item.recordId
+                  setPickedDoppel(next)
+                  if (next !== 0) {
+                    props.onPickDoppel?.(next)
+                  }
+                }}
+              >
                 <span className="botrow__name">{`#${String(item.recordId)}`}</span>
                 <GlyphState
                   state={item.alive ? 'true' : 'false'}
@@ -221,8 +238,28 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
                 <span className="botrow__cell">
                   {item.originHandle === '' ? '주인 없음' : `${item.originHandle} 의 그림자`}
                 </span>
-              </div>
+              </button>
             ))}
+          </div>
+        )}
+        {pickedDoppel === 0 ? null : (
+          <div className="bots__bags">
+            <div className="inv bots__inv">
+              {/* 봇과 **같은 격자**다. 같은 것을 두 모양으로 그리면 답이 갈린다. */}
+              <InventoryGrid
+                inventory={props.doppelGear}
+                pickedKey={gearKey}
+                ownerLabel={`#${String(pickedDoppel)}`}
+                onPick={(cell) => {
+                  setGearKey((current) => (current === cell.key ? '' : cell.key))
+                }}
+              />
+              <ValueExpr
+                text="얼려 둔 기록이다 — 이 개체는 아이템을 갖지 않고, 잡아도 떨어지지 않는다"
+                size="sm"
+                dim
+              />
+            </div>
           </div>
         )}
       </Panel>

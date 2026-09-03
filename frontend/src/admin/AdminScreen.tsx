@@ -24,6 +24,7 @@ import {
   applyBotSettings,
   readBotAdmin,
   readBotBag,
+  readDoppelGear,
   type BotOverview,
 } from '../storage/botAdmin'
 import { CatalogAdminPanel, ContentAdminPanel } from '../editor'
@@ -103,6 +104,7 @@ export function AdminScreen(): React.JSX.Element {
   const [bots, setBots] = useState<BotOverview | undefined>(undefined)
   const [botBag, setBotBag] = useState<InventoryView | undefined>(undefined)
   const [myBag, setMyBag] = useState<InventoryView | undefined>(undefined)
+  const [doppelGear, setDoppelGear] = useState<InventoryView | undefined>(undefined)
 
   useEffect(() => {
     let isCurrent = true
@@ -244,6 +246,11 @@ export function AdminScreen(): React.JSX.Element {
             rulesetIds={RULESET_IDS}
             botBag={botBag}
             myBag={myBag}
+            doppelGear={doppelGear}
+            onPickDoppel={(recordId) => {
+              setDoppelGear(undefined)
+              void readDoppelGear(token, recordId).then(setDoppelGear)
+            }}
             onPickBot={(accountId) => {
               setBotBag(undefined)
               void readBotBag(token, accountId).then(setBotBag)

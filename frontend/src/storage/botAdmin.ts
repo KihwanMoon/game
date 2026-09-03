@@ -210,3 +210,26 @@ export async function readBotBag(
   }
   return readInventoryPayload((await response.json()) as Record<string, unknown>)
 }
+
+/**
+ * 도플갱어가 끼고 있던 장비를 읽는다.
+ *
+ * **가진 아이템이 아니라 얼려 둔 기록이다.** 그 개체는 어떤 아이템도 소유하지 않는다 —
+ * 그래서 칸의 `itemId` 가 0 이고, 조작을 걸 자리가 없다.
+ *
+ * @param token 기기 토큰.
+ * @param recordId 볼 개체.
+ * @returns 장비만 채워진 인벤토리. 도플갱어가 아니면 undefined.
+ */
+export async function readDoppelGear(
+  token: string,
+  recordId: number,
+): Promise<InventoryView | undefined> {
+  const response = await sendRequest(`/admin/doppel/gear?record_id=${String(recordId)}`, {
+    headers: { [TOKEN_HEADER]: token },
+  })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  return readInventoryPayload((await response.json()) as Record<string, unknown>)
+}

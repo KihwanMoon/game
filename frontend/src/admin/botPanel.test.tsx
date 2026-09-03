@@ -107,6 +107,26 @@ describe('봇 패널', () => {
     expect(html).toContain('아직 도플갱어가 없다')
   })
 
+  it('★ 도플갱어를 안 골랐으면 장비 격자를 안 그린다', () => {
+    const withOne = {
+      ...OVERVIEW,
+      doppels: [
+        {
+          recordId: 7,
+          zoneFloor: 3,
+          level: 6,
+          alive: true,
+          entitySlot: 'goblin_rusher_0',
+          originHandle: 'bot1',
+        },
+      ],
+    }
+    const shown = renderToStaticMarkup(
+      <BotPanel overview={withOne} rulesetIds={[]} onSave={() => undefined} />,
+    )
+    expect(shown).not.toContain('얼려 둔 기록이다')
+  })
+
   it('도플갱어가 있으면 누구의 그림자인지 적는다', () => {
     const withOne = {
       ...OVERVIEW,
@@ -204,5 +224,26 @@ describe('봇 인벤토리는 유저 화면과 같은 격자다', () => {
       <InventoryGrid inventory={BAG} pickedKey="" onPick={() => undefined} />,
     )
     expect(grid).toContain('invg__count')
+  })
+})
+
+describe('도플갱어 장비', () => {
+  it('★ 봇과 같은 격자로 그린다 — 같은 것을 두 모양으로 그리면 답이 갈린다', async () => {
+    const { InventoryGrid } = await import('../editor/InventoryGrid')
+    const frozen = {
+      slots: [],
+      equipment: [
+        { slotIndex: 0, slot: 'BODY', item: { itemId: 0, labelKo: '판금 갑옷', isBroken: false } },
+      ],
+      balance: 0,
+      repairCost: 0,
+    } as unknown as Parameters<typeof InventoryGrid>[0]['inventory']
+    const grid = renderToStaticMarkup(
+      <InventoryGrid inventory={frozen} pickedKey="" ownerLabel="#7" onPick={() => undefined} />,
+    )
+    expect(grid).toContain('invg invg--equip')
+    expect(grid).toContain('aria-label="BD 판금"')
+    // 가방은 늘 비어 있다 — 도플갱어는 아무것도 들고 다니지 않는다.
+    expect(grid).toContain('#7 · 가방 0 / 20')
   })
 })

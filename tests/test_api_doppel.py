@@ -294,3 +294,105 @@ def test_the_shadow_keeps_the_ruleset(client):
         pool, build_bot_account(client), 3, "keeps_slot", {"hp_max": 120}, ruleset
     )
     assert read_doppel_ruleset(pool, record_id)["ruleset_id"] == "sniper"
+
+
+def test_the_shadow_freezes_what_it_wore(client):
+    """★ 원본이 끼고 있던 장비를 얼려서 들고 선다.
+
+    「그 빌드로 여기까지 왔다」가 이 개체의 뜻인데, 무엇을 끼고 갔는지 볼 수 없으면 그
+    뜻이 절반만 남는다.
+    """
+    from game.api.deps import get_item_catalog, get_pool
+    from game.app.store.accounts import find_player_entity
+    from game.app.store.doppels import create_doppel, read_doppel_gear
+
+    pool = get_pool()
+    account_id = build_bot_account(client)
+    entity_id = find_player_entity(pool, account_id)
+    catalog_id = sorted(get_item_catalog())[0]
+    with pool.connection() as connection:
+        row = connection.execute(
+            "INSERT INTO item_instance (catalog_id, owner_entity_id) VALUES (%s, %s) RETURNING id",
+            (catalog_id, entity_id),
+        ).fetchone()
+        connection.execute(
+            "INSERT INTO equipment_slot (entity_id, slot, item_id) VALUES (%s, %s, %s)",
+            (entity_id, "BODY", int(row[0])),
+        )
+    record_id = create_doppel(pool, account_id, 3, "wore_slot", {"hp_max": 120}, {})
+    gear = read_doppel_gear(pool, record_id)
+    assert [item["slot"] for item in gear] == ["BODY"]
+    assert gear[0]["catalog_id"] == catalog_id
+
+
+def test_the_shadow_owns_no_items(client):
+    """★ **아이템을 옮기지 않는다.**
+
+    얼린 것은 사본 기록이라 `item_instance` 행이 늘지 않는다 — 그것이 전리품 차단의
+    뿌리다. 옮겼다면 원본이 그것을 잃고, 도플갱어를 잡은 사람이 그것을 얻는다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.doppels import create_doppel
+
+    pool = get_pool()
+    with pool.connection() as connection:
+        before = int(connection.execute("SELECT count(*) FROM item_instance").fetchone()[0])
+    record_id = create_doppel(pool, build_bot_account(client), 3, "owns_slot", {"hp_max": 10}, {})
+    with pool.connection() as connection:
+        after = int(connection.execute("SELECT count(*) FROM item_instance").fetchone()[0])
+        owned = int(
+            connection.execute(
+                "SELECT count(*) FROM item_instance WHERE owner_entity_id = %s", (record_id,)
+            ).fetchone()[0]
+        )
+    assert after == before
+    assert owned == 0
+
+
+def test_the_gear_route_shows_it(client):
+    """★ 관리 화면이 그것을 사람 가방과 **같은 모양**으로 받는다."""
+    from game.api.deps import get_pool
+    from game.app.store.doppels import create_doppel
+
+    pool = get_pool()
+    admin = build_admin_token(client)
+    record_id = create_doppel(pool, build_bot_account(client), 3, "route_slot", {"hp_max": 10}, {})
+    body = client.get(
+        "/api/admin/doppel/gear",
+        params={"record_id": record_id},
+        headers=build_headers(admin),
+    ).json()
+    # 가방은 늘 비어 있다 — 도플갱어는 아무것도 들고 다니지 않는다.
+    assert body["slots"] == []
+    for row in body["equipment"]:
+        # **id 가 0 이다.** 가리킬 행이 없다는 뜻이고, 진짜 id 를 지어내면 화면이 그것으로
+        # 조작을 걸 수 있다.
+        assert row["item"]["item_id"] == 0
+
+
+def test_a_missing_doppel_is_a_404(client):
+    """없는 개체에 손대면 조용히 넘어가지 않는다."""
+    response = client.get(
+        "/api/admin/doppel/gear",
+        params={"record_id": 999999999},
+        headers=build_headers(build_admin_token(client)),
+    )
+    assert response.status_code == 404
+
+
+def build_admin_token(client):
+    """관리자 토큰 하나.
+
+    Args:
+        client: 테스트 클라이언트.
+
+    Returns:
+        토큰.
+    """
+    from game.api.deps import get_pool
+
+    token = client.post("/api/account").json()["token"]
+    account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
+    with get_pool().connection() as connection:
+        connection.execute("UPDATE account SET is_admin = TRUE WHERE id = %s", (account_id,))
+    return token

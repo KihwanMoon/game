@@ -62,6 +62,64 @@ def find_free_slot(pool: ConnectionPool, floor: int, slots: tuple[str, ...]) -> 
     return next((slot for slot in slots if slot not in taken), "")
 
 
+def list_origin_gear(pool: ConnectionPool, account_id: int) -> list[dict]:
+    """그 계정이 **지금 끼고 있는 것**을 얼려 둘 모양으로 읽는다.
+
+    **아이템을 옮기지 않는다.** 도플갱어는 어떤 아이템도 소유하지 않는다 — 그것이
+    전리품 차단의 뿌리다(잡아도 떨어질 것이 없고, 되찾을 것도 없다). 여기서 만드는 것은
+    **사본 기록**이라 `item_instance` 행이 늘지 않고, 따라서 세계의 아이템 총량도 그대로다.
+
+    그런데도 기록해 두는 이유는 「그 빌드로 여기까지 왔다」가 이 개체의 뜻이기 때문이다.
+    무엇을 끼고 갔는지 볼 수 없으면 그 뜻이 절반만 남는다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 원본 계정.
+
+    Returns:
+        자리 순의 장비 기록들.
+    """
+    with pool.connection() as connection:
+        rows = connection.execute(
+            "SELECT e.slot, i.catalog_id, i.affixes, i.is_broken"
+            " FROM equipment_slot e JOIN item_instance i ON i.id = e.item_id"
+            " JOIN entity_record p ON p.id = e.entity_id"
+            " WHERE p.kind = 'PLAYER' AND p.owner_account_id = %s"
+            " ORDER BY e.slot",
+            (account_id,),
+        ).fetchall()
+    return [
+        {
+            "slot": str(row[0]),
+            "catalog_id": str(row[1]),
+            "affixes": row[2] if isinstance(row[2], list) else [],
+            "is_broken": bool(row[3]),
+        }
+        for row in rows
+    ]
+
+
+def read_doppel_gear(pool: ConnectionPool, record_id: int) -> list[dict]:
+    """그 도플갱어가 끼고 있던 장비 기록.
+
+    Args:
+        pool: 연결 풀.
+        record_id: 개체 id.
+
+    Returns:
+        장비 기록들. 없으면 빈 목록.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT loadout_json FROM entity_record WHERE id = %s AND is_doppel", (record_id,)
+        ).fetchone()
+    raw = row[0] if row else None
+    if isinstance(raw, str):
+        raw = json.loads(raw)
+    gear = raw.get("gear") if isinstance(raw, dict) else None
+    return [item for item in gear if isinstance(item, dict)] if isinstance(gear, list) else []
+
+
 def create_doppel(
     pool: ConnectionPool,
     origin_account_id: int,
@@ -113,7 +171,9 @@ def create_doppel(
                 floor,
                 slot,
                 origin_account_id,
-                Jsonb(loadout),
+                # **장비를 함께 얼린다.** 아이템을 옮기는 것이 아니라 사본 기록이다 —
+                # `item_instance` 가 늘지 않으므로 잡아도 떨어질 것이 없다.
+                Jsonb({**loadout, "gear": list_origin_gear(pool, origin_account_id)}),
                 int(loadout.get("rule_slots", 0)),
                 int(loadout.get("cpu_budget", 0)),
             ),
