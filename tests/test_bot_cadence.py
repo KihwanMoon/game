@@ -15,6 +15,18 @@ from game.app.bots.personas import (
 )
 
 
+def test_the_names_are_bot1_through_bot10():
+    """★ 이름이 `bot1`~`bot10` 이다 — 화면에서 봇임을 바로 알아봐야 한다 (T11).
+
+    성격 이름(「겁쟁이」)은 사람 이름처럼 보여서 그 목적과 어긋난다. 성격은 남기되
+    계정 이름은 따로 짓는다.
+    """
+    from game.app.bots.play import list_persona_specs
+
+    names = [spec[0] for spec in list_persona_specs()]
+    assert names == [f"bot{number}" for number in range(1, 11)]
+
+
 def test_the_cap_is_five_runs_an_hour():
     """★ 상한이 실제로 시간당 다섯이다 — 간격을 바꿔도 이 등식이 남는다."""
     assert HOUR // MIN_CADENCE_SEC == MAX_RUNS_PER_HOUR
@@ -43,15 +55,21 @@ def test_every_persona_respects_the_cap():
         assert persona.cadence_sec >= MIN_CADENCE_SEC, persona.label
 
 
-def test_the_personas_do_not_share_one_rhythm():
-    """리듬이 같으면 세계가 한꺼번에 움직였다 한꺼번에 멈춘다."""
-    assert len({persona.cadence_sec for persona in BOT_PERSONAS}) >= 5
+def test_every_bot_runs_at_the_cap():
+    """★ 봇마다 시간당 다섯 판이다.
+
+    리듬을 갈라 두면 세계가 고르게 움직이지만, 지금은 **세계가 너무 조용한 것**이 더 큰
+    문제다 — 경매 등록이 4건이다. 다양성보다 활동량을 택한 자리이며, 조용함이 해결되면
+    다시 갈라 볼 값이다.
+    """
+    for persona in BOT_PERSONAS:
+        assert HOUR // persona.cadence_sec == MAX_RUNS_PER_HOUR, persona.label
 
 
 def test_ten_bots_cannot_exceed_fifty_runs_an_hour():
     """★ 열 명을 합쳐도 시간당 50판이 천장이다 — 부하 상한이 이 수다."""
     ceiling = sum(HOUR // persona.cadence_sec for persona in BOT_PERSONAS)
-    assert ceiling <= MAX_RUNS_PER_HOUR * len(BOT_PERSONAS)
+    assert ceiling == MAX_RUNS_PER_HOUR * len(BOT_PERSONAS) == 50
 
 
 def test_the_store_pushes_back_a_too_fast_bot(monkeypatch):

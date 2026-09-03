@@ -190,6 +190,35 @@ services:
       - ..:/app
     restart: "no"
 
+  # ── 봇 (가상 유저 열) ────────────────────────────────────────────────────
+  #
+  # **스택과 함께 뜨고 함께 내려간다.** 호스트 cron 으로 두면 설정이 저장소 밖에 살아서
+  # 재설치 때 따라오지 않는다.
+  #
+  # 백엔드에 **라우트로** 붙는다 — 서비스 계층을 직접 부르면 티켓 1회용·코어버전 대조
+  # 같은 규율을 우회하고, 그러면 봇의 런은 「진짜 경로가 도는지」를 증명하지 못한다.
+  # `game_net` 안에서만 부르므로 공개 주소를 거치지 않는다.
+  #
+  # 봇마다 시간당 다섯 판이 상한이고 `bot_profile.next_run_at` 이 그것을 물린다.
+  bots:
+    build:
+      <<: *build
+      target: ci
+    container_name: game-bots-1
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    environment:
+      GAME_DATABASE_URL: >-
+        postgresql://${POSTGRES_USER:-game}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-game}
+      GAME_API_URL: http://backend:8000
+    command: ["uv", "run", "python", "-m", "scripts.run_bots"]
+    networks:
+      - game_net
+
   # 개발 셸. uv·Python 3.11 을 호스트에 설치하지 않고 동일 환경을 쓴다.
   dev:
     profiles: ["tools"]

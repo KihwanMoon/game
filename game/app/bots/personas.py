@@ -40,20 +40,22 @@ class BotPersona:
     skill_pct: int
 
 
-# 열 명. 규칙표는 `benchmark.json`(14) 과 `g0_examples.json`(3) 에서 골랐다 — 새로 짜지
+# 열 명. **전부 상한으로 돈다** — 봇마다 시간당 다섯 판이고 합쳐서 50판이다. 리듬을
+# 갈라 두면 세계가 고르게 움직이지만, 지금은 세계가 너무 조용한 것이 더 큰 문제다.
+# 규칙표는 `benchmark.json`(14) 과 `g0_examples.json`(3) 에서 골랐다 — 새로 짜지
 # 않은 이유는 이것들이 이미 전략 공간을 갈라 놓았기 때문이다(`test_benchmark_rulesets`).
 #
 # 실력 분포를 일부러 아래로 기울였다. 잘하는 셋, 보통 넷, 못하는 셋이다.
 BOT_PERSONAS: tuple[BotPersona, ...] = (
-    BotPersona("겨눔", "sniper", HOUR // 2, 100),
-    BotPersona("문지기", "door_hold", HOUR, 100),
-    BotPersona("쓸어담기", "area_sweep", HOUR * 2, 95),
-    BotPersona("약한고리", "focus_lowest", HOUR, 80),
-    BotPersona("위협우선", "focus_threat", HOUR + HOUR // 2, 75),
-    BotPersona("사거리", "weapon_reach", HOUR * 3, 70),
-    BotPersona("소환사냥", "kite_summoner", HOUR * 2, 65),
-    BotPersona("맞불", "g0_pressure", HOUR // 3, 45),
-    BotPersona("샘터", "spring_camp", HOUR * 4, 40),
+    BotPersona("겨눔", "sniper", MIN_CADENCE_SEC, 100),
+    BotPersona("문지기", "door_hold", MIN_CADENCE_SEC, 100),
+    BotPersona("쓸어담기", "area_sweep", MIN_CADENCE_SEC, 95),
+    BotPersona("약한고리", "focus_lowest", MIN_CADENCE_SEC, 80),
+    BotPersona("위협우선", "focus_threat", MIN_CADENCE_SEC, 75),
+    BotPersona("사거리", "weapon_reach", MIN_CADENCE_SEC, 70),
+    BotPersona("소환사냥", "kite_summoner", MIN_CADENCE_SEC, 65),
+    BotPersona("맞불", "g0_pressure", MIN_CADENCE_SEC, 45),
+    BotPersona("샘터", "spring_camp", MIN_CADENCE_SEC, 40),
     BotPersona("겁쟁이", "g0_kite", MIN_CADENCE_SEC, 30),
 )
 
