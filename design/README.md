@@ -16,6 +16,47 @@
 토큰을 고칠 일이 생기면 **이 파일이 아니라 Design 프로젝트를 고치고 다시 가져온다.**
 표준 문서와 같은 원칙이다 — 사람이 보는 정본과 기계가 쓰는 사본을 나눈다.
 
+## 피그마로 내보내기
+
+`design/tokens.json` 이 피그마가 읽는 형식이고, `scripts/export_design_tokens.py` 가
+`tokens/*.css` 에서 만든다. **손으로 옮기지 않는다** — 이 디렉터리가 정본의 사본이라
+손으로 옮기면 또 어긋나고, 실제로 열한 개가 어긋나 있었다.
+
+```bash
+uv run python -m scripts.export_design_tokens
+```
+
+받는 곳: **Coding Roguelike — Design Tokens**
+(`h1Hd5uHx5csRvCBceUxq87`, team `The matrix`)
+<https://www.figma.com/design/h1Hd5uHx5csRvCBceUxq87>
+
+가져오는 절차는 피그마 쪽에서 사람이 한다.
+
+1. 그 파일에서 **Tokens Studio** 플러그인을 연다
+2. Tools → **Import** → `design/tokens.json`
+3. 셋 순서는 `$metadata` 가 정한다: `primitive` → `semantic` → `layout/*`
+4. Themes 에서 `desktop`·`portrait`·`landscape` 를 켜고 **Create Variables** 를 누른다
+
+셋이 셋으로 갈린 이유가 그 3단계다.
+
+| 셋 | 무엇 | 어떻게 정했나 |
+|:--|:--|:--|
+| `primitive` | 실제 값을 든 것 | 값에 `var()` 가 없다 |
+| `semantic` | 다른 토큰을 가리키는 것 | 값이 `var()` 하나뿐이다 |
+| `layout/{모드}` | 배치마다 달라지는 것 | `@media` 안에서 다시 정의된다 |
+
+**반응형이 모드가 된다.** 피그마 변수에는 미디어쿼리가 없고 모드가 있다 — 이 저장소가
+브레이크포인트를 `tokens/spacing.css` 한 곳에만 두기로 한 규율이 마침 그 모양과 맞는다.
+재정의하지 않은 값은 기본 배치(desktop)에서 채운다: CSS 는 이어받는 것을 전제로 쓰였지만
+피그마는 모드에 값이 없으면 그냥 빈다.
+
+**MCP 로 직접 밀어 넣지 않는 이유.** 이 계정은 Starter · View 좌석이라 **월 20 호출**이
+상한이고, 피그마 공식 스킬은 디자인 시스템 하나에 20~100 호출을 요구한다. 중간에 끊기면
+절반만 올라간 파일이 남는다. 좌석을 Full/Dev 로 올리면 그때는 직접 올려도 된다.
+
+읽기(`get_design_context`·`get_screenshot`·`get_metadata`)가 바로 그 한도 대상이므로,
+예산은 **피그마에서 디자인한 것을 코드로 가져올 때** 쓴다.
+
 ## 성격
 
 기계 도면(technical drawing)이다. 게임 UI 의 관습을 대부분 쓰지 않는다.
