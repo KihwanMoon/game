@@ -147,18 +147,21 @@ def build_stack_view(catalog_id: str | None, catalog: dict) -> StackView:
     )
 
 
-@router.get("/api/inventory", response_model=InventoryResponse)
-def read_inventory(account: CurrentAccount) -> InventoryResponse:
-    """인벤토리·장비·지갑을 함께 읽는다.
+def build_inventory_response(account_id: int) -> InventoryResponse:
+    """그 계정의 인벤토리·장비·지갑을 만든다.
+
+    라우트에서 떼어 낸 이유는 **관리 화면이 봇의 가방을 같은 모양으로 봐야** 하기
+    때문이다. 거기서 따로 만들면 두 화면이 다른 것을 그리게 되고, 「봇에게 뭐가 있지」를
+    답하려고 만든 화면이 답을 틀리게 한다.
 
     Args:
-        account: 토큰으로 푼 계정.
+        account_id: 볼 계정.
 
     Returns:
-        칸 번호 순 인벤토리와 슬롯 순 장비. 봉인된 슬롯은 `is_sealed` 가 참이다.
+        칸 번호 순 인벤토리와 슬롯 순 장비.
     """
     pool = get_pool()
-    entity_id = find_player_entity(pool, account.account_id)
+    entity_id = find_player_entity(pool, account_id)
     catalog = get_item_catalog()
     base_stats = build_base_stats(get_context().balance)
 
@@ -191,9 +194,22 @@ def read_inventory(account: CurrentAccount) -> InventoryResponse:
             )
             for index, (slot, item) in enumerate(sorted(equipped.items(), key=lambda p: str(p[0])))
         ],
-        balance=read_balance(pool, account.account_id),
+        balance=read_balance(pool, account_id),
         repair_cost=REPAIR_COST,
     )
+
+
+@router.get("/api/inventory", response_model=InventoryResponse)
+def read_inventory(account: CurrentAccount) -> InventoryResponse:
+    """인벤토리·장비·지갑을 함께 읽는다.
+
+    Args:
+        account: 토큰으로 푼 계정.
+
+    Returns:
+        칸 번호 순 인벤토리와 슬롯 순 장비. 봉인된 슬롯은 `is_sealed` 가 참이다.
+    """
+    return build_inventory_response(account.account_id)
 
 
 @router.post("/api/equip", response_model=InventoryResponse)

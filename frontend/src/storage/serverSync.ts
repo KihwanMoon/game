@@ -701,17 +701,16 @@ function readSlot(raw: RawSlot): SlotView {
 }
 
 /**
- * 인벤토리를 읽는다.
+ * 인벤토리 응답 절을 화면 모양으로 옮긴다.
  *
- * @param token 기기 토큰.
- * @returns 인벤토리. 서버에 닿지 못했으면 undefined.
+ * 라우트에서 떼어 낸 이유는 **관리 화면이 봇의 가방을 같은 모양으로 읽어야** 하기
+ * 때문이다. 거기서 따로 옮기면 두 화면이 다른 것을 그린다.
+ *
+ * @param raw 서버 응답.
+ * @returns 인벤토리.
  */
-export async function readInventory(token: string): Promise<InventoryView | undefined> {
-  const response = await sendRequest('/inventory', { headers: { [TOKEN_HEADER]: token } })
-  if (response === undefined || !response.ok) {
-    return undefined
-  }
-  const body = (await response.json()) as {
+export function readInventoryPayload(raw: Record<string, unknown>): InventoryView {
+  const body = raw as unknown as {
     slots: RawSlot[]
     equipment: RawSlot[]
     balance: number
@@ -723,6 +722,20 @@ export async function readInventory(token: string): Promise<InventoryView | unde
     balance: body.balance,
     repairCost: body.repair_cost,
   }
+}
+
+/**
+ * 내 인벤토리를 읽는다.
+ *
+ * @param token 기기 토큰.
+ * @returns 인벤토리. 서버에 닿지 못했으면 undefined.
+ */
+export async function readInventory(token: string): Promise<InventoryView | undefined> {
+  const response = await sendRequest('/inventory', { headers: { [TOKEN_HEADER]: token } })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  return readInventoryPayload((await response.json()) as Record<string, unknown>)
 }
 
 /**

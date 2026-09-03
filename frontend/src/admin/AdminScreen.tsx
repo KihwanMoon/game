@@ -18,10 +18,12 @@ import { readActivePack } from '../content/pack'
 import { BENCHMARK_RULESETS, G0_RULESETS } from '../core/resources'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import { BotPanel } from './BotPanel'
+import { readInventory, type InventoryView } from '../storage'
 import {
   applyBotGift,
   applyBotSettings,
   readBotAdmin,
+  readBotBag,
   type BotOverview,
 } from '../storage/botAdmin'
 import { CatalogAdminPanel, ContentAdminPanel } from '../editor'
@@ -99,6 +101,8 @@ export function AdminScreen(): React.JSX.Element {
   const [catalog, setCatalog] = useState<CatalogAdminView | undefined>(undefined)
   const [detail, setDetail] = useState('')
   const [bots, setBots] = useState<BotOverview | undefined>(undefined)
+  const [botBag, setBotBag] = useState<InventoryView | undefined>(undefined)
+  const [myBag, setMyBag] = useState<InventoryView | undefined>(undefined)
 
   useEffect(() => {
     let isCurrent = true
@@ -178,6 +182,8 @@ export function AdminScreen(): React.JSX.Element {
                   void readContentAsset(token, item.id).then(setAsset)
                 } else if (item.id === 'bots') {
                   void readBotAdmin(token).then(setBots)
+                  // 내 가방을 함께 읽는다. 넘길 것을 고르려면 무엇이 있는지 보여야 한다.
+                  void readInventory(token).then(setMyBag)
                 }
               }}
             >
@@ -236,6 +242,12 @@ export function AdminScreen(): React.JSX.Element {
           <BotPanel
             overview={bots}
             rulesetIds={RULESET_IDS}
+            botBag={botBag}
+            myBag={myBag}
+            onPickBot={(accountId) => {
+              setBotBag(undefined)
+              void readBotBag(token, accountId).then(setBotBag)
+            }}
             onGift={(accountId, itemId) => {
               void applyBotGift(token, accountId, itemId).then((updated) => {
                 if (updated === undefined) {
@@ -244,6 +256,9 @@ export function AdminScreen(): React.JSX.Element {
                 }
                 setBots(updated)
                 setDetail('넘겼다 — 그 아이템은 귀속되어 돌아오지 않는다')
+                // 두 가방을 다시 읽는다. 안 읽으면 넘긴 물건이 양쪽에 그대로 보인다.
+                void readBotBag(token, accountId).then(setBotBag)
+                void readInventory(token).then(setMyBag)
               })
             }}
             onSave={(next) => {

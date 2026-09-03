@@ -100,6 +100,9 @@ def test_there_is_no_route_that_grants_admin(client):
         # 봇 조회·개입 (T11). 여기서 하는 것은 멈춤·재개와 성격 고치기뿐이고, **지우는
         # 조작은 두지 않는다** — 지우면 그 봇이 벌어 둔 장비·도감·순위가 함께 사라진다.
         "/api/admin/bot",
+        # 봇의 가방을 본다. **봇만** 본다 — 아무 계정이나 열리면 남의 가방을 들여다보는
+        # 길이 된다.
+        "/api/admin/bot/bag",
         # 사람 → 봇 한 방향. 도착 즉시 귀속이라 돌아오는 길이 없다 (결정 #07).
         "/api/admin/bot/gift",
         "/api/admin/bots",

@@ -8,7 +8,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { BotPanel, formatCadence, formatDue, formatWinRate } from './BotPanel'
+import { BagList, BotPanel, formatCadence, formatDue, formatWinRate } from './BotPanel'
 import type { BotOverview } from '../storage/botAdmin'
 
 const OVERVIEW: BotOverview = {
@@ -139,6 +139,44 @@ describe('봇 패널', () => {
     )
     // 줄을 안 골랐으면 조작이 없다. 고른 뒤에 뜨는 것이 맞다.
     expect(shown).not.toContain('넘기면 귀속된다')
+  })
+
+  it('★ 가방은 id 가 아니라 이름으로 고른다 — 무엇이 있는지 모르고 숫자를 적을 수 없다', () => {
+    const bag = {
+      slots: [
+        {
+          slotIndex: 0,
+          item: { itemId: 42, labelKo: '사슬 갑옷', isBound: false },
+        },
+      ],
+      equipment: [],
+      balance: 0,
+      repairCost: 0,
+    } as unknown as Parameters<typeof BagList>[0]['bag']
+    const picked: number[] = []
+    const shown = renderToStaticMarkup(
+      <BagList title='내 가방' bag={bag} onPick={(id) => picked.push(id)} />,
+    )
+    expect(shown).toContain('사슬 갑옷')
+    expect(shown).toContain('#42')
+    expect(shown).toContain('넘기기')
+  })
+
+  it('빈 가방도 말을 한다 — 빈 화면은 고장으로 읽힌다', () => {
+    expect(renderToStaticMarkup(<BagList title='봇의 가방' bag={undefined} />)).toContain('비어 있다')
+  })
+
+  it('★ 조작을 안 주면 넘기기 버튼이 없다 — 봇의 가방은 읽기 전용이다', () => {
+    const bag = {
+      slots: [{ slotIndex: 0, item: { itemId: 7, labelKo: '장궁', isBound: true } }],
+      equipment: [],
+      balance: 0,
+      repairCost: 0,
+    } as unknown as Parameters<typeof BagList>[0]['bag']
+    const shown = renderToStaticMarkup(<BagList title='봇의 가방' bag={bag} />)
+    expect(shown).toContain('장궁')
+    expect(shown).toContain('귀속')
+    expect(shown).not.toContain('넘기기')
   })
 
   it('★ 넘기는 길만 있고 되받는 길이 없다 — 한 방향이어야 성립한다', async () => {

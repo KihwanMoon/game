@@ -5,7 +5,8 @@
  * 사실이 없다. 알아야 할 것은 몇 판을 돌았고 몇 번 이겼고 어디까지 내려갔는가다 —
  * 승리가 0이면 그 봇은 세계에 아무것도 안 남긴다.
  */
-import { TOKEN_HEADER, sendRequest } from './serverSync'
+import { TOKEN_HEADER, readInventoryPayload, sendRequest } from './serverSync'
+import type { InventoryView } from './serverSync'
 
 /** 봇 한 줄. */
 export interface BotView {
@@ -185,4 +186,27 @@ export async function applyBotGift(
     return undefined
   }
   return parseBotOverview((await response.json()) as Parameters<typeof parseBotOverview>[0])
+}
+
+/**
+ * 봇 하나의 가방을 읽는다.
+ *
+ * **사람 화면과 같은 모양이다** — 서버가 같은 빌더로 만든다. 여기서 따로 만들면 두
+ * 화면이 다른 것을 그리고, 「봇에게 뭐가 있지」를 답하려던 화면이 답을 틀리게 한다.
+ *
+ * @param token 기기 토큰.
+ * @param accountId 볼 봇.
+ * @returns 그 봇의 가방. 봇이 아니거나 못 닿으면 undefined.
+ */
+export async function readBotBag(
+  token: string,
+  accountId: number,
+): Promise<InventoryView | undefined> {
+  const response = await sendRequest(`/admin/bot/bag?account_id=${String(accountId)}`, {
+    headers: { [TOKEN_HEADER]: token },
+  })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  return readInventoryPayload((await response.json()) as Record<string, unknown>)
 }

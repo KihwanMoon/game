@@ -282,3 +282,42 @@ body {
 .bots__field--num {
   width: 9ch;
 }
+
+/* 두 가방을 나란히 둔다 — 봇에게 뭐가 있는지와 내가 뭘 줄 수 있는지를 함께 봐야 고른다. */
+.bots__bags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  width: 100%;
+}
+
+.bots__bag {
+  flex: 1 1 20ch;
+  min-width: 0;
+}
+
+.bots__bag-head {
+  padding-bottom: var(--sp-1);
+  border-bottom: var(--border);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+}
+
+.bots__bag-row {
+  display: grid;
+  grid-template-columns: 1fr 7ch 6ch auto;
+  gap: var(--sp-2);
+  align-items: center;
+  padding: var(--sp-1) 0;
+  border-bottom: var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+}
+
+.bots__bag-name {
+  overflow: hidden;
+  color: var(--text-body);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

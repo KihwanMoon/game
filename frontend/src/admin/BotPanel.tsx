@@ -15,6 +15,7 @@ import { useState } from 'react'
 
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import type { BotOverview, BotView } from '../storage/botAdmin'
+import type { InventoryView } from '../storage'
 
 /** 아무것도 없을 때 적는 말. 빈 화면은 고장으로 읽힌다. */
 const EMPTY_BOTS = '봇이 없다 — 러너가 처음 뜰 때 열을 세운다'
@@ -79,6 +80,12 @@ export interface BotPanelProps {
   }) => void
   /** 내 가방의 아이템 하나를 이 봇에게 넘긴다. **한 방향이다** — 돌아오는 길은 없다. */
   readonly onGift?: (accountId: number, itemId: number) => void
+  /** 고른 봇의 가방. 줄을 고를 때 밖에서 읽어 넣는다. */
+  readonly botBag?: InventoryView | undefined
+  /** 내 가방. */
+  readonly myBag?: InventoryView | undefined
+  /** 줄을 골랐을 때 부른다. 그 봇의 가방을 읽어 오라는 신호다. */
+  readonly onPickBot?: (accountId: number) => void
 }
 
 /**
@@ -156,7 +163,11 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
             <div className="bots__grid">
               {bots.map((bot) =>
                 renderRow(bot, bot.accountId === pickedId, (target) => {
-                  setPickedId((current) => (current === target.accountId ? 0 : target.accountId))
+                  const next = pickedId === target.accountId ? 0 : target.accountId
+                  setPickedId(next)
+                  if (next !== 0) {
+                    props.onPickBot?.(next)
+                  }
                 }),
               )}
             </div>
@@ -169,6 +180,8 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
                 minCadenceSec={props.overview?.minCadenceSec ?? 0}
                 onSave={props.onSave}
                 onGift={props.onGift}
+                botBag={props.botBag}
+                myBag={props.myBag}
               />
             )}
           </>
@@ -210,6 +223,10 @@ interface BotEditorProps {
   readonly minCadenceSec: number
   readonly onSave: BotPanelProps['onSave']
   readonly onGift?: BotPanelProps['onGift']
+  /** 고른 봇의 가방. 아직 안 읽었으면 undefined. */
+  readonly botBag?: InventoryView | undefined
+  /** 내 가방. 여기서 골라 넘긴다 — id 를 손으로 적게 하지 않는다. */
+  readonly myBag?: InventoryView | undefined
 }
 
 /**
@@ -286,36 +303,71 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
         size="sm"
         dim
       />
-      {props.onGift === undefined ? null : (
-        <>
-          <label className="bots__label" htmlFor={`gift-${String(bot.accountId)}`}>
-            아이템 id
-          </label>
-          <input
-            id={`gift-${String(bot.accountId)}`}
-            className="bots__field bots__field--num"
-            type="number"
-            min={1}
-            placeholder="내 가방"
-          />
-          <Button
-            size="sm"
-            variant="ghost"
-            glyph="→"
-            title="내 가방의 그 아이템을 이 봇에게 넘긴다. 도착하면 귀속되어 되돌릴 수 없다"
-            onClick={() => {
-              const field = document.getElementById(`gift-${String(bot.accountId)}`)
-              const wanted = Number.parseInt((field as HTMLInputElement | null)?.value ?? '', 10)
-              if (Number.isFinite(wanted) && wanted > 0) {
-                props.onGift?.(bot.accountId, wanted)
-              }
+      <div className="bots__bags">
+        <BagList title={`${bot.handle} 의 가방`} bag={props.botBag} />
+        {props.onGift === undefined ? null : (
+          <BagList
+            title="내 가방 — 눌러서 넘긴다"
+            bag={props.myBag}
+            onPick={(itemId) => {
+              props.onGift?.(bot.accountId, itemId)
             }}
-          >
-            넘기기
-          </Button>
-          {/* **되돌릴 수 없다고 먼저 말한다.** 귀속은 눌러 본 뒤에 알면 늦다. */}
-          <ValueExpr text="넘기면 귀속된다 — 되돌릴 수 없다" size="sm" dim />
-        </>
+          />
+        )}
+      </div>
+      {/* **되돌릴 수 없다고 먼저 말한다.** 귀속은 눌러 본 뒤에 알면 늦다. */}
+      {props.onGift === undefined ? null : (
+        <ValueExpr text="넘기면 귀속된다 — 되돌릴 수 없다" size="sm" dim />
+      )}
+    </div>
+  )
+}
+
+/**
+ * 가방 한 벌을 줄로 그린다.
+ *
+ * **id 를 손으로 적게 하지 않는다.** 무엇이 있는지 모르는 채로 숫자를 적을 수는 없고,
+ * 그런 화면은 안 쓰인다.
+ *
+ * @param props 제목·가방·줄마다 붙일 조작.
+ * @returns 가방 요소.
+ */
+export function BagList(props: {
+  readonly title: string
+  readonly bag: InventoryView | undefined
+  readonly onPick?: (itemId: number) => void
+}): React.JSX.Element {
+  const rows = (props.bag?.slots ?? []).filter((slot) => slot.item !== undefined)
+  return (
+    <div className="bots__bag">
+      <div className="bots__bag-head">{`${props.title} ${String(rows.length)}`}</div>
+      {rows.length === 0 ? (
+        <ValueExpr text="비어 있다" size="sm" dim />
+      ) : (
+        rows.map((slot) => (
+          <div className="bots__bag-row" key={slot.item?.itemId ?? slot.slotIndex}>
+            <span className="bots__bag-name">{slot.item?.labelKo ?? ''}</span>
+            <span className="botrow__cell">{`#${String(slot.item?.itemId ?? 0)}`}</span>
+            {slot.item?.isBound === true ? (
+              <GlyphState state="false" size="sm" label="귀속" />
+            ) : (
+              <span className="botrow__cell" />
+            )}
+            {props.onPick === undefined ? null : (
+              <Button
+                size="sm"
+                variant="ghost"
+                glyph="→"
+                title="이 아이템을 이 봇에게 넘긴다. 도착하면 귀속되어 되돌릴 수 없다"
+                onClick={() => {
+                  props.onPick?.(slot.item?.itemId ?? 0)
+                }}
+              >
+                넘기기
+              </Button>
+            )}
+          </div>
+        ))
       )}
     </div>
   )

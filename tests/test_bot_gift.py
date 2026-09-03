@@ -79,7 +79,7 @@ def build_item(account_id):
     Returns:
         아이템 id.
     """
-    from game.api.deps import get_pool
+    from game.api.deps import get_item_catalog, get_pool
     from game.app.store.accounts import find_player_entity
     from game.app.store.inventory_slots import find_empty_slot
 
@@ -87,9 +87,11 @@ def build_item(account_id):
     entity_id = find_player_entity(pool, account_id)
     index = find_empty_slot(pool, entity_id)
     with pool.connection() as connection:
+        # **서버가 든 카탈로그에서 고른다.** DB 표에는 다른 검사가 남긴 id 가 있는데
+        # 그것들은 메모리 카탈로그에 없어서 가방 조회가 그 줄에서 터진다.
         row = connection.execute(
             "INSERT INTO item_instance (catalog_id, owner_entity_id) VALUES (%s, %s) RETURNING id",
-            ("chain_mail", entity_id),
+            (sorted(get_item_catalog())[0], entity_id),
         ).fetchone()
         connection.execute(
             "INSERT INTO inventory_slot (entity_id, slot_index, item_id) VALUES (%s, %s, %s)",
@@ -229,3 +231,48 @@ def test_there_is_no_route_that_takes_from_a_bot(client):
 
     paths = [route.path for route in create_app().routes]
     assert not [path for path in paths if "bot" in path and ("take" in path or "claim" in path)]
+
+
+def test_the_bot_bag_is_readable(client):
+    """★ 봇이 무엇을 가졌는지 관리 화면이 본다.
+
+    id 를 손으로 적게 하면 그 화면은 안 쓰인다 — 무엇이 있는지 모르는 채로 숫자를 적을
+    수는 없다.
+    """
+    token, admin_id = build_admin(client)
+    bot_id = build_bot(client)
+    item_id = build_item(admin_id)
+    client.post(
+        "/api/admin/bot/gift",
+        json={"account_id": bot_id, "item_id": item_id},
+        headers=build_headers(token),
+    )
+    body = client.get(
+        "/api/admin/bot/bag", params={"account_id": bot_id}, headers=build_headers(token)
+    ).json()
+    held = [slot["item"]["item_id"] for slot in body["slots"] if slot["item"] is not None]
+    assert item_id in held
+
+
+def test_only_a_bot_bag_can_be_opened(client):
+    """★ **봇만 본다.**
+
+    아무 계정이나 열리면 이것은 관리자가 남의 가방을 들여다보는 길이 된다 — 봇을
+    관리하려고 연 창이 그것이어서는 안 된다.
+    """
+    token, _admin_id = build_admin(client)
+    person = client.post("/api/account").json()["token"]
+    person_id = client.get("/api/account", headers=build_headers(person)).json()["account_id"]
+    response = client.get(
+        "/api/admin/bot/bag", params={"account_id": person_id}, headers=build_headers(token)
+    )
+    assert response.status_code == 404
+
+
+def test_a_plain_account_cannot_open_a_bot_bag(client):
+    """관리자가 아니면 404 — 경로의 존재도 알리지 않는다."""
+    token = client.post("/api/account").json()["token"]
+    response = client.get(
+        "/api/admin/bot/bag", params={"account_id": 1}, headers=build_headers(token)
+    )
+    assert response.status_code == 404

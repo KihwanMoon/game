@@ -16,12 +16,23 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from game.api.deps import CurrentAdmin, get_pool
-from game.api.schemas import AdminBotOverviewResponse, AdminBotView, AdminDoppelView
+from game.api.routes.items import build_inventory_response
+from game.api.schemas import (
+    AdminBotOverviewResponse,
+    AdminBotView,
+    AdminDoppelView,
+    InventoryResponse,
+)
 from game.app.bots.personas import MAX_RUNS_PER_HOUR, MIN_CADENCE_SEC
 from game.app.store.accounts import find_player_entity
 from game.app.store.admin import record_admin_action
 from game.app.store.bot_view import list_bot_rows, list_doppel_rows
-from game.app.store.bots import MAX_SKILL_PCT, MIN_SKILL_PCT, apply_bot_settings
+from game.app.store.bots import (
+    MAX_SKILL_PCT,
+    MIN_SKILL_PCT,
+    apply_bot_settings,
+    check_is_bot,
+)
 from game.app.store.gifts import apply_bot_gift
 
 router = APIRouter()
@@ -112,6 +123,32 @@ def apply_admin_bot(request: BotSettingsRequest, account: CurrentAdmin) -> Admin
         f" · {'돌림' if request.is_active else '멈춤'}",
     )
     return build_bot_overview(account)
+
+
+@router.get("/api/admin/bot/bag", response_model=InventoryResponse)
+def read_bot_bag(account_id: int, account: CurrentAdmin) -> InventoryResponse:
+    """봇 하나의 가방을 본다.
+
+    **사람 화면과 같은 모양으로 만든다** (`build_inventory_response`). 여기서 따로
+    만들면 두 화면이 다른 것을 그리게 되고, 「봇에게 뭐가 있지」를 답하려던 화면이 답을
+    틀리게 한다.
+
+    **봇만 본다.** 아무 계정이나 볼 수 있으면 이것은 관리자가 남의 가방을 들여다보는
+    길이 된다 — 봇을 관리하려고 연 창이 그것이어서는 안 된다.
+
+    Args:
+        account_id: 볼 봇의 계정.
+        account: 관리자 계정.
+
+    Returns:
+        그 봇의 인벤토리와 장비.
+
+    Raises:
+        HTTPException: 봇이 아닌 계정이면 404.
+    """
+    if not check_is_bot(get_pool(), account_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"없는 봇이다: {account_id}")
+    return build_inventory_response(account_id)
 
 
 @router.post("/api/admin/bot/gift", response_model=AdminBotOverviewResponse)
