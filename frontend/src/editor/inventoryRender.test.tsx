@@ -25,6 +25,7 @@ import {
   buildEquipCells,
   clipCellLabel,
 } from './inventoryCells'
+import { InventoryGrid } from './InventoryGrid'
 import { InventoryPanel } from './InventoryPanel'
 
 const noop = (): undefined => undefined
@@ -301,5 +302,18 @@ describe('상세와 도구줄', () => {
     expect(html).toContain('봉인 칸은 장비의 것')
     expect(html).not.toContain('버리기')
     expect(html).not.toContain('호가')
+  })
+})
+
+describe('초점과 고름은 다른 채널이다', () => {
+  // 예전에는 고른 칸이 `outline` 을 썼다. 초점 테두리와 **같은 속성**이라 고른 칸에
+  // 초점이 오면 둘 중 하나가 통째로 사라진다 — 고름은 데이터의 상태이고 초점은 입력
+  // 장치의 상태라 채널이 달라야 한다.
+  it('★ 고른 칸을 보조 기술이 읽을 수 있다', () => {
+    const markup = renderToStaticMarkup(
+      <InventoryGrid inventory={INVENTORY} pickedKey="bag:0" onPick={() => undefined} />,
+    )
+    expect(markup).toContain('aria-pressed="true"')
+    expect(markup).toContain('aria-pressed="false"')
   })
 })

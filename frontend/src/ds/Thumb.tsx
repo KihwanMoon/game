@@ -15,6 +15,17 @@
 /** 아직 안 밝힌 것. 도감의 미해금 칸이 이것을 쓴다. */
 export type ThumbState = 'known' | 'locked'
 
+/**
+ * 등급의 한글 이름. **색만으로 가르지 않는다** — 그림 자리는 좁아 글리프를 하나 더
+ * 넣을 자리가 없으므로, 세 번째 채널을 보조 기술이 읽는 이름으로 둔다. 칸의 글리프
+ * 표기는 바깥(`editor/gradeBadge`)이 이미 그린다.
+ */
+export const THUMB_GRADE_LABELS: ReadonlyMap<string, string> = new Map([
+  ['COMMON', '보통'],
+  ['FINE', '상급'],
+  ['RELIC', '유물'],
+])
+
 /** 분류에서 두 글자 코드로. 없는 분류는 `··` 로 떨어진다. */
 export const THUMB_CODES: ReadonlyMap<string, string> = new Map([
   ['WEAPON_MAIN', 'WM'],
@@ -46,6 +57,13 @@ export interface ThumbProps {
   readonly art?: string
   readonly size?: 'md' | 'sm'
   readonly state?: ThumbState
+  /**
+   * 등급 코드. `COMMON`·`FINE`·`RELIC` 이며, 분류 코드를 `--grade-*` 로 칠한다.
+   *
+   * **미해금에는 안 칠한다.** 안 밝힌 물건의 등급을 색으로 흘리면 그것이 곧 밝힌 것이
+   * 되고, `⧅` 로 가려 둔 뜻이 사라진다.
+   */
+  readonly grade?: string
 }
 
 /**
@@ -58,12 +76,20 @@ export function Thumb(props: ThumbProps): React.JSX.Element {
   const size = props.size ?? 'md'
   const state = props.state ?? 'known'
   const code = THUMB_CODES.get(props.kind) ?? '··'
+  const grade = state === 'locked' ? undefined : THUMB_GRADE_LABELS.get(props.grade ?? '')
+  const gradeClass = grade === undefined ? '' : ` ds-thumb--${(props.grade ?? '').toLowerCase()}`
 
   return (
     <span
-      className={`ds-thumb ds-thumb--${size} ds-thumb--${state}`}
+      className={`ds-thumb ds-thumb--${size} ds-thumb--${state}${gradeClass}`}
       role="img"
-      aria-label={state === 'locked' ? `${props.label} · 아직 안 밝힘` : props.label}
+      aria-label={
+        state === 'locked'
+          ? `${props.label} · 아직 안 밝힘`
+          : grade === undefined
+            ? props.label
+            : `${props.label} · ${grade}`
+      }
     >
       {props.art !== undefined && state === 'known' ? (
         <img className="ds-thumb__art" src={props.art} alt="" />

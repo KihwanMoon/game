@@ -788,6 +788,23 @@
   color: var(--text-dim);
 }
 
+/* 등급은 부품 번호를 칠한다. **색은 채널 하나다** — 나머지 둘은 칸 바깥의 글리프
+   표기와 보조 기술이 읽는 이름이 든다(Thumb 의 aria-label).
+
+   셋 다 칠한다. 보통을 안 칠하면 그것이 `--text-dim` 으로 남아 「등급을 모른다」와
+   같아 보인다 — 셋이 백묵 → 노랑 → 주황의 한 줄이어야 등급이 축으로 읽힌다. */
+.ds-thumb--common .ds-thumb__code {
+  color: var(--grade-common);
+}
+
+.ds-thumb--fine .ds-thumb__code {
+  color: var(--grade-fine);
+}
+
+.ds-thumb--relic .ds-thumb__code {
+  color: var(--grade-relic);
+}
+
 /* 미해금은 「불가」와 같은 해칭을 쓴다 — 새 표기를 만들지 않는다. */
 .ds-thumb--locked {
   border-style: dashed;

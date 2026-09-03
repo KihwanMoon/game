@@ -495,6 +495,31 @@ describe('Thumb — 그림이 오기 전의 자리', () => {
     expect(html).not.toContain('HD')
   })
 
+  it('★ 등급은 색과 이름 둘로 적는다 — 색 하나면 못 가르는 사람에게 사라진다', () => {
+    const html = renderToStaticMarkup(<Thumb kind="HEAD" label="철투구" grade="RELIC" />)
+    expect(html).toContain('ds-thumb--relic')
+    expect(html).toContain('aria-label="철투구 · 유물"')
+  })
+
+  it('★ 셋 다 칠한다 — 보통만 흐리면 「등급을 모른다」와 같아 보인다', () => {
+    const css = readStrippedCss('ds.css')
+    for (const grade of ['common', 'fine', 'relic']) {
+      expect(css).toContain(`.ds-thumb--${grade} .ds-thumb__code`)
+      const html = renderToStaticMarkup(
+        <Thumb kind="HEAD" label="철투구" grade={grade.toUpperCase()} />,
+      )
+      expect(html).toContain(`ds-thumb--${grade}`)
+    }
+  })
+
+  it('★ 미해금의 등급은 흘리지 않는다 — 흘리면 ⧅ 로 가려 둔 뜻이 사라진다', () => {
+    const html = renderToStaticMarkup(
+      <Thumb kind="HEAD" label="철투구" grade="RELIC" state="locked" />,
+    )
+    expect(html).not.toContain('ds-thumb--relic')
+    expect(html).not.toContain('유물')
+  })
+
   it('★ 미해금에는 그림을 안 그린다 — 그리면 해금이 뜻을 잃는다', () => {
     const html = renderToStaticMarkup(
       <Thumb kind="HEAD" label="철투구" art="data:image/svg+xml,x" state="locked" />,

@@ -682,6 +682,7 @@ export function CatalogAdminPanel(props: CatalogAdminPanelProps): React.JSX.Elem
               <Thumb
                 kind={item.slot === '' ? item.kind : item.slot}
                 label={item.labelKo}
+                grade={item.grade}
                 state={item.isRetired ? 'locked' : 'known'}
               />
             ),

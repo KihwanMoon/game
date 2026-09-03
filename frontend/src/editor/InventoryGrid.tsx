@@ -42,6 +42,9 @@ export function renderCell(
       type="button"
       className={`invg__cell${state}${picked}`}
       key={cell.key}
+      // 고름은 색·명도만으로 알리지 않는다. 화면을 못 보는 경로에서는 이것이
+      // 유일한 채널이다 — 참/거짓을 3중으로 적는 것과 같은 규칙이다.
+      aria-pressed={isPicked}
       aria-label={`${cell.code} ${cell.label === '' ? '빈 칸' : cell.label}`}
       onClick={() => {
         onPick(cell)
