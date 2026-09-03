@@ -16,6 +16,8 @@ from datetime import UTC, datetime, timedelta
 
 from psycopg_pool import ConnectionPool
 
+from game.app.bots.personas import resolve_cadence
+
 # 실력의 하한. 0 이면 규칙표가 통째로 꺼져 폴백만 남고, 그런 봇은 무엇도 배우지 못한다.
 MIN_SKILL_PCT = 20
 
@@ -72,7 +74,7 @@ def create_bot(
         account_id: 봇으로 삼을 계정.
         label: 화면에 적을 이름.
         ruleset_id: 이 봇이 쓸 규칙표.
-        cadence_sec: 판 사이에 쉬는 시간(초).
+        cadence_sec: 판 사이에 쉬는 시간(초). 상한(시간당 5판) 안으로 물려서 쓴다.
         skill_pct: 실력. 낮으면 규칙 몇 줄을 끄고 나간다.
     """
     with pool.connection() as connection:
@@ -88,7 +90,7 @@ def create_bot(
                 account_id,
                 label,
                 ruleset_id,
-                cadence_sec,
+                resolve_cadence(cadence_sec),
                 max(MIN_SKILL_PCT, min(MAX_SKILL_PCT, skill_pct)),
             ),
         )
@@ -153,12 +155,12 @@ def apply_bot_rest(pool: ConnectionPool, account_id: int, cadence_sec: int) -> N
     Args:
         pool: 연결 풀.
         account_id: 대상 봇.
-        cadence_sec: 쉴 시간(초).
+        cadence_sec: 쉴 시간(초). 상한(시간당 5판) 안으로 물려서 쓴다.
     """
     with pool.connection() as connection:
         connection.execute(
             "UPDATE bot_profile SET next_run_at = %s WHERE account_id = %s",
-            (datetime.now(UTC) + timedelta(seconds=max(1, cadence_sec)), account_id),
+            (datetime.now(UTC) + timedelta(seconds=resolve_cadence(cadence_sec)), account_id),
         )
 
 

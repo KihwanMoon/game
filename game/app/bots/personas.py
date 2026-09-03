@@ -15,6 +15,20 @@ from dataclasses import dataclass
 # 한 시간. 리듬을 초로 적으면 읽을 때마다 나눠야 한다.
 HOUR = 3600
 
+# 시간당 최대 출격 수. **상한이지 목표가 아니다** — 이보다 자주 나가는 봇은 없다.
+#
+# 세우는 이유가 둘이다. 하나는 부하다: 이 API 에 런 단위 레이트 리밋이 없어(로그인만
+# `throttle` 이 센다) 봇이 첫 대량 클라이언트가 된다. 다른 하나는 경제다 — 봇이 사람보다
+# 빨리 돌면 전리품과 화폐가 봇 쪽에서 나오고, 그러면 시장을 채우려던 것이 시장을 봇의
+# 것으로 만든다.
+#
+# 「한 판」은 티켓 하나다. 하강 한 번이 층마다 청구를 여러 번 올리지만 그것은 한 판이며,
+# 사람도 그렇게 논다.
+MAX_RUNS_PER_HOUR = 5
+
+# 판 사이의 최소 간격(초). `next_run_at` 이 이만큼은 미뤄지므로 상한이 실제로 걸린다.
+MIN_CADENCE_SEC = HOUR // MAX_RUNS_PER_HOUR
+
 
 @dataclass(frozen=True)
 class BotPersona:
@@ -40,5 +54,21 @@ BOT_PERSONAS: tuple[BotPersona, ...] = (
     BotPersona("소환사냥", "kite_summoner", HOUR * 2, 65),
     BotPersona("맞불", "g0_pressure", HOUR // 3, 45),
     BotPersona("샘터", "spring_camp", HOUR * 4, 40),
-    BotPersona("겁쟁이", "g0_kite", HOUR // 4, 30),
+    BotPersona("겁쟁이", "g0_kite", MIN_CADENCE_SEC, 30),
 )
+
+
+def resolve_cadence(seconds: int) -> int:
+    """리듬을 상한 안으로 물린다.
+
+    **성격 정의에만 적지 않는다.** 거기 적힌 값은 데이터라 다음 사람이 더 빠른 수를 넣을
+    수 있고, 그러면 상한이 있었다는 사실만 남는다. `next_run_at` 을 쓰는 자리마다 이것을
+    거치게 해서, 상한을 넘기려면 이 함수를 고쳐야 하게 둔다.
+
+    Args:
+        seconds: 바라는 간격(초).
+
+    Returns:
+        `MIN_CADENCE_SEC` 이상의 간격.
+    """
+    return max(MIN_CADENCE_SEC, seconds)
