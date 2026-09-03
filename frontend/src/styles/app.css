@@ -321,3 +321,15 @@ body {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/* 머리글 줄. 눌리지 않으므로 커서를 바꾸지 않고, 글자만 흐리게 둔다. */
+.botrow--head {
+  border-bottom: var(--border);
+  color: var(--text-dim);
+  cursor: default;
+}
+
+.botrow--head .botrow__name,
+.botrow--head .botrow__cell {
+  color: var(--text-dim);
+}

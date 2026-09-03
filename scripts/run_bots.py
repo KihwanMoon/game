@@ -25,7 +25,13 @@ from psycopg_pool import ConnectionPool
 
 from game.app.bots.personas import BOT_PERSONAS
 from game.app.bots.play import build_played_ruleset, list_persona_specs, resolve_claim_floors
-from game.app.bots.shopping import BagItem, Listing, find_purchase, list_equippable
+from game.app.bots.shopping import (
+    BagItem,
+    Listing,
+    build_allocation,
+    find_purchase,
+    list_equippable,
+)
 from game.app.services.run_battle import load_balance
 from game.app.services.run_chain import run_room_chain
 from game.app.store.bots import (
@@ -68,13 +74,14 @@ TIMEOUT_SEC = 60
 START_ROOM_ID = "corridor"
 
 
-def send_request(url: str, token: str, payload: dict | None) -> dict | None:
+def send_request(url: str, token: str, payload: dict | None, method: str = "") -> dict | None:
     """백엔드에 한 번 부른다.
 
     Args:
         url: 전체 주소.
         token: 기기 토큰. 빈 문자열이면 헤더를 안 붙인다.
         payload: 보낼 절. None 이면 GET 이다.
+        method: 강제할 메서드. 비우면 payload 유무로 정한다 — 배분은 PUT 이다.
 
     Returns:
         응답 절. 닿지 못했거나 4xx·5xx 면 None — **봇이 죽지 않는다**. 백엔드가 잠깐
@@ -84,7 +91,8 @@ def send_request(url: str, token: str, payload: dict | None) -> dict | None:
         알 수 없다 — 실제로 그 상태로 배포해 한 번 헤맸다.
     """
     body = None if payload is None else json.dumps(payload).encode("utf-8")
-    request = urllib.request.Request(url, data=body, method="GET" if body is None else "POST")
+    verb = method or ("GET" if body is None else "POST")
+    request = urllib.request.Request(url, data=body, method=verb)
     request.add_header("Content-Type", "application/json")
     if token:
         request.add_header(TOKEN_HEADER, token)
@@ -290,6 +298,35 @@ def apply_bot_gear(api_url: str, bot: BotProfile) -> str:
     return "" if not worn else f"{'·'.join(worn)} 착용"
 
 
+def apply_bot_growth(api_url: str, bot: BotProfile) -> str:
+    """레벨이 준 능력치 포인트를 쓴다.
+
+    **안 쓰면 없는 것과 같다.** 포인트는 레벨과 함께 쌓이기만 하고 배분해야 몸에 붙는다 —
+    실제로 열 봇 전부 레벨 4 에 배분표가 비어 있었고, 9점씩 놀고 있었다. 사람은 레벨이
+    오르면 찍는다.
+
+    Args:
+        api_url: 백엔드 주소.
+        bot: 이 봇의 성격.
+
+    Returns:
+        무슨 일이 있었는지. 쓸 것이 없었으면 빈 문자열.
+    """
+    progress = send_request(f"{api_url}/api/progress", bot.token, None)
+    if progress is None:
+        return ""
+    spent = {key: int(value) for key, value in (progress.get("stats") or {}).items()}
+    wanted = build_allocation(int(progress.get("level", 1)), bot.ruleset_id, spent)
+    if wanted == spent:
+        return ""
+    done = send_request(f"{api_url}/api/progress/stats", bot.token, {"stats": wanted}, method="PUT")
+    return (
+        ""
+        if done is None
+        else "능력치 " + " ".join(f"{key}{wanted[key]}" for key in sorted(wanted) if wanted[key])
+    )
+
+
 def apply_bot_round(pool: ConnectionPool, api_url: str, parts: dict) -> int:
     """차례가 된 봇들을 한 번씩 내보낸다.
 
@@ -315,6 +352,9 @@ def apply_bot_round(pool: ConnectionPool, api_url: str, parts: dict) -> int:
             worn = apply_bot_gear(api_url, bot)
             if worn:
                 note = f"{note} · {worn}"
+            grown = apply_bot_growth(api_url, bot)
+            if grown:
+                note = f"{note} · {grown}"
         except (KeyError, ValueError, TypeError) as error:
             note = f"판이 깨졌다: {error}"
         print(f"[봇] {bot.label} — {note}", flush=True)

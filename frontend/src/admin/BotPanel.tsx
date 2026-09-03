@@ -160,6 +160,19 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
                 label="아직 아무 봇도 못 이겼다 — 전리품·경매·순위가 생기지 않는다"
               />
             ) : null}
+            {/* **줄에 머리글을 붙인다.** 라벨 없는 「0 / 13」은 무엇을 세는지 알 수
+                없다 — 실제로 그 질문을 받았다. */}
+            <div className="botrow botrow--head" aria-hidden="true">
+              <span className="botrow__name">이름</span>
+              <span className="botrow__cell">상태</span>
+              <span className="botrow__cell">승 / 판</span>
+              <span className="botrow__cell">최고</span>
+              <span className="botrow__cell">규칙표</span>
+              <span className="botrow__cell">실력</span>
+              <span className="botrow__cell">리듬</span>
+              <span className="botrow__cell">다음</span>
+              <span className="botrow__cell">벌이</span>
+            </div>
             <div className="bots__grid">
               {bots.map((bot) =>
                 renderRow(bot, bot.accountId === pickedId, (target) => {
@@ -212,6 +225,78 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
           </div>
         )}
       </Panel>
+    </div>
+  )
+}
+
+/**
+ * 낀 것을 자리별로 그린다.
+ *
+ * **가방만 보면 무엇을 착용했는지 알 수 없다** (실제 신고). 봇에게 장비를 준 뒤 그것이
+ * 실제로 몸에 붙었는지는 여기서만 확인된다 — 붙지 않으면 사망 페널티가 그것을 지운다.
+ *
+ * @param props 제목과 가방.
+ * @returns 장비 요소.
+ */
+export function GearList(props: {
+  readonly title: string
+  readonly bag: InventoryView | undefined
+}): React.JSX.Element {
+  const rows = (props.bag?.equipment ?? []).filter((slot) => slot.item != null)
+  return (
+    <div className="bots__bag">
+      <div className="bots__bag-head">{`${props.title} ${String(rows.length)}`}</div>
+      {rows.length === 0 ? (
+        <ValueExpr text="아무것도 안 꼈다 — 가방에 둔 것은 죽을 때 사라진다" size="sm" dim />
+      ) : (
+        rows.map((slot) => (
+          <div className="bots__bag-row" key={slot.slot ?? slot.slotIndex}>
+            <span className="bots__bag-name">{slot.item?.labelKo ?? ''}</span>
+            <span className="botrow__cell">{slot.slot ?? ''}</span>
+            {slot.item?.isBroken === true ? (
+              <GlyphState state="danger" size="sm" label="파손" />
+            ) : (
+              <span className="botrow__cell" />
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  )
+}
+
+/**
+ * 소모품 칸을 그린다.
+ *
+ * 소모품은 장비와 다른 칸에 산다 — 가방 목록에 섞으면 개수가 안 보인다.
+ *
+ * @param props 제목과 가방.
+ * @returns 소모품 요소.
+ */
+export function StackList(props: {
+  readonly title: string
+  readonly bag: InventoryView | undefined
+}): React.JSX.Element {
+  const rows = (props.bag?.slots ?? []).filter(
+    (slot) => slot.item == null && (slot.stackCount ?? 0) > 0,
+  )
+  return (
+    <div className="bots__bag">
+      <div className="bots__bag-head">{`${props.title} ${String(rows.length)}`}</div>
+      {rows.length === 0 ? (
+        <ValueExpr text="없다" size="sm" dim />
+      ) : (
+        rows.map((slot) => (
+          <div className="bots__bag-row" key={slot.slotIndex}>
+            <span className="bots__bag-name">
+              {/* 이름이 없으면 id 라도 적는다 — 빈 줄은 아무것도 안 말한다. */}
+              {slot.stackLabelKo === '' ? (slot.stackCatalogId ?? '') : slot.stackLabelKo}
+            </span>
+            <span className="botrow__cell">{`x${String(slot.stackCount ?? 0)}`}</span>
+            <span className="botrow__cell">{slot.stackUseTag ?? ''}</span>
+          </div>
+        ))
+      )}
     </div>
   )
 }
@@ -304,6 +389,8 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
         dim
       />
       <div className="bots__bags">
+        <GearList title={`${bot.handle} 이 낀 것`} bag={props.botBag} />
+        <StackList title={`${bot.handle} 의 소모품`} bag={props.botBag} />
         <BagList title={`${bot.handle} 의 가방`} bag={props.botBag} />
         {props.onGift === undefined ? null : (
           <BagList
@@ -337,7 +424,9 @@ export function BagList(props: {
   readonly bag: InventoryView | undefined
   readonly onPick?: (itemId: number) => void
 }): React.JSX.Element {
-  const rows = (props.bag?.slots ?? []).filter((slot) => slot.item !== undefined)
+  // **`!= null` 로 거른다.** 서버는 빈 칸을 `null` 로 보내고 소모품 칸도 `item` 이 비어
+  // 있다 — `!== undefined` 로 거르면 그 칸들이 빈 줄로 그려져 가방이 잡음이 된다.
+  const rows = (props.bag?.slots ?? []).filter((slot) => slot.item != null)
   return (
     <div className="bots__bag">
       <div className="bots__bag-head">{`${props.title} ${String(rows.length)}`}</div>

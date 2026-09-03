@@ -8,7 +8,15 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { BagList, BotPanel, formatCadence, formatDue, formatWinRate } from './BotPanel'
+import {
+  BagList,
+  BotPanel,
+  GearList,
+  StackList,
+  formatCadence,
+  formatDue,
+  formatWinRate,
+} from './BotPanel'
 import type { BotOverview } from '../storage/botAdmin'
 
 const OVERVIEW: BotOverview = {
@@ -185,10 +193,67 @@ describe('봇 패널', () => {
     expect(Object.keys(source).join(' ')).not.toMatch(/takeFromBot|reclaim/)
   })
 
+  it('★ 숫자마다 무엇을 세는지 적는다 — 라벨 없는 「0 / 13」은 알 수 없다', () => {
+    expect(html).toContain('승 / 판')
+    expect(html).toContain('최고')
+    expect(html).toContain('리듬')
+  })
+
   it('현황이 없어도 안 터진다 — 서버에 못 닿는 것은 흔한 일이다', () => {
     const shown = renderToStaticMarkup(
       <BotPanel overview={undefined} rulesetIds={[]} onSave={() => undefined} />,
     )
     expect(shown).toContain('봇이 없다')
+  })
+})
+
+const BAG = {
+  slots: [
+    { slotIndex: 0, item: { itemId: 42, labelKo: '사슬 갑옷', isBound: false, isBroken: false } },
+    { slotIndex: 1, item: null, stackCatalogId: 'potion_heal', stackCount: 3, stackLabelKo: '치유 물약', stackUseTag: 'POTION' },
+    { slotIndex: 2, item: null, stackCount: 0 },
+  ],
+  equipment: [
+    { slotIndex: 0, slot: 'BODY', item: { itemId: 7, labelKo: '판금 갑옷', isBroken: false } },
+    { slotIndex: 1, slot: 'HEAD', item: { itemId: 8, labelKo: '철 투구', isBroken: true } },
+  ],
+  balance: 0,
+  repairCost: 0,
+} as unknown as Parameters<typeof BagList>[0]['bag']
+
+describe('낀 것과 소모품', () => {
+  it('★ 낀 것을 자리별로 본다 — 가방만 보면 무엇을 착용했는지 알 수 없다', () => {
+    const html = renderToStaticMarkup(<GearList title="낀 것" bag={BAG} />)
+    expect(html).toContain('판금 갑옷')
+    expect(html).toContain('BODY')
+    expect(html).toContain('철 투구')
+  })
+
+  it('★ 파손된 장비를 표시한다 — 파손은 끼고 있어도 안 붙는다', () => {
+    expect(renderToStaticMarkup(<GearList title="낀 것" bag={BAG} />)).toContain('파손')
+  })
+
+  it('★ 아무것도 안 꼈으면 그것이 왜 문제인지 말한다', () => {
+    const bare = { ...BAG, equipment: [] } as typeof BAG
+    expect(renderToStaticMarkup(<GearList title="낀 것" bag={bare} />)).toContain(
+      '죽을 때 사라진다',
+    )
+  })
+
+  it('★ 소모품은 개수와 함께 본다', () => {
+    const html = renderToStaticMarkup(<StackList title="소모품" bag={BAG} />)
+    expect(html).toContain('치유 물약')
+    expect(html).toContain('x3')
+  })
+
+  it('★ 빈 칸은 소모품으로 세지 않는다 — 0개짜리 줄은 잡음이다', () => {
+    const html = renderToStaticMarkup(<StackList title="소모품" bag={BAG} />)
+    expect(html).toContain('소모품 1')
+  })
+
+  it('★ 가방에는 장비만 나온다 — 빈 칸과 소모품 칸이 빈 줄로 그려지면 안 된다', () => {
+    const html = renderToStaticMarkup(<BagList title="가방" bag={BAG} />)
+    expect(html).toContain('가방 1')
+    expect(html).toContain('사슬 갑옷')
   })
 })

@@ -175,3 +175,61 @@ def test_the_order_is_fixed():
 
     bag = (build_bag_item(9, "HEAD"), build_bag_item(4, "BODY"))
     assert [item.slot for item in list_equippable(bag, frozenset())] == ["BODY", "HEAD"]
+
+
+def test_unspent_points_get_spent():
+    """★ **안 쓰면 없는 것과 같다.**
+
+    포인트는 레벨과 함께 쌓이기만 하고 배분해야 몸에 붙는다 — 실제로 열 봇 전부 레벨 4 에
+    배분표가 비어 있었고 9점씩 놀고 있었다. 레벨 4 짜리가 레벨 1 의 몸으로 싸운 것이다.
+    """
+    from game.app.bots.shopping import build_allocation
+    from game.app.progression.levels import build_growth, count_spent_points
+
+    stats = build_allocation(4, "g0_pressure", {})
+    assert count_spent_points(stats) == build_growth(4).stat_points
+
+
+def test_the_persona_shapes_the_body():
+    """★ 성격을 따른다 — 열이 같은 몸을 가지면 규칙표를 갈라 둔 뜻이 절반 사라진다."""
+    from game.app.bots.shopping import build_allocation
+
+    ranged = build_allocation(10, "sniper", {})
+    melee = build_allocation(10, "g0_pressure", {})
+    assert ranged["dex"] > ranged["str"]
+    assert melee["str"] > melee["dex"]
+
+
+def test_nothing_left_over():
+    """★ 나눗셈이 버린 나머지도 쓴다 — 버리면 그 포인트가 영영 안 쓰인다."""
+    from game.app.bots.shopping import build_allocation
+    from game.app.progression.levels import build_growth, count_spent_points
+
+    for level in range(2, 12):
+        stats = build_allocation(level, "focus_lowest", {})
+        assert count_spent_points(stats) == build_growth(level).stat_points, level
+
+
+def test_an_existing_allocation_is_kept():
+    """★ 이미 쓴 것은 그대로 둔다 — 통째로 다시 쓰면 사람이 손댄 배분이 조용히 덮인다."""
+    from game.app.bots.shopping import build_allocation
+
+    assert build_allocation(4, "sniper", {"str": 9})["str"] == 9
+
+
+def test_a_full_allocation_changes_nothing():
+    """더 쓸 것이 없으면 그대로 둔다 — 서버가 거절할 요청을 안 보낸다."""
+    from game.app.bots.shopping import build_allocation
+
+    spent = build_allocation(4, "sniper", {})
+    assert build_allocation(4, "sniper", spent) == spent
+
+
+def test_the_allocation_passes_the_server_check():
+    """★ 서버가 받아 주는 배분이어야 한다 — 안 그러면 봇은 영영 안 찍는다."""
+    from game.app.bots.shopping import build_allocation
+    from game.app.progression.levels import check_allocation
+
+    for level in range(1, 12):
+        stats = build_allocation(level, "kite_summoner", {})
+        assert check_allocation(stats, level) == "", (level, stats)

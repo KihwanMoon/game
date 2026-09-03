@@ -17,6 +17,8 @@
 
 from dataclasses import dataclass
 
+from game.app.progression.levels import STAT_KEYS, build_growth, count_spent_points
+
 # 등록 유효 기간(분). `auction.LISTING_TTL` 과 같은 값이어야 한다 — 남은 시간에서
 # 걸린 지 얼마나 됐는지를 역산하기 때문이다.
 LISTING_TTL_MINUTES = 2 * 24 * 60
@@ -127,3 +129,46 @@ def list_equippable(bag: tuple[BagItem, ...], filled_slots: frozenset[str]) -> t
         picked[item.slot] = item
     # 자리 이름 순으로 낸다. 순서가 흔들리면 같은 가방에서 다른 일이 벌어진다.
     return tuple(picked[slot] for slot in sorted(picked))
+
+
+def build_allocation(level: int, ruleset_id: str, spent: dict[str, int]) -> dict[str, int]:
+    """레벨이 준 포인트를 성격에 맞게 나눈다.
+
+    **안 쓰면 없는 것과 같다.** 포인트는 레벨과 함께 쌓이기만 하고 사람이 배분해야
+    붙는다 — 봇이 배분을 안 하면 레벨 4 짜리가 레벨 1 의 몸으로 싸운다. 실제로 그렇게
+    돌았다: 열 봇 전부 `stat_json` 이 비어 있었고 9점씩 놀고 있었다.
+
+    성격을 따른다. 근접으로 미는 규칙표는 힘에, 거리를 두는 쪽은 민첩에, 규칙을 많이
+    까는 쪽은 지능에 싣는다 — 열이 같은 몸을 가지면 규칙표를 갈라 둔 뜻이 절반 사라진다.
+
+    **이미 쓴 것은 그대로 둔다.** 배분표를 통째로 다시 쓰면 사람이 손댄 봇의 배분이
+    조용히 덮인다.
+
+    Args:
+        level: 지금 레벨.
+        ruleset_id: 이 봇이 쓰는 규칙표. 성격을 여기서 읽는다.
+        spent: 지금 배분표.
+
+    Returns:
+        새 배분표. 더 쓸 것이 없으면 지금 것 그대로다.
+    """
+    available = build_growth(level).stat_points - count_spent_points(spent)
+    if available <= 0:
+        return dict(spent)
+    # 규칙표 이름으로 가른다. 표 자체를 뜯어 보는 것보다 거칠지만, 성격은 이미 이름에
+    # 담겨 있고 거친 판단이 안 하는 것보다 낫다.
+    if any(mark in ruleset_id for mark in ("kite", "range", "sniper", "longshot", "reach")):
+        weights = {"dex": 2, "int": 1, "str": 0}
+    elif any(mark in ruleset_id for mark in ("focus", "summon", "camp", "hold")):
+        weights = {"int": 2, "dex": 1, "str": 0}
+    else:
+        weights = {"str": 2, "dex": 1, "int": 0}
+    total = sum(weights.values())
+    next_stats = dict(spent)
+    # 정렬된 열쇠로 돈다. 딕셔너리 순회 순서에 기대면 같은 상황에서 다른 몸이 나온다.
+    for key in sorted(STAT_KEYS):
+        next_stats[key] = int(next_stats.get(key, 0)) + available * weights.get(key, 0) // total
+    # **나머지 처리를 두지 않는다.** 레벨당 포인트(3)가 가중치 합(3)의 배수라 나눗셈이
+    # 아무것도 안 버린다 — 닿지 않는 갈래를 방어라고 두면 검사할 수 없는 코드가 된다.
+    # 둘 중 하나가 바뀌면 「남는 포인트가 없다」 검사가 그 자리에서 걸린다.
+    return next_stats
