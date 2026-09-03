@@ -36,7 +36,7 @@ from game.schemas.room import (
 ROOM_TEMPLATE_COUNT = 31
 ROOM_WIDTH = 12
 ROOM_HEIGHT = 9
-ENEMY_KIND_COUNT = 13  # +4: 늑대·골렘·저주 사수·역병 사제 (게임 변수 확장)
+ENEMY_KIND_COUNT = 14  # +4 늑대·골렘·저주 사수·역병 사제, +1 도플갱어
 
 
 @pytest.fixture(scope="module")
@@ -258,6 +258,9 @@ def test_template_ids_are_unique(templates):
 def test_w7_ships_eight_enemy_kinds(balance):
     # GDD §9 콘텐츠 범위 — 적 8종. Phase 1 W3 의 3종에 W7 이 5종을
     # 더했다. 보스 3종은 페이즈별 규칙표 교체가 필요해 Phase 4 다.
+    # 이후 변수 확대로 4종(dire_wolf·shield_golem·hex_archer·plague_mender)이,
+    # 그리고 도플갱어 1종이 붙어 14 다. 도플갱어는 방 배치에 없는 유일한 종이다 —
+    # 남의 자리를 스냅샷으로 이어받는다.
     assert len(balance["enemies"]) == ENEMY_KIND_COUNT
     ids = [e["id"] for e in balance["enemies"]]
     assert len(ids) == len(set(ids))

@@ -278,7 +278,11 @@ export function buildEngine(setup: EngineSetup): TickEngine {
         ? resolveSpawnSpot(template, spawn.position, taken, variance)
         : spawn.position
     taken.add(`${String(spot.x)},${String(spot.y)}`)
-    const kind = byId.get(kindId)
+    // **스냅샷이 종도 정한다.** 얼려 둔 것은 그 개체의 상태 전부이고 종은 그 일부다.
+    // 이것이 없으면 도플갱어가 방에 설 자리가 없다 (G3 — 파이썬과 같은 규칙).
+    const namedKind =
+      found !== undefined && byId.has(found.kindId) ? found.kindId : kindId
+    const kind = byId.get(namedKind)
     if (kind === undefined) {
       throw new Error(`balance.json 에 없는 적 종류다: ${kindId}`)
     }

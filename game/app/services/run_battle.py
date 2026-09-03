@@ -208,6 +208,15 @@ def build_engine(
             else resolve_spawn_spot(template, spawn.position, taken, variance)
         )
         taken.add(spot)
+        # **스냅샷이 종도 정한다.** 얼려 둔 것은 그 개체의 상태 전부이고 종은 그 일부다.
+        # 이것이 없으면 도플갱어가 방에 설 자리가 없다 — 자리 이름만 겹치고 전투가 보는
+        # 종은 템플릿의 것이라, 잡아도 「도플갱어를 잡았다」가 아니게 되고 전리품 차단이
+        # 통째로 빗나간다.
+        #
+        # 기존 개체는 심을 때 템플릿의 종으로 심으므로 이 갈래를 안 탄다 — 값이 같다.
+        found_kind = overrides.get(slot_id)
+        if found_kind is not None and found_kind.kind_id in by_id:
+            kind_id = found_kind.kind_id
         kind = by_id[kind_id]
         # **자리 이름은 템플릿의 종으로 짓는다.** 승격으로 종이 바뀌어도 스냅샷·
         # 도감이 겨냥하는 이름이 그대로여야 한다.

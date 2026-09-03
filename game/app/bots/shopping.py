@@ -88,3 +88,42 @@ def find_purchase(listings: tuple[Listing, ...], balance: int) -> int:
     if not affordable:
         return 0
     return min(affordable, key=lambda item: (item.price, item.listing_id)).listing_id
+
+
+@dataclass(frozen=True)
+class BagItem:
+    """낄지 말지 판단할 가방 속 물건 하나."""
+
+    item_id: int
+    slot: str
+    can_equip: bool
+    is_broken: bool
+
+
+def list_equippable(bag: tuple[BagItem, ...], filled_slots: frozenset[str]) -> tuple[BagItem, ...]:
+    """빈 자리에 낄 수 있는 것들을 고른다.
+
+    **끼는 것이 지키는 것이다.** 사망 페널티는 장착·가방을 통틀어 하나를 뽑는데, 뽑힌
+    것이 **장착 중이었으면 파손**(복구 가능)이고 **가방에 있었으면 삭제**다 (결정 #34).
+    그것이 「좋은 건 끼고 다녀라」는 유인인데, 봇이 아무것도 안 끼면 그 유인의 반대편만
+    받는다 — 실제로 봇 열이 스무 개를 그렇게 잃었다. 받은 것도 산 것도 가방에서 녹았다.
+
+    빈 자리만 채운다. 「더 좋은 것으로 갈아 끼우기」는 값을 매기는 기준이 필요하고, 그
+    기준이 틀리면 봇이 좋은 것을 벗고 나쁜 것을 낀다 — 빈 자리는 그 판단이 필요 없다.
+
+    Args:
+        bag: 가방 속 물건들.
+        filled_slots: 이미 차 있는 장비 자리들.
+
+    Returns:
+        낄 것들. 한 자리에 하나씩만 고른다.
+    """
+    picked: dict[str, BagItem] = {}
+    for item in bag:
+        if not item.can_equip or item.is_broken or not item.slot:
+            continue
+        if item.slot in filled_slots or item.slot in picked:
+            continue
+        picked[item.slot] = item
+    # 자리 이름 순으로 낸다. 순서가 흔들리면 같은 가방에서 다른 일이 벌어진다.
+    return tuple(picked[slot] for slot in sorted(picked))

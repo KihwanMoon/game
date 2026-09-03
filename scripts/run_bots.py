@@ -25,7 +25,7 @@ from psycopg_pool import ConnectionPool
 
 from game.app.bots.personas import BOT_PERSONAS
 from game.app.bots.play import build_played_ruleset, list_persona_specs, resolve_claim_floors
-from game.app.bots.shopping import Listing, find_purchase
+from game.app.bots.shopping import BagItem, Listing, find_purchase, list_equippable
 from game.app.services.run_battle import load_balance
 from game.app.services.run_chain import run_room_chain
 from game.app.store.bots import (
@@ -250,6 +250,46 @@ def apply_bot_shopping(api_url: str, bot: BotProfile) -> str:
     return "" if bought is None else f"경매 #{wanted} 샀다"
 
 
+def apply_bot_gear(api_url: str, bot: BotProfile) -> str:
+    """가방에 있는 것을 빈 자리에 낀다.
+
+    **끼는 것이 지키는 것이다.** 사망 페널티는 장착·가방을 통틀어 하나를 뽑는데, 뽑힌
+    것이 장착 중이었으면 파손(복구 가능)이고 가방에 있었으면 삭제다 (결정 #34). 봇이
+    아무것도 안 끼면 그 유인의 반대편만 받는다 — 실제로 봇 열이 스무 개를 그렇게 잃었다.
+
+    Args:
+        api_url: 백엔드 주소.
+        bot: 이 봇의 성격.
+
+    Returns:
+        무슨 일이 있었는지. 아무것도 안 꼈으면 빈 문자열.
+    """
+    bag = send_request(f"{api_url}/api/inventory", bot.token, None)
+    if bag is None:
+        return ""
+    filled = frozenset(
+        str(row.get("slot") or "") for row in bag.get("equipment", []) if row.get("item")
+    )
+    items = tuple(
+        BagItem(
+            item_id=int(row["item"]["item_id"]),
+            slot=str(row["item"].get("slot") or ""),
+            can_equip=bool(row["item"].get("can_equip")),
+            is_broken=bool(row["item"].get("is_broken")),
+        )
+        for row in bag.get("slots", [])
+        if row.get("item")
+    )
+    worn = []
+    for item in list_equippable(items, filled):
+        done = send_request(
+            f"{api_url}/api/equip", bot.token, {"item_id": item.item_id, "slot": item.slot}
+        )
+        if done is not None:
+            worn.append(item.slot)
+    return "" if not worn else f"{'·'.join(worn)} 착용"
+
+
 def apply_bot_round(pool: ConnectionPool, api_url: str, parts: dict) -> int:
     """차례가 된 봇들을 한 번씩 내보낸다.
 
@@ -271,6 +311,10 @@ def apply_bot_round(pool: ConnectionPool, api_url: str, parts: dict) -> int:
             bought = apply_bot_shopping(api_url, bot)
             if bought:
                 note = f"{note} · {bought}"
+            # **산 뒤에 낀다.** 가방에 둔 채로 다음 판에 나가면 사망 페널티가 그것을 지운다.
+            worn = apply_bot_gear(api_url, bot)
+            if worn:
+                note = f"{note} · {worn}"
         except (KeyError, ValueError, TypeError) as error:
             note = f"판이 깨졌다: {error}"
         print(f"[봇] {bot.label} — {note}", flush=True)

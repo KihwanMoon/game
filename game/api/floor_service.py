@@ -119,6 +119,26 @@ def count_claim_rooms(ticket: IssuedTicket, claimed: int) -> int:
     return (claimed - ticket.floor + 1) * ticket.rooms_per_floor
 
 
+def count_floor_rooms(ticket: IssuedTicket, claimed: int) -> tuple[str, ...]:
+    """그 층이 도는 방들을 잘라 낸다.
+
+    도플갱어가 앉을 자리를 그 층의 방 배치에서 고르기 때문에 필요하다 — 하강 전체의
+    자리에서 고르면 **다른 층의 방에 그림자가 서고**, 그 층을 도는 사람은 영영 못 만난다.
+
+    Args:
+        ticket: 이 런의 티켓.
+        claimed: 확정한 층. 0 이면 시작 층으로 본다.
+
+    Returns:
+        그 층의 방 id 들. 층을 못 가르면 하강 전체다.
+    """
+    if ticket.rooms_per_floor <= 0 or not ticket.room_ids:
+        return tuple(ticket.room_ids)
+    step = max(0, max(claimed, ticket.floor) - ticket.floor)
+    offset = step * ticket.rooms_per_floor
+    return tuple(ticket.room_ids[offset : offset + ticket.rooms_per_floor])
+
+
 def apply_charge_spend(account_id: int, ticket: IssuedTicket, verified: VerifiedRun) -> None:
     """이번 재시뮬이 쓴 만큼 소모품 칸에서 깎는다 (설계/4_아이템 §5).
 

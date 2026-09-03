@@ -14,7 +14,7 @@ import type { RuleSet } from './ruleset'
 /** 엔진 로직 세대. 파이썬 `ENGINE_VERSION` 과 같은 값이어야 한다. */
 // e2: 인자 없는 USE_ITEM 이 물약으로 떨어진다 (불가 → 발동).
 // e3: 층 스케일이 복리(×mult/100, 층마다 내림)로 바뀌었다.
-export const ENGINE_VERSION = 5
+export const ENGINE_VERSION = 6
 
 /**
  * 시드 상한. `Number.MAX_SAFE_INTEGER` 이며, 이것은 밸런스가 아니라 **이식 제약**이다.

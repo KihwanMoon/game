@@ -14,11 +14,13 @@ from game.api.deps import (
     get_core_version,
     get_pool,
 )
+from game.api.doppel_service import apply_doppel_from_death
 from game.api.floor_service import (
     apply_charge_spend,
     apply_floor_outcome,
     check_descent_over,
     count_claim_rooms,
+    count_floor_rooms,
     resolve_claim,
 )
 from game.api.loot_service import create_run_drops, list_floor_defeats
@@ -220,6 +222,53 @@ def check_run_submission(
     )
 
 
+def build_world_notes(
+    request: SubmissionRequest,
+    ticket: IssuedTicket,
+    verified: VerifiedRun,
+    account_id: int,
+    submission_id: int,
+    claimed: int,
+) -> str:
+    """이 제출이 세계에 남긴 것을 한 줄로 모은다.
+
+    라우트에서 떼어 낸 이유는 복잡도다 — 세계 반영이 늘어날 때마다 라우트가 길어지면
+    「무엇을 검사했고 무엇을 확정했는가」가 그 사이에 묻힌다 (§4).
+
+    Args:
+        request: 제출 요청.
+        ticket: 이 런의 티켓.
+        verified: 서버가 확정한 결과.
+        account_id: 플레이어 계정.
+        submission_id: 제출 id.
+        claimed: 확정한 층.
+
+    Returns:
+        보상 줄에 이어 붙일 말. 없으면 빈 문자열.
+    """
+    notes: list[str] = []
+    # **싸운 층만 반영한다.** 티켓은 하강 전체를 싣는데 한 제출은 일부 층만 돈다 —
+    # 안 가르면 1층에서 죽은 판이 9층 몬스터를 키운다 (실측).
+    world = apply_monster_outcome(ticket, submission_id, verified, account_id, claimed)
+    if world:
+        notes.append(world)
+    # **봇이 깊은 층에서 죽으면 그 자리에 그림자가 선다** (T11). 서버가 판단한다 —
+    # 러너가 「나 죽었으니 세워 줘」라고 말하는 구조면 세계 상태를 클라이언트가 정한다 (T9).
+    shadow = apply_doppel_from_death(
+        get_pool(),
+        get_context().rooms,
+        account_id,
+        verified,
+        ticket.floor if claimed <= 0 else claimed,
+        count_floor_rooms(ticket, claimed),
+        ticket.loadout or {},
+        request.ruleset,
+    )
+    if shadow:
+        notes.append(shadow)
+    return " · ".join(notes)
+
+
 @router.post("/api/run", response_model=SubmissionResponse)
 def create_run_submission(
     request: SubmissionRequest, account: CurrentAccount
@@ -279,9 +328,7 @@ def create_run_submission(
         ticket.floor,
         ticket.rooms_per_floor,
     )
-    # **싸운 층만 반영한다.** 티켓은 하강 전체를 싣는데 한 제출은 일부 층만 돈다 —
-    # 안 가르면 1층에서 죽은 판이 9층 몬스터를 키운다 (실측).
-    world = apply_monster_outcome(ticket, submission_id, verified, account.account_id, claimed)
+    world = build_world_notes(request, ticket, verified, account.account_id, submission_id, claimed)
     if world:
         reward = f"{reward} · {world}" if reward else world
     apply_charge_spend(account.account_id, ticket, verified)

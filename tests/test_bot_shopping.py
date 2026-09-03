@@ -103,3 +103,75 @@ def test_the_runner_never_lists_anything():
     source = Path("scripts/run_bots.py").read_text(encoding="utf-8")
     assert "auction/list" not in source
     assert "auction/cancel" not in source
+
+
+def build_bag_item(item_id, slot, can_equip=True, is_broken=False):
+    """가방 속 물건 하나.
+
+    Args:
+        item_id: 아이템 id.
+        slot: 들어갈 자리.
+        can_equip: 요구조건을 채웠는가.
+        is_broken: 파손됐는가.
+
+    Returns:
+        물건.
+    """
+    from game.app.bots.shopping import BagItem
+
+    return BagItem(item_id=item_id, slot=slot, can_equip=can_equip, is_broken=is_broken)
+
+
+def test_an_empty_slot_gets_filled():
+    """★ **끼는 것이 지키는 것이다.**
+
+    사망 페널티는 장착·가방을 통틀어 하나를 뽑는데, 장착 중이면 파손(복구 가능)이고
+    가방에 있으면 삭제다 (결정 #34). 봇이 아무것도 안 끼면 그 유인의 반대편만 받는다 —
+    실제로 봇 열이 스무 개를 그렇게 잃었다.
+    """
+    from game.app.bots.shopping import list_equippable
+
+    picked = list_equippable((build_bag_item(1, "BODY"),), frozenset())
+    assert [item.item_id for item in picked] == [1]
+
+
+def test_a_filled_slot_is_left_alone():
+    """★ 차 있는 자리는 안 건드린다.
+
+    갈아 끼우려면 값을 매기는 기준이 필요하고, 기준이 틀리면 봇이 좋은 것을 벗고 나쁜
+    것을 낀다. 빈 자리는 그 판단이 필요 없다.
+    """
+    from game.app.bots.shopping import list_equippable
+
+    assert list_equippable((build_bag_item(1, "BODY"),), frozenset({"BODY"})) == ()
+
+
+def test_one_per_slot():
+    """★ 한 자리에 하나만 고른다 — 둘을 보내면 뒤엣것이 앞엣것을 벗긴다."""
+    from game.app.bots.shopping import list_equippable
+
+    picked = list_equippable(
+        (build_bag_item(1, "BODY"), build_bag_item(2, "BODY"), build_bag_item(3, "FEET")),
+        frozenset(),
+    )
+    assert sorted(item.slot for item in picked) == ["BODY", "FEET"]
+
+
+def test_what_cannot_be_worn_is_skipped():
+    """★ 요구조건을 못 채웠거나 파손된 것은 안 낀다 — 서버가 거절할 요청을 안 보낸다."""
+    from game.app.bots.shopping import list_equippable
+
+    bag = (
+        build_bag_item(1, "BODY", can_equip=False),
+        build_bag_item(2, "FEET", is_broken=True),
+        build_bag_item(3, ""),
+    )
+    assert list_equippable(bag, frozenset()) == ()
+
+
+def test_the_order_is_fixed():
+    """순서가 흔들리면 같은 가방에서 다른 일이 벌어진다."""
+    from game.app.bots.shopping import list_equippable
+
+    bag = (build_bag_item(9, "HEAD"), build_bag_item(4, "BODY"))
+    assert [item.slot for item in list_equippable(bag, frozenset())] == ["BODY", "HEAD"]

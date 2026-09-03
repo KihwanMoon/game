@@ -8,6 +8,7 @@ import json
 
 import pytest
 
+from game.app.bots.doppel import DOPPEL_KIND_ID
 from game.app.rules.validator import validate_ruleset
 from game.app.services.run_battle import load_balance
 from game.config import (
@@ -150,7 +151,10 @@ def test_every_enemy_kind_actually_shows_up_in_a_room(templates, balance):
     # 정의와 규칙표와 도감만 있고 어느 방에도 나오지 않는 적은 없는 적이다.
     # 자폭형(예고의 유일한 사용처)과 치유형이 그 상태였다.
     placed = {spawn.kind for template in templates for spawn in template.enemy_spawns}
-    assert {e["id"] for e in balance["enemies"]} == placed
+    # **도플갱어는 예외다.** 남의 자리를 스냅샷으로 이어받는 개체라 템플릿에 제 자리가
+    # 없다 — 그것이 이 종의 정의다. 예외를 여기 적어 두는 이유는 「어느 방에도 안 나오는
+    # 적」과 구별하기 위해서다: 그쪽은 결함이고 이쪽은 설계다.
+    assert {e["id"] for e in balance["enemies"]} - {DOPPEL_KIND_ID} == placed
 
 
 def test_min_floor_is_declared_for_every_room(templates):

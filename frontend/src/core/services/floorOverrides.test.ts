@@ -85,3 +85,23 @@ describe('층별 스냅샷', () => {
     expect(parseSnapshot(raw).zoneFloor).toBe(0)
   })
 })
+
+describe('스냅샷이 종을 정한다', () => {
+  it('★ 도플갱어가 방에 선다 — 파이썬 `test_doppel_spawn` 의 짝 (G3)', async () => {
+    const { buildEngine, parseBalance } = await import('./runBattle')
+    const { BALANCE, ROOM_TEMPLATES } = await import('../resources')
+    const template = ROOM_TEMPLATES.find((room) => room.templateId === 'corridor')
+    if (template === undefined) {
+      throw new Error('corridor 가 없다')
+    }
+    const slot = `${template.enemySpawns[0]?.kind ?? ''}_0`
+    const engine = buildEngine({
+      template,
+      balance: parseBalance(BALANCE),
+      seed: 1,
+      isVaried: false,
+      snapshots: [{ ...build(1, 3), entityId: slot, kindId: 'doppelganger', hpMax: 140 }],
+    })
+    expect(engine.state.entities.get(slot)?.kindId).toBe('doppelganger')
+  })
+})

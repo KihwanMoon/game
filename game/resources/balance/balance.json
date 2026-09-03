@@ -21,7 +21,7 @@
     "정보는 룸 템플릿의 min_floor 로 옮겼다 — 어느 층에 나오는가는 방 배치가 정한다",
     "(docs/04 P-2)."
   ],
-  "balance_version": 9,
+  "balance_version": 10,
   "damage_formula": {
     "_note": "TDD §8 을 정수 연산으로 옮긴 것. // 는 내림 나눗셈이다.",
     "defense_denominator": "defense + soft_cap_base + soft_cap_per_floor * floor",
@@ -291,6 +291,23 @@
       "cpu_budget": 4,
       "rule_slots": 3,
       "ruleset_id": "ai_mender",
+      "tier": "ELITE"
+    },
+    {
+      "id": "doppelganger",
+      "type": "MELEE",
+      "label_ko": "도플갱어",
+      "hp_max": 100,
+      "attack": 12,
+      "defense": 5,
+      "attack_range": 1,
+      "move_cost": 1,
+      "regen_base": 0,
+      "initiative": 50,
+      "_note": "봇이 깊은 층에서 죽으면 그 빌드가 여기 선다. **기본값이 플레이어의 것이다** — 이 개체는 몬스터 곡선이 아니라 사람의 로드아웃에서 나오며, 실제 스탯은 그 봇이 쓰던 값이 스냅샷으로 덮는다. 카탈로그의 값은 스냅샷이 없을 때의 바닥이며, CPU·슬롯은 다른 적과 같은 4·3 을 쓴다 — 실제로 도는 값은 그 봇의 로드아웃이 스냅샷으로 싣는다. **전리품을 만들지 않는다** (결정 #02, T11): 봇의 장비에서 나온 개체라 무엇이든 떨어지면 봇이 벌어 둔 것을 사람에게 건네는 통로가 된다. 드롭 굴림·전리품 강탈·되찾기 셋이 `game/app/bots/doppel.py` 에서 막혀 있고, 그 판정이 이 id 하나에 걸려 있으므로 id 를 바꾸면 셋이 함께 뚫린다.",
+      "cpu_budget": 4,
+      "rule_slots": 3,
+      "ruleset_id": "ai_veteran",
       "tier": "ELITE"
     }
   ],
