@@ -6,7 +6,7 @@
 
 import json
 
-from game.app.bots.play import build_bot_handle, degrade_ruleset, resolve_claim_floors
+from game.app.bots.play import build_bot_handle, build_played_ruleset, resolve_claim_floors
 from game.config import BENCHMARK_RULESETS_PATH
 
 
@@ -28,7 +28,7 @@ def build_raw(count):
 
 def test_full_skill_keeps_every_rule():
     """실력 100 은 규칙표를 그대로 쓴다."""
-    assert len(degrade_ruleset(build_raw(6), 100)["rules"]) == 6
+    assert len(build_played_ruleset(build_raw(6), 100)["rules"]) == 6
 
 
 def test_low_skill_drops_the_lower_rows():
@@ -36,19 +36,19 @@ def test_low_skill_drops_the_lower_rows():
 
     윗줄을 덜면 표가 뜻을 잃어 「못하는 것」이 아니라 「망가진 것」이 된다.
     """
-    kept = degrade_ruleset(build_raw(10), 30)["rules"]
+    kept = build_played_ruleset(build_raw(10), 30)["rules"]
     assert [rule["priority"] for rule in kept] == [1, 2, 3]
 
 
 def test_one_rule_always_survives():
     """★ 전부 덜지 않는다 — 폴백만 남으면 열 봇이 같은 판을 돈다."""
-    assert len(degrade_ruleset(build_raw(2), 1)["rules"]) == 1
+    assert len(build_played_ruleset(build_raw(2), 1)["rules"]) == 1
 
 
 def test_degrading_does_not_touch_the_original():
     """원본을 건드리면 다음 봇이 이미 깎인 표를 물려받는다."""
     raw = build_raw(8)
-    degrade_ruleset(raw, 25)
+    build_played_ruleset(raw, 25)
     assert len(raw["rules"]) == 8
 
 
@@ -70,7 +70,7 @@ def test_degrading_a_real_ruleset_still_parses():
     from game.schemas.ruleset import parse_ruleset
 
     raw = json.loads(BENCHMARK_RULESETS_PATH.read_text(encoding="utf-8"))["rulesets"][0]
-    parsed = parse_ruleset(degrade_ruleset(raw, 40))
+    parsed = parse_ruleset(build_played_ruleset(raw, 40))
     assert len(parsed.rules) >= 1
 
 

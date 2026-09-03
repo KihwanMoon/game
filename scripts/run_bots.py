@@ -24,7 +24,7 @@ import urllib.request
 from psycopg_pool import ConnectionPool
 
 from game.app.bots.personas import BOT_PERSONAS
-from game.app.bots.play import degrade_ruleset, list_persona_specs, resolve_claim_floors
+from game.app.bots.play import build_played_ruleset, list_persona_specs, resolve_claim_floors
 from game.app.services.run_battle import load_balance
 from game.app.services.run_chain import run_room_chain
 from game.app.store.bots import (
@@ -171,7 +171,7 @@ def run_one_bot(pool: ConnectionPool, api_url: str, bot: BotProfile, parts: dict
     raw = parts["raw"].get(bot.ruleset_id)
     if raw is None:
         return f"규칙표가 없다: {bot.ruleset_id}"
-    played = degrade_ruleset(raw, bot.skill_pct)
+    played = build_played_ruleset(raw, bot.skill_pct)
     loadout = ticket.get("loadout")
     result = run_room_chain(
         chain,

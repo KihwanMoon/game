@@ -32,8 +32,8 @@ def build_bot_handle(index: int) -> str:
     return f"bot{index + 1}"
 
 
-def degrade_ruleset(raw: dict, skill_pct: int) -> dict:
-    """실력만큼만 규칙을 남긴다.
+def build_played_ruleset(raw: dict, skill_pct: int) -> dict:
+    """실력만큼만 규칙을 남긴 규칙표를 만든다.
 
     **윗줄부터 남긴다.** 우선순위가 높은 줄이 그 규칙표의 뼈대이고, 아랫줄은 다듬기다 —
     덜 다듬어진 표가 못하는 사람의 표다. 반대로 윗줄을 덜면 표가 뜻을 잃어 「못하는 것」이
