@@ -31,6 +31,7 @@ from game.config import (
     BLOCKS_PATH,
     ENEMY_RULESETS_PATH,
     G0_RULESETS_PATH,
+    LATER_BLOCKS_RULESETS_PATH,
     ROOM_TEMPLATES_PATH,
 )
 from game.schemas.blocks import BlockCatalog, load_block_catalog
@@ -94,6 +95,7 @@ def load_batch_resources() -> BatchResources:
     """
     player_rulesets = load_rulesets(G0_RULESETS_PATH)
     player_rulesets.update(load_rulesets(BENCHMARK_RULESETS_PATH))
+    player_rulesets.update(load_rulesets(LATER_BLOCKS_RULESETS_PATH))
     candidates: list[tuple[str, RuleSet | None]] = [(FALLBACK_ID, None)]
     candidates.extend(player_rulesets.items())
     return BatchResources(

@@ -22,6 +22,10 @@ SKILLS_PATH = RESOURCES_DIR / "balance" / "skills.json"
 ITEMS_PATH = RESOURCES_DIR / "balance" / "items.json"
 ROOM_TEMPLATES_PATH = RESOURCES_DIR / "rooms" / "templates.json"
 G0_RULESETS_PATH = RESOURCES_DIR / "rulesets" / "g0_examples.json"
+# 동결 이후에 들어온 블록을 쓰는 표들. benchmark 는 블록 18/14/9 로 동결돼 있고
+# g0 는 게이트 자료라 둘 다 못 건드리는데, 그 뒤에 들어온 블록을 쓰는 표가 하나도
+# 없어 팔레트가 보여 주는 것을 아무것도 시연하지 않고 있었다.
+LATER_BLOCKS_RULESETS_PATH = RESOURCES_DIR / "rulesets" / "later_blocks.json"
 ENEMY_RULESETS_PATH = RESOURCES_DIR / "rulesets" / "enemies.json"
 BENCHMARK_RULESETS_PATH = RESOURCES_DIR / "rulesets" / "benchmark.json"
 TUTORIAL_STAGES_PATH = RESOURCES_DIR / "tutorial" / "stages.json"

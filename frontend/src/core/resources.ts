@@ -22,6 +22,7 @@ import roomsRaw from '@resources/rooms/templates.json'
 import benchmarkRaw from '@resources/rulesets/benchmark.json'
 import enemiesRaw from '@resources/rulesets/enemies.json'
 import g0Raw from '@resources/rulesets/g0_examples.json'
+import laterRaw from '@resources/rulesets/later_blocks.json'
 import tutorialRaw from '@resources/tutorial/stages.json'
 
 import type {
@@ -101,6 +102,9 @@ function collectTemplates(file: RawRuleSetFile): readonly RuleTemplate[] {
 export const RULE_TEMPLATES: readonly RuleTemplate[] = [
   ...collectTemplates(g0Raw as unknown as RawRuleSetFile),
   ...collectTemplates(benchmarkRaw as unknown as RawRuleSetFile),
+  // 동결 이후에 들어온 블록을 쓰는 표들. 팔레트가 보여 주는 것을 무엇도 시연하지
+  // 않고 있었다 — 예시 없는 블록은 있어도 없는 것과 같다.
+  ...collectTemplates(laterRaw as unknown as RawRuleSetFile),
 ]
 
 /** 룸 템플릿 목록 (GDD §4.4). 파일에 적힌 순서를 유지한다. */
@@ -121,6 +125,11 @@ export const ENEMY_RULESETS: ReadonlyMap<string, RuleSet> = loadRuleSets(
 /** 벤치마크 규칙표. 배치 러너가 승률을 재는 대상이다. */
 export const BENCHMARK_RULESETS: ReadonlyMap<string, RuleSet> = loadRuleSets(
   benchmarkRaw as unknown as RawRuleSetFile,
+)
+
+/** 동결 이후에 들어온 블록을 쓰는 표들 (v4~v8). */
+export const LATER_BLOCK_RULESETS: ReadonlyMap<string, RuleSet> = loadRuleSets(
+  laterRaw as unknown as RawRuleSetFile,
 )
 
 /**

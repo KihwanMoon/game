@@ -1,0 +1,360 @@
+{
+  "_comment": [
+    "동결 이후에 들어온 블록들 (v4~v8).",
+    "",
+    "benchmark.json 은 블록 18/14/9 로 동결돼 있고 g0_examples.json 은 G0 게이트 자료라",
+    "둘 다 손대지 않는다. 그래서 그 뒤에 들어온 블록 — USE_SKILL[id](v5)·USE_ITEM[tag](v6)·",
+    "TYPE_HEALER(v4)·self_skill_ready·지형 인지 — 은 **카탈로그에만 있고 아무 규칙표도",
+    "쓰지 않았다.** 팔레트는 그것을 보여 주는데 무엇을 보여 주는 예시가 하나도 없었고,",
+    "벤치마크도 그 경로를 한 번도 안 태웠다 — 단위 검사만 있었다.",
+    "",
+    "**셋 다 이기는 뼈대 위에 얹었다.** 처음엔 블록을 쓰는 것 자체를 목표로 짰더니 셋이",
+    "6%·5%·1% 였다 — 폴백(6%)과 같거나 그보다 나빴다. 조건이 거의 안 걸리는 표는 블록을",
+    "시연하는 것이 아니라 시연하지 않는 것이다. focus_lowest_guard(46%)의 뼈대를 쓰고",
+    "부르는 방식만 바꾸니 앞의 둘이 같은 46% 가 됐고, 그것이 곧 「v5/v6 형식이 옛 형식과",
+    "같은 일을 한다」는 증명이다.",
+    "",
+    "제약은 다른 파일과 같다: rule_slots 5, cpu_budget 8, cpu 비용 1항=1 / 2항=2 / 3항=4.",
+    "1층 60런 실측 — skill_identity 46% · cut_the_healer 46% · read_the_ground 20%."
+  ],
+  "rulesets": [
+    {
+      "ruleset_id": "v8_skill_identity",
+      "version": 1,
+      "strategy_ko": "스킬을 자리 번호가 아니라 정체로 부른다 (v5 USE_SKILL). 소모품도 태그로 부른다 (v6 USE_ITEM). focus_lowest_guard 와 같은 뼈대이고 부르는 방식만 다르다 — 1번 자리를 다른 스킬로 바꿔도 이 표는 자살하지 않는다.",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_ITEM",
+          "action_param": "POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "USE_SKILL",
+          "action_param": "SKILL_2",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "LOWEST_HP"
+              },
+              {
+                "lhs": "self_skill_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "LOWEST_HP"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 5,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "LOWEST_HP"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ruleset_id": "v8_cut_the_healer",
+      "version": 1,
+      "strategy_ko": "치유형을 먼저 끊는다 (v4 TYPE_HEALER). **치유형이 없는 층에서도 논다** — focus_summoner 가 0% 였던 것과 같은 병을 피하려고, 셋째 줄이 평범한 사거리 공격으로 받는다. 선호 대상이 없을 때 아무것도 안 하는 표는 표가 아니다.",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_ITEM",
+          "action_param": "POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "USE_SKILL",
+          "action_param": "SKILL_2",
+          "target": "TYPE_HEALER",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "TYPE_HEALER"
+              },
+              {
+                "lhs": "self_skill_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "USE_SKILL",
+          "action_param": "SKILL_2",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "LOWEST_HP"
+              },
+              {
+                "lhs": "self_skill_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 5,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "LOWEST_HP"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ruleset_id": "v8_read_the_ground",
+      "version": 1,
+      "strategy_ko": "발밑을 읽는다 (지형 인지). 다치고 포위가 시작되면 벽을 등진다. **1층 실측 20% 로, 같은 뼈대의 46% 보다 낮다** — 물러나는 데 쓴 틱이 때리는 틱보다 비쌌다. 지우지 않고 남기는 이유는 이것이 벤치마크가 잡으라고 있는 종류의 사실이기 때문이다: 「엄폐로 물러난다」는 직관이 이 층에서는 값을 못 한다.",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_ITEM",
+          "action_param": "POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "MOVE_TO_COVER",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 55
+              },
+              {
+                "lhs": "open_neighbor_count",
+                "cmp": ">=",
+                "rhs": 6
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "USE_SKILL",
+          "action_param": "SKILL_2",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "NEAREST"
+              },
+              {
+                "lhs": "self_skill_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 5,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
