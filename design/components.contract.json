@@ -57,6 +57,8 @@
       "hpMax",
       "potions",
       "potionsMax",
+      "scrolls",
+      "scrollsMax",
       "threat"
     ],
     "ThreatNotice": [
@@ -83,11 +85,8 @@
       "fired"
     ],
     "PlanGrid": [
-      "map",
-      "actors",
-      "hazards",
       "cell",
-      "showCoords"
+      "children"
     ],
     "RuleRow": [
       "index",
@@ -96,15 +95,11 @@
       "action",
       "cpu",
       "armed",
+      "enabled",
       "onClick"
     ],
     "RuleTable": [
-      "rules",
-      "armedIndex",
-      "cpuUsed",
-      "cpuMax",
-      "onEdit",
-      "onSelect"
+      "children"
     ],
     "PlanActor": [
       "x",
@@ -129,65 +124,14 @@
   },
   "_missing_note": "저장소에는 있는데 정본에 없는 것. 2026-09-03 에 셋(CellGrid·Thumb·PlanActor)을 올려 비었다 — 그 셋이 등급·연결선 토큰을 쓰는 쪽이었고, 그래서 정본에서 그 토큰이 아무 데도 안 쓰이고 있었다.",
   "missing_in_design": {},
-  "_divergence_note": "정본과 저장소가 다른 자리. 여기 적힌 것만 허용되고, 새로 생기면 검사가 잡는다. 고칠 때는 정본을 고치고 이 항목을 지우는 것이 정답이며, 남겨 둘 이유가 있으면 사유를 적는다.",
+  "_divergence_note": "정본과 저장소가 다른 자리. 여기 적힌 것만 허용되고, 새로 생기면 검사가 잡는다. 2026-09-03 에 여덟을 맞춰 셋만 남았다 — Button 은 되돌리지 않을 차이, LogRow 는 표현이 같은 차이, Thumb 은 저장소가 뒤처진 쪽이다.",
   "divergences": {
-    "StatusBar": {
-      "repo_only": [
-        "scrolls",
-        "scrollsMax"
-      ],
-      "why": "주문서가 소모품 칸에 붙으면서 하단바가 함께 적게 됐다. 정본이 따라와야 한다"
-    },
-    "PlanGrid": {
-      "repo_only": [
-        "children"
-      ],
-      "design_only": [
-        "actors",
-        "hazards",
-        "map",
-        "showCoords"
-      ],
-      "why": "말·연결선·이펙트를 도면 위에 따로 그리게 되면서 자식 슬롯 방식으로 바꿨다. 정본은 아직 배열을 받는다"
-    },
-    "RuleRow": {
-      "repo_only": [
-        "enabled"
-      ],
-      "why": "규칙 끄기(가설 시험)가 생겼다. cpu 도 초과 표기를 위해 number|절 로 넓어졌지만 이름은 같다"
-    },
-    "GlyphState": {
-      "why": "state 에 blocked 가 늘었다 — 규칙 상태 4종의 「참·불가」. 알려진 이슈 X4 와 같은 자리다"
-    },
-    "TopBar": {
-      "why": "speed 가 문자열(\"1x\")에서 숫자(1)로 바뀌었다. 이름은 같아 검사가 못 잡는 종류의 격차이며, 시트가 문자열을 넘기고 있다"
-    },
-    "SpeedControl": {
-      "why": "TopBar 과 같은 이유로 value 가 숫자다"
-    },
-    "SegmentedGauge": {
-      "why": "readout 이 boolean|string 으로 넓어졌다. cpu 10 / 8 처럼 초과를 숫자로 적어야 해서다"
-    },
     "Button": {
       "repo_only": [
         "onClick",
         "title"
       ],
       "why": "정본은 HTML 속성을 통째로 상속하고 저장소는 닫힌 계약을 쓴다 — 좁힌 쪽이 의도이며 되돌리지 않는다"
-    },
-    "RuleTable": {
-      "repo_only": [
-        "children"
-      ],
-      "design_only": [
-        "armedIndex",
-        "cpuMax",
-        "cpuUsed",
-        "onEdit",
-        "onSelect",
-        "rules"
-      ],
-      "why": "CPU 게이지가 패널 머리로, 편집 버튼이 상단바로 옮겨 가면서 저장소 쪽은 컨테이너만 남았다"
     },
     "LogRow": {
       "why": "tick 이 문자열(T027)에서 숫자로 바뀌었다. 표현은 같아 실질 격차가 아니다"
