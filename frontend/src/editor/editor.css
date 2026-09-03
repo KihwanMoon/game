@@ -110,6 +110,10 @@
 }
 
 .palette__kind {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
   font-family: var(--font-body);
   font-size: var(--fs-label);
   letter-spacing: var(--ls-label);
@@ -117,6 +121,17 @@
   color: var(--text-accent);
   border-bottom: var(--border);
   padding-bottom: var(--sp-1);
+}
+
+/* 수는 그것이 세는 것 옆에 둔다. 머리에 `21·16·10` 만 있으면 무엇을 세는지가 화면
+   어디에도 없다 — 봇 관리창의 「0 / 13」이 받은 것과 같은 질문이다. */
+.palette__count {
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: var(--ls-mono);
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
 }
 
 .palette__group {
@@ -1402,6 +1417,18 @@
   color: var(--text-body);
   font-family: var(--font-mono);
   font-size: var(--fs-mono);
+}
+
+/* 「이것이 너다」 — 화면의 유일한 광원을 여기 한 자리에 쓴다. 순위표에 내 줄은
+   하나뿐이라 예산 한 칸이다. 색만으로 알리지 않으므로 글리프(◉)와 글자(나)를
+   함께 적고, 보조 기술에는 한 문장으로 남긴다. */
+.wld__me {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  color: var(--brass);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
 }
 
 .wld__warn {

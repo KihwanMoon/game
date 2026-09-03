@@ -85,6 +85,20 @@ describe('세계 패널', () => {
     expect(markup).toContain('6 · 120 / 300')
   })
 
+  it('★ 「이것이 너다」는 황동이다 — 의미색을 빌려 쓰지 않는다', () => {
+    // 예전에는 `GlyphState state="true"` 라 참/거짓의 녹청 ✓ 로 내 줄을 표시했다.
+    // 의미색을 빌려 쓰면 그 색이 무엇을 뜻하는지가 화면마다 갈린다.
+    expect(markup).toContain('wld__row--me')
+    expect(markup).toContain('wld__me')
+    expect(markup).toContain('◉')
+    // 색만으로 알리지 않는다 — 보조 기술이 읽을 한 문장이 함께 있다.
+    expect(markup).toContain('이 줄이 나다')
+  })
+
+  it('내 줄이 아니면 표시하지 않는다 — 모두가 「나」면 아무 말도 아니다', () => {
+    expect(markup.match(/wld__row--me/g)).toHaveLength(1)
+  })
+
   it('★ 점수가 누적 경험치임을 말한다 — 한 판 성적이 아니다', () => {
     expect(markup).toContain('점수는 누적 경험치다')
   })

@@ -71,6 +71,7 @@ import {
   EvictionNotice,
   AUTO_ADVANCE_SECONDS,
   AutoAdvanceNotice,
+  buildRoomGroups,
   checkShouldAutoAdvance,
   readAutoAdvance,
   writeAutoAdvance,
@@ -1463,10 +1464,16 @@ export function App(): React.JSX.Element {
           setSession((current) => applyRoomChoice(current, roomId))
         }}
       >
-        {ROOM_TEMPLATES.map((template) => (
-          <option value={template.templateId} key={template.templateId}>
-            {template.templateId}
-          </option>
+        {/* **층으로 묶고 뜻을 함께 적는다.** 영문 id 서른한 줄로는 「어느 방이 내
+            규칙표를 시험하는가」에 답할 수 없어, 대부분은 맨 위 것을 그냥 쓰게 된다. */}
+        {buildRoomGroups(ROOM_TEMPLATES).map((group) => (
+          <optgroup label={group.label} key={group.minFloor}>
+            {group.rooms.map((room) => (
+              <option value={room.templateId} key={room.templateId} title={room.title}>
+                {room.label}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
       <label className="launch__label" htmlFor="launch-seed">

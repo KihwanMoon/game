@@ -214,7 +214,10 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
             ) : (
               <ul className="wld__list">
                 {leaderboard.entries.slice(0, 10).map((entry) => (
-                  <li className="wld__row" key={entry.accountId}>
+                  <li
+                    className={`wld__row${entry.accountId === props.accountId ? ' wld__row--me' : ''}`}
+                    key={entry.accountId}
+                  >
                     <span className="wld__label">{String(entry.rank)}</span>
                     <span className="wld__name">{entry.handle}</span>
                     <ValueExpr
@@ -222,8 +225,16 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
                       size="sm"
                       dim
                     />
+                    {/* **「이것이 너다」는 황동이다** (design/README.md). 예전에는
+                        `state="true"` 라 참/거짓의 녹청 ✓ 를 정체성 표시로 쓰고 있었다 —
+                        의미색을 빌려 쓰면 그 색이 무엇을 뜻하는지가 화면마다 갈린다.
+                        글리프도 도면의 자기 표시(◉)와 같은 것을 쓴다. */}
                     {entry.accountId === props.accountId ? (
-                      <GlyphState state="true" size="sm" label="나" />
+                      <span className="wld__me">
+                        <span aria-hidden="true">◉</span>
+                        <span className="ds-sr">이 줄이 나다</span>
+                        나
+                      </span>
                     ) : null}
                   </li>
                 ))}

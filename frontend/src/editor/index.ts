@@ -26,6 +26,8 @@ export {
   writeAutoAdvance,
 } from './AutoAdvance'
 export { EvictionNotice, EVICTION_TEXT } from './EvictionNotice'
+export { buildRoomGroups, clipPurpose, PURPOSE_CLIP } from './roomChoices'
+export type { RoomChoice, RoomGroup } from './roomChoices'
 export { LinkNoticeLine } from './LinkNoticeLine'
 export type { LinkNoticeLineProps } from './LinkNoticeLine'
 export {

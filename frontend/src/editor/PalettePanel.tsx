@@ -34,7 +34,11 @@ export interface PalettePanelProps {
  */
 export function PalettePanel(props: PalettePanelProps): React.JSX.Element {
   const { catalog } = props
-  const meta = `${String(catalog.perceptions.size)}·${String(catalog.actions.size)}·${String(catalog.selectors.size)}`
+  // **라벨 없는 숫자는 아무 말도 안 한다.** 예전에는 머리에 `21·16·10` 세 개가
+  // 붙어 있었는데, 무엇을 세는지가 화면 어디에도 없었다 — 봇 관리창의 「0 / 13」이
+  // 받은 것과 같은 질문이다. 수는 그것이 세는 것 옆에 둔다.
+  const total = catalog.perceptions.size + catalog.actions.size + catalog.selectors.size
+  const meta = `블록 ${String(total)}`
 
   return (
     <Panel title="블록 팔레트" meta={meta} padded={false} scroll>
@@ -48,7 +52,10 @@ export function PalettePanel(props: PalettePanelProps): React.JSX.Element {
         </p>
 
         <section className="palette__section">
-          <h3 className="palette__kind">인지 변수</h3>
+          <h3 className="palette__kind">
+            인지 변수
+            <span className="palette__count">{String(catalog.perceptions.size)}</span>
+          </h3>
           {listPerceptionGroups(catalog).map((group) => (
             <div className="palette__group" key={group.category}>
               <span className="palette__group-name">{group.labelKo}</span>
@@ -70,7 +77,10 @@ export function PalettePanel(props: PalettePanelProps): React.JSX.Element {
         </section>
 
         <section className="palette__section">
-          <h3 className="palette__kind">행동</h3>
+          <h3 className="palette__kind">
+            행동
+            <span className="palette__count">{String(catalog.actions.size)}</span>
+          </h3>
           {listActionGroups(catalog).map((group) => (
             <div className="palette__group" key={group.category}>
               <span className="palette__group-name">{group.labelKo}</span>
@@ -93,7 +103,10 @@ export function PalettePanel(props: PalettePanelProps): React.JSX.Element {
         </section>
 
         <section className="palette__section">
-          <h3 className="palette__kind">셀렉터</h3>
+          <h3 className="palette__kind">
+            셀렉터
+            <span className="palette__count">{String(catalog.selectors.size)}</span>
+          </h3>
           <div className="palette__group">
             {listSelectors(catalog).map((item) => (
               <Button

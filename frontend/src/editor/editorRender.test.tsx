@@ -74,6 +74,27 @@ describe('규칙 에디터 렌더', () => {
     }
   })
 
+  it('★ 팔레트의 수마다 무엇을 세는지 붙어 있다', () => {
+    // 예전에는 머리에 `21·16·10` 세 개가 붙어 있었고, 무엇을 세는지가 화면 어디에도
+    // 없었다 — 봇 관리창의 「0 / 13」이 받은 것과 같은 질문이다.
+    const markup = renderEditor(PRESSURE)
+    expect(markup).not.toContain(
+      `${String(BLOCK_CATALOG.perceptions.size)}·${String(BLOCK_CATALOG.actions.size)}`,
+    )
+    const total =
+      BLOCK_CATALOG.perceptions.size + BLOCK_CATALOG.actions.size + BLOCK_CATALOG.selectors.size
+    expect(markup).toContain(`블록 ${String(total)}`)
+    // 수는 그것이 세는 것 옆에 선다.
+    expect(markup).toContain('palette__count')
+    for (const size of [
+      BLOCK_CATALOG.perceptions.size,
+      BLOCK_CATALOG.actions.size,
+      BLOCK_CATALOG.selectors.size,
+    ]) {
+      expect(markup).toContain(`palette__count">${String(size)}<`)
+    }
+  })
+
   it('규칙 줄마다 우선순위와 CPU 비용을 적는다', () => {
     const markup = renderEditor(PRESSURE)
     for (const rule of PRESSURE.rules) {
