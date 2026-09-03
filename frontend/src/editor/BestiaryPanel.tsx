@@ -18,12 +18,16 @@ import { formatRuleText } from './ruleText'
 import { Button, GlyphState, Panel, Thumb, ValueExpr } from '../ds'
 import type { BestiaryEntry } from '../storage'
 
+import { LinkNoticeLine } from './LinkNoticeLine'
+import { checkLinked, type LinkState } from './linkState'
+
 export interface BestiaryPanelProps {
   readonly entries: readonly BestiaryEntry[] | undefined
-  readonly isOnline: boolean
+  readonly link: LinkState
 }
 
-const OFFLINE_HINT = '서버에 닿지 못했다 — 세계의 몬스터는 서버가 안다'
+/** 못 닿았을 때 무엇을 못 보는가. 앞머리(`서버에 닿지 못했다`)는 linkState 가 든다. */
+const MISSING_HINT = '세계의 몬스터는 서버가 안다'
 const EMPTY_HINT = '아직 세계에 지속 몬스터가 없다'
 
 /**
@@ -50,7 +54,7 @@ export function listRuleLines(entry: BestiaryEntry): readonly string[] {
  * @returns 패널 요소.
  */
 export function BestiaryPanel(props: BestiaryPanelProps): React.JSX.Element {
-  const { entries, isOnline } = props
+  const { entries, link } = props
   const [openId, setOpenId] = useState<number | undefined>(undefined)
   const mine = (entries ?? []).filter((entry) => entry.holdsMine).length
 
@@ -63,8 +67,8 @@ export function BestiaryPanel(props: BestiaryPanelProps): React.JSX.Element {
       scroll
     >
       <div className="bst">
-        {!isOnline || entries === undefined ? (
-          <ValueExpr text={OFFLINE_HINT} size="sm" dim />
+        {!checkLinked(link) || entries === undefined ? (
+          <LinkNoticeLine link={link} missing={MISSING_HINT} />
         ) : entries.length === 0 ? (
           <ValueExpr text={EMPTY_HINT} size="sm" dim />
         ) : (

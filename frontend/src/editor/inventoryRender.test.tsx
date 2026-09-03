@@ -145,7 +145,7 @@ describe('격자 렌더', () => {
   const html = renderToStaticMarkup(
     <InventoryPanel
       inventory={INVENTORY}
-      isOnline
+      link="online"
       detail=""
       onEquip={noop}
       onUnequip={noop}
@@ -181,7 +181,7 @@ describe('격자 렌더', () => {
     const offline = renderToStaticMarkup(
       <InventoryPanel
         inventory={undefined}
-        isOnline={false}
+        link="offline"
         detail=""
         onEquip={noop}
         onUnequip={noop}
@@ -200,7 +200,7 @@ function renderDetail(kind: 'equip' | 'bag', entry: SlotView, slot = 'BODY'): st
   return renderToStaticMarkup(
     <InventoryDetail
       choice={{ kind, slot, entry }}
-      isOnline
+      link="online"
       repairCost={120}
       feePercent={5}
       onEquip={noop}

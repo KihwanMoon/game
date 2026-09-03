@@ -35,7 +35,7 @@ describe('계정 패널 — 익명', () => {
   const markup = renderToStaticMarkup(
     <AccountPanel
       account={undefined}
-      isOnline
+      link="online"
       hasLocalProgress={false}
       onRegister={noop}
       onLogin={noop}
@@ -62,7 +62,7 @@ describe('계정 패널 — 로그인됨', () => {
   const markup = renderToStaticMarkup(
     <AccountPanel
       account={{ accountId: 7, handle: 'user_x', loginId: 'victor' }}
-      isOnline
+      link="online"
       hasLocalProgress
       onRegister={noop}
       onLogin={noop}
@@ -84,7 +84,7 @@ describe('계정 패널 — 오프라인', () => {
   const markup = renderToStaticMarkup(
     <AccountPanel
       account={undefined}
-      isOnline={false}
+      link="offline"
       hasLocalProgress={false}
       onRegister={noop}
       onLogin={noop}
@@ -150,7 +150,7 @@ describe('로그아웃과 한 기기 규율 (2026-09-01)', () => {
   const signedIn = renderToStaticMarkup(
     <AccountPanel
       account={{ accountId: 7, handle: 'probe', loginId: 'sinindra' }}
-      isOnline
+      link="online"
       hasLocalProgress
       onRegister={async () => ''}
       onLogin={async () => ''}
@@ -172,7 +172,7 @@ describe('로그아웃과 한 기기 규율 (2026-09-01)', () => {
     const html = renderToStaticMarkup(
       <AccountPanel
         account={undefined}
-        isOnline
+        link="online"
         hasLocalProgress={false}
         onRegister={async () => ''}
         onLogin={async () => ''}
@@ -186,7 +186,7 @@ describe('로그아웃과 한 기기 규율 (2026-09-01)', () => {
     const html = renderToStaticMarkup(
       <AccountPanel
         account={undefined}
-        isOnline
+        link="online"
         hasLocalProgress={false}
         onRegister={async () => ''}
         onLogin={async () => ''}

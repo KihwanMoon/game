@@ -16,6 +16,8 @@ import { formatGradeClass, renderGrade } from './gradeBadge'
 import { EQUIP_CELL_LABELS } from './inventoryCells'
 import { formatAffix } from './InventoryPanel'
 
+import { checkLinked, type LinkState } from './linkState'
+
 /** 십진수 파싱. 앞의 0 을 8진수로 읽는 사고를 막는다. */
 const DECIMAL_RADIX = 10
 const PERCENT_BASE = 100
@@ -30,7 +32,7 @@ export interface CellChoice {
 
 export interface InventoryDetailProps {
   readonly choice: CellChoice
-  readonly isOnline: boolean
+  readonly link: LinkState
   readonly repairCost: number
   readonly feePercent: number
   readonly onEquip: (itemId: number, slot: string) => void
@@ -172,7 +174,7 @@ export function InventoryDetail(props: InventoryDetailProps): React.JSX.Element 
     )
   }
 
-  const disabled = !props.isOnline
+  const disabled = !checkLinked(props.link)
   return (
     <div className="invd">
       <div className="invd__row">

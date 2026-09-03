@@ -19,7 +19,7 @@ import { describe, expect, it } from 'vitest'
 
 import { App, CHAIN_LENGTH, LOCAL_FLOOR_CAP, buildInitialRuleSet, checkFloorCleared, checkLaunchLocked, checkRunOver, formatLaunchLabel, buildChainPosition, buildNextRoomSetup, buildRunSetup, resolvePlayerLimits, describeRunResult, findLaunchBlocker, formatLocation, readPlayerLimits } from './App'
 import { buildBattleSession, checkOngoing, resolveRoomFloor, type BattleSetup } from './battle'
-import { checkShouldAutoAdvance } from './editor'
+import { checkShouldAutoAdvance, OFFLINE_PREFIX, PROBING_TEXT } from './editor'
 import { BALANCE, BLOCK_CATALOG, G0_RULESETS } from './core/resources'
 import type { LogEntry } from './core/eventLog'
 import { validateRuleSet } from './core/rules/validator'
@@ -60,6 +60,15 @@ describe('첫 화면', () => {
   it('규칙 에디터가 먼저 뜬다', () => {
     expect(markup).toContain('규칙 에디터')
     expect(markup).toContain('우선순위 리스트')
+  })
+
+  // **첫 페인트가 경보를 띄우면 안 된다.** 앱은 서버에 붙어 보기도 전에
+  // 「서버에 닿지 못했다」를 ◈ 위험으로 적고 가입·로그인을 잠그고 있었다. 매번 뜨는
+  // 경보는 곧 아무도 안 읽는 경보가 되고, 진짜로 서버가 죽은 날 그 줄은 배경이 된다.
+  it('★ 서버에 물어보기 전에는 경보를 띄우지 않는다', () => {
+    expect(markup).not.toContain('ds-glyph--danger')
+    expect(markup).not.toContain(OFFLINE_PREFIX)
+    expect(markup).toContain(PROBING_TEXT)
   })
 
   it('출격 조작부가 상단 바에 붙는다', () => {

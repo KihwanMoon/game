@@ -16,9 +16,12 @@ import { useState } from 'react'
 import { Button, CellGrid, Panel, Thumb, ValueExpr } from '../ds'
 import type { DiscoveryRow, DiscoveryView } from '../storage'
 
+import { LinkNoticeLine } from './LinkNoticeLine'
+import { checkLinked, type LinkState } from './linkState'
+
 export interface DiscoveryPanelProps {
   readonly discovery: DiscoveryView | undefined
-  readonly isOnline: boolean
+  readonly link: LinkState
 }
 
 type View = 'items' | 'skills'
@@ -28,7 +31,8 @@ const VIEWS: readonly { readonly id: View; readonly label: string }[] = [
   { id: 'skills', label: '스킬' },
 ]
 
-const OFFLINE_HINT = '서버에 닿지 못했다 — 도감은 서버가 안다'
+/** 못 닿았을 때 무엇을 못 보는가. 앞머리(`서버에 닿지 못했다`)는 linkState 가 든다. */
+const MISSING_HINT = '도감은 서버가 안다'
 
 /**
  * 도감 줄들을 칸으로 바꾼다.
@@ -60,14 +64,14 @@ export function buildDiscoveryCells(rows: readonly DiscoveryRow[], picked: strin
  * @returns 패널 요소.
  */
 export function DiscoveryPanel(props: DiscoveryPanelProps): React.JSX.Element {
-  const { discovery, isOnline } = props
+  const { discovery, link } = props
   const [view, setView] = useState<View>('items')
   const [picked, setPicked] = useState('')
 
-  if (!isOnline || discovery === undefined) {
+  if (!checkLinked(link) || discovery === undefined) {
     return (
       <Panel title="수집" tone="panel" padded>
-        <ValueExpr text={OFFLINE_HINT} size="sm" dim />
+        <LinkNoticeLine link={link} missing={MISSING_HINT} />
       </Panel>
     )
   }

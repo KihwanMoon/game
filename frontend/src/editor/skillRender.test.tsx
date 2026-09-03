@@ -14,7 +14,7 @@ const noop = (): undefined => undefined
 
 function render(view: SkillPrefView | undefined, detail = ''): string {
   return renderToStaticMarkup(
-    <SkillPanel view={view} isOnline detail={detail} onChange={noop} />,
+    <SkillPanel view={view} link="online" detail={detail} onChange={noop} />,
   )
 }
 

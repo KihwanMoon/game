@@ -15,10 +15,12 @@ import { useState } from 'react'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import type { AccountState } from '../storage'
 
+import { checkLinked, describeLink, type LinkState } from './linkState'
+
 export interface AccountPanelProps {
   readonly account: AccountState | undefined
   /** 서버에 닿지 못했으면 false. 그래도 게임은 돈다. */
-  readonly isOnline: boolean
+  readonly link: LinkState
   /** 이 기기에 남아 있는 진행. 로그인 경고를 띄울지 판단한다. */
   readonly hasLocalProgress: boolean
   readonly onRegister: (loginId: string, password: string) => Promise<string>
@@ -34,7 +36,8 @@ export interface AccountPanelProps {
 
 type Mode = 'idle' | 'register' | 'login'
 
-const OFFLINE_TEXT = '서버에 닿지 못했다 — 진행은 이 기기에 남는다'
+/** 못 닿았을 때 무엇이 어떻게 되는가. 앞머리는 linkState 가 든다. */
+const MISSING_HINT = '진행은 이 기기에 남는다'
 const ANONYMOUS_TEXT = '익명 — 이 기기에만 남는다'
 const SINGLE_DEVICE_HINT =
   '한 계정은 한 기기다 — 다른 기기에서 로그인하면 이 기기는 로그아웃된다'
@@ -49,7 +52,8 @@ const LOGIN_WARNING = '로그인하면 이 기기의 익명 기록은 따라오�
  * @returns 패널 요소.
  */
 export function AccountPanel(props: AccountPanelProps): React.JSX.Element {
-  const { account, isOnline, hasLocalProgress } = props
+  const { account, link, hasLocalProgress } = props
+  const isOnline = checkLinked(link)
   const [mode, setMode] = useState<Mode>('idle')
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
@@ -92,8 +96,10 @@ export function AccountPanel(props: AccountPanelProps): React.JSX.Element {
     })
   }
 
+  // **아직 물어보는 중이면 경보를 띄우지 않는다.** 첫 페인트마다 ◈ 가 뜨면 그 줄은
+  // 곧 배경이 되고, 진짜로 서버가 죽은 날 아무도 안 읽는다.
   const status = !isOnline
-    ? { state: 'danger' as const, text: OFFLINE_TEXT }
+    ? describeLink(link, MISSING_HINT)
     : isRegistered
       ? { state: 'true' as const, text: `${String(account?.loginId)} 로 로그인됨` }
       : { state: 'pending' as const, text: ANONYMOUS_TEXT }

@@ -21,11 +21,14 @@ import { buildBagCells, buildEquipCells } from './inventoryCells'
 import { InventoryGrid } from './InventoryGrid'
 import { InventoryDetail, type CellChoice } from './InventoryDetail'
 
+import { LinkNoticeLine } from './LinkNoticeLine'
+import { checkLinked, type LinkState } from './linkState'
+
 export { formatGradeClass, renderGrade }
 
 export interface InventoryPanelProps {
   readonly inventory: InventoryView | undefined
-  readonly isOnline: boolean
+  readonly link: LinkState
   readonly detail: string
   readonly onEquip: (itemId: number, slot: string) => void
   readonly onUnequip: (slot: string) => void
@@ -38,7 +41,8 @@ export interface InventoryPanelProps {
 }
 
 const EMPTY_HINT = '아직 없다 — 판을 끝내면 서버가 전리품을 준다'
-const OFFLINE_HINT = '서버에 닿지 못했다 — 아이템은 서버가 발급한다'
+/** 못 닿았을 때 무엇을 못 보는가. 앞머리(`서버에 닿지 못했다`)는 linkState 가 든다. */
+const MISSING_HINT = '아이템은 서버가 발급한다'
 
 /**
  * 접사 하나를 사람이 읽는 한 줄로 만든다.
@@ -75,7 +79,7 @@ export function formatAffix(affix: AffixView): string {
  * @returns 패널 요소.
  */
 export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
-  const { inventory, isOnline } = props
+  const { inventory, link } = props
   const [pickedKey, setPickedKey] = useState('')
 
   const equipCells = buildEquipCells(inventory)
@@ -100,8 +104,8 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
       scroll
     >
       <div className="inv">
-        {!isOnline || inventory === undefined ? (
-          <ValueExpr text={OFFLINE_HINT} size="sm" dim />
+        {!checkLinked(link) || inventory === undefined ? (
+          <LinkNoticeLine link={link} missing={MISSING_HINT} />
         ) : (
           <>
             <InventoryGrid
@@ -117,7 +121,7 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
             ) : (
               <InventoryDetail
                 choice={choice}
-                isOnline={isOnline}
+                link={link}
                 repairCost={inventory.repairCost}
                 feePercent={props.feePercent}
                 onEquip={props.onEquip}

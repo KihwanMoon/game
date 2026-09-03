@@ -9,9 +9,11 @@
 import { Button, Panel, ValueExpr } from '../ds'
 import type { MaintenanceRowView, MaintenanceView } from '../storage'
 
+import { checkLinked, type LinkState } from './linkState'
+
 export interface MaintenancePanelProps {
   readonly view: MaintenanceView | undefined
-  readonly isOnline: boolean
+  readonly link: LinkState
   readonly detail: string
   readonly onChange: (view: MaintenanceView) => void
 }
@@ -88,7 +90,7 @@ export function MaintenancePanel(props: MaintenancePanelProps): React.JSX.Elemen
       </Panel>
     )
   }
-  const disabled = !props.isOnline
+  const disabled = !checkLinked(props.link)
   const commit = (rows: readonly MaintenanceRowView[]): void => {
     props.onChange({ rows })
   }

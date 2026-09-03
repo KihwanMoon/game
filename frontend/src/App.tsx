@@ -91,6 +91,7 @@ import {
   checkTextEntry,
   resolveHistoryCommand,
 } from './editor'
+import type { LinkState } from './editor'
 import { ErrorBoundary, formatCrash } from './ErrorBoundary'
 import { PostMortem, formatOutcome, recordBattle, usePlanTheme } from './hud'
 import type { BattleRecording } from './hud'
@@ -566,7 +567,9 @@ export function App(): React.JSX.Element {
   // 때문이며, 서버는 보관과 검증을 맡을 뿐이다.
   const [account, setAccount] = useState<string | undefined>(undefined)
   const [profile, setProfile] = useState<AccountState | undefined>(undefined)
-  const [isOnline, setOnline] = useState(false)
+  // **연결 상태는 셋이다.** 「확인 중」을 「못 닿았다」로 적으면 앱이 서버에 붙어 보기도
+  // 전에 ◈ 위험을 띄운다 — 매번 뜨는 경보는 아무도 안 읽는 경보가 된다.
+  const [link, setLink] = useState<LinkState>('probing')
   // 서버가 확정한 판정. 브라우저가 낸 결과와 다르면 두 코어가 갈린 것이다 (G3).
   const [verdict, setVerdict] = useState<RunVerdict | undefined>(undefined)
   // 아이템은 **서버가 발급한다** (결정 #02). 화면은 받아서 보여줄 뿐이다.
@@ -646,7 +649,7 @@ export function App(): React.JSX.Element {
       setEvicted(true)
       setAccount(undefined)
       setProfile(undefined)
-      setOnline(false)
+      setLink('offline')
       setAdmin(undefined)
       try {
         getLocalStorage()?.removeItem(TOKEN_STORAGE_KEY)
@@ -701,11 +704,17 @@ export function App(): React.JSX.Element {
       // 받는다 — 이미 짜던 것이 있으면 덮어쓰지 않는다.
       const hasSave = readSave(storage) !== undefined
       const token = await ensureToken(storage)
-      if (!isCurrent || token === undefined) {
+      if (!isCurrent) {
+        return
+      }
+      // **물어본 결과를 반드시 적는다.** 여기서 그냥 돌아가면 상태가 「확인 중」에
+      // 영원히 멈춰, 서버가 죽었다는 사실을 화면이 끝내 말하지 못한다.
+      if (token === undefined) {
+        setLink('offline')
         return
       }
       setAccount(token)
-      setOnline(true)
+      setLink('online')
       await loadAccountState(token)
       const outcome = await readServerMeta(token)
       if (!isCurrent) {
@@ -1012,7 +1021,7 @@ export function App(): React.JSX.Element {
     const held = account
     setAccount(undefined)
     setProfile(undefined)
-    setOnline(false)
+    setLink('offline')
     setMeta(createEmptyMeta())
     setSession(
       createSession(undefined, {
@@ -1562,7 +1571,7 @@ export function App(): React.JSX.Element {
           <>
               <AccountPanel
                 account={profile}
-                isOnline={isOnline}
+                link={link}
                 hasLocalProgress={meta.bestFloor > 0 || meta.bestiary.length > 0}
                 onRegister={applyRegister}
                 onLogin={applyLogin}
@@ -1575,7 +1584,7 @@ export function App(): React.JSX.Element {
                 baseStats={BALANCE.player as Record<string, number>}
                 allSkills={ALL_SKILL_IDS}
                 allItems={ALL_ITEM_TAGS}
-                isOnline={isOnline}
+                link={link}
               />
           </>
         ),
@@ -1587,7 +1596,7 @@ export function App(): React.JSX.Element {
           <>
               <InventoryPanel
                 inventory={inventory}
-                isOnline={isOnline}
+                link={link}
                 detail={itemDetail}
                 onEquip={(itemId, slot) => {
                   applyItem('/equip', { item_id: itemId, slot })
@@ -1616,7 +1625,7 @@ export function App(): React.JSX.Element {
               />
               <SkillPanel
                 view={skillPrefs}
-                isOnline={isOnline}
+                link={link}
                 detail={skillDetail}
                 onChange={(next) => {
                   if (account === undefined) {
@@ -1635,7 +1644,7 @@ export function App(): React.JSX.Element {
               />
               <MaintenancePanel
                 view={upkeep}
-                isOnline={isOnline}
+                link={link}
                 detail={upkeepDetail}
                 onChange={(next) => {
                   if (account === undefined) {
@@ -1655,7 +1664,7 @@ export function App(): React.JSX.Element {
               />
               <ConsumablePanel
                 view={consumables}
-                isOnline={isOnline}
+                link={link}
                 detail={consumableDetail}
                 onClear={(useTag, slotIndex) => {
                   applyConsumable('/consumable/clear', {
@@ -1689,7 +1698,7 @@ export function App(): React.JSX.Element {
                 leaderboard={leaderboard}
                 auction={auction}
                 accountId={profile?.accountId}
-                isOnline={isOnline}
+                link={link}
                 detail={worldDetail}
                 onAllocate={(stats) => {
                   if (account === undefined) {
@@ -1722,8 +1731,8 @@ export function App(): React.JSX.Element {
                   })
                 }}
               />
-              <BestiaryPanel entries={bestiary} isOnline={isOnline} />
-              <DiscoveryPanel discovery={discovery} isOnline={isOnline} />
+              <BestiaryPanel entries={bestiary} link={link} />
+              <DiscoveryPanel discovery={discovery} link={link} />
           </>
         ),
       },

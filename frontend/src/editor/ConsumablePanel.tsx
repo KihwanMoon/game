@@ -16,6 +16,8 @@ import type { ConsumableOptionView, ConsumableSlotView, ConsumableView } from '.
 
 import { formatGradeClass, renderGrade } from './gradeBadge'
 
+import { checkLinked, type LinkState } from './linkState'
+
 /** 칸 쓰임새의 한글 이름. */
 const TAG_LABELS: ReadonlyMap<string, string> = new Map([
   ['POTION', '물약'],
@@ -24,7 +26,7 @@ const TAG_LABELS: ReadonlyMap<string, string> = new Map([
 
 export interface ConsumablePanelProps {
   readonly view: ConsumableView | undefined
-  readonly isOnline: boolean
+  readonly link: LinkState
   readonly detail: string
   /** 칸을 비운다. 남은 충전은 안 돌아온다. */
   readonly onClear: (useTag: string, slotIndex: number) => void
@@ -145,7 +147,7 @@ function renderSlot(slot: ConsumableSlotView, props: ConsumablePanelProps): Reac
   // **런 중에도 잠그지 않는다.** 하강이 서른 방이라, 잠그면 방 사이에 규칙을 고치는
   // 내내 칸을 못 건드린다 (GDD §2.2). 지금 채운 것이 이번 런에 안 실릴 뿐이고,
   // 그 사실은 위의 안내가 말한다.
-  const locked = !props.isOnline
+  const locked = !checkLinked(props.link)
   const refill = formatRefillLabel(slot)
   return (
     <li className="cns__card" key={`${slot.useTag}-${String(slot.slotIndex)}`}>
@@ -264,7 +266,7 @@ export function ConsumablePanel(props: ConsumablePanelProps): React.JSX.Element 
                 size="sm"
                 variant="primary"
                 glyph="↧"
-                disabled={!props.isOnline}
+                disabled={!checkLinked(props.link)}
                 title={`${String(option.charges)}충전 — 빈 칸부터 채운다`}
                 onClick={() => {
                   props.onLoadStock(option.catalogId)
@@ -275,7 +277,7 @@ export function ConsumablePanel(props: ConsumablePanelProps): React.JSX.Element 
               <Button
                 size="sm"
                 variant="ghost"
-                disabled={!props.isOnline}
+                disabled={!checkLinked(props.link)}
                 onClick={() => {
                   props.onSell(option.catalogId)
                 }}

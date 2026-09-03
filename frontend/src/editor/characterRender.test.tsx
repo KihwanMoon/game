@@ -12,6 +12,8 @@ import { STATE_GLYPHS } from '../ds'
 import type { ProgressView } from '../storage'
 import { CharacterPanel, formatDelta, splitStatSources } from './CharacterPanel'
 
+import { LOADING_TEXT, PROBING_TEXT, type LinkState } from './linkState'
+
 const BASE = BALANCE.player as unknown as Record<string, number>
 const ITEMS = ['POTION', 'SCROLL']
 const SKILLS = ['ATTACK', 'GUARD_BRACE', 'SKILL_1', 'SKILL_2']
@@ -43,14 +45,14 @@ const PROGRESS: ProgressView = {
   },
 }
 
-function render(progress: ProgressView | undefined, isOnline = true) {
+function render(progress: ProgressView | undefined, link: LinkState = 'online') {
   return renderToStaticMarkup(
     <CharacterPanel
       progress={progress}
       baseStats={BASE}
       allSkills={SKILLS}
       allItems={ITEMS}
-      isOnline={isOnline}
+      link={link}
     />,
   )
 }
@@ -123,9 +125,13 @@ describe('캐릭터 시트 화면', () => {
     expect(html).toContain('112%')
   })
 
-  it('서버에 못 닿으면 그렇게 적는다 — 빈 표를 보여주면 스탯이 0 인 줄 안다', () => {
-    expect(render(PROGRESS, false)).toContain('서버에 닿지 못했다')
-    expect(render(undefined)).toContain('서버에 닿지 못했다')
+  it('★ 보여 줄 수 없는 이유를 넷으로 가른다 — 빈 표를 보여주면 스탯이 0 인 줄 안다', () => {
+    // 못 닿았을 때만 ◈ 다. 아직 물어보는 중인 것은 실패가 아니다.
+    expect(render(PROGRESS, 'offline')).toContain('서버에 닿지 못했다')
+    expect(render(PROGRESS, 'probing')).toContain(PROBING_TEXT)
+    expect(render(PROGRESS, 'probing')).not.toContain('서버에 닿지 못했다')
+    // 붙었는데 아직 안 온 것도 말해야 한다 — 빈 화면은 「없다」로 읽힌다.
+    expect(render(undefined, 'online')).toContain(LOADING_TEXT)
   })
 })
 

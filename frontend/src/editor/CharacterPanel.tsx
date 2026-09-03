@@ -17,6 +17,9 @@ import { buildAttributeBonus } from '../core/progression/attributes'
 import { GlyphState, Panel, ValueExpr } from '../ds'
 import type { ProgressView } from '../storage'
 
+import { LinkNoticeLine } from './LinkNoticeLine'
+import { checkLinked, type LinkState } from './linkState'
+
 export interface CharacterPanelProps {
   readonly progress: ProgressView | undefined
   /** balance.json 의 플레이어 기본 스탯. 출처를 가르는 기준점이다. */
@@ -30,10 +33,11 @@ export interface CharacterPanelProps {
    * 없다" 인데, 안 보여주면 그 답을 어디서도 찾을 수 없다 (#54).
    */
   readonly allItems: readonly string[]
-  readonly isOnline: boolean
+  readonly link: LinkState
 }
 
-const OFFLINE_HINT = '서버에 닿지 못했다 — 장비와 능력치는 서버가 안다'
+/** 못 닿았을 때 무엇을 못 보는가. 앞머리(`서버에 닿지 못했다`)는 linkState 가 든다. */
+const MISSING_HINT = '장비와 능력치는 서버가 안다'
 
 /** 전투 스탯 한 줄. 화면에 적는 순서가 곧 이 배열의 순서다. */
 const COMBAT_ROWS: readonly { readonly key: string; readonly label: string }[] = [
@@ -101,7 +105,7 @@ export function formatDelta(value: number, suffix = ''): string {
  * @returns 패널 요소.
  */
 export function CharacterPanel(props: CharacterPanelProps): React.JSX.Element {
-  const { progress, baseStats, allSkills, allItems, isOnline } = props
+  const { progress, baseStats, allSkills, allItems, link } = props
   const loadout = progress?.loadout
   const bonus = buildAttributeBonus(progress?.stats ?? {})
   const equipped = new Set(loadout?.skills ?? [])
@@ -115,8 +119,8 @@ export function CharacterPanel(props: CharacterPanelProps): React.JSX.Element {
       scroll
     >
       <div className="chr">
-        {!isOnline || loadout === undefined || progress === undefined ? (
-          <ValueExpr text={OFFLINE_HINT} size="sm" dim />
+        {!checkLinked(link) || loadout === undefined || progress === undefined ? (
+          <LinkNoticeLine link={link} missing={MISSING_HINT} />
         ) : (
           <>
             <div className="chr__head">전투 입력 · 기본 · 장비 · 능력치 = 최종</div>

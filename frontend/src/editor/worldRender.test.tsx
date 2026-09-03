@@ -72,7 +72,7 @@ describe('세계 패널', () => {
       leaderboard={LEADERBOARD}
       auction={AUCTION}
       accountId={7}
-      isOnline
+      link="online"
       detail=""
       onAllocate={noop}
       onBuy={noop}
@@ -125,7 +125,7 @@ describe('세계 패널 — 서버 없음', () => {
         leaderboard={undefined}
         auction={undefined}
         accountId={undefined}
-        isOnline={false}
+        link="offline"
         detail=""
         onAllocate={noop}
         onBuy={noop}
@@ -175,7 +175,7 @@ describe('경매 — 사기 전에 알아야 할 것 (모바일 우선)', () => 
       leaderboard={undefined}
       auction={AUCTION}
       accountId={1}
-      isOnline
+      link="online"
       detail=""
       onAllocate={() => undefined}
       onBuy={() => undefined}
@@ -219,7 +219,7 @@ describe('층 깊이 (설계/6_몬스터 §3)', () => {
         leaderboard={LEADERBOARD}
         auction={AUCTION}
         accountId={7}
-        isOnline
+        link="online"
         detail=""
         onAllocate={noop}
         onBuy={noop}

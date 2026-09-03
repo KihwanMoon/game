@@ -26,6 +26,16 @@ export {
   writeAutoAdvance,
 } from './AutoAdvance'
 export { EvictionNotice, EVICTION_TEXT } from './EvictionNotice'
+export { LinkNoticeLine } from './LinkNoticeLine'
+export type { LinkNoticeLineProps } from './LinkNoticeLine'
+export {
+  checkLinked,
+  describeLink,
+  LOADING_TEXT,
+  OFFLINE_PREFIX,
+  PROBING_TEXT,
+} from './linkState'
+export type { LinkState } from './linkState'
 export type { DiscoveryPanelProps } from './DiscoveryPanel'
 export { WorldPanel } from './WorldPanel'
 export type { WorldPanelProps } from './WorldPanel'

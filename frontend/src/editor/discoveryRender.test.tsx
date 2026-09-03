@@ -40,7 +40,7 @@ const DISCOVERY: DiscoveryView = {
   total: 3,
 }
 
-const MARKUP = renderToStaticMarkup(<DiscoveryPanel discovery={DISCOVERY} isOnline />)
+const MARKUP = renderToStaticMarkup(<DiscoveryPanel discovery={DISCOVERY} link="online" />)
 
 describe('도감', () => {
   it('★ 안 밝힌 것도 목록에 있다 — 빼면 무엇을 더 찾아야 하는지가 사라진다', () => {
@@ -67,7 +67,7 @@ describe('도감', () => {
   })
 
   it('★ 서버가 없으면 그렇게 말한다 — 빈 도감과 못 불러온 도감은 다르다', () => {
-    const html = renderToStaticMarkup(<DiscoveryPanel discovery={undefined} isOnline={false} />)
+    const html = renderToStaticMarkup(<DiscoveryPanel discovery={undefined} link="offline" />)
     expect(html).toContain('서버에 닿지 못했다')
   })
 

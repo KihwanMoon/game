@@ -17,9 +17,11 @@ import type { SkillPrefView } from '../storage'
 
 import { formatParamLabel } from './blockOptions'
 
+import { checkLinked, type LinkState } from './linkState'
+
 export interface SkillPanelProps {
   readonly view: SkillPrefView | undefined
-  readonly isOnline: boolean
+  readonly link: LinkState
   readonly detail: string
   readonly onChange: (view: SkillPrefView) => void
 }
@@ -145,7 +147,7 @@ export function SkillPanel(props: SkillPanelProps): React.JSX.Element {
               <Button
                 size="sm"
                 variant={picked.isOn ? 'ghost' : 'primary'}
-                disabled={!props.isOnline}
+                disabled={!checkLinked(props.link)}
                 onClick={() => {
                   props.onChange({
                     rows: view.rows.map((entry) =>

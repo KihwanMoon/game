@@ -14,7 +14,7 @@ const noop = (): undefined => undefined
 
 function render(view: MaintenanceView | undefined, detail = ''): string {
   return renderToStaticMarkup(
-    <MaintenancePanel view={view} isOnline detail={detail} onChange={noop} />,
+    <MaintenancePanel view={view} link="online" detail={detail} onChange={noop} />,
   )
 }
 

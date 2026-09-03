@@ -52,7 +52,7 @@ const ENTRIES: readonly BestiaryEntry[] = [
 ]
 
 describe('도감 패널', () => {
-  const markup = renderToStaticMarkup(<BestiaryPanel entries={ENTRIES} isOnline />)
+  const markup = renderToStaticMarkup(<BestiaryPanel entries={ENTRIES} link="online" />)
 
   it('★ 내 장비를 들고 있다고 말한다 — 되찾기 동기', () => {
     expect(markup).toContain('내 장비 보유')
@@ -92,8 +92,8 @@ describe('도감 패널', () => {
 
 describe('도감 패널 — 빈 경우', () => {
   it('서버 없음과 빈 세계를 구분해서 말한다', () => {
-    const offline = renderToStaticMarkup(<BestiaryPanel entries={undefined} isOnline={false} />)
-    const empty = renderToStaticMarkup(<BestiaryPanel entries={[]} isOnline />)
+    const offline = renderToStaticMarkup(<BestiaryPanel entries={undefined} link="offline" />)
+    const empty = renderToStaticMarkup(<BestiaryPanel entries={[]} link="online" />)
     expect(offline).toContain('서버에 닿지 못했다')
     expect(empty).toContain('아직 세계에 지속 몬스터가 없다')
   })

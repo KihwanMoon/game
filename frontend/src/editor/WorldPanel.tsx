@@ -16,12 +16,15 @@ import { Button, GlyphState, Panel, ValueExpr } from "../ds";
 import { formatAffix } from "./InventoryPanel";
 import type { AuctionView, LeaderboardView, ProgressView } from "../storage";
 
+import { LinkNoticeLine } from './LinkNoticeLine'
+import { checkLinked, type LinkState } from './linkState'
+
 export interface WorldPanelProps {
   readonly progress: ProgressView | undefined;
   readonly leaderboard: LeaderboardView | undefined;
   readonly auction: AuctionView | undefined;
   readonly accountId: number | undefined;
-  readonly isOnline: boolean;
+  readonly link: LinkState;
   readonly detail: string;
   readonly onAllocate: (stats: Record<string, number>) => void;
   readonly onBuy: (listingId: number) => void;
@@ -29,7 +32,8 @@ export interface WorldPanelProps {
   readonly onDaily: () => void;
 }
 
-const OFFLINE_HINT = "서버에 닿지 못했다 — 순위와 경매는 서버가 안다";
+/** 못 닿았을 때 무엇을 못 보는가. 앞머리(`서버에 닿지 못했다`)는 linkState 가 든다. */
+const MISSING_HINT = '순위와 경매는 서버가 안다'
 
 /**
  * 이 배분이 지금 여는 것을 실측값으로 적는다 (결정 #51).
@@ -78,7 +82,7 @@ const FLOOR_HP_PCT = 25
 const FLOOR_ATTACK_PCT = 20
 
 export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
-  const { progress, leaderboard, auction, isOnline } = props;
+  const { progress, leaderboard, auction, link } = props;
   const [pending, setPending] = useState<Record<string, number>>({});
   const left = (progress?.statPoints ?? 0) - (progress?.spentPoints ?? 0);
   const staged = Object.values(pending).reduce((sum, value) => sum + value, 0);
@@ -104,8 +108,8 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
       scroll
     >
       <div className="wld">
-        {!isOnline || progress === undefined ? (
-          <ValueExpr text={OFFLINE_HINT} size="sm" dim />
+        {!checkLinked(link) || progress === undefined ? (
+          <LinkNoticeLine link={link} missing={MISSING_HINT} />
         ) : (
           <>
             <div className="wld__row">

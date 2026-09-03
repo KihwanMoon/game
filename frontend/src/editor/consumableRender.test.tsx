@@ -100,7 +100,7 @@ describe('소모품 칸', () => {
     const html = renderToStaticMarkup(
       <ConsumablePanel
         view={buildView()}
-        isOnline
+        link="online"
         detail=""
         onLoadStock={() => undefined}
         onClear={() => undefined}
@@ -117,7 +117,7 @@ describe('소모품 칸', () => {
     const html = renderToStaticMarkup(
       <ConsumablePanel
         view={buildView()}
-        isOnline
+        link="online"
         detail=""
         onLoadStock={() => undefined}
         onClear={() => undefined}
@@ -134,7 +134,7 @@ describe('소모품 칸', () => {
     const html = renderToStaticMarkup(
       <ConsumablePanel
         view={buildView({ isRunOpen: true })}
-        isOnline
+        link="online"
         detail=""
         onLoadStock={() => undefined}
         onClear={() => undefined}
@@ -151,7 +151,7 @@ describe('소모품 칸', () => {
     const html = renderToStaticMarkup(
       <ConsumablePanel
         view={buildView()}
-        isOnline
+        link="online"
         detail="240 이 필요하다"
         onLoadStock={() => undefined}
         onClear={() => undefined}
@@ -166,7 +166,7 @@ describe('소모품 칸', () => {
     const html = renderToStaticMarkup(
       <ConsumablePanel
         view={undefined}
-        isOnline={false}
+        link="offline"
         detail=""
         onLoadStock={() => undefined}
         onClear={() => undefined}
@@ -181,7 +181,7 @@ describe('소모품 칸', () => {
     const html = renderToStaticMarkup(
       <ConsumablePanel
         view={buildView()}
-        isOnline
+        link="online"
         detail=""
         onLoadStock={() => undefined}
         onClear={() => undefined}
@@ -206,7 +206,7 @@ describe('소모품 칸', () => {
     const html = renderToStaticMarkup(
       <ConsumablePanel
         view={buildView({ slots: [spent], options: [] })}
-        isOnline
+        link="online"
         detail=""
         onLoadStock={() => undefined}
         onClear={() => undefined}
@@ -222,7 +222,7 @@ describe('소모품 칸', () => {
     const html = renderToStaticMarkup(
       <ConsumablePanel
         view={buildView()}
-        isOnline
+        link="online"
         detail=""
         onLoadStock={() => undefined}
         onClear={() => undefined}
