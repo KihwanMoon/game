@@ -17,12 +17,8 @@ import { Panel, ValueExpr } from '../ds'
 import type { AffixView, InventoryView } from '../storage'
 
 import { formatGradeClass, renderGrade } from './gradeBadge'
-import {
-  BAG_CELL_COUNT,
-  buildBagCells,
-  buildEquipCells,
-  type GridCell,
-} from './inventoryCells'
+import { buildBagCells, buildEquipCells } from './inventoryCells'
+import { InventoryGrid } from './InventoryGrid'
 import { InventoryDetail, type CellChoice } from './InventoryDetail'
 
 export { formatGradeClass, renderGrade }
@@ -70,50 +66,6 @@ export function formatAffix(affix: AffixView): string {
 }
 
 /**
- * 격자 칸 하나를 그린다.
- *
- * **상태만 그린다.** 조작은 고른 칸의 상세(`InventoryDetail`)에 산다 — 칸마다 버튼을
- * 펴면 좁은 화면에서 칸 하나가 서너 줄로 꺾인다.
- *
- * @param cell 그릴 칸.
- * @param isPicked 지금 고른 칸인가.
- * @param onPick 칸을 고른다.
- * @returns 칸 버튼.
- */
-function renderCell(
-  cell: GridCell,
-  isPicked: boolean,
-  onPick: (cell: GridCell) => void,
-): React.JSX.Element {
-  const state = cell.isSealedSlot ? ' invg__cell--sealed' : ''
-  const picked = isPicked ? ' invg__cell--picked' : ''
-  return (
-    <button
-      type="button"
-      className={`invg__cell${state}${picked}`}
-      key={cell.key}
-      aria-label={`${cell.code} ${cell.label === '' ? '빈 칸' : cell.label}`}
-      onClick={() => {
-        onPick(cell)
-      }}
-    >
-      <span className="invg__code">{cell.code}</span>
-      {cell.isSealedSlot ? (
-        <span className="invg__mark">▨</span>
-      ) : cell.label === '' ? (
-        <span className="invg__empty">·</span>
-      ) : (
-        <span className={`invg__label${formatGradeClass(cell.grade)}`}>{cell.label}</span>
-      )}
-      {cell.countText === '' ? null : <span className="invg__count">{cell.countText}</span>}
-      {cell.marks.length === 0 ? null : (
-        <span className="invg__marks">{cell.marks.join(' ')}</span>
-      )}
-    </button>
-  )
-}
-
-/**
  * 인벤토리·장비 패널을 도면 격자로 그린다.
  *
  * 장비 여섯 칸 + 가방 스무 칸. 칸을 고르면 아래 상세에 그 아이템의 전부(능력치·요구
@@ -152,18 +104,13 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
           <ValueExpr text={OFFLINE_HINT} size="sm" dim />
         ) : (
           <>
-            <div className="inv__head">장비</div>
-            <div className="invg invg--equip">
-              {equipCells.map((cell) => renderCell(cell, cell.key === pickedKey, (target) => {
+            <InventoryGrid
+              inventory={inventory}
+              pickedKey={pickedKey}
+              onPick={(target) => {
                 setPickedKey((current) => (current === target.key ? '' : target.key))
-              }))}
-            </div>
-            <div className="inv__head">{`가방 ${String(filled)} / ${String(BAG_CELL_COUNT)}`}</div>
-            <div className="invg invg--bag">
-              {bagCells.map((cell) => renderCell(cell, cell.key === pickedKey, (target) => {
-                setPickedKey((current) => (current === target.key ? '' : target.key))
-              }))}
-            </div>
+              }}
+            />
             {filled === 0 ? <ValueExpr text={EMPTY_HINT} size="sm" dim /> : null}
             {choice === undefined ? (
               <ValueExpr text="칸을 고르면 여기에 상세와 조작이 뜬다" size="sm" dim />

@@ -287,40 +287,30 @@ body {
 .bots__bags {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--sp-3);
+  gap: var(--sp-4);
   width: 100%;
 }
 
-.bots__bag {
-  flex: 1 1 20ch;
+/* 격자 하나가 한 열이다. 좁아지면 아래로 접힌다 — 칸 크기는 유저 화면과 같은 토큰이
+   정하므로 여기서 손대지 않는다. */
+.bots__inv {
+  flex: 1 1 28ch;
   min-width: 0;
 }
 
-.bots__bag-head {
-  padding-bottom: var(--sp-1);
-  border-bottom: var(--border);
-  color: var(--text-dim);
-  font-family: var(--font-mono);
-  font-size: var(--fs-mono-s);
-}
-
-.bots__bag-row {
-  display: grid;
-  grid-template-columns: 1fr 7ch 6ch auto;
+.bots__gift {
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--sp-2);
   align-items: center;
-  padding: var(--sp-1) 0;
-  border-bottom: var(--border);
-  font-family: var(--font-mono);
-  font-size: var(--fs-mono-s);
+  width: 100%;
+  padding-top: var(--sp-2);
+  border-top: var(--border);
 }
 
-.bots__bag-name {
-  overflow: hidden;
-  color: var(--text-body);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
+
+
+
 
 /* 머리글 줄. 눌리지 않으므로 커서를 바꾸지 않고, 글자만 흐리게 둔다. */
 .botrow--head {

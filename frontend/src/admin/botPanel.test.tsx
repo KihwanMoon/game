@@ -8,15 +8,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import {
-  BagList,
-  BotPanel,
-  GearList,
-  StackList,
-  formatCadence,
-  formatDue,
-  formatWinRate,
-} from './BotPanel'
+import { BotPanel, formatCadence, formatDue, formatWinRate } from './BotPanel'
 import type { BotOverview } from '../storage/botAdmin'
 
 const OVERVIEW: BotOverview = {
@@ -149,56 +141,6 @@ describe('봇 패널', () => {
     expect(shown).not.toContain('넘기면 귀속된다')
   })
 
-  it('★ 가방은 id 가 아니라 이름으로 고른다 — 무엇이 있는지 모르고 숫자를 적을 수 없다', () => {
-    const bag = {
-      slots: [
-        {
-          slotIndex: 0,
-          item: { itemId: 42, labelKo: '사슬 갑옷', isBound: false },
-        },
-      ],
-      equipment: [],
-      balance: 0,
-      repairCost: 0,
-    } as unknown as Parameters<typeof BagList>[0]['bag']
-    const picked: number[] = []
-    const shown = renderToStaticMarkup(
-      <BagList title='내 가방' bag={bag} onPick={(id) => picked.push(id)} />,
-    )
-    expect(shown).toContain('사슬 갑옷')
-    expect(shown).toContain('#42')
-    expect(shown).toContain('넘기기')
-  })
-
-  it('빈 가방도 말을 한다 — 빈 화면은 고장으로 읽힌다', () => {
-    expect(renderToStaticMarkup(<BagList title='봇의 가방' bag={undefined} />)).toContain('비어 있다')
-  })
-
-  it('★ 조작을 안 주면 넘기기 버튼이 없다 — 봇의 가방은 읽기 전용이다', () => {
-    const bag = {
-      slots: [{ slotIndex: 0, item: { itemId: 7, labelKo: '장궁', isBound: true } }],
-      equipment: [],
-      balance: 0,
-      repairCost: 0,
-    } as unknown as Parameters<typeof BagList>[0]['bag']
-    const shown = renderToStaticMarkup(<BagList title='봇의 가방' bag={bag} />)
-    expect(shown).toContain('장궁')
-    expect(shown).toContain('귀속')
-    expect(shown).not.toContain('넘기기')
-  })
-
-  it('★ 넘기는 길만 있고 되받는 길이 없다 — 한 방향이어야 성립한다', async () => {
-    const source = await import('../storage/botAdmin')
-    expect(Object.keys(source)).toContain('applyBotGift')
-    expect(Object.keys(source).join(' ')).not.toMatch(/takeFromBot|reclaim/)
-  })
-
-  it('★ 숫자마다 무엇을 세는지 적는다 — 라벨 없는 「0 / 13」은 알 수 없다', () => {
-    expect(html).toContain('승 / 판')
-    expect(html).toContain('최고')
-    expect(html).toContain('리듬')
-  })
-
   it('현황이 없어도 안 터진다 — 서버에 못 닿는 것은 흔한 일이다', () => {
     const shown = renderToStaticMarkup(
       <BotPanel overview={undefined} rulesetIds={[]} onSave={() => undefined} />,
@@ -210,50 +152,57 @@ describe('봇 패널', () => {
 const BAG = {
   slots: [
     { slotIndex: 0, item: { itemId: 42, labelKo: '사슬 갑옷', isBound: false, isBroken: false } },
-    { slotIndex: 1, item: null, stackCatalogId: 'potion_heal', stackCount: 3, stackLabelKo: '치유 물약', stackUseTag: 'POTION' },
-    { slotIndex: 2, item: null, stackCount: 0 },
+    {
+      slotIndex: 1,
+      item: null,
+      stackCatalogId: 'potion_heal',
+      stackCount: 3,
+      stackLabelKo: '치유 물약',
+      stackUseTag: 'POTION',
+    },
   ],
   equipment: [
     { slotIndex: 0, slot: 'BODY', item: { itemId: 7, labelKo: '판금 갑옷', isBroken: false } },
-    { slotIndex: 1, slot: 'HEAD', item: { itemId: 8, labelKo: '철 투구', isBroken: true } },
   ],
   balance: 0,
   repairCost: 0,
-} as unknown as Parameters<typeof BagList>[0]['bag']
+} as unknown as Parameters<typeof BotPanel>[0]['botBag']
 
-describe('낀 것과 소모품', () => {
-  it('★ 낀 것을 자리별로 본다 — 가방만 보면 무엇을 착용했는지 알 수 없다', () => {
-    const html = renderToStaticMarkup(<GearList title="낀 것" bag={BAG} />)
-    expect(html).toContain('판금 갑옷')
-    expect(html).toContain('BODY')
-    expect(html).toContain('철 투구')
+describe('봇 인벤토리는 유저 화면과 같은 격자다', () => {
+  const html = renderToStaticMarkup(
+    <BotPanel
+      overview={OVERVIEW}
+      rulesetIds={[]}
+      onSave={() => undefined}
+      botBag={BAG}
+      onGift={() => undefined}
+    />,
+  )
+
+  it('줄을 안 골랐으면 격자를 안 그린다 — 고른 뒤에 뜨는 것이 맞다', () => {
+    expect(html).not.toContain('invg--equip')
   })
 
-  it('★ 파손된 장비를 표시한다 — 파손은 끼고 있어도 안 붙는다', () => {
-    expect(renderToStaticMarkup(<GearList title="낀 것" bag={BAG} />)).toContain('파손')
-  })
-
-  it('★ 아무것도 안 꼈으면 그것이 왜 문제인지 말한다', () => {
-    const bare = { ...BAG, equipment: [] } as typeof BAG
-    expect(renderToStaticMarkup(<GearList title="낀 것" bag={bare} />)).toContain(
-      '죽을 때 사라진다',
+  it('★ 유저 화면의 격자 클래스를 그대로 쓴다 — 같은 것을 두 모양으로 그리지 않는다', async () => {
+    const { InventoryGrid } = await import('../editor/InventoryGrid')
+    const grid = renderToStaticMarkup(
+      <InventoryGrid inventory={BAG} pickedKey="" ownerLabel="bot1" onPick={() => undefined} />,
     )
+    expect(grid).toContain('invg invg--equip')
+    expect(grid).toContain('invg invg--bag')
+    // 장비·소모품·가방이 한 격자 안에 있다 — 따로 만든 목록 셋이 하던 일이다.
+    // 이름은 칸에 맞게 잘린다(`clipCellLabel`) — 전체 이름은 고른 칸의 상세가 편다.
+    expect(grid).toContain('aria-label="BD 판금"')
+    expect(grid).toContain('aria-label="CS 치유"')
+    expect(grid).toContain('aria-label="IT 사슬"')
+    expect(grid).toContain('bot1 · 장비')
   })
 
-  it('★ 소모품은 개수와 함께 본다', () => {
-    const html = renderToStaticMarkup(<StackList title="소모품" bag={BAG} />)
-    expect(html).toContain('치유 물약')
-    expect(html).toContain('x3')
-  })
-
-  it('★ 빈 칸은 소모품으로 세지 않는다 — 0개짜리 줄은 잡음이다', () => {
-    const html = renderToStaticMarkup(<StackList title="소모품" bag={BAG} />)
-    expect(html).toContain('소모품 1')
-  })
-
-  it('★ 가방에는 장비만 나온다 — 빈 칸과 소모품 칸이 빈 줄로 그려지면 안 된다', () => {
-    const html = renderToStaticMarkup(<BagList title="가방" bag={BAG} />)
-    expect(html).toContain('가방 1')
-    expect(html).toContain('사슬 갑옷')
+  it('★ 소모품 개수가 칸에 붙는다 — 개수 없이는 「있다」만 알 수 있다', async () => {
+    const { InventoryGrid } = await import('../editor/InventoryGrid')
+    const grid = renderToStaticMarkup(
+      <InventoryGrid inventory={BAG} pickedKey="" onPick={() => undefined} />,
+    )
+    expect(grid).toContain('invg__count')
   })
 })

@@ -15,6 +15,7 @@ import { useState } from 'react'
 
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import type { BotOverview, BotView } from '../storage/botAdmin'
+import { InventoryGrid } from '../editor/InventoryGrid'
 import type { InventoryView } from '../storage'
 
 /** 아무것도 없을 때 적는 말. 빈 화면은 고장으로 읽힌다. */
@@ -229,77 +230,7 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
   )
 }
 
-/**
- * 낀 것을 자리별로 그린다.
- *
- * **가방만 보면 무엇을 착용했는지 알 수 없다** (실제 신고). 봇에게 장비를 준 뒤 그것이
- * 실제로 몸에 붙었는지는 여기서만 확인된다 — 붙지 않으면 사망 페널티가 그것을 지운다.
- *
- * @param props 제목과 가방.
- * @returns 장비 요소.
- */
-export function GearList(props: {
-  readonly title: string
-  readonly bag: InventoryView | undefined
-}): React.JSX.Element {
-  const rows = (props.bag?.equipment ?? []).filter((slot) => slot.item != null)
-  return (
-    <div className="bots__bag">
-      <div className="bots__bag-head">{`${props.title} ${String(rows.length)}`}</div>
-      {rows.length === 0 ? (
-        <ValueExpr text="아무것도 안 꼈다 — 가방에 둔 것은 죽을 때 사라진다" size="sm" dim />
-      ) : (
-        rows.map((slot) => (
-          <div className="bots__bag-row" key={slot.slot ?? slot.slotIndex}>
-            <span className="bots__bag-name">{slot.item?.labelKo ?? ''}</span>
-            <span className="botrow__cell">{slot.slot ?? ''}</span>
-            {slot.item?.isBroken === true ? (
-              <GlyphState state="danger" size="sm" label="파손" />
-            ) : (
-              <span className="botrow__cell" />
-            )}
-          </div>
-        ))
-      )}
-    </div>
-  )
-}
 
-/**
- * 소모품 칸을 그린다.
- *
- * 소모품은 장비와 다른 칸에 산다 — 가방 목록에 섞으면 개수가 안 보인다.
- *
- * @param props 제목과 가방.
- * @returns 소모품 요소.
- */
-export function StackList(props: {
-  readonly title: string
-  readonly bag: InventoryView | undefined
-}): React.JSX.Element {
-  const rows = (props.bag?.slots ?? []).filter(
-    (slot) => slot.item == null && (slot.stackCount ?? 0) > 0,
-  )
-  return (
-    <div className="bots__bag">
-      <div className="bots__bag-head">{`${props.title} ${String(rows.length)}`}</div>
-      {rows.length === 0 ? (
-        <ValueExpr text="없다" size="sm" dim />
-      ) : (
-        rows.map((slot) => (
-          <div className="bots__bag-row" key={slot.slotIndex}>
-            <span className="bots__bag-name">
-              {/* 이름이 없으면 id 라도 적는다 — 빈 줄은 아무것도 안 말한다. */}
-              {slot.stackLabelKo === '' ? (slot.stackCatalogId ?? '') : slot.stackLabelKo}
-            </span>
-            <span className="botrow__cell">{`x${String(slot.stackCount ?? 0)}`}</span>
-            <span className="botrow__cell">{slot.stackUseTag ?? ''}</span>
-          </div>
-        ))
-      )}
-    </div>
-  )
-}
 
 /** BotEditor 가 받는 props. */
 interface BotEditorProps {
@@ -325,6 +256,10 @@ interface BotEditorProps {
  */
 function BotEditor(props: BotEditorProps): React.JSX.Element {
   const { bot } = props
+  const [pickedKey, setPickedKey] = useState('')
+  // 고른 칸이 아니라 **넘길 아이템**을 따로 든다. 칸을 고르는 것과 넘기는 것을 한 번에
+  // 묶으면 잘못 누른 칸이 곧 되돌릴 수 없는 이관이 된다.
+  const [giftId, setGiftId] = useState(0)
   return (
     <div className="bots__edit">
       <span className="bots__edit-name">{`${bot.handle} · ${bot.label}`}</span>
@@ -388,79 +323,57 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
         size="sm"
         dim
       />
+      {/* **유저 화면과 같은 격자를 쓴다.** 같은 것을 두 모양으로 그리면 「봇에게 뭐가
+          있지」를 답하려던 화면이 답을 틀리게 한다 — 장비·소모품·귀속·파손 표기가 전부
+          거기 이미 있다. */}
       <div className="bots__bags">
-        <GearList title={`${bot.handle} 이 낀 것`} bag={props.botBag} />
-        <StackList title={`${bot.handle} 의 소모품`} bag={props.botBag} />
-        <BagList title={`${bot.handle} 의 가방`} bag={props.botBag} />
-        {props.onGift === undefined ? null : (
-          <BagList
-            title="내 가방 — 눌러서 넘긴다"
-            bag={props.myBag}
-            onPick={(itemId) => {
-              props.onGift?.(bot.accountId, itemId)
+        <div className="inv bots__inv">
+          <InventoryGrid
+            inventory={props.botBag}
+            pickedKey={pickedKey}
+            ownerLabel={bot.handle}
+            onPick={(cell) => {
+              setPickedKey((current) => (current === cell.key ? '' : cell.key))
             }}
           />
+        </div>
+        {props.onGift === undefined ? null : (
+          <div className="inv bots__inv">
+            <InventoryGrid
+              inventory={props.myBag}
+              pickedKey={pickedKey}
+              ownerLabel="내"
+              onPick={(cell) => {
+                setPickedKey((current) => (current === cell.key ? '' : cell.key))
+                setGiftId(cell.entry?.item?.itemId ?? 0)
+              }}
+            />
+          </div>
         )}
       </div>
-      {/* **되돌릴 수 없다고 먼저 말한다.** 귀속은 눌러 본 뒤에 알면 늦다. */}
-      {props.onGift === undefined ? null : (
-        <ValueExpr text="넘기면 귀속된다 — 되돌릴 수 없다" size="sm" dim />
+      {props.onGift === undefined || giftId === 0 ? null : (
+        <div className="bots__gift">
+          <ValueExpr text={`#${String(giftId)} 를 ${bot.handle} 에게`} size="sm" />
+          <Button
+            size="sm"
+            variant="primary"
+            glyph="→"
+            title="이 아이템을 이 봇에게 넘긴다. 도착하면 귀속되어 되돌릴 수 없다"
+            onClick={() => {
+              props.onGift?.(bot.accountId, giftId)
+              setGiftId(0)
+            }}
+          >
+            넘기기
+          </Button>
+          <ValueExpr text="넘기면 귀속된다 — 되돌릴 수 없다" size="sm" dim />
+        </div>
       )}
+      {/* **되돌릴 수 없다고 먼저 말한다.** 귀속은 눌러 본 뒤에 알면 늦다. */}
     </div>
   )
 }
 
-/**
- * 가방 한 벌을 줄로 그린다.
- *
- * **id 를 손으로 적게 하지 않는다.** 무엇이 있는지 모르는 채로 숫자를 적을 수는 없고,
- * 그런 화면은 안 쓰인다.
- *
- * @param props 제목·가방·줄마다 붙일 조작.
- * @returns 가방 요소.
- */
-export function BagList(props: {
-  readonly title: string
-  readonly bag: InventoryView | undefined
-  readonly onPick?: (itemId: number) => void
-}): React.JSX.Element {
-  // **`!= null` 로 거른다.** 서버는 빈 칸을 `null` 로 보내고 소모품 칸도 `item` 이 비어
-  // 있다 — `!== undefined` 로 거르면 그 칸들이 빈 줄로 그려져 가방이 잡음이 된다.
-  const rows = (props.bag?.slots ?? []).filter((slot) => slot.item != null)
-  return (
-    <div className="bots__bag">
-      <div className="bots__bag-head">{`${props.title} ${String(rows.length)}`}</div>
-      {rows.length === 0 ? (
-        <ValueExpr text="비어 있다" size="sm" dim />
-      ) : (
-        rows.map((slot) => (
-          <div className="bots__bag-row" key={slot.item?.itemId ?? slot.slotIndex}>
-            <span className="bots__bag-name">{slot.item?.labelKo ?? ''}</span>
-            <span className="botrow__cell">{`#${String(slot.item?.itemId ?? 0)}`}</span>
-            {slot.item?.isBound === true ? (
-              <GlyphState state="false" size="sm" label="귀속" />
-            ) : (
-              <span className="botrow__cell" />
-            )}
-            {props.onPick === undefined ? null : (
-              <Button
-                size="sm"
-                variant="ghost"
-                glyph="→"
-                title="이 아이템을 이 봇에게 넘긴다. 도착하면 귀속되어 되돌릴 수 없다"
-                onClick={() => {
-                  props.onPick?.(slot.item?.itemId ?? 0)
-                }}
-              >
-                넘기기
-              </Button>
-            )}
-          </div>
-        ))
-      )}
-    </div>
-  )
-}
 
 /**
  * 봇 한 줄을 저장 요청 모양으로 옮긴다.
