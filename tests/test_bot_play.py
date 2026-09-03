@@ -76,19 +76,30 @@ def test_degrading_a_real_ruleset_still_parses():
 
 def test_claims_cover_every_cleared_floor():
     """★ 깬 층을 빠짐없이 청구한다 — 마지막 층만 청구하면 중간 정산이 사라진다."""
-    assert resolve_claim_floors(1, 15, 5) == (1, 2, 3)
-    assert resolve_claim_floors(3, 10, 5) == (3, 4)
+    assert resolve_claim_floors(1, 15, 5, 15) == (1, 2, 3)
+    assert resolve_claim_floors(3, 10, 5, 10) == (3, 4)
 
 
-def test_a_partial_floor_is_not_claimed():
-    """★ 덜 깬 층은 청구하지 않는다 — 하면 서버가 반려하거나 거짓이 확정된다."""
-    assert resolve_claim_floors(1, 4, 5) == ()
-    assert resolve_claim_floors(1, 9, 5) == (1,)
+def test_a_death_still_gets_submitted():
+    """★ **죽어도 제출한다.** 안 보내면 그 판은 세계에 없던 일이 된다.
+
+    도감도 안 차고, 그 층 몬스터도 안 크고, 순위에도 안 오른다. 실제로 그렇게 돌렸다 —
+    봇이 티켓 18개를 태우고 제출은 0건이었다.
+    """
+    # 첫 방에서 죽었다: 깬 층은 0 이지만 1층에 들어갔다.
+    assert resolve_claim_floors(1, 0, 5, 15) == (1,)
+    # 1층을 깨고 2층에서 죽었다.
+    assert resolve_claim_floors(1, 7, 5, 15) == (1, 2)
+
+
+def test_a_finished_descent_claims_only_what_it_cleared():
+    """끝까지 갔으면 없는 층을 더 청구하지 않는다 — 서버가 반려한다."""
+    assert resolve_claim_floors(1, 15, 5, 15) == (1, 2, 3)
 
 
 def test_an_old_ticket_claims_nothing():
     """층 개념이 없던 티켓은 층을 청구하지 않는다 — 0 이 「하강 전체」다."""
-    assert resolve_claim_floors(1, 9, 0) == ()
+    assert resolve_claim_floors(1, 9, 0, 15) == ()
 
 
 def test_handles_are_numbered_from_one():

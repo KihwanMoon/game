@@ -56,24 +56,30 @@ def build_played_ruleset(raw: dict, skill_pct: int) -> dict:
 
 
 def resolve_claim_floors(
-    start_floor: int, cleared_rooms: int, rooms_per_floor: int
+    start_floor: int, cleared_rooms: int, rooms_per_floor: int, total_rooms: int
 ) -> tuple[int, ...]:
-    """깬 층들을 층 번호로 낸다.
+    """이 판이 **들어간** 층들을 층 번호로 낸다.
 
-    브라우저는 층을 깰 때마다 청구한다. 봇도 같아야 하는데, 한 번에 마지막 층만 청구하면
-    중간 층의 정산·전리품이 통째로 빠진다 — 사람이 받는 것을 봇은 못 받게 된다.
+    브라우저는 층을 깰 때마다 청구하고, **죽어도 한 번 더 청구한다**. 죽은 판을 안 보내면
+    그 판은 세계에 없던 일이 된다 — 도감도 안 차고, 그 층 몬스터도 안 크고, 순위에도 안
+    오른다. 실제로 그렇게 돌렸다: 봇이 티켓 18개를 태우고 제출은 0건이었다.
+
+    깬 층만 세면 안 되는 이유가 그것이다. 「끝까지 못 갔으면 한 층 더」가 죽은 층이다.
 
     Args:
         start_floor: 하강이 시작한 층.
         cleared_rooms: 끝까지 깬 방 수.
         rooms_per_floor: 층 하나에 드는 방 수.
+        total_rooms: 이 하강의 전체 방 수. 끝까지 갔는지 여기서 안다.
 
     Returns:
-        청구할 층들. 하나도 못 깼으면 비어 있다.
+        청구할 층들. 층 개념이 없는 옛 티켓이면 비어 있다.
     """
     if rooms_per_floor <= 0:
         return ()
-    return tuple(start_floor + step for step in range(cleared_rooms // rooms_per_floor))
+    cleared = cleared_rooms // rooms_per_floor
+    entered = cleared + (1 if cleared_rooms < total_rooms else 0)
+    return tuple(start_floor + step for step in range(entered))
 
 
 def list_persona_specs() -> tuple[tuple[str, str, int, int], ...]:

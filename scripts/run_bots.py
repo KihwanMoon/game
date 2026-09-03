@@ -191,6 +191,7 @@ def run_one_bot(pool: ConnectionPool, api_url: str, bot: BotProfile, parts: dict
         int(ticket.get("floor", 1)),
         result.cleared_rooms,
         int(ticket.get("rooms_per_floor", 0)),
+        len(chain),
     )
     rewards = []
     for floor in floors:
@@ -208,7 +209,8 @@ def run_one_bot(pool: ConnectionPool, api_url: str, bot: BotProfile, parts: dict
         if answer is None:
             break
         rewards.append(f"{floor}층 {answer.get('reward', '')}".strip())
-    depth = f"{len(floors)}층" if floors else "1층에서 죽었다"
+    cleared = result.cleared_rooms // max(1, int(ticket.get("rooms_per_floor", 1)))
+    depth = f"{cleared}층 깼다" if cleared else "1층에서 죽었다"
     return f"{depth} · " + (" · ".join(rewards) if rewards else "정산 없음")
 
 

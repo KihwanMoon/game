@@ -279,7 +279,9 @@ def create_run_submission(
         ticket.floor,
         ticket.rooms_per_floor,
     )
-    world = apply_monster_outcome(ticket, submission_id, verified, account.account_id)
+    # **싸운 층만 반영한다.** 티켓은 하강 전체를 싣는데 한 제출은 일부 층만 돈다 —
+    # 안 가르면 1층에서 죽은 판이 9층 몬스터를 키운다 (실측).
+    world = apply_monster_outcome(ticket, submission_id, verified, account.account_id, claimed)
     if world:
         reward = f"{reward} · {world}" if reward else world
     apply_charge_spend(account.account_id, ticket, verified)

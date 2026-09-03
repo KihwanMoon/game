@@ -99,3 +99,62 @@ def test_an_old_payload_reads_as_unknown():
     payload = build_snapshot_payload(build_snapshot(6, 6))
     del payload["zone_floor"]
     assert parse_snapshot(payload).zone_floor == 0
+
+
+def build_probe_ticket(floor=1):
+    """검사용 티켓 하나.
+
+    Args:
+        floor: 하강이 시작하는 층.
+
+    Returns:
+        티켓.
+    """
+    from game.app.store.tickets import IssuedTicket
+
+    return IssuedTicket(
+        ticket_id="probe",
+        seed=1,
+        room_id="corridor",
+        floor=floor,
+        mode="PRACTICE",
+        core_version="probe",
+    )
+
+
+def test_a_first_floor_death_does_not_grow_the_ninth_floor():
+    """★ 만난 적 없는 개체가 그 죽음으로 자라면 안 된다.
+
+    실제로 그렇게 돌았다 — 봇이 1층에서 죽을 때마다 `arch_summoner 6→7` 이 함께 찍혔다.
+    """
+    from game.api.monster_service import list_fought_snapshots
+
+    world = tuple(build_snapshot(floor, floor) for floor in range(1, 11))
+    fought = list_fought_snapshots(world, build_probe_ticket(1), 1)
+    assert [item.zone_floor for item in fought] == [1]
+
+
+def test_a_descent_covers_the_floors_it_passed():
+    """★ 3층까지 갔으면 1~3층이 반영된다 — 지나온 층은 실제로 싸운 층이다."""
+    from game.api.monster_service import list_fought_snapshots
+
+    world = tuple(build_snapshot(floor, floor) for floor in range(1, 11))
+    fought = list_fought_snapshots(world, build_probe_ticket(1), 3)
+    assert [item.zone_floor for item in fought] == [1, 2, 3]
+
+
+def test_an_old_style_submission_still_covers_everything():
+    """층을 안 적는 옛 제출(0)은 하강 전체다 — 그 티켓의 반영이 사라지면 안 된다."""
+    from game.api.monster_service import list_fought_snapshots
+
+    world = tuple(build_snapshot(floor, floor) for floor in range(1, 4))
+    assert len(list_fought_snapshots(world, build_probe_ticket(1), 0)) == 3
+
+
+def test_a_floorless_snapshot_is_always_included():
+    """층을 모르는 개체(0)는 빼지 않는다 — 빼면 옛 티켓의 세계 반영이 통째로 사라진다."""
+    from game.api.monster_service import list_fought_snapshots
+
+    world = (build_snapshot(0, 4), build_snapshot(9, 9))
+    fought = list_fought_snapshots(world, build_probe_ticket(1), 1)
+    assert [item.zone_floor for item in fought] == [0]

@@ -95,8 +95,45 @@ def apply_win_to_monsters(
     return " · ".join(notes)
 
 
+def list_fought_snapshots(
+    snapshots: tuple[MonsterSnapshot, ...], ticket: IssuedTicket, claimed: int
+) -> tuple[MonsterSnapshot, ...]:
+    """이 제출이 **실제로 싸운** 층의 개체만 고른다.
+
+    티켓은 하강 전체(1~10층)의 개체를 싣는데, 한 번의 제출은 그중 일부 층만 돈다.
+    전부에 반영하면 **1층에서 죽은 판이 9층 몬스터를 키운다** — 실제로 그렇게 돌았다:
+    봇이 1층에서 죽을 때마다 `arch_summoner 레벨 6→7`, `longbow_archer 7→8` 이 함께
+    찍혔다. 만난 적도 없는 개체가 그 죽음으로 자란 것이다.
+
+    이긴 판의 감쇠도 같다. 1층을 깼다고 9층이 약해지면 안 된다.
+
+    **층을 모르는 스냅샷(0)은 그대로 둔다.** 층을 싣기 전에 발급된 티켓이 그 값이고,
+    거기서 빼면 그 티켓의 세계 반영이 통째로 사라진다.
+
+    Args:
+        snapshots: 티켓이 얼려 둔 개체 전부.
+        ticket: 이 런의 티켓.
+        claimed: 이번에 확정한 층. 0 이면 하강 전체다.
+
+    Returns:
+        이 제출이 싸운 층의 개체들.
+    """
+    if claimed <= 0:
+        return snapshots
+    last = max(claimed, ticket.floor)
+    return tuple(
+        item
+        for item in snapshots
+        if item.zone_floor == 0 or ticket.floor <= item.zone_floor <= last
+    )
+
+
 def apply_monster_outcome(
-    ticket: IssuedTicket, submission_id: int, verified: VerifiedRun, account_id: int
+    ticket: IssuedTicket,
+    submission_id: int,
+    verified: VerifiedRun,
+    account_id: int,
+    claimed: int = 0,
 ) -> str:
     """이 런의 결과를 지속 몬스터에 반영한다 (docs/설계/6_몬스터 §3·§4, 결정 #34·#35).
 
@@ -108,6 +145,7 @@ def apply_monster_outcome(
         submission_id: 제출 id.
         verified: 서버가 확정한 결과.
         account_id: 플레이어 계정.
+        claimed: 이번에 확정한 층. 0 이면 하강 전체다.
 
     Returns:
         플레이어에게 보여줄 한 줄. 없으면 빈 문자열.
@@ -115,7 +153,7 @@ def apply_monster_outcome(
     if verified.verdict != VERDICT_VERIFIED:
         return ""
     pool = get_pool()
-    snapshots = load_snapshots(pool, ticket.ticket_id)
+    snapshots = list_fought_snapshots(load_snapshots(pool, ticket.ticket_id), ticket, claimed)
     if not snapshots:
         return ""
     notes: list[str] = []
