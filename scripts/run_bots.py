@@ -78,6 +78,9 @@ def send_request(url: str, token: str, payload: dict | None) -> dict | None:
     Returns:
         응답 절. 닿지 못했거나 4xx·5xx 면 None — **봇이 죽지 않는다**. 백엔드가 잠깐
         내려가도 루프가 멈추면 안 되고, 다음 차례에 다시 시도하면 그만이다.
+
+        **사유는 반드시 적는다.** 삼키면 「티켓을 못 받았다」만 남아 무엇이 잘못됐는지
+        알 수 없다 — 실제로 그 상태로 배포해 한 번 헤맸다.
     """
     body = None if payload is None else json.dumps(payload).encode("utf-8")
     request = urllib.request.Request(url, data=body, method="GET" if body is None else "POST")
@@ -87,7 +90,11 @@ def send_request(url: str, token: str, payload: dict | None) -> dict | None:
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_SEC) as response:  # noqa: S310 내부 주소만 부른다
             return dict(json.loads(response.read().decode("utf-8")))
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValueError):
+    except urllib.error.HTTPError as error:
+        print(f"[봇] {url} → {error.code} {error.read()[:200]!r}", file=sys.stderr, flush=True)
+        return None
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValueError) as error:
+        print(f"[봇] {url} → {error}", file=sys.stderr, flush=True)
         return None
 
 
