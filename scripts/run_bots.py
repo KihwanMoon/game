@@ -25,6 +25,7 @@ from psycopg_pool import ConnectionPool
 
 from game.app.bots.personas import BOT_PERSONAS
 from game.app.bots.play import build_played_ruleset, list_persona_specs, resolve_claim_floors
+from game.app.bots.shopping import Listing, find_purchase
 from game.app.services.run_battle import load_balance
 from game.app.services.run_chain import run_room_chain
 from game.app.store.bots import (
@@ -214,6 +215,41 @@ def run_one_bot(pool: ConnectionPool, api_url: str, bot: BotProfile, parts: dict
     return f"{depth} · " + (" · ".join(rewards) if rewards else "정산 없음")
 
 
+def apply_bot_shopping(api_url: str, bot: BotProfile) -> str:
+    """판이 끝난 뒤 시장을 한 번 본다.
+
+    사람도 판이 끝나면 가방과 시장을 본다. 봇이 그것을 안 하면 번 화폐가 영영 안 쓰이고,
+    그러면 봇은 경제에 들어와 있지 않은 것이다.
+
+    **사기만 한다.** 거는 길은 여기 없다 — 봇이 물건을 걸면 「봇이 파밍해서 사람에게
+    넘기는」 통로가 열린다 (T11, 결정 #02).
+
+    Args:
+        api_url: 백엔드 주소.
+        bot: 이 봇의 성격.
+
+    Returns:
+        무슨 일이 있었는지. 아무것도 안 샀으면 빈 문자열.
+    """
+    market = send_request(f"{api_url}/api/auction", bot.token, None)
+    if market is None:
+        return ""
+    listings = tuple(
+        Listing(
+            listing_id=int(row["listing_id"]),
+            price=int(row["price"]),
+            is_mine=bool(row.get("is_mine")),
+            expires_in_minutes=int(row.get("expires_in_minutes", 0)),
+        )
+        for row in market.get("listings", [])
+    )
+    wanted = find_purchase(listings, int(market.get("balance", 0)))
+    if wanted == 0:
+        return ""
+    bought = send_request(f"{api_url}/api/auction/buy", bot.token, {"listing_id": wanted})
+    return "" if bought is None else f"경매 #{wanted} 샀다"
+
+
 def apply_bot_round(pool: ConnectionPool, api_url: str, parts: dict) -> int:
     """차례가 된 봇들을 한 번씩 내보낸다.
 
@@ -232,6 +268,9 @@ def apply_bot_round(pool: ConnectionPool, api_url: str, parts: dict) -> int:
         apply_bot_rest(pool, bot.account_id, bot.cadence_sec)
         try:
             note = run_one_bot(pool, api_url, bot, parts)
+            bought = apply_bot_shopping(api_url, bot)
+            if bought:
+                note = f"{note} · {bought}"
         except (KeyError, ValueError, TypeError) as error:
             note = f"판이 깨졌다: {error}"
         print(f"[봇] {bot.label} — {note}", flush=True)
