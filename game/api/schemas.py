@@ -317,3 +317,46 @@ class ListingAction(BaseModel):
     """매물 하나를 대상으로 하는 요청."""
 
     listing_id: int
+
+
+class AdminBotView(BaseModel):
+    """관리 화면이 보는 봇 한 줄.
+
+    성격(규칙표·실력)보다 **결과**가 먼저다 — 몇 판을 돌았고 몇 번 이겼는가. 승리가
+    0이면 그 봇은 세계에 아무것도 안 남긴다.
+    """
+
+    account_id: int
+    handle: str
+    label: str
+    ruleset_id: str
+    cadence_sec: int
+    skill_pct: int
+    is_active: bool
+    due_in_sec: int
+    runs: int
+    wins: int
+    best_floor: int
+    balance: int
+    items: int
+
+
+class AdminDoppelView(BaseModel):
+    """관리 화면이 보는 도플갱어 한 줄."""
+
+    record_id: int
+    zone_floor: int
+    level: int
+    alive: bool
+    entity_slot: str
+    origin_handle: str
+
+
+class AdminBotOverviewResponse(BaseModel):
+    """봇·도플갱어 현황."""
+
+    # 상한을 함께 싣는다. 화면이 제 값으로 적으면 서버가 물리는 값과 갈릴 수 있다.
+    max_runs_per_hour: int
+    min_cadence_sec: int
+    bots: list[AdminBotView]
+    doppels: list[AdminDoppelView]

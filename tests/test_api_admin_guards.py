@@ -97,6 +97,10 @@ def test_there_is_no_route_that_grants_admin(client):
     # 새 경로가 붙는 순간 그것이 얼마나 위험한지 한 번 더 보게 한다.
     assert sorted(path for path in paths if "/admin/" in path) == [
         "/api/admin/auction/cancel",
+        # 봇 조회·개입 (T11). 여기서 하는 것은 멈춤·재개와 성격 고치기뿐이고, **지우는
+        # 조작은 두지 않는다** — 지우면 그 봇이 벌어 둔 장비·도감·순위가 함께 사라진다.
+        "/api/admin/bot",
+        "/api/admin/bots",
         "/api/admin/catalog",
         "/api/admin/catalog/edit",
         "/api/admin/catalog/item",

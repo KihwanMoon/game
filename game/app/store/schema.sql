@@ -629,6 +629,10 @@ CREATE TABLE IF NOT EXISTS bot_profile (
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- 돌고 있는가. **지우지 않고 멈춘다** — 지우면 그 봇이 벌어 둔 장비·도감·순위가 함께
+-- 사라지고, 다시 세우면 다른 계정이 된다. 멈춤은 되돌릴 수 있어야 한다.
+ALTER TABLE bot_profile ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+
 -- 도플갱어는 지속 몬스터의 한 갈래다. **별도 테이블을 만들지 않는다** — 스냅샷·도감·
 -- 되찾기·성장 상한이 전부 entity_record 위에 서 있고, 옆에 새 테이블을 두면 그 전부를
 -- 두 번 써야 한다. 다른 점은 「플레이어 규칙표를 들고 하강한다」 하나뿐이다.

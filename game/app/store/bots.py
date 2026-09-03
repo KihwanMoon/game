@@ -21,6 +21,9 @@ from game.app.bots.personas import resolve_cadence
 # 실력의 하한. 0 이면 규칙표가 통째로 꺼져 폴백만 남고, 그런 봇은 무엇도 배우지 못한다.
 MIN_SKILL_PCT = 20
 
+# 조회에서 is_active 가 앉는 자리. 순서를 바꾸면 여기도 바꾼다.
+ACTIVE_COLUMN = 6
+
 # 실력의 상한. 100 이 「규칙표를 그대로 쓴다」다.
 MAX_SKILL_PCT = 100
 
@@ -35,6 +38,7 @@ class BotProfile:
     cadence_sec: int
     skill_pct: int
     token: str
+    is_active: bool = True
 
 
 def _build_profile(row: tuple) -> BotProfile:
@@ -53,6 +57,7 @@ def _build_profile(row: tuple) -> BotProfile:
         cadence_sec=int(row[3]),
         skill_pct=int(row[4]),
         token=str(row[5] or ""),
+        is_active=bool(row[ACTIVE_COLUMN]),
     )
 
 
@@ -123,7 +128,7 @@ def list_bots(pool: ConnectionPool) -> tuple[BotProfile, ...]:
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT account_id, label, ruleset_id, cadence_sec, skill_pct, token"
+            "SELECT account_id, label, ruleset_id, cadence_sec, skill_pct, token, is_active"
             " FROM bot_profile ORDER BY account_id"
         ).fetchall()
     return tuple(_build_profile(row) for row in rows)
@@ -140,8 +145,8 @@ def list_due_bots(pool: ConnectionPool) -> tuple[BotProfile, ...]:
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT account_id, label, ruleset_id, cadence_sec, skill_pct, token"
-            " FROM bot_profile WHERE next_run_at <= now() ORDER BY account_id"
+            "SELECT account_id, label, ruleset_id, cadence_sec, skill_pct, token, is_active"
+            " FROM bot_profile WHERE is_active AND next_run_at <= now() ORDER BY account_id"
         ).fetchall()
     return tuple(_build_profile(row) for row in rows)
 
@@ -179,3 +184,38 @@ def check_is_bot(pool: ConnectionPool, account_id: int) -> bool:
             "SELECT is_bot FROM account WHERE id = %s", (account_id,)
         ).fetchone()
     return bool(row and row[0])
+
+
+def apply_bot_settings(
+    pool: ConnectionPool,
+    account_id: int,
+    ruleset_id: str,
+    skill_pct: int,
+    cadence_sec: int,
+    is_active: bool,
+) -> None:
+    """봇의 성격을 고친다 (관리자 개입).
+
+    **멈춤은 지움이 아니다.** 지우면 그 봇이 벌어 둔 장비·도감·순위가 함께 사라지고,
+    다시 세우면 다른 계정이 된다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 대상 봇.
+        ruleset_id: 쓸 규칙표.
+        skill_pct: 실력.
+        cadence_sec: 판 사이 간격(초). 상한 안으로 물려서 쓴다.
+        is_active: 돌릴 것인가.
+    """
+    with pool.connection() as connection:
+        connection.execute(
+            "UPDATE bot_profile SET ruleset_id = %s, skill_pct = %s, cadence_sec = %s,"
+            " is_active = %s WHERE account_id = %s",
+            (
+                ruleset_id,
+                max(MIN_SKILL_PCT, min(MAX_SKILL_PCT, skill_pct)),
+                resolve_cadence(cadence_sec),
+                is_active,
+                account_id,
+            ),
+        )

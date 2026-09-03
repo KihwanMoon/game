@@ -17,6 +17,7 @@ from game.api.deps import init_state
 from game.api.routes import (
     account,
     admin,
+    admin_bots,
     auction,
     auth,
     bestiary,
@@ -86,6 +87,7 @@ def create_app() -> FastAPI:
         auction,
         discovery,
         admin,
+        admin_bots,
         catalog_admin,
         content_admin,
         content_pack,

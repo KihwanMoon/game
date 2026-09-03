@@ -15,7 +15,10 @@ import { SkillTable } from './SkillTable'
 import { ValueTree } from './ValueTree'
 import { PublishBar } from './PublishBar'
 import { readActivePack } from '../content/pack'
+import { BENCHMARK_RULESETS, G0_RULESETS } from '../core/resources'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
+import { BotPanel } from './BotPanel'
+import { applyBotSettings, readBotAdmin, type BotOverview } from '../storage/botAdmin'
 import { CatalogAdminPanel, ContentAdminPanel } from '../editor'
 import {
   applyCatalogAdmin,
@@ -30,7 +33,7 @@ import {
   type ContentDraftView,
 } from '../storage'
 
-type Tab = 'balance' | 'enemies' | 'skills' | 'rooms' | 'catalog' | 'content'
+type Tab = 'balance' | 'enemies' | 'skills' | 'rooms' | 'catalog' | 'bots' | 'content'
 
 const TABS: readonly { readonly id: Tab; readonly label: string }[] = [
   { id: 'balance', label: '밸런스' },
@@ -38,11 +41,25 @@ const TABS: readonly { readonly id: Tab; readonly label: string }[] = [
   { id: 'skills', label: '스킬' },
   { id: 'rooms', label: '룸' },
   { id: 'catalog', label: '아이템' },
+  // 봇은 우리가 들인 것이라 우리가 봐야 한다 (T11). 표시만 하고 보는 자리가 없으면
+  // 「몇 마리가 무엇을 하고 있는지」를 DB 로만 알 수 있고, 그러면 아무도 안 본다.
+  { id: 'bots', label: '봇' },
   // 원문은 마지막이다. 드물고 위험한 일에 쓰는 탈출구이지 기본 도구가 아니다.
   { id: 'content', label: '원문' },
 ]
 
 const EMPTY_HINT = '여기엔 아무것도 없다'
+
+/**
+ * 봇에게 줄 수 있는 규칙표들.
+ *
+ * **자산에서 읽는다.** 목록을 손으로 적으면 규칙표를 늘렸을 때 관리 화면만 모르게 되고,
+ * 없는 id 를 고르면 그 봇은 영영 안 논다.
+ */
+const RULESET_IDS: readonly string[] = [
+  ...BENCHMARK_RULESETS.keys(),
+  ...G0_RULESETS.keys(),
+].sort()
 
 /**
  * 연 자산의 절을 꺼낸다.
@@ -76,6 +93,7 @@ export function AdminScreen(): React.JSX.Element {
   const [asset, setAsset] = useState<ContentAssetView | undefined>(undefined)
   const [catalog, setCatalog] = useState<CatalogAdminView | undefined>(undefined)
   const [detail, setDetail] = useState('')
+  const [bots, setBots] = useState<BotOverview | undefined>(undefined)
 
   useEffect(() => {
     let isCurrent = true
@@ -153,6 +171,8 @@ export function AdminScreen(): React.JSX.Element {
                   void readContentAsset(token, 'balance').then(setAsset)
                 } else if (item.id === 'enemies' || item.id === 'skills' || item.id === 'rooms') {
                   void readContentAsset(token, item.id).then(setAsset)
+                } else if (item.id === 'bots') {
+                  void readBotAdmin(token).then(setBots)
                 }
               }}
             >
@@ -205,6 +225,21 @@ export function AdminScreen(): React.JSX.Element {
             file={readAssetFile(asset, 'enemies')}
             onSave={(text, note) => {
               applyContent('/admin/content/draft', 'enemies', text, note)
+            }}
+          />
+        ) : tab === 'bots' ? (
+          <BotPanel
+            overview={bots}
+            rulesetIds={RULESET_IDS}
+            onSave={(next) => {
+              void applyBotSettings(token, next).then((updated) => {
+                if (updated === undefined) {
+                  setDetail('봇을 고치지 못했다 — 서버에 닿지 못했거나 없는 봇이다')
+                  return
+                }
+                setBots(updated)
+                setDetail('')
+              })
             }}
           />
         ) : tab === 'content' ? (

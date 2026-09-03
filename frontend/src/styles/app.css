@@ -201,3 +201,84 @@ body {
   text-decoration: none;
 }
 
+
+/* ── 봇 관리 ──────────────────────────────────────────────────────────────
+   **결과를 왼쪽에 둔다.** 규칙표와 실력은 우리가 정해 준 값이라 새 사실이 없고, 알아야
+   할 것은 판·승·최고층이다. 이름 다음이 곧 상태와 승률인 것은 그래서다. */
+.bots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.bots__grid {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--border);
+}
+
+/* 줄 자체가 버튼이다 — 좁은 화면에서 줄마다 조작을 펴면 한 줄이 서너 줄로 꺾인다. */
+.botrow {
+  display: grid;
+  grid-template-columns: 7ch 8ch 14ch 5ch 1fr 9ch 10ch 7ch 1fr;
+  gap: var(--sp-2);
+  align-items: center;
+  padding: var(--sp-1) var(--sp-2);
+  border: 0;
+  border-bottom: var(--border);
+  background: transparent;
+  color: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  text-align: left;
+  cursor: pointer;
+}
+
+.botrow--picked {
+  background: var(--surface-row-active);
+}
+
+.botrow__name {
+  color: var(--text-body);
+}
+
+.botrow__cell {
+  overflow: hidden;
+  color: var(--text-dim);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.bots__edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+  padding-top: var(--sp-2);
+  border-top: var(--border);
+}
+
+.bots__edit-name {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+}
+
+.bots__label {
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+}
+
+.bots__field {
+  min-height: var(--btn-tap-h);
+  padding: 0 var(--sp-2);
+  border: var(--border);
+  background: var(--surface-panel);
+  color: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+}
+
+.bots__field--num {
+  width: 9ch;
+}
