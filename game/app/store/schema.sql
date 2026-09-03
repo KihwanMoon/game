@@ -596,3 +596,48 @@ CREATE TABLE IF NOT EXISTS content_generation (
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     CHECK (id = 1)
 );
+
+-- ── 봇 (가상 유저) ────────────────────────────────────────────────────────
+--
+-- **표시하는 것이 설계다.** `설계/7_변조방지` T11 이 봇 파밍을 위협으로 적고 봇 판정
+-- 기준(결정 #48)이 미결인데, 우리가 들인 봇을 표시하지 않으면 우리 손으로 만든 것과
+-- 잡아야 할 것이 구별되지 않는다 — 나중에 골라낼 수도, 지울 수도 없다.
+--
+-- 봇은 **진짜 계정**이다. 같은 라우트로 티켓을 받고 같은 재시뮬로 확정받는다. 그래서
+-- 봇이 낀 장비는 실제로 벌어서 낀 것이고(결정 #02), 봇이 못 하는 일도 사람과 같다.
+ALTER TABLE account ADD COLUMN IF NOT EXISTS is_bot BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- 봇의 성격. **스펙을 손으로 박지 않는다** — 규칙표와 리듬과 실력만 다르게 주면
+-- 장비·도달 층·도감은 굴러가면서 저절로 갈린다.
+CREATE TABLE IF NOT EXISTS bot_profile (
+    account_id    BIGINT      PRIMARY KEY REFERENCES account(id) ON DELETE CASCADE,
+    -- 화면에 적히는 이름. 계정 handle 과 따로 두는 이유는 handle 이 유일해야 하기
+    -- 때문이다 — 이름은 겹쳐도 되고, 겹치는 편이 사람처럼 보인다.
+    label         TEXT        NOT NULL,
+    -- 이 봇이 쓰는 규칙표 id. `benchmark.json`·`g0_examples.json` 에서 고른다.
+    ruleset_id    TEXT        NOT NULL,
+    -- 판 사이에 쉬는 시간(초). 리듬이 다르면 세계가 고르게 움직이지 않는다 — 그것이
+    -- 사람이 여럿인 세계의 모습이다.
+    cadence_sec   INT         NOT NULL DEFAULT 900,
+    -- 실력(%). 100 이면 규칙표를 그대로 쓰고, 낮으면 규칙 몇 줄을 끄고 나간다.
+    -- **못하는 봇이 있어야 한다** — 1층에서 죽는 쪽이 지속 몬스터를 먹인다.
+    skill_pct     INT         NOT NULL DEFAULT 100,
+    -- 기기 토큰. 봇은 로그인하지 않으므로 이것이 유일한 신원이다. 401 이면 다시 받는다.
+    token         TEXT,
+    -- 다음에 나갈 시각. 이것으로 리듬을 물린다 — 러너가 상시 돌아도 봇마다 제 박자다.
+    next_run_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 도플갱어는 지속 몬스터의 한 갈래다. **별도 테이블을 만들지 않는다** — 스냅샷·도감·
+-- 되찾기·성장 상한이 전부 entity_record 위에 서 있고, 옆에 새 테이블을 두면 그 전부를
+-- 두 번 써야 한다. 다른 점은 「플레이어 규칙표를 들고 하강한다」 하나뿐이다.
+ALTER TABLE entity_record ADD COLUMN IF NOT EXISTS is_doppel BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- 누구의 그림자인가. 봇이 깊은 층에서 죽으면 그 빌드가 여기 남는다.
+ALTER TABLE entity_record ADD COLUMN IF NOT EXISTS origin_account_id BIGINT
+    REFERENCES account(id) ON DELETE SET NULL;
+
+-- 도플갱어가 든 로드아웃. 스탯을 stat_json 에 얹지 않고 따로 두는 이유는 **그것이
+-- 플레이어 형태이기 때문이다** — 몬스터 스탯 계산(등급×레벨)과 섞이면 둘 다 틀린다.
+ALTER TABLE entity_record ADD COLUMN IF NOT EXISTS loadout_json JSONB;

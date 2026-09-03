@@ -15,6 +15,7 @@ from psycopg_pool import ConnectionPool
 
 from game.api.deps import get_item_catalog, get_pool
 from game.api.discovery_service import record_item_discovery
+from game.app.bots.doppel import check_is_doppel
 from game.app.items.drops import GRADE_MISS, build_grade_pool, create_affix_rolls, get_weighted
 from game.app.store.accounts import find_player_entity
 from game.app.store.drops import (
@@ -156,6 +157,12 @@ def create_kill_drop(account_id: int, entity_id: int, context: dict) -> str:
     Returns:
         화면에 적을 한 줄. 아무것도 안 나왔으면 빈 문자열.
     """
+    # **도플갱어는 굴리지 않는다.** 그 개체는 봇의 장비에서 나오므로, 무엇이든
+    # 떨어지면 봇이 벌어 둔 것을 사람에게 건네는 통로가 된다 — 아이템이 세계에
+    # 들어오는 문은 검증된 런 하나뿐이라는 결정 #02 가 그 자리에서 뚫리고, 봇을
+    # 여럿 돌려 죽이는 것이 최적 파밍이 된다 (T11).
+    if check_is_doppel(str(context["kind_id"])):
+        return ""
     pool = get_pool()
     floor = int(context["floor"])
     level = int(context["level"])

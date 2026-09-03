@@ -14,6 +14,7 @@ from psycopg_pool import ConnectionPool
 
 from game.api.deps import get_pool
 from game.api.discovery_service import record_item_discovery
+from game.app.bots.doppel import check_is_doppel
 from game.app.services.verify_run import VERDICT_VERIFIED, VerifiedRun
 from game.app.simulation.plan import OUTCOME_PLAYER_WIN as OUTCOME_WIN
 from game.app.store.accounts import find_player_entity
@@ -53,6 +54,47 @@ def resolve_home_floor(
     return record.zone_floor
 
 
+def apply_win_to_monsters(
+    pool: ConnectionPool,
+    ticket: IssuedTicket,
+    snapshots: tuple[MonsterSnapshot, ...],
+    account_id: int,
+) -> str:
+    """이긴 런을 반영한다 — 그 층의 지속 몬스터가 감쇠하고, 내 것을 되찾는다.
+
+    졌을 때와 갈라 둔 이유는 복잡도다. 한 함수에 두 갈래를 두면 각 갈래에 조건이 하나
+    붙을 때마다 전체가 읽기 어려워진다 (§4).
+
+    Args:
+        pool: 연결 풀.
+        ticket: 이 런의 티켓.
+        snapshots: 얼려 둔 개체들.
+        account_id: 플레이어 계정.
+
+    Returns:
+        플레이어에게 보여줄 한 줄.
+    """
+    notes: list[str] = []
+    entity_id = find_player_entity(pool, account_id)
+    for item in snapshots:
+        # **그 개체가 사는 층으로 판정한다.** 티켓의 시작 층을 쓰면 3층에서 잡은
+        # 개체가 1층 기준으로 감쇠해 「레벨 1→1」이 된다 (실제 신고).
+        level = apply_monster_defeat(pool, item.record_id, resolve_home_floor(pool, item, ticket))
+        # **바뀐 것만 적는다.** 하강이 열 층을 돌아 스냅샷이 서른 마리가 되면서,
+        # 「레벨 6→6」 서른 줄이 화폐·전리품을 밀어냈다(실제 신고).
+        if level != item.level:
+            notes.append(f"{item.kind_id} 레벨 {item.level}→{level}")
+        # 그 개체가 들고 있던 **내 것**을 되찾는다 (`설계/6_몬스터` §5).
+        # **도플갱어에서는 되찾지 않는다.** 그 개체는 애초에 아무것도 들지 않지만, 길을
+        # 코드로 막아 둔다 — 데이터가 비어 있는 것과 길이 없는 것은 다르다.
+        if check_is_doppel(item.kind_id):
+            continue
+        for catalog_id in apply_recovery(pool, item.record_id, account_id, entity_id):
+            record_item_discovery(account_id, catalog_id)
+            notes.append(f"{catalog_id} 되찾음")
+    return " · ".join(notes)
+
+
 def apply_monster_outcome(
     ticket: IssuedTicket, submission_id: int, verified: VerifiedRun, account_id: int
 ) -> str:
@@ -78,26 +120,7 @@ def apply_monster_outcome(
         return ""
     notes: list[str] = []
     if verified.outcome == OUTCOME_WIN:
-        # 이겼으면 그 층의 지속 몬스터가 전부 감쇠한다 — 플레이어의 승리가 세계에
-        # 흔적을 남긴다 (결정 #35).
-        entity_id = find_player_entity(pool, account_id)
-        for item in snapshots:
-            # **그 개체가 사는 층으로 판정한다.** 티켓의 시작 층을 쓰면 3층에서 잡은
-            # 개체가 1층 기준으로 감쇠해 「레벨 1→1」이 된다 (실제 신고).
-            home = resolve_home_floor(pool, item, ticket)
-            level = apply_monster_defeat(pool, item.record_id, home)
-            # **바뀐 것만 적는다.** 하강이 열 층을 돌아 스냅샷이 서른 마리가 되면서,
-            # 「레벨 6→6」 서른 줄이 화폐·전리품을 밀어냈다(실제 신고). 감쇠가 층
-            # 하한에 걸려 그대로인 경우가 대부분이라 그 줄은 아무것도 안 말한다.
-            if level != item.level:
-                notes.append(f"{item.kind_id} 레벨 {item.level}→{level}")
-            # 그 개체가 들고 있던 **내 것**을 되찾는다 (`설계/6_몬스터` §5). 도감이
-            # "내 아이템을 들고 있다" 고 말해 놓고 잡아도 못 돌려받으면, World Loop 의
-            # 동기가 화면에만 있고 세계에는 없다.
-            for catalog_id in apply_recovery(pool, item.record_id, account_id, entity_id):
-                record_item_discovery(account_id, catalog_id)
-                notes.append(f"{catalog_id} 되찾음")
-        return " · ".join(notes)
+        return apply_win_to_monsters(pool, ticket, snapshots, account_id)
 
     # 졌으면 그 층의 몬스터가 경험치를 얻고, 하나가 장비 사본을 가져간다 (결정 #34).
     for item in snapshots:
@@ -106,7 +129,10 @@ def apply_monster_outcome(
         )
         if level > item.level:
             notes.append(f"{item.kind_id} 레벨 {item.level}→{level}")
-    taken = apply_trophy_transfer(account_id, snapshots[0].record_id)
+    # 사본을 가져갈 개체를 고를 때 도플갱어를 건너뛴다. 들면 그 순간 「내 것을 들고 있는
+    # 개체」가 되고, 되찾기가 그 위에 길을 낸다 — 봇의 장비가 사람에게 가는 통로다.
+    holders = [item for item in snapshots if not check_is_doppel(item.kind_id)]
+    taken = apply_trophy_transfer(account_id, holders[0].record_id) if holders else ""
     if taken:
         notes.append(taken)
     return " · ".join(notes)

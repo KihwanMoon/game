@@ -189,8 +189,15 @@ def test_the_same_ticket_replays_identically(client, token, monster):
     assert first == second
 
 
-def test_snapshot_changes_the_battle(client, token, monster):
-    """스냅샷이 실제로 전투를 바꾼다 — 안 바뀌면 얼려 두는 뜻이 없다."""
+def test_snapshot_changes_the_battle(client, token, monster, monkeypatch):
+    """스냅샷이 실제로 전투를 바꾼다 — 안 바뀌면 얼려 두는 뜻이 없다.
+
+    **시드를 못 박는다.** 티켓이 시드를 굴리게 된 뒤로는 어떤 시드에서 두 판이 같은 틱에
+    끝나는 일이 생기고, 그때 이 검사는 「스냅샷이 전투를 안 바꾼다」고 거짓 신고를 한다.
+    """
+    from game.app.store import tickets as tickets_store
+
+    monkeypatch.setattr(tickets_store, "create_seed", lambda: 12345)
     from game.api.deps import get_context, get_pool
     from game.app.services.verify_run import evaluate_submission
     from game.app.store.monsters import load_snapshots
