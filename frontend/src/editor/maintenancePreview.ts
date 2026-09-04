@@ -19,6 +19,7 @@
  */
 import type { ConsumableView, InventoryView, MaintenanceRowView } from '../storage'
 
+import { DISCARD_ALL } from './maintenanceRules'
 import {
   listSealedWorn,
   runUnseal,
@@ -65,11 +66,23 @@ interface RowOutcome {
   readonly isActive: boolean
 }
 
+/** 가방에 있는 장비 하나 — 버리기가 보는 두 축만 담는다. */
+interface PreviewBagItem {
+  readonly grade: string
+  readonly isRecovered: boolean
+}
+
 /** 미리보기가 돌리는 동안의 상태. 원본을 안 건드린다. */
 interface PreviewState {
   balance: number
-  /** 아직 안 버린 가방 장비 — 등급별 개수. */
-  readonly bagByGrade: Map<string, number>
+  /**
+   * 아직 안 버린 가방 장비.
+   *
+   * **등급별 개수가 아니라 물건 목록이다.** 「전부 버리기」가 생기면서 세는 축이 둘이
+   * 됐기 때문이다 — 등급으로 버릴 때는 되찾은 것을 빼고 세고, 전부 버릴 때는 그것까지
+   * 센다. 개수 두 벌을 나란히 들면 한 행이 버린 것이 다른 축에서 안 줄어든다.
+   */
+  bagItems: readonly PreviewBagItem[]
   /** 아직 안 고친 파손 착용 장비 수. */
   brokenCount: number
   repairCost: number
@@ -102,15 +115,16 @@ function buildState(
   consumables: ConsumableView | undefined,
   baseStats: Readonly<Record<string, number>>,
 ): PreviewState {
-  const bagByGrade = new Map<string, number>()
+  // 되찾음 표시를 **버리지 않고 담아 둔다.** 등급으로 버릴 때는 서버가 그것을 남기고
+  // (`apply_discard_rule`), 「전부」일 때는 그 보호를 함께 내려놓는다 — 여기서 미리
+  // 걸러 내면 두 경우를 한 상태로 못 그린다.
+  const bagItems: PreviewBagItem[] = []
   for (const entry of inventory?.slots ?? []) {
     const item = entry.item
-    // **되찾은 것은 안 센다.** 서버가 남기기 때문이다 — 몬스터에게서 도로 빼앗아 온
-    // 물건을 자동으로 버리면 되찾기의 뜻이 사라진다 (`apply_discard_rule`).
-    if (item === null || item.isRecovered) {
+    if (item === null) {
       continue
     }
-    bagByGrade.set(item.grade, (bagByGrade.get(item.grade) ?? 0) + 1)
+    bagItems.push({ grade: item.grade, isRecovered: item.isRecovered })
   }
   const brokenCount = (inventory?.equipment ?? []).filter(
     (entry) => entry.item?.isBroken === true,
@@ -125,7 +139,7 @@ function buildState(
     // 잔액의 정본은 가방 쪽이다 — 둘 다 같은 지갑을 보지만, 소모품 화면은 가방보다
     // 늦게 읽힐 수 있다. 하나를 골라 두지 않으면 줄마다 다른 잔액을 보게 된다.
     balance: inventory?.balance ?? consumables?.balance ?? 0,
-    bagByGrade,
+    bagItems,
     brokenCount,
     repairCost: inventory?.repairCost ?? 0,
     refills,
@@ -138,21 +152,43 @@ function buildState(
 }
 
 /**
+ * 이 인자가 이 물건을 버리는가. **서버의 판정과 같은 식이어야 한다.**
+ *
+ * 여기서 갈리면 미리보기가 서버와 다른 수를 세고, 그때 사람은 화면을 믿고 규칙을 짠다.
+ *
+ * @param item 가방의 물건.
+ * @param grade 버리기의 인자. `DISCARD_ALL` 이면 등급도 되찾음도 안 본다.
+ * @returns 버리면 참.
+ */
+function checkDiscarded(item: PreviewBagItem, grade: string): boolean {
+  if (grade === DISCARD_ALL) {
+    return true
+  }
+  return item.grade === grade && !item.isRecovered
+}
+
+/**
  * 버리기 한 행을 돌린다.
  *
  * @param state 지금 판.
- * @param grade 버릴 등급.
+ * @param grade 버릴 등급. `DISCARD_ALL` 이면 가방의 장비 전부다.
  * @returns 무슨 일이 있었는지와 잔액 변화.
  */
 function runDiscard(state: PreviewState, grade: string): RowOutcome {
-  const count = state.bagByGrade.get(grade) ?? 0
+  const kept = state.bagItems.filter((item) => !checkDiscarded(item, grade))
+  const count = state.bagItems.length - kept.length
   if (count === 0) {
     return { text: '지금이면 버릴 것이 없다', money: 0, isActive: false }
   }
-  state.bagByGrade.set(grade, 0)
+  state.bagItems = kept
   // 버리기는 돈이 안 된다 — 파는 것이 아니라 없애는 것이다. 그 사실을 적어 둔다,
   // 「버리면 돈이 되겠지」로 짜는 사람이 있기 때문이다.
-  return { text: `지금이면 ${String(count)}개 버림 (값은 안 받는다)`, money: 0, isActive: true }
+  const what = grade === DISCARD_ALL ? '가방을 비운다 · ' : ''
+  return {
+    text: `지금이면 ${what}${String(count)}개 버림 (값은 안 받는다)`,
+    money: 0,
+    isActive: true,
+  }
 }
 
 /**

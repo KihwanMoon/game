@@ -17,10 +17,12 @@ import type { ConsumableView, InventoryView, MaintenanceView } from '../storage'
 
 import { MaintenanceCheck, MaintenanceEditor, MaintenancePalette } from './MaintenanceEditor'
 import { buildMaintenancePreview, checkPreviewIdle, formatMoneyDelta } from './maintenancePreview'
+import { readArgNote } from './MaintenanceEditor'
 import {
   checkBlocked,
   checkMaintenanceRows,
   createRow,
+  DISCARD_ALL,
   MAINTENANCE_ACTIONS,
   duplicateRow,
   formatMaintenanceSentence,
@@ -655,5 +657,122 @@ describe('★ 「더 좋게 만든다」 미리보기는 확실한 것만 센다
     // 판정과 표기가 같은 문자열을 나눠 쓰면, 문구를 한 글자 고칠 때 경고가 사라진다.
     const preview = buildMaintenancePreview([{ action: 'UNSEAL', grade: '' }], INVENTORY, CONSUMABLES)
     expect(preview.isShort).toBe(false)
+  })
+})
+
+/**
+ * 가방 칸 하나를 만든다. 버리기가 보는 두 축만 바꾼다.
+ *
+ * @param index 칸 번호.
+ * @param item 등급과 되찾음 표시.
+ * @returns 가방 칸.
+ */
+function buildBagSlot(
+  index: number,
+  item: { grade: string; isRecovered: boolean },
+): InventoryView['slots'][number] {
+  return {
+    slotIndex: index,
+    slot: null,
+    isSealed: false,
+    stackCatalogId: null,
+    stackCount: 0,
+    stackLabelKo: '',
+    stackGrade: '',
+    stackUseTag: '',
+    item: {
+      itemId: index + 1,
+      catalogId: 'a',
+      labelKo: '무엇',
+      kind: 'EQUIPMENT',
+      slot: 'WEAPON_MAIN',
+      hands: null,
+      equippedSlot: null,
+      isBroken: false,
+      isBound: false,
+      isRecovered: item.isRecovered,
+      sealedSlots: 0,
+      unsealCost: 0,
+      grade: item.grade,
+      attackRange: 0,
+      affixes: [],
+      requirements: [],
+      canEquip: true,
+    },
+  }
+}
+
+describe('★ 전부 버리기 — 조심이 가방을 영영 안 비웠다', () => {
+  // 등급으로 버리면 되찾은 것이 남는데, 죽고 되찾기를 되풀이하면 **가방 전체에** 그
+  // 표시가 붙는다. 봇 하나는 17칸이 17칸 다 되찾은 것이었고, 그래서 새 전리품이 들어올
+  // 자리가 없어 판마다 흘렸다.
+  const buildBag = (): InventoryView => ({
+    slots: [
+      buildBagSlot(0, { grade: 'COMMON', isRecovered: true }),
+      buildBagSlot(1, { grade: 'COMMON', isRecovered: false }),
+      buildBagSlot(2, { grade: 'RELIC', isRecovered: false }),
+    ],
+    equipment: [],
+    balance: 0,
+    repairCost: 0,
+  })
+
+  it('등급으로 버리면 되찾은 것과 다른 등급은 남는다', () => {
+    const preview = buildMaintenancePreview(
+      [{ action: 'DISCARD', grade: 'COMMON' }],
+      buildBag(),
+      undefined,
+    )
+    // 되찾은 COMMON 하나는 남으므로 하나만 버린다.
+    expect(preview.rows[0]?.text).toContain('1개 버림')
+  })
+
+  it('「전부」는 유물도 되찾은 것도 함께 버린다', () => {
+    const preview = buildMaintenancePreview(
+      [{ action: 'DISCARD', grade: DISCARD_ALL }],
+      buildBag(),
+      undefined,
+    )
+    expect(preview.rows[0]?.text).toContain('가방을 비운다')
+    expect(preview.rows[0]?.text).toContain('3개 버림')
+  })
+
+  it('버린 것은 다음 행에서 또 세지 않는다', () => {
+    // 개수를 축 두 벌로 들면 여기서 갈린다 — 앞 행이 비운 것을 뒤 행이 다시 본다.
+    const preview = buildMaintenancePreview(
+      [
+        { action: 'DISCARD', grade: DISCARD_ALL },
+        { action: 'DISCARD', grade: 'COMMON' },
+      ],
+      buildBag(),
+      undefined,
+    )
+    expect(preview.rows[1]?.text).toBe('지금이면 버릴 것이 없다')
+    expect(preview.rows[1]?.isActive).toBe(false)
+  })
+
+  it('전부 버리기가 교체보다 위면 경고한다 — 고를 것을 먼저 없앤다', () => {
+    const problems = checkMaintenanceRows([
+      { action: 'DISCARD', grade: DISCARD_ALL },
+      { action: 'UPGRADE_GEAR', grade: 'ATTACK' },
+    ])
+    const found = problems.find((problem) => problem.text.includes('교체보다 위'))
+    expect(found).toBeDefined()
+    // 막지는 않는다 — 가방을 비우는 것이 목적인 배치도 있다.
+    expect(found?.isBlocking).toBe(false)
+  })
+
+  it('교체가 위면 경고하지 않는다 — 그것이 뜻이 맞는 배치다', () => {
+    const problems = checkMaintenanceRows([
+      { action: 'UPGRADE_GEAR', grade: 'ATTACK' },
+      { action: 'DISCARD', grade: DISCARD_ALL },
+    ])
+    expect(problems.some((problem) => problem.text.includes('교체보다 위'))).toBe(false)
+  })
+
+  it('「전부」를 고르면 주의 문구가 뒤집힌다', () => {
+    // 행동 하나에 문구 하나를 붙여 두면 「전부」를 골라 놓고 「유물은 안 버린다」를 읽는다.
+    expect(readArgNote('DISCARD', 'COMMON')).toContain('유물은 자동으로 안 버린다')
+    expect(readArgNote('DISCARD', DISCARD_ALL)).toContain('되돌릴 수 없다')
   })
 })

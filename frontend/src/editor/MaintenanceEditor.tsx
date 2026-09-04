@@ -34,6 +34,7 @@ import {
 import {
   checkBlocked,
   checkMaintenanceRows,
+  DISCARD_ALL,
   duplicateRow,
   findAction,
   formatMaintenanceSentence,
@@ -72,6 +73,24 @@ const ESTIMATE_TEXT = '지금 가방으로 잰 어림이다 — 실제로는 판
 const ARG_NOTES: Readonly<Record<string, string>> = {
   DISCARD: '유물은 자동으로 안 버린다 — 되찾은 것도 남는다',
   UPGRADE_GEAR: '봇이 쓰는 저울과 같다 — 근소한 차이로는 안 바꾼다',
+}
+
+/**
+ * 고른 인자에 붙는 주의.
+ *
+ * **행동이 아니라 인자를 보고 고른다.** 버리기의 주의는 「무엇을 남기는가」인데 그것이
+ * 인자마다 정반대다 — 등급을 고르면 유물·되찾은 것을 남기고, 「전부」는 그것까지 버린다.
+ * 행동 하나에 문구 하나를 붙여 두면 「전부」를 골라 놓고 「유물은 안 버린다」를 읽게 된다.
+ *
+ * @param action 이 행의 행동.
+ * @param grade 고른 인자.
+ * @returns 화면에 적을 주의. 없으면 빈 문자열.
+ */
+export function readArgNote(action: string, grade: string): string {
+  if (action === 'DISCARD' && grade === DISCARD_ALL) {
+    return '되돌릴 수 없다 — 유물도 되찾은 것도 함께 버린다. 위에서 교체가 먼저 돌아야 뜻이 맞다'
+  }
+  return ARG_NOTES[action] ?? ''
 }
 
 /**
@@ -222,7 +241,7 @@ function MaintenanceRowDetail(props: {
           </select>
           {/* 그 인자가 무엇을 뜻하는지 한 줄. 「공격」만 있으면 무엇을 기준으로 고르는지
               모른다 — 팔레트의 설명이 여기까지 따라오지 않는다. */}
-          <ValueExpr text={ARG_NOTES[props.row.action] ?? ''} size="sm" dim />
+          <ValueExpr text={readArgNote(props.row.action, props.row.grade)} size="sm" dim />
         </div>
       ) : (
         <ValueExpr text="이 행동은 고칠 인자가 없다 — 순서만 정한다" size="sm" dim />

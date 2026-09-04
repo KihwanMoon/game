@@ -99,6 +99,8 @@ def test_an_unknown_row_is_refused(client, token):
         [{"action": "DISCARD", "grade": "COMMOM"}],
         [{"action": "EXPLODE", "grade": ""}],
         [{"action": "REPAIR", "grade": "COMMON"}],
+        # 등급으로는 여전히 유물을 못 고른다. 유물까지 버리려면 「전부」를 골라야 하고,
+        # 그것은 **등급이 아니라 「등급을 안 본다」**는 선언이라 실수로 눌리지 않는다.
         [{"action": "DISCARD", "grade": "RELIC"}],
     ):
         refused = client.put("/api/maintenance", json={"rows": rows}, headers=headers)
@@ -193,3 +195,88 @@ def test_maintenance_runs_only_when_the_ticket_closes(client, token):
     between = source[guard:call]
     assert "is_run_closed" in between
     assert between.count("\n    if ") <= 1, "닫힘 가드 밖에서 정비가 돈다"
+
+
+def build_bag_item(client, token, grade, is_recovered=False):
+    """가방에 장비 하나를 넣는다.
+
+    Args:
+        client: 테스트 클라이언트.
+        token: 기기 토큰.
+        grade: 굴린 등급.
+        is_recovered: 되찾은 것으로 표시할지. 저장된 플래그가 아니라 `taken_from`
+            (빼앗겼던 계정)이 채워진 채 내 가방에 있는 상태다.
+
+    Returns:
+        만든 아이템 id.
+    """
+    from game.api.deps import get_item_catalog, get_pool
+    from game.app.store.items import create_item
+
+    account_id, entity_id = find_ids(client, token)
+    catalog = get_item_catalog()
+    armor = next(key for key, entry in sorted(catalog.items()) if entry.slot is not None)
+    item_id = create_item(get_pool(), entity_id, armor, (), grade=grade)
+    if is_recovered:
+        with get_pool().connection() as connection:
+            connection.execute(
+                "UPDATE item_instance SET taken_from = %s WHERE id = %s", (account_id, item_id)
+            )
+    return item_id
+
+
+def test_discard_all_empties_the_bag(client, token):
+    """★ 되찾음 보호가 실제로는 가방을 영영 안 비웠다.
+
+    죽고 되찾기를 되풀이하면 **가방 전체에** 그 표시가 붙는다 — 봇 하나는 17칸이 17칸 다
+    되찾은 것이었고, 그래서 새 전리품이 들어올 자리가 없어 판마다 흘렸다. 「전부」는 그
+    보호를 함께 내려놓는다: 등급도 유물도 되찾음도 안 본다.
+    """
+    from game.api.deps import get_pool
+    from game.api.maintenance_service import apply_discard_rule
+    from game.app.store.items import list_inventory
+    from game.app.store.maintenance import DISCARD_ALL
+
+    _account_id, entity_id = find_ids(client, token)
+    build_bag_item(client, token, "COMMON", is_recovered=True)
+    build_bag_item(client, token, "FINE")
+    build_bag_item(client, token, "RELIC")
+
+    assert apply_discard_rule(get_pool(), entity_id, DISCARD_ALL) == 3
+    assert not [entry for entry in list_inventory(get_pool(), entity_id) if entry.item]
+
+
+def test_discard_all_leaves_worn_gear_alone(client, token):
+    """★ 낀 것은 안 버린다 — 「전부」여도 그렇다.
+
+    낀 것을 버리면 스탯이 유령이 된다. 「전부」가 넓히는 것은 **가방 안에서** 무엇을
+    남기느냐이지, 가방 밖까지 손대라는 뜻이 아니다.
+    """
+    from game.api.deps import get_item_catalog, get_pool
+    from game.api.maintenance_service import apply_discard_rule
+    from game.app.store.equipment import apply_equip
+    from game.app.store.items import create_item, list_equipment
+    from game.app.store.maintenance import DISCARD_ALL
+
+    _account_id, entity_id = find_ids(client, token)
+    pool = get_pool()
+    catalog = get_item_catalog()
+    armor = next(key for key, entry in sorted(catalog.items()) if entry.slot is not None)
+    worn = create_item(pool, entity_id, armor, (), grade="RELIC")
+    apply_equip(pool, entity_id, worn, catalog[armor].slot)
+
+    apply_discard_rule(pool, entity_id, DISCARD_ALL)
+
+    assert worn in [item.item_id for item in list_equipment(pool, entity_id).values()]
+
+
+def test_discard_all_is_in_the_closed_vocabulary(client, token):
+    """★ 저장 층이 받아야 화면이 그것을 쓸 수 있다 — 어휘는 한 곳에서 닫힌다."""
+    rows = [{"action": "UPGRADE_GEAR", "grade": "ATTACK"}, {"action": "DISCARD", "grade": "ALL"}]
+    saved = client.put("/api/maintenance", json={"rows": rows}, headers=build_headers(token))
+    assert saved.status_code == 200, saved.text
+    read = client.get("/api/maintenance", headers=build_headers(token)).json()
+    assert [(row["action"], row["grade"]) for row in read["rows"]] == [
+        ("UPGRADE_GEAR", "ATTACK"),
+        ("DISCARD", "ALL"),
+    ]

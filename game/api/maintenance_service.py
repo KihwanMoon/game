@@ -31,6 +31,7 @@ from game.app.store.maintenance import (
     ACTION_UNSEAL,
     ACTION_UPGRADE_CONSUMABLE,
     ACTION_UPGRADE_GEAR,
+    DISCARD_ALL,
     MaintenanceRow,
     read_maintenance,
 )
@@ -39,24 +40,32 @@ from game.schemas.item import ItemKind
 
 
 def apply_discard_rule(pool: ConnectionPool, entity_id: int, grade: str) -> int:
-    """이 등급의 가방 장비를 버린다.
+    """가방 장비를 버린다.
 
-    **가방만 본다.** 낀 것을 버리면 스탯이 유령이 되고, 소모품 스택은 장비가 아니다.
-    되찾은 것(`is_recovered`)은 남긴다 — 몬스터에게서 도로 빼앗아 온 물건을 자동으로
-    버리면, 되찾기의 뜻이 사라진다.
+    **가방만 본다.** 낀 것을 버리면 스탯이 유령이 되고, 소모품 스택은 장비가 아니다 —
+    남는 소모품을 처분하는 것은 「재고 팔기」의 몫이다.
+
+    등급을 고르면 **되찾은 것(`is_recovered`)은 남긴다** — 몬스터에게서 도로 빼앗아 온
+    물건을 자동으로 버리면 되찾기의 뜻이 사라진다. 그런데 그 보호가 실제로는 가방을
+    영영 안 비웠다: 죽고 되찾기를 되풀이하면 **가방 전체에 그 표시가 붙는다** (봇 하나는
+    17칸이 17칸 다 되찾은 것이었다). 그래서 `DISCARD_ALL` 은 그 보호까지 내려놓는다 —
+    등급도 유물도 되찾음도 안 보고 가방을 비운다.
 
     Args:
         pool: 연결 풀.
         entity_id: 대상 개체.
-        grade: 버릴 등급.
+        grade: 버릴 등급. `DISCARD_ALL` 이면 가방의 장비 전부다.
 
     Returns:
         버린 개수.
     """
+    is_all = grade == DISCARD_ALL
     dropped = 0
     for entry in list_inventory(pool, entity_id):
         item = entry.item
-        if item is None or item.grade != grade or item.is_recovered:
+        if item is None:
+            continue
+        if not is_all and (item.grade != grade or item.is_recovered):
             continue
         if remove_item(pool, entity_id, item.item_id):
             dropped += 1
@@ -206,7 +215,10 @@ def run_discard(pool: ConnectionPool, _account_id: int, entity_id: int, row: Mai
         무슨 일이 있었는지.
     """
     dropped = apply_discard_rule(pool, entity_id, row.grade)
-    return f"{row.grade} 장비 {dropped}개 버림" if dropped else ""
+    if not dropped:
+        return ""
+    where = "가방" if row.grade == DISCARD_ALL else row.grade
+    return f"{where} 장비 {dropped}개 버림"
 
 
 def run_repair(pool: ConnectionPool, account_id: int, entity_id: int, _row: MaintenanceRow) -> str:

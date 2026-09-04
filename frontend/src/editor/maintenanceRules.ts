@@ -18,9 +18,15 @@ import type { MaintenanceRowView } from '../storage'
 export const MAX_MAINTENANCE_ROWS = 10
 
 /** 버리기가 받는 등급. 유물은 없다 — 최상급을 자동으로 버리는 규칙은 오조작이 사고가 된다. */
+export const DISCARD_ALL = 'ALL'
+
 export const DISCARD_GRADES: readonly (readonly [string, string])[] = [
   ['COMMON', '보통'],
   ['FINE', '상급'],
+  // **등급이 아니라 「등급을 안 본다」다.** 유물도 되찾은 것도 함께 버린다 — 등급으로
+  // 버리면 되찾은 것이 남는데, 죽고 되찾기를 되풀이하면 가방 전체에 그 표시가 붙어
+  // 가방이 영영 안 비워졌다. 고르는 것 자체가 그 보호를 내려놓겠다는 선언이다.
+  [DISCARD_ALL, '전부'],
 ]
 
 /** 인자 하나의 선택지. 값은 서버 어휘, 이름은 화면의 것이다. */
@@ -322,6 +328,22 @@ export function checkMaintenanceRows(
   })
   // **돈을 쓰는 행이 버는 행보다 앞이면 잔액이 모자랄 수 있다.** 복구·보충은 잔액 안에서만
   // 도는데(`maintenance_service`), 팔기를 뒤에 두면 그 돈을 못 쓴다.
+  // **「전부 버리기」가 장비 교체보다 위면 고를 것을 먼저 없앤다.** 「남은 것은 잉여다」는
+  // 위에서 최선을 끼운 뒤에만 참인 말이라, 순서가 뒤집히면 그 판에 주운 것이 통째로
+  // 사라진다. 막지는 않는다 — 가방을 비우는 것이 목적인 배치도 있다.
+  const dropAllAt = rows.findIndex(
+    (row) => row.action === 'DISCARD' && row.grade === DISCARD_ALL,
+  )
+  const upgradeAt = rows.findIndex(
+    (row) => row.action === 'UPGRADE_GEAR' || row.action === 'UPGRADE_CONSUMABLE',
+  )
+  if (dropAllAt >= 0 && upgradeAt >= 0 && dropAllAt < upgradeAt) {
+    problems.push({
+      index: dropAllAt,
+      isBlocking: false,
+      text: '전부 버리기가 교체보다 위에 있다 — 갈아 낄 후보를 먼저 버린다',
+    })
+  }
   const earnAt = rows.findIndex((row) => findAction(row.action)?.money === 1)
   const spendAt = rows.findIndex((row) => findAction(row.action)?.money === -1)
   if (earnAt >= 0 && spendAt >= 0 && spendAt < earnAt) {

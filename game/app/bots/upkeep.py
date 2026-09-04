@@ -12,12 +12,17 @@
     4  봉인 해제    번 돈으로 연다. 여는 것은 지금 낀 것과 가방의 것
     5  복구         파손된 착용 장비를 고친다
     6  보충         끼운 소모품을 채운다
-    7  버리기(보통) 남은 잡템을 버린다. 1 이 이미 쓸 것을 골라 간 뒤다
+    7  버리기(전부) 남은 것을 버린다. 1 이 이미 쓸 것을 골라 간 뒤다
 
 **파는 행이 쓰는 행보다 위인 것이 요점이다.** 아래에 두면 판 돈을 이번 정비에서 못 쓴다 —
 화면의 검증이 그것을 일러 주는 바로 그 배치다 (`maintenanceRules.checkMaintenanceRows`).
 
 **버리기가 맨 끝인 것도 요점이다.** 앞에 두면 갈아 끼울 후보를 먼저 버린다.
+
+**「보통」이 아니라 「전부」다.** 등급으로 버리면 되찾은 것을 남기는데, 봇은 매 판 죽고
+매 판 되찾으므로 **가방 전체에 그 표시가 붙는다** — 실제로 한 봇은 17칸이 17칸 다 되찾은
+것이었고, 그래서 새 전리품이 들어올 자리가 없어 판마다 「가방이 가득 찼다」로 흘렸다.
+1·2 가 위에서 최선을 끼우고 3 이 소모품을 팔고 난 뒤라, 여기 남은 것은 정의상 잉여다.
 """
 
 from game.app.bots.personas import resolve_persona
@@ -29,6 +34,7 @@ from game.app.store.maintenance import (
     ACTION_UNSEAL,
     ACTION_UPGRADE_CONSUMABLE,
     ACTION_UPGRADE_GEAR,
+    DISCARD_ALL,
     MaintenanceRow,
 )
 
@@ -65,7 +71,7 @@ def build_bot_upkeep(ruleset_id: str) -> tuple[MaintenanceRow, ...]:
         MaintenanceRow(ACTION_UNSEAL, ""),
         MaintenanceRow(ACTION_REPAIR, ""),
         MaintenanceRow(ACTION_REFILL, ""),
-        MaintenanceRow(ACTION_DISCARD, "COMMON"),
+        MaintenanceRow(ACTION_DISCARD, DISCARD_ALL),
     )
 
 
