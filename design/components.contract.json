@@ -1,6 +1,6 @@
 {
   "_note": "디자인 시스템 정본(Claude Design 프로젝트 7a323244)의 컴포넌트 계약을 기록한 것이다. **사본이 아니라 계약이다** — 구현(.jsx)을 복사하면 그것이 또 썩는다. 저장소에는 이미 구현이 있고(frontend/src/ds), 필요한 것은 '정본이 무엇을 약속하는가' 하나뿐이다. tests/test_design_contract.py 가 이 파일과 저장소 구현을 대조해, 어긋난 것이 아래 기록에 없으면 게이트에서 잡는다. 그래야 드리프트가 몇 주 뒤 조사가 아니라 그날의 실패가 된다. 정본을 고쳤으면 이 파일을 함께 고친다.",
-  "recorded_at": "2026-09-03",
+  "recorded_at": "2026-09-04",
   "source_project": "7a323244-94a4-426b-a3b5-1bb1c949c195",
   "components": {
     "Button": [
@@ -106,7 +106,8 @@
       "y",
       "kind",
       "label",
-      "tier"
+      "tier",
+      "isDanger"
     ],
     "Thumb": [
       "kind",

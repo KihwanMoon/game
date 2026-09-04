@@ -38,6 +38,49 @@ def count_doppels(pool: ConnectionPool) -> int:
     return int(row[0]) if row else 0
 
 
+def find_shallowest_doppel(pool: ConnectionPool) -> tuple[int, int]:
+    """가장 얕은 그림자. 같은 깊이면 가장 오래된 것.
+
+    **밀어낼 하나를 고르는 자리다.** 얕은 것부터 내보내야 남는 것이 「가장 깊은 스물」이
+    된다. 같은 깊이가 여럿이면 오래된 것을 내보낸다 — 그래야 같은 깊이가 계속 나올 때도
+    보토가 돌고, 하루 종일 같은 그림자를 만나지 않는다.
+
+    Args:
+        pool: 연결 풀.
+
+    Returns:
+        (개체 id, 그 층). 하나도 없으면 (0, 0).
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT id, zone_floor FROM entity_record"
+            " WHERE kind = 'MONSTER' AND is_doppel AND alive"
+            " ORDER BY zone_floor ASC, id ASC LIMIT 1"
+        ).fetchone()
+    return (int(row[0]), int(row[1] or 0)) if row else (0, 0)
+
+
+def remove_doppel(pool: ConnectionPool, record_id: int) -> bool:
+    """그림자 하나를 세계에서 지운다.
+
+    **지워도 되는 종이다.** 지속 몬스터를 안 지우는 이유는 되찾기 동기가 함께 사라지기
+    때문인데(결정 #35), 도플갱어는 **애초에 아무것도 안 든다** — 되찾기가 코드로 막혀
+    있으므로 그 사유가 이 종에는 안 붙는다.
+
+    Args:
+        pool: 연결 풀.
+        record_id: 지울 개체.
+
+    Returns:
+        지웠으면 참. 이미 없었으면 거짓.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "DELETE FROM entity_record WHERE id = %s AND is_doppel RETURNING id", (record_id,)
+        ).fetchone()
+    return row is not None
+
+
 def find_free_slot(pool: ConnectionPool, floor: int, slots: tuple[str, ...]) -> str:
     """그 층에서 아직 아무도 안 앉은 자리를 찾는다.
 
@@ -130,8 +173,14 @@ def create_doppel(
 ) -> int:
     """도플갱어 하나를 세운다.
 
-    **다섯을 넘기지 않는다.** 층마다 그림자가 서면 「가끔 만나는 것」이 아니게 된다 —
-    정예 승격과 같은 이유로, 사건은 드물어야 사건이다.
+    **자리가 아니라 순위표다** (개정 2026-09-04). 상한에 닿으면 버리는 것이 아니라 **가장
+    얕은 그림자와 견준다** — 새 죽음이 그것보다 깊거나 같으면 밀어내고 선다. 예전에는
+    선착순이었고 비우는 길이 없어서, 자리가 2층 그림자로 차는 순간 그 뒤의 모든 죽음이
+    조용히 버려졌다. 2층 죽음이 가장 흔하므로 **가장 얕은 빌드가 자리를 영구히 점유**했고,
+    그것은 「거기까지 실제로 내려간 빌드」라는 이 기제의 전제와 정반대였다.
+
+    **같은 깊이면 새 것이 이긴다.** 더 깊을 때만 밀어내게 하면 봇이 한 깊이에서 평평해지는
+    순간 보토가 다시 굳는다 — 밀려나는 것은 그 깊이에서 가장 오래된 그림자다.
 
     Args:
         pool: 연결 풀.
@@ -142,10 +191,15 @@ def create_doppel(
         ruleset: 그 봇이 쓰던 규칙표. 도감이 이것을 편다.
 
     Returns:
-        만들어진 개체 id. 상한에 걸렸거나 자리가 없으면 0.
+        만들어진 개체 id. 자리가 없거나 순위에 못 들면 0.
     """
-    if not slot or count_doppels(pool) >= MAX_DOPPELS:
+    if not slot:
         return 0
+    if count_doppels(pool) >= MAX_DOPPELS:
+        record_id, shallowest = find_shallowest_doppel(pool)
+        if record_id == 0 or floor < shallowest:
+            return 0
+        remove_doppel(pool, record_id)
     level = max(1, floor)
     stats = {
         "hp_max": int(loadout.get("hp_max", 0)),

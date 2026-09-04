@@ -1,7 +1,7 @@
 {
   "_note": "design/tokens/*.css 가 정본(Claude Design 7a323244)에서 받아온 순간의 값이다. 게이트가 이것과 대조해 **사본이 손대졌는지**를 본다 — 정본이 바뀐 것은 여기서 못 잡고, 받아올 때 알게 된다. 값을 고쳐야 하면 이 파일이 아니라 정본을 고치고 `uv run python -m scripts.lock_design_tokens` 로 다시 잠근다.",
   "source_project": "7a323244-94a4-426b-a3b5-1bb1c949c195",
-  "token_count": 201,
+  "token_count": 202,
   "tokens": {
     "borders.css:desktop:--border": "var(--bw) solid var(--line)",
     "borders.css:desktop:--border-accent": "var(--bw) solid var(--line-accent)",
@@ -33,6 +33,7 @@
     "colors.css:desktop:--line-grid": "var(--rule-line)",
     "colors.css:desktop:--line-strong": "var(--chalk-dim)",
     "colors.css:desktop:--plan-actor-boss": "var(--grade-relic)",
+    "colors.css:desktop:--plan-actor-doppel": "var(--rust)",
     "colors.css:desktop:--plan-actor-elite": "var(--grade-fine)",
     "colors.css:desktop:--plan-actor-enemy": "var(--chalk)",
     "colors.css:desktop:--plan-actor-self": "var(--brass)",

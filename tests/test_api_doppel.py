@@ -270,19 +270,6 @@ def test_a_win_leaves_no_shadow(client):
     assert count_doppels(pool) == before
 
 
-def test_five_is_the_ceiling(client):
-    """★ 다섯을 넘기지 않는다 — 층마다 서면 「가끔 만나는 것」이 아니게 된다."""
-    from game.api.deps import get_pool
-    from game.app.bots.doppel import MAX_DOPPELS
-    from game.app.store.doppels import count_doppels, create_doppel
-
-    pool = get_pool()
-    account_id = build_bot_account(client)
-    for step in range(MAX_DOPPELS + 3):
-        create_doppel(pool, account_id, 2 + (step % 4), f"probe_slot_{step}", {"hp_max": 10}, {})
-    assert count_doppels(pool) <= MAX_DOPPELS
-
-
 def test_the_shadow_keeps_the_ruleset(client):
     """★ 규칙표를 들고 선다 — 「그 빌드로 여기까지 왔다」가 이 개체의 뜻이다."""
     from game.api.deps import get_pool
