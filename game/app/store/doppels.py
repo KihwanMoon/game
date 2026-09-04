@@ -17,7 +17,7 @@ import json
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
-from game.app.bots.doppel import DOPPEL_KIND_ID, MAX_DOPPELS
+from game.app.bots.doppel import DOPPEL_KIND_ID, DOPPEL_LIVES, MAX_DOPPELS
 from game.app.monsters.growth import compute_level_xp
 from game.app.monsters.tiers import MonsterTier
 
@@ -79,6 +79,36 @@ def remove_doppel(pool: ConnectionPool, record_id: int) -> bool:
             "DELETE FROM entity_record WHERE id = %s AND is_doppel RETURNING id", (record_id,)
         ).fetchone()
     return row is not None
+
+
+def apply_doppel_defeat(pool: ConnectionPool, record_id: int) -> int:
+    """그림자를 한 번 잡은 것을 반영한다.
+
+    **목숨을 하나 쓴다.** 다 쓰면 지운다 — 한 번에 지우면 봇들이 쉼 없이 싸우는 세계에서
+    그림자가 서자마자 사라져 사람이 만날 새가 없고, 안 지우면 자리가 굳는다.
+
+    **레벨 감쇠는 부르는 쪽이 한다.** 여기서 함께 하면 목숨과 감쇠가 한 덩이가 되어,
+    여느 몬스터의 감쇠와 다른 길이 하나 더 생긴다.
+
+    Args:
+        pool: 연결 풀.
+        record_id: 잡힌 개체.
+
+    Returns:
+        남은 목숨. 0 이면 지워졌다. 그림자가 아니거나 이미 없으면 -1.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "UPDATE entity_record SET lives = lives - 1, updated_at = now()"
+            " WHERE id = %s AND is_doppel RETURNING lives",
+            (record_id,),
+        ).fetchone()
+    if row is None:
+        return -1
+    left = max(0, int(row[0]))
+    if left <= 0:
+        remove_doppel(pool, record_id)
+    return left
 
 
 def find_free_slot(pool: ConnectionPool, floor: int, slots: tuple[str, ...]) -> str:
@@ -219,9 +249,9 @@ def create_doppel(
             "INSERT INTO entity_record"
             " (kind, catalog_id, tier, persistence, level, total_xp, stat_json, ruleset_json,"
             "  zone_floor, entity_slot, is_doppel, origin_account_id, loadout_json,"
-            "  rule_slots, cpu_budget)"
+            "  rule_slots, cpu_budget, lives)"
             " VALUES ('MONSTER', %s, %s, 'PERSISTENT', %s, %s, %s, %s, %s, %s, TRUE, %s, %s,"
-            "  %s, %s)"
+            "  %s, %s, %s)"
             " RETURNING id",
             (
                 DOPPEL_KIND_ID,
@@ -238,6 +268,8 @@ def create_doppel(
                 Jsonb({**loadout, "gear": list_origin_gear(pool, origin_account_id)}),
                 int(loadout.get("rule_slots", 0)),
                 int(loadout.get("cpu_budget", 0)),
+                # **목숨을 갖고 선다.** 한 번에 지워지면 서자마자 사라져 아무도 못 만난다.
+                DOPPEL_LIVES,
             ),
         ).fetchone()
     return int(row[0]) if row else 0

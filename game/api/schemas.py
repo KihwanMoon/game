@@ -358,6 +358,8 @@ class AdminDoppelView(BaseModel):
     alive: bool
     entity_slot: str
     origin_handle: str
+    # 남은 목숨. 잡을 때마다 하나 줄고 다 쓰면 지워지므로 **여기 보이는 것은 늘 1 이상**이다.
+    lives: int = 1
 
 
 class AdminBotOverviewResponse(BaseModel):

@@ -66,6 +66,10 @@ export function DoppelPanel(props: DoppelPanelProps): React.JSX.Element {
                   label={item.alive ? '살아 있다' : '죽었다'}
                 />
                 <span className="botrow__cell">{`${String(item.zoneFloor)}층`}</span>
+                {/* **목숨은 셋에서 줄어든다.** 잡을 때마다 하나 쓰고 레벨이 감쇠하므로,
+                    같은 그림자를 세 번 만나되 만날 때마다 약해진다. 남은 수를 안 적으면
+                    「왜 아직 서 있지」와 「왜 사라졌지」를 둘 다 설명할 수 없다. */}
+                <span className="botrow__cell">{`목숨 ${String(item.lives)}`}</span>
                 <span className="botrow__cell">{`레벨 ${String(item.level)}`}</span>
                 <span className="botrow__cell">{item.entitySlot}</span>
                 <span className="botrow__cell">

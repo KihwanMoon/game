@@ -447,3 +447,11 @@ UPDATE entity_record
    SET level = zone_floor,
        total_xp = GREATEST(total_xp, CASE zone_floor WHEN 1 THEN 0 WHEN 2 THEN 100 WHEN 3 THEN 235 WHEN 4 THEN 417 WHEN 5 THEN 662 WHEN 6 THEN 992 WHEN 7 THEN 1437 WHEN 8 THEN 2037 WHEN 9 THEN 2847 WHEN 10 THEN 3940 ELSE total_xp END)
  WHERE kind = 'MONSTER' AND zone_floor > level;
+
+
+-- ── 이미 선 그림자에 목숨을 준다 (개정 2026-09-04) ─────────────────────────
+--
+-- 컬럼 기본값이 1 이라 새로 서는 것은 그 값으로 시작한다. 이미 세계에 서 있는 그림자는
+-- 한 대만 맞으면 사라지게 되므로, 여기서 셋으로 올려 준다 — 배포 한 번에 세계가 비는
+-- 것을 막는다.
+UPDATE entity_record SET lives = 3 WHERE is_doppel AND lives < 3;

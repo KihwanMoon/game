@@ -18,7 +18,7 @@ from game.app.bots.doppel import check_is_doppel
 from game.app.services.verify_run import VERDICT_VERIFIED, VerifiedRun
 from game.app.simulation.plan import OUTCOME_PLAYER_WIN as OUTCOME_WIN
 from game.app.store.accounts import find_player_entity
-from game.app.store.doppels import remove_doppel
+from game.app.store.doppels import apply_doppel_defeat
 from game.app.store.items import list_equipment, list_inventory
 from game.app.store.monster_snapshots import load_snapshots
 from game.app.store.monsters import (
@@ -78,13 +78,24 @@ def apply_win_to_monsters(
     notes: list[str] = []
     entity_id = find_player_entity(pool, account_id)
     for item in snapshots:
-        # **도플갱어는 잡으면 사라진다** (개정 2026-09-04). 지속 몬스터를 안 지우는 이유는
-        # 되찾기 동기가 함께 사라지기 때문인데(결정 #35), 이 종은 애초에 아무것도 안 들어
-        # 되찾을 것이 없다 — 그 사유가 안 붙는다. 지워서 얻는 것은 둘이다: 이긴 것이
-        # 세계에 남고, 그 자리에 더 깊은 그림자가 들어올 수 있다.
-        if check_is_doppel(item.kind_id) and remove_doppel(pool, item.record_id):
-            notes.append(f"{item.kind_id} 를 지웠다")
-            continue
+        # **도플갱어는 목숨을 하나 쓴다** (개정 2026-09-04). 지속 몬스터를 안 지우는
+        # 이유는 되찾기 동기가 함께 사라지기 때문인데(결정 #35), 이 종은 애초에 아무것도
+        # 안 들어 되찾을 것이 없다 — 그 사유가 안 붙는다.
+        #
+        # 그렇다고 한 번에 지우지도 않는다. 봇들이 쉼 없이 싸우는 세계에서는 그림자가
+        # 서자마자 사라져 사람이 만날 새가 없었다. 셋을 두고 **잡을 때마다 감쇠시켜**,
+        # 같은 그림자를 세 번 만나되 만날 때마다 약해지게 한다.
+        if check_is_doppel(item.kind_id):
+            left = apply_doppel_defeat(pool, item.record_id)
+            if left == 0:
+                notes.append(f"{item.kind_id} 를 끝내 지웠다")
+                continue
+            if left > 0:
+                level = apply_monster_defeat(
+                    pool, item.record_id, resolve_home_floor(pool, item, ticket)
+                )
+                notes.append(f"{item.kind_id} 목숨 {left} 남음 · 레벨 {item.level}→{level}")
+                continue
         # **그 개체가 사는 층으로 판정한다.** 티켓의 시작 층을 쓰면 3층에서 잡은
         # 개체가 1층 기준으로 감쇠해 「레벨 1→1」이 된다 (실제 신고).
         level = apply_monster_defeat(pool, item.record_id, resolve_home_floor(pool, item, ticket))

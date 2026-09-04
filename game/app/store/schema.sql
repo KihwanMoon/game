@@ -645,3 +645,15 @@ ALTER TABLE entity_record ADD COLUMN IF NOT EXISTS origin_account_id BIGINT
 -- 도플갱어가 든 로드아웃. 스탯을 stat_json 에 얹지 않고 따로 두는 이유는 **그것이
 -- 플레이어 형태이기 때문이다** — 몬스터 스탯 계산(등급×레벨)과 섞이면 둘 다 틀린다.
 ALTER TABLE entity_record ADD COLUMN IF NOT EXISTS loadout_json JSONB;
+-- 남은 목숨 (개정 2026-09-04). **한 번 잡았다고 사라지지 않는다.**
+--
+-- 처치가 자리를 비우게 한 직후에 나온 문제다: 봇들이 쉼 없이 싸우니 그림자가 서자마자
+-- 지워져, 사람이 만날 새가 없었다. 그렇다고 안 지우면 자리가 굳는다 — 그것이 원래
+-- 고치려던 병이다.
+--
+-- 목숨 셋이 그 사이를 잡는다. 잡을 때마다 하나 줄고 레벨이 감쇠하므로, **같은 그림자를
+-- 세 번 만나되 만날 때마다 약해진다.** 「끝내 지웠다」가 한 판이 아니라 이야기가 된다.
+--
+-- 여느 몬스터는 1 이다 — 그쪽은 애초에 지워지지 않고 감쇠만 하므로 이 값을 안 본다.
+ALTER TABLE entity_record ADD COLUMN IF NOT EXISTS lives SMALLINT NOT NULL DEFAULT 1;
+

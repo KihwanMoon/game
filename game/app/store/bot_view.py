@@ -45,6 +45,8 @@ class DoppelRow:
     entity_slot: str
     # 누구의 그림자인가. 봇이 지워졌으면 빈 문자열이다.
     origin_handle: str
+    # 남은 목숨. 다 쓰면 세계에서 지워지므로 **여기 보이는 것은 늘 1 이상**이다.
+    lives: int = 1
 
 
 def list_bot_rows(pool: ConnectionPool) -> tuple[BotRow, ...]:
@@ -111,7 +113,7 @@ def list_doppel_rows(pool: ConnectionPool) -> tuple[DoppelRow, ...]:
     with pool.connection() as connection:
         rows = connection.execute(
             "SELECT e.id, COALESCE(e.zone_floor, 0), e.level, e.alive,"
-            " COALESCE(e.entity_slot, ''), COALESCE(a.handle, '')"
+            " COALESCE(e.entity_slot, ''), COALESCE(a.handle, ''), e.lives"
             " FROM entity_record e LEFT JOIN account a ON a.id = e.origin_account_id"
             " WHERE e.kind = 'MONSTER' AND e.is_doppel"
             " ORDER BY COALESCE(e.zone_floor, 0), e.id"
@@ -124,6 +126,7 @@ def list_doppel_rows(pool: ConnectionPool) -> tuple[DoppelRow, ...]:
             alive=bool(row[3]),
             entity_slot=str(row[4]),
             origin_handle=str(row[5]),
+            lives=int(row[6]),
         )
         for row in rows
     )

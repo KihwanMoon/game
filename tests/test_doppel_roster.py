@@ -232,3 +232,81 @@ def test_removal_only_touches_shadows(client):
             is not None
         ), "일반 몬스터가 지워졌다"
         connection.execute("DELETE FROM entity_record WHERE id = %s", (record_id,))
+
+
+def test_a_shadow_survives_two_beatings(client):
+    """★ 한 번 잡았다고 사라지지 않는다 — 셋을 견딘다.
+
+    처치가 자리를 비우게 한 직후에 나온 문제다: 봇들이 쉼 없이 싸우니 그림자가 서자마자
+    지워져 **사람이 만날 새가 없었다.** 그렇다고 안 지우면 자리가 굳는다 — 그것이 원래
+    고치려던 병이다. 목숨 셋이 그 사이를 잡는다.
+    """
+    from game.api.deps import get_pool
+    from game.app.bots.doppel import DOPPEL_LIVES
+    from game.app.store.doppels import apply_doppel_defeat, count_doppels, create_doppel
+
+    pool = get_pool()
+    record_id = create_doppel(pool, build_bot_account(client), 4, "lives_slot", {"hp_max": 10}, {})
+
+    left = [apply_doppel_defeat(pool, record_id) for _ in range(DOPPEL_LIVES)]
+
+    assert left == [2, 1, 0], f"목숨이 {left} 로 줄었다"
+    assert count_doppels(pool) == 0, "다 쓰고도 안 지워졌다"
+
+
+def test_a_beaten_shadow_still_holds_its_place(client):
+    """★ 목숨이 남았으면 그 자리는 아직 그 그림자의 것이다.
+
+    잡혔다고 자리를 놓으면 세 번 만나는 이야기가 성립하지 않는다 — 두 번째로 만나기
+    전에 더 깊은 죽음 하나가 밀어내 버린다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.doppels import apply_doppel_defeat, count_doppels, create_doppel
+
+    pool = get_pool()
+    record_id = create_doppel(pool, build_bot_account(client), 4, "held_slot", {"hp_max": 10}, {})
+
+    assert apply_doppel_defeat(pool, record_id) == 2
+    assert count_doppels(pool) == 1
+    assert read_floors(pool) == [4]
+
+
+def test_beating_something_that_is_not_a_shadow_changes_nothing(client):
+    """★ 목숨을 쓰는 길이 일반 몬스터로 새면 결정 #35 가 뚫린다."""
+    from game.api.deps import get_pool
+    from game.app.store.doppels import apply_doppel_defeat
+
+    pool = get_pool()
+    with pool.connection() as connection:
+        record_id = int(
+            connection.execute(
+                "INSERT INTO entity_record (kind, catalog_id, tier, level, zone_floor)"
+                " VALUES ('MONSTER', 'goblin_rusher', 'NORMAL', 1, 2) RETURNING id"
+            ).fetchone()[0]
+        )
+
+    assert apply_doppel_defeat(pool, record_id) == -1
+    with pool.connection() as connection:
+        assert (
+            connection.execute(
+                "SELECT lives FROM entity_record WHERE id = %s", (record_id,)
+            ).fetchone()[0]
+            == 1
+        ), "일반 몬스터의 목숨이 줄었다"
+        connection.execute("DELETE FROM entity_record WHERE id = %s", (record_id,))
+
+
+def test_a_new_shadow_stands_with_its_lives(client):
+    """★ 목숨을 갖고 선다 — 기본값 1 로 서면 첫 판에 사라진다."""
+    from game.api.deps import get_pool
+    from game.app.bots.doppel import DOPPEL_LIVES
+    from game.app.store.doppels import create_doppel
+
+    pool = get_pool()
+    record_id = create_doppel(pool, build_bot_account(client), 4, "born_slot", {"hp_max": 10}, {})
+
+    with pool.connection() as connection:
+        lives = connection.execute(
+            "SELECT lives FROM entity_record WHERE id = %s", (record_id,)
+        ).fetchone()[0]
+    assert lives == DOPPEL_LIVES

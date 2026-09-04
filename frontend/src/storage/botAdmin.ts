@@ -52,6 +52,8 @@ export interface DoppelView {
   readonly alive: boolean
   readonly entitySlot: string
   readonly originHandle: string
+  /** 남은 목숨. 잡을 때마다 줄고 다 쓰면 지워지므로 **보이는 것은 늘 1 이상**이다. */
+  readonly lives: number
 }
 
 /** 봇 현황 전체. */
@@ -87,6 +89,8 @@ interface RawDoppel {
   alive: boolean
   entity_slot: string
   origin_handle: string
+  /** 목숨을 싣기 전 서버는 안 보낸다. 그때는 1 — 한 번 잡히면 사라진다는 뜻이다. */
+  lives?: number
 }
 
 /**
@@ -126,6 +130,7 @@ export function parseBotOverview(raw: {
       alive: item.alive,
       entitySlot: item.entity_slot,
       originHandle: item.origin_handle,
+      lives: item.lives ?? 1,
     })),
   }
 }
