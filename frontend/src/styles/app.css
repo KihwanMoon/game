@@ -481,5 +481,15 @@ body {
   flex: 1 1 var(--sp-0);
   min-block-size: var(--sp-0);
   min-inline-size: var(--sp-0);
-  overflow: hidden;
+  /* 좁은 화면에서 전투 화면이 제 최소 높이를 못 줄이면 넘친다. 가두는 대신 흐르게
+     둔다 — 가두면 하단 바가 잘리고 **아무것도 스크롤되지 않는다**(한 번 그랬다). */
+  overflow: auto;
+}
+
+/* **전투 화면은 뷰포트가 아니라 이 상자를 채운다.** `.battle` 은 `100dvh` 라, 위에
+   리플레이 바가 있는 만큼 아래가 잘린다 — 부모가 이미 정확한 높이를 갖고 있으므로
+   `100%` 가 맞다 (`.editor`·`.edit-m` 과 같은 함정이었다). */
+.replay__body > .battle {
+  height: 100%;
+  min-block-size: var(--sp-0);
 }

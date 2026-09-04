@@ -11,6 +11,9 @@
  * 2. **탭 수가 다르다** — 정비·스킬·리플레이가 없고, 없는 이유를 화면이 적는다.
  * 3. **조작이 없다** — 아이템이 아니라 기록이라 걸 자리가 없다.
  */
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
@@ -146,5 +149,50 @@ describe('★ 리플레이는 기록을 트는 것이 아니라 다시 돌리는
     expect(
       renderToStaticMarkup(<ReplayView replay={undefined} onClose={() => undefined} />),
     ).toBe('')
+  })
+})
+
+describe('★ 리플레이가 하강을 이어 간다', () => {
+  // 한 티켓이 층을 이어 도는데 재생이 한 방에 고정돼 있었다 — 「다음 층을 안 간다」.
+  it('방 목록이 있으면 몇 번째 방인지 적는다', async () => {
+    const { ReplayView } = await import('./ReplayView')
+    const html = renderToStaticMarkup(
+      <ReplayView
+        replay={{
+          submissionId: 1,
+          ruleset: { rulesetId: 'r', version: 1, rules: [] } as never,
+          roomId: 'corridor',
+          seed: 42,
+          floor: 1,
+          roomsPerFloor: 5,
+          roomIds: ['corridor', 'chapel', 'pillars'],
+          loadout: undefined,
+          snapshots: [],
+          outcome: 'PLAYER_WIN',
+          ticks: 10,
+          playerHp: 5,
+        }}
+        onClose={() => undefined}
+      />,
+    )
+    expect(html).toContain('방 1 / 3')
+  })
+
+  it('★ 전투 화면이 뷰포트가 아니라 상자를 채운다 — 100dvh 면 바 높이만큼 잘린다', () => {
+    const css = readFileSync(
+      fileURLToPath(new URL('../styles/app.css', import.meta.url)),
+      'utf8',
+    )
+    const rule = css.slice(css.indexOf('.replay__body > .battle {'))
+    expect(rule.slice(0, rule.indexOf('}'))).toContain('height: 100%')
+  })
+
+  it('★ 넘치면 가두지 않고 흐른다 — 가두면 아무것도 스크롤되지 않는다', () => {
+    const css = readFileSync(
+      fileURLToPath(new URL('../styles/app.css', import.meta.url)),
+      'utf8',
+    )
+    const rule = css.slice(css.indexOf('\n.replay__body {'))
+    expect(rule.slice(0, rule.indexOf('}'))).toContain('overflow: auto')
   })
 })
