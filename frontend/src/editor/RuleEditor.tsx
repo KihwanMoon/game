@@ -40,8 +40,12 @@ import {
   updateRule,
   updateTerm,
 } from './draft'
+import { COMBAT_TAB_ID, type EditorTab } from './editorTabs'
 import { formatRuleText, parseRuleText } from './ruleText'
 import type { TermReadings } from './termMeasure'
+
+export { COMBAT_TAB_ID }
+export type { EditorTab }
 
 /** `[3] 목록에 없는 ...` 에서 규칙 번호를 떼어 낸다. */
 const PROBLEM_LABEL_PATTERN = /^\[(\d+)\]\s*(.*)$/
@@ -87,6 +91,13 @@ export interface RuleEditorProps {
    * 수 없었다」가 아니다 (`termMeasure.ts`).
    */
   readonly readings?: TermReadings
+  /**
+   * 전투 규칙 말고 더 붙일 규칙표 탭들. 앱이 정비 규칙을 여기 끼운다.
+   *
+   * 슬롯인 이유는 `controls`·`library` 와 같다 — **정비가 무엇을 하는지는 에디터의 일이
+   * 아니다.** 에디터가 아는 것은 「규칙표가 여럿이고 한 번에 하나를 고친다」까지다.
+   */
+  readonly tabs?: readonly EditorTab[]
 }
 
 /** 검증 메시지를 규칙별로 나눈 것. */
@@ -158,6 +169,8 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
   // 편집 화면을 열었을 때의 규칙표. `취소` 가 이 지점으로 되돌린다. 상태가 아니라 ref 인
   // 이유는 이 값이 화면을 다시 그리지 않기 때문이다 — 되돌릴 때 한 번 읽히고 만다.
   const restoreRef = useRef<RuleSet | undefined>(undefined)
+  // 지금 고치고 있는 규칙표. 전투가 기본이다 — 이 게임의 규칙표는 여전히 전투가 중심이다.
+  const [tabId, setTabId] = useState(COMBAT_TAB_ID)
   const mode = useViewportMode()
 
   const problems = useMemo(
@@ -269,6 +282,9 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
         }}
         {...(props.controls === undefined ? {} : { controls: props.controls })}
         {...(props.library === undefined ? {} : { library: props.library })}
+        tabs={props.tabs ?? []}
+        tabId={tabId}
+        onTab={setTabId}
       />
     )
   }
@@ -299,37 +315,87 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
   const hasSelection = ruleset.rules.length > 0
   const validGlyph = index.total === 0 ? 'true' : 'danger'
   const cpuReadout = `${String(totalCpu)} / ${String(cpuBudget)}`
+  // 전투 말고 다른 규칙표를 고르고 있는가. 골랐으면 **세 열이 통째로 바뀐다** — 본문만
+  // 갈아 끼우면 왼쪽에 전투 팔레트가 남고, 그것을 누르면 안 보이는 규칙표가 바뀐다.
+  const openTab = (props.tabs ?? []).find((tab) => tab.id === tabId)
+  const tabStrip =
+    (props.tabs ?? []).length === 0 ? null : (
+      <span className="editor__tabs" role="tablist">
+        <Button
+          size="sm"
+          variant={openTab === undefined ? 'primary' : 'ghost'}
+          active={openTab === undefined}
+          title="전투 규칙 — 던전에서 캐릭터가 돌린다"
+          onClick={() => {
+            setTabId(COMBAT_TAB_ID)
+          }}
+        >
+          전투 규칙
+        </Button>
+        {(props.tabs ?? []).map((tab) => (
+          <Button
+            key={tab.id}
+            size="sm"
+            variant={tab.id === tabId ? 'primary' : 'ghost'}
+            active={tab.id === tabId}
+            onClick={() => {
+              setTabId(tab.id)
+            }}
+          >
+            {tab.label}
+          </Button>
+        ))}
+      </span>
+    )
 
   return (
     <div className="editor">
       <header className="editor__top">
         <h1 className="editor__title">규칙 에디터</h1>
-        <span className="editor__hint">
-          <ValueExpr text={ruleset.rulesetId} size="sm" dim />
-        </span>
+        {tabStrip}
+        {openTab === undefined ? (
+          <span className="editor__hint">
+            <ValueExpr text={ruleset.rulesetId} size="sm" dim />
+          </span>
+        ) : null}
         <span className="editor__spacer" />
-        <SegmentedGauge value={totalCpu} max={cpuBudget} tone="cpu" label="cpu" readout={cpuReadout} />
-        <ValueExpr text={`규칙 ${String(ruleset.rules.length)} / ${String(ruleSlots)}`} size="sm" />
-        <GlyphState
-          state={validGlyph}
-          size="sm"
-          label={index.total === 0 ? '검증 통과' : `위반 ${String(index.total)}`}
-        />
-        <Button
-          variant={textMode ? 'primary' : 'secondary'}
-          size="sm"
-          glyph="≡"
-          active={textMode}
-          title="텍스트 뷰 토글"
-          onClick={toggleTextMode}
-        >
-          텍스트 뷰
-        </Button>
+        {/* **계량도 탭을 따라간다.** 정비 규칙을 고치는데 상단에 전투 CPU 가 서 있으면,
+            그 숫자가 지금 고치는 것의 예산인 줄로 읽힌다. */}
+        {openTab === undefined ? (
+          <>
+            <SegmentedGauge
+              value={totalCpu}
+              max={cpuBudget}
+              tone="cpu"
+              label="cpu"
+              readout={cpuReadout}
+            />
+            <ValueExpr text={`규칙 ${String(ruleset.rules.length)} / ${String(ruleSlots)}`} size="sm" />
+            <GlyphState
+              state={validGlyph}
+              size="sm"
+              label={index.total === 0 ? '검증 통과' : `위반 ${String(index.total)}`}
+            />
+            <Button
+              variant={textMode ? 'primary' : 'secondary'}
+              size="sm"
+              glyph="≡"
+              active={textMode}
+              title="텍스트 뷰 토글"
+              onClick={toggleTextMode}
+            >
+              텍스트 뷰
+            </Button>
+          </>
+        ) : (
+          openTab.gauge
+        )}
         {props.controls}
       </header>
 
       <div className="editor__body">
         <div className="editor__col editor__col--palette">
+          {openTab === undefined ? (
           <PalettePanel
             catalog={catalog}
             hasSelection={hasSelection}
@@ -344,13 +410,20 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
               commit(updateRule(ruleset, selectedIndex, { target: selectorId }))
             }}
           />
+          ) : (
+            openTab.palette
+          )}
+          {/* **서랍은 두 탭에 다 남는다.** 이 열의 아래는 앱의 길목이라, 정비를 고치는
+              동안 감추면 가방·세계로 나갈 문이 사라진다. */}
           {props.library}
         </div>
 
         <span className="editor__rule-line" aria-hidden="true" />
 
         <div className="editor__col editor__col--main">
-          {textMode ? (
+          {openTab !== undefined ? (
+            openTab.main
+          ) : textMode ? (
             <TextView
               text={textDraft}
               errors={textParse.errors}
@@ -412,6 +485,9 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
         <span className="editor__rule-line" aria-hidden="true" />
 
         <div className="editor__col editor__col--check">
+          {openTab !== undefined ? (
+            openTab.check
+          ) : (
           <Panel title="검증" meta={index.total === 0 ? '통과' : String(index.total)} scroll>
             {index.total === 0 ? (
               <GlyphState state="true" label="실행 가능한 규칙표다" size="sm" />
@@ -432,21 +508,31 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
               </ul>
             )}
           </Panel>
+          )}
         </div>
       </div>
 
       <footer className="editor__bottom">
-        {/* 터치 화면에서 Alt+↑ 는 뜻이 없다. 좁아지면 이것부터 버린다 — 남겨 두면
-            오른쪽 끝의 `cpu 10 / 8` 이 대신 밀려 나간다. */}
-        <span className="editor__hint">
-          <ValueExpr
-            text="Alt+↑/↓ 순서 · Alt+Enter 추가 · Alt+D 복제 · Alt+T 조건 추가 · Alt+Backspace 삭제 · Ctrl+Z 되돌리기"
-            size="sm"
-            dim
-          />
-        </span>
-        <span className="editor__spacer" />
-        <ValueExpr text={`cpu ${cpuReadout}`} size="sm" dim={totalCpu <= cpuBudget} />
+        {openTab === undefined ? (
+          <>
+            {/* 터치 화면에서 Alt+↑ 는 뜻이 없다. 좁아지면 이것부터 버린다 — 남겨 두면
+                오른쪽 끝의 `cpu 10 / 8` 이 대신 밀려 나간다. */}
+            <span className="editor__hint">
+              <ValueExpr
+                text="Alt+↑/↓ 순서 · Alt+Enter 추가 · Alt+D 복제 · Alt+T 조건 추가 · Alt+Backspace 삭제 · Ctrl+Z 되돌리기"
+                size="sm"
+                dim
+              />
+            </span>
+            <span className="editor__spacer" />
+            <ValueExpr text={`cpu ${cpuReadout}`} size="sm" dim={totalCpu <= cpuBudget} />
+          </>
+        ) : (
+          <>
+            <span className="editor__hint">{openTab.foot}</span>
+            <span className="editor__spacer" />
+          </>
+        )}
       </footer>
     </div>
   )

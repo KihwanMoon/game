@@ -608,12 +608,34 @@ interface RawRequirement {
 }
 
 /** 서버가 보내는 접사 절. `stat_label` 은 능력치의 한글 이름이다. */
-interface RawAffix {
+export interface RawAffix {
   stat: string
   flat: number
   percent: number
   label_ko: string
   stat_label?: string
+}
+
+/**
+ * 서버가 보낸 접사 절들을 화면 값으로 만든다.
+ *
+ * **한 곳에 둔다.** 같은 매핑이 가방·경매·소모품에 흩어져 있었고, 그 상태에서 서버가
+ * 필드를 하나 늘리면 **고친 화면에서만** 보인다 — `stat_label` 이 없던 시절 경매장에서만
+ * 영어 키가 새던 것이 정확히 그 모양이었다.
+ *
+ * @param raw 서버가 보낸 절들. 없으면 빈 배열이다.
+ * @returns 화면이 읽을 접사들.
+ */
+export function readAffixRows(raw: readonly RawAffix[] | undefined): readonly AffixView[] {
+  return (raw ?? []).map((affix) => ({
+    stat: affix.stat,
+    flat: affix.flat,
+    percent: affix.percent,
+    labelKo: affix.label_ko,
+    // 서버가 한글 이름을 안 실어 보낸 경로가 남아 있다. 그때는 영어 키가 낫다 —
+    // 빈 문자열이면 줄이 통째로 사라져 「접사가 없다」로 읽힌다.
+    statLabel: affix.stat_label ?? affix.stat,
+  }))
 }
 
 interface RawItem {
@@ -682,13 +704,7 @@ function readSlot(raw: RawSlot): SlotView {
             unsealCost: raw.item.unseal_cost ?? 0,
             grade: raw.item.grade ?? '',
             attackRange: raw.item.attack_range ?? 0,
-            affixes: (raw.item.affixes ?? []).map((affix) => ({
-              stat: affix.stat,
-              flat: affix.flat,
-              percent: affix.percent,
-              labelKo: affix.label_ko,
-              statLabel: affix.stat_label ?? affix.stat,
-            })),
+            affixes: readAffixRows(raw.item.affixes),
             canEquip: raw.item.can_equip,
             requirements: raw.item.requirements.map((item) => ({
               stat: item.stat,
@@ -1128,13 +1144,7 @@ function readAuctionBody(raw: {
       itemId: item.item_id,
       labelKo: item.label_ko,
       price: item.price,
-      affixes: (item.affixes ?? []).map((affix) => ({
-        statLabel: affix.stat_label ?? affix.stat,
-        stat: affix.stat,
-        flat: affix.flat,
-        percent: affix.percent,
-        labelKo: affix.label_ko,
-      })),
+      affixes: readAffixRows(item.affixes),
       expiresInMinutes: item.expires_in_minutes ?? 0,
       fee: item.fee ?? 0,
       isMine: item.is_mine,

@@ -9,6 +9,8 @@
  */
 import type { AffixView, InventoryView, ItemView, SlotView } from '../storage'
 
+import type { CellFace } from './gridCell'
+
 /** 가방 칸 수. 서버의 `INVENTORY_SIZE` 와 같은 값이다 — 다르면 있는 칸이 안 그려진다. */
 export const BAG_CELL_COUNT = 20
 
@@ -42,32 +44,15 @@ export const EQUIP_CELL_LABELS: ReadonlyMap<string, string> = new Map([
   ['HANDS', '장갑'],
 ])
 
-/** 격자 칸 하나. */
-export interface GridCell {
-  /** React key 이자 선택 식별자. */
-  readonly key: string
-  /** 칸 구석의 도식 코드. 장비는 슬롯 코드, 가방은 칸 번호다. */
-  readonly code: string
-  /** 칸 가운데 글자. 비었으면 빈 문자열이다. */
-  readonly label: string
-  readonly grade: string
-  /** 칸의 상태 글리프들 (파손 ◈, 봉인 ◇n, 귀속 ▨, 양손 점유 ▨). */
-  readonly marks: readonly string[]
-  /** 소모품 스택이면 개수. 아니면 빈 문자열. */
-  readonly countText: string
-  /**
-   * 이 물건이 **무엇을 해 주는가** 한 줄.
-   *
-   * 예전에는 칸이 이름과 등급색만 그렸다. 그래서 가방을 봐서는 어느 게 더 좋은지 알 수
-   * 없고 열세 칸을 하나씩 눌러야 했다 — 방 드롭다운이 영문 id 서른한 줄이던 것과 같은
-   * 병이다. **접사를 전부 적지 않는 이유**는 칸마다 줄 수가 달라지면 격자가 들쭉날쭉해
-   * 훑을 수 없게 되기 때문이다. 자세한 것과 지금 낀 것과의 차이는 상세가 답한다.
-   */
-  readonly fact: string
+/**
+ * 가방·장비 격자 칸 하나.
+ *
+ * 겉면(`CellFace`)은 소모품 칸·경매장과 함께 쓰고, 여기서 더하는 것은 **알맹이 하나**다 —
+ * 이 칸이 인벤토리의 어느 자리를 가리키는가.
+ */
+export interface GridCell extends CellFace {
   /** 이 칸이 가리키는 원본. 빈 칸이면 undefined. */
   readonly entry: SlotView | undefined
-  /** 양손무기가 막은 자리인가. */
-  readonly isSealedSlot: boolean
 }
 
 /**
@@ -99,11 +84,10 @@ export const SHORT_STAT_LABELS: ReadonlyMap<string, string> = new Map([
  * 여기서 **좋고 나쁨을 판단하지 않는다.** 저주 접사(음수)가 가장 클 수도 있고, 그때는
  * 그것이 그 물건에 대해 말할 가장 중요한 사실이다.
  *
- * @param item 볼 아이템. 없으면 빈 문자열.
+ * @param affixes 볼 접사들. 비어 있으면 빈 문자열.
  * @returns `공+5` 꼴. 적을 것이 없으면 빈 문자열.
  */
-export function pickHeadlineAffix(item: ItemView | undefined): string {
-  const affixes = item?.affixes ?? []
+export function pickHeadlineFromAffixes(affixes: readonly AffixView[]): string {
   if (affixes.length === 0) {
     return ''
   }
@@ -120,6 +104,16 @@ export function pickHeadlineAffix(item: ItemView | undefined): string {
     return `${head}${best.flat > 0 ? '+' : '−'}${String(Math.abs(best.flat))}`
   }
   return `${head}${best.percent > 0 ? '+' : '−'}${String(Math.abs(best.percent))}%`
+}
+
+/**
+ * 아이템의 대표 접사 한 줄.
+ *
+ * @param item 볼 아이템. 없으면 빈 문자열.
+ * @returns `공+5` 꼴. 적을 것이 없으면 빈 문자열.
+ */
+export function pickHeadlineAffix(item: ItemView | undefined): string {
+  return pickHeadlineFromAffixes(item?.affixes ?? [])
 }
 
 /**

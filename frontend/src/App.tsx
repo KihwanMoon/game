@@ -83,8 +83,16 @@ import {
   WorldPanel,
   ConsumablePanel,
   findFreeConsumableSlot,
+  checkLinked,
   InventoryPanel,
-  MaintenancePanel,
+  MaintenanceEditor,
+  MaintenancePalette,
+  MaintenanceCheck,
+  MAX_MAINTENANCE_ROWS,
+  buildMaintenancePreview,
+  checkMaintenanceRows,
+  createRow as createMaintenanceRow,
+  AuctionPanel,
   SkillPanel,
   MetaPanel,
   RuleLibrary,
@@ -93,7 +101,7 @@ import {
   checkTextEntry,
   resolveHistoryCommand,
 } from './editor'
-import type { LinkState } from './editor'
+import type { EditorTab, LinkState } from './editor'
 import { ErrorBoundary, formatCrash } from './ErrorBoundary'
 import { PostMortem, formatOutcome, recordBattle, usePlanTheme } from './hud'
 import type { BattleRecording } from './hud'
@@ -592,6 +600,10 @@ export function App(): React.JSX.Element {
   const [leaderboard, setLeaderboard] = useState<LeaderboardView | undefined>(undefined)
   const [auction, setAuction] = useState<AuctionView | undefined>(undefined)
   const [worldDetail, setWorldDetail] = useState('')
+  // **경매의 사유는 경매 탭에 선다.** 경매가 세계에서 갈라져 나오면서 자리가 갈렸다 —
+  // 한 줄을 나눠 쓰면 「오늘의 도전 티켓을 받았다」가 경매 탭에 붉은 경고로 서고,
+  // 매물 구매 실패가 순위표 아래에 선다.
+  const [auctionDetail, setAuctionDetail] = useState('')
   // 관리자 현황. **관리자가 아니면 undefined 로 남고 패널이 아무것도 그리지 않는다** —
   // 서버가 404 로 답하므로 그 사실 자체가 화면에 드러나지 않는다.
   const [admin, setAdmin] = useState<AdminOverview | undefined>(undefined)
@@ -917,18 +929,24 @@ export function App(): React.JSX.Element {
    * @param path `/auction/buy` 같은 경로.
    * @param body 보낼 절.
    */
-  function applyAuction(path: string, body: Record<string, unknown>): void {
+  function applyAuction(
+    path: string,
+    body: Record<string, unknown>,
+    // **사유가 설 자리를 부르는 쪽이 정한다.** 거는 것은 가방에서 하고 사는 것은 경매
+    // 탭에서 하는데, 실패 사유가 늘 같은 곳에 서면 **누른 화면이 아닌 곳**에 뜬다.
+    notify: (detail: string) => void = setAuctionDetail,
+  ): void {
     if (account === undefined) {
       return
     }
-    setWorldDetail('')
+    notify('')
     void applyAuctionAction(account, path, body).then((outcome) => {
       if (outcome.auction !== undefined) {
         setAuction(outcome.auction)
         refreshBag(account)
         return
       }
-      setWorldDetail(outcome.detail)
+      notify(outcome.detail)
     })
   }
 
@@ -1575,6 +1593,9 @@ export function App(): React.JSX.Element {
               <DrawerPanel tabs={buildDrawerTabs()} />
             </>
           }
+          // **규칙표가 두 벌이다.** 전투 규칙과 정비 규칙 — 둘 다 행 순서가 실행 순서인
+          // 조립물이고, 그래서 같은 화면에서 같은 골격으로 고친다.
+          tabs={[buildMaintenanceTab()]}
         />
       </div>
     )
@@ -1599,6 +1620,93 @@ export function App(): React.JSX.Element {
       }
     }
     return worn
+  }
+
+  /**
+   * 정비 규칙을 서버에 저장하고 그 결과를 화면에 앉힌다.
+   *
+   * **낙관하지 않는다.** 서버가 저장한 값을 화면에 앉힌다 — 저장이 실패했는데 켜진
+   * 것으로 보이면, 껐다고 믿은 정비가 돈을 쓴다.
+   *
+   * @param next 저장할 행들.
+   */
+  function saveUpkeep(next: MaintenanceView): void {
+    if (account === undefined) {
+      return
+    }
+    setUpkeepDetail('')
+    void saveMaintenance(account, next).then((outcome) => {
+      if (outcome.view === undefined) {
+        setUpkeepDetail(outcome.detail)
+        return
+      }
+      setUpkeep(outcome.view)
+    })
+  }
+
+  /**
+   * 규칙표 에디터의 정비 탭을 만든다.
+   *
+   * **가방 탭에서 규칙표로 옮겼다.** 정비는 「무엇을 가졌는가」가 아니라 「무엇을 자동으로
+   * 할 것인가」이고, 그것은 전투 규칙표와 같은 종류의 물건이다 — 둘 다 행 순서가 실행
+   * 순서인 조립물이다. 가방 아래에 있으면 소모품 칸에 밀려 안 보였다.
+   *
+   * @returns 에디터에 끼울 탭 하나.
+   */
+  function buildMaintenanceTab(): EditorTab {
+    const rows = upkeep?.rows ?? []
+    const preview = buildMaintenancePreview(rows, inventory, consumables)
+    return {
+      id: 'upkeep',
+      label: '정비 규칙',
+      palette: (
+        <MaintenancePalette
+          disabled={!checkLinked(link) || upkeep === undefined}
+          isFull={rows.length >= MAX_MAINTENANCE_ROWS}
+          onAdd={(action) => {
+            saveUpkeep({ rows: [...rows, createMaintenanceRow(action)] })
+          }}
+        />
+      ),
+      main: (
+        <MaintenanceEditor
+          view={upkeep}
+          link={link}
+          detail={upkeepDetail}
+          inventory={inventory}
+          consumables={consumables}
+          onChange={saveUpkeep}
+        />
+      ),
+      check: (
+        <MaintenanceCheck
+          problems={checkMaintenanceRows(rows)}
+          preview={preview}
+          hasRows={rows.length > 0}
+        />
+      ),
+      // 상단 계량의 자리다. **정비가 재는 예산은 CPU 가 아니라 돈이다.**
+      gauge: (
+        <>
+          <ValueExpr
+            text={`행 ${String(rows.length)} / ${String(MAX_MAINTENANCE_ROWS)}`}
+            size="sm"
+          />
+          <ValueExpr
+            text={`잔액 ${String(preview.balance)} → ${String(preview.balanceAfter)}`}
+            size="sm"
+            dim
+          />
+        </>
+      ),
+      foot: (
+        <ValueExpr
+          text="티켓이 닫힐 때 위에서 아래로 한 번 돈다 · 미리보기는 지금 가방으로 잰 어림이다"
+          size="sm"
+          dim
+        />
+      ),
+    }
   }
 
   /**
@@ -1686,30 +1794,10 @@ export function App(): React.JSX.Element {
                 onList={(itemId, price) => {
                   // **경매에 걸면 가방과 지갑이 함께 바뀐다.** 아이템이 빠지고 수수료가
                   // 나가므로 둘 다 다시 읽어야 화면이 그것을 안다.
-                  applyAuction('/auction/list', { item_id: itemId, price })
+                  applyAuction('/auction/list', { item_id: itemId, price }, setItemDetail)
                   if (account !== undefined) {
                     refreshBag(account)
                   }
-                }}
-              />
-              <MaintenancePanel
-                view={upkeep}
-                link={link}
-                detail={upkeepDetail}
-                onChange={(next) => {
-                  if (account === undefined) {
-                    return
-                  }
-                  // **낙관하지 않는다.** 서버가 저장한 값을 화면에 앉힌다 — 저장이
-                  // 실패했는데 켜진 것으로 보이면, 껐다고 믿은 정비가 돈을 쓴다.
-                  setUpkeepDetail('')
-                  void saveMaintenance(account, next).then((outcome) => {
-                    if (outcome.view === undefined) {
-                      setUpkeepDetail(outcome.detail)
-                      return
-                    }
-                    setUpkeep(outcome.view)
-                  })
                 }}
               />
               <ConsumablePanel
@@ -1766,6 +1854,28 @@ export function App(): React.JSX.Element {
         ),
       },
       {
+        // **세계에서 갈라 나왔다.** 세계 탭은 「나 밖의 일」(순위·도감·오늘의 도전)인데,
+        // 경매는 내 가방을 바꾸는 일이다 — 사면 돈이 나가고 아이템이 들어오며 되돌릴 수
+        // 없다(귀속된다, 결정 #07). 순위표 아래에 있으면 그만한 무게로 안 보였다.
+        id: 'auction',
+        label: '경매',
+        body: (
+          <AuctionPanel
+            auction={auction}
+            link={link}
+            detail={auctionDetail}
+            // 자리에서 지금 낀 것으로. 「이게 내 것보다 나은가」에 답하는 데 쓴다.
+            worn={buildWornBySlot(inventory)}
+            onBuy={(listingId) => {
+              applyAuction('/auction/buy', { listing_id: listingId })
+            }}
+            onCancel={(listingId) => {
+              applyAuction('/auction/cancel', { listing_id: listingId })
+            }}
+          />
+        ),
+      },
+      {
         id: 'world',
         label: '세계',
         body: (
@@ -1773,17 +1883,9 @@ export function App(): React.JSX.Element {
               <WorldPanel
                 progress={progress}
                 leaderboard={leaderboard}
-                auction={auction}
                 accountId={profile?.accountId}
                 link={link}
                 detail={worldDetail}
-                worn={buildWornBySlot(inventory)}
-                onBuy={(listingId) => {
-                  applyAuction('/auction/buy', { listing_id: listingId })
-                }}
-                onCancel={(listingId) => {
-                  applyAuction('/auction/cancel', { listing_id: listingId })
-                }}
                 onDaily={() => {
                   if (account === undefined) {
                     return

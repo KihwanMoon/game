@@ -14,7 +14,8 @@ import type { ItemView, SlotView } from '../storage'
 
 import { formatGradeClass, renderGrade } from './gradeBadge'
 import { EQUIP_CELL_LABELS } from './inventoryCells'
-import { compareToWorn, formatDelta } from './compareItems'
+import { CompareBlock } from './CompareRows'
+import { compareToWorn } from './compareItems'
 import { formatAffix } from './InventoryPanel'
 
 import { checkLinked, type LinkState } from './linkState'
@@ -54,38 +55,21 @@ export interface InventoryDetailProps {
 /**
  * 지금 낀 것과의 차이를 그린다.
  *
- * **점수 하나로 접지 않는다.** 「이게 더 좋다」를 한 숫자로 말하려면 어느 스탯이 얼마나
- * 값한지를 코드가 정해야 하고, 그 기준이 틀리면 화면이 **틀린 답을 자신 있게** 말한다.
- * 사람의 취향은 사람이 정한다 — 화면은 스탯별 차이까지만 낸다.
- *
- * 좋고 나쁨은 색·부호 둘로 적는다. 색 하나면 못 가르는 사람에게 사라진다.
+ * 표기는 `CompareRows` 가 든다 — 같은 표가 경매장·소모품 칸에도 서고, 세 곳이 각자
+ * 그리면 견줌의 표기를 하나 고칠 때 **고친 화면에서만** 바뀐다.
  *
  * @param picked 고른 아이템.
  * @param worn 그 자리에 지금 낀 것. 없으면 빈 자리다.
  * @returns 견줌 줄들. 차이가 없으면 그렇게 적는다.
  */
 function renderCompare(picked: ItemView, worn: ItemView | undefined): React.JSX.Element {
-  const rows = compareToWorn(picked.affixes, worn?.affixes ?? [])
   const where = worn === undefined ? '빈 자리와' : `${worn.labelKo} 와`
-  if (rows.length === 0) {
-    return <ValueExpr text={`${where} 견줘 달라지는 것이 없다`} size="sm" dim />
-  }
   return (
-    <>
-      <ValueExpr text={`${where} 견줌`} size="sm" dim />
-      <ul className="invd__compare">
-        {rows.map((row) => {
-          const gain = row.flatDelta + row.percentDelta
-          const tone = gain > 0 ? ' invd__delta--up' : gain < 0 ? ' invd__delta--down' : ''
-          return (
-            <li className="invd__compare-row" key={row.stat}>
-              <span className="invd__compare-name">{row.label}</span>
-              <span className={`invd__delta${tone}`}>{formatDelta(row)}</span>
-            </li>
-          )
-        })}
-      </ul>
-    </>
+    <CompareBlock
+      heading={`${where} 견줌`}
+      rows={compareToWorn(picked.affixes, worn?.affixes ?? [])}
+      sameText={`${where} 견줘 달라지는 것이 없다`}
+    />
   )
 }
 

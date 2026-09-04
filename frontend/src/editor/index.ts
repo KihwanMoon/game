@@ -6,6 +6,8 @@
  */
 export { RuleEditor } from './RuleEditor'
 export type { RuleEditorProps } from './RuleEditor'
+export { COMBAT_TAB_ID } from './editorTabs'
+export type { EditorTab } from './editorTabs'
 export { AccountPanel } from './AccountPanel'
 export type { AccountPanelProps } from './AccountPanel'
 export { BestiaryPanel } from './BestiaryPanel'
@@ -46,8 +48,59 @@ export type { WorldPanelProps } from './WorldPanel'
 export type { BestiaryPanelProps } from './BestiaryPanel'
 export { ConsumablePanel, findFreeConsumableSlot } from './ConsumablePanel'
 export type { ConsumablePanelProps } from './ConsumablePanel'
+export {
+  buildConsumableSlotCells,
+  buildConsumableStockCells,
+  formatCharges,
+  formatClearLabel,
+  formatRefillLabel,
+  formatSlotCode,
+  formatSlotName,
+  USE_TAG_CODES,
+  USE_TAG_LABELS,
+} from './consumableCells'
+export type { ConsumableCell } from './consumableCells'
+export { ConsumableDetail } from './ConsumableDetail'
+export { ConsumableGrid } from './ConsumableGrid'
+export {
+  buildChargeRow,
+  compareToSlots,
+  pickFromOption,
+  pickFromSlot,
+} from './compareConsumables'
+export type { ComparePick, SlotCompare } from './compareConsumables'
+export { AuctionPanel, AuctionDetail } from './AuctionPanel'
+export type { AuctionPanelProps } from './AuctionPanel'
+export { buildListingCells, findBuyBlocker, MINE_MARK } from './auctionCells'
+export type { ListingCell } from './auctionCells'
+export { CompareRows, CompareBlock } from './CompareRows'
+export { renderCell } from './GridCellView'
+export type { CellFace } from './gridCell'
 export { InventoryPanel } from './InventoryPanel'
-export { MaintenancePanel } from './MaintenancePanel'
+export { MaintenanceEditor, MaintenancePalette, MaintenanceCheck } from './MaintenanceEditor'
+export type { MaintenanceEditorProps } from './MaintenanceEditor'
+export {
+  checkBlocked,
+  checkMaintenanceRows,
+  createRow,
+  DISCARD_GRADES,
+  duplicateRow,
+  findAction,
+  formatGradeName,
+  formatMaintenanceSentence,
+  MAINTENANCE_ACTIONS,
+  MAX_MAINTENANCE_ROWS,
+  moveRow,
+  replaceRow,
+} from './maintenanceRules'
+export type { MaintenanceAction, MaintenanceProblem } from './maintenanceRules'
+export {
+  buildMaintenancePreview,
+  checkPreviewIdle,
+  EMPTY_PREVIEW,
+  formatMoneyDelta,
+} from './maintenancePreview'
+export type { MaintenancePreview, PreviewRow } from './maintenancePreview'
 export { SkillPanel } from './SkillPanel'
 export type { InventoryPanelProps } from './InventoryPanel'
 export { MetaPanel } from './MetaPanel'

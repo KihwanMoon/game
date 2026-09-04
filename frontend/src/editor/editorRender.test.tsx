@@ -237,3 +237,56 @@ describe('좁은 화면의 상단 조작부', () => {
     expect(readStrippedCss('../styles/app.css')).not.toContain('@media')
   })
 })
+
+describe('규칙표 탭 — 전투와 정비', () => {
+  // **정비가 가방 탭에서 규칙표로 왔다.** 전투 규칙과 정비 규칙은 같은 종류의 물건이다 —
+  // 둘 다 행 순서가 실행 순서인 조립물이고, 그래서 같은 화면에서 같은 골격으로 고친다.
+  const UPKEEP_TAB = {
+    id: 'upkeep',
+    label: '정비 규칙',
+    palette: <div>정비 팔레트다</div>,
+    main: <div>정비 본문이다</div>,
+    check: <div>정비 검증이다</div>,
+    gauge: <span>정비 계량이다</span>,
+    foot: <span>정비 안내다</span>,
+  }
+
+  const withTab = renderToStaticMarkup(
+    <RuleEditor
+      ruleset={PRESSURE}
+      catalog={BLOCK_CATALOG}
+      cpuBudget={CPU_BUDGET}
+      ruleSlots={RULE_SLOTS}
+      onChange={() => undefined}
+      tabs={[UPKEEP_TAB]}
+    />,
+  )
+
+  it('★ 두 탭이 상단에 선다 — 세 열을 통째로 갈아 끼우는 것이라 자리가 위여야 한다', () => {
+    expect(withTab).toContain('editor__tabs')
+    expect(withTab).toContain('전투 규칙')
+    expect(withTab).toContain('정비 규칙')
+  })
+
+  it('★ 전투 탭이 처음 열린다 — 이 게임의 규칙표는 여전히 전투가 중심이다', () => {
+    expect(withTab).toContain('우선순위 리스트')
+  })
+
+  it('★ 안 열린 탭의 세 열이 통째로 빠진다 — 본문만 갈면 안 보이는 규칙표가 바뀐다', () => {
+    // 정비 탭이 닫혀 있으므로 팔레트도 본문도 검증도 없다. 특히 **팔레트**가 중요하다 —
+    // 남아 있으면 정비를 고치는 동안 전투 블록 팔레트가 서 있고, 그것을 누르면 안 보이는
+    // 규칙표가 바뀐다.
+    expect(withTab).not.toContain('정비 팔레트다')
+    expect(withTab).not.toContain('정비 본문이다')
+    expect(withTab).not.toContain('정비 검증이다')
+  })
+
+  it('★ 계량도 탭을 따라간다 — 전투 탭에서는 CPU 게이지가 선다', () => {
+    expect(withTab).toContain('cpu')
+    expect(withTab).not.toContain('정비 계량이다')
+  })
+
+  it('탭을 안 주면 탭 줄이 아예 없다 — 갈아 낄 것이 하나뿐이면 고를 일도 없다', () => {
+    expect(renderEditor(PRESSURE)).not.toContain('editor__tabs')
+  })
+})

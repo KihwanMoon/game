@@ -17,7 +17,7 @@
 from fastapi import APIRouter, HTTPException, status
 from psycopg_pool import ConnectionPool
 
-from game.api.catalog_view import format_affix
+from game.api.catalog_view import build_affix_view, format_affix
 from game.api.deps import CurrentAccount, get_item_catalog, get_pool
 from game.api.loadout_service import build_equipped_entries, count_slot_bonus
 from game.api.schemas_gear import (
@@ -75,6 +75,9 @@ def build_slot_view(slot: ConsumableSlot, catalog: dict) -> ConsumableSlotView:
         refill_cost=resolve_refill_cost(entry.grade, charge_max - slot.charges),
         # **다 써도 붙는다.** 안 그러면 안 마시는 것이 이득이 된다 (§5).
         affixes=[format_affix(affix) for affix in entry.affixes],
+        # 견줌은 능력치 축이 있어야 한다. 문자열만 보내면 화면이 두 칸을 스탯별로
+        # 견줄 수 없다 — 가방이 이미 그렇게 견주고 있다.
+        affix_rows=[build_affix_view(affix) for affix in entry.affixes],
     )
 
 
@@ -111,6 +114,7 @@ def list_bag_options(pool: ConnectionPool, entity_id: int, catalog: dict) -> lis
                 stock=stock[catalog_id],
                 sell_price=resolve_sell_price(item.grade, max(1, item.charges)),
                 affixes=[format_affix(affix) for affix in item.affixes],
+                affix_rows=[build_affix_view(affix) for affix in item.affixes],
             )
         )
     return options

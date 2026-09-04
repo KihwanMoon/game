@@ -19,9 +19,16 @@ class ConsumableSlotView(BaseModel):
     charge_max: int = 0
     # 이 칸을 가득 채우는 값. 빈 칸은 0 이다 — 끼운 것이 없으면 채울 것도 없다.
     refill_cost: int = 0
-    # 끼우고 있는 동안 붙는 부가 옵션. **충전이 0 이면 비어 있다** — 다 쓴 물약은 파손된
-    # 장비와 같아서, 효과가 남으면 보충비가 뜻을 잃는다.
+    # 끼우고 있는 동안 붙는 부가 옵션. **충전이 0 이어도 붙는다.** 처음에는 파손된 장비에
+    # 빗대 「다 쓰면 사라진다」로 적어 뒀는데 그 비유가 틀렸고, 코드는 이미 반대로 돈다
+    # (`list_loaded_consumables`) — 사라지게 두면 안 마시는 것이 이득이 된다. 보충은
+    # 능력치를 되찾으려고가 아니라 다시 마실 수 있으려고 하는 것이다.
     affixes: list[str] = []
+    # **견줌용 원본 절.** `affixes` 는 「튼튼함 +8」 처럼 적어 둔 것이라 능력치 축이 안
+    # 담긴다. 그것만 보내면 화면이 두 소모품을 스탯별로 견줄 수 없어 문자열 두 벌을
+    # 나란히 놓고 판단을 통째로 사람에게 넘기게 된다 — 가방이 이미 구조화된 절로
+    # 견주고 있으므로(`CompareRow`), 같은 질문에 두 화면이 다른 방식으로 답하면 안 된다.
+    affix_rows: list[dict] = []
 
 
 class ConsumableOption(BaseModel):
@@ -38,6 +45,8 @@ class ConsumableOption(BaseModel):
     sell_price: int
     # 끼우면 붙는 부가 옵션. 끼우기 전에 무엇이 붙는지 알아야 고를 수 있다.
     affixes: list[str] = []
+    # 견줌용 원본 절. `ConsumableSlotView.affix_rows` 와 같은 이유다.
+    affix_rows: list[dict] = []
 
 
 class ConsumableResponse(BaseModel):

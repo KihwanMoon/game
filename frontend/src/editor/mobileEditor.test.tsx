@@ -605,3 +605,63 @@ describe('토큰 규율', () => {
     expect(cutRule('.edit-cond__row')).toContain('var(--edit-cmp-w)')
   })
 })
+
+describe('좁은 화면의 규칙표 탭', () => {
+  // **모바일은 세 열을 못 편다.** 데스크톱처럼 팔레트·본문·검증을 나란히 두지 않고
+  // 세로로 쌓는다 (명세 C) — 그래도 **한 번에 한 규칙표**라는 규약은 같다.
+  const UPKEEP_TAB = {
+    id: 'upkeep',
+    label: '정비 규칙',
+    palette: <div>정비 팔레트다</div>,
+    main: <div>정비 본문이다</div>,
+    check: <div>정비 검증이다</div>,
+    gauge: <span>정비 계량이다</span>,
+    foot: <span>정비 안내다</span>,
+  }
+
+  it('★ 탭 줄이 본문 맨 위에 선다 — 좁은 상단 바에는 자리가 없다', () => {
+    const html = renderToStaticMarkup(
+      RuleEditMobile(
+        buildProps({ editIndex: -1, tabs: [UPKEEP_TAB], tabId: 'combat', onTab: vi.fn() }),
+      ),
+    )
+    expect(html).toContain('edit-m__tabs')
+    expect(html).toContain('전투 규칙')
+    expect(html).toContain('정비 규칙')
+  })
+
+  it('★ 정비 탭을 열면 세 조각이 세로로 쌓인다 — 좁은 화면에는 열이 하나뿐이다', () => {
+    const html = renderToStaticMarkup(
+      RuleEditMobile(
+        buildProps({ editIndex: -1, tabs: [UPKEEP_TAB], tabId: 'upkeep', onTab: vi.fn() }),
+      ),
+    )
+    expect(html).toContain('정비 본문이다')
+    expect(html).toContain('정비 팔레트다')
+    expect(html).toContain('정비 검증이다')
+  })
+
+  it('★ 정비 탭에서는 전투 규칙 줄이 안 보인다 — 한 번에 한 규칙표다', () => {
+    const html = renderToStaticMarkup(
+      RuleEditMobile(
+        buildProps({ editIndex: -1, tabs: [UPKEEP_TAB], tabId: 'upkeep', onTab: vi.fn() }),
+      ),
+    )
+    expect(html).not.toContain('edit-m__rules')
+  })
+
+  it('★ 출격 조작부는 두 탭에 다 남는다 — 없으면 정비 탭에서 나갈 길이 사라진다', () => {
+    const html = renderToStaticMarkup(
+      RuleEditMobile(
+        buildProps({
+          editIndex: -1,
+          tabs: [UPKEEP_TAB],
+          tabId: 'upkeep',
+          onTab: vi.fn(),
+          controls: <button type="button">출격</button>,
+        }),
+      ),
+    )
+    expect(html).toContain('출격')
+  })
+})

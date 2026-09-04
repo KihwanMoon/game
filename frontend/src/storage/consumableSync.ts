@@ -7,8 +7,14 @@
  * `serverSync.ts` 에서 갈라 나온 것이 아니라 처음부터 따로 둔다 — 저쪽은 이미 길고,
  * 이쪽은 라우트 넷과 값 하나만 안다.
  */
-import type { InventoryView } from './serverSync'
-import { TOKEN_HEADER, readErrorDetail, readInventory, sendRequest } from './serverSync'
+import type { AffixView, InventoryView, RawAffix } from './serverSync'
+import {
+  TOKEN_HEADER,
+  readAffixRows,
+  readErrorDetail,
+  readInventory,
+  sendRequest,
+} from './serverSync'
 
 /** 칸 하나. */
 export interface ConsumableSlotView {
@@ -24,6 +30,14 @@ export interface ConsumableSlotView {
   readonly refillCost: number
   /** 끼우고 있는 동안 붙는 부가 옵션. 충전이 0 이면 비어 있다. */
   readonly affixes: readonly string[]
+  /**
+   * 같은 옵션의 구조화된 절. **견줌이 이것을 쓴다.**
+   *
+   * `affixes` 는 「튼튼함 · 최대체력 +8」 처럼 구운 문자열이라 능력치 축이 안 담긴다 —
+   * 그것만 있으면 두 소모품을 스탯별로 견줄 수 없고, 문자열 두 벌을 나란히 놓는 것이
+   * 화면이 할 수 있는 전부가 된다. 가방은 이미 구조화된 절로 견준다.
+   */
+  readonly affixRows: readonly AffixView[]
 }
 
 /** 가방에 있어 끼울 수 있는 소모품 한 종류. */
@@ -37,6 +51,8 @@ export interface ConsumableOptionView {
   readonly sellPrice: number
   /** 끼우면 붙는 부가 옵션. */
   readonly affixes: readonly string[]
+  /** 같은 옵션의 구조화된 절. 견줌이 이것을 쓴다. */
+  readonly affixRows: readonly AffixView[]
 }
 
 /** 소모품 칸 화면 전체. */
@@ -59,6 +75,7 @@ interface RawSlot {
   charge_max: number
   refill_cost: number
   affixes: string[]
+  affix_rows?: RawAffix[]
 }
 
 interface RawOption {
@@ -70,6 +87,7 @@ interface RawOption {
   stock: number
   sell_price: number
   affixes: string[]
+  affix_rows?: RawAffix[]
 }
 
 interface RawBody {
@@ -98,6 +116,7 @@ export function buildConsumableView(body: RawBody): ConsumableView {
       chargeMax: raw.charge_max,
       refillCost: raw.refill_cost,
       affixes: raw.affixes,
+      affixRows: readAffixRows(raw.affix_rows),
     })),
     options: body.options.map((raw) => ({
       catalogId: raw.catalog_id,
@@ -108,6 +127,7 @@ export function buildConsumableView(body: RawBody): ConsumableView {
       stock: raw.stock,
       sellPrice: raw.sell_price,
       affixes: raw.affixes,
+      affixRows: readAffixRows(raw.affix_rows),
     })),
     balance: body.balance,
     freeCharges: body.free_charges,

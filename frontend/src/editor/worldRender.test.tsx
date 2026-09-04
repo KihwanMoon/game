@@ -1,8 +1,11 @@
 /**
- * 세계 화면 검사 (F단계) — **순위와 경매장뿐이다.**
+ * 세계 화면 검사 (F단계) — **순위와 오늘의 도전뿐이다.**
  *
  * 레벨·깊이·능력치 배분은 `growthRender.test.tsx` 가 본다. 그것은 세계에 대한 사실이
  * 아니라 나에 대한 사실이라 패널이 갈렸다.
+ *
+ * **경매도 여기 없다.** `auctionRender.test.tsx` 가 본다 — 세계는 「나 밖의 일」이고,
+ * 경매는 내 가방을 바꾸는 일이다. 여기서 지키는 것은 **그 둘이 다시 안 합쳐지는 것**이다.
  *
  * **API 만 있고 화면이 없으면 아무도 못 쓴다** — 도감에서 한 번 겪은 실수다.
  */
@@ -13,7 +16,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import { WorldPanel } from './WorldPanel'
-import type { AuctionView, LeaderboardView, ProgressView } from '../storage'
+import type { LeaderboardView, ProgressView } from '../storage'
 
 const noop = () => undefined
 
@@ -41,49 +44,14 @@ const LEADERBOARD: LeaderboardView = {
   ],
 }
 
-const AUCTION: AuctionView = {
-  listings: [
-    {
-      listingId: 1,
-      itemId: 11,
-      labelKo: '철 투구',
-      price: 300,
-      isMine: false,
-      affixes: [{ stat: 'hp_max', flat: 8, percent: 0, labelKo: '튼튼함', statLabel: '최대체력' }],
-      expiresInMinutes: 42,
-      fee: 15,
-      slot: 'HEAD',
-      grade: 'COMMON',
-    },
-    {
-      listingId: 2,
-      itemId: 12,
-      labelKo: '대검',
-      price: 900,
-      isMine: true,
-      affixes: [],
-      expiresInMinutes: 10,
-      fee: 45,
-      slot: 'WEAPON_MAIN',
-      grade: 'FINE',
-    },
-  ],
-  balance: 500,
-  feePercent: 5,
-}
-
 describe('세계 패널', () => {
   const markup = renderToStaticMarkup(
     <WorldPanel
       progress={PROGRESS}
       leaderboard={LEADERBOARD}
-      auction={AUCTION}
       accountId={7}
       link="online"
       detail=""
-      worn={new Map()}
-      onBuy={noop}
-      onCancel={noop}
       onDaily={noop}
     />,
   )
@@ -125,38 +93,50 @@ describe('세계 패널', () => {
     expect(markup).toContain('시즌 b5.v2.e1')
   })
 
-  it('★ 수수료율을 먼저 보여준다 — 걸기 전에 얼마가 나가는지 알아야 한다', () => {
-    expect(markup).toContain('수수료 5%')
-  })
-
-  it('내 매물은 사는 대신 내리는 버튼이 뜬다', () => {
-    expect(markup).toContain('내린다')
-    expect(markup).toContain('수수료는 안 돌려준다')
-  })
-
-  it('★ 잔액이 모자라면 구매를 잠근다', () => {
-    // 잔액 500 인데 대검이 900 이다 — 다만 그것은 내 매물이라, 철 투구(300)는 살 수 있다.
-    expect(markup).toContain('구매')
-  })
-
   it('내 순위를 표시한다', () => {
     expect(markup).toContain('victor')
+  })
+
+  it('오늘의 도전이 여기 있다 — 나 밖의 일이다', () => {
+    expect(markup).toContain('오늘의 도전')
+  })
+})
+
+describe('★ 경매가 세계에서 나갔다', () => {
+  // 세계 탭은 「나 밖의 일」(순위·도감·오늘의 도전)이고, 경매는 내 가방을 바꾸는 일이다 —
+  // 사면 돈이 나가고 아이템이 들어오며 되돌릴 수 없다(귀속된다, 결정 #07). 순위표 아래에
+  // 있으면 그만한 무게로 안 보였고, 매물 열둘이면 순위표가 화면 밖으로 밀려났다.
+  const markup = renderToStaticMarkup(
+    <WorldPanel
+      progress={PROGRESS}
+      leaderboard={LEADERBOARD}
+      accountId={7}
+      link="online"
+      detail=""
+      onDaily={noop}
+    />,
+  )
+
+  it('매물도 수수료도 여기서 안 그린다', () => {
+    expect(markup).not.toContain('경매장')
+    expect(markup).not.toContain('수수료')
+    expect(markup).not.toContain('wld__listing')
+  })
+
+  it('견줌 표도 여기 없다 — 경매 탭의 것이다', () => {
+    expect(markup).not.toContain('invd__compare')
   })
 })
 
 describe('세계 패널 — 서버 없음', () => {
-  it('순위와 경매가 서버의 것임을 말한다', () => {
+  it('순위가 서버의 것임을 말한다', () => {
     const markup = renderToStaticMarkup(
       <WorldPanel
         progress={undefined}
         leaderboard={undefined}
-        auction={undefined}
         accountId={undefined}
         link="offline"
         detail=""
-        worn={new Map()}
-        onBuy={noop}
-        onCancel={noop}
         onDaily={noop}
       />,
     )
@@ -177,55 +157,14 @@ describe('세계 패널 스타일', () => {
   })
 })
 
-describe('경매 — 사기 전에 알아야 할 것 (모바일 우선)', () => {
-  const markup = renderToStaticMarkup(
-    <WorldPanel
-      progress={PROGRESS}
-      leaderboard={undefined}
-      auction={AUCTION}
-      accountId={1}
-      link="online"
-      detail=""
-      worn={new Map()}
-      onBuy={() => undefined}
-      onCancel={() => undefined}
-      onDaily={() => undefined}
-    />,
-  )
-
-  it('★ 접사가 보인다 — 이름과 값만 보고 사면 저주를 돈 주고 산다', () => {
-    expect(markup).toContain('튼튼함 · 최대체력 +8')
-  })
-
-  it('★ 언제 사라지는지 보인다', () => {
-    expect(markup).toContain('42분 뒤 사라진다')
-  })
-
-  it('★ 내 매물에는 못 돌려받는 수수료를 적는다', () => {
-    expect(markup).toContain('수수료 45')
-  })
-
-  it('★ 버튼이 자기 줄에 있다 — 한 줄에 몰면 좁은 폭에서 밀려 나간다', () => {
-    // 세로 배치에서 버튼은 --tap-min(44px)까지 커진다. 이름·접사와 같은 줄에 두면
-    // 그 높이가 줄을 밀어 올려 겹친다.
-    expect(markup).toContain('wld__listing')
-  })
-})
-
-
-
 describe('세계 패널이 나에 대한 것을 안 그린다', () => {
   const markup = renderToStaticMarkup(
     <WorldPanel
       progress={PROGRESS}
       leaderboard={LEADERBOARD}
-      auction={AUCTION}
       accountId={7}
       link="online"
       detail=""
-      worn={new Map()}
-      onBuy={noop}
-      onCancel={noop}
       onDaily={noop}
     />,
   )
@@ -238,70 +177,5 @@ describe('세계 패널이 나에 대한 것을 안 그린다', () => {
   it('★ 레벨과 깊이도 없다 — 나에 대한 사실은 성장 패널이 든다', () => {
     expect(markup).not.toContain('10층')
     expect(markup).not.toContain('표현력')
-  })
-})
-
-describe('사기 전에 내 것과 견준다', () => {
-  const WORN = new Map([
-    [
-      'HEAD',
-      {
-        itemId: 99,
-        catalogId: 'helm_old',
-        labelKo: '낡은 투구',
-        kind: 'EQUIPMENT',
-        slot: 'HEAD',
-        hands: null,
-        equippedSlot: 'HEAD',
-        isBroken: false,
-        isBound: false,
-        isRecovered: false,
-        sealedSlots: 0,
-        unsealCost: 0,
-        grade: 'COMMON',
-        attackRange: 0,
-        affixes: [
-          { stat: 'hp_max', flat: 3, percent: 0, labelKo: '', statLabel: '최대체력' },
-        ],
-        requirements: [],
-        canEquip: true,
-      },
-    ],
-  ])
-
-  const markup = renderToStaticMarkup(
-    <WorldPanel
-      progress={PROGRESS}
-      leaderboard={LEADERBOARD}
-      auction={AUCTION}
-      accountId={7}
-      link="online"
-      detail=""
-      worn={WORN}
-      onBuy={noop}
-      onCancel={noop}
-      onDaily={noop}
-    />,
-  )
-
-  it('★ 매물이 내 것보다 얼마나 나은지 적는다 — 사면 귀속돼 되돌릴 수 없다', () => {
-    // 철 투구는 체력 +8, 낡은 투구는 +3 이므로 차이는 +5 다.
-    expect(markup).toContain('invd__compare')
-    expect(markup).toContain('+5')
-  })
-
-  it('★ 빈 자리는 그렇게 말한다 — 견줄 상대가 없는 것과 같은 것은 다르다', () => {
-    // 대검 자리(WEAPON_MAIN)에는 아무것도 안 꼈다.
-    expect(markup).toContain('빈 자리')
-  })
-
-  it('★ 스탯별로 낸다 — 한 숫자로 접으면 기준을 코드가 정하게 된다', () => {
-    // 견줌 줄마다 **어느 스탯인지**가 붙어 있어야 한다. 「+5」만 있으면 무엇이 +5 인지
-    // 모르고, 그것은 판단을 대신해 주는 척하면서 아무 말도 안 하는 것이다.
-    expect(markup).toContain('invd__compare-name')
-    expect(markup).toContain('최대체력')
-    // 「이게 낫다」 같은 한 줄 판정을 내리지 않는다.
-    expect(markup).not.toContain('추천')
-    expect(markup).not.toContain('더 좋다')
   })
 })

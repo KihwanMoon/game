@@ -32,6 +32,7 @@ import { GlyphState, SegmentedGauge, ValueExpr } from '../ds'
 import type { BlockCatalog, RuleSet } from '../core/schemas'
 import { formatActionLabel } from './blockOptions'
 import { calculateTotalCpu } from './draft'
+import { COMBAT_TAB_ID, type EditorTab } from './editorTabs'
 import { ActionCard, ConditionCard, CpuCard, PriorityCard } from './RuleEditCards'
 import type { RuleRowActions } from './RuleRowEditor'
 import { formatMeasuredCondition, type TermReadings } from './termMeasure'
@@ -75,6 +76,16 @@ export interface RuleEditMobileProps {
   readonly controls?: ReactNode
   /** 앱이 끼워 넣는 코드 라이브러리(프리셋 8슬롯·공유 코드). */
   readonly library?: ReactNode
+  /**
+   * 전투 말고 더 있는 규칙표 탭들. 정비 규칙이 여기 온다.
+   *
+   * **모바일은 세 열을 못 편다.** 그래서 데스크톱처럼 팔레트·본문·검증을 나란히 두지 않고
+   * 세로로 쌓는다 — 좁은 화면의 규약이다 (명세 C).
+   */
+  readonly tabs?: readonly EditorTab[]
+  /** 지금 열린 탭. 전투면 `COMBAT_TAB_ID`. */
+  readonly tabId?: string
+  readonly onTab?: (id: string) => void
 }
 
 /** RuleListScreen 이 받는 props. */
@@ -96,6 +107,59 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
   const problemCount =
     props.globalProblems.length + [...props.problems.values()].reduce((sum, one) => sum + one.length, 0)
   const over = props.totalCpu > props.cpuBudget
+  const tabs = props.tabs ?? []
+  const openTab = tabs.find((tab) => tab.id === props.tabId)
+  const tabStrip =
+    tabs.length === 0 || props.onTab === undefined ? null : (
+      <div className="edit-m__tabs" role="tablist">
+        <button
+          type="button"
+          className={`edit-m__tab${openTab === undefined ? ' edit-m__tab--on' : ''}`}
+          aria-pressed={openTab === undefined}
+          onClick={() => {
+            props.onTab?.(COMBAT_TAB_ID)
+          }}
+        >
+          전투 규칙
+        </button>
+        {tabs.map((tab) => (
+          <button
+            type="button"
+            key={tab.id}
+            className={`edit-m__tab${tab.id === props.tabId ? ' edit-m__tab--on' : ''}`}
+            aria-pressed={tab.id === props.tabId}
+            onClick={() => {
+              props.onTab?.(tab.id)
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+    )
+
+  // 전투가 아닌 규칙표를 고르고 있다. **팔레트·본문·검증을 세로로 쌓는다** — 좁은
+  // 화면에는 열이 하나뿐이라, 세 열을 나란히 두려 하면 전부 못 읽을 폭이 된다.
+  if (openTab !== undefined) {
+    return (
+      <div className={`edit-m edit-m--${props.mode} edit-m--list`}>
+        <header className="edit-m__bar edit-m__bar--top">
+          <h1 className="edit-m__title">{openTab.label}</h1>
+          <span className="edit-m__meta">{openTab.gauge}</span>
+        </header>
+        <div className="edit-m__body">
+          {tabStrip}
+          {props.controls === undefined ? null : (
+            <div className="edit-m__controls">{props.controls}</div>
+          )}
+          {openTab.main}
+          {openTab.palette}
+          {openTab.check}
+          {props.library}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={`edit-m edit-m--${props.mode} edit-m--list`}>
@@ -116,6 +180,7 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
       </header>
 
       <div className="edit-m__body">
+        {tabStrip}
         {props.controls === undefined ? null : (
           <div className="edit-m__controls">{props.controls}</div>
         )}
