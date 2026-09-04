@@ -38,6 +38,17 @@ STAT_WEIGHTS: dict[str, dict[str, int]] = {
     "melee": {"attack": 3, "hp_max": 2, "defense": 2, "initiative": 1},
 }
 
+# **사람이 고르는 우선순위.** 봇의 성격표(`STAT_WEIGHTS`)와 나란히 두는 이유는 같은
+# 저울이기 때문이다 — 정비 규칙의 「더 좋은 장비로 교체」가 이 표를 쓴다. 봇의 성격은
+# 규칙표가 정하고 사람의 우선순위는 사람이 고른다는 것만 다르다.
+#
+# 공격 쪽에서 **사거리가 가장 무겁다.** 기본 사거리가 1 이라 +1 은 닿는 거리를 두 배로
+# 만들고, 그것이 곧 「맞지 않고 때린다」의 성립 여부다.
+GEAR_PRIORITY_WEIGHTS: dict[str, dict[str, int]] = {
+    "ATTACK": {"attack_range": 6, "attack": 4, "initiative": 2, "hp_max": 1, "defense": 1},
+    "DEFENSE": {"defense": 4, "hp_max": 3, "attack": 1, "initiative": 1, "attack_range": 1},
+}
+
 # 이만큼은 이겨야 바꾼다. 벗은 것이 가방에서 삭제될 수 있으므로 근소한 차이는 손해다.
 UPGRADE_MARGIN = 6
 
@@ -74,7 +85,28 @@ def compute_item_score(item: GearItem, persona: str, base_stats: dict[str, int])
     Returns:
         점수. 클수록 이 봇에게 좋다. 저주 접사가 있으면 음수일 수 있다.
     """
-    weights = STAT_WEIGHTS.get(persona, STAT_WEIGHTS["melee"])
+    return compute_weighted_score(
+        item, STAT_WEIGHTS.get(persona, STAT_WEIGHTS["melee"]), base_stats
+    )
+
+
+def compute_weighted_score(
+    item: GearItem, weights: dict[str, int], base_stats: dict[str, int]
+) -> int:
+    """저울을 직접 받아 값을 매긴다.
+
+    **성격표에서 갈라 나왔다.** 봇은 성격으로 저울을 고르고 사람은 우선순위로 고르는데,
+    저울을 고르는 방식이 다를 뿐 **재는 방식은 같아야 한다** — 두 벌로 두면 같은 장비가
+    봇 화면과 정비 미리보기에서 다른 값을 갖는다.
+
+    Args:
+        item: 값을 매길 장비.
+        weights: 스탯에서 무게로. 여기 없는 스탯은 0 이다.
+        base_stats: 플레이어 기본 스탯. 퍼센트를 값으로 바꾸는 기준이다.
+
+    Returns:
+        점수. 클수록 좋다. 저주 접사가 있으면 음수일 수 있다.
+    """
     total = 0
     for stat, flat, percent in item.affixes:
         weight = weights.get(stat, 0)
@@ -107,6 +139,28 @@ def find_upgrades(
         (벗을 것, 낄 것) 짝들. 자리 이름 순이다.
     """
     persona = resolve_persona(ruleset_id)
+    return find_upgrades_by_weights(
+        bag, worn, STAT_WEIGHTS.get(persona, STAT_WEIGHTS["melee"]), base_stats
+    )
+
+
+def find_upgrades_by_weights(
+    bag: tuple[GearItem, ...],
+    worn: tuple[GearItem, ...],
+    weights: dict[str, int],
+    base_stats: dict[str, int],
+) -> tuple[tuple[GearItem, GearItem], ...]:
+    """저울을 직접 받아 갈아 낄 짝을 고른다.
+
+    Args:
+        bag: 가방 속 장비들.
+        worn: 지금 입고 있는 것들.
+        weights: 스탯에서 무게로.
+        base_stats: 플레이어 기본 스탯.
+
+    Returns:
+        (벗을 것, 낄 것) 짝들. 자리 이름 순이다.
+    """
     wearing = {item.slot: item for item in worn if item.slot}
     # 자리에서 (벗을 것, 낄 것, 낄 것의 점수) 로. 점수를 들고 다니는 이유는 같은 값을
     # 후보마다 세 번 다시 재지 않기 위해서다.
@@ -119,8 +173,8 @@ def find_upgrades(
         current = wearing.get(candidate.slot)
         if current is None or current.is_broken:
             continue
-        score = compute_item_score(candidate, persona, base_stats)
-        if score - compute_item_score(current, persona, base_stats) < UPGRADE_MARGIN:
+        score = compute_weighted_score(candidate, weights, base_stats)
+        if score - compute_weighted_score(current, weights, base_stats) < UPGRADE_MARGIN:
             continue
         # 같은 자리에 후보가 여럿이면 제일 나은 것 하나. 동점이면 먼저 본 쪽이 남는다 —
         # 가방 순서가 곧 id 순이라, 순서가 흔들리면 같은 가방에서 다른 몸이 나간다.

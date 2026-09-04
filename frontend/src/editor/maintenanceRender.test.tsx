@@ -21,6 +21,7 @@ import {
   checkBlocked,
   checkMaintenanceRows,
   createRow,
+  MAINTENANCE_ACTIONS,
   duplicateRow,
   formatMaintenanceSentence,
   MAX_MAINTENANCE_ROWS,
@@ -484,5 +485,76 @@ describe('정비 검증 화면', () => {
       />,
     )
     expect(html).toContain('행이 없다')
+  })
+})
+
+describe('★ 「더 좋게 만든다」 셋', () => {
+  // 봉인 해제 · 장비 교체 · 소모품 교체. 앞의 넷은 덜어 내거나 되돌리는 일이라 판단이
+  // 없고, 이 셋은 무엇이 더 좋은지를 골라야 한다.
+  it('행동 일곱이 어휘에 다 있다 — 서버와 같은 id 다', () => {
+    for (const id of ['UNSEAL', 'UPGRADE_GEAR', 'UPGRADE_CONSUMABLE']) {
+      expect(MAINTENANCE_ACTIONS.some((one) => one.id === id)).toBe(true)
+    }
+  })
+
+  it('★ 장비 교체만 인자를 받는다 — 공격이냐 방어냐', () => {
+    const swap = MAINTENANCE_ACTIONS.find((one) => one.id === 'UPGRADE_GEAR')
+    expect(swap?.args.map(([value]) => value)).toEqual(['ATTACK', 'DEFENSE'])
+    expect(MAINTENANCE_ACTIONS.find((one) => one.id === 'UNSEAL')?.args).toHaveLength(0)
+  })
+
+  it('★ 새 행은 인자가 채워진 채로 선다 — 빈 인자는 서버가 거절한다', () => {
+    expect(createRow('UPGRADE_GEAR')).toEqual({ action: 'UPGRADE_GEAR', grade: 'ATTACK' })
+    expect(createRow('UNSEAL')).toEqual({ action: 'UNSEAL', grade: '' })
+  })
+
+  it('★ 인자가 문장에 실린다 — 「공격 이 우선순위로…」', () => {
+    expect(formatMaintenanceSentence({ action: 'UPGRADE_GEAR', grade: 'DEFENSE' })).toContain('방어')
+  })
+
+  it('★ 어휘 밖 인자는 막는다 — 등급과 같은 규율이다', () => {
+    const problems = checkMaintenanceRows([{ action: 'UPGRADE_GEAR', grade: 'SPEED' }])
+    expect(checkBlocked(problems)).toBe(true)
+  })
+
+  it('★ 상한이 서버와 같다 — 행동이 일곱이 되면서 함께 올렸다', () => {
+    expect(MAX_MAINTENANCE_ROWS).toBe(10)
+  })
+})
+
+describe('★ 「더 좋게 만든다」 미리보기는 확실한 것만 센다', () => {
+  // 저울(무게표)은 서버에 있다. 화면으로 베끼면 밸런스가 두 벌이 되고, 한쪽을 고칠 때
+  // 다른 쪽이 조용히 옛 값으로 남는다 — 그때 미리보기는 서버가 안 할 일을 할 것처럼 적는다.
+  it('봉인 해제는 값을 아는 칸만 센다', () => {
+    const preview = buildMaintenancePreview([{ action: 'UNSEAL', grade: '' }], INVENTORY, CONSUMABLES)
+    // 준비한 가방의 착용 장비에는 봉인이 없다.
+    expect(preview.rows[0]?.text).toContain('열 봉인이 없다')
+    expect(preview.rows[0]?.isActive).toBe(false)
+  })
+
+  it('★ 장비 교체는 후보만 세고, 고르는 것은 서버라고 적는다', () => {
+    const preview = buildMaintenancePreview(
+      [{ action: 'UPGRADE_GEAR', grade: 'ATTACK' }],
+      INVENTORY,
+      CONSUMABLES,
+    )
+    // 착용은 머리뿐이고 가방에는 주무기·보조뿐이라 갈아 낄 후보가 없다.
+    expect(preview.rows[0]?.text).toContain('후보가 없다')
+  })
+
+  it('★ 소모품 교체는 충전이 확실히 더 큰 칸만 센다', () => {
+    const preview = buildMaintenancePreview(
+      [{ action: 'UPGRADE_CONSUMABLE', grade: '' }],
+      INVENTORY,
+      CONSUMABLES,
+    )
+    // 칸이 1/2 이라 가득 차지 않았다 — 쓰던 칸은 안 건드린다.
+    expect(preview.rows[0]?.text).toContain('갈아 낄 것이 없다')
+  })
+
+  it('★ 잔액이 마른 것을 문구로 알아내지 않는다', () => {
+    // 판정과 표기가 같은 문자열을 나눠 쓰면, 문구를 한 글자 고칠 때 경고가 사라진다.
+    const preview = buildMaintenancePreview([{ action: 'UNSEAL', grade: '' }], INVENTORY, CONSUMABLES)
+    expect(preview.isShort).toBe(false)
   })
 })

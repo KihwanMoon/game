@@ -7,10 +7,17 @@
 무엇을 했는지 **한 줄로 돌려준다.** 조용한 자동화는 「왜 돈이 줄었지」가 된다 (P1).
 """
 
+from collections.abc import Callable
+
 from psycopg_pool import ConnectionPool
 
-from game.api.deps import get_item_catalog, get_pool
+from game.api.deps import get_context, get_item_catalog, get_pool
 from game.api.loadout_service import build_equipped_entries, count_slot_bonus
+from game.api.maintenance_upgrade import (
+    apply_unseal_rule,
+    apply_upgrade_consumable_rule,
+    apply_upgrade_gear_rule,
+)
 from game.app.store.accounts import find_player_entity
 from game.app.store.consumables import apply_slot_fill, list_consumable_slots
 from game.app.store.equipment import add_currency, apply_repair, read_balance, remove_item
@@ -21,6 +28,9 @@ from game.app.store.maintenance import (
     ACTION_REFILL,
     ACTION_REPAIR,
     ACTION_SELL_STOCK,
+    ACTION_UNSEAL,
+    ACTION_UPGRADE_CONSUMABLE,
+    ACTION_UPGRADE_GEAR,
     MaintenanceRow,
     read_maintenance,
 )
@@ -149,6 +159,10 @@ def apply_sell_rule(pool: ConnectionPool, account_id: int, entity_id: int) -> tu
 def apply_row(pool: ConnectionPool, account_id: int, entity_id: int, row: MaintenanceRow) -> str:
     """정비 행 하나를 실행한다.
 
+    **표로 가른다.** 행동이 일곱이 되면서 if 사슬이 여덟 갈래가 됐다 — 행동을 하나 더할
+    때마다 갈래가 늘고, 늘어난 갈래는 읽는 사람이 전부 훑어야 한다. 어휘가 닫혀 있으므로
+    (`MAINTENANCE_ACTIONS`) 표가 그 닫힘을 그대로 그린다.
+
     Args:
         pool: 연결 풀.
         account_id: 대상 계정.
@@ -158,19 +172,152 @@ def apply_row(pool: ConnectionPool, account_id: int, entity_id: int, row: Mainte
     Returns:
         무슨 일이 있었는지. 한 일이 없으면 빈 문자열.
     """
-    if row.action == ACTION_DISCARD:
-        dropped = apply_discard_rule(pool, entity_id, row.grade)
-        return f"{row.grade} 장비 {dropped}개 버림" if dropped else ""
-    if row.action == ACTION_REPAIR:
-        fixed = apply_repair_rule(pool, account_id, entity_id)
-        return f"파손 {fixed}개 복구" if fixed else ""
-    if row.action == ACTION_REFILL:
-        filled, paid = apply_refill_rule(pool, account_id, entity_id)
-        return f"충전 {filled}개 보충 (-{paid})" if filled else ""
-    if row.action == ACTION_SELL_STOCK:
-        sold, earned = apply_sell_rule(pool, account_id, entity_id)
-        return f"재고 {sold}개 판매 (+{earned})" if sold else ""
-    return ""
+    runner = ROW_RUNNERS.get(row.action)
+    if runner is None:
+        # 어휘 밖이다. 저장 층이 이미 막고 있으므로 여기 오면 옛 절이 남아 있는 것이다.
+        return ""
+    return runner(pool, account_id, entity_id, row)
+
+
+def run_discard(pool: ConnectionPool, _account_id: int, entity_id: int, row: MaintenanceRow) -> str:
+    """이 등급의 가방 장비를 버린다.
+
+    Args:
+        pool: 연결 풀.
+        _account_id: 안 쓴다. 버리기는 돈이 안 든다.
+        entity_id: 대상 개체.
+        row: 실행할 행.
+
+    Returns:
+        무슨 일이 있었는지.
+    """
+    dropped = apply_discard_rule(pool, entity_id, row.grade)
+    return f"{row.grade} 장비 {dropped}개 버림" if dropped else ""
+
+
+def run_repair(pool: ConnectionPool, account_id: int, entity_id: int, _row: MaintenanceRow) -> str:
+    """파손된 착용 장비를 잔액 안에서 복구한다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 비용을 낼 계정.
+        entity_id: 대상 개체.
+        _row: 인자를 안 받는다.
+
+    Returns:
+        무슨 일이 있었는지.
+    """
+    fixed = apply_repair_rule(pool, account_id, entity_id)
+    return f"파손 {fixed}개 복구" if fixed else ""
+
+
+def run_refill(pool: ConnectionPool, account_id: int, entity_id: int, _row: MaintenanceRow) -> str:
+    """끼운 소모품을 잔액 안에서 보충한다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 비용을 낼 계정.
+        entity_id: 대상 개체.
+        _row: 인자를 안 받는다.
+
+    Returns:
+        무슨 일이 있었는지.
+    """
+    filled, paid = apply_refill_rule(pool, account_id, entity_id)
+    return f"충전 {filled}개 보충 (-{paid})" if filled else ""
+
+
+def run_sell(pool: ConnectionPool, account_id: int, entity_id: int, _row: MaintenanceRow) -> str:
+    """가방의 소모품 재고를 전부 판다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 값을 받을 계정.
+        entity_id: 대상 개체.
+        _row: 인자를 안 받는다.
+
+    Returns:
+        무슨 일이 있었는지.
+    """
+    sold, earned = apply_sell_rule(pool, account_id, entity_id)
+    return f"재고 {sold}개 판매 (+{earned})" if sold else ""
+
+
+def run_unseal(pool: ConnectionPool, account_id: int, entity_id: int, _row: MaintenanceRow) -> str:
+    """착용 장비의 봉인을 잔액 안에서 연다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 비용을 낼 계정.
+        entity_id: 대상 개체.
+        _row: 인자를 안 받는다.
+
+    Returns:
+        무슨 일이 있었는지.
+    """
+    opened, paid = apply_unseal_rule(pool, account_id, entity_id)
+    return f"봉인 {opened}칸 해제 (-{paid})" if opened else ""
+
+
+def run_upgrade_gear(
+    pool: ConnectionPool, _account_id: int, entity_id: int, row: MaintenanceRow
+) -> str:
+    """가방에 더 나은 장비가 있으면 갈아 낀다.
+
+    Args:
+        pool: 연결 풀.
+        _account_id: 안 쓴다. 교체는 돈이 안 든다.
+        entity_id: 대상 개체.
+        row: 우선순위를 인자로 든 행.
+
+    Returns:
+        무슨 일이 있었는지.
+    """
+    # 퍼센트를 값으로 바꾸는 기준은 플레이어 기본 스탯이다 — 환산 상수를 지어내면
+    # 그것이 곧 아무도 안 정한 밸런스 결정 하나가 된다 (`bots/upgrade`).
+    swapped = apply_upgrade_gear_rule(pool, entity_id, row.grade, read_base_stats())
+    return f"장비 {swapped}개 교체" if swapped else ""
+
+
+def run_upgrade_consumable(
+    pool: ConnectionPool, _account_id: int, entity_id: int, _row: MaintenanceRow
+) -> str:
+    """가득 찬 소모품 칸을 가방의 더 나은 것으로 갈아 낀다.
+
+    Args:
+        pool: 연결 풀.
+        _account_id: 안 쓴다. 교체는 돈이 안 든다.
+        entity_id: 대상 개체.
+        _row: 인자를 안 받는다.
+
+    Returns:
+        무슨 일이 있었는지.
+    """
+    swapped = apply_upgrade_consumable_rule(pool, entity_id)
+    return f"소모품 {swapped}칸 교체" if swapped else ""
+
+
+# 행동에서 그것을 실행하는 함수로. **저장 층의 닫힌 어휘와 짝이다** — 여기 없는 행동은
+# 안 돌고, 저기 없는 행동은 저장되지 않는다.
+ROW_RUNNERS: dict[str, Callable[[ConnectionPool, int, int, MaintenanceRow], str]] = {
+    ACTION_DISCARD: run_discard,
+    ACTION_REPAIR: run_repair,
+    ACTION_REFILL: run_refill,
+    ACTION_SELL_STOCK: run_sell,
+    ACTION_UNSEAL: run_unseal,
+    ACTION_UPGRADE_GEAR: run_upgrade_gear,
+    ACTION_UPGRADE_CONSUMABLE: run_upgrade_consumable,
+}
+
+
+def read_base_stats() -> dict[str, int]:
+    """퍼센트 접사를 값으로 바꿀 기준. 실제 합산식이 쓰는 바로 그 값이다.
+
+    Returns:
+        스탯에서 기본값으로.
+    """
+    player = get_context().balance.get("player", {})
+    return {key: int(value) for key, value in player.items() if isinstance(value, int)}
 
 
 def apply_maintenance(account_id: int) -> str:

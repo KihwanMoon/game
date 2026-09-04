@@ -77,3 +77,65 @@ def save_run_result(pool: ConnectionPool, result: StoredResult) -> None:
                 result.detail,
             ),
         )
+
+
+@dataclass(frozen=True)
+class RunRecord:
+    """지나간 판 하나. **결과는 서버가 재시뮬해서 만든 값이다** (§4)."""
+
+    submission_id: int
+    room_id: str
+    floor: int
+    seed: int
+    outcome: str
+    ticks: int
+    player_hp: int
+    verdict: str
+    submitted_at: str
+
+
+def list_recent_runs(pool: ConnectionPool, account_id: int, limit: int) -> tuple[RunRecord, ...]:
+    """이 계정이 최근에 돈 판들을 새것부터 읽는다.
+
+    **이벤트 로그는 없다.** 저장하는 것은 제출(규칙표)과 판정(결과)뿐이라, 여기서 낼 수
+    있는 것은 「어떤 판을 돌았고 어떻게 끝났는가」까지다 — 「그 판이 어떻게 돌았는가」는
+    시드와 규칙표로 다시 돌려야 나온다.
+
+    **판정이 없는 제출도 낸다.** 검증 전인 것과 없는 것이 같아 보이면, 서버가 밀렸을 때
+    화면이 「안 돌았다」로 읽힌다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 대상 계정.
+        limit: 몇 개까지.
+
+    Returns:
+        새것부터의 판들.
+    """
+    with pool.connection() as connection:
+        rows = connection.execute(
+            "SELECT s.id, t.room_id, t.floor, t.seed,"
+            " COALESCE(r.outcome, ''), COALESCE(r.ticks, 0), COALESCE(r.player_hp, 0),"
+            " COALESCE(r.verdict, ''), s.submitted_at"
+            " FROM run_submission s"
+            " JOIN run_ticket t ON t.id = s.ticket_id"
+            " LEFT JOIN run_result r ON r.submission_id = s.id"
+            " WHERE t.account_id = %s"
+            " ORDER BY s.submitted_at DESC, s.id DESC"
+            " LIMIT %s",
+            (account_id, limit),
+        ).fetchall()
+    return tuple(
+        RunRecord(
+            submission_id=int(row[0]),
+            room_id=str(row[1] or ""),
+            floor=int(row[2] or 0),
+            seed=int(row[3] or 0),
+            outcome=str(row[4] or ""),
+            ticks=int(row[5] or 0),
+            player_hp=int(row[6] or 0),
+            verdict=str(row[7] or ""),
+            submitted_at=row[8].isoformat() if row[8] is not None else "",
+        )
+        for row in rows
+    )

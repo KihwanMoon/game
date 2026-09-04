@@ -337,3 +337,78 @@ body {
 .botrow--head .botrow__cell {
   color: var(--text-dim);
 }
+
+/* ── 봇 상세 (관리 화면) ──────────────────────────────────────────────────
+   봇 하나를 사람 화면과 같은 눈으로 본다. 부품은 사람 화면의 것을 그대로 쓰므로
+   여기서 정하는 것은 **배치뿐**이다 — 색·간격은 토큰이고, 격자·패널은 저쪽 것이다. */
+.botd__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  align-items: center;
+  margin-block-end: var(--sp-2);
+  padding-block-end: var(--sp-2);
+  border-block-end: var(--border);
+}
+
+.botd__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: var(--sp-0);
+}
+
+/* 지나간 판 목록. 한 줄이 한 판이고, 컬럼이 맞아야 눈이 세로로 훑는다 —
+   순위표의 컬럼 정렬과 같은 이유다(미관이 아니라 디버깅 기능이다). */
+.botd__runs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-0);
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  list-style: none;
+}
+
+.botd__run {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: baseline;
+  padding-block: var(--sp-1);
+  border-block-end: var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+}
+
+.botd__run-room {
+  min-width: calc(var(--sp-12) * 1.5);
+  color: var(--text-body);
+}
+
+.botd__run-floor,
+.botd__run-num {
+  min-width: var(--sp-10);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 시드는 **다시 돌리려면 필요한 값**이라 지우지 않는다 — 좁으면 접힌다. */
+.botd__run-seed {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.botd__skills {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  list-style: none;
+}
+
+.botd__skill {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+}

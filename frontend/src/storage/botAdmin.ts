@@ -5,8 +5,15 @@
  * 사실이 없다. 알아야 할 것은 몇 판을 돌았고 몇 번 이겼고 어디까지 내려갔는가다 —
  * 승리가 0이면 그 봇은 세계에 아무것도 안 남긴다.
  */
-import { TOKEN_HEADER, readInventoryPayload, sendRequest } from './serverSync'
-import type { InventoryView } from './serverSync'
+import {
+  TOKEN_HEADER,
+  readInventoryPayload,
+  readProgressPayload,
+  sendRequest,
+} from './serverSync'
+import type { InventoryView, ProgressView } from './serverSync'
+import type { MaintenanceView } from './maintenanceSync'
+import type { SkillPrefView } from './skillSync'
 
 /** 봇 한 줄. */
 export interface BotView {
@@ -232,4 +239,96 @@ export async function readDoppelGear(
     return undefined
   }
   return readInventoryPayload((await response.json()) as Record<string, unknown>)
+}
+
+/** 봇이 지나간 판 한 줄. **이벤트 로그는 저장하지 않는다** — 결과까지가 남는 전부다. */
+export interface BotRunView {
+  readonly submissionId: number
+  readonly roomId: string
+  readonly floor: number
+  /** 시드. 결정론 코어라 이것과 규칙표가 있으면 그 판을 다시 돌릴 수 있다 (R5·G3). */
+  readonly seed: number
+  readonly outcome: string
+  readonly ticks: number
+  readonly playerHp: number
+  /** 서버가 재시뮬해 확정했는가. 빈 문자열이면 아직 안 본 것이고 「없다」와 다르다. */
+  readonly verdict: string
+  readonly submittedAt: string
+}
+
+/** 봇 하나를 사람 화면과 같은 눈으로 본 것. */
+export interface BotDetail {
+  readonly accountId: number
+  readonly handle: string
+  readonly rulesetId: string
+  readonly maintenance: MaintenanceView
+  readonly progress: ProgressView
+  readonly skills: SkillPrefView
+  readonly runs: readonly BotRunView[]
+}
+
+/**
+ * 봇 하나의 규칙표·정비·성장·스킬·지나간 판을 한 번에 읽는다.
+ *
+ * **한 번에 읽는다.** 탭마다 따로 부르면 탭을 옮길 때마다 화면이 비었다가 찬다 —
+ * 가방만 따로인 것은 그것이 이미 사람 화면과 같은 라우트를 쓰고 있어서다.
+ *
+ * @param token 기기 토큰.
+ * @param accountId 볼 봇.
+ * @returns 그 봇의 상세. 봇이 아니거나 못 닿으면 undefined.
+ */
+export async function readBotDetail(
+  token: string,
+  accountId: number,
+): Promise<BotDetail | undefined> {
+  const response = await sendRequest(`/admin/bot/detail?account_id=${String(accountId)}`, {
+    headers: { [TOKEN_HEADER]: token },
+  })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  const raw = (await response.json()) as {
+    account_id: number
+    handle: string
+    ruleset_id: string
+    maintenance: { rows: { action: string; grade: string }[] }
+    progress: Record<string, unknown>
+    skills: { rows: { skill_id: string; is_on: boolean; is_locked: boolean }[] }
+    runs: {
+      submission_id: number
+      room_id: string
+      floor: number
+      seed: number
+      outcome: string
+      ticks: number
+      player_hp: number
+      verdict: string
+      submitted_at: string
+    }[]
+  }
+  return {
+    accountId: raw.account_id,
+    handle: raw.handle,
+    rulesetId: raw.ruleset_id,
+    maintenance: { rows: raw.maintenance.rows.map((row) => ({ ...row })) },
+    progress: readProgressPayload(raw.progress),
+    skills: {
+      rows: raw.skills.rows.map((row) => ({
+        skillId: row.skill_id,
+        isOn: row.is_on,
+        isLocked: row.is_locked,
+      })),
+    },
+    runs: raw.runs.map((row) => ({
+      submissionId: row.submission_id,
+      roomId: row.room_id,
+      floor: row.floor,
+      seed: row.seed,
+      outcome: row.outcome,
+      ticks: row.ticks,
+      playerHp: row.player_hp,
+      verdict: row.verdict,
+      submittedAt: row.submitted_at,
+    })),
+  }
 }

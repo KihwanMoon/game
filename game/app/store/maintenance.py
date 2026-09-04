@@ -21,18 +21,37 @@ ACTION_DISCARD = "DISCARD"
 ACTION_REPAIR = "REPAIR"
 ACTION_REFILL = "REFILL"
 ACTION_SELL_STOCK = "SELL_STOCK"
+ACTION_UNSEAL = "UNSEAL"
+ACTION_UPGRADE_GEAR = "UPGRADE_GEAR"
+ACTION_UPGRADE_CONSUMABLE = "UPGRADE_CONSUMABLE"
 MAINTENANCE_ACTIONS: tuple[str, ...] = (
     ACTION_DISCARD,
     ACTION_REPAIR,
     ACTION_REFILL,
     ACTION_SELL_STOCK,
+    ACTION_UNSEAL,
+    ACTION_UPGRADE_GEAR,
+    ACTION_UPGRADE_CONSUMABLE,
 )
 
 # 버리기가 받는 등급. 유물은 없다 — 최상급을 자동으로 버리는 규칙은 오조작이 사고가 된다.
 DISCARD_CHOICES: tuple[str, ...] = ("COMMON", "FINE")
 
-# 행 수 상한. 행동이 넷뿐이라 이 이상은 같은 일의 반복이다.
-MAX_ROWS = 8
+# 장비 교체가 받는 우선순위. 무게는 `bots/upgrade.GEAR_PRIORITY_WEIGHTS` 가 든다 —
+# 여기는 **어휘**이고 거기는 **저울**이다.
+GEAR_PRIORITY_CHOICES: tuple[str, ...] = ("ATTACK", "DEFENSE")
+
+# 행동에서 그 행동이 받는 인자 목록으로. **여기 없는 행동은 인자를 안 받는다.**
+# 표 하나로 두는 이유는, 행동을 더할 때 검증·화면·문장이 각자 목록을 들면 셋이 갈리기
+# 때문이다 — 실제로 등급 목록이 그렇게 두 곳에 있었다.
+ACTION_ARGUMENTS: dict[str, tuple[str, ...]] = {
+    ACTION_DISCARD: DISCARD_CHOICES,
+    ACTION_UPGRADE_GEAR: GEAR_PRIORITY_CHOICES,
+}
+
+# 행 수 상한. 행동이 일곱이라 그보다 조금 넉넉하다 — 같은 행동을 인자만 바꿔 두 번
+# 두는 배치(보통 버리고 상급도 버리고)가 흔해서다.
+MAX_ROWS = 10
 
 
 @dataclass(frozen=True)
@@ -40,7 +59,9 @@ class MaintenanceRow:
     """정비 규칙 한 행. 위에서 아래로 순서대로 돈다 — 전투 규칙표와 같은 규약이다."""
 
     action: str
-    # DISCARD 의 인자. 다른 행동은 빈 문자열이다.
+    # **이 행동의 인자다.** 이름이 `grade` 인 것은 처음 만든 행동(버리기)이 등급만
+    # 받았기 때문이고, 저장된 절의 키라 못 바꾼다 — 뜻은 「인자」이며 무엇을 받는지는
+    # `ACTION_ARGUMENTS` 가 정한다. 인자를 안 받는 행동은 빈 문자열이다.
     grade: str = ""
 
 
@@ -58,10 +79,13 @@ def check_rows(rows: tuple[MaintenanceRow, ...]) -> str:
     for row in rows:
         if row.action not in MAINTENANCE_ACTIONS:
             return f"모르는 행동이다: {row.action}"
-        if row.action == ACTION_DISCARD and row.grade not in DISCARD_CHOICES:
-            return f"버릴 수 없는 등급이다: {row.grade}"
-        if row.action != ACTION_DISCARD and row.grade:
-            return f"{row.action} 은 인자를 받지 않는다"
+        allowed = ACTION_ARGUMENTS.get(row.action)
+        if allowed is None:
+            if row.grade:
+                return f"{row.action} 은 인자를 받지 않는다"
+            continue
+        if row.grade not in allowed:
+            return f"{row.action} 이 받을 수 없는 인자다: {row.grade or '(빈 값)'}"
     return ""
 
 

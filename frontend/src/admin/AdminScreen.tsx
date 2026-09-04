@@ -15,8 +15,10 @@ import { SkillTable } from './SkillTable'
 import { ValueTree } from './ValueTree'
 import { PublishBar } from './PublishBar'
 import { readActivePack } from '../content/pack'
+import { ALL_ITEM_TAGS, ALL_SKILL_IDS } from '../core/resources'
 import { BENCHMARK_RULESETS, G0_RULESETS } from '../core/resources'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
+import { BotDetailPanel } from './BotDetail'
 import { BotPanel } from './BotPanel'
 import { readInventory, type InventoryView } from '../storage'
 import {
@@ -24,6 +26,7 @@ import {
   applyBotSettings,
   readBotAdmin,
   readBotBag,
+  readBotDetail,
   readDoppelGear,
   type BotOverview,
 } from '../storage/botAdmin'
@@ -36,10 +39,17 @@ import {
   readAdminItems,
   readContentAdmin,
   readContentAsset,
+  type BotDetail,
   type CatalogAdminView,
   type ContentAssetView,
   type ContentDraftView,
 } from '../storage'
+
+/** 사람 화면과 같은 밸런스를 본다 — 다른 값을 보면 캐릭터 탭이 다른 것을 그린다. */
+const PLAYER_BASE = (readActivePack().balance as Record<string, unknown>).player as Record<
+  string,
+  number
+>
 
 type Tab = 'balance' | 'enemies' | 'skills' | 'rooms' | 'catalog' | 'bots' | 'content'
 
@@ -103,6 +113,9 @@ export function AdminScreen(): React.JSX.Element {
   const [detail, setDetail] = useState('')
   const [bots, setBots] = useState<BotOverview | undefined>(undefined)
   const [botBag, setBotBag] = useState<InventoryView | undefined>(undefined)
+  // 고른 봇의 규칙표·성장·스킬·지나간 판. 가방과 따로인 것은 가방이 이미 사람 화면과
+  // 같은 라우트를 쓰고 있어서다.
+  const [botDetail, setBotDetail] = useState<BotDetail | undefined>(undefined)
   const [myBag, setMyBag] = useState<InventoryView | undefined>(undefined)
   const [doppelGear, setDoppelGear] = useState<InventoryView | undefined>(undefined)
 
@@ -241,6 +254,7 @@ export function AdminScreen(): React.JSX.Element {
             }}
           />
         ) : tab === 'bots' ? (
+          <>
           <BotPanel
             overview={bots}
             rulesetIds={RULESET_IDS}
@@ -253,7 +267,9 @@ export function AdminScreen(): React.JSX.Element {
             }}
             onPickBot={(accountId) => {
               setBotBag(undefined)
+              setBotDetail(undefined)
               void readBotBag(token, accountId).then(setBotBag)
+              void readBotDetail(token, accountId).then(setBotDetail)
             }}
             onGift={(accountId, itemId) => {
               void applyBotGift(token, accountId, itemId).then((updated) => {
@@ -279,6 +295,16 @@ export function AdminScreen(): React.JSX.Element {
               })
             }}
           />
+            {/* **봇 하나를 사람 화면과 같은 눈으로 연다.** 위의 표는 봇 떼를 다루고,
+                여기는 고른 하나를 연다 — 규칙표 둘, 캐릭터, 가방, 스킬, 지나간 판. */}
+            <BotDetailPanel
+              detail={botDetail}
+              bag={botBag}
+              baseStats={PLAYER_BASE}
+              allSkills={ALL_SKILL_IDS}
+              allItems={ALL_ITEM_TAGS}
+            />
+          </>
         ) : tab === 'content' ? (
           <ContentAdminPanel
               content={content}

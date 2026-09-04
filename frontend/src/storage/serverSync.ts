@@ -1057,21 +1057,38 @@ export async function readProgress(token: string): Promise<ProgressView | undefi
   if (response === undefined || !response.ok) {
     return undefined
   }
-  const body = (await response.json()) as {
-    level: number
-    total_xp: number
-    remaining_xp: number
-    next_xp: number
-    stats: Record<string, number>
-    stat_keys: string[]
-    stat_points: number
-    spent_points: number
-    bonus_rule_slots: number
-    bonus_cpu: number
-    reached_floor?: number
-    floor_cap?: number
-    loadout?: RawPlayerLoadout | null
-  }
+  return readProgressPayload((await response.json()) as Record<string, unknown>)
+}
+
+/** 서버가 보내는 성장 절. */
+interface RawProgress {
+  level: number
+  total_xp: number
+  remaining_xp: number
+  next_xp: number
+  stats: Record<string, number>
+  stat_keys: string[]
+  stat_points: number
+  spent_points: number
+  bonus_rule_slots: number
+  bonus_cpu: number
+  reached_floor?: number
+  floor_cap?: number
+  loadout?: RawPlayerLoadout | null
+}
+
+/**
+ * 성장 절을 화면 값으로 만든다.
+ *
+ * **라우트에서 갈라 냈다.** 관리 화면이 봇의 성장을 같은 모양으로 읽어야 하는데, 매핑이
+ * 라우트 안에 갇혀 있으면 그쪽이 제 것을 하나 더 만들게 된다 — 봇 가방이 한 번 그렇게
+ * 갈렸고, 그때 「봇에게 뭐가 있지」를 답하려던 화면이 답을 틀리게 했다.
+ *
+ * @param raw 서버가 보낸 절.
+ * @returns 화면이 읽을 성장 상태.
+ */
+export function readProgressPayload(raw: Record<string, unknown>): ProgressView {
+  const body = raw as unknown as RawProgress
   return {
     level: body.level,
     totalXp: body.total_xp,

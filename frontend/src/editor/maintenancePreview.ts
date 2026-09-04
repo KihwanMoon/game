@@ -19,6 +19,13 @@
  */
 import type { ConsumableView, InventoryView, MaintenanceRowView } from '../storage'
 
+import {
+  listSealedWorn,
+  runUnseal,
+  runUpgradeConsumable,
+  runUpgradeGear,
+} from './maintenanceUpgrade'
+
 /** 미리보기 한 줄. */
 export interface PreviewRow {
   /** 몇 번째 행인가. */
@@ -71,6 +78,14 @@ interface PreviewState {
   /** 아직 안 판 재고 — (개수, 하나 값). */
   readonly stock: { count: number; price: number }[]
   isShort: boolean
+  /**
+   * 「더 좋게 만든다」 셋이 읽는 원본.
+   *
+   * 저쪽은 **덜어 내는 일이 아니라 고르는 일**이라 개수만으로는 못 센다 — 봉인은 값이
+   * 아이템마다 다르고, 교체는 어느 자리에 무엇이 끼워져 있는지를 봐야 한다.
+   */
+  readonly inventory: InventoryView | undefined
+  readonly consumables: ConsumableView | undefined
 }
 
 /**
@@ -113,6 +128,8 @@ function buildState(
     refills,
     stock,
     isShort: false,
+    inventory,
+    consumables,
   }
 }
 
@@ -255,6 +272,16 @@ function runRow(state: PreviewState, row: MaintenanceRowView): RowOutcome {
       return runRefill(state)
     case 'SELL_STOCK':
       return runSell(state)
+    case 'UNSEAL': {
+      const outcome = runUnseal(listSealedWorn(state.inventory), state.balance)
+      state.balance += outcome.money
+      state.isShort = state.isShort || outcome.isShort
+      return outcome
+    }
+    case 'UPGRADE_GEAR':
+      return runUpgradeGear(state.inventory, row.grade)
+    case 'UPGRADE_CONSUMABLE':
+      return runUpgradeConsumable(state.consumables)
     default:
       // 어휘 밖이다. 검증이 이미 막고 있으므로 여기서는 「안 돈다」만 말한다.
       return { text: '모르는 행동이라 안 돈다', money: 0, isActive: false }

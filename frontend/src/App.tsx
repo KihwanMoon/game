@@ -1966,9 +1966,23 @@ export function App(): React.JSX.Element {
         label: '관리',
         main: (
           <>
-            {/* **관리는 별도 페이지다** (`/admin.html`). 표와 격자가 폭을 다 써야 하는데
+            {/* **관리 페이지로 가는 문이 맨 위다.** 아래의 세계 현황과 개입이 길어서,
+                그 뒤에 두었을 때는 스크롤을 지나야 찾을 수 있었다 — 이 탭에 오는 가장
+                흔한 이유가 저 페이지로 가려는 것인데 그것이 가장 찾기 어려웠다.
+
+                **관리는 별도 페이지다** (`/admin.html`). 표와 격자가 폭을 다 써야 하는데
                 탭 하나는 좁은 열이라 게임 UI 와 공간을 다퉜다. 여기엔 세계 현황과 개입만
                 남긴다 — 판을 돌다 급히 볼 것들이다. */}
+            <Panel title="관리 페이지" tone="panel" padded>
+              <a className="adm__link" href="/admin.html">
+                관리 페이지 열기
+              </a>
+              <ValueExpr
+                text="봇·콘텐츠·아이템은 저기서 본다 — 표와 격자가 폭을 다 써야 한다"
+                size="sm"
+                dim
+              />
+            </Panel>
             <AdminPanel
               overview={admin}
               detail={adminDetail}
@@ -1997,12 +2011,6 @@ export function App(): React.JSX.Element {
                 })
               }}
             />
-            <Panel title="콘텐츠·아이템 관리" tone="panel" padded>
-              <ValueExpr text="별도 페이지에서 연다 — 표와 격자가 폭을 다 써야 한다" size="sm" dim />
-              <a className="adm__link" href="/admin.html">
-                관리 페이지 열기
-              </a>
-            </Panel>
           </>
         ),
       })

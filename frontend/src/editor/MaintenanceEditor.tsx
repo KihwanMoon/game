@@ -34,7 +34,6 @@ import {
 import {
   checkBlocked,
   checkMaintenanceRows,
-  DISCARD_GRADES,
   duplicateRow,
   findAction,
   formatMaintenanceSentence,
@@ -61,6 +60,12 @@ const WHEN_TEXT = '티켓이 닫힐 때(죽거나 완주) 위에서 아래로 �
 
 /** 미리보기가 어림이라는 사실. **확정처럼 적으면 틀렸을 때 화면이 거짓말한 것이 된다.** */
 const ESTIMATE_TEXT = '지금 가방으로 잰 어림이다 — 실제로는 판이 끝난 뒤의 가방으로 돈다'
+
+/** 인자 칸 옆에 붙일 한 줄. 고르는 값이 무엇을 뜻하는지 말한다. */
+const ARG_NOTES: Readonly<Record<string, string>> = {
+  DISCARD: '유물은 자동으로 안 버린다 — 되찾은 것도 남는다',
+  UPGRADE_GEAR: '봇이 쓰는 저울과 같다 — 근소한 차이로는 안 바꾼다',
+}
 
 /**
  * 행 하나를 그린다.
@@ -188,13 +193,13 @@ function MaintenanceRowDetail(props: {
         <span className="mnt__when">{`${String(props.index + 1)}.`}</span>
         <ValueExpr text={formatMaintenanceSentence(props.row)} size="sm" />
       </div>
-      {action?.takesGrade === true ? (
+      {action !== undefined && action.args.length > 0 ? (
         <div className="invd__row">
-          <label className="wld__label" htmlFor="mnt-grade">
-            버릴 등급
+          <label className="wld__label" htmlFor="mnt-arg">
+            {action.argLabel}
           </label>
           <select
-            id="mnt-grade"
+            id="mnt-arg"
             className="term__field"
             value={props.row.grade}
             disabled={props.disabled}
@@ -202,16 +207,15 @@ function MaintenanceRowDetail(props: {
               props.onChange({ ...props.row, grade: event.target.value })
             }}
           >
-            {DISCARD_GRADES.map(([value, label]) => (
+            {action.args.map(([value, label]) => (
               <option value={value} key={value}>
                 {label}
               </option>
             ))}
           </select>
-          {/* **유물이 목록에 없는 것은 빠진 것이 아니다.** 최상급을 자동으로 버리는
-              규칙은 오조작이 그대로 사고가 된다 — 화면이 그 사실을 말해야 「왜 없지」가
-              안 나온다. */}
-          <ValueExpr text="유물은 자동으로 안 버린다 — 되찾은 것도 남는다" size="sm" dim />
+          {/* 그 인자가 무엇을 뜻하는지 한 줄. 「공격」만 있으면 무엇을 기준으로 고르는지
+              모른다 — 팔레트의 설명이 여기까지 따라오지 않는다. */}
+          <ValueExpr text={ARG_NOTES[props.row.action] ?? ''} size="sm" dim />
         </div>
       ) : (
         <ValueExpr text="이 행동은 고칠 인자가 없다 — 순서만 정한다" size="sm" dim />

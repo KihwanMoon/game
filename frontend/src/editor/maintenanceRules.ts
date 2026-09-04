@@ -5,7 +5,8 @@
  * 코어가 재현해야 하지만(R5·G3), 정비는 계정 상태를 만지는 서버의 일이다. 그래서 블록도
  * CPU 도 없다 — 대신 **조립의 규약은 같다**: 행 순서가 실행 순서이고, 위에서 아래로 돈다.
  *
- * 어휘는 닫혀 있다. 행동 넷, 버리기 인자 둘. 자유 조건식은 전투 DSL 의 자리다.
+ * 어휘는 닫혀 있다. 행동 일곱, 인자는 그 행동이 정한 목록 안에서만. 자유 조건식은 전투
+ * DSL 의 자리다.
  *
  * 순수 값이다. 렌더 검사가 훅 없이 문장과 검증을 볼 수 있어야 한다 — 저장 층
  * (`game/app/store/maintenance.py`) 의 `check_rows` 와 **같은 규칙을 본다.** 화면이
@@ -14,7 +15,7 @@
 import type { MaintenanceRowView } from '../storage'
 
 /** 행 수 상한. 서버 `MAX_ROWS` 와 같은 값이다 — 다르면 화면이 통과시킨 것을 서버가 막는다. */
-export const MAX_MAINTENANCE_ROWS = 8
+export const MAX_MAINTENANCE_ROWS = 10
 
 /** 버리기가 받는 등급. 유물은 없다 — 최상급을 자동으로 버리는 규칙은 오조작이 사고가 된다. */
 export const DISCARD_GRADES: readonly (readonly [string, string])[] = [
@@ -22,18 +23,34 @@ export const DISCARD_GRADES: readonly (readonly [string, string])[] = [
   ['FINE', '상급'],
 ]
 
+/** 인자 하나의 선택지. 값은 서버 어휘, 이름은 화면의 것이다. */
+export type ArgChoice = readonly [string, string]
+
 /** 정비 행동 하나의 뜻. */
 export interface MaintenanceAction {
   readonly id: string
   /** 팔레트 버튼에 적을 짧은 이름. */
   readonly label: string
-  /** 이 행동이 인자(등급)를 받는가. */
-  readonly takesGrade: boolean
+  /**
+   * 이 행동이 받는 인자들. 비어 있으면 인자를 안 받는다.
+   *
+   * **표 하나로 둔다.** 서버의 `ACTION_ARGUMENTS` 와 짝이다 — 검증·화면·문장이 각자
+   * 목록을 들면 셋이 갈린다.
+   */
+  readonly args: readonly ArgChoice[]
+  /** 인자를 고르는 칸에 붙일 이름. 인자가 없으면 빈 문자열. */
+  readonly argLabel: string
   /** 무엇을 하는가 한 줄. 팔레트가 버튼 아래에 적는다. */
   readonly note: string
   /** 돈이 나가는가(-1) 드는가(+1) 그대로인가(0). 검증의 순서 힌트가 이것을 본다. */
   readonly money: -1 | 0 | 1
 }
+
+/** 장비 교체가 받는 우선순위. 서버 `GEAR_PRIORITY_CHOICES` 와 같은 값이다. */
+export const GEAR_PRIORITIES: readonly ArgChoice[] = [
+  ['ATTACK', '공격'],
+  ['DEFENSE', '방어'],
+]
 
 /**
  * 정비가 아는 행동들. **닫힌 목록이다** — 모르는 행동이 조용히 무시되면, 켰다고 믿은
@@ -43,30 +60,61 @@ export const MAINTENANCE_ACTIONS: readonly MaintenanceAction[] = [
   {
     id: 'DISCARD',
     label: '버리기',
-    takesGrade: true,
+    args: DISCARD_GRADES,
+    argLabel: '버릴 등급',
     note: '이 등급의 가방 장비를 버린다 (되찾은 것은 남긴다)',
     money: 0,
   },
   {
     id: 'REPAIR',
     label: '복구',
-    takesGrade: false,
+    args: [],
+    argLabel: '',
     note: '파손된 착용 장비를 잔액 안에서 복구한다',
     money: -1,
   },
   {
     id: 'REFILL',
     label: '보충',
-    takesGrade: false,
+    args: [],
+    argLabel: '',
     note: '끼운 소모품을 잔액 안에서 보충한다',
     money: -1,
   },
   {
     id: 'SELL_STOCK',
     label: '재고 팔기',
-    takesGrade: false,
+    args: [],
+    argLabel: '',
     note: '가방의 소모품 재고를 전부 판다',
     money: 1,
+  },
+  {
+    id: 'UNSEAL',
+    label: '봉인 해제',
+    args: [],
+    argLabel: '',
+    // **착용한 것만이다.** 가방 것까지 열면 안 쓰는 물건에 돈을 쓰고, 그 돈은 죽을 때
+    // 가방과 함께 사라진다 (결정 #34).
+    note: '착용 장비의 봉인을 잔액 안에서 연다 (싼 칸부터)',
+    money: -1,
+  },
+  {
+    id: 'UPGRADE_GEAR',
+    label: '장비 교체',
+    args: GEAR_PRIORITIES,
+    argLabel: '우선순위',
+    note: '이 우선순위로 가방에 더 나은 것이 있으면 갈아 낀다',
+    money: 0,
+  },
+  {
+    id: 'UPGRADE_CONSUMABLE',
+    label: '소모품 교체',
+    args: [],
+    argLabel: '',
+    // 가득 찬 칸만 바꾼다 — 쓰던 칸을 갈면 남은 충전이 사라진다.
+    note: '가득 찬 소모품 칸을 가방의 더 나은 것으로 갈아 낀다',
+    money: 0,
   },
 ]
 
@@ -81,10 +129,21 @@ export function findAction(action: string): MaintenanceAction | undefined {
 }
 
 /**
- * 등급의 한글 이름.
+ * 인자의 한글 이름.
+ *
+ * @param action 그 인자를 받는 행동. 목록이 행동마다 다르다.
+ * @param value 인자 값.
+ * @returns 한글 이름. 모르면 받은 것을 그대로 — 영어 키라도 빈 칸보다 낫다.
+ */
+export function formatArgName(action: MaintenanceAction | undefined, value: string): string {
+  return action?.args.find(([one]) => one === value)?.[1] ?? value
+}
+
+/**
+ * 등급의 한글 이름. 버리기 행이 쓴다.
  *
  * @param grade 등급 id.
- * @returns 한글 이름. 모르면 받은 것을 그대로 — 영어 키라도 빈 칸보다 낫다.
+ * @returns 한글 이름.
  */
 export function formatGradeName(grade: string): string {
   return DISCARD_GRADES.find(([value]) => value === grade)?.[1] ?? grade
@@ -106,10 +165,10 @@ export function formatMaintenanceSentence(row: MaintenanceRowView): string {
   if (action === undefined) {
     return `모르는 행동이다: ${row.action || '(빈 값)'}`
   }
-  if (!action.takesGrade) {
+  if (action.args.length === 0) {
     return action.note
   }
-  return `${formatGradeName(row.grade)} ${action.note}`
+  return `${formatArgName(action, row.grade)} ${action.note}`
 }
 
 /**
@@ -192,10 +251,7 @@ export function duplicateRow(
  */
 export function createRow(action: string): MaintenanceRowView {
   const found = findAction(action)
-  return {
-    action,
-    grade: found?.takesGrade === true ? (DISCARD_GRADES[0]?.[0] ?? '') : '',
-  }
+  return { action, grade: found?.args[0]?.[0] ?? '' }
 }
 
 /** 검증 한 줄. 막는 것과 일러 주는 것을 가른다. */
@@ -242,14 +298,14 @@ export function checkMaintenanceRows(
       problems.push({ index, isBlocking: true, text: `모르는 행동이다: ${row.action}` })
       return
     }
-    if (action.takesGrade && !DISCARD_GRADES.some(([value]) => value === row.grade)) {
+    if (action.args.length > 0 && !action.args.some(([value]) => value === row.grade)) {
       problems.push({
         index,
         isBlocking: true,
-        text: `버릴 수 없는 등급이다: ${row.grade || '(빈 값)'}`,
+        text: `${action.label} 이 받을 수 없는 인자다: ${row.grade || '(빈 값)'}`,
       })
     }
-    if (!action.takesGrade && row.grade !== '') {
+    if (action.args.length === 0 && row.grade !== '') {
       problems.push({ index, isBlocking: true, text: `${action.label} 은 인자를 받지 않는다` })
     }
     // **같은 행이 두 번 있으면 뒤엣것은 할 일이 없다.** 앞의 행이 이미 다 했기 때문이다 —
