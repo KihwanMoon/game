@@ -12,7 +12,6 @@
 
 from game.app.services.manage_meta import RunSummary, list_ruleset_blocks
 from game.app.simulation.state import FACTION_ENEMY, WorldState
-from game.schemas.meta_save import FIRST_FLOOR
 from game.schemas.ruleset import RuleSet
 
 # 층을 밟지 못한 런. 진 판이 여기 해당한다.
@@ -49,6 +48,7 @@ def build_run_summary(
     defeated: tuple[str, ...],
     player_ruleset: RuleSet,
     is_cleared: bool,
+    floor_reached: int,
     enemy_rulesets: tuple[RuleSet, ...] = (),
 ) -> RunSummary:
     """판 하나의 결산 입력을 만든다.
@@ -61,6 +61,9 @@ def build_run_summary(
         defeated: 잡은 적 종류. 조우 목록의 부분집합이다.
         player_ruleset: 이번 판에 쓴 플레이어 규칙표.
         is_cleared: 플레이어가 이겼는가.
+        floor_reached: 이 판이 **끝까지 깬** 가장 깊은 층. 한 층도 못 깼으면 0.
+            **부르는 쪽이 재서 넘긴다** — 예전에는 여기서 「이겼으면 1층」을 박아 넣었고,
+            그래서 10층을 깨도 최고 층이 1 로 남았다 (`resolve_deepest_floor`).
         enemy_rulesets: 만난 적의 규칙표들. 없으면 플레이어 것만 센다.
 
     Returns:
@@ -73,7 +76,7 @@ def build_run_summary(
         perceptions.update(seen_perceptions)
         actions.update(seen_actions)
     return RunSummary(
-        floor_reached=FIRST_FLOOR if is_cleared else NO_FLOOR,
+        floor_reached=max(NO_FLOOR, floor_reached),
         is_cleared=is_cleared,
         seen_perceptions=tuple(sorted(perceptions)),
         seen_actions=tuple(sorted(actions)),

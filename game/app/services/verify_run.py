@@ -18,6 +18,7 @@
 from dataclasses import dataclass
 from typing import Any
 
+from game.app.progression.floors import read_floor_cap, resolve_deepest_floor
 from game.app.rules.validator import validate_ruleset
 from game.app.services.manage_meta import RunSummary
 from game.app.services.run_battle import BattleResult, run_battle
@@ -203,6 +204,12 @@ def evaluate_submission(
             defeated,
             ruleset,
             result.outcome == OUTCOME_PLAYER_WIN,
+            # **재시뮬이 센 방 수로 잰다.** 층 진행을 여는 것과 같은 값이라야 도달 기록과
+            # 최고 층이 안 갈린다 (`floor_service.apply_floor_outcome`).
+            min(
+                resolve_deepest_floor(floor, result.cleared_rooms, rooms_per_floor),
+                read_floor_cap(context.balance),
+            ),
             list_encountered_rulesets(
                 encountered, context.balance["enemies"], dict(context.enemy_rulesets)
             ),

@@ -30,6 +30,32 @@ def resolve_floor(wanted: int, reached: int) -> int:
     return max(FIRST_FLOOR, min(int(wanted), max(FIRST_FLOOR, int(reached))))
 
 
+def resolve_deepest_floor(start_floor: int, cleared_rooms: int, rooms_per_floor: int) -> int:
+    """이 하강이 **끝까지 깬** 가장 깊은 층.
+
+    **진 판도 몇 층까지는 깼다.** 하강이 여러 층에 걸치므로 「이겼다」 하나로는 어디까지
+    갔는지 알 수 없고, 끝까지 깬 방 수가 그것을 말한다.
+
+    도달 기록과 메타 세이브의 최고 층이 **같은 수를 봐야 한다.** 예전에는 아니었다 —
+    도달 기록은 여기서 나온 값을 받았는데 메타 세이브는 「이겼으면 1층」을 박아 넣고
+    있어서, 7층까지 내려간 계정의 최고 층이 1 로 남았다. 화면이 틀리게 적는 것으로 끝나지
+    않는다: 층 보너스 규칙 슬롯이 그 값에서 나오므로(`manage_meta.get_slot_bonus`)
+    최대 +4 가 아무에게도 안 붙고 있었다 (GDD §2.3).
+
+    Args:
+        start_floor: 하강이 시작한 층.
+        cleared_rooms: 끝까지 깬 방 수.
+        rooms_per_floor: 층 하나에 드는 방 수. 0 이면 연쇄 전체가 한 층이다.
+
+    Returns:
+        가장 깊은 층. 한 층도 못 깼으면 0 — 「0층」이 아니라 **없다**는 뜻이다.
+    """
+    cleared_floors = cleared_rooms // max(1, rooms_per_floor)
+    if cleared_floors <= 0:
+        return 0
+    return start_floor + cleared_floors - 1
+
+
 def read_floor_cap(balance: dict) -> int:
     """마지막 층을 읽는다.
 

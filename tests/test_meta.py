@@ -245,3 +245,50 @@ def test_rendered_page_shows_every_rule(balance, enemy_rulesets):
     # 규칙표 JSON 과 같은 표기여야 도감을 보고 그대로 옮겨 적을 수 있다.
     assert "== true" in text
     assert "True" not in text
+
+
+@pytest.mark.parametrize(
+    ("start_floor", "cleared_rooms", "rooms_per_floor", "deepest"),
+    [
+        # 한 층도 못 깼다 — 0 은 「0층」이 아니라 **없다**는 뜻이다.
+        (1, 0, 5, 0),
+        (1, 4, 5, 0),
+        # 딱 한 층.
+        (1, 5, 5, 1),
+        (1, 9, 5, 1),
+        # 여러 층에 걸친 하강. 여기가 예전에 늘 1 로 접히던 자리다.
+        (1, 10, 5, 2),
+        (1, 35, 5, 7),
+        (1, 50, 5, 10),
+        # 깊은 데서 출발하면 그만큼 더 깊다.
+        (3, 10, 5, 4),
+        # 층 개념이 없는 옛 티켓. 연쇄 전체가 한 층이다.
+        (1, 3, 0, 3),
+    ],
+)
+def test_deepest_floor_follows_the_rooms_actually_cleared(
+    start_floor, cleared_rooms, rooms_per_floor, deepest
+):
+    """★ 「이겼다」 하나로는 어디까지 갔는지 알 수 없다 — 깬 방 수가 그것을 말한다.
+
+    예전에는 메타 세이브가 「이겼으면 1층」을 박아 넣어서, 7층까지 내려간 계정의 최고 층이
+    1 로 남았다. 화면이 틀리게 적는 것으로 끝나지 않는다: 층 보너스 규칙 슬롯이 그 값에서
+    나오므로 최대 +4 가 **아무에게도** 안 붙고 있었다 (GDD §2.3).
+    """
+    from game.app.progression.floors import resolve_deepest_floor
+
+    assert resolve_deepest_floor(start_floor, cleared_rooms, rooms_per_floor) == deepest
+
+
+def test_the_slot_bonus_is_reachable_at_all():
+    """★ 최고 층이 1 에서 안 움직이면 이 곡선 전체가 죽은 코드다.
+
+    `get_slot_bonus` 자체는 늘 옳았다 — 넣어 주는 값이 늘 1 이었을 뿐이다. 곡선만
+    검사하면 그 사실이 안 잡히므로, **도달할 수 있는 값인지**를 함께 잰다.
+    """
+    from game.app.progression.floors import resolve_deepest_floor
+
+    # 5방짜리 층을 넷 깨고 출발층이 1 이면 4층이다 → 보너스 3.
+    reached = resolve_deepest_floor(1, 20, 5)
+    assert reached == 4
+    assert get_slot_bonus(reached) == 3

@@ -10,7 +10,7 @@
 
 from game.api.deps import get_context, get_item_catalog, get_pool
 from game.api.loadout_service import build_equipped_entries, count_slot_bonus
-from game.app.progression.floors import read_floor_cap
+from game.app.progression.floors import read_floor_cap, resolve_deepest_floor
 from game.app.services.verify_run import VERDICT_VERIFIED, VerifiedRun
 from game.app.simulation.plan import OUTCOME_PLAYER_WIN
 from game.app.store.accounts import find_player_entity
@@ -45,14 +45,13 @@ def apply_floor_outcome(
     """
     if verified.verdict != VERDICT_VERIFIED:
         return ""
-    # **진 판도 몇 층까지는 깼다.** 하강이 여러 층에 걸치므로 "이겼다" 하나로는 어디까지
-    # 갔는지 알 수 없다 — 깬 방 수가 그것을 말한다.
-    per_floor = max(1, rooms_per_floor)
-    cleared_floors = verified.cleared_rooms // per_floor
-    if cleared_floors <= 0:
+    # **진 판도 몇 층까지는 깼다.** 셈은 `resolve_deepest_floor` 가 든다 — 메타 세이브의
+    # 최고 층도 같은 수를 봐야 하고, 두 곳이 각자 세면 한쪽만 고쳐지는 날이 온다.
+    deepest_cleared = resolve_deepest_floor(floor, verified.cleared_rooms, rooms_per_floor)
+    if deepest_cleared <= 0:
         return ""
     cap = read_floor_cap(get_context().balance)
-    deepest = min(floor + cleared_floors - 1, cap)
+    deepest = min(deepest_cleared, cap)
     pool = get_pool()
     entity_id = find_player_entity(pool, account_id)
     before = read_reached_floor(pool, entity_id)
