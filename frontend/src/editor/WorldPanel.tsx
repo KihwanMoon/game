@@ -15,7 +15,9 @@
  */
 import { Button, GlyphState, Panel, ValueExpr } from "../ds";
 import { formatAffix } from "./InventoryPanel";
-import type { AuctionView, LeaderboardView, ProgressView } from "../storage";
+import type { AuctionView, ItemView, LeaderboardView, ListingView, ProgressView } from "../storage";
+
+import { compareToWorn, formatDelta } from "./compareItems";
 
 import { LinkNoticeLine } from './LinkNoticeLine'
 import { checkLinked, type LinkState } from './linkState'
@@ -27,6 +29,13 @@ export interface WorldPanelProps {
   readonly accountId: number | undefined;
   readonly link: LinkState;
   readonly detail: string;
+  /**
+   * 자리에서 지금 낀 것으로. 매물을 「내 것보다 나은가」로 읽는 데 쓴다.
+   *
+   * 서버가 매물의 자리를 이제 보내므로 견줄 상대를 찾을 수 있다 — 예전에는 그 필드가
+   * 없어서 접사만 늘어놓고 판단을 통째로 사람에게 넘겼다.
+   */
+  readonly worn: ReadonlyMap<string, ItemView>;
   readonly onBuy: (listingId: number) => void;
   readonly onCancel: (listingId: number) => void;
   readonly onDaily: () => void;
@@ -35,6 +44,67 @@ export interface WorldPanelProps {
 /** 못 닿았을 때 무엇을 못 보는가. 앞머리(`서버에 닿지 못했다`)는 linkState 가 든다. */
 const MISSING_HINT = '순위와 경매는 서버가 안다'
 
+
+/**
+ * 매물을 지금 낀 것과 견준다.
+ *
+ * **가방의 견줌과 같은 규칙이다** — 점수 하나가 아니라 스탯별 차이까지만 낸다. 같은
+ * 질문에 두 화면이 다른 방식으로 답하면 어느 쪽을 믿을지가 또 문제가 된다.
+ *
+ * 자리를 모르는 매물(소모품 등)은 견주지 않는다. 견줄 자리가 없다.
+ *
+ * @param listing 볼 매물.
+ * @param worn 자리에서 지금 낀 것으로의 대응표.
+ * @returns 견줌 줄들. 견줄 것이 없으면 null.
+ */
+function renderListingCompare(
+  listing: ListingView,
+  worn: ReadonlyMap<string, ItemView>,
+): React.JSX.Element | null {
+  if (listing.slot === '') {
+    return null
+  }
+  const held = worn.get(listing.slot)
+  const rows = compareToWorn(listing.affixes, held?.affixes ?? [])
+  if (rows.length === 0) {
+    const same = held === undefined ? '빈 자리라 그대로 이득이다' : '지금 낀 것과 같다'
+    return <ValueExpr text={same} size="sm" dim />
+  }
+  return (
+    <ul className="invd__compare">
+      {rows.map((row) => {
+        const gain = row.flatDelta + row.percentDelta
+        const tone = gain > 0 ? ' invd__delta--up' : gain < 0 ? ' invd__delta--down' : ''
+        return (
+          <li className="invd__compare-row" key={row.stat}>
+            <span className="invd__compare-name">
+              {held === undefined ? `${row.label} · 빈 자리` : row.label}
+            </span>
+            <span className={`invd__delta${tone}`}>{formatDelta(row)}</span>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+/** 격차 막대의 칸 수. 여덟이면 한 칸이 12.5%라 눈이 그 단위로 읽는다. */
+export const BAR_SEGMENTS = 8
+
+/**
+ * 1등 대비 격차를 칸으로 나눈다.
+ *
+ * **색이 아니라 칸 수가 정보다.** 그리고 칸 옆에 점수가 그대로 적혀 있으므로, 칸을
+ * 못 읽어도 잃는 것이 없다 — 색이 유일한 채널이 되지 않게 하는 규율과 같다.
+ *
+ * @param score 이 줄의 점수.
+ * @param top 1등의 점수. 0 이면 아무도 점수가 없다.
+ * @returns 칸마다 켜짐 여부. 언제나 BAR_SEGMENTS 개다.
+ */
+export function buildBarSegments(score: number, top: number): boolean[] {
+  const filled = top <= 0 ? 0 : Math.round((Math.max(0, score) * BAR_SEGMENTS) / top)
+  return Array.from({ length: BAR_SEGMENTS }, (_, index) => index < filled)
+}
 
 /**
  * 세계 패널을 그린다.
@@ -65,16 +135,25 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
               <ul className="wld__list">
                 {leaderboard.entries.slice(0, 10).map((entry) => (
                   <li
-                    className={`wld__row${entry.accountId === props.accountId ? ' wld__row--me' : ''}`}
+                    className={`wld__rank${entry.accountId === props.accountId ? ' wld__rank--me' : ''}`}
                     key={entry.accountId}
                   >
-                    <span className="wld__label">{String(entry.rank)}</span>
+                    {/* **컬럼 정렬은 미관이 아니라 디버깅 기능이다** — 자리가 맞아야
+                        눈이 세로로 훑는다. 예전에는 `lv6 · 900` 한 덩어리라 레벨도
+                        점수도 줄마다 시작 자리가 달랐다. */}
+                    <span className="wld__rank-no">{String(entry.rank)}</span>
                     <span className="wld__name">{entry.handle}</span>
-                    <ValueExpr
-                      text={`lv${String(entry.level)} · ${String(entry.score)}`}
-                      size="sm"
-                      dim
-                    />
+                    <span className="wld__rank-lv">{`lv${String(entry.level)}`}</span>
+                    <span className="wld__rank-score">{String(entry.score)}</span>
+                    {/* 1등 대비 격차. **색이 아니라 칸 수가 정보이고, 숫자가 정본이다** —
+                        칸은 「얼마나 멀리 있나」를 세지 않고 알게 해 주는 보조다. */}
+                    <span className="wld__bar" aria-hidden="true">
+                      {buildBarSegments(entry.score, leaderboard.entries[0]?.score ?? 0).map(
+                        (isOn, index) => (
+                          <i className={isOn ? 'on' : undefined} key={index} />
+                        ),
+                      )}
+                    </span>
                     {/* **「이것이 너다」는 황동이다** (design/README.md). 예전에는
                         `state="true"` 라 참/거짓의 녹청 ✓ 를 정체성 표시로 쓰고 있었다 —
                         의미색을 빌려 쓰면 그 색이 무엇을 뜻하는지가 화면마다 갈린다.
@@ -113,6 +192,11 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
                         size="sm"
                       />
                     )}
+                    {/* **사기 전에 「내 것보다 나은가」에 답한다.** 접사만 보여 주면
+                        그 판단을 사람이 머리로 해야 하고, 산 뒤에는 되돌릴 수 없다
+                        (귀속된다 — 결정 #07). 가방의 견줌과 같은 규칙으로 낸다:
+                        점수 하나가 아니라 스탯별 차이까지만. */}
+                    {renderListingCompare(item, props.worn)}
                     <div className="wld__row">
                       <ValueExpr
                         text={

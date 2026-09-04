@@ -24,6 +24,7 @@ import {
   buildBagCells,
   buildEquipCells,
   clipCellLabel,
+  pickHeadlineAffix,
 } from './inventoryCells'
 import { InventoryGrid } from './InventoryGrid'
 import { InventoryPanel } from './InventoryPanel'
@@ -202,6 +203,7 @@ function renderDetail(kind: 'equip' | 'bag', entry: SlotView, slot = 'BODY'): st
     <InventoryDetail
       choice={{ kind, slot, entry }}
       link="online"
+      worn={undefined}
       repairCost={120}
       feePercent={5}
       onEquip={noop}
@@ -315,5 +317,52 @@ describe('초점과 고름은 다른 채널이다', () => {
     )
     expect(markup).toContain('aria-pressed="true"')
     expect(markup).toContain('aria-pressed="false"')
+  })
+})
+
+describe('가방이 무엇을 해 주는지 말한다', () => {
+  /** 접사가 붙은 아이템 하나. 공유 표본은 접사가 비어 있어 이 검사를 못 한다. */
+  const ARMED: ItemView = {
+    ...(INVENTORY.equipment[0]?.item as ItemView),
+    affixes: [
+      { stat: 'defense', flat: 2, percent: 0, labelKo: '', statLabel: '방어력' },
+      { stat: 'attack', flat: 9, percent: 0, labelKo: '', statLabel: '공격력' },
+    ],
+  }
+
+  it('★ 칸에 대표 접사가 한 줄 붙는다 — 없으면 열세 칸을 하나씩 눌러야 안다', () => {
+    const withAffix: InventoryView = {
+      ...INVENTORY,
+      equipment: [{ ...(INVENTORY.equipment[0] as SlotView), item: ARMED }],
+    }
+    const markup = renderToStaticMarkup(
+      <InventoryGrid inventory={withAffix} pickedKey="" onPick={() => undefined} />,
+    )
+    expect(markup).toContain('invg__fact')
+    expect(markup).toContain('공+9')
+  })
+
+  it('★ 한 글자 표기를 쓴다 — 칸이 54px 라 「공격력 +5」는 잘린다', () => {
+    // 도면 말이 두 글자 표기를 쓰는 것과 같은 이유다. 잘린 채 두면 아무 말도 안 하느니만 못하다.
+    const fact = pickHeadlineAffix(ARMED)
+    expect(fact).not.toBe('')
+    expect(fact).not.toContain('공격력')
+    expect(fact.length).toBeLessThanOrEqual(6)
+  })
+
+  it('가장 큰 접사 하나다 — 동점이면 스탯 이름 순으로 끊는다', () => {
+    expect(pickHeadlineAffix(ARMED)).toBe('공+9')
+  })
+
+  it('접사가 없으면 빈 줄이다 — 칸마다 줄 수가 다르면 격자를 훑을 수 없다', () => {
+    expect(pickHeadlineAffix(INVENTORY.equipment[0]?.item ?? undefined)).toBe('')
+  })
+
+  it('표에 없는 스탯은 칸에 안 적는다 — 상세가 전체 이름으로 답한다', () => {
+    const odd = {
+      ...ARMED,
+      affixes: [{ stat: 'weird_axis', flat: 9, percent: 0, labelKo: '', statLabel: '수수께끼' }],
+    }
+    expect(pickHeadlineAffix(odd)).toBe('')
   })
 })

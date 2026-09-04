@@ -58,6 +58,8 @@ class Listing:
     affixes: tuple[dict, ...] = ()
     expires_in_minutes: int = 0
     is_broken: bool = False
+    # 급. 가방 격자가 이름을 등급색으로 칠하는데 매물만 그 색을 못 쓰고 있었다.
+    grade: str = ""
 
 
 def compute_fee(price: int) -> int:
@@ -171,7 +173,7 @@ def list_open(pool: ConnectionPool, account_id: int, limit: int = 50) -> tuple[L
     with pool.connection() as connection:
         rows = connection.execute(
             "SELECT l.id, l.item_id, i.catalog_id, l.seller_id, l.price, l.state,"
-            " i.affixes, i.is_broken,"
+            " i.affixes, i.is_broken, coalesce(i.grade, ''),"
             " greatest(0, extract(epoch FROM (l.expires_at - now()))::bigint / 60)"
             " FROM auction_listing l JOIN item_instance i ON i.id = l.item_id"
             " JOIN account s ON s.id = l.seller_id"
@@ -192,7 +194,8 @@ def list_open(pool: ConnectionPool, account_id: int, limit: int = 50) -> tuple[L
             is_mine=int(row[3]) == account_id,
             affixes=tuple(read_affix_rows(row[6])),
             is_broken=bool(row[7]),
-            expires_in_minutes=int(row[8] or 0),
+            grade=str(row[8]),
+            expires_in_minutes=int(row[9] or 0),
         )
         for row in rows
     )

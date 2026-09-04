@@ -58,6 +58,9 @@ export function renderCell(
       ) : (
         <span className={`invg__label${formatGradeClass(cell.grade)}`}>{cell.label}</span>
       )}
+      {/* **무엇을 해 주는가 한 줄.** 이것이 없으면 가방을 봐서는 어느 게 더 좋은지
+          알 수 없어 칸을 하나씩 눌러야 한다. 54px 안에 들려고 한 글자 표기를 쓴다. */}
+      {cell.fact === '' ? null : <span className="invg__fact">{cell.fact}</span>}
       {cell.countText === '' ? null : <span className="invg__count">{cell.countText}</span>}
       {cell.marks.length === 0 ? null : (
         <span className="invg__marks">{cell.marks.join(' ')}</span>

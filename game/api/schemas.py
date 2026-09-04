@@ -296,6 +296,11 @@ class ListingView(BaseModel):
     expires_in_minutes: int = 0
     # 걸 때 떼는 수수료. 화면이 다시 계산하면 두 곳이 갈린다.
     fee: int = 0
+    # **어느 자리 물건인가.** 이것이 없으면 화면이 「지금 낀 것과 견주기」를 할 수 없다 —
+    # 견줄 상대를 못 찾는다. 서버는 카탈로그에서 이미 알고 있었고 안 보내고 있었다.
+    slot: str = ""
+    # 급. 가방 격자가 이름을 등급색으로 칠하는데, 매물만 그 색을 못 쓰고 있었다.
+    grade: str = ""
 
 
 class AuctionResponse(BaseModel):

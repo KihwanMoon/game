@@ -991,6 +991,15 @@ export interface ListingView {
   /** 남은 시간(분). 절대 시각이 아니라 남은 양이라 기기 시계가 어긋나도 같다. */
   readonly expiresInMinutes: number
   readonly fee: number
+  /**
+   * 어느 자리 물건인가.
+   *
+   * **이것이 없으면 「지금 낀 것과 견주기」를 할 수 없다** — 견줄 상대를 못 찾는다.
+   * 서버는 카탈로그에서 이미 알고 있었고 안 보내고 있었다.
+   */
+  readonly slot: string
+  /** 급. 가방 격자가 이름을 등급색으로 칠하는데 매물만 그 색을 못 쓰고 있었다. */
+  readonly grade: string
 }
 
 /** 경매장. 수수료율을 함께 받는다 — 걸기 전에 얼마가 나가는지 알아야 한다. */
@@ -1107,6 +1116,8 @@ function readAuctionBody(raw: {
     affixes?: RawAffix[]
     expires_in_minutes?: number
     fee?: number
+    slot?: string
+    grade?: string
   }[]
   balance: number
   fee_percent: number
@@ -1127,6 +1138,8 @@ function readAuctionBody(raw: {
       expiresInMinutes: item.expires_in_minutes ?? 0,
       fee: item.fee ?? 0,
       isMine: item.is_mine,
+      slot: item.slot ?? '',
+      grade: item.grade ?? '',
     })),
     balance: raw.balance,
     feePercent: raw.fee_percent,

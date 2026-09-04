@@ -67,16 +67,20 @@ def build_listing_view(listing: Listing, catalog: dict) -> ListingView:
     Returns:
         매물 절.
     """
+    entry = find_catalog_item(catalog, listing.catalog_id)
     return ListingView(
         listing_id=listing.listing_id,
         item_id=listing.item_id,
         catalog_id=listing.catalog_id,
-        label_ko=find_catalog_item(catalog, listing.catalog_id).label_ko,
+        label_ko=entry.label_ko,
         price=listing.price,
         is_mine=listing.is_mine,
         affixes=build_affix_rows(listing),
         expires_in_minutes=listing.expires_in_minutes,
         fee=compute_fee(listing.price),
+        # 카탈로그가 이미 들고 있던 것이다. 안 보내면 화면이 견줄 상대를 못 찾는다.
+        slot="" if entry.slot is None else str(entry.slot),
+        grade=listing.grade,
     )
 
 

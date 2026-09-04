@@ -1429,6 +1429,61 @@
   font-size: var(--fs-mono);
 }
 
+/* ── 순위 줄 ──────────────────────────────────────────────────────────
+   **컬럼 정렬은 미관이 아니라 기능이다** — 자리가 맞아야 눈이 세로로 훑는다. 예전에는
+   `lv6 · 900` 이 한 덩어리라 줄마다 시작 자리가 달라, 누가 얼마나 앞선지 세로로
+   비교할 수 없었다. */
+.wld__rank {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--btn-tap-sm-h);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 내 줄. 「이것이 너다」는 명도로도 적는다 — 황동은 이름과 표시가 이미 쓴다. */
+.wld__rank--me {
+  background: var(--surface-row-active);
+}
+
+.wld__rank-no {
+  min-inline-size: 3ch;
+  text-align: right;
+  color: var(--text-dim);
+}
+
+.wld__rank-lv {
+  min-inline-size: 4ch;
+  text-align: right;
+  color: var(--text-dim);
+}
+
+.wld__rank-score {
+  min-inline-size: 6ch;
+  text-align: right;
+  color: var(--text-data);
+}
+
+/* 격차 막대. **칸 수가 정보이고 옆의 숫자가 정본이다** — 못 읽어도 잃는 것이 없다. */
+.wld__bar {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--bw);
+}
+
+.wld__bar > i {
+  inline-size: var(--sp-1);
+  block-size: var(--sp-3);
+  background: var(--line-grid);
+}
+
+.wld__bar > i.on {
+  background: var(--line-strong);
+}
+
 /* 「이것이 너다」 — 화면의 유일한 광원을 여기 한 자리에 쓴다. 순위표에 내 줄은
    하나뿐이라 예산 한 칸이다. 색만으로 알리지 않으므로 글리프(◉)와 글자(나)를
    함께 적고, 보조 기술에는 한 문장으로 남긴다. */
@@ -2106,6 +2161,63 @@
 
 .invg__empty {
   color: var(--text-dim);
+}
+
+/* ── 견줌 ─────────────────────────────────────────────────────────────
+   지금 낀 것과의 스탯별 차이. **점수 하나로 접지 않는다** — 「이게 더 좋다」를 한 숫자로
+   말하려면 어느 스탯이 얼마나 값한지를 코드가 정해야 하고, 그 기준이 틀리면 화면이 틀린
+   답을 자신 있게 말한다. 사람의 취향은 사람이 정한다.
+
+   좋고 나쁨은 **색과 부호 둘**로 적는다. 색 하나면 못 가르는 사람에게 사라진다. */
+.invd__compare {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bw);
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  list-style: none;
+}
+
+.invd__compare-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  line-height: var(--lh-data);
+}
+
+.invd__compare-name {
+  color: var(--text-dim);
+}
+
+.invd__delta {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.invd__delta--up {
+  color: var(--text-true);
+}
+
+.invd__delta--down {
+  color: var(--text-danger);
+}
+
+/* **무엇을 해 주는가** 한 줄. 칸이 54px 라(320px 열 · 안쪽 288 · 5열) 한 글자 표기를
+   쓰고, 그래도 넘치면 자른다 — 잘린 채 두면 아무 말도 안 하느니만 못하다.
+
+   좋고 나쁨을 여기서 칠하지 않는다. 저주 접사가 가장 큰 접사일 수 있고, 그때 그것이
+   그 물건에 대해 말할 가장 중요한 사실이다 — 판단은 상세의 견줌이 한다. */
+.invg__fact {
+  max-inline-size: 100%;
+  color: var(--text-dim);
+  font-size: var(--fs-label);
+  line-height: var(--lh-tight);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .invg__count {

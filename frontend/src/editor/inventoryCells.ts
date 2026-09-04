@@ -7,7 +7,7 @@
  *
  * 순수 값이다. 렌더 검사가 훅 없이 셀 배치를 볼 수 있어야 한다.
  */
-import type { InventoryView, SlotView } from '../storage'
+import type { AffixView, InventoryView, ItemView, SlotView } from '../storage'
 
 /** 가방 칸 수. 서버의 `INVENTORY_SIZE` 와 같은 값이다 — 다르면 있는 칸이 안 그려진다. */
 export const BAG_CELL_COUNT = 20
@@ -55,10 +55,71 @@ export interface GridCell {
   readonly marks: readonly string[]
   /** 소모품 스택이면 개수. 아니면 빈 문자열. */
   readonly countText: string
+  /**
+   * 이 물건이 **무엇을 해 주는가** 한 줄.
+   *
+   * 예전에는 칸이 이름과 등급색만 그렸다. 그래서 가방을 봐서는 어느 게 더 좋은지 알 수
+   * 없고 열세 칸을 하나씩 눌러야 했다 — 방 드롭다운이 영문 id 서른한 줄이던 것과 같은
+   * 병이다. **접사를 전부 적지 않는 이유**는 칸마다 줄 수가 달라지면 격자가 들쭉날쭉해
+   * 훑을 수 없게 되기 때문이다. 자세한 것과 지금 낀 것과의 차이는 상세가 답한다.
+   */
+  readonly fact: string
   /** 이 칸이 가리키는 원본. 빈 칸이면 undefined. */
   readonly entry: SlotView | undefined
   /** 양손무기가 막은 자리인가. */
   readonly isSealedSlot: boolean
+}
+
+/**
+ * 칸에 적을 스탯의 한 글자 표기.
+ *
+ * **가방 칸은 54px 다** (320px 열 · 안쪽 288 · 5열). 「공격력 +5」는 안 들어가고, 안
+ * 들어가는 것을 적으면 잘려서 아무 말도 안 하게 된다 — 도면 말이 두 글자 표기를 쓰는
+ * 것과 같은 이유이며, 거기서는 셀 폭 64px 이 한계였다.
+ *
+ * 표에 없는 스탯은 칸에 안 적는다. 상세가 전체 이름으로 답한다.
+ */
+export const SHORT_STAT_LABELS: ReadonlyMap<string, string> = new Map([
+  ['hp_max', '체'],
+  ['attack', '공'],
+  ['defense', '방'],
+  ['attack_range', '사'],
+  ['initiative', '선'],
+  ['cpu_budget', 'cpu'],
+  ['potion_slots', '물'],
+  ['scroll_slots', '주'],
+])
+
+/**
+ * 칸에 적을 대표 접사 한 줄을 고른다.
+ *
+ * **가장 큰 것 하나다.** 크기는 고정값과 퍼센트의 절대값 중 큰 쪽으로 재고, 같으면
+ * 스탯 이름 순으로 끊는다 — 순서가 흔들리면 같은 물건이 볼 때마다 다른 줄을 보인다.
+ *
+ * 여기서 **좋고 나쁨을 판단하지 않는다.** 저주 접사(음수)가 가장 클 수도 있고, 그때는
+ * 그것이 그 물건에 대해 말할 가장 중요한 사실이다.
+ *
+ * @param item 볼 아이템. 없으면 빈 문자열.
+ * @returns `공+5` 꼴. 적을 것이 없으면 빈 문자열.
+ */
+export function pickHeadlineAffix(item: ItemView | undefined): string {
+  const affixes = item?.affixes ?? []
+  if (affixes.length === 0) {
+    return ''
+  }
+  const weigh = (affix: AffixView) => Math.max(Math.abs(affix.flat), Math.abs(affix.percent))
+  const best = [...affixes]
+    .filter((affix) => SHORT_STAT_LABELS.has(affix.stat))
+    .sort((left, right) => weigh(right) - weigh(left) || left.stat.localeCompare(right.stat))[0]
+  if (best === undefined) {
+    return ''
+  }
+  const head = SHORT_STAT_LABELS.get(best.stat) ?? ''
+  // 고정값이 있으면 그것을, 없으면 퍼센트를. 둘 다 적으면 54px 를 넘는다.
+  if (best.flat !== 0) {
+    return `${head}${best.flat > 0 ? '+' : '−'}${String(Math.abs(best.flat))}`
+  }
+  return `${head}${best.percent > 0 ? '+' : '−'}${String(Math.abs(best.percent))}%`
 }
 
 /**
@@ -111,6 +172,7 @@ export function buildEquipCells(inventory: InventoryView | undefined): readonly 
       grade: entry?.item?.grade ?? '',
       marks: entry === undefined ? [] : listCellMarks(entry),
       countText: '',
+      fact: pickHeadlineAffix(entry?.item ?? undefined),
       entry,
       isSealedSlot: entry?.isSealed ?? false,
     }
@@ -140,6 +202,7 @@ export function buildBagCells(inventory: InventoryView | undefined): readonly Gr
         grade: entry.item.grade,
         marks: listCellMarks(entry),
         countText: '',
+        fact: pickHeadlineAffix(entry.item),
         entry,
         isSealedSlot: false,
       }
@@ -153,6 +216,9 @@ export function buildBagCells(inventory: InventoryView | undefined): readonly Gr
         grade: entry.stackGrade,
         marks: [],
         countText: `x${String(entry.stackCount)}`,
+        // 소모품 더미에는 접사가 없다. 빈 줄이 남지만 칸 높이가 안 흔들리는 편이
+        // 격자를 훑는 데 낫다 — 줄 수가 칸마다 다르면 눈이 세로로 못 간다.
+        fact: '',
         entry,
         isSealedSlot: false,
       }
@@ -164,6 +230,7 @@ export function buildBagCells(inventory: InventoryView | undefined): readonly Gr
       grade: '',
       marks: [],
       countText: '',
+      fact: '',
       entry: undefined,
       isSealedSlot: false,
     }

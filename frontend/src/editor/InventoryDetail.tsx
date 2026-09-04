@@ -14,6 +14,7 @@ import type { ItemView, SlotView } from '../storage'
 
 import { formatGradeClass, renderGrade } from './gradeBadge'
 import { EQUIP_CELL_LABELS } from './inventoryCells'
+import { compareToWorn, formatDelta } from './compareItems'
 import { formatAffix } from './InventoryPanel'
 
 import { checkLinked, type LinkState } from './linkState'
@@ -32,6 +33,13 @@ export interface CellChoice {
 
 export interface InventoryDetailProps {
   readonly choice: CellChoice
+  /**
+   * 지금 그 자리에 낀 것. 가방 칸을 골랐을 때 견줄 상대다.
+   *
+   * 빈 자리면 undefined — 그때는 「지금 아무것도 없다」가 답이고, 견줌이 전부 이득으로
+   * 나오는 것이 맞다.
+   */
+  readonly worn: ItemView | undefined
   readonly link: LinkState
   readonly repairCost: number
   readonly feePercent: number
@@ -41,6 +49,44 @@ export interface InventoryDetailProps {
   readonly onRepair: (itemId: number) => void
   readonly onUnseal: (itemId: number) => void
   readonly onList: (itemId: number, price: number) => void
+}
+
+/**
+ * 지금 낀 것과의 차이를 그린다.
+ *
+ * **점수 하나로 접지 않는다.** 「이게 더 좋다」를 한 숫자로 말하려면 어느 스탯이 얼마나
+ * 값한지를 코드가 정해야 하고, 그 기준이 틀리면 화면이 **틀린 답을 자신 있게** 말한다.
+ * 사람의 취향은 사람이 정한다 — 화면은 스탯별 차이까지만 낸다.
+ *
+ * 좋고 나쁨은 색·부호 둘로 적는다. 색 하나면 못 가르는 사람에게 사라진다.
+ *
+ * @param picked 고른 아이템.
+ * @param worn 그 자리에 지금 낀 것. 없으면 빈 자리다.
+ * @returns 견줌 줄들. 차이가 없으면 그렇게 적는다.
+ */
+function renderCompare(picked: ItemView, worn: ItemView | undefined): React.JSX.Element {
+  const rows = compareToWorn(picked.affixes, worn?.affixes ?? [])
+  const where = worn === undefined ? '빈 자리와' : `${worn.labelKo} 와`
+  if (rows.length === 0) {
+    return <ValueExpr text={`${where} 견줘 달라지는 것이 없다`} size="sm" dim />
+  }
+  return (
+    <>
+      <ValueExpr text={`${where} 견줌`} size="sm" dim />
+      <ul className="invd__compare">
+        {rows.map((row) => {
+          const gain = row.flatDelta + row.percentDelta
+          const tone = gain > 0 ? ' invd__delta--up' : gain < 0 ? ' invd__delta--down' : ''
+          return (
+            <li className="invd__compare-row" key={row.stat}>
+              <span className="invd__compare-name">{row.label}</span>
+              <span className={`invd__delta${tone}`}>{formatDelta(row)}</span>
+            </li>
+          )
+        })}
+      </ul>
+    </>
+  )
 }
 
 /**
@@ -199,6 +245,8 @@ export function InventoryDetail(props: InventoryDetailProps): React.JSX.Element 
         ) : null}
       </div>
       {renderAffixes(item)}
+      {/* **가방 칸에서만 견준다.** 장비 칸을 고르면 견줄 상대가 자기 자신이다. */}
+      {choice.kind === 'equip' ? null : renderCompare(item, props.worn)}
       {renderRequirements(item)}
       <div className="invd__row invd__row--tools">
         {choice.kind === 'equip' ? (

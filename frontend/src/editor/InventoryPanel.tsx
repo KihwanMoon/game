@@ -14,7 +14,7 @@
 import { useState } from 'react'
 
 import { Panel, ValueExpr } from '../ds'
-import type { AffixView, InventoryView } from '../storage'
+import type { AffixView, InventoryView, ItemView } from '../storage'
 
 import { formatGradeClass, renderGrade } from './gradeBadge'
 import { buildBagCells, buildEquipCells } from './inventoryCells'
@@ -70,6 +70,29 @@ export function formatAffix(affix: AffixView): string {
 }
 
 /**
+ * 고른 칸과 같은 자리에 지금 낀 것을 찾는다.
+ *
+ * **장비 칸을 고르면 undefined 다.** 그때 견줄 상대는 자기 자신이라 견줌이 뜻이 없다.
+ *
+ * @param inventory 서버가 준 인벤토리.
+ * @param choice 고른 칸.
+ * @returns 그 자리에 낀 것. 빈 자리거나 장비 칸을 골랐으면 undefined.
+ */
+export function findWorn(
+  inventory: InventoryView,
+  choice: CellChoice,
+): ItemView | undefined {
+  if (choice.kind === 'equip') {
+    return undefined
+  }
+  const slot = choice.entry.item?.slot
+  if (slot === null || slot === undefined || slot === '') {
+    return undefined
+  }
+  return inventory.equipment.find((entry) => entry.slot === slot)?.item ?? undefined
+}
+
+/**
  * 인벤토리·장비 패널을 도면 격자로 그린다.
  *
  * 장비 여섯 칸 + 가방 스무 칸. 칸을 고르면 아래 상세에 그 아이템의 전부(능력치·요구
@@ -121,6 +144,9 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
             ) : (
               <InventoryDetail
                 choice={choice}
+                // 그 자리에 지금 낀 것. 「이게 더 좋나」에 답하려면 견줄 상대가 있어야
+                // 한다 — 없으면 화면이 접사만 늘어놓고 판단을 사람에게 통째로 넘긴다.
+                worn={findWorn(inventory, choice)}
                 link={link}
                 repairCost={inventory.repairCost}
                 feePercent={props.feePercent}

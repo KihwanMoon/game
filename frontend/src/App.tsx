@@ -169,6 +169,7 @@ import {
   type SkillPrefView,
   type ConsumableView,
   type InventoryView,
+  type ItemView,
   type RunResult,
   type RunVerdict,
   type AdminOverview,
@@ -1582,6 +1583,25 @@ export function App(): React.JSX.Element {
 
 
   /**
+   * 자리에서 지금 낀 것으로의 대응표를 만든다.
+   *
+   * 경매가 「내 것보다 나은가」를 답하는 데 쓴다 — 서버가 매물의 자리를 이제 보내므로
+   * 견줄 상대를 찾을 수 있다.
+   *
+   * @param bag 서버가 준 인벤토리.
+   * @returns 자리에서 낀 것으로. 없으면 빈 표.
+   */
+  function buildWornBySlot(bag: InventoryView | undefined): ReadonlyMap<string, ItemView> {
+    const worn = new Map<string, ItemView>()
+    for (const entry of bag?.equipment ?? []) {
+      if (entry.slot !== null && entry.slot !== undefined && entry.item) {
+        worn.set(entry.slot, entry.item)
+      }
+    }
+    return worn
+  }
+
+  /**
    * 서랍 탭을 만든다.
    *
    * **묶음은 "무엇에 대한 것인가" 로 가른다.** 화면 수를 줄이려고 아무거나 합치면 탭
@@ -1757,6 +1777,7 @@ export function App(): React.JSX.Element {
                 accountId={profile?.accountId}
                 link={link}
                 detail={worldDetail}
+                worn={buildWornBySlot(inventory)}
                 onBuy={(listingId) => {
                   applyAuction('/auction/buy', { listing_id: listingId })
                 }}
