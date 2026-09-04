@@ -727,6 +727,19 @@
   border: var(--bw-accent) solid var(--plan-actor-boss);
 }
 
+/* 위험한 말 — 게임 쪽에서는 도플갱어가 여기 걸린다 (설계/6_몬스터 §5).
+
+   **등급 색을 덮는다.** 도플갱어는 ELITE 로 서지만 다른 정예와 같은 것이 아니다 —
+   사람의 빌드가 그대로 서 있고 그 규칙표가 나를 읽는다. 노랑으로 두면 「한 단 위의
+   고블린」으로 읽힌다.
+
+   고리는 등급이 준 것을 그대로 쓴다. 색만 바꾸는 것이라 규칙이 뒤에 서면 족하다 —
+   색이 유일한 채널이 되지 않는 것은 표기(「분신」)가 따로 서기 때문이다. */
+.ds-plan-actor--danger .ds-plan-actor__glyph {
+  color: var(--plan-actor-doppel);
+  border-color: var(--plan-actor-doppel);
+}
+
 .ds-plan-actor__label {
   font-family: var(--font-body);
   font-size: var(--fs-label);

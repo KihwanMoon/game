@@ -45,6 +45,16 @@ export interface PlanActorProps {
    * 보스는 달라 보여야 한다.
    */
   readonly tier?: string
+  /**
+   * 이 말이 **아픈 것**인가 (`--plan-actor-doppel`).
+   *
+   * 등급과 따로 두는 이유는 등급이 아니라 정체이기 때문이다 — 게임 쪽에서는 도플갱어가
+   * 여기 걸린다. 디자인 시스템은 「무엇이 위험한가」를 모르고 알 필요도 없으므로, 그
+   * 판정은 부르는 쪽에 두고 여기서는 **색과 고리만** 든다.
+   *
+   * 등급을 덮는다. 도플갱어는 ELITE 로 서지만 다른 정예와 같은 것이 아니라서다.
+   */
+  readonly isDanger?: boolean
 }
 
 /**
@@ -69,13 +79,19 @@ export function formatTierClass(tier: string | undefined): string {
   return TIER_CLASSES.get(tier ?? '') ?? ''
 }
 
+/** 위험한 말이 쓰는 class. 등급 class 위에 얹혀 색만 덮는다. */
+const DANGER_CLASS = ' ds-plan-actor--danger'
+
 export function PlanActor(props: PlanActorProps): React.JSX.Element {
   const glyph = ACTOR_GLYPHS.get(props.kind) ?? ACTOR_GLYPHS.get('charge')
   const name = ACTOR_NAMES.get(props.kind) ?? props.kind
 
   return (
     <div
-      className={`ds-plan-actor ds-plan-actor--${props.kind}${formatTierClass(props.tier)}`}
+      className={
+        `ds-plan-actor ds-plan-actor--${props.kind}${formatTierClass(props.tier)}` +
+        (props.isDanger === true ? DANGER_CLASS : '')
+      }
       style={{
         left: `calc(var(--plan-cell) * ${String(props.x)})`,
         top: `calc(var(--plan-cell) * ${String(props.y)})`,
@@ -85,7 +101,9 @@ export function PlanActor(props: PlanActorProps): React.JSX.Element {
         {glyph}
       </span>
       <span className="ds-sr">
-        {name} ({props.x}, {props.y})
+        {/* **화면을 안 보는 사람에게도 위험이 남아야 한다.** 색과 표기는 눈으로 읽는
+            채널이라, 여기서 빠지면 이 말만 다른 적과 똑같이 들린다. */}
+        {props.isDanger === true ? `위험 ${name}` : name} ({props.x}, {props.y})
       </span>
       {props.label === undefined ? null : (
         <span className="ds-plan-actor__label">{props.label}</span>

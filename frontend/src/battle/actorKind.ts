@@ -30,6 +30,28 @@ export const KIND_BY_ENEMY_TYPE: ReadonlyMap<string, PlanActorKind> = new Map([
   ['HEALER', 'summon'],
 ])
 
+/**
+ * 도플갱어의 종 id.
+ *
+ * **파이썬이 같은 값을 박아 두고 있다** (`game/app/bots/doppel.py`). 저쪽에서는 이 id
+ * 하나에 드롭 굴림·전리품 강탈·되찾기 셋이 막혀 있어 바꾸면 셋이 함께 뚫린다. 여기서는
+ * 화면 표시뿐이라 뚫릴 것은 없지만, 갈리면 **도면만 조용히 다른 것을 그린다.**
+ */
+export const DOPPEL_KIND_ID = 'doppelganger'
+
+/**
+ * 이 말이 도플갱어인가.
+ *
+ * 등급으로는 못 가른다 — ELITE 로 서지만 다른 정예와 같은 것이 아니다. 사람의 빌드가
+ * 그대로 서 있고, 전리품을 안 떨어뜨리며, 그 규칙표가 나를 읽는다.
+ *
+ * @param kindId 엔티티 종류 id.
+ * @returns 도플갱어면 참.
+ */
+export function checkDoppel(kindId: string): boolean {
+  return kindId === DOPPEL_KIND_ID
+}
+
 /** 유형을 모를 때의 말. 근접으로 두는 편이 사거리를 과소평가하지 않는다. */
 export const FALLBACK_ACTOR_KIND: PlanActorKind = 'charge'
 
@@ -48,6 +70,10 @@ export const SHORT_LABEL_BY_KIND_ID: ReadonlyMap<string, string> = new Map([
   ['veteran_rusher', '정예'],
   ['longbow_archer', '장궁'],
   ['arch_summoner', '대소'],
+  // **표기가 색과 함께 선다.** 색만으로 가르면 색을 못 가르는 사람에게 도플갱어가
+  // 그냥 정예 하나로 남는다. 앞 두 글자를 자르는 기본값이면 「도플」인데, 그것은
+  // 「돌진」과 한 글자 차이라 64px 칸에서 헷갈린다.
+  [DOPPEL_KIND_ID, '분신'],
 ])
 
 /** 표에 없는 종류에서 잘라 쓸 글자 수. */

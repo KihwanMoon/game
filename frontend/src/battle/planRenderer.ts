@@ -607,11 +607,32 @@ export function resolveTierColor(tier: string, theme: PlanTheme): string {
   return theme.actorEnemy
 }
 
+/**
+ * 이 말을 칠할 색을 고른다.
+ *
+ * **도플갱어가 등급을 이긴다.** ELITE 로 서지만 다른 정예와 같은 것이 아니라서다 —
+ * 사람의 빌드가 그대로 서 있고, 전리품을 안 떨어뜨리며, 그 규칙표가 나를 읽는다.
+ * 노랑으로 두면 「한 단 위의 고블린」으로 읽힌다.
+ *
+ * @param actor 그릴 말.
+ * @param theme 토큰에서 읽은 값들.
+ * @returns 칠할 색.
+ */
+export function resolveActorColor(actor: PlanActorView, theme: PlanTheme): string {
+  if (actor.isSelf) {
+    return theme.actorSelf
+  }
+  if (actor.isDoppel) {
+    return theme.actorDoppel
+  }
+  return resolveTierColor(actor.tier, theme)
+}
+
 function drawActor(ctx: CanvasRenderingContext2D, actor: PlanActorView, theme: PlanTheme): void {
   const rect = getCellRect(actor.x, actor.y, theme)
   const cx = rect.left + rect.size * HALF
   const cy = rect.top + rect.size * HALF
-  const color = actor.isSelf ? theme.actorSelf : resolveTierColor(actor.tier, theme)
+  const color = resolveActorColor(actor, theme)
 
   // **색이 유일한 채널이 아니다.** 등급 있는 적에게 고리를 두른다 — 색을 못 가르는
   // 사람에게도 정예와 보스가 달라 보여야 하고, 그것이 이 저장소가 참·거짓을 색·글리프·

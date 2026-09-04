@@ -20,7 +20,7 @@ import { FACTION_PLAYER, type Entity, getHpPercent } from '../core/sim/state'
 import type { LogEntry } from '../core/eventLog'
 import { PHASE_ACT } from '../core/sim/phases'
 
-import { resolveActorKind, resolveActorLabel } from './actorKind'
+import { checkDoppel, resolveActorKind, resolveActorLabel } from './actorKind'
 
 /** 도면에 그릴 말 하나. */
 export interface PlanActorView {
@@ -31,6 +31,13 @@ export interface PlanActorView {
   readonly kind: PlanActorKind
   /** 일반·엘리트·보스. 도면이 색과 테두리로 가른다. */
   readonly tier: string
+  /**
+   * 도플갱어인가. **등급과 따로 싣는다** — ELITE 로 서지만 다른 정예와 같은 것이 아니다.
+   *
+   * 렌더러가 `kindId` 를 보고 직접 판정하지 않는 이유는, 그러면 그리는 쪽이 종 id 하나를
+   * 알아야 하고 그 앎이 캔버스·DOM 두 곳으로 갈리기 때문이다.
+   */
+  readonly isDoppel: boolean
   /** 글리프 아래 두 글자 표기. 글리프가 겹치는 자리를 이것이 가른다. */
   readonly label: string
   /** 남은 체력 백분율. 말 아래 명도 막대가 이 값을 쓴다. */
@@ -128,6 +135,7 @@ function convertEntityToActor(
     kind: isSelf ? 'self' : resolveActorKind(entity.kindId, kindTypes),
     label: isSelf ? '자신' : resolveActorLabel(entity.kindId),
     tier: entity.tier,
+    isDoppel: !isSelf && checkDoppel(entity.kindId),
     hpPercent: getHpPercent(entity),
     isSelf,
   }

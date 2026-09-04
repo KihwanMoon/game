@@ -175,6 +175,8 @@ function BattleSkeleton(): React.JSX.Element {
             <PlanActor x={5} y={3} kind="charge" label="rush" />
             <PlanActor x={8} y={6} kind="shoot" label="bow" />
             <PlanActor x={10} y={1} kind="summon" label="sum" />
+            {/* 도플갱어. 등급은 정예인데 색이 위험색이다 — 등급이 아니라 정체다. */}
+            <PlanActor x={7} y={2} kind="charge" label="분신" tier="ELITE" isDanger />
           </PlanGrid>
         </div>
         <div className="gal__gap" />

@@ -45,12 +45,16 @@ import {
 } from '../core/schemas'
 import { OUTCOME_ONGOING } from '../core/sim/phases'
 import type { LogEntry } from '../core/eventLog'
+import type { PlanActorView } from './planScene'
 import {
   BattleView,
   KIND_BY_ENEMY_TYPE,
   resizePlanCanvas,
   LeaderLine,
   SHORT_LABEL_BY_KIND_ID,
+  DOPPEL_KIND_ID,
+  checkDoppel,
+  resolveActorColor,
   TILE_DRAWERS,
   addExtraEnemies,
   buildBattleSession,
@@ -212,6 +216,7 @@ const FAKE_TOKENS: ReadonlyMap<string, string> = new Map([
   ['--plan-actor-enemy', '#C6CFDC'],
   ['--plan-actor-elite', '#F2D14A'],
   ['--plan-actor-boss', '#F08A3C'],
+  ['--plan-actor-doppel', '#A65A42'],
   ['--text-dim', '#7C889A'],
   ['--plan-cell', '64px'],
   ['--hatch-gap', '4px'],
@@ -420,6 +425,7 @@ describe('도면 렌더러', () => {
           y: 0,
           kind: 'self',
           tier: 'NORMAL',
+          isDoppel: false,
           label: '자신',
           hpPercent: 100,
           isSelf: true,
@@ -431,6 +437,7 @@ describe('도면 렌더러', () => {
           y: 0,
           kind: 'charge',
           tier: 'NORMAL',
+          isDoppel: false,
           label: '돌진',
           hpPercent: 50,
           isSelf: false,
@@ -846,6 +853,7 @@ describe('지속 몬스터 스냅샷 배선 (E4)', () => {
     recordId: 1,
     kindId: 'goblin_rusher',
     tier: 'ELITE',
+    isDoppel: false,
     level: 7,
     hpMax: 96,
     attack: 17,
@@ -960,5 +968,82 @@ describe('적 등급 표기 (설계/6_몬스터 §1)', () => {
     const tiers = scene.actors.filter((one) => !one.isSelf).map((one) => one.tier)
     expect(tiers).toContain('ELITE')
     expect(tiers).toContain('NORMAL')
+  })
+})
+
+describe('★ 도플갱어는 정예가 아니라 사람이다', () => {
+  // ELITE 로 서지만 다른 정예와 같은 것이 아니다 — 사람의 빌드가 그대로 서 있고,
+  // 전리품을 안 떨어뜨리며, 그 규칙표가 나를 읽는다. 노랑으로 두면 「한 단 위의
+  // 고블린」으로 읽힌다.
+  const buildActor = (over: Partial<PlanActorView>): PlanActorView => ({
+    entityId: 'e',
+    kindId: 'goblin_rusher',
+    x: 0,
+    y: 0,
+    kind: 'charge',
+    tier: 'NORMAL',
+    isDoppel: false,
+    label: '돌진',
+    hpPercent: 100,
+    isSelf: false,
+    ...over,
+  })
+
+  it('도플갱어는 위험색으로 칠한다', () => {
+    const actor = buildActor({ kindId: 'doppelganger', tier: 'ELITE', isDoppel: true })
+    expect(resolveActorColor(actor, FAKE_THEME)).toBe(FAKE_THEME.actorDoppel)
+  })
+
+  it('등급을 덮는다 — 정예 노랑이 아니다', () => {
+    const actor = buildActor({ kindId: 'doppelganger', tier: 'ELITE', isDoppel: true })
+    expect(resolveActorColor(actor, FAKE_THEME)).not.toBe(FAKE_THEME.actorElite)
+  })
+
+  it('보통 정예는 그대로 등급 색이다', () => {
+    expect(resolveActorColor(buildActor({ tier: 'ELITE' }), FAKE_THEME)).toBe(
+      FAKE_THEME.actorElite,
+    )
+  })
+
+  it('자신이 먼저다 — 도플갱어 표시가 붙어도 나는 나다', () => {
+    const actor = buildActor({ isSelf: true, isDoppel: true })
+    expect(resolveActorColor(actor, FAKE_THEME)).toBe(FAKE_THEME.actorSelf)
+  })
+
+  it('★ 색만으로 안 가른다 — 표기가 따로 선다', () => {
+    // 색을 못 가르는 사람에게 색이 유일한 채널이면 도플갱어가 그냥 정예 하나로 남는다.
+    // 앞 두 글자를 자르는 기본값이면 「도플」인데 「돌진」과 한 글자 차이다.
+    expect(resolveActorLabel('doppelganger')).toBe('분신')
+    expect(resolveActorLabel('goblin_rusher')).toBe('돌진')
+  })
+
+  it('종 id 가 파이썬과 같아야 도면이 딴것을 안 그린다', () => {
+    expect(DOPPEL_KIND_ID).toBe('doppelganger')
+    expect(checkDoppel('doppelganger')).toBe(true)
+    expect(checkDoppel('goblin_rusher')).toBe(false)
+  })
+
+  it('★ 장면이 실제로 그 표시를 싣는다 — 붙이는 쪽과 받는 쪽이 갈린 적이 있다', () => {
+    // 등급 class 가 그랬다: `formatTierClass` 는 붙이고 있었는데 받는 CSS 규칙이 없어
+    // 정예도 보스도 일반과 똑같이 그려졌다. 순수 함수만 재면 그 종류의 끊김이 안 잡힌다.
+    const session = buildBattleSession(CHECK_SETUP, G0_RULESETS)
+    const entity = [...session.engine.state.entities.values()].find(
+      (one) => one.entityId !== PLAYER_ENTITY_ID,
+    )
+    expect(entity, '적이 하나도 없다').toBeDefined()
+    if (entity === undefined) {
+      return
+    }
+    // 이 방의 적 하나를 도플갱어로 바꿔 세운다. 스냅샷이 세우는 것과 같은 종 id 다.
+    const doppel = { ...entity, kindId: DOPPEL_KIND_ID }
+    session.engine.state.entities.set(doppel.entityId, doppel)
+
+    const actor = buildPlanScene(session.engine).actors.find(
+      (one) => one.entityId === doppel.entityId,
+    )
+    expect(actor?.isDoppel).toBe(true)
+    expect(actor?.label).toBe('분신')
+    // 플레이어에게는 절대 안 붙는다 — 나는 나다.
+    expect(buildPlanScene(session.engine).actors.find((one) => one.isSelf)?.isDoppel).toBe(false)
   })
 })

@@ -41,9 +41,11 @@ export {
 export type { BattleClockOptions } from './battleClock'
 
 export {
+  DOPPEL_KIND_ID,
   FALLBACK_ACTOR_KIND,
   KIND_BY_ENEMY_TYPE,
   SHORT_LABEL_BY_KIND_ID,
+  checkDoppel,
   resolveActorKind,
   resolveActorLabel,
 } from './actorKind'
@@ -108,6 +110,7 @@ export {
   getCellRect,
   renderPlan,
   resizePlanCanvas,
+  resolveActorColor,
   resolveTierColor,
 } from './planRenderer'
 export type { CellRect, TileDrawer } from './planRenderer'
