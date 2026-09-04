@@ -86,6 +86,8 @@ export interface BotDetailProps {
   readonly allItems: readonly string[]
   /** 가방 칸을 골랐을 때. 관리 화면은 넘기기를 건다 — 착용은 걸지 않는다. */
   readonly onPickCell?: (itemId: number) => void
+  /** 리플레이 줄의 재생을 눌렀을 때. 그 판을 다시 돌리라는 신호다. */
+  readonly onPlay?: (submissionId: number) => void
 }
 
 /**
@@ -134,7 +136,11 @@ export function resolveVerdictState(verdict: string): 'true' | 'danger' | 'pendi
  * @param props 판들.
  * @returns 렌더 트리.
  */
-export function BotRuns(props: { readonly runs: BotDetail['runs'] }): React.JSX.Element {
+export function BotRuns(props: {
+  readonly runs: BotDetail['runs']
+  /** 줄을 누르면 그 판을 다시 돌린다. 없으면 줄이 버튼이 아니다. */
+  readonly onPlay?: (submissionId: number) => void
+}): React.JSX.Element {
   if (props.runs.length === 0) {
     return <ValueExpr text="아직 돈 판이 없다" size="sm" dim />
   }
@@ -142,6 +148,19 @@ export function BotRuns(props: { readonly runs: BotDetail['runs'] }): React.JSX.
     <ul className="botd__runs">
       {props.runs.map((run) => (
         <li className="botd__run" key={run.submissionId}>
+          {props.onPlay === undefined ? null : (
+            <Button
+              size="sm"
+              variant="ghost"
+              glyph="▶"
+              title="이 판을 다시 돌린다 — 기록을 트는 것이 아니라 같은 시드로 재현한다"
+              onClick={() => {
+                props.onPlay?.(run.submissionId)
+              }}
+            >
+              재생
+            </Button>
+          )}
           <span className="botd__run-room">{run.roomId}</span>
           <span className="botd__run-floor">{`${String(run.floor)}층`}</span>
           <GlyphState
@@ -290,12 +309,17 @@ export function BotDetailPanel(props: BotDetailProps): React.JSX.Element {
       label: '리플레이',
       body: (
         <>
+          {/* **기록을 트는 것이 아니라 다시 돌린다.** 이벤트 로그는 안 남기지만, 코어가
+              결정론이라 시드·규칙표·로드아웃이 같으면 그때 그 판이 그대로 재현된다. */}
           <ValueExpr
-            text={`최근 ${String(detail.runs.length)}판 — 기록이지 재생이 아니다 (이벤트 로그는 안 남긴다)`}
+            text={`최근 ${String(detail.runs.length)}판 — 재생은 같은 시드로 다시 돌리는 것이다`}
             size="sm"
             dim
           />
-          <BotRuns runs={detail.runs} />
+          <BotRuns
+            runs={detail.runs}
+            {...(props.onPlay === undefined ? {} : { onPlay: props.onPlay })}
+          />
         </>
       ),
     },

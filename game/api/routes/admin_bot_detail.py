@@ -27,6 +27,7 @@ from game.app.store.accounts import find_player_entity
 from game.app.store.bots import check_is_bot
 from game.app.store.doppels import read_doppel_ruleset
 from game.app.store.maintenance import read_maintenance
+from game.app.store.monsters import load_snapshots
 from game.app.store.progress import read_progress, read_reached_floor
 from game.app.store.runs import list_recent_runs
 
@@ -203,4 +204,74 @@ def read_doppel_detail(record_id: int, account: CurrentAdmin) -> DoppelDetailRes
         entity_slot=str(found[4] or ""),
         origin_handle=str(found[5] or ""),
         ruleset=read_doppel_ruleset(pool, record_id),
+    )
+
+
+class ReplayResponse(BaseModel):
+    """지나간 판 하나를 **다시 돌릴 수 있는 입력 전부**.
+
+    **결과가 아니라 입력이다.** 이벤트 로그는 저장하지 않으므로 재생은 「그때 찍은 화면을
+    트는 것」이 아니라 **같은 입력으로 다시 돌리는 것**이다 — 코어가 결정론이라 같은
+    입력이면 같은 판이 나온다 (R5·G3). 그래서 서버가 돌려주는 것도 결과가 아니라 입력이고,
+    그 입력은 전부 **티켓의 것**이다: 제출이 실어 온 것은 규칙표 하나뿐이다 (§4).
+    """
+
+    submission_id: int
+    ruleset: dict = Field(default_factory=dict)
+    room_id: str
+    seed: int
+    floor: int
+    rooms_per_floor: int
+    room_ids: list[str] = Field(default_factory=list)
+    loadout: dict = Field(default_factory=dict)
+    # 티켓이 얼려 둔 지속 몬스터. **이것이 없으면 재생이 다른 판을 돈다** — 화면은 기본
+    # 적을 그리는데 그때는 엘리트가 서 있었다 (설계/6_몬스터 §5).
+    snapshots: list[dict] = Field(default_factory=list)
+    # 그때 확정된 결과. 재생이 같은 답을 내는지 눈으로 대조할 수 있어야 한다.
+    outcome: str
+    ticks: int
+    player_hp: int
+
+
+@router.get("/api/admin/replay", response_model=ReplayResponse)
+def read_replay(submission_id: int, account: CurrentAdmin) -> ReplayResponse:
+    """지나간 판 하나를 다시 돌릴 입력을 읽는다.
+
+    Args:
+        submission_id: 볼 제출.
+        account: 관리자 계정.
+
+    Returns:
+        그 판을 재현할 입력 전부와 그때의 결과.
+
+    Raises:
+        HTTPException: 없는 제출이면 404.
+    """
+    pool = get_pool()
+    with pool.connection() as connection:
+        found = connection.execute(
+            "SELECT s.id, s.ruleset, t.id, t.room_id, t.seed, t.floor,"
+            " COALESCE(t.rooms_per_floor, 0), t.room_ids, t.loadout,"
+            " COALESCE(r.outcome, ''), COALESCE(r.ticks, 0), COALESCE(r.player_hp, 0)"
+            " FROM run_submission s"
+            " JOIN run_ticket t ON t.id = s.ticket_id"
+            " LEFT JOIN run_result r ON r.submission_id = s.id"
+            " WHERE s.id = %s",
+            (submission_id,),
+        ).fetchone()
+    if found is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"없는 제출이다: {submission_id}")
+    return ReplayResponse(
+        submission_id=int(found[0]),
+        ruleset=dict(found[1] or {}),
+        room_id=str(found[3] or ""),
+        seed=int(found[4] or 0),
+        floor=int(found[5] or 1),
+        rooms_per_floor=int(found[6] or 0),
+        room_ids=list(found[7] or []),
+        loadout=dict(found[8] or {}),
+        snapshots=[vars(one) for one in load_snapshots(pool, str(found[2]))],
+        outcome=str(found[9] or ""),
+        ticks=int(found[10] or 0),
+        player_hp=int(found[11] or 0),
     )

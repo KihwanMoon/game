@@ -80,8 +80,6 @@ export interface BotPanelProps {
   }) => void
   /** 내 가방의 아이템 하나를 이 봇에게 넘긴다. **한 방향이다** — 돌아오는 길은 없다. */
   readonly onGift?: (accountId: number, itemId: number) => void
-  /** 고른 봇의 가방. 줄을 고를 때 밖에서 읽어 넣는다. */
-  readonly botBag?: InventoryView | undefined
   /** 내 가방. */
   readonly myBag?: InventoryView | undefined
   /** 줄을 골랐을 때 부른다. 그 봇의 가방을 읽어 오라는 신호다. */
@@ -201,7 +199,6 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
                 minCadenceSec={props.overview?.minCadenceSec ?? 0}
                 onSave={props.onSave}
                 onGift={props.onGift}
-                botBag={props.botBag}
                 myBag={props.myBag}
               />
             )}
@@ -225,8 +222,6 @@ interface BotEditorProps {
   readonly minCadenceSec: number
   readonly onSave: BotPanelProps['onSave']
   readonly onGift?: BotPanelProps['onGift']
-  /** 고른 봇의 가방. 아직 안 읽었으면 undefined. */
-  readonly botBag?: InventoryView | undefined
   /** 내 가방. 여기서 골라 넘긴다 — id 를 손으로 적게 하지 않는다. */
   readonly myBag?: InventoryView | undefined
 }
@@ -309,21 +304,12 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
         size="sm"
         dim
       />
-      {/* **유저 화면과 같은 격자를 쓴다.** 같은 것을 두 모양으로 그리면 「봇에게 뭐가
-          있지」를 답하려던 화면이 답을 틀리게 한다 — 장비·소모품·귀속·파손 표기가 전부
-          거기 이미 있다. */}
-      <div className="bots__bags">
-        <div className="inv bots__inv">
-          <InventoryGrid
-            inventory={props.botBag}
-            pickedKey={pickedKey}
-            ownerLabel={bot.handle}
-            onPick={(cell) => {
-              setPickedKey((current) => (current === cell.key ? '' : cell.key))
-            }}
-          />
-        </div>
-        {props.onGift === undefined ? null : (
+      {/* **여기에는 내 가방만 둔다.** 봇의 가방은 아래 상세의 「가방」 탭에 있다 — 같은
+          것을 한 화면에 두 번 그리면 어느 쪽이 최신인지 알 수 없고, 실제로 넘긴 뒤에
+          한쪽만 갱신되는 창이 생긴다. 여기 남길 이유는 하나뿐이다: **넘길 물건을 고르는
+          곳**이라는 것. */}
+      {props.onGift === undefined ? null : (
+        <div className="bots__bags">
           <div className="inv bots__inv">
             <InventoryGrid
               inventory={props.myBag}
@@ -335,8 +321,8 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
               }}
             />
           </div>
-        )}
-      </div>
+        </div>
+      )}
       {props.onGift === undefined || giftId === 0 ? null : (
         <div className="bots__gift">
           <ValueExpr text={`#${String(giftId)} 를 ${bot.handle} 에게`} size="sm" />

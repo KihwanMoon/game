@@ -103,3 +103,48 @@ describe('도플갱어 상세 — 봇과 같은 UI, 다른 탭 수', () => {
     expect(html).toContain('3층 · lv6')
   })
 })
+
+describe('★ 리플레이는 기록을 트는 것이 아니라 다시 돌리는 것이다', () => {
+  // 이벤트 로그는 저장하지 않는다 — 남는 것은 제출(규칙표)과 판정(결과)뿐이다. 그런데
+  // 코어가 결정론이라(R5·G3) 같은 입력이면 같은 판이 나오므로, 시드·방·층·로드아웃·
+  // 스냅샷을 그대로 넣고 다시 돌리면 그때 그 판이 눈앞에 다시 선다.
+  it('규칙표를 못 읽으면 재생하지 않고 그렇게 말한다', async () => {
+    const { ReplayView } = await import('./ReplayView')
+    const html = renderToStaticMarkup(
+      <ReplayView
+        replay={{
+          submissionId: 1,
+          ruleset: undefined,
+          roomId: 'corridor',
+          seed: 42,
+          floor: 1,
+          roomsPerFloor: 0,
+          roomIds: [],
+          loadout: undefined,
+          snapshots: [],
+          outcome: 'PLAYER_WIN',
+          ticks: 10,
+          playerHp: 5,
+        }}
+        onClose={() => undefined}
+      />,
+    )
+    // 빈 규칙표로 돌리면 **다른 판**이 나온다 — 그것을 재생이라 부르면 화면이 거짓말한다.
+    expect(html).toContain('빈 규칙표로 돌리면 다른 판이 나온다')
+  })
+
+  it('★ 그때의 결과를 함께 적는다 — 재생이 같은 답을 내는지 눈으로 대조해야 한다', async () => {
+    const { formatOutcomeName } = await import('./ReplayView')
+    expect(formatOutcomeName('PLAYER_WIN')).toBe('승리')
+    expect(formatOutcomeName('PLAYER_LOSS')).toBe('패배')
+    // 판정 전과 패배를 가른다 — 서버가 밀렸을 뿐인데 진 것으로 읽히면 안 된다.
+    expect(formatOutcomeName('')).toBe('판정 전')
+  })
+
+  it('재생을 안 열었으면 아무것도 안 그린다', async () => {
+    const { ReplayView } = await import('./ReplayView')
+    expect(
+      renderToStaticMarkup(<ReplayView replay={undefined} onClose={() => undefined} />),
+    ).toBe('')
+  })
+})

@@ -148,7 +148,7 @@ const BAG = {
   ],
   balance: 0,
   repairCost: 0,
-} as unknown as Parameters<typeof BotPanel>[0]['botBag']
+} as unknown as Parameters<typeof BotPanel>[0]['myBag']
 
 describe('봇 인벤토리는 유저 화면과 같은 격자다', () => {
   const html = renderToStaticMarkup(
@@ -156,13 +156,19 @@ describe('봇 인벤토리는 유저 화면과 같은 격자다', () => {
       overview={OVERVIEW}
       rulesetIds={[]}
       onSave={() => undefined}
-      botBag={BAG}
+      myBag={BAG}
       onGift={() => undefined}
     />,
   )
 
   it('줄을 안 골랐으면 격자를 안 그린다 — 고른 뒤에 뜨는 것이 맞다', () => {
     expect(html).not.toContain('invg--equip')
+  })
+
+  it('★ 봇의 가방은 여기 없다 — 상세의 「가방」 탭에 있다', () => {
+    // 같은 것을 한 화면에 두 번 그리면 어느 쪽이 최신인지 알 수 없고, 넘긴 뒤에 한쪽만
+    // 갱신되는 창이 생긴다. 여기 남는 격자는 **넘길 물건을 고르는** 내 가방뿐이다.
+    expect(html).not.toContain('bot1 · 장비')
   })
 
   it('★ 유저 화면의 격자 클래스를 그대로 쓴다 — 같은 것을 두 모양으로 그리지 않는다', async () => {

@@ -20,6 +20,7 @@ import { BENCHMARK_RULESETS, G0_RULESETS } from '../core/resources'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import { BotDetailPanel } from './BotDetail'
 import { DoppelPanel } from './DoppelPanel'
+import { ReplayView } from './ReplayView'
 import { BotPanel } from './BotPanel'
 import { readInventory, type InventoryView } from '../storage'
 import {
@@ -29,6 +30,7 @@ import {
   readBotBag,
   readBotDetail,
   readDoppelDetail,
+  readReplay,
   readDoppelGear,
   type BotOverview,
 } from '../storage/botAdmin'
@@ -43,6 +45,7 @@ import {
   readContentAsset,
   type BotDetail,
   type DoppelDetail,
+  type ReplayInput,
   type CatalogAdminView,
   type ContentAssetView,
   type ContentDraftView,
@@ -122,6 +125,9 @@ export function AdminScreen(): React.JSX.Element {
   const [botDetail, setBotDetail] = useState<BotDetail | undefined>(undefined)
   // 고른 도플갱어. **봇과 갈라 둔다** — 계정과 얼려 둔 개체 기록은 다른 것이다.
   const [doppelDetail, setDoppelDetail] = useState<DoppelDetail | undefined>(undefined)
+  // 지금 다시 돌리고 있는 판. **입력이지 기록이 아니다** — 코어가 결정론이라 같은
+  // 입력이면 같은 판이 나온다 (R5·G3).
+  const [replay, setReplay] = useState<ReplayInput | undefined>(undefined)
   const [myBag, setMyBag] = useState<InventoryView | undefined>(undefined)
   const [doppelGear, setDoppelGear] = useState<InventoryView | undefined>(undefined)
 
@@ -184,6 +190,16 @@ export function AdminScreen(): React.JSX.Element {
 
   return (
     <div className="adm">
+      {/* **재생은 화면을 덮는다.** 판 하나를 도는 동안 뒤의 표를 볼 이유가 없고, 전투
+          화면은 제 높이를 다 써야 도면과 로그가 함께 선다. */}
+      {replay === undefined ? null : (
+        <ReplayView
+          replay={replay}
+          onClose={() => {
+            setReplay(undefined)
+          }}
+        />
+      )}
       <header className="adm__bar">
         <span className="adm__title">관리</span>
         <ValueExpr text={`코어 ${readActivePack().coreVersion}`} size="sm" dim />
@@ -263,7 +279,6 @@ export function AdminScreen(): React.JSX.Element {
           <BotPanel
             overview={bots}
             rulesetIds={RULESET_IDS}
-            botBag={botBag}
             myBag={myBag}
             onPickBot={(accountId) => {
               setBotBag(undefined)
@@ -304,6 +319,10 @@ export function AdminScreen(): React.JSX.Element {
                 baseStats={PLAYER_BASE}
                 allSkills={ALL_SKILL_IDS}
                 allItems={ALL_ITEM_TAGS}
+                onPlay={(submissionId) => {
+                  setReplay(undefined)
+                  void readReplay(token, submissionId).then(setReplay)
+                }}
               />
             }
           />
