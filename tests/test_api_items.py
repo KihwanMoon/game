@@ -7,7 +7,10 @@
    결과를 바꾸고, 서버가 (계정, 아이템)만으로 재판정할 수 없게 된다.
 3. **봉인은 계산값이다** (§2.1). 양손무기를 끼면 보조 자리가 막히되 저장되지는 않는다.
 4. **사망은 장비 하나만 건드린다** (결정 #34). 장착 중이면 파손, 가방이면 삭제.
-5. **인벤토리가 가득 차면 해제를 거절한다.** 아이템을 없애는 것보다 낫다.
+5. **인벤토리가 가득 차면 해제를 거절한다.** 아이템을 없애는 것보다 낫다. 다만
+   **갈아 끼우기는 된다** — 들어올 것이 칸 하나를 비우므로 칸 수가 그대로다.
+
+낀 것이 티켓과 아이템 뷰로 나가는 길은 `test_api_item_loadout.py` 에 있다.
 """
 
 import os
@@ -15,7 +18,6 @@ import os
 import pytest
 
 from game.app.store.connection import DATABASE_URL_ENV
-from game.schemas.item import Affix
 
 fastapi_testclient = pytest.importorskip("fastapi.testclient")
 
@@ -247,9 +249,6 @@ def test_repair_costs_currency(client, token):
     assert head["item"]["is_broken"] is False
 
 
-# ── 장비 → 티켓 (결정 #13) ───────────────────────────────────────────────
-
-
 def apply_equip_via_api(client, token, item_id, slot):
     """착용하고 **성공했는지 확인한다.**
 
@@ -262,95 +261,57 @@ def apply_equip_via_api(client, token, item_id, slot):
     return response
 
 
-def request_loadout(client, token):
-    """티켓을 하나 받아 그 안의 로드아웃을 돌려준다."""
-    body = {"room_id": ROOM_ID, "seed": 42}
-    return client.post("/api/ticket", headers=build_headers(token), json=body).json()["loadout"]
+# ── 꽉 찬 가방에서 갈아 끼우기 ──────────────────────────────────────────
 
 
-def test_ticket_carries_loadout(client, token):
-    """★ 맨몸이어도 티켓은 로드아웃을 싣는다.
+def fill_bag(client, token):
+    """가방을 끝까지 채운다.
 
-    브라우저가 전투를 돌리므로 서버만 아는 장비를 티켓에 얼려 보내야 한다. 이 절이 없으면
-    클라이언트는 기본값으로 떨어지고, 서버는 장비를 낀 채로 재시뮬해 정상 제출이 전부
-    반려된다.
+    Returns:
+        채우는 데 쓴 아이템 id 들.
     """
-    loadout = request_loadout(client, token)
-    assert loadout["attack_range"] >= 1
-    assert "ATTACK" in loadout["skills"]
+    from game.app.store.inventory_slots import INVENTORY_SIZE
+
+    return [grant_item(client, token, "helm_iron") for _ in range(INVENTORY_SIZE)]
 
 
-def test_equipping_changes_the_issued_loadout(client, token):
-    """★ 여기가 실제로 비어 있던 자리다 — 부품은 다 있고 배선이 없었다.
+def test_swapping_gear_works_with_a_full_bag(client, token):
+    """★ 갈아 끼우기는 가방 칸 수를 바꾸지 않는다.
 
-    장비를 끼면 티켓이 싣는 값이 바뀌어야 한다. 안 바뀌면 인벤토리는 화면 장식이다.
+    들어올 것이 칸 하나를 비우고 벗은 것이 그 칸에 들어가므로 꽉 차 있어도 성립한다.
+    예전에는 벗기를 먼저 해서 **그 순간에만** 칸이 하나 더 필요했고, 꽉 찬 가방에서
+    갈아 끼우기가 막혔다 — 정비 규칙에서는 그것이 `/api/run` 500 이 되어 그 판의 정산을
+    통째로 날렸다.
     """
-    before = request_loadout(client, token)
-    item_id = grant_item(client, token, "bow_long")
-    apply_equip_via_api(client, token, item_id, "WEAPON_MAIN")
-    after = request_loadout(client, token)
-    assert after["attack_range"] > before["attack_range"]
+    worn = grant_item(client, token, "helm_iron")
+    apply_equip_via_api(client, token, worn, "HEAD")
+    spare = fill_bag(client, token)[0]
+
+    apply_equip_via_api(client, token, spare, "HEAD")
+
+    inventory = client.get("/api/inventory", headers=build_headers(token)).json()
+    head = next(e for e in inventory["equipment"] if e["slot"] == "HEAD")
+    assert head["item"]["item_id"] == spare
+    # 벗은 것이 **사라지지 않았다.** 자리를 못 찾아 조용히 없어지는 것이 최악이다.
+    held = {slot["item"]["item_id"] for slot in inventory["slots"] if slot["item"] is not None}
+    assert worn in held
 
 
-def test_equipping_opens_a_skill(client, token):
-    """★ 장비가 스킬을 연다 — 규칙표 재설계로 이어지는 지점이다 (결정 #13)."""
-    item_id = grant_item(client, token, "shield_buckler")
-    apply_equip_via_api(client, token, item_id, "WEAPON_OFF")
-    assert "GUARD_BRACE" in request_loadout(client, token)["skills"]
+def test_a_full_bag_still_refuses_to_unequip(client, token):
+    """★ 가방에 없던 것을 끼울 때는 여전히 거절한다.
 
-
-def test_broken_gear_grants_nothing(client, token):
-    """★ 파손은 그 자리가 비어 있는 것과 같다 (결정 #34).
-
-    파손된 장비가 계속 스탯을 주면 사망 대가가 사라진다.
+    갈아 끼우기가 되는 것과 **칸 없이 벗는 것**이 되는 것은 다른 이야기다. 후자까지 열면
+    벗은 장비가 갈 곳이 없어지고, 그때 아이템이 사라진다.
     """
-    from game.api.deps import get_pool
-    from game.app.store.accounts import find_player_entity
-    from game.app.store.equipment import mark_item_broken
+    worn = grant_item(client, token, "helm_iron")
+    apply_equip_via_api(client, token, worn, "HEAD")
+    fill_bag(client, token)
 
-    item_id = grant_item(client, token, "bow_long")
-    apply_equip_via_api(client, token, item_id, "WEAPON_MAIN")
-    geared = request_loadout(client, token)
-    account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
-    mark_item_broken(get_pool(), find_player_entity(get_pool(), account_id), item_id)
-    assert request_loadout(client, token)["attack_range"] < geared["attack_range"]
+    response = client.post(
+        "/api/unequip", json={"item_id": 0, "slot": "HEAD"}, headers=build_headers(token)
+    )
 
-
-def test_instance_affixes_beat_catalog_defaults(client, token):
-    """★ 같은 이름의 아이템이 조금씩 다르게 나와야 파밍이 성립한다.
-
-    인스턴스가 굴린 접사를 안 쓰면 모든 롱보우가 똑같아진다.
-    """
-    plain_id = grant_item(client, token, "helm_iron")
-    apply_equip_via_api(client, token, plain_id, "HEAD")
-    plain = request_loadout(client, token)
-    unequip = {"item_id": plain_id, "slot": "HEAD"}
-    client.post("/api/unequip", headers=build_headers(token), json=unequip)
-    rolled_id = grant_item(client, token, "helm_iron", (Affix(stat="hp_max", flat=40),))
-    apply_equip_via_api(client, token, rolled_id, "HEAD")
-    assert request_loadout(client, token)["hp_max"] > plain["hp_max"]
-
-
-def test_the_item_view_shows_what_it_actually_gives(client, token):
-    """★ 카탈로그 기본 접사를 가진 아이템도 효과가 보여야 한다.
-
-    인스턴스가 굴린 접사만 보내면, 기본 접사로만 이루어진 아이템이 화면에서 "아무 효과
-    없음" 으로 보인다 — 로드아웃 계산은 카탈로그 것을 쓰는데 화면만 모르는 상태가 된다.
-    """
-    item_id = grant_item(client, token, "helm_iron")
-    slots = client.get("/api/inventory", headers=build_headers(token)).json()["slots"]
-    view = next(s["item"] for s in slots if (s["item"] or {}).get("item_id") == item_id)
-    assert view["affixes"] != []
-    assert any(a["stat"] == "hp_max" for a in view["affixes"])
-
-
-def test_rolled_affixes_replace_the_catalog_ones_in_the_view(client, token):
-    """★ 화면이 로드아웃 계산과 같은 규칙을 보여야 한다.
-
-    인스턴스가 굴린 접사가 카탈로그 기본값을 **대체한다** — 화면만 둘을 합쳐 보여주면
-    유저가 본 것과 전투가 쓰는 것이 달라진다.
-    """
-    item_id = grant_item(client, token, "helm_iron", (Affix(stat="hp_max", flat=40),))
-    slots = client.get("/api/inventory", headers=build_headers(token)).json()["slots"]
-    view = next(s["item"] for s in slots if (s["item"] or {}).get("item_id") == item_id)
-    assert [a["flat"] for a in view["affixes"]] == [40]
+    assert response.status_code != 200
+    inventory = client.get("/api/inventory", headers=build_headers(token)).json()
+    head = next(e for e in inventory["equipment"] if e["slot"] == "HEAD")
+    assert head["item"]["item_id"] == worn

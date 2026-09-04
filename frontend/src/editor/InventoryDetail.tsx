@@ -13,9 +13,9 @@ import { Button, GlyphState, ValueExpr } from '../ds'
 import type { ItemView, SlotView } from '../storage'
 
 import { formatGradeClass, renderGrade } from './gradeBadge'
-import { EQUIP_CELL_LABELS } from './inventoryCells'
+import { EQUIP_CELL_LABELS, RANGE_SLOT } from './inventoryCells'
 import { CompareBlock } from './CompareRows'
-import { compareToWorn } from './compareItems'
+import { buildRangeRow, compareToWorn } from './compareItems'
 import { formatAffix } from './InventoryPanel'
 
 import { checkLinked, type LinkState } from './linkState'
@@ -64,10 +64,17 @@ export interface InventoryDetailProps {
  */
 function renderCompare(picked: ItemView, worn: ItemView | undefined): React.JSX.Element {
   const where = worn === undefined ? '빈 자리와' : `${worn.labelKo} 와`
+  // **사거리는 접사가 아니라 필드다** — 접사만 견주면 활과 단검을 바꿔도 「달라지는 것이
+  // 없다」가 나온다. 자리가 주무기일 때만 뜻이 있다 (`items/loadout.replace_range`).
+  const range =
+    picked.slot === RANGE_SLOT ? buildRangeRow(picked.attackRange, worn?.attackRange ?? 0) : undefined
   return (
     <CompareBlock
       heading={`${where} 견줌`}
-      rows={compareToWorn(picked.affixes, worn?.affixes ?? [])}
+      rows={[
+        ...compareToWorn(picked.affixes, worn?.affixes ?? []),
+        ...(range === undefined ? [] : [range]),
+      ]}
       sameText={`${where} 견줘 달라지는 것이 없다`}
     />
   )

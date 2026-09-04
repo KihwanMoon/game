@@ -34,6 +34,7 @@ const AUCTION: AuctionView = {
       fee: 15,
       slot: 'HEAD',
       grade: 'COMMON',
+      attackRange: 0,
     },
     {
       listingId: 2,
@@ -46,6 +47,7 @@ const AUCTION: AuctionView = {
       fee: 45,
       slot: 'WEAPON_MAIN',
       grade: 'FINE',
+      attackRange: 0,
     },
   ],
   balance: 500,

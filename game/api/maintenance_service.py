@@ -163,6 +163,15 @@ def apply_row(pool: ConnectionPool, account_id: int, entity_id: int, row: Mainte
     때마다 갈래가 늘고, 늘어난 갈래는 읽는 사람이 전부 훑어야 한다. 어휘가 닫혀 있으므로
     (`MAINTENANCE_ACTIONS`) 표가 그 닫힘을 그대로 그린다.
 
+    **한 행이 넘어져도 나머지는 돈다.** 예전에는 아니었다 — 「장비 교체」가 꽉 찬 가방에서
+    `ValueError` 를 냈고, 그것이 라우트 밖으로 나가 `/api/run` 이 500 이 되면서 **그 판의
+    정산이 통째로 날아갔다.** 정비는 뒷정리고 정산은 그 판의 결과다; 뒷정리가 결과를
+    지우면 안 된다. 게다가 그 행이 첫 줄이라, 칸을 비워 줄 「재고 팔기」가 아래에 있는데도
+    영영 안 돌았다 — 스스로 풀릴 수 있는 막힘이 영구적인 막힘이 됐다.
+
+    **삼키지 않고 적는다.** 무슨 일이 있었는지를 그 판의 보상 줄에 남긴다 — 설명 없는
+    미실행은 버그와 구별되지 않는다 (P1).
+
     Args:
         pool: 연결 풀.
         account_id: 대상 계정.
@@ -176,7 +185,12 @@ def apply_row(pool: ConnectionPool, account_id: int, entity_id: int, row: Mainte
     if runner is None:
         # 어휘 밖이다. 저장 층이 이미 막고 있으므로 여기 오면 옛 절이 남아 있는 것이다.
         return ""
-    return runner(pool, account_id, entity_id, row)
+    try:
+        return runner(pool, account_id, entity_id, row)
+    except (ValueError, KeyError) as error:
+        # 도메인이 거절한 것만 잡는다. 연결이 끊긴 것 같은 것까지 잡으면 저장이 안 되는
+        # 상태를 「정비 한 줄 실패」로 적고 넘어가게 된다.
+        return f"{row.action} 못 함 ({error})"
 
 
 def run_discard(pool: ConnectionPool, _account_id: int, entity_id: int, row: MaintenanceRow) -> str:

@@ -19,6 +19,7 @@ import { BattleView, type BattleSetup } from '../battle'
 import { readActivePack } from '../content/pack'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import { OUTCOME_PLAYER_WIN } from '../core/sim/phases'
+import { resolveRoomFloor } from '../core/services/runChain'
 import type { RuleSet } from '../core/schemas'
 import type { ReplayInput } from '../storage'
 
@@ -62,6 +63,12 @@ export function ReplayView(props: ReplayViewProps): React.JSX.Element | null {
   const [cleared, setCleared] = useState(false)
   const rooms = replay?.roomIds ?? []
   const roomId = rooms[index] ?? replay?.roomId ?? ''
+  // **티켓의 층은 「출발한 층」이지 「지금 있는 층」이 아니다.** 한 티켓이 방 50개를
+  // 층당 5개씩 이어 도므로 열 개 층이 그 안에 있는데, 화면이 티켓 값을 그대로 적어
+  // 50개 방이 전부 「1층」으로 보였다 — 방은 넘어가는데 층이 안 넘어가는 것처럼.
+  // 코어가 적을 세울 때 쓰는 식과 **같은 함수**를 쓴다. 여기서 갈리면 화면이 적는 층과
+  // 실제로 돈 층이 달라지고, 그것은 재생을 대조 근거로 못 쓰게 만든다 (G3).
+  const floor = resolveRoomFloor(replay?.floor ?? 1, index, replay?.roomsPerFloor ?? 0)
 
   // **참조가 바뀌어야 새 판이 돈다.** 같은 제출을 다시 열면 같은 setup 이어야 하고,
   // 다른 제출로 옮기면 새 판이어야 한다 — 제출 id 가 그 경계다.
@@ -116,8 +123,8 @@ export function ReplayView(props: ReplayViewProps): React.JSX.Element | null {
         <ValueExpr
           text={
             rooms.length === 0
-              ? `${roomId} · ${String(replay.floor)}층`
-              : `${roomId} · 방 ${String(index + 1)} / ${String(rooms.length)}`
+              ? `${roomId} · ${String(floor)}층`
+              : `${roomId} · ${String(floor)}층 · 방 ${String(index + 1)} / ${String(rooms.length)}`
           }
           size="sm"
           dim
@@ -143,7 +150,9 @@ export function ReplayView(props: ReplayViewProps): React.JSX.Element | null {
               setCleared(false)
             }}
           >
-            {`다음 방 (${String(index + 2)} / ${String(rooms.length)})`}
+            {resolveRoomFloor(replay.floor, index + 1, replay.roomsPerFloor) === floor
+              ? `다음 방 (${String(index + 2)} / ${String(rooms.length)})`
+              : `다음 층 (${String(floor + 1)}층)`}
           </Button>
         ) : null}
         {index === 0 ? null : (
@@ -168,7 +177,7 @@ export function ReplayView(props: ReplayViewProps): React.JSX.Element | null {
         <BattleView
           setup={setup}
           rulesets={rulesets}
-          location={`${roomId} · ${String(replay.floor)}층`}
+          location={`${roomId} · ${String(floor)}층`}
           onOutcome={(outcome) => {
             // 이겼을 때만 다음 방이 있다. 졌으면 그 판은 거기서 끝난 것이다.
             setCleared(outcome === OUTCOME_PLAYER_WIN)

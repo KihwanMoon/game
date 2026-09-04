@@ -12,6 +12,8 @@
  * 퍼센트와 고정값은 **합치지 않는다.** 합치려면 기준값이 필요하고 그것이 다시 기준을
  * 정하는 일이 된다 — 둘을 따로 적고 어느 쪽인지 화면이 말한다.
  */
+import balanceFile from '@resources/balance/balance.json'
+
 import type { AffixView } from '../storage'
 
 /** 한 스탯의 견줌 한 줄. */
@@ -118,4 +120,75 @@ export function formatDelta(row: CompareRow): string {
     parts.push(`${row.percentDelta > 0 ? '+' : '−'}${String(Math.abs(row.percentDelta))}%`)
   }
   return parts.join(' ')
+}
+
+/**
+ * 사거리의 스탯 키.
+ *
+ * **접사가 아니라 필드다** (§2.2). 예전에는 접사였는데, 접사는 굴림에서 잘릴 수 있어
+ * **활이 근접무기가 되는** 경로가 있었다. 필드로 올라간 뒤로는 견줌이 그것을 못 봤다 —
+ * 활과 단검을 바꿔도 화면이 「달라지는 것이 없다」라고 적었다. 소모품의 충전 용량과
+ * 같은 자리이고, 같은 방식으로 접사 줄에 끼워 넣는다.
+ */
+export const RANGE_STAT = 'attack_range'
+
+/** 사거리 줄의 이름. 서버 접사가 아니므로 여기서 붙인다. */
+export const RANGE_LABEL = '사거리'
+
+/**
+ * 캐릭터가 맨손일 때 닿는 거리.
+ *
+ * **밸런스 원본을 그대로 읽는다** — 사본을 두면 파이썬이 1 로 계산하는 동안 화면만 옛
+ * 값으로 견주게 된다 (CLAUDE.md 의 `@resources` 규약, `SkillPanel` 과 같은 자리다).
+ */
+export const BASE_RANGE: number = Number(
+  (balanceFile as { readonly player: { readonly attack_range: number } }).player.attack_range,
+)
+
+/**
+ * 무기가 실제로 갖는 사거리.
+ *
+ * **0 은 「안 정한다」다** — 0 칸이 아니다. 주무기가 사거리를 정하지 않으면 캐릭터의
+ * 기본값이 그대로 남는다 (`items/loadout.replace_range`). 그 규칙을 안 따르면 단검
+ * (안 정함)과 견줄 때 활이 실제보다 한 칸 더 좋아 보인다.
+ *
+ * @param range 무기가 적은 사거리. 0 이면 안 정한 것이다.
+ * @param base 캐릭터 기본 사거리. 생략하면 밸런스 원본의 값이다.
+ * @returns 실제로 닿는 거리.
+ */
+export function resolveRange(range: number, base: number = BASE_RANGE): number {
+  return range > 0 ? range : base
+}
+
+/**
+ * 사거리 차이를 접사 줄과 같은 모양으로 만든다.
+ *
+ * **주무기끼리만 부른다.** 사거리를 대체하는 것은 주무기 하나이므로, 투구를 견주면서
+ * 이 줄을 내면 아무 뜻이 없는 숫자가 선다.
+ *
+ * @param pickedRange 고른 것이 적은 사거리.
+ * @param wornRange 지금 낀 것이 적은 사거리.
+ * @param base 캐릭터 기본 사거리. 생략하면 밸런스 원본의 값이다.
+ * @returns 견줌 한 줄. 같으면 undefined.
+ */
+export function buildRangeRow(
+  pickedRange: number,
+  wornRange: number,
+  base: number = BASE_RANGE,
+): CompareRow | undefined {
+  const picked = resolveRange(pickedRange, base)
+  const worn = resolveRange(wornRange, base)
+  if (picked === worn) {
+    return undefined
+  }
+  return {
+    stat: RANGE_STAT,
+    label: RANGE_LABEL,
+    pickedFlat: picked,
+    pickedPercent: 0,
+    wornFlat: worn,
+    wornPercent: 0,
+    flatDelta: picked - worn,
+    percentDelta: 0,
+  }
 }

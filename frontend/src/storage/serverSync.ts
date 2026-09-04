@@ -1016,6 +1016,13 @@ export interface ListingView {
   readonly slot: string
   /** 급. 가방 격자가 이름을 등급색으로 칠하는데 매물만 그 색을 못 쓰고 있었다. */
   readonly grade: string
+  /**
+   * 무기가 정하는 사거리 (§2.2). 0 은 「안 정한다」다.
+   *
+   * **접사가 아니라 필드라 견줌에서 빠져 있었다.** 매물의 접사만 견주면 활과 단검을
+   * 바꿔도 화면이 「달라지는 것이 없다」라고 적는다 — 사거리는 접사 목록에 없으니까.
+   */
+  readonly attackRange: number
 }
 
 /** 경매장. 수수료율을 함께 받는다 — 걸기 전에 얼마가 나가는지 알아야 한다. */
@@ -1151,6 +1158,7 @@ function readAuctionBody(raw: {
     fee?: number
     slot?: string
     grade?: string
+    attack_range?: number
   }[]
   balance: number
   fee_percent: number
@@ -1167,6 +1175,7 @@ function readAuctionBody(raw: {
       isMine: item.is_mine,
       slot: item.slot ?? '',
       grade: item.grade ?? '',
+      attackRange: item.attack_range ?? 0,
     })),
     balance: raw.balance,
     feePercent: raw.fee_percent,

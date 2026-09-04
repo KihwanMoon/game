@@ -19,11 +19,11 @@ import type { AuctionView, ItemView } from '../storage'
 
 import { buildListingCells, findBuyBlocker, type ListingCell } from './auctionCells'
 import { CompareBlock } from './CompareRows'
-import { compareToWorn } from './compareItems'
+import { buildRangeRow, compareToWorn } from './compareItems'
 import { renderCell } from './GridCellView'
 import { formatGradeClass, renderGrade } from './gradeBadge'
 import { formatAffix } from './InventoryPanel'
-import { EQUIP_CELL_LABELS } from './inventoryCells'
+import { EQUIP_CELL_LABELS, RANGE_SLOT } from './inventoryCells'
 import { LinkNoticeLine } from './LinkNoticeLine'
 import { checkLinked, type LinkState } from './linkState'
 
@@ -64,6 +64,12 @@ export function AuctionDetail(props: {
   const listing = props.cell.listing
   const held = listing.slot === '' ? undefined : props.worn.get(listing.slot)
   const blocker = findBuyBlocker(listing, props.balance)
+  // **사거리를 안 보면 활과 단검이 같아 보인다.** 사거리는 접사가 아니라 필드라 접사
+  // 견줌에 안 잡히는데, 경매는 되돌릴 수 없는 자리다 — 사면 귀속된다 (결정 #07).
+  const range =
+    listing.slot === RANGE_SLOT
+      ? buildRangeRow(listing.attackRange, held?.attackRange ?? 0)
+      : undefined
   return (
     <div className="invd">
       <div className="invd__row">
@@ -96,7 +102,10 @@ export function AuctionDetail(props: {
       ) : (
         <CompareBlock
           heading={held === undefined ? '빈 자리와 견줌' : `${held.labelKo} 와 견줌`}
-          rows={compareToWorn(listing.affixes, held?.affixes ?? [])}
+          rows={[
+            ...compareToWorn(listing.affixes, held?.affixes ?? []),
+            ...(range === undefined ? [] : [range]),
+          ]}
           sameText={held === undefined ? '빈 자리라 그대로 이득이다' : '지금 낀 것과 같다'}
           {...(held === undefined ? { nameSuffix: '빈 자리' } : {})}
         />

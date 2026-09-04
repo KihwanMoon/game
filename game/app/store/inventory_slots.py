@@ -10,6 +10,7 @@
 사라졌는지 설명할 수 없는 삭제는 버그와 구분되지 않는다.
 """
 
+from psycopg import Connection
 from psycopg_pool import ConnectionPool
 
 # 인벤토리 칸 수. 밸런스가 정해지기 전의 출발값이다 (docs/설계/4_아이템 §5).
@@ -29,9 +30,26 @@ def find_empty_slot(pool: ConnectionPool, entity_id: int) -> int | None:
         칸 번호. 가득 찼으면 None.
     """
     with pool.connection() as connection:
-        rows = connection.execute(
-            "SELECT slot_index FROM inventory_slot WHERE entity_id = %s", (entity_id,)
-        ).fetchall()
+        return find_empty_index(connection, entity_id)
+
+
+def find_empty_index(connection: Connection, entity_id: int) -> int | None:
+    """열린 연결 위에서 가장 낮은 빈 칸을 찾는다.
+
+    **트랜잭션 안에서 봐야 하는 자리가 있다.** 갈아 끼우기는 가방에서 하나를 빼고 하나를
+    넣는 한 건이라, 빼는 것과 빈 칸을 세는 것이 다른 트랜잭션이면 방금 비운 칸이 안
+    보인다 — 꽉 찬 가방에서 갈아 끼우기가 막히던 것이 그 자리였다.
+
+    Args:
+        connection: 열린 연결. 부르는 쪽의 트랜잭션을 그대로 쓴다.
+        entity_id: 개체 id (entity_record).
+
+    Returns:
+        칸 번호. 가득 찼으면 None.
+    """
+    rows = connection.execute(
+        "SELECT slot_index FROM inventory_slot WHERE entity_id = %s", (entity_id,)
+    ).fetchall()
     used = {int(row[0]) for row in rows}
     for index in range(INVENTORY_SIZE):
         if index not in used:

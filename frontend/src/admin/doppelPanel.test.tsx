@@ -196,3 +196,43 @@ describe('★ 리플레이가 하강을 이어 간다', () => {
     expect(rule.slice(0, rule.indexOf('}'))).toContain('overflow: auto')
   })
 })
+
+describe('★ 재생이 적는 층은 「지금 있는 층」이다', () => {
+  // 티켓의 `floor` 는 **출발한 층**이다. 한 티켓이 방 50개를 층당 5개씩 이어 도므로 열
+  // 개 층이 그 안에 있는데, 화면이 티켓 값을 그대로 적어 방이 넘어가도 전부 「1층」으로
+  // 보였다 — 「방은 넘어가는데 계속 1층」이 그것이었다.
+  const buildReplay = () => ({
+    submissionId: 1,
+    ruleset: { rulesetId: 'r', version: 1, rules: [] } as never,
+    roomId: 'corridor',
+    seed: 42,
+    floor: 1,
+    roomsPerFloor: 5,
+    // 같은 방을 잇는다. 여기서 보는 것은 **층 계산**이지 방 배치가 아니다.
+    roomIds: Array.from({ length: 12 }, () => 'corridor'),
+    loadout: undefined,
+    snapshots: [],
+    outcome: 'PLAYER_WIN',
+    ticks: 10,
+    playerHp: 5,
+  })
+
+  it('첫 방은 출발한 층이다', async () => {
+    const { ReplayView } = await import('./ReplayView')
+    const html = renderToStaticMarkup(
+      <ReplayView replay={buildReplay()} onClose={() => undefined} />,
+    )
+    expect(html).toContain('1층 · 방 1 / 12')
+  })
+
+  it('코어가 적을 세울 때 쓰는 식과 같은 함수를 쓴다', async () => {
+    // 여기서 갈리면 화면이 적는 층과 실제로 돈 층이 달라지고, 그러면 재생을 대조
+    // 근거로 못 쓴다 (G3).
+    const { resolveRoomFloor } = await import('../core/services/runChain')
+    expect(resolveRoomFloor(1, 0, 5)).toBe(1)
+    expect(resolveRoomFloor(1, 4, 5)).toBe(1)
+    // 다섯 번째 방을 넘어가면 2층이다 — 여기가 안 넘어가던 자리다.
+    expect(resolveRoomFloor(1, 5, 5)).toBe(2)
+    expect(resolveRoomFloor(1, 11, 5)).toBe(3)
+  })
+})

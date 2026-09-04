@@ -11,6 +11,7 @@
 
 from psycopg_pool import ConnectionPool
 
+from game.app.store.inventory_slots import find_empty_index
 from game.app.store.items import (
     EVENT_BREAK,
     EVENT_DISCARD,
@@ -82,6 +83,16 @@ def add_currency(pool: ConnectionPool, account_id: int, amount: int) -> int:
 def apply_equip(pool: ConnectionPool, entity_id: int, item_id: int, slot: EquipSlot) -> None:
     """아이템을 슬롯에 착용한다. 그 자리에 있던 것은 인벤토리로 돌아간다.
 
+    **갈아 끼우기는 가방 칸 수를 바꾸지 않는다.** 들어올 것이 칸 하나를 비우고 벗은 것이
+    그 칸에 들어가기 때문이다. 그런데 예전에는 벗기를 먼저 해서 **그 순간에만** 칸 하나가
+    더 필요했고, 꽉 찬 가방에서는 거기서 막혔다 — 사람에게는 「갈아 끼울 수 없다」였고,
+    정비 규칙의 「장비 교체」에서는 `ValueError` 가 라우트 밖으로 나가 `/api/run` 이 500 이
+    되면서 **그 판의 정산이 통째로 날아갔다.** 게다가 그 행이 첫 줄이라, 칸을 비워 줄
+    「재고 팔기」가 아래에 있는데도 영영 안 돌았다.
+
+    그래서 한 트랜잭션 안에서 **빼는 것을 먼저** 한다. 중간에 거절되면 통째로 되돌아가므로
+    아이템이 어느 쪽에도 없는 상태가 생기지 않는다.
+
     Args:
         pool: 연결 풀.
         entity_id: 개체 id (entity_record).
@@ -89,25 +100,39 @@ def apply_equip(pool: ConnectionPool, entity_id: int, item_id: int, slot: EquipS
         slot: 대상 슬롯.
 
     Raises:
-        ValueError: 이미 찬 자리를 비울 인벤토리 칸이 없는 경우.
+        ValueError: 가방에 없던 것을 끼우는데 벗은 것을 둘 칸이 없는 경우. 아이템을
+            없애는 것보다 착용을 거절하는 편이 낫다.
     """
     with pool.connection() as connection:
-        existing = connection.execute(
+        row = connection.execute(
             "SELECT item_id FROM equipment_slot WHERE entity_id = %s AND slot = %s",
             (entity_id, str(slot)),
         ).fetchone()
-    if existing is not None:
-        apply_unequip(pool, entity_id, slot)
-    with pool.connection() as connection:
-        # 인벤토리에서 빼고 슬롯에 넣는다. 한 트랜잭션이라 둘 중 하나만 되는 일이 없다.
-        connection.execute(
-            "DELETE FROM inventory_slot WHERE entity_id = %s AND item_id = %s",
+        worn_id = None if row is None else int(row[0])
+        # 들어올 것을 가방에서 먼저 뺀다. 비운 칸이 곧 벗은 것이 들어갈 칸이다.
+        freed = connection.execute(
+            "DELETE FROM inventory_slot WHERE entity_id = %s AND item_id = %s RETURNING slot_index",
             (entity_id, item_id),
-        )
+        ).fetchone()
+        if worn_id is not None:
+            index = int(freed[0]) if freed is not None else find_empty_index(connection, entity_id)
+            if index is None:
+                raise ValueError("인벤토리가 가득 차 해제할 수 없다")
+            connection.execute(
+                "DELETE FROM equipment_slot WHERE entity_id = %s AND slot = %s",
+                (entity_id, str(slot)),
+            )
+            connection.execute(
+                "INSERT INTO inventory_slot (entity_id, slot_index, item_id) VALUES (%s, %s, %s)",
+                (entity_id, index, worn_id),
+            )
         connection.execute(
             "INSERT INTO equipment_slot (entity_id, slot, item_id) VALUES (%s, %s, %s)",
             (entity_id, str(slot), item_id),
         )
+    # 기록은 트랜잭션이 닫힌 뒤에 남긴다 — 되돌아간 시도의 흔적이 남으면 안 된다.
+    if worn_id is not None:
+        record_item_event(pool, entity_id, worn_id, EVENT_UNEQUIP, str(slot))
     record_item_event(pool, entity_id, item_id, EVENT_EQUIP, str(slot))
 
 

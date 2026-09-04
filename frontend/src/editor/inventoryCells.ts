@@ -14,6 +14,9 @@ import type { CellFace } from './gridCell'
 /** 가방 칸 수. 서버의 `INVENTORY_SIZE` 와 같은 값이다 — 다르면 있는 칸이 안 그려진다. */
 export const BAG_CELL_COUNT = 20
 
+/** 사거리를 대체하는 자리. **주무기 하나다** (`items/loadout.replace_range`). */
+export const RANGE_SLOT = 'WEAPON_MAIN'
+
 /** 장비 슬롯 순서. 파이썬 `SLOT_ORDER` 와 같아야 화면과 합산이 같은 순서를 본다. */
 export const EQUIP_CELL_ORDER: readonly string[] = [
   'WEAPON_MAIN',

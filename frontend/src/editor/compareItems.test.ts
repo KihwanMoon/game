@@ -10,7 +10,14 @@ import { describe, expect, it } from 'vitest'
 
 import type { AffixView } from '../storage'
 
-import { compareToWorn, formatDelta, mergeAffixes } from './compareItems'
+import {
+  BASE_RANGE,
+  buildRangeRow,
+  compareToWorn,
+  formatDelta,
+  mergeAffixes,
+  resolveRange,
+} from './compareItems'
 
 /**
  * 접사 하나를 짠다.
@@ -75,5 +82,44 @@ describe('차이 문구', () => {
   it('음수는 부호로도 적는다 — 색 하나면 못 가르는 사람에게 사라진다', () => {
     const rows = compareToWorn([], [affix('attack', 4)])
     expect(formatDelta(rows[0]!)).toBe('−4')
+  })
+})
+
+describe('사거리 견줌', () => {
+  it('0 은 「안 정한다」다 — 기본 사거리로 읽는다', () => {
+    expect(resolveRange(0, 1)).toBe(1)
+    expect(resolveRange(4, 1)).toBe(4)
+  })
+
+  it('기본값은 밸런스 원본에서 온다', () => {
+    // 사본이 아니라 원본을 읽는지. 여기서 갈리면 화면만 옛 값으로 견준다.
+    expect(BASE_RANGE).toBe(1)
+  })
+
+  it('활을 단검과 견주면 사거리 줄이 선다', () => {
+    // 단검은 사거리를 안 정하므로 기본값 1 이다 — 활 4 와의 차이는 3 이다.
+    const row = buildRangeRow(4, 0, 1)
+    expect(row?.label).toBe('사거리')
+    expect(row?.flatDelta).toBe(3)
+    expect(row?.pickedFlat).toBe(4)
+    expect(row?.wornFlat).toBe(1)
+  })
+
+  it('활을 벗고 단검을 끼면 사거리가 줄어든 것으로 보인다', () => {
+    expect(buildRangeRow(0, 4, 1)?.flatDelta).toBe(-3)
+  })
+
+  it('둘 다 사거리를 안 정하면 줄이 없다', () => {
+    expect(buildRangeRow(0, 0, 1)).toBeUndefined()
+  })
+
+  it('같은 사거리면 줄이 없다 — 「달라지는 것이 없다」가 맞는 자리다', () => {
+    expect(buildRangeRow(3, 3, 1)).toBeUndefined()
+  })
+
+  it('사거리를 안 정한 것과 기본값이 같은 무기는 차이가 없다', () => {
+    // 사거리 1 인 무기와 안 정한 무기는 실제로 닿는 거리가 같다. 여기서 줄이 서면
+    // 사람이 없는 차이를 보고 산다.
+    expect(buildRangeRow(1, 0, 1)).toBeUndefined()
   })
 })

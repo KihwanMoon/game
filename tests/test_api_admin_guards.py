@@ -103,6 +103,10 @@ def test_there_is_no_route_that_grants_admin(client):
         # 봇의 가방을 본다. **봇만** 본다 — 아무 계정이나 열리면 남의 가방을 들여다보는
         # 길이 된다.
         "/api/admin/bot/bag",
+        # 봇 하나를 유저 화면과 같은 모양으로 연다 — 규칙표·캐릭터·가방·소모품·스킬·
+        # 리플레이. **읽기만이다.** 여기에 착용·해제가 붙으면 관리자가 봇의 빌드를 손으로
+        # 만들게 되고, 그러면 봇의 성적이 더 이상 봇의 규칙표를 뜻하지 않는다.
+        "/api/admin/bot/detail",
         # 사람 → 봇 한 방향. 도착 즉시 귀속이라 돌아오는 길이 없다 (결정 #07).
         "/api/admin/bot/gift",
         "/api/admin/bots",
@@ -116,6 +120,9 @@ def test_there_is_no_route_that_grants_admin(client):
         "/api/admin/content/draft",
         "/api/admin/content/publish",
         "/api/admin/content/{asset}",
+        # 도플갱어 하나를 연다. 봇보다 탭이 적고, 그 차이가 곧 이 개체가 무엇인지를
+        # 말한다 — 계정이 아니라 얼려 둔 기록이라 가방도 소모품도 없다.
+        "/api/admin/doppel/detail",
         # 도플갱어가 끼고 있던 것. **가진 아이템이 아니라 얼려 둔 기록이다** — 그 개체는
         # 어떤 아이템도 소유하지 않는다.
         "/api/admin/doppel/gear",
@@ -124,6 +131,10 @@ def test_there_is_no_route_that_grants_admin(client):
         "/api/admin/item/recall",
         "/api/admin/monster/level",
         "/api/admin/overview",
+        # 지나간 판을 다시 돌릴 **입력**을 준다 — 시드·방·층·로드아웃·스냅샷. 전부
+        # 티켓에서 나오고 **클라이언트가 보낸 것은 하나도 안 실린다** (설계/7_변조방지 §4).
+        # 결과를 여기서 주는 것이 아니라, 받는 쪽이 다시 돌려서 같은 답이 나오는지 본다.
+        "/api/admin/replay",
     ]
 
 
