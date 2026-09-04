@@ -619,7 +619,7 @@ describe('좁은 화면의 규칙표 탭', () => {
     foot: <span>정비 안내다</span>,
   }
 
-  it('★ 탭 줄이 본문 맨 위에 선다 — 좁은 상단 바에는 자리가 없다', () => {
+  it('★ 탭 줄이 본문에 선다 — 좁은 상단 바에는 자리가 없다', () => {
     const html = renderToStaticMarkup(
       RuleEditMobile(
         buildProps({ editIndex: -1, tabs: [UPKEEP_TAB], tabId: 'combat', onTab: vi.fn() }),
@@ -628,6 +628,40 @@ describe('좁은 화면의 규칙표 탭', () => {
     expect(html).toContain('edit-m__tabs')
     expect(html).toContain('전투 규칙')
     expect(html).toContain('정비 규칙')
+  })
+
+  it('★ 탭 줄이 출격 조작부 **아래**다 — 접히면 출격 버튼이 그만큼 밀린다', () => {
+    // 탭이 여덟이면 좁은 폭에서 두세 줄로 접힌다. 그것이 위에 있으면 이 화면에서 가장
+    // 자주 누르는 출격이 화면 밖으로 나간다.
+    for (const tabId of ['combat', 'upkeep']) {
+      const html = renderToStaticMarkup(
+        RuleEditMobile(
+          buildProps({
+            editIndex: -1,
+            tabs: [UPKEEP_TAB],
+            tabId,
+            onTab: vi.fn(),
+            controls: <button type="button">출격</button>,
+          }),
+        ),
+      )
+      expect(html.indexOf('출격')).toBeLessThan(html.indexOf('edit-m__tabs'))
+    }
+  })
+
+  it('★ 본문 하나뿐인 탭은 본문만 쌓는다 — 없는 팔레트 자리를 비워 두지 않는다', () => {
+    const html = renderToStaticMarkup(
+      RuleEditMobile(
+        buildProps({
+          editIndex: -1,
+          tabs: [{ id: 'bag', label: '가방', main: <div>가방 본문이다</div> }],
+          tabId: 'bag',
+          onTab: vi.fn(),
+        }),
+      ),
+    )
+    expect(html).toContain('가방 본문이다')
+    expect(html).not.toContain('edit-m__rules')
   })
 
   it('★ 정비 탭을 열면 세 조각이 세로로 쌓인다 — 좁은 화면에는 열이 하나뿐이다', () => {

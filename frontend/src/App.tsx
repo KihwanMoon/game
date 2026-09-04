@@ -67,7 +67,6 @@ import {
   AdminPanel,
   BestiaryPanel,
   DiscoveryPanel,
-  DrawerPanel,
   EvictionNotice,
   GrowthPanel,
   AUTO_ADVANCE_SECONDS,
@@ -76,7 +75,6 @@ import {
   checkShouldAutoAdvance,
   readAutoAdvance,
   writeAutoAdvance,
-  type DrawerTab,
   CharacterPanel,
   TemplatePanel,
   TutorialPanel,
@@ -1572,9 +1570,8 @@ export function App(): React.JSX.Element {
           library={
             <>
               {/* **코드 라이브러리는 규칙을 고치는 화면에 있다.** 이 슬롯이 원래
-                  그것을 위해 만들어졌는데(RuleEditor 의 `library` 주석), 서랍의 한
-                  탭으로 들어가 있었다 — 규칙표를 저장하고 불러오는 일은 서랍을 열어
-                  탭을 고르는 일이 아니라 편집의 일부다. */}
+                  그것을 위해 만들어졌는데 곁다리 탭 하나로 들어가 있었다 — 규칙표를
+                  저장하고 불러오는 일은 탭을 고르는 일이 아니라 편집의 일부다. */}
               <RuleLibrary
                 presets={session.presets}
                 onSave={(name) => {
@@ -1590,12 +1587,12 @@ export function App(): React.JSX.Element {
                 onExport={(name) => exportSessionCode(session, name)}
                 onExportSlot={(index) => exportSlotCode(session, index)}
               />
-              <DrawerPanel tabs={buildDrawerTabs()} />
             </>
           }
-          // **규칙표가 두 벌이다.** 전투 규칙과 정비 규칙 — 둘 다 행 순서가 실행 순서인
-          // 조립물이고, 그래서 같은 화면에서 같은 골격으로 고친다.
-          tabs={[buildMaintenanceTab()]}
+          // **탭 줄 하나가 화면 전부를 든다.** 앞의 둘은 규칙표(전투·정비)라 팔레트와
+          // 검증까지 쓰고, 나머지는 본문 하나짜리 화면이다 — 예전에는 뒤쪽이 「서랍」
+          // 이라는 또 하나의 탭 줄 안에 갇혀 있었다.
+          tabs={[buildMaintenanceTab(), ...buildScreenTabs()]}
         />
       </div>
     )
@@ -1710,24 +1707,29 @@ export function App(): React.JSX.Element {
   }
 
   /**
-   * 서랍 탭을 만든다.
+   * 규칙표 옆에 세울 화면 탭들을 만든다.
+   *
+   * **예전에는 「서랍」이라는 탭 줄 안에 또 탭으로 있었다.** 그래서 가방에 가려면 규칙표
+   * 탭에서 서랍을 찾고 서랍 안에서 가방을 골라야 했다 — 어느 탭 안의 어느 탭인지를
+   * 외우게 하는 구조이고, 두 줄이 서로 다른 것을 뜻한다는 근거도 없었다. 규칙표와
+   * 곁다리는 **동위다**: 둘 다 「지금 무슨 화면을 보는가」이며, 한 줄로 편다.
    *
    * **묶음은 "무엇에 대한 것인가" 로 가른다.** 화면 수를 줄이려고 아무거나 합치면 탭
    * 이름이 설명을 못 하고, 그러면 탭이 있으나 마나다.
    *
    * 관리자 탭은 관리자에게만 생긴다 — 빈 탭이라도 있으면 관리자 경로의 존재가 드러난다.
    *
-   * @returns 탭 목록.
+   * @returns 탭 목록. 팔레트도 검증도 없는 본문 하나짜리 탭들이다.
    */
-  function buildDrawerTabs(): DrawerTab[] {
-    const tabs: DrawerTab[] = [
+  function buildScreenTabs(): EditorTab[] {
+    const tabs: EditorTab[] = [
       {
         // **레벨과 능력치가 여기로 왔다.** 세계 패널에 있었는데, 그것은 세계에 대한
         // 사실이 아니라 나에 대한 사실이다 — 「내 캐릭터가 뭘 찍을 수 있나」를 보려고
         // 세계를 여는 것이 이상했다.
         id: 'me',
         label: '캐릭터',
-        body: (
+        main: (
           <>
               <AccountPanel
                 account={profile}
@@ -1769,7 +1771,7 @@ export function App(): React.JSX.Element {
       {
         id: 'bag',
         label: '가방',
-        body: (
+        main: (
           <>
               <InventoryPanel
                 inventory={inventory}
@@ -1831,7 +1833,7 @@ export function App(): React.JSX.Element {
         // 뒤지는 일과 다른 질문이다 — 한 탭에 있으면 소모품·정비 아래로 밀려 안 보인다.
         id: 'skill',
         label: '스킬',
-        body: (
+        main: (
             <SkillPanel
                 view={skillPrefs}
                 link={link}
@@ -1859,7 +1861,7 @@ export function App(): React.JSX.Element {
         // 없다(귀속된다, 결정 #07). 순위표 아래에 있으면 그만한 무게로 안 보였다.
         id: 'auction',
         label: '경매',
-        body: (
+        main: (
           <AuctionPanel
             auction={auction}
             link={link}
@@ -1878,7 +1880,7 @@ export function App(): React.JSX.Element {
       {
         id: 'world',
         label: '세계',
-        body: (
+        main: (
           <>
               <WorldPanel
                 progress={progress}
@@ -1906,7 +1908,7 @@ export function App(): React.JSX.Element {
       {
         id: 'learn',
         label: '배움',
-        body: (
+        main: (
           <>
               <TemplatePanel
                 templates={RULE_TEMPLATES}
@@ -1947,10 +1949,10 @@ export function App(): React.JSX.Element {
       tabs.push({
         id: 'admin',
         label: '관리',
-        body: (
+        main: (
           <>
             {/* **관리는 별도 페이지다** (`/admin.html`). 표와 격자가 폭을 다 써야 하는데
-                서랍은 좁은 열이라 게임 UI 와 공간을 다퉜다. 여기엔 세계 현황과 개입만
+                탭 하나는 좁은 열이라 게임 UI 와 공간을 다퉜다. 여기엔 세계 현황과 개입만
                 남긴다 — 판을 돌다 급히 볼 것들이다. */}
             <AdminPanel
               overview={admin}

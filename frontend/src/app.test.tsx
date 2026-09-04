@@ -19,7 +19,7 @@ import { describe, expect, it } from 'vitest'
 
 import { App, CHAIN_LENGTH, LOCAL_FLOOR_CAP, buildInitialRuleSet, checkFloorCleared, checkLaunchLocked, checkRunOver, formatLaunchLabel, buildChainPosition, buildNextRoomSetup, buildRunSetup, resolvePlayerLimits, describeRunResult, findLaunchBlocker, formatLocation, readPlayerLimits } from './App'
 import { buildBattleSession, checkOngoing, resolveRoomFloor, type BattleSetup } from './battle'
-import { checkShouldAutoAdvance, OFFLINE_PREFIX, PROBING_TEXT } from './editor'
+import { checkShouldAutoAdvance, OFFLINE_PREFIX } from './editor'
 import { BALANCE, BLOCK_CATALOG, G0_RULESETS } from './core/resources'
 import type { LogEntry } from './core/eventLog'
 import { validateRuleSet } from './core/rules/validator'
@@ -68,7 +68,9 @@ describe('첫 화면', () => {
   it('★ 서버에 물어보기 전에는 경보를 띄우지 않는다', () => {
     expect(markup).not.toContain('ds-glyph--danger')
     expect(markup).not.toContain(OFFLINE_PREFIX)
-    expect(markup).toContain(PROBING_TEXT)
+    // 「물어보는 중」 문구 자체는 패널의 것이라 `characterRender` 가 지킨다. 예전에는
+    // 서랍의 첫 칸이 늘 열려 있어 여기서도 보였는데, 그것은 설계가 아니라 우연이었다 —
+    // 서랍을 다른 탭으로 옮겨 두면 그때도 안 보였다.
   })
 
   it('출격 조작부가 상단 바에 붙는다', () => {
@@ -99,42 +101,46 @@ describe('첫 화면', () => {
     expect(markup).not.toContain('사후 분석')
   })
 
-  it('★ 곁다리 패널이 서랍으로 갈려 있다 — 아홉을 쌓으면 규칙 에디터에 닿지 못한다', () => {
-    // 쌓기를 그만둔 이유는 두 가지다. 높이가 안 나와 아래쪽이 하단 바를 뚫고 나갔고,
-    // 규칙 에디터에 닿기 전에 스크롤을 아홉 번 지나야 했다.
-    expect(markup).toContain('서랍')
+  it('★ 규칙표와 곁다리가 한 탭 줄에 동위로 선다', () => {
+    // 예전에는 탭 줄이 둘이었다 — 규칙표 탭(전투·정비)이 상단 바에 있고, 곁다리는
+    // 「서랍」이라는 또 하나의 탭 줄 안에 갇혀 있었다. 가방에 가려면 어느 탭 안의 어느
+    // 탭인지를 외워야 했고, 두 줄이 서로 다른 것을 뜻한다는 근거도 없었다.
+    expect(markup).not.toContain('>서랍<')
+    expect(markup).toContain('editor__tabs')
     // 묶음은 「무엇에 대한 것인가」로 가른다. 「나」가 「캐릭터」가 되고 스킬이 가방에서
     // 갈라진 것은, 레벨·능력치가 세계에서 이쪽으로 오면서 탭의 뜻이 분명해져서다.
-    for (const label of ['캐릭터', '가방', '스킬', '세계', '배움']) {
+    for (const label of ['전투 규칙', '정비 규칙', '캐릭터', '가방', '스킬', '경매', '세계', '배움']) {
       expect(markup).toContain(`>${label}<`)
     }
   })
 
-  it('★ 레벨과 능력치는 세계가 아니라 캐릭터에 있다', () => {
-    // 그것은 세계에 대한 사실이 아니라 나에 대한 사실이다 — 「내가 뭘 찍을 수 있나」를
-    // 보려고 세계를 여는 것이 이상했다.
-    expect(markup).toContain('>성장<')
+  it('★ 탭 줄이 출격 조작부보다 아래에 선다 — 접히면 출격이 밀린다', () => {
+    // 탭이 여덟이라 좁은 폭에서 두세 줄로 접힌다. 그것이 위에 있으면 이 화면에서 가장
+    // 자주 누르는 출격 버튼이 그만큼 아래로 밀린다.
+    expect(markup.indexOf('launch__field')).toBeLessThan(markup.indexOf('editor__tabs'))
   })
 
-  it('★ 코드 라이브러리는 서랍 밖, 규칙을 고치는 열에 있다', () => {
-    // 이 슬롯이 원래 그것을 위해 만들어졌는데(RuleEditor 의 `library` 주석) 서랍의 한
-    // 탭으로 들어가 있었다. 규칙표를 저장하고 불러오는 일은 서랍을 열어 탭을 고르는
-    // 일이 아니라 편집의 일부다.
+  it('★ 처음 열리는 것은 전투 규칙이다 — 이 게임의 규칙표는 전투가 중심이다', () => {
+    expect(markup).toContain('우선순위 리스트')
+    // 안 열린 탭의 내용은 안 그려진다 — 그려지면 탭이 갈린 뜻이 없다.
+    expect(markup).not.toContain('>성장<')
+    expect(markup).not.toContain('장비와 가방')
+  })
+
+  it('★ 코드 라이브러리는 규칙을 고치는 열에 있다', () => {
+    // 이 슬롯이 원래 그것을 위해 만들어졌는데(RuleEditor 의 `library` 주석) 곁다리 탭
+    // 하나로 들어가 있었다. 규칙표를 저장하고 불러오는 일은 탭을 고르는 일이 아니라
+    // 편집의 일부다.
     expect(markup).toContain('코드 라이브러리')
     expect(markup).not.toContain('>서고<')
-    // 팔레트 열 안에 있어야 한다 — 서랍보다 위다.
-    const column = markup.slice(markup.indexOf('editor__col--palette'))
-    expect(column.indexOf('코드 라이브러리')).toBeLessThan(column.indexOf('>서랍<'))
+    expect(markup.slice(markup.indexOf('editor__col--palette'))).toContain('코드 라이브러리')
   })
 
   it('★ 관리 탭은 관리자에게만 생긴다 — 빈 탭도 경로의 존재를 알려 준다', () => {
     expect(markup).not.toContain('>관리<')
   })
 
-  it('처음 열려 있는 서랍이 자기 내용을 보여준다 — 빈 패널은 고장으로 읽힌다', () => {
-    // 첫 칸은 「나」다. 계정과 캐릭터가 거기 있다.
-    expect(markup).toContain('캐릭터')
-  })
+
 
   it('되돌리기 조작이 상단 바에 있고, 되돌릴 것이 없으면 잠겨 있다', () => {
     expect(markup).toContain('되돌리기 (Ctrl+Z)')

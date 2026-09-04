@@ -134,29 +134,46 @@ describe('바가 넘칠 때 무엇을 버리는가', () => {
   })
 })
 
-describe('높이 사슬 — 서랍 몸통이 0 으로 접히지 않는가', () => {
+describe('높이 사슬 — 팔레트 열의 아래 칸이 0 으로 접히지 않는가', () => {
   it('★ **패널 body 가 사슬을 잇는다**', () => {
     // `Panel` 의 기본 body 는 flex 를 걸지 않아 `flex: 0 1 auto` 로 남는다. 그대로 두면
-    // 서랍 안쪽의 `flex: 1 …` 이 잡을 높이가 없어 0 으로 접히고, **탭 줄만 남고 내용이
-    // 사라진다** — 실제로 그렇게 배포됐다.
+    // 아래 칸의 `flex: 1 …` 이 잡을 높이가 없어 0 으로 접히고, **머리만 남고 내용이
+    // 사라진다** — 실제로 그렇게 배포됐다 (그때는 서랍이었다).
     const rule = readRule('.editor__col--palette > .ds-panel + .ds-panel > .ds-panel__body')
     expect(rule).toContain('display: flex')
     expect(rule).toContain('flex: 1 1 var(--sp-0)')
   })
+})
 
-  it('★ 서랍 몸통의 basis 는 auto 다 — 0 이면 자기 높이를 0 으로 신고한다', () => {
-    // 세로 배치에서는 열 높이가 정해지지 않는다. 그때 basis 0 이면 몸통이 통째로
-    // 사라진다. auto 면 내용만큼 신고하고, 높이가 정해진 곳에서는 grow 로 채운다.
-    const rule = readRule('.drw__body')
-    expect(rule).toContain('flex: 1 1 auto')
-    expect(rule).not.toContain('flex: 1 1 var(--sp-0)')
+describe('화면 탭 줄 — 규칙표와 곁다리가 동위다', () => {
+  // 예전에는 탭 줄이 둘이었다. 규칙표 탭(전투·정비)이 상단 바에 있고, 곁다리 패널들은
+  // 「서랍」이라는 또 하나의 탭 줄 안에 갇혀 있었다 — 가방에 가려면 어느 탭 안의 어느
+  // 탭인지를 외워야 했다.
+  it('★ 서랍이 없다 — 탭 줄은 하나다', () => {
+    expect(readFileSync(EDITOR_CSS, 'utf8')).not.toContain('.drw')
   })
 
-  it('★ 탭 줄은 줄지 않는다 — 줄면 버튼이 서로 겹친다', () => {
-    expect(readRule('.drw__tabs')).toContain('flex: 0 0 auto')
+  it('★ 탭 줄이 제 행을 쓴다 — 머리 바에 두면 출격 버튼부터 밀려 나간다', () => {
+    // 머리 바는 고정 높이라 넘치는 것을 감춘다(`editor__top`). 탭 아홉을 거기 넣으면
+    // 가장 중요한 것(출격·CPU)이 먼저 사라진다.
+    const rows = readRule('.editor')
+    expect(rows).toContain('grid-template-rows')
+    // 머리 · 탭 · 본문 · 하단 네 칸이다.
+    expect(rows).toContain('var(--bar-top) auto minmax(var(--sp-0), 1fr) var(--bar-bottom)')
   })
 
-  it('서랍 자신도 자라고 줄어든다 — 고정 100% 는 부모 높이가 없으면 auto 가 된다', () => {
-    expect(readRule('.drw')).toContain('flex: 1 1 auto')
+  it('★ 탭 줄은 접힌다 — 잘린 탭은 없는 탭과 구별되지 않는다', () => {
+    expect(readRule('.editor__tabs')).toContain('flex-wrap: wrap')
+  })
+
+  it('★ 본문 하나뿐인 탭은 열을 하나만 쓴다 — 빈 열 둘을 세우지 않는다', () => {
+    expect(readRule('.editor__body--single')).toContain('grid-template-columns')
+  })
+
+  it('★ 그 한 열도 폭을 다 쓰지 않는다 — 가방 격자는 320px 열에 맞춘 표기를 쓴다', () => {
+    const rule = readRule('.editor__col--single')
+    expect(rule).toContain('max-inline-size')
+    expect(rule).toContain('var(--col-rules)')
+    expect(rule).toContain('margin-inline: auto')
   })
 })

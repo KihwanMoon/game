@@ -40,7 +40,7 @@ import {
   updateRule,
   updateTerm,
 } from './draft'
-import { COMBAT_TAB_ID, type EditorTab } from './editorTabs'
+import { COMBAT_TAB_ID, checkWideTab, type EditorTab } from './editorTabs'
 import { formatRuleText, parseRuleText } from './ruleText'
 import type { TermReadings } from './termMeasure'
 
@@ -320,7 +320,10 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
   const openTab = (props.tabs ?? []).find((tab) => tab.id === tabId)
   const tabStrip =
     (props.tabs ?? []).length === 0 ? null : (
-      <span className="editor__tabs" role="tablist">
+      // **머리 바에 안 둔다.** 거기엔 이미 제목·게이지·출격 조작부가 있어 탭 아홉이
+      // 들어가면 넘치고, 넘치면 오른쪽 끝의 출격 버튼부터 밀려 나간다 — 가장 중요한
+      // 것이 먼저 사라진다(`editor__top` 주석). 제 줄을 주면 접혀도 아래로 접힌다.
+      <nav className="editor__tabs" aria-label="화면">
         <Button
           size="sm"
           variant={openTab === undefined ? 'primary' : 'ghost'}
@@ -345,14 +348,16 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
             {tab.label}
           </Button>
         ))}
-      </span>
+      </nav>
     )
 
   return (
     <div className="editor">
       <header className="editor__top">
-        <h1 className="editor__title">규칙 에디터</h1>
-        {tabStrip}
+        {/* **제목이 열린 화면을 가리킨다.** 탭이 규칙표뿐일 때는 「규칙 에디터」가 늘
+            맞았지만, 가방·세계가 동위로 들어온 뒤로는 가방을 보면서 「규칙 에디터」를
+            읽게 된다 — 좁은 화면은 이미 그렇게 하고 있었다(`RuleEditMobile`). */}
+        <h1 className="editor__title">{openTab?.label ?? '규칙 에디터'}</h1>
         {openTab === undefined ? (
           <span className="editor__hint">
             <ValueExpr text={ruleset.rulesetId} size="sm" dim />
@@ -393,6 +398,16 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
         {props.controls}
       </header>
 
+      {tabStrip}
+
+      {/* **본문 하나뿐인 탭.** 가방·세계처럼 팔레트도 검증도 없는 탭까지 세 열로 세우면
+          화면의 3분의 2가 빈 채로 남는다 — 열은 규칙표를 고치는 데 필요한 것이지 탭이
+          있다고 늘 있어야 하는 것이 아니다. */}
+      {openTab !== undefined && !checkWideTab(openTab) ? (
+        <div className="editor__body editor__body--single">
+          <div className="editor__col editor__col--single">{openTab.main}</div>
+        </div>
+      ) : (
       <div className="editor__body">
         <div className="editor__col editor__col--palette">
           {openTab === undefined ? (
@@ -413,9 +428,11 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
           ) : (
             openTab.palette
           )}
-          {/* **서랍은 두 탭에 다 남는다.** 이 열의 아래는 앱의 길목이라, 정비를 고치는
-              동안 감추면 가방·세계로 나갈 문이 사라진다. */}
-          {props.library}
+          {/* **코드 라이브러리는 전투 탭에만 있다.** 프리셋 8슬롯은 전투 규칙표를 담는
+              서랍이고, 정비 규칙을 고치는 동안 그것이 서 있으면 무엇이 저장되는지가
+              헷갈린다. 예전에는 여기 남겨 두었는데, 그때는 이 열이 가방·세계로 나가는
+              유일한 길이었기 때문이다 — 이제 탭 줄이 그 길이다. */}
+          {openTab === undefined ? props.library : null}
         </div>
 
         <span className="editor__rule-line" aria-hidden="true" />
@@ -511,6 +528,7 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
           )}
         </div>
       </div>
+      )}
 
       <footer className="editor__bottom">
         {openTab === undefined ? (

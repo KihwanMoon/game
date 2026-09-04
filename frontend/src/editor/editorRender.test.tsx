@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest'
 import { BLOCK_CATALOG, G0_RULESETS } from '../core/resources'
 import type { RuleSet } from '../core/schemas'
 import { MAX_PRESET_SLOTS, type RulePreset } from '../storage'
+import { checkWideTab } from './editorTabs'
 import { RuleEditor } from './RuleEditor'
 import { RuleLibrary } from './RuleLibrary'
 
@@ -238,9 +239,10 @@ describe('좁은 화면의 상단 조작부', () => {
   })
 })
 
-describe('규칙표 탭 — 전투와 정비', () => {
-  // **정비가 가방 탭에서 규칙표로 왔다.** 전투 규칙과 정비 규칙은 같은 종류의 물건이다 —
-  // 둘 다 행 순서가 실행 순서인 조립물이고, 그래서 같은 화면에서 같은 골격으로 고친다.
+describe('화면 탭 — 규칙표와 곁다리가 동위다', () => {
+  // **정비가 가방 탭에서 규칙표로 왔고, 곁다리가 서랍에서 나왔다.** 예전에는 탭 줄이
+  // 둘이라 「어느 탭 안의 어느 탭」을 외워야 했다 — 규칙표든 가방이든 답하는 질문은
+  // 하나다: 「지금 무슨 화면을 보는가」.
   const UPKEEP_TAB = {
     id: 'upkeep',
     label: '정비 규칙',
@@ -262,10 +264,48 @@ describe('규칙표 탭 — 전투와 정비', () => {
     />,
   )
 
-  it('★ 두 탭이 상단에 선다 — 세 열을 통째로 갈아 끼우는 것이라 자리가 위여야 한다', () => {
+  it('★ 탭 줄이 머리 바 밖에 있다 — 안에 두면 출격 버튼부터 밀려 나간다', () => {
+    // 머리 바는 고정 높이라 넘치는 것을 감춘다(`editor__top`). 탭 여덟을 거기 넣으면
+    // 가장 중요한 것(출격·CPU)이 먼저 사라진다.
     expect(withTab).toContain('editor__tabs')
     expect(withTab).toContain('전투 규칙')
     expect(withTab).toContain('정비 규칙')
+    const head = withTab.slice(withTab.indexOf('editor__top'), withTab.indexOf('</header>'))
+    expect(head).not.toContain('editor__tabs')
+  })
+
+  it('★ 탭 줄이 출격 조작부보다 아래다 — 접히면 출격이 밀린다', () => {
+    const withControls = renderToStaticMarkup(
+      <RuleEditor
+        ruleset={PRESSURE}
+        catalog={BLOCK_CATALOG}
+        cpuBudget={CPU_BUDGET}
+        ruleSlots={RULE_SLOTS}
+        onChange={() => undefined}
+        tabs={[UPKEEP_TAB]}
+        controls={<button type="button">출격</button>}
+      />,
+    )
+    expect(withControls.indexOf('출격')).toBeLessThan(withControls.indexOf('editor__tabs'))
+  })
+
+  it('★ 본문 하나뿐인 탭은 열을 하나만 쓴다 — 빈 열 둘을 세우면 화면 3분의 2가 빈다', () => {
+    const panelTab = { id: 'bag', label: '가방', main: <div>가방 본문이다</div> }
+    const html = renderToStaticMarkup(
+      <RuleEditor
+        ruleset={PRESSURE}
+        catalog={BLOCK_CATALOG}
+        cpuBudget={CPU_BUDGET}
+        ruleSlots={RULE_SLOTS}
+        onChange={() => undefined}
+        tabs={[panelTab]}
+      />,
+    )
+    // 전투 탭이 열려 있으므로 세 열이다. 한 열짜리는 그 탭을 골랐을 때다 —
+    // 여기서는 계약만 본다: 팔레트도 검증도 없는 탭이 `checkWideTab` 에 거짓이다.
+    expect(checkWideTab(panelTab)).toBe(false)
+    expect(checkWideTab(UPKEEP_TAB)).toBe(true)
+    expect(html).toContain('editor__tabs')
   })
 
   it('★ 전투 탭이 처음 열린다 — 이 게임의 규칙표는 여전히 전투가 중심이다', () => {
@@ -284,6 +324,21 @@ describe('규칙표 탭 — 전투와 정비', () => {
   it('★ 계량도 탭을 따라간다 — 전투 탭에서는 CPU 게이지가 선다', () => {
     expect(withTab).toContain('cpu')
     expect(withTab).not.toContain('정비 계량이다')
+  })
+
+  it('★ 코드 라이브러리는 전투 탭의 것이다 — 프리셋은 전투 규칙표를 담는다', () => {
+    const html = renderToStaticMarkup(
+      <RuleEditor
+        ruleset={PRESSURE}
+        catalog={BLOCK_CATALOG}
+        cpuBudget={CPU_BUDGET}
+        ruleSlots={RULE_SLOTS}
+        onChange={() => undefined}
+        tabs={[UPKEEP_TAB]}
+        library={<div>코드 라이브러리다</div>}
+      />,
+    )
+    expect(html).toContain('코드 라이브러리다')
   })
 
   it('탭을 안 주면 탭 줄이 아예 없다 — 갈아 낄 것이 하나뿐이면 고를 일도 없다', () => {

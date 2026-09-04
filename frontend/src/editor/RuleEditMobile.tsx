@@ -32,7 +32,7 @@ import { GlyphState, SegmentedGauge, ValueExpr } from '../ds'
 import type { BlockCatalog, RuleSet } from '../core/schemas'
 import { formatActionLabel } from './blockOptions'
 import { calculateTotalCpu } from './draft'
-import { COMBAT_TAB_ID, type EditorTab } from './editorTabs'
+import { COMBAT_TAB_ID, checkWideTab, type EditorTab } from './editorTabs'
 import { ActionCard, ConditionCard, CpuCard, PriorityCard } from './RuleEditCards'
 import type { RuleRowActions } from './RuleRowEditor'
 import { formatMeasuredCondition, type TermReadings } from './termMeasure'
@@ -111,7 +111,9 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
   const openTab = tabs.find((tab) => tab.id === props.tabId)
   const tabStrip =
     tabs.length === 0 || props.onTab === undefined ? null : (
-      <div className="edit-m__tabs" role="tablist">
+      // 자식이 `role="tab"` 이 아니므로 `role="tablist"` 를 쓰지 않는다 — 짝이 안 맞는
+      // ARIA 는 없느니만 못하다. 고름은 `aria-pressed` 가 말한다(데스크톱과 같다).
+      <nav className="edit-m__tabs" aria-label="화면">
         <button
           type="button"
           className={`edit-m__tab${openTab === undefined ? ' edit-m__tab--on' : ''}`}
@@ -135,10 +137,10 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
             {tab.label}
           </button>
         ))}
-      </div>
+      </nav>
     )
 
-  // 전투가 아닌 규칙표를 고르고 있다. **팔레트·본문·검증을 세로로 쌓는다** — 좁은
+  // 전투가 아닌 화면을 고르고 있다. **팔레트·본문·검증을 세로로 쌓는다** — 좁은
   // 화면에는 열이 하나뿐이라, 세 열을 나란히 두려 하면 전부 못 읽을 폭이 된다.
   if (openTab !== undefined) {
     return (
@@ -148,14 +150,20 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
           <span className="edit-m__meta">{openTab.gauge}</span>
         </header>
         <div className="edit-m__body">
-          {tabStrip}
+          {/* **조작부가 탭 줄보다 위다.** 탭이 아홉이면 좁은 폭에서 두세 줄로 접히는데,
+              그것이 위에 있으면 출격 버튼이 그만큼 아래로 밀린다 — 이 화면에서 가장 자주
+              누르는 것이 출격이다. */}
           {props.controls === undefined ? null : (
             <div className="edit-m__controls">{props.controls}</div>
           )}
+          {tabStrip}
           {openTab.main}
-          {openTab.palette}
-          {openTab.check}
-          {props.library}
+          {checkWideTab(openTab) ? (
+            <>
+              {openTab.palette}
+              {openTab.check}
+            </>
+          ) : null}
         </div>
       </div>
     )
@@ -180,10 +188,11 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
       </header>
 
       <div className="edit-m__body">
-        {tabStrip}
+        {/* 조작부가 탭 줄보다 위다 — 위 주석과 같은 이유다. */}
         {props.controls === undefined ? null : (
           <div className="edit-m__controls">{props.controls}</div>
         )}
+        {tabStrip}
 
         <ul className="edit-m__rules">
           {ruleset.rules.map((rule, at) => {
