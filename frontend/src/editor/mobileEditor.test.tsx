@@ -726,36 +726,32 @@ describe('★ 좁은 화면이 가로로 밀리지 않는다', () => {
   })
 })
 
-describe('★ 세로의 탭 화면은 문서 흐름이다', () => {
-  // 100vh 격자에 가두면 몸통이 제 스크롤을 만들고, 그 안의 패널이 **또** 만든다.
-  // 스크롤이 두 겹이면 어느 것을 밀고 있는지 손가락이 모르고, 패널마다 화면 높이를
-  // 나눠 가지느라 무엇도 제 내용을 다 못 편다.
-  it('세로 목록은 높이를 안 고정한다 — 100dvh 는 하한이다', () => {
-    const rule = cutRule('.edit-m--portrait.edit-m--list')
-    expect(rule).toContain('height: auto')
-    expect(rule).toContain('min-height: 100dvh')
+describe('★ 세로에서는 스크롤 컨테이너가 하나다', () => {
+  // 예전에는 둘이었다 — 몸통이 하나, 그 안의 `Panel scroll` 이 또 하나. 두 겹이면 어느
+  // 것을 밀고 있는지 손가락이 모르고, 패널마다 화면 높이를 나눠 가져 가방 격자 스무 칸이
+  // 몇 줄만 보이는 창에 갇힌다.
+  it('몸통이 스크롤을 든다 — 여기까지 풀면 아무것도 스크롤되지 않는다', () => {
+    // 껍데기(`.app`)가 `height: 100dvh; overflow: hidden` 인 고정 프레임이라, 몸통까지
+    // 흐르게 두면 넘친 만큼이 그냥 잘린다. 한 번 그렇게 배포했다.
+    expect(cutRule('.edit-m__body')).toContain('overflow-y: auto')
   })
 
-  it('몸통이 제 스크롤을 안 만든다 — 페이지가 흐른다', () => {
-    expect(cutRule('.edit-m--portrait.edit-m--list > .edit-m__body')).toContain(
-      'overflow-y: visible',
-    )
-  })
-
-  it('안쪽 패널의 높이 제한도 함께 풀린다 — 흐르는 문서에는 가둘 높이가 없다', () => {
-    // 선택자가 두 줄짜리라 `cutRule` 로 못 자른다. 규칙 덩어리를 통째로 본다.
-    const css = readStrippedCss('editor.css')
-    const at = css.indexOf('.edit-m--portrait.edit-m--list .ds-panel,')
-    const rule = css.slice(at, css.indexOf('}', at))
-    expect(rule).toContain('.ds-panel__body')
-    expect(rule).toContain('max-height: none')
+  it('안쪽 패널은 제 스크롤을 안 만든다 — 높이 제한이 풀린다', () => {
+    const rule = cutRule('.edit-m--portrait .ds-panel__body')
     expect(rule).toContain('overflow: visible')
+    expect(rule).toContain('max-height: none')
   })
 
-  it('★ 가로와 편집 화면은 그대로 둔다 — 흐르게 두면 잃는 것이 있다', () => {
-    // 가로는 높이가 390px 뿐이라 머리 바가 화면 밖으로 나가고, 편집 화면은 하단의
-    // 취소·저장이 늘 손에 닿아야 한다.
-    expect(cutRule('.edit-m--edit')).toContain('var(--bar-edit)')
+  it('패널이 제 내용만큼 선다 — 줄어들면 다시 창에 갇힌다', () => {
+    expect(cutRule('.edit-m--portrait .ds-panel')).toContain('flex: 0 0 auto')
+  })
+
+  it('★ 껍데기의 높이를 그대로 쓴다 — 100vh 는 주소창을 포함해 하단 바를 자른다', () => {
+    expect(cutRule('.edit-m')).toContain('height: 100%')
+    expect(cutRule('.edit-m')).not.toContain('100vh')
+  })
+
+  it('★ 가로는 그대로 둔다 — 390px 에서 안쪽이 다 펴지면 한 패널이 화면을 먹는다', () => {
     expect(cutRule('.edit-m--landscape.edit-m--edit')).toContain('minmax(var(--sp-0), 1fr)')
   })
 })
