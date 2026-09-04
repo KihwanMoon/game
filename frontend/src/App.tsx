@@ -82,6 +82,7 @@ import {
   ConsumablePanel,
   findFreeConsumableSlot,
   checkLinked,
+  describeGlobalLink,
   InventoryPanel,
   MaintenanceEditor,
   MaintenancePalette,
@@ -1543,6 +1544,9 @@ export function App(): React.JSX.Element {
     </div>
   )
 
+  // 탭 줄 끝에 설 연결 상태. 붙어 있으면 undefined 라 아무것도 안 선다.
+  const globalLink = describeGlobalLink(link)
+
   // **이른 return 앞에서 구한다.** 뒤에 두면 편집기 가지에서 `goToEditor` 가 이 값을
   // 읽을 때 아직 초기화되지 않아 터진다.
   const nextRoom = run === undefined ? undefined : buildNextRoomSetup(run.setup, outcome)
@@ -1593,6 +1597,17 @@ export function App(): React.JSX.Element {
           // 검증까지 쓰고, 나머지는 본문 하나짜리 화면이다 — 예전에는 뒤쪽이 「서랍」
           // 이라는 또 하나의 탭 줄 안에 갇혀 있었다.
           tabs={[buildMaintenanceTab(), ...buildScreenTabs()]}
+          // **연결 상태는 모든 탭에서 보인다.** 예전에는 서랍의 첫 칸이 열려 있을 때만
+          // 보였는데 그것은 우연이었다 — 다른 탭에 두면 서버가 죽어도 화면이 조용했다.
+          // 등급은 패널의 것과 다르다: 여기서 오프라인은 실패가 아니라 **설계된 상태**라
+          // ◈ 를 안 쓴다 (`describeGlobalLink`).
+          {...(globalLink === undefined
+            ? {}
+            : {
+                status: (
+                  <GlyphState state={globalLink.state} size="sm" label={globalLink.text} />
+                ),
+              })}
         />
       </div>
     )

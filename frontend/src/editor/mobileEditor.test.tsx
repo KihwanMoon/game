@@ -699,3 +699,27 @@ describe('좁은 화면의 규칙표 탭', () => {
     expect(html).toContain('출격')
   })
 })
+
+describe('★ 좁은 화면이 가로로 밀리지 않는다', () => {
+  // 탭 여덟이 한 줄에 들어가려다 화면 폭을 넘겨 **페이지 전체가 가로로 밀렸다** — 왼쪽이
+  // 잘려 규칙 조건문의 앞머리가 사라졌다(실제 신고). 원인은 둘이었고 둘 다 여기서 본다.
+  it('탭 줄이 접힌다 — 안 접히면 여덟 칸이 한 줄을 고집한다', () => {
+    expect(cutRule('.edit-m__tabs')).toContain('flex-wrap: wrap')
+  })
+
+  it('탭 한 칸이 폭을 나눠 갖지 않는다 — `flex: 1 1 0` 은 탭이 둘이던 시절 값이다', () => {
+    // 플렉스 항목은 min-content 아래로 안 줄어든다. 여덟을 8분의 1로 누르면 줄 전체가
+    // 화면을 넘는다.
+    const rule = cutRule('.edit-m__tab')
+    expect(rule).toContain('flex: 0 1 auto')
+    expect(rule).not.toContain('flex: 1 1 0')
+  })
+
+  it('라벨을 글자 단위로 쪼개지 않는다 — 「정비 규칙」이 세로로 서면 못 읽는다', () => {
+    expect(cutRule('.edit-m__tab')).toContain('white-space: nowrap')
+  })
+
+  it('몸통이 내용보다 좁아질 수 있다 — 격자 칸의 기본은 안 줄어드는 auto 다', () => {
+    expect(cutRule('.edit-m__body')).toContain('min-width: var(--sp-0)')
+  })
+})

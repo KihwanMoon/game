@@ -86,6 +86,8 @@ export interface RuleEditMobileProps {
   /** 지금 열린 탭. 전투면 `COMBAT_TAB_ID`. */
   readonly tabId?: string
   readonly onTab?: (id: string) => void
+  /** 탭 줄 끝에 늘 서 있는 상태. 앱이 연결 상태를 여기 끼운다. */
+  readonly status?: ReactNode
 }
 
 /** RuleListScreen 이 받는 props. */
@@ -137,6 +139,9 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
             {tab.label}
           </button>
         ))}
+        {props.status === undefined ? null : (
+          <span className="editor__status">{props.status}</span>
+        )}
       </nav>
     )
 

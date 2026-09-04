@@ -98,6 +98,16 @@ export interface RuleEditorProps {
    * 아니다.** 에디터가 아는 것은 「규칙표가 여럿이고 한 번에 하나를 고친다」까지다.
    */
   readonly tabs?: readonly EditorTab[]
+  /**
+   * 탭 줄 오른쪽 끝에 늘 서 있는 상태. 앱이 연결 상태를 여기 끼운다.
+   *
+   * **탭 줄이 자리인 이유**는 모든 탭에서 보여야 하기 때문이다. 예전에는 서랍의 첫 칸이
+   * 열려 있을 때만 연결 상태가 보였는데, 그것은 설계가 아니라 우연이었다 — 서랍을 다른
+   * 탭으로 옮겨 두면 서버가 죽어도 화면에 아무 말이 없었다.
+   *
+   * 슬롯인 이유는 `controls`·`library` 와 같다 — 에디터는 서버를 모른다.
+   */
+  readonly status?: ReactNode
 }
 
 /** 검증 메시지를 규칙별로 나눈 것. */
@@ -285,6 +295,7 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
         tabs={props.tabs ?? []}
         tabId={tabId}
         onTab={setTabId}
+        {...(props.status === undefined ? {} : { status: props.status })}
       />
     )
   }
@@ -348,6 +359,9 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
             {tab.label}
           </Button>
         ))}
+        {props.status === undefined ? null : (
+          <span className="editor__status">{props.status}</span>
+        )}
       </nav>
     )
 

@@ -67,3 +67,29 @@ export function describeLink(link: LinkState, missing: string): LinkNotice {
 export function checkLinked(link: LinkState): boolean {
   return link === 'online'
 }
+
+/**
+ * 화면 전체가 늘 달고 있는 연결 상태 한 줄.
+ *
+ * **패널의 것과 등급이 다르다.** 패널에서 `offline` 이 ◈ 인 이유는 그 패널이 보여 줄
+ * 것을 못 가져왔기 때문이다 — 가방이 비어 보이는 것은 실패다. 그런데 화면 전체로 보면
+ * 오프라인은 **설계된 상태**다: 코어가 브라우저 안에서 돌므로 서버가 없어도 게임은
+ * 돈다(CLAUDE.md). 그것을 상시 ◈ 로 적으면 늘 켜져 있는 경보가 되고, 늘 켜진 경보는
+ * 아무도 안 읽는다 — 그리고 **진짜로 서버가 죽은 날 그 줄은 배경이 된다.** 앱이 첫
+ * 페인트마다 ◈ 를 띄우던 것을 고친 것과 같은 이유이며, 방향만 반대다.
+ *
+ * 그래서 못 하게 된 것을 대신 적는다 — 저장과 순위다.
+ *
+ * @param link 연결 상태.
+ * @returns 적을 것. **붙어 있으면 undefined 다** — 잘 돌고 있다는 말을 늘 띄우는 것도
+ *     같은 종류의 소음이다.
+ */
+export function describeGlobalLink(link: LinkState): LinkNotice | undefined {
+  if (link === 'probing') {
+    return { state: 'pending', text: PROBING_TEXT }
+  }
+  if (link === 'offline') {
+    return { state: 'pending', text: `${OFFLINE_PREFIX} — 판은 돌지만 저장·순위는 안 된다` }
+  }
+  return undefined
+}

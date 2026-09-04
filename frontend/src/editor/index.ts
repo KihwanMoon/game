@@ -36,6 +36,7 @@ export { LinkNoticeLine } from './LinkNoticeLine'
 export type { LinkNoticeLineProps } from './LinkNoticeLine'
 export {
   checkLinked,
+  describeGlobalLink,
   describeLink,
   LOADING_TEXT,
   OFFLINE_PREFIX,

@@ -644,6 +644,9 @@
   flex-direction: column;
   gap: var(--sp-3);
   min-height: var(--sp-0);
+  /* 격자 칸의 기본은 `min-width: auto` 라 내용보다 안 줄어든다. 안 걸어 두면 안쪽에
+     넓은 것이 하나 생기는 순간 페이지가 통째로 가로로 밀린다. */
+  min-width: var(--sp-0);
   padding: var(--plan-pad);
   overflow-y: auto;
 }
@@ -2497,15 +2500,25 @@
 }
 
 /* 좁은 화면의 탭 줄. **출격 조작부 바로 아래**다 — 탭이 아홉이면 좁은 폭에서 두세 줄로
-   접히는데, 그것이 위에 있으면 가장 자주 누르는 출격 버튼이 그만큼 아래로 밀린다. */
+   접히는데, 그것이 위에 있으면 가장 자주 누르는 출격 버튼이 그만큼 아래로 밀린다.
+
+   **반드시 접혀야 한다.** 안 접히면 여덟 칸이 한 줄에 들어가려다 화면 폭을 넘고, 페이지
+   전체가 가로로 밀린다 — 왼쪽이 잘려 규칙 조건문의 앞머리가 사라진다(실제 신고). */
 .edit-m__tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--sp-1);
   margin-block-end: var(--sp-2);
 }
 
+/* **내용만큼만 차지한다.** 예전 값은 `flex: 1 1 0` 이었는데 그때는 탭이 둘이라 반반으로
+   나누는 것이 맞았다. 여덟이 되자 한 칸이 8분의 1로 눌렸고, 플렉스 항목은 min-content
+   아래로는 안 줄어들므로 줄 전체가 화면을 넘겼다. */
 .edit-m__tab {
-  flex: 1 1 0;
+  flex: 0 1 auto;
+  /* 라벨을 글자 단위로 쪼개지 않는다. 「정비 규칙」이 세로로 정·비·규·칙 이 되면
+     읽는 데 드는 품이 탭을 찾는 품보다 커진다. */
+  white-space: nowrap;
   min-height: var(--btn-tap-h);
   padding: var(--sp-1) var(--sp-2);
   border: var(--border);
@@ -2514,6 +2527,11 @@
   font-family: var(--font-mono);
   font-size: var(--fs-mono);
   cursor: pointer;
+}
+
+/* 연결 상태는 탭 오른쪽 끝으로 민다. 접히면 제 줄에 서고, 그때도 탭을 안 가린다. */
+.editor__status {
+  margin-inline-start: auto;
 }
 
 /* 열린 탭. 색·명도·`aria-pressed` 셋으로 적는다 — 색 하나면 못 가르는 사람에게 사라진다. */
