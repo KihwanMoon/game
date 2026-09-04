@@ -1,5 +1,8 @@
 /**
- * 세계 화면 검사 (F단계).
+ * 세계 화면 검사 (F단계) — **순위와 경매장뿐이다.**
+ *
+ * 레벨·깊이·능력치 배분은 `growthRender.test.tsx` 가 본다. 그것은 세계에 대한 사실이
+ * 아니라 나에 대한 사실이라 패널이 갈렸다.
  *
  * **API 만 있고 화면이 없으면 아무도 못 쓴다** — 도감에서 한 번 겪은 실수다.
  */
@@ -9,7 +12,7 @@ import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { WorldPanel, formatAttributeEffect } from './WorldPanel'
+import { WorldPanel } from './WorldPanel'
 import type { AuctionView, LeaderboardView, ProgressView } from '../storage'
 
 const noop = () => undefined
@@ -74,16 +77,11 @@ describe('세계 패널', () => {
       accountId={7}
       link="online"
       detail=""
-      onAllocate={noop}
       onBuy={noop}
       onCancel={noop}
       onDaily={noop}
     />,
   )
-
-  it('레벨과 다음 레벨까지의 경험치를 적는다', () => {
-    expect(markup).toContain('6 · 120 / 300')
-  })
 
   it('★ 「이것이 너다」는 황동이다 — 의미색을 빌려 쓰지 않는다', () => {
     // 예전에는 `GlyphState state="true"` 라 참/거짓의 녹청 ✓ 로 내 줄을 표시했다.
@@ -105,11 +103,6 @@ describe('세계 패널', () => {
 
   it('★ 시즌 이름이 코어 버전이다 (결정 #06)', () => {
     expect(markup).toContain('시즌 b5.v2.e1')
-  })
-
-  it('남은 능력치 포인트를 적는다', () => {
-    // 15 받고 6 썼으니 9 남았다.
-    expect(markup).toContain('남은 포인트 9')
   })
 
   it('★ 수수료율을 먼저 보여준다 — 걸기 전에 얼마가 나가는지 알아야 한다', () => {
@@ -141,7 +134,6 @@ describe('세계 패널 — 서버 없음', () => {
         accountId={undefined}
         link="offline"
         detail=""
-        onAllocate={noop}
         onBuy={noop}
         onCancel={noop}
         onDaily={noop}
@@ -164,24 +156,6 @@ describe('세계 패널 스타일', () => {
   })
 })
 
-describe('능력치 미리보기 (결정 #51)', () => {
-  it('★ 찍기 전에 무엇이 오르는지 실측값으로 보인다', () => {
-    // "힘 +1" 만 적으면 그것이 공격력을 얼마나 올리는지 알 수 없다. 배분은 되돌릴 수
-    // 없으므로 찍기 전에 값이 보여야 한다 (디자인 §8.2 와 같은 이유).
-    expect(formatAttributeEffect('str', 10)).toBe('공격 +10 · 체력 +40')
-    expect(formatAttributeEffect('dex', 7)).toBe('선공 +14 · 방어 +7')
-  })
-
-  it('★ 지능의 CPU 상한이 화면에도 보인다', () => {
-    // 상한을 화면이 숨기면 유저는 안 오르는 축에 계속 찍는다.
-    expect(formatAttributeEffect('int', 40)).toBe('CPU +8 · 스킬위력 180%')
-  })
-
-  it('0점이면 아무것도 적지 않는다 — 빈 줄이 세 개 늘면 목록이 읽히지 않는다', () => {
-    expect(formatAttributeEffect('str', 0)).toBe('')
-  })
-})
-
 describe('경매 — 사기 전에 알아야 할 것 (모바일 우선)', () => {
   const markup = renderToStaticMarkup(
     <WorldPanel
@@ -191,7 +165,6 @@ describe('경매 — 사기 전에 알아야 할 것 (모바일 우선)', () => 
       accountId={1}
       link="online"
       detail=""
-      onAllocate={() => undefined}
       onBuy={() => undefined}
       onCancel={() => undefined}
       onDaily={() => undefined}
@@ -218,40 +191,29 @@ describe('경매 — 사기 전에 알아야 할 것 (모바일 우선)', () => 
 })
 
 
-describe('층 깊이 (설계/6_몬스터 §3)', () => {
-  /**
-   * 도달 층만 바꿔 세계 화면을 그린다.
-   *
-   * @param reachedFloor 도달 층.
-   * @param floorCap 마지막 층.
-   * @returns 마크업.
-   */
-  function drawDepth(reachedFloor: number, floorCap: number): string {
-    return renderToStaticMarkup(
-      <WorldPanel
-        progress={{ ...PROGRESS, reachedFloor, floorCap }}
-        leaderboard={LEADERBOARD}
-        auction={AUCTION}
-        accountId={7}
-        link="online"
-        detail=""
-        onAllocate={noop}
-        onBuy={noop}
-        onCancel={noop}
-        onDaily={noop}
-      />,
-    )
-  }
 
-  it('★ 어디까지 왔는지 말한다 — 없으면 자기가 몇 층인지 모른 채 같은 판을 돈다', () => {
-    expect(drawDepth(4, 10)).toContain('4 / 10층')
+describe('세계 패널이 나에 대한 것을 안 그린다', () => {
+  const markup = renderToStaticMarkup(
+    <WorldPanel
+      progress={PROGRESS}
+      leaderboard={LEADERBOARD}
+      auction={AUCTION}
+      accountId={7}
+      link="online"
+      detail=""
+      onBuy={noop}
+      onCancel={noop}
+      onDaily={noop}
+    />,
+  )
+
+  it('★ 능력치 배분이 여기 없다 — 「내가 뭘 찍을 수 있나」를 보려고 세계를 열지 않는다', () => {
+    expect(markup).not.toContain('남은 포인트')
+    expect(markup).not.toContain('배분 확정')
   })
 
-  it('★ 층이 무엇을 바꾸는지 말한다 — 깊이 가는 이유와 대가가 같은 줄에 있어야 한다', () => {
-    expect(drawDepth(4, 10)).toContain('HP +25%')
-  })
-
-  it('★ 끝까지 왔으면 그렇게 말한다 — 더 갈 곳이 있는 것처럼 보이면 안 된다', () => {
-    expect(drawDepth(10, 10)).toContain('끝까지 왔다')
+  it('★ 레벨과 깊이도 없다 — 나에 대한 사실은 성장 패널이 든다', () => {
+    expect(markup).not.toContain('10층')
+    expect(markup).not.toContain('표현력')
   })
 })

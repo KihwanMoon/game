@@ -69,6 +69,7 @@ import {
   DiscoveryPanel,
   DrawerPanel,
   EvictionNotice,
+  GrowthPanel,
   AUTO_ADVANCE_SECONDS,
   AutoAdvanceNotice,
   buildRoomGroups,
@@ -1550,7 +1551,28 @@ export function App(): React.JSX.Element {
           }}
           controls={launchControls}
           library={
-            <DrawerPanel tabs={buildDrawerTabs()} />
+            <>
+              {/* **코드 라이브러리는 규칙을 고치는 화면에 있다.** 이 슬롯이 원래
+                  그것을 위해 만들어졌는데(RuleEditor 의 `library` 주석), 서랍의 한
+                  탭으로 들어가 있었다 — 규칙표를 저장하고 불러오는 일은 서랍을 열어
+                  탭을 고르는 일이 아니라 편집의 일부다. */}
+              <RuleLibrary
+                presets={session.presets}
+                onSave={(name) => {
+                  setSession((current) => applyPresetSave(current, name))
+                }}
+                onLoad={(index) => {
+                  setSession((current) => applyPresetLoad(current, index))
+                }}
+                onRemove={(index) => {
+                  setSession((current) => applyPresetRemove(current, index))
+                }}
+                onImport={readSharedCode}
+                onExport={(name) => exportSessionCode(session, name)}
+                onExportSlot={(index) => exportSlotCode(session, index)}
+              />
+              <DrawerPanel tabs={buildDrawerTabs()} />
+            </>
           }
         />
       </div>
@@ -1572,8 +1594,11 @@ export function App(): React.JSX.Element {
   function buildDrawerTabs(): DrawerTab[] {
     const tabs: DrawerTab[] = [
       {
+        // **레벨과 능력치가 여기로 왔다.** 세계 패널에 있었는데, 그것은 세계에 대한
+        // 사실이 아니라 나에 대한 사실이다 — 「내 캐릭터가 뭘 찍을 수 있나」를 보려고
+        // 세계를 여는 것이 이상했다.
         id: 'me',
-        label: '나',
+        label: '캐릭터',
         body: (
           <>
               <AccountPanel
@@ -1584,6 +1609,23 @@ export function App(): React.JSX.Element {
                 onLogin={applyLogin}
                 onLogout={() => {
                   applyLogoutHere()
+                }}
+              />
+              <GrowthPanel
+                progress={progress}
+                link={link}
+                onAllocate={(stats) => {
+                  if (account === undefined) {
+                    return
+                  }
+                  setWorldDetail('')
+                  void fetch('/api/progress/stats', {
+                    method: 'PUT',
+                    headers: { 'X-Game-Token': account, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ stats }),
+                  }).then(() => {
+                    refreshWorld()
+                  })
                 }}
               />
               <CharacterPanel
@@ -1628,25 +1670,6 @@ export function App(): React.JSX.Element {
                   if (account !== undefined) {
                     refreshBag(account)
                   }
-                }}
-              />
-              <SkillPanel
-                view={skillPrefs}
-                link={link}
-                detail={skillDetail}
-                onChange={(next) => {
-                  if (account === undefined) {
-                    return
-                  }
-                  // 낙관하지 않는다 — 서버가 확정한 값을 앉힌다 (정비 규칙과 같은 규율).
-                  setSkillDetail('')
-                  void saveSkillPrefs(account, next).then((outcome) => {
-                    if (outcome.view === undefined) {
-                      setSkillDetail(outcome.detail)
-                      return
-                    }
-                    setSkillPrefs(outcome.view)
-                  })
                 }}
               />
               <MaintenancePanel
@@ -1696,6 +1719,33 @@ export function App(): React.JSX.Element {
         ),
       },
       {
+        // **가방에서 갈라 나왔다.** 스킬은 장비가 열지만 「무엇을 들고 갈까」는 가방을
+        // 뒤지는 일과 다른 질문이다 — 한 탭에 있으면 소모품·정비 아래로 밀려 안 보인다.
+        id: 'skill',
+        label: '스킬',
+        body: (
+            <SkillPanel
+                view={skillPrefs}
+                link={link}
+                detail={skillDetail}
+                onChange={(next) => {
+                  if (account === undefined) {
+                    return
+                  }
+                  // 낙관하지 않는다 — 서버가 확정한 값을 앉힌다 (정비 규칙과 같은 규율).
+                  setSkillDetail('')
+                  void saveSkillPrefs(account, next).then((outcome) => {
+                    if (outcome.view === undefined) {
+                      setSkillDetail(outcome.detail)
+                      return
+                    }
+                    setSkillPrefs(outcome.view)
+                  })
+                }}
+              />
+        ),
+      },
+      {
         id: 'world',
         label: '세계',
         body: (
@@ -1707,19 +1757,6 @@ export function App(): React.JSX.Element {
                 accountId={profile?.accountId}
                 link={link}
                 detail={worldDetail}
-                onAllocate={(stats) => {
-                  if (account === undefined) {
-                    return
-                  }
-                  setWorldDetail('')
-                  void fetch('/api/progress/stats', {
-                    method: 'PUT',
-                    headers: { 'X-Game-Token': account, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ stats }),
-                  }).then(() => {
-                    refreshWorld()
-                  })
-                }}
                 onBuy={(listingId) => {
                   applyAuction('/auction/buy', { listing_id: listingId })
                 }}
@@ -1779,29 +1816,6 @@ export function App(): React.JSX.Element {
                 }}
               />
               <MetaPanel meta={meta} baseSlots={limits.ruleSlots} />
-          </>
-        ),
-      },
-      {
-        id: 'library',
-        label: '서고',
-        body: (
-          <>
-              <RuleLibrary
-              presets={session.presets}
-              onSave={(name) => {
-                setSession((current) => applyPresetSave(current, name))
-              }}
-              onLoad={(index) => {
-                setSession((current) => applyPresetLoad(current, index))
-              }}
-              onRemove={(index) => {
-                setSession((current) => applyPresetRemove(current, index))
-              }}
-              onImport={readSharedCode}
-              onExport={(name) => exportSessionCode(session, name)}
-                onExportSlot={(index) => exportSlotCode(session, index)}
-              />
           </>
         ),
       },
