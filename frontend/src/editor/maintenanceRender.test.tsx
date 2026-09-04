@@ -31,6 +31,15 @@ import {
 
 const noop = (): undefined => undefined
 
+/** 퍼센트를 값으로 바꾸는 기준. 장비 교체의 저울이 쓴다. */
+const BASE_STATS: Readonly<Record<string, number>> = {
+  hp_max: 100,
+  attack: 12,
+  defense: 5,
+  attack_range: 1,
+  initiative: 50,
+}
+
 const ROWS: MaintenanceView = {
   rows: [
     { action: 'DISCARD', grade: 'COMMON' },
@@ -171,6 +180,56 @@ const CONSUMABLES = {
   isRunOpen: false,
 } as unknown as ConsumableView
 
+/**
+ * 검사용 투구 하나. 방어 접사만 다르다.
+ *
+ * @param defense 방어 접사 값.
+ * @param itemId 아이템 id.
+ * @param equipped 낀 것인가.
+ * @returns 인벤토리 칸 하나.
+ */
+function buildHelm(defense: number, itemId: number, equipped: boolean): Record<string, unknown> {
+  return {
+    slotIndex: 0,
+    slot: equipped ? 'HEAD' : null,
+    isSealed: false,
+    stackCatalogId: null,
+    stackCount: 0,
+    stackLabelKo: '',
+    stackGrade: '',
+    stackUseTag: '',
+    item: {
+      itemId,
+      catalogId: 'helm',
+      labelKo: '투구',
+      kind: 'EQUIPMENT',
+      slot: 'HEAD',
+      hands: null,
+      equippedSlot: equipped ? 'HEAD' : null,
+      isBroken: false,
+      isBound: false,
+      isRecovered: false,
+      sealedSlots: 0,
+      unsealCost: 0,
+      grade: 'COMMON',
+      attackRange: 0,
+      affixes: [{ stat: 'defense', flat: defense, percent: 0, labelKo: '', statLabel: '방어' }],
+      requirements: [],
+      canEquip: true,
+    },
+  }
+}
+
+/** 낀 투구. */
+function buildWornHelm(defense: number): Record<string, unknown> {
+  return buildHelm(defense, 90, true)
+}
+
+/** 가방의 투구. */
+function buildBagHelm(defense: number): Record<string, unknown> {
+  return buildHelm(defense, 91, false)
+}
+
 function renderEditor(view: MaintenanceView | undefined, detail = ''): string {
   return renderToStaticMarkup(
     <MaintenanceEditor
@@ -179,6 +238,7 @@ function renderEditor(view: MaintenanceView | undefined, detail = ''): string {
       detail={detail}
       inventory={INVENTORY}
       consumables={CONSUMABLES}
+      baseStats={BASE_STATS}
       onChange={noop}
     />,
   )
@@ -532,14 +592,38 @@ describe('★ 「더 좋게 만든다」 미리보기는 확실한 것만 센다
     expect(preview.rows[0]?.isActive).toBe(false)
   })
 
-  it('★ 장비 교체는 후보만 세고, 고르는 것은 서버라고 적는다', () => {
+  it('★ 장비 교체가 서버와 같은 저울로 센다 — 파일 하나를 함께 읽는다', () => {
     const preview = buildMaintenancePreview(
       [{ action: 'UPGRADE_GEAR', grade: 'ATTACK' }],
       INVENTORY,
       CONSUMABLES,
+      BASE_STATS,
     )
-    // 착용은 머리뿐이고 가방에는 주무기·보조뿐이라 갈아 낄 후보가 없다.
-    expect(preview.rows[0]?.text).toContain('후보가 없다')
+    // 착용은 머리뿐이고 가방에는 주무기·보조뿐이라 갈아 낄 것이 없다.
+    expect(preview.rows[0]?.text).toContain('갈아 낄 것이 없다')
+  })
+
+  it('★ 여유폭을 못 넘기면 안 바꾼다 — 서버와 같은 값을 파일에서 읽는다', () => {
+    const worn = buildWornHelm(3)
+    const barely = buildBagHelm(9)
+    const clearly = buildBagHelm(3 + 6 + 1)
+    const near = buildMaintenancePreview(
+      [{ action: 'UPGRADE_GEAR', grade: 'DEFENSE' }],
+      ({ ...INVENTORY, slots: [barely], equipment: [worn] } as unknown as InventoryView),
+      CONSUMABLES,
+      BASE_STATS,
+    )
+    // 방어 무게 4 × 차이 6 = 24 로 여유폭을 넘는다 — 이쪽은 바뀐다.
+    expect(near.rows[0]?.text).toContain('1개 교체')
+
+    const same = buildMaintenancePreview(
+      [{ action: 'UPGRADE_GEAR', grade: 'DEFENSE' }],
+      ({ ...INVENTORY, slots: [buildBagHelm(3)], equipment: [worn] } as unknown as InventoryView),
+      CONSUMABLES,
+      BASE_STATS,
+    )
+    expect(same.rows[0]?.text).toContain('갈아 낄 것이 없다')
+    expect(clearly).toBeDefined()
   })
 
   it('★ 소모품 교체는 충전이 확실히 더 큰 칸만 센다', () => {

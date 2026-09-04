@@ -56,6 +56,8 @@ const BLOCK_CATALOG = ACTIVE.catalog
 const ROOM_TEMPLATES = ACTIVE.rooms
 const ENEMY_RULESETS = ACTIVE.enemies
 const BALANCE = ACTIVE.balance
+/** 퍼센트 접사를 값으로 바꾸는 기준. 정비의 장비 교체 저울이 쓴다. */
+const PLAYER_BASE = BALANCE.player as Record<string, number>
 import type { RawBalanceFile } from './core/resources'
 import { validateRuleSet } from './core/rules/validator'
 import type { RuleSet } from './core/schemas'
@@ -1667,7 +1669,7 @@ export function App(): React.JSX.Element {
    */
   function buildMaintenanceTab(): EditorTab {
     const rows = upkeep?.rows ?? []
-    const preview = buildMaintenancePreview(rows, inventory, consumables)
+    const preview = buildMaintenancePreview(rows, inventory, consumables, PLAYER_BASE)
     return {
       id: 'upkeep',
       label: '정비 규칙',
@@ -1687,6 +1689,7 @@ export function App(): React.JSX.Element {
           detail={upkeepDetail}
           inventory={inventory}
           consumables={consumables}
+          baseStats={PLAYER_BASE}
           onChange={saveUpkeep}
         />
       ),

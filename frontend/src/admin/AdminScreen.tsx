@@ -254,7 +254,6 @@ export function AdminScreen(): React.JSX.Element {
             }}
           />
         ) : tab === 'bots' ? (
-          <>
           <BotPanel
             overview={bots}
             rulesetIds={RULESET_IDS}
@@ -294,17 +293,19 @@ export function AdminScreen(): React.JSX.Element {
                 setDetail('')
               })
             }}
+            // **봇 하나를 사람 화면과 같은 눈으로 연다.** 표는 봇 떼를 다루고, 이것은
+            // 고른 하나를 연다 — 규칙표 둘, 캐릭터, 가방, 스킬, 지나간 판. 자리는
+            // 표 바로 아래다: 뒤에 두었더니 도플갱어와 두 가방에 묻혔다.
+            detail={
+              <BotDetailPanel
+                detail={botDetail}
+                bag={botBag}
+                baseStats={PLAYER_BASE}
+                allSkills={ALL_SKILL_IDS}
+                allItems={ALL_ITEM_TAGS}
+              />
+            }
           />
-            {/* **봇 하나를 사람 화면과 같은 눈으로 연다.** 위의 표는 봇 떼를 다루고,
-                여기는 고른 하나를 연다 — 규칙표 둘, 캐릭터, 가방, 스킬, 지나간 판. */}
-            <BotDetailPanel
-              detail={botDetail}
-              bag={botBag}
-              baseStats={PLAYER_BASE}
-              allSkills={ALL_SKILL_IDS}
-              allItems={ALL_ITEM_TAGS}
-            />
-          </>
         ) : tab === 'content' ? (
           <ContentAdminPanel
               content={content}

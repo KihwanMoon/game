@@ -155,3 +155,34 @@ def test_the_argument_free_actions_reject_arguments():
     assert check_rows((MaintenanceRow(ACTION_UNSEAL, ""),)) == ""
     assert "인자를 받지 않는다" in check_rows((MaintenanceRow(ACTION_UNSEAL, "COMMON"),))
     assert check_rows((MaintenanceRow(ACTION_UPGRADE_CONSUMABLE, ""),)) == ""
+
+
+def test_the_gear_scale_lives_in_one_file():
+    """★ 저울이 파일 하나다 — 파이썬과 브라우저가 그것을 각자 직접 읽는다.
+
+    여기 상수로 박아 두면 미리보기가 「2개 교체」라 적고 서버는 3개를 바꾸는 일이
+    생기고, 그때 어느 쪽이 맞는지 물으면 답할 사람이 없다. 사본을 두지 않는 것이 이
+    저장소의 규율이다 (CLAUDE.md 의 `@resources`).
+    """
+    import json
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "game/resources/balance/gear_priority.json"
+    raw = json.loads(path.read_text(encoding="utf-8"))
+
+    assert raw["margin"] == UPGRADE_MARGIN
+    assert set(GEAR_PRIORITY_WEIGHTS) == set(raw["priorities"])
+    for name, table in raw["priorities"].items():
+        numbers = {key: value for key, value in table.items() if isinstance(value, int)}
+        assert GEAR_PRIORITY_WEIGHTS[name] == numbers
+
+
+def test_the_scale_is_not_sealed_content():
+    """★ 봉인된 자산이 아니다 — 고쳐도 지나간 판의 재현성이 안 깨진다.
+
+    전투 시뮬레이션에 안 들어가는 값이라 `core_version` 에 들어가면 안 된다. 들어가면
+    저울을 만질 때마다 랭킹 시즌이 갈리고, 그것은 이 값이 하는 일과 무관한 대가다.
+    """
+    from game.app.store.content_draft import DRAFT_ASSETS
+
+    assert "gear_priority" not in DRAFT_ASSETS

@@ -19,7 +19,9 @@
 자리의 교체는 두 칸을 동시에 보는 판단이고, 한 칸씩 보는 이 규칙으로는 틀린다.
 """
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 
 from game.app.bots.personas import resolve_persona
 
@@ -38,22 +40,31 @@ STAT_WEIGHTS: dict[str, dict[str, int]] = {
     "melee": {"attack": 3, "hp_max": 2, "defense": 2, "initiative": 1},
 }
 
-# **사람이 고르는 우선순위.** 봇의 성격표(`STAT_WEIGHTS`)와 나란히 두는 이유는 같은
-# 저울이기 때문이다 — 정비 규칙의 「더 좋은 장비로 교체」가 이 표를 쓴다. 봇의 성격은
-# 규칙표가 정하고 사람의 우선순위는 사람이 고른다는 것만 다르다.
+# **사람이 고르는 우선순위 — 값은 파일에 있다.**
 #
-# 공격 쪽에서 **사거리가 가장 무겁다.** 기본 사거리가 1 이라 +1 은 닿는 거리를 두 배로
-# 만들고, 그것이 곧 「맞지 않고 때린다」의 성립 여부다.
+# `game/resources/balance/gear_priority.json` 하나를 파이썬과 브라우저가 **직접** 읽는다.
+# 여기 상수로 박아 두면 미리보기가 「2개 교체」라 적고 서버는 3개를 바꾸는 일이 생기고,
+# 그때 어느 쪽이 맞는지 물으면 답할 사람이 없다 — 사본을 두지 않는 것이 이 저장소의
+# 규율이다 (CLAUDE.md 의 `@resources`).
+#
+# 봉인된 자산이 아니다. 전투 시뮬레이션에 안 들어가므로 고쳐도 지나간 판의 재현성이
+# 깨지지 않고, core_version 도 안 움직인다.
+_PRIORITY_PATH = (
+    Path(__file__).resolve().parents[2] / "resources" / "balance" / "gear_priority.json"
+)
+_PRIORITY_FILE = json.loads(_PRIORITY_PATH.read_text(encoding="utf-8"))
+
 GEAR_PRIORITY_WEIGHTS: dict[str, dict[str, int]] = {
-    "ATTACK": {"attack_range": 6, "attack": 4, "initiative": 2, "hp_max": 1, "defense": 1},
-    "DEFENSE": {"defense": 4, "hp_max": 3, "attack": 1, "initiative": 1, "attack_range": 1},
+    name: {stat: value for stat, value in table.items() if isinstance(value, int)}
+    for name, table in _PRIORITY_FILE["priorities"].items()
 }
 
 # 이만큼은 이겨야 바꾼다. 벗은 것이 가방에서 삭제될 수 있으므로 근소한 차이는 손해다.
-UPGRADE_MARGIN = 6
+# 이 값도 파일에서 온다 — 미리보기가 같은 여유폭으로 세야 같은 답을 낸다.
+UPGRADE_MARGIN: int = int(_PRIORITY_FILE["margin"])
 
 # 교체 판단에서 빼는 자리. 양손무기가 보조 칸을 봉인해 두 칸을 함께 봐야 한다.
-TWO_HANDED_SLOTS = frozenset({"WEAPON_MAIN", "WEAPON_OFF"})
+TWO_HANDED_SLOTS = frozenset(_PRIORITY_FILE["two_handed_slots"])
 
 
 @dataclass(frozen=True)

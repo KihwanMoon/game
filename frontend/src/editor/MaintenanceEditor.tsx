@@ -52,6 +52,13 @@ export interface MaintenanceEditorProps {
   readonly inventory: InventoryView | undefined
   /** 미리보기가 재는 지금 소모품 칸. */
   readonly consumables: ConsumableView | undefined
+  /**
+   * 퍼센트 접사를 값으로 바꾸는 기준. 장비 교체의 저울이 쓴다.
+   *
+   * **실제 합산식이 쓰는 그 값이다** — 환산 상수를 지어내면 그것이 곧 아무도 안 정한
+   * 밸런스 결정 하나가 된다 (`bots/upgrade`).
+   */
+  readonly baseStats: Readonly<Record<string, number>>
   readonly onChange: (view: MaintenanceView) => void
 }
 
@@ -362,7 +369,7 @@ export function MaintenanceEditor(props: MaintenanceEditorProps): React.JSX.Elem
   const disabled = !checkLinked(props.link)
   const rows = view.rows
   const problems = checkMaintenanceRows(rows)
-  const preview = buildMaintenancePreview(rows, props.inventory, props.consumables)
+  const preview = buildMaintenancePreview(rows, props.inventory, props.consumables, props.baseStats)
   const picked = rows[pickedIndex]
 
   const commit = (next: readonly MaintenanceRowView[]): void => {

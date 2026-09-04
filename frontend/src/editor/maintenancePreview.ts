@@ -86,6 +86,8 @@ interface PreviewState {
    */
   readonly inventory: InventoryView | undefined
   readonly consumables: ConsumableView | undefined
+  /** 퍼센트 접사를 값으로 바꾸는 기준. 장비 교체의 저울이 쓴다. */
+  readonly baseStats: Readonly<Record<string, number>>
 }
 
 /**
@@ -98,6 +100,7 @@ interface PreviewState {
 function buildState(
   inventory: InventoryView | undefined,
   consumables: ConsumableView | undefined,
+  baseStats: Readonly<Record<string, number>>,
 ): PreviewState {
   const bagByGrade = new Map<string, number>()
   for (const entry of inventory?.slots ?? []) {
@@ -130,6 +133,7 @@ function buildState(
     isShort: false,
     inventory,
     consumables,
+    baseStats,
   }
 }
 
@@ -279,7 +283,7 @@ function runRow(state: PreviewState, row: MaintenanceRowView): RowOutcome {
       return outcome
     }
     case 'UPGRADE_GEAR':
-      return runUpgradeGear(state.inventory, row.grade)
+      return runUpgradeGear(state.inventory, row.grade, state.baseStats)
     case 'UPGRADE_CONSUMABLE':
       return runUpgradeConsumable(state.consumables)
     default:
@@ -304,8 +308,9 @@ export function buildMaintenancePreview(
   rows: readonly MaintenanceRowView[],
   inventory: InventoryView | undefined,
   consumables: ConsumableView | undefined,
+  baseStats: Readonly<Record<string, number>> = {},
 ): MaintenancePreview {
-  const state = buildState(inventory, consumables)
+  const state = buildState(inventory, consumables, baseStats)
   const balance = state.balance
   const previewRows = rows.map((row, index) => {
     const outcome = runRow(state, row)

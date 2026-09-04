@@ -87,6 +87,14 @@ export interface BotPanelProps {
   readonly myBag?: InventoryView | undefined
   /** 줄을 골랐을 때 부른다. 그 봇의 가방을 읽어 오라는 신호다. */
   readonly onPickBot?: (accountId: number) => void
+  /**
+   * 고른 봇의 상세 화면. **표 바로 아래에 선다.**
+   *
+   * 슬롯인 이유는 이 패널이 봇 **떼**를 다루기 때문이다 — 하나를 여는 일은 밖의
+   * 몫이다. 자리가 여기인 이유는 **묻히지 않게** 하려는 것이다: 도플갱어와 두 가방
+   * 뒤에 두었더니 스크롤을 한참 지나야 나왔고, 봇을 눌러 연 화면이 거기 있었다.
+   */
+  readonly detail?: React.ReactNode
   /** 도플갱어 줄을 골랐을 때 부른다. */
   readonly onPickDoppel?: (recordId: number) => void
   /** 고른 도플갱어가 끼고 있던 것. 아이템이 아니라 얼려 둔 기록이다. */
@@ -192,7 +200,7 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
               )}
             </div>
             {picked === undefined ? (
-              <ValueExpr text="줄을 고르면 여기에서 고칠 수 있다" size="sm" dim />
+              <ValueExpr text="줄을 고르면 여기에서 고치고, 아래에서 그 봇을 연다" size="sm" dim />
             ) : (
               <BotEditor
                 bot={picked}
@@ -207,6 +215,9 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
           </>
         )}
       </Panel>
+
+      {/* 고른 봇의 상세. **표 바로 다음이다** — 뒤로 밀면 스크롤에 묻힌다. */}
+      {props.detail}
 
       <Panel title="도플갱어" meta={`${String(props.overview?.doppels.length ?? 0)}`} tone="panel" padded>
         {(props.overview?.doppels.length ?? 0) === 0 ? (
