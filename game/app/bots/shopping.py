@@ -26,6 +26,7 @@
 
 from dataclasses import dataclass
 
+from game.app.bots.personas import resolve_persona
 from game.app.progression.levels import STAT_KEYS, build_growth, count_spent_points
 
 # 등록 유효 기간(분). `auction.LISTING_TTL` 과 같은 값이어야 한다 — 남은 시간에서
@@ -44,6 +45,14 @@ KEEP_PERCENT = 20
 MIN_OPEN_LISTINGS = 3
 
 PERCENT_BASE = 100
+
+# 성격이 능력치 포인트를 어디에 싣는가. 열이 같은 몸을 가지면 규칙표를 갈라 둔 뜻이
+# 절반 사라진다.
+ATTRIBUTE_WEIGHTS: dict[str, dict[str, int]] = {
+    "ranged": {"dex": 2, "int": 1, "str": 0},
+    "caster": {"int": 2, "dex": 1, "str": 0},
+    "melee": {"str": 2, "dex": 1, "int": 0},
+}
 
 
 @dataclass(frozen=True)
@@ -132,8 +141,10 @@ def list_equippable(bag: tuple[BagItem, ...], filled_slots: frozenset[str]) -> t
     그것이 「좋은 건 끼고 다녀라」는 유인인데, 봇이 아무것도 안 끼면 그 유인의 반대편만
     받는다 — 실제로 봇 열이 스무 개를 그렇게 잃었다. 받은 것도 산 것도 가방에서 녹았다.
 
-    빈 자리만 채운다. 「더 좋은 것으로 갈아 끼우기」는 값을 매기는 기준이 필요하고, 그
-    기준이 틀리면 봇이 좋은 것을 벗고 나쁜 것을 낀다 — 빈 자리는 그 판단이 필요 없다.
+    **빈 자리만 채운다.** 값을 매길 필요가 없는 경우이기 때문이다. 갈아 끼우기는 기준이
+    필요하고 그 기준이 틀리면 봇이 좋은 것을 벗고 나쁜 것을 끼므로, 그쪽은 `upgrade.py`
+    가 따로 맡는다 — 그리고 **이 함수가 먼저 돈다.** 빈 자리 채우기가 끝나야 「찬 자리」가
+    확정되고, 그래야 두 규칙이 같은 자리를 두고 다투지 않는다.
 
     Args:
         bag: 가방 속 물건들.
@@ -207,14 +218,9 @@ def build_allocation(level: int, ruleset_id: str, spent: dict[str, int]) -> dict
     available = build_growth(level).stat_points - count_spent_points(spent)
     if available <= 0:
         return dict(spent)
-    # 규칙표 이름으로 가른다. 표 자체를 뜯어 보는 것보다 거칠지만, 성격은 이미 이름에
-    # 담겨 있고 거친 판단이 안 하는 것보다 낫다.
-    if any(mark in ruleset_id for mark in ("kite", "range", "sniper", "longshot", "reach")):
-        weights = {"dex": 2, "int": 1, "str": 0}
-    elif any(mark in ruleset_id for mark in ("focus", "summon", "camp", "hold")):
-        weights = {"int": 2, "dex": 1, "str": 0}
-    else:
-        weights = {"str": 2, "dex": 1, "int": 0}
+    # 성격 판단은 `personas.resolve_persona` 한 곳에만 있다. 두 벌이면 하나만 고쳐도
+    # 봇이 스탯은 사수처럼, 장비는 전사처럼 고르게 된다.
+    weights = ATTRIBUTE_WEIGHTS[resolve_persona(ruleset_id)]
     total = sum(weights.values())
     next_stats = dict(spent)
     # 정렬된 열쇠로 돈다. 딕셔너리 순회 순서에 기대면 같은 상황에서 다른 몸이 나온다.

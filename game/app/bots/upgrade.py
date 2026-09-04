@@ -1,0 +1,130 @@
+"""봇이 더 좋은 것으로 갈아 끼운다.
+
+**빈 자리만 채우고 있었다.** 봇은 주운 것을 빈 칸에 넣기만 하고, 나중에 더 좋은 것이
+들어와도 벗지 않았다. 그래서 봇의 장비는 첫 몇 판에 굳고, 그 뒤로 경매에서 사 온 유물이
+가방에서 사망 페널티에 녹았다.
+
+안 하고 있던 이유가 있었다. **값을 매기는 기준이 틀리면 봇이 좋은 것을 벗고 나쁜 것을
+낀다.** 그래서 기준을 새로 지어내지 않고 이미 있는 것 둘을 쓴다.
+
+* **성격**은 `personas.resolve_persona` 가 정한다 — 능력치 배분이 쓰는 것과 같은 표다.
+  두 벌이면 봇이 스탯은 사수처럼, 장비는 전사처럼 고르게 된다.
+* **퍼센트를 값으로 바꾸는 기준**은 `balance.json` 의 플레이어 기본값이다. 환산 상수를
+  지어내지 않는다 — 실제 합산식이 쓰는 바로 그 값이다 (`(기본 + 고정) × (1 + %)`).
+
+**근소한 차이로는 안 바꾼다.** 벗은 것은 가방으로 가고, 가방에 있는 것은 죽을 때
+**삭제**된다 (결정 #34). 1점 이득을 보려고 바꾸면 그 1점보다 큰 것을 잃을 수 있다.
+
+**양손 자리는 건드리지 않는다.** 양손무기가 보조 칸을 봉인하므로(`items/stats.py`) 그
+자리의 교체는 두 칸을 동시에 보는 판단이고, 한 칸씩 보는 이 규칙으로는 틀린다.
+"""
+
+from dataclasses import dataclass
+
+from game.app.bots.personas import resolve_persona
+
+PERCENT_BASE = 100
+
+# 성격이 장비에서 무엇을 보는가. 능력치 배분(str/dex/int)과 축이 다른 이유는 접사가
+# 전투 수치에 붙기 때문이다 — 같은 성격을 두 축으로 옮긴 표이지 새 성격이 아니다.
+#
+# **여기 없는 스탯은 0 이다.** 소모품 칸처럼 판단이 갈리는 것을 빼 두면, 「물약 칸 +1」
+# 하나로 무기를 바꾸는 일이 안 생긴다.
+STAT_WEIGHTS: dict[str, dict[str, int]] = {
+    # 사거리 한 칸이 무겁다. 기본 사거리가 1 이라 +1 은 **닿는 거리를 두 배로**
+    # 만들고, 그것이 곧 「맞지 않고 때린다」의 성립 여부다 — 공격 +4 와 맞바꿀 값이다.
+    "ranged": {"attack_range": 8, "attack": 2, "initiative": 2, "hp_max": 1, "defense": 1},
+    "caster": {"cpu_budget": 4, "initiative": 2, "hp_max": 2, "attack": 1, "defense": 1},
+    "melee": {"attack": 3, "hp_max": 2, "defense": 2, "initiative": 1},
+}
+
+# 이만큼은 이겨야 바꾼다. 벗은 것이 가방에서 삭제될 수 있으므로 근소한 차이는 손해다.
+UPGRADE_MARGIN = 6
+
+# 교체 판단에서 빼는 자리. 양손무기가 보조 칸을 봉인해 두 칸을 함께 봐야 한다.
+TWO_HANDED_SLOTS = frozenset({"WEAPON_MAIN", "WEAPON_OFF"})
+
+
+@dataclass(frozen=True)
+class GearItem:
+    """값을 매길 장비 하나."""
+
+    item_id: int
+    slot: str
+    can_equip: bool
+    is_broken: bool
+    hands: str
+    affixes: tuple[tuple[str, int, int], ...]
+    attack_range: int
+
+
+def compute_item_score(item: GearItem, persona: str, base_stats: dict[str, int]) -> int:
+    """이 봇에게 이 장비가 얼마나 값하는가.
+
+    **퍼센트를 실제 합산식과 같은 방식으로 값으로 바꾼다** — `기본값 × % / 100`. 환산
+    상수를 지어내면 그 상수가 곧 아무도 안 정한 밸런스 결정 하나가 된다.
+
+    정수만 쓴다. 곱한 뒤에 나눈다 (R5).
+
+    Args:
+        item: 값을 매길 장비.
+        persona: 이 봇의 성격.
+        base_stats: 플레이어 기본 스탯. 퍼센트를 값으로 바꾸는 기준이다.
+
+    Returns:
+        점수. 클수록 이 봇에게 좋다. 저주 접사가 있으면 음수일 수 있다.
+    """
+    weights = STAT_WEIGHTS.get(persona, STAT_WEIGHTS["melee"])
+    total = 0
+    for stat, flat, percent in item.affixes:
+        weight = weights.get(stat, 0)
+        if weight == 0:
+            continue
+        total += weight * (flat + base_stats.get(stat, 0) * percent // PERCENT_BASE)
+    # 무기가 정하는 사거리는 접사가 아니라 필드다 (§2.2). 안 세면 활과 단검이 같아진다.
+    total += weights.get("attack_range", 0) * item.attack_range
+    return total
+
+
+def find_upgrades(
+    bag: tuple[GearItem, ...],
+    worn: tuple[GearItem, ...],
+    ruleset_id: str,
+    base_stats: dict[str, int],
+) -> tuple[tuple[GearItem, GearItem], ...]:
+    """자리마다 갈아 낄 짝을 고른다.
+
+    **찬 자리만 본다.** 빈 자리는 `list_equippable` 이 채운다 — 두 곳이 같은 자리를
+    노리면 한 번에 두 번 끼우려다 하나가 거절당한다.
+
+    Args:
+        bag: 가방 속 장비들.
+        worn: 지금 입고 있는 것들.
+        ruleset_id: 이 봇의 규칙표. 성격을 여기서 읽는다.
+        base_stats: 플레이어 기본 스탯.
+
+    Returns:
+        (벗을 것, 낄 것) 짝들. 자리 이름 순이다.
+    """
+    persona = resolve_persona(ruleset_id)
+    wearing = {item.slot: item for item in worn if item.slot}
+    # 자리에서 (벗을 것, 낄 것, 낄 것의 점수) 로. 점수를 들고 다니는 이유는 같은 값을
+    # 후보마다 세 번 다시 재지 않기 위해서다.
+    best: dict[str, tuple[GearItem, GearItem, int]] = {}
+    for candidate in bag:
+        if not candidate.can_equip or candidate.is_broken or not candidate.slot:
+            continue
+        if candidate.slot in TWO_HANDED_SLOTS or candidate.hands == "TWO":
+            continue
+        current = wearing.get(candidate.slot)
+        if current is None or current.is_broken:
+            continue
+        score = compute_item_score(candidate, persona, base_stats)
+        if score - compute_item_score(current, persona, base_stats) < UPGRADE_MARGIN:
+            continue
+        # 같은 자리에 후보가 여럿이면 제일 나은 것 하나. 동점이면 먼저 본 쪽이 남는다 —
+        # 가방 순서가 곧 id 순이라, 순서가 흔들리면 같은 가방에서 다른 몸이 나간다.
+        found = best.get(candidate.slot)
+        if found is None or score > found[2]:
+            best[candidate.slot] = (current, candidate, score)
+    return tuple((best[slot][0], best[slot][1]) for slot in sorted(best))

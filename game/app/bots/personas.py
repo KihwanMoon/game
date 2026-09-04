@@ -74,3 +74,36 @@ def resolve_cadence(seconds: int) -> int:
         `MIN_CADENCE_SEC` 이상의 간격.
     """
     return max(MIN_CADENCE_SEC, seconds)
+
+
+# 규칙표 이름에 들어 있는 표식으로 성격을 가른다. **표 자체를 뜯어 보는 것보다
+# 거칠지만**, 성격은 이미 이름에 담겨 있고 거친 판단이 안 하는 것보다 낫다.
+#
+# **순서가 뜻을 갖는다** — 앞에서부터 맞는 것을 쓴다. 딕셔너리 순회에 기대면 같은
+# 규칙표가 실행마다 다른 성격으로 읽힐 수 있다 (R5 와 같은 결의 규율).
+PERSONA_MARKS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("ranged", ("kite", "range", "sniper", "longshot", "reach")),
+    ("caster", ("focus", "summon", "camp", "hold")),
+)
+
+# 표식에 안 걸리는 것. 근접이 기본인 이유는 사거리를 과소평가하지 않기 때문이다 —
+# 근접인 줄 알고 붙는 것이, 원거리인 줄 알고 안 붙는 것보다 덜 나쁘다.
+DEFAULT_PERSONA = "melee"
+
+
+def resolve_persona(ruleset_id: str) -> str:
+    """규칙표 이름에서 성격을 읽는다.
+
+    **한 곳에서만 판단한다.** 예전에는 능력치 배분이 제 안에 같은 표를 들고 있었다 —
+    두 벌이면 하나만 고쳐도 봇이 스탯은 사수처럼, 장비는 전사처럼 고르게 된다.
+
+    Args:
+        ruleset_id: 이 봇이 쓰는 규칙표 id.
+
+    Returns:
+        성격 이름. 표식에 안 걸리면 근접이다.
+    """
+    for persona, marks in PERSONA_MARKS:
+        if any(mark in ruleset_id for mark in marks):
+            return persona
+    return DEFAULT_PERSONA

@@ -21,6 +21,7 @@ from game.app.bots.shopping import (
     list_repairable,
     parse_consumables,
 )
+from game.app.bots.upgrade import GearItem, find_upgrades
 from game.app.store.bots import BotProfile
 from scripts.bot_client import send_request
 
@@ -139,6 +140,82 @@ def apply_bot_repair(api_url: str, bot: BotProfile) -> str:
         if done is not None:
             fixed.append(str(item.item_id))
     return "" if not fixed else f"#{'·#'.join(fixed)} 고쳤다"
+
+
+def build_gear_items(rows: list[dict]) -> tuple[GearItem, ...]:
+    """인벤토리 줄을 값 매길 장비로 옮긴다.
+
+    Args:
+        rows: `item` 을 가진 인벤토리 줄들.
+
+    Returns:
+        장비들.
+    """
+    return tuple(
+        GearItem(
+            item_id=int(row["item"]["item_id"]),
+            slot=str(row["item"].get("slot") or ""),
+            can_equip=bool(row["item"].get("can_equip")),
+            is_broken=bool(row["item"].get("is_broken")),
+            hands=str(row["item"].get("hands") or ""),
+            affixes=tuple(
+                (
+                    str(affix.get("stat", "")),
+                    int(affix.get("flat", 0)),
+                    int(affix.get("percent", 0)),
+                )
+                for affix in row["item"].get("affixes", [])
+                if isinstance(affix, dict)
+            ),
+            attack_range=int(row["item"].get("attack_range", 0)),
+        )
+        for row in rows
+    )
+
+
+def apply_bot_upgrade(api_url: str, bot: BotProfile, base_stats: dict[str, int]) -> str:
+    """더 좋은 것이 가방에 있으면 갈아 낀다.
+
+    **빈 자리만 채우고 있었다.** 봇의 장비가 첫 몇 판에 굳고, 그 뒤로 경매에서 사 온
+    유물이 가방에서 사망 페널티에 녹았다 (결정 #34).
+
+    **끼운 뒤에 부른다.** 빈 자리 채우기가 먼저 끝나야 「찬 자리」가 확정되고, 그래야
+    두 규칙이 같은 자리를 두고 다투지 않는다.
+
+    Args:
+        api_url: 백엔드 주소.
+        bot: 이 봇의 성격.
+        base_stats: 플레이어 기본 스탯. 퍼센트를 값으로 바꾸는 기준이다.
+
+    Returns:
+        무슨 일이 있었는지. 바꿀 것이 없었으면 빈 문자열.
+    """
+    bag = send_request(f"{api_url}/api/inventory", bot.token, None)
+    if bag is None:
+        return ""
+    carried = build_gear_items([row for row in bag.get("slots", []) if row.get("item")])
+    worn = build_gear_items([row for row in bag.get("equipment", []) if row.get("item")])
+    swapped = []
+    for old_item, new_item in find_upgrades(carried, worn, bot.ruleset_id, base_stats):
+        # **벗고 나서 낀다.** 자리가 찬 채로 끼우면 서버가 거절하고, 그것은 실패를
+        # 로그로 옮길 뿐이다.
+        if send_request(f"{api_url}/api/unequip", bot.token, {"slot": old_item.slot}) is None:
+            continue
+        done = send_request(
+            f"{api_url}/api/equip",
+            bot.token,
+            {"item_id": new_item.item_id, "slot": new_item.slot},
+        )
+        if done is None:
+            # 되돌린다 — 벗기만 하고 끝나면 그 자리가 빈 채로 다음 판에 나간다.
+            send_request(
+                f"{api_url}/api/equip",
+                bot.token,
+                {"item_id": old_item.item_id, "slot": old_item.slot},
+            )
+            continue
+        swapped.append(new_item.slot)
+    return "" if not swapped else f"{'·'.join(swapped)} 교체"
 
 
 def apply_bot_supplies(api_url: str, bot: BotProfile) -> str:

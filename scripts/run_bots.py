@@ -53,6 +53,7 @@ from scripts.bot_chores import (
     apply_bot_repair,
     apply_bot_shopping,
     apply_bot_supplies,
+    apply_bot_upgrade,
 )
 from scripts.bot_client import API_URL_ENV, DEFAULT_API_URL, send_request
 
@@ -209,6 +210,11 @@ def apply_bot_round(pool: ConnectionPool, api_url: str, parts: dict) -> int:
             worn = apply_bot_gear(api_url, bot)
             if worn:
                 note = f"{note} · {worn}"
+            # **끼운 뒤에 갈아 낀다.** 빈 자리 채우기가 먼저 끝나야 「찬 자리」가
+            # 확정되고, 그래야 두 규칙이 같은 자리를 두고 다투지 않는다.
+            swapped = apply_bot_upgrade(api_url, bot, parts["balance"]["player"])
+            if swapped:
+                note = f"{note} · {swapped}"
             grown = apply_bot_growth(api_url, bot)
             if grown:
                 note = f"{note} · {grown}"
