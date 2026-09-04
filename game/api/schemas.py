@@ -291,6 +291,9 @@ class ListingView(BaseModel):
     # **사기 전에 알아야 하는 것들.** 이름과 값만 보고 사면 같은 「장궁」이라도 무엇이
     # 붙어 있는지 모르고, 언제 사라질지도 모른다.
     affixes: list[dict] = Field(default_factory=list)
+    # **무기가 정하는 사거리** (§2.2). 접사가 아니라 필드라, 안 보내면 활과 단검이
+    # 같아 보인다 — 값을 매기는 쪽에서 이것이 가장 무거운 항이다 (`GEAR_PRIORITY_WEIGHTS`).
+    attack_range: int = 0
     # 남은 시간(분). 절대 시각이 아니라 남은 양으로 보내는 이유는 기기 시계가 어긋나도
     # 같은 값을 보여야 하기 때문이다.
     expires_in_minutes: int = 0

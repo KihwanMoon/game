@@ -198,7 +198,7 @@ def apply_bot_round(pool: ConnectionPool, api_url: str, parts: dict) -> int:
         apply_bot_rest(pool, bot.account_id, bot.cadence_sec)
         try:
             note = run_one_bot(pool, api_url, bot, parts)
-            bought = apply_bot_shopping(api_url, bot)
+            bought = apply_bot_shopping(api_url, bot, parts["balance"]["player"])
             if bought:
                 note = f"{note} · {bought}"
             # **끼기 전에 고친다.** 부서진 것은 낄 수 없으므로, 순서가 반대면 고친

@@ -1,5 +1,8 @@
 """봇의 경매 구매 (T11 대응, 결정 #07 위에 선다).
 
+가방·성장·소모품 잡일은 `chores.py` 로 갈라 나갔다 — 저쪽은 이미 가진 것으로 무엇을
+할까를 정하고, 여기는 **무엇을 살까**만 정한다.
+
 **봇은 사기만 한다.** 걸지 않는 것이 이 모듈의 첫 번째 규율이다 — 봇이 물건을 걸면
 「봇이 파밍해서 사람에게 넘기는」 길이 열리고, 그것이 T11 이자 아이템이 세계에 들어오는
 문을 검증된 런 하나로 묶은 결정 #02 가 막으려던 것이다. 도플갱어에서 막은 세 길과 같은
@@ -26,8 +29,12 @@
 
 from dataclasses import dataclass
 
-from game.app.bots.personas import resolve_persona
-from game.app.progression.levels import STAT_KEYS, build_growth, count_spent_points
+from game.app.bots.upgrade import (
+    TWO_HANDED_SLOTS,
+    UPGRADE_MARGIN,
+    GearItem,
+    compute_weighted_score,
+)
 
 # 등록 유효 기간(분). `auction.LISTING_TTL` 과 같은 값이어야 한다 — 남은 시간에서
 # 걸린 지 얼마나 됐는지를 역산하기 때문이다.
@@ -46,14 +53,6 @@ MIN_OPEN_LISTINGS = 3
 
 PERCENT_BASE = 100
 
-# 성격이 능력치 포인트를 어디에 싣는가. 열이 같은 몸을 가지면 규칙표를 갈라 둔 뜻이
-# 절반 사라진다.
-ATTRIBUTE_WEIGHTS: dict[str, dict[str, int]] = {
-    "ranged": {"dex": 2, "int": 1, "str": 0},
-    "caster": {"int": 2, "dex": 1, "str": 0},
-    "melee": {"str": 2, "dex": 1, "int": 0},
-}
-
 
 @dataclass(frozen=True)
 class Listing:
@@ -63,6 +62,11 @@ class Listing:
     price: int
     is_mine: bool
     expires_in_minutes: int
+    # **무엇인가**를 아는 데 필요한 것들. 예전에는 값과 만료뿐이라 봇이 자기 장비와
+    # 견줄 수 없었고, 그래서 **가장 싼 것**을 샀다 — 정의상 가장 값 안 나가는 물건이다.
+    slot: str = ""
+    affixes: tuple[tuple[str, int, int], ...] = ()
+    attack_range: int = 0
 
 
 def check_is_open_to_bots(listing: Listing) -> bool:
@@ -92,14 +96,10 @@ def resolve_budget(balance: int) -> int:
     return balance * (PERCENT_BASE - KEEP_PERCENT) // PERCENT_BASE
 
 
-def find_purchase(listings: tuple[Listing, ...], balance: int) -> int:
-    """이번에 살 매물을 고른다.
+def list_buyable(listings: tuple[Listing, ...], balance: int) -> tuple[Listing, ...]:
+    """지금 살 수 있는 매물들.
 
-    **싼 것부터 하나만 산다.** 한 번에 여럿 사면 열 봇이 시장을 한 바퀴에 비우고, 그것은
-    유동성이 아니라 청소다. 값이 같으면 id 가 작은 쪽 — 순서가 실행마다 흔들리면 같은
-    상황에서 다른 일이 벌어진다 (R5 와 같은 결의 규율).
-
-    **넘치는 것만 산다.** 열린 매물이 `MIN_OPEN_LISTINGS` 이하면 아무것도 안 산다 —
+    **넘치는 것만 산다.** 열린 매물이 `MIN_OPEN_LISTINGS` 이하면 아무것도 못 산다 —
     사람이 열어 봤을 때 아무것도 없는 것이 이 시스템의 실패 모습이고, 규칙 하나하나가
     지켜져도 시간당 쉰 번의 기회가 시장을 그렇게 만든다. 세는 것은 **사람이 볼 수 있는
     전량**이지 봇이 살 수 있는 것이 아니다: 봇이 못 사는 매물도 사람에게는 재고다.
@@ -109,216 +109,105 @@ def find_purchase(listings: tuple[Listing, ...], balance: int) -> int:
         balance: 봇의 화폐.
 
     Returns:
-        살 매물 id. 살 것이 없으면 0.
+        사람 우선권·시장 하한·예산을 다 통과한 매물들.
     """
     for_sale = [item for item in listings if not item.is_mine]
     if len(for_sale) <= MIN_OPEN_LISTINGS:
-        return 0
-    budget = resolve_budget(balance)
-    affordable = [
-        item for item in for_sale if check_is_open_to_bots(item) and 0 < item.price <= budget
-    ]
-    if not affordable:
-        return 0
-    return min(affordable, key=lambda item: (item.price, item.listing_id)).listing_id
-
-
-@dataclass(frozen=True)
-class BagItem:
-    """낄지 말지 판단할 가방 속 물건 하나."""
-
-    item_id: int
-    slot: str
-    can_equip: bool
-    is_broken: bool
-
-
-def list_equippable(bag: tuple[BagItem, ...], filled_slots: frozenset[str]) -> tuple[BagItem, ...]:
-    """빈 자리에 낄 수 있는 것들을 고른다.
-
-    **끼는 것이 지키는 것이다.** 사망 페널티는 장착·가방을 통틀어 하나를 뽑는데, 뽑힌
-    것이 **장착 중이었으면 파손**(복구 가능)이고 **가방에 있었으면 삭제**다 (결정 #34).
-    그것이 「좋은 건 끼고 다녀라」는 유인인데, 봇이 아무것도 안 끼면 그 유인의 반대편만
-    받는다 — 실제로 봇 열이 스무 개를 그렇게 잃었다. 받은 것도 산 것도 가방에서 녹았다.
-
-    **빈 자리만 채운다.** 값을 매길 필요가 없는 경우이기 때문이다. 갈아 끼우기는 기준이
-    필요하고 그 기준이 틀리면 봇이 좋은 것을 벗고 나쁜 것을 끼므로, 그쪽은 `upgrade.py`
-    가 따로 맡는다 — 그리고 **이 함수가 먼저 돈다.** 빈 자리 채우기가 끝나야 「찬 자리」가
-    확정되고, 그래야 두 규칙이 같은 자리를 두고 다투지 않는다.
-
-    Args:
-        bag: 가방 속 물건들.
-        filled_slots: 이미 차 있는 장비 자리들.
-
-    Returns:
-        낄 것들. 한 자리에 하나씩만 고른다.
-    """
-    picked: dict[str, BagItem] = {}
-    for item in bag:
-        if not item.can_equip or item.is_broken or not item.slot:
-            continue
-        if item.slot in filled_slots or item.slot in picked:
-            continue
-        picked[item.slot] = item
-    # 자리 이름 순으로 낸다. 순서가 흔들리면 같은 가방에서 다른 일이 벌어진다.
-    return tuple(picked[slot] for slot in sorted(picked))
-
-
-def list_repairable(bag: tuple[BagItem, ...], balance: int, cost: int) -> tuple[BagItem, ...]:
-    """고칠 수 있는 것들을 고른다.
-
-    **안 고치면 장비가 한 방향으로만 준다.** 사망 페널티가 장착 중인 것을 부수는데
-    (결정 #34), 부순 것을 아무도 안 고치면 봇의 장비는 죽을 때마다 줄기만 하고 절대
-    늘지 않는다 — 그러면 「끼는 것이 지키는 것이다」의 뒷부분(복구 가능)이 봇에게는
-    거짓이 되고, 몬스터가 뺏어 갈 것도 사라진다.
-
-    **낄 수 있는 것만 고친다.** 못 끼는 것을 고치면 화폐가 나가고 아무것도 안 바뀐다.
-
-    **낼 수 있는 만큼만 고른다.** 잔액을 넘겨 보내면 서버가 거절하고, 그것은 실패를
-    로그로 옮길 뿐이다. 자리 이름 순으로 세어 나가므로 같은 가방에서 같은 결과가 나온다.
-
-    Args:
-        bag: 가방과 장비를 통틀어 본 물건들.
-        balance: 봇의 화폐.
-        cost: 한 번 고치는 값.
-
-    Returns:
-        고칠 것들. 낼 수 있는 만큼에서 끊는다.
-    """
-    if cost <= 0:
         return ()
-    broken = sorted(
-        (item for item in bag if item.is_broken and item.can_equip and item.slot),
-        key=lambda item: (item.slot, item.item_id),
+    budget = resolve_budget(balance)
+    return tuple(
+        item for item in for_sale if check_is_open_to_bots(item) and 0 < item.price <= budget
     )
-    return tuple(broken[: max(0, balance // cost)])
 
 
-def build_allocation(level: int, ruleset_id: str, spent: dict[str, int]) -> dict[str, int]:
-    """레벨이 준 포인트를 성격에 맞게 나눈다.
+def find_upgrade_buy(
+    buyable: tuple[Listing, ...],
+    worn: dict[str, GearItem],
+    weights: dict[str, int],
+    base_stats: dict[str, int],
+) -> int:
+    """지금 낀 것보다 나은 매물 중 **가장 많이 나은** 것.
 
-    **안 쓰면 없는 것과 같다.** 포인트는 레벨과 함께 쌓이기만 하고 사람이 배분해야
-    붙는다 — 봇이 배분을 안 하면 레벨 4 짜리가 레벨 1 의 몸으로 싸운다. 실제로 그렇게
-    돌았다: 열 봇 전부 `stat_json` 이 비어 있었고 9점씩 놀고 있었다.
+    **끼는 것과 같은 저울이다** (`bots/upkeep.PERSONA_PRIORITY`). 사는 저울과 끼는 저울이
+    다르면 봇이 산 것을 안 끼는 일이 생긴다 — 돈만 나가고 몸은 그대로다.
 
-    성격을 따른다. 근접으로 미는 규칙표는 힘에, 거리를 두는 쪽은 민첩에, 규칙을 많이
-    까는 쪽은 지능에 싣는다 — 열이 같은 몸을 가지면 규칙표를 갈라 둔 뜻이 절반 사라진다.
-
-    **이미 쓴 것은 그대로 둔다.** 배분표를 통째로 다시 쓰면 사람이 손댄 봇의 배분이
-    조용히 덮인다.
-
-    Args:
-        level: 지금 레벨.
-        ruleset_id: 이 봇이 쓰는 규칙표. 성격을 여기서 읽는다.
-        spent: 지금 배분표.
-
-    Returns:
-        새 배분표. 더 쓸 것이 없으면 지금 것 그대로다.
-    """
-    available = build_growth(level).stat_points - count_spent_points(spent)
-    if available <= 0:
-        return dict(spent)
-    # 성격 판단은 `personas.resolve_persona` 한 곳에만 있다. 두 벌이면 하나만 고쳐도
-    # 봇이 스탯은 사수처럼, 장비는 전사처럼 고르게 된다.
-    weights = ATTRIBUTE_WEIGHTS[resolve_persona(ruleset_id)]
-    total = sum(weights.values())
-    next_stats = dict(spent)
-    # 정렬된 열쇠로 돈다. 딕셔너리 순회 순서에 기대면 같은 상황에서 다른 몸이 나온다.
-    for key in sorted(STAT_KEYS):
-        next_stats[key] = int(next_stats.get(key, 0)) + available * weights.get(key, 0) // total
-    # **나머지 처리를 두지 않는다.** 레벨당 포인트(3)가 가중치 합(3)의 배수라 나눗셈이
-    # 아무것도 안 버린다 — 닿지 않는 갈래를 방어라고 두면 검사할 수 없는 코드가 된다.
-    # 둘 중 하나가 바뀌면 「남는 포인트가 없다」 검사가 그 자리에서 걸린다.
-    return next_stats
-
-
-@dataclass(frozen=True)
-class ConsumableSlot:
-    """소모품 칸 하나."""
-
-    use_tag: str
-    slot_index: int
-    catalog_id: str
-
-
-@dataclass(frozen=True)
-class ConsumableOption:
-    """가방에 있는, 칸에 끼울 수 있는 소모품."""
-
-    catalog_id: str
-    use_tag: str
-    count: int
-
-
-def list_loadable(
-    slots: tuple[ConsumableSlot, ...], options: tuple[ConsumableOption, ...]
-) -> tuple[tuple[ConsumableSlot, str], ...]:
-    """빈 칸에 끼울 것을 짝지어 낸다.
-
-    **끼워야 보충이 돈다.** 정비의 REFILL 은 이미 끼운 것을 채우기만 한다 — 칸이 비어
-    있으면 채울 대상이 없어서 아무 일도 일어나지 않는다. 그래서 봇이 소모품을 주워도
-    가방에 쌓이기만 하고, 죽을 때 사망 페널티가 그것을 지운다.
-
-    쓰임새가 맞아야 들어간다. POTION 칸에 SCROLL 을 밀어 넣으면 서버가 거절하므로,
-    보내기 전에 여기서 거른다 — 거절당할 요청을 보내는 것은 실패를 로그로 옮길 뿐이다.
+    **여유폭을 요구한다.** 갈아 끼우기와 같은 값이다: 근소하게 나은 것을 사면 그 돈으로
+    다음에 뜰 확실한 것을 못 산다.
 
     Args:
-        slots: 지금 칸 상태.
-        options: 가방에 있는 소모품들.
+        buyable: 살 수 있는 매물들.
+        worn: 자리에서 지금 낀 것으로.
+        weights: 이 봇의 저울.
+        base_stats: 퍼센트를 값으로 바꾸는 기준.
 
     Returns:
-        (빈 칸, 끼울 소모품 id) 짝들. 한 후보를 여러 칸에 나눠 쓰지 않는다.
+        살 매물 id. 나은 것이 없으면 0.
     """
-    left = {item.catalog_id: item.count for item in options}
-    by_tag: dict[str, list[str]] = {}
-    for item in options:
-        by_tag.setdefault(item.use_tag, []).append(item.catalog_id)
-    picked: list[tuple[ConsumableSlot, str]] = []
-    # 칸 순서대로 채운다. 순서가 흔들리면 같은 가방에서 다른 몸이 나간다.
-    for slot in sorted(slots, key=lambda item: (item.use_tag, item.slot_index)):
-        if slot.catalog_id:
+    scored: list[tuple[int, int, int]] = []
+    for item in buyable:
+        if not item.slot or item.slot in TWO_HANDED_SLOTS:
             continue
-        found = next(
-            (item for item in sorted(by_tag.get(slot.use_tag, [])) if left.get(item, 0) > 0),
-            "",
-        )
-        if not found:
+        current = worn.get(item.slot)
+        if current is None:
+            # 빈 자리는 견줄 상대가 없다. 그 자리를 채우는 것은 러너의 몫이다
+            # (`apply_bot_gear`) — 여기서 사면 두 곳이 같은 자리를 두고 다툰다.
             continue
-        left[found] -= 1
-        picked.append((slot, found))
-    return tuple(picked)
+        offered = GearItem(
+            item_id=0,
+            slot=item.slot,
+            can_equip=True,
+            is_broken=False,
+            hands="",
+            affixes=item.affixes,
+            attack_range=item.attack_range,
+        )
+        gain = compute_weighted_score(offered, weights, base_stats) - compute_weighted_score(
+            current, weights, base_stats
+        )
+        if gain >= UPGRADE_MARGIN:
+            scored.append((gain, item.price, item.listing_id))
+    if not scored:
+        return 0
+    # 많이 나은 것 먼저, 같으면 싼 쪽, 그래도 같으면 id 가 작은 쪽 — 순서가 흔들리면
+    # 같은 상황에서 다른 일이 벌어진다 (R5 와 같은 결의 규율).
+    return min(scored, key=lambda one: (-one[0], one[1], one[2]))[2]
 
 
-def parse_consumables(
-    payload: dict,
-) -> tuple[tuple[ConsumableSlot, ...], tuple[ConsumableOption, ...]]:
-    """`/api/consumables` 응답을 읽는다.
+def find_purchase(
+    listings: tuple[Listing, ...],
+    balance: int,
+    worn: dict[str, GearItem] | None = None,
+    weights: dict[str, int] | None = None,
+    base_stats: dict[str, int] | None = None,
+) -> int:
+    """이번에 살 매물을 고른다.
 
-    **이름을 여기 한 곳에만 적는다.** 러너 안에 인라인으로 두었더니 재고 열쇠를 `count`
-    로 적었는데 서버는 `stock` 이라, 후보가 늘 0개로 읽혀 아무것도 장전되지 않았다 —
-    조용히 아무 일도 안 일어나는 종류의 결함이다. 파싱이 함수로 나와 있어야 응답 모양을
-    그대로 넣어 보는 검사를 쓸 수 있다.
+    **나은 것이 먼저, 없으면 싼 것.** 예전에는 싼 것만 샀다 — 6시간 넘게 안 팔린 것 중
+    제일 싼 것이라 정의상 가장 값 안 나가는 물건이고, 봇의 가방에 쌓였다가 정비의
+    버리기나 사망 페널티가 지웠다. 사실상 화폐 소각기였다.
+
+    싼 것 사기를 **없애지는 않았다.** 봇이 시장에서 사 주는 것 자체가 사람이 드롭을 팔
+    곳이고, 나은 것만 사면 그 자리가 크게 준다. 그래서 둘을 순서로 둔다: 쓸모를 먼저
+    보고, 없으면 유동성을 낸다.
+
+    **싼 것부터 하나만 산다.** 한 번에 여럿 사면 열 봇이 시장을 한 바퀴에 비우고, 그것은
+    유동성이 아니라 청소다.
 
     Args:
-        payload: 서버 응답.
+        listings: 지금 열려 있는 매물들.
+        balance: 봇의 화폐.
+        worn: 자리에서 지금 낀 것으로. 없으면 견줌을 건너뛴다.
+        weights: 이 봇의 저울. 없으면 견줌을 건너뛴다.
+        base_stats: 퍼센트를 값으로 바꾸는 기준.
 
     Returns:
-        (칸들, 가방 후보들).
+        살 매물 id. 살 것이 없으면 0.
     """
-    slots = tuple(
-        ConsumableSlot(
-            use_tag=str(row.get("use_tag", "")),
-            slot_index=int(row.get("slot_index", 0)),
-            catalog_id=str(row.get("catalog_id") or ""),
-        )
-        for row in payload.get("slots", [])
-    )
-    options = tuple(
-        ConsumableOption(
-            catalog_id=str(row.get("catalog_id", "")),
-            use_tag=str(row.get("use_tag") or ""),
-            count=int(row.get("stock", 0)),
-        )
-        for row in payload.get("options", [])
-    )
-    return slots, options
+    buyable = list_buyable(listings, balance)
+    if not buyable:
+        return 0
+    if worn is not None and weights is not None and base_stats is not None:
+        upgrade = find_upgrade_buy(buyable, worn, weights, base_stats)
+        if upgrade != 0:
+            return upgrade
+    return min(buyable, key=lambda item: (item.price, item.listing_id)).listing_id

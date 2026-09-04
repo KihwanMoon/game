@@ -81,6 +81,7 @@ def build_listing_view(listing: Listing, catalog: dict) -> ListingView:
         # 카탈로그가 이미 들고 있던 것이다. 안 보내면 화면이 견줄 상대를 못 찾는다.
         slot="" if entry.slot is None else str(entry.slot),
         grade=listing.grade,
+        attack_range=entry.attack_range or 0,
     )
 
 

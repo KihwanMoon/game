@@ -11,23 +11,71 @@
 봇이 판 뒤에 하는 일이다 (§4 의 400줄 상한에 걸린 자리이기도 하다).
 """
 
-from game.app.bots.shopping import (
+from game.app.bots.chores import (
     BagItem,
-    Listing,
     build_allocation,
-    find_purchase,
     list_equippable,
     list_loadable,
     list_repairable,
     parse_consumables,
 )
-from game.app.bots.upkeep import build_bot_upkeep, check_upkeep_matches
+from game.app.bots.personas import resolve_persona
+from game.app.bots.shopping import (
+    Listing,
+    find_purchase,
+)
+from game.app.bots.upgrade import GEAR_PRIORITY_WEIGHTS, GearItem
+from game.app.bots.upkeep import PERSONA_PRIORITY, build_bot_upkeep, check_upkeep_matches
 from game.app.store.bots import BotProfile
 from game.app.store.maintenance import MaintenanceRow
 from scripts.bot_client import send_request
 
 
-def apply_bot_shopping(api_url: str, bot: BotProfile) -> str:
+def read_worn_gear(api_url: str, bot: BotProfile) -> dict[str, GearItem]:
+    """이 봇이 지금 낀 것을 자리별로 읽는다.
+
+    **살지 말지를 정하려면 견줄 상대가 있어야 한다.** 예전에는 이것을 안 읽어서 봇이
+    가장 싼 것을 샀다.
+
+    Args:
+        api_url: 백엔드 주소.
+        bot: 이 봇의 성격.
+
+    Returns:
+        자리에서 낀 것으로. 못 읽으면 빈 표.
+    """
+    bag = send_request(f"{api_url}/api/inventory", bot.token, None)
+    if bag is None:
+        return {}
+    worn: dict[str, GearItem] = {}
+    for row in bag.get("equipment", []):
+        item = row.get("item")
+        if not isinstance(item, dict) or item.get("is_broken"):
+            continue
+        slot = str(item.get("slot") or "")
+        if not slot:
+            continue
+        worn[slot] = GearItem(
+            item_id=int(item.get("item_id", 0)),
+            slot=slot,
+            can_equip=True,
+            is_broken=False,
+            hands=str(item.get("hands") or ""),
+            affixes=tuple(
+                (
+                    str(affix.get("stat", "")),
+                    int(affix.get("flat", 0)),
+                    int(affix.get("percent", 0)),
+                )
+                for affix in item.get("affixes", [])
+                if isinstance(affix, dict)
+            ),
+            attack_range=int(item.get("attack_range", 0)),
+        )
+    return worn
+
+
+def apply_bot_shopping(api_url: str, bot: BotProfile, base_stats: dict[str, int]) -> str:
     """판이 끝난 뒤 시장을 한 번 본다.
 
     사람도 판이 끝나면 가방과 시장을 본다. 봇이 그것을 안 하면 번 화폐가 영영 안 쓰이고,
@@ -39,6 +87,7 @@ def apply_bot_shopping(api_url: str, bot: BotProfile) -> str:
     Args:
         api_url: 백엔드 주소.
         bot: 이 봇의 성격.
+        base_stats: 플레이어 기본 스탯. 퍼센트를 값으로 바꾸는 기준이다.
 
     Returns:
         무슨 일이 있었는지. 아무것도 안 샀으면 빈 문자열.
@@ -52,10 +101,25 @@ def apply_bot_shopping(api_url: str, bot: BotProfile) -> str:
             price=int(row["price"]),
             is_mine=bool(row.get("is_mine")),
             expires_in_minutes=int(row.get("expires_in_minutes", 0)),
+            slot=str(row.get("slot") or ""),
+            affixes=tuple(
+                (
+                    str(affix.get("stat", "")),
+                    int(affix.get("flat", 0)),
+                    int(affix.get("percent", 0)),
+                )
+                for affix in row.get("affixes", [])
+                if isinstance(affix, dict)
+            ),
+            attack_range=int(row.get("attack_range", 0)),
         )
         for row in market.get("listings", [])
     )
-    wanted = find_purchase(listings, int(market.get("balance", 0)))
+    # **사는 저울과 끼는 저울이 같아야 한다.** 다르면 산 것을 안 끼는 일이 생긴다 —
+    # 돈만 나가고 몸은 그대로다 (`bots/upkeep.PERSONA_PRIORITY`).
+    weights = GEAR_PRIORITY_WEIGHTS[PERSONA_PRIORITY.get(resolve_persona(bot.ruleset_id), "ATTACK")]
+    worn = read_worn_gear(api_url, bot)
+    wanted = find_purchase(listings, int(market.get("balance", 0)), worn, weights, base_stats)
     if wanted == 0:
         return ""
     bought = send_request(f"{api_url}/api/auction/buy", bot.token, {"listing_id": wanted})

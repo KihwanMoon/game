@@ -263,3 +263,64 @@ def test_the_persona_picks_the_priority():
 
     assert build_bot_upkeep("g0_pressure")[0].grade == "DEFENSE"
     assert build_bot_upkeep("sniper")[0].grade == "ATTACK"
+
+
+def test_the_bot_buys_an_upgrade_before_it_buys_junk():
+    """★ 봇이 자기 장비와 견주고 산다.
+
+    예전에는 **가장 싼 것**을 샀다 — 6시간 넘게 안 팔린 것 중 제일 싼 것이라 정의상 가장
+    값 안 나가는 물건이고, 가방에 쌓였다가 버려졌다. 사실상 화폐 소각기였다.
+
+    싼 것 사기를 없애지는 않았다: 봇이 사 주는 것 자체가 사람이 드롭을 팔 곳이다. 둘을
+    **순서**로 둔다 — 쓸모를 먼저 보고, 없으면 유동성을 낸다.
+    """
+    from game.app.bots.shopping import Listing, find_purchase
+
+    worn = {"HEAD": build_gear(1, affixes=(("defense", 2, 0),))}
+    weights = GEAR_PRIORITY_WEIGHTS["DEFENSE"]
+    # 시장 하한(3건)을 넘겨야 산다 — 그 아래면 아무것도 안 산다.
+    listings = (
+        Listing(1, 10, False, 100),
+        Listing(2, 500, False, 100, slot="HEAD", affixes=(("defense", 20, 0),)),
+        Listing(3, 20, False, 100),
+        Listing(4, 30, False, 100),
+        Listing(5, 40, False, 100),
+    )
+    assert find_purchase(listings, 10000, worn, weights, BASE_STATS) == 2
+
+    # 나은 것이 없으면 예전처럼 가장 싼 것을 산다.
+    plain = tuple(Listing(one, one * 10, False, 100) for one in range(1, 6))
+    assert find_purchase(plain, 10000, worn, weights, BASE_STATS) == 1
+
+
+def test_the_bot_leaves_the_market_alone_when_it_is_thin():
+    """★ 넘치는 것만 산다 — 견줌을 붙여도 이 규율은 그대로다.
+
+    사람이 열어 봤을 때 아무것도 없는 것이 이 시스템의 실패 모습이고, 규칙 하나하나가
+    지켜져도 시간당 쉰 번의 기회가 시장을 그렇게 만든다 (실측: 경매 열림 0).
+    """
+    from game.app.bots.shopping import Listing, find_purchase
+
+    worn = {"HEAD": build_gear(1, affixes=(("defense", 2, 0),))}
+    weights = GEAR_PRIORITY_WEIGHTS["DEFENSE"]
+    thin = (
+        Listing(1, 10, False, 100),
+        Listing(2, 500, False, 100, slot="HEAD", affixes=(("defense", 99, 0),)),
+        Listing(3, 20, False, 100),
+    )
+    assert find_purchase(thin, 10000, worn, weights, BASE_STATS) == 0
+
+
+def test_the_bot_does_not_buy_for_an_empty_slot():
+    """★ 빈 자리는 러너가 채운다 — 여기서 사면 두 곳이 같은 자리를 두고 다툰다."""
+    from game.app.bots.shopping import Listing, find_purchase
+
+    weights = GEAR_PRIORITY_WEIGHTS["ATTACK"]
+    listings = (
+        Listing(1, 900, False, 100, slot="HEAD", affixes=(("attack", 99, 0),)),
+        Listing(2, 10, False, 100),
+        Listing(3, 20, False, 100),
+        Listing(4, 30, False, 100),
+    )
+    # 머리가 비었으므로 견줌에서 빠지고, 폴백이 가장 싼 것을 고른다.
+    assert find_purchase(listings, 10000, {}, weights, BASE_STATS) == 2
