@@ -14,22 +14,13 @@ from dataclasses import dataclass
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
-from game.app.monsters.affixes import compute_affixed_stat, list_monster_affixes
 from game.app.monsters.growth import (
-    build_growth,
     compute_cap_xp,
     compute_defeat_xp,
     compute_level,
     compute_level_xp,
 )
-from game.app.monsters.tiers import MonsterTier, compute_tier_stat
-from game.app.store.spoils import compute_spoiled_stat
-from game.schemas.monster_snapshot import (
-    MonsterSnapshot,
-    build_snapshot_payload,
-    parse_snapshot,
-    sort_snapshots,
-)
+from game.app.monsters.tiers import MonsterTier
 
 # 플레이어를 잡았을 때 얻는 경험치. 처치한 플레이어의 레벨·장비에 비례시키지 않는다 —
 # 비례시키면 강한 캐릭터로 일부러 죽어 주는 것이 가장 빠른 육성법이 된다 (T9).
@@ -46,6 +37,7 @@ MAX_SPAWN_SEED = 1 << 40
 # 조용히 비고, 그것이 "엘리트인데 접사가 없다" 로 나타난다.
 COLUMN_SPAWN_SEED = 8
 COLUMN_RULESET = 9
+COLUMN_STATS = 10
 
 
 @dataclass(frozen=True)
@@ -64,6 +56,13 @@ class MonsterRecord:
     spawn_seed: int = 0
     # 이 개체 전용 규칙표. None 이면 카탈로그 기본표를 쓴다 — 레벨별 규칙표(#36)의 자리다.
     ruleset_json: dict | None = None
+    # 얼려 둔 빌드. **도플갱어의 것이다** — 카탈로그가 아니라 그 봇이 쓰던 값이 이 개체의
+    # 바탕이다. 비어 있으면 여느 몬스터처럼 카탈로그를 바탕으로 쓴다.
+    #
+    # 안 읽던 시절에는 카탈로그(hp 100)로만 세워져서, **그림자가 원본 봇보다 약했다** —
+    # 실측으로 7층 그림자가 공격 24 대 70, 방어 7 대 42 였다. 빌드를 얼려 두고 안 쓰면
+    # 「그 빌드로 여기까지 왔다」가 이름뿐인 말이 된다.
+    stat_json: dict | None = None
 
 
 def create_monster(
@@ -128,6 +127,7 @@ def _build_record(row: tuple) -> MonsterRecord:
         만들어진 레코드.
     """
     raw_ruleset = row[COLUMN_RULESET] if len(row) > COLUMN_RULESET else None
+    raw_stats = row[COLUMN_STATS] if len(row) > COLUMN_STATS else None
     return MonsterRecord(
         record_id=int(row[0]),
         catalog_id=str(row[1]),
@@ -143,6 +143,7 @@ def _build_record(row: tuple) -> MonsterRecord:
             else 0
         ),
         ruleset_json=(json.loads(raw_ruleset) if isinstance(raw_ruleset, str) else raw_ruleset),
+        stat_json=(json.loads(raw_stats) if isinstance(raw_stats, str) else raw_stats),
     )
 
 
@@ -162,7 +163,7 @@ def list_monsters(pool: ConnectionPool, zone_floor: int) -> tuple[MonsterRecord,
     with pool.connection() as connection:
         rows = connection.execute(
             "SELECT id, catalog_id, tier, zone_floor, entity_slot, total_xp, level, alive,"
-            " spawn_seed, ruleset_json"
+            " spawn_seed, ruleset_json, stat_json"
             " FROM entity_record WHERE kind = 'MONSTER' AND zone_floor = %s AND alive = true"
             " ORDER BY entity_slot",
             (zone_floor,),
@@ -183,7 +184,7 @@ def find_monster(pool: ConnectionPool, record_id: int) -> MonsterRecord | None:
     with pool.connection() as connection:
         row = connection.execute(
             "SELECT id, catalog_id, tier, zone_floor, entity_slot, total_xp, level, alive,"
-            " spawn_seed, ruleset_json"
+            " spawn_seed, ruleset_json, stat_json"
             " FROM entity_record WHERE kind = 'MONSTER' AND id = %s",
             (record_id,),
         ).fetchone()
@@ -207,107 +208,6 @@ def set_monster_level(pool: ConnectionPool, record_id: int, level: int) -> None:
             " WHERE kind = 'MONSTER' AND id = %s",
             (level, compute_level_xp(level), record_id),
         )
-
-
-def build_monster_snapshot(
-    record: MonsterRecord, base: dict, spoils: dict[str, tuple[int, int]] | None = None
-) -> MonsterSnapshot:
-    """레코드와 카탈로그 값으로 스냅샷 한 줄을 만든다.
-
-    **스탯을 직접 담는다.** 레벨과 곡선만 담고 클라이언트가 계산하게 하면, 곡선을 고치는
-    순간 이미 발급된 티켓들이 다른 몬스터를 가리키게 된다.
-
-    Args:
-        record: 몬스터 레코드.
-        base: balance.json 의 그 적 절.
-        spoils: 뺏어 든 장비의 보정. 없으면 안 건다 — 도감처럼 전투가 아닌 자리는
-            굳이 조회하지 않는다.
-
-    Returns:
-        만들어진 스냅샷.
-    """
-    tier = MonsterTier(record.tier)
-    taken = spoils or {}
-    growth = build_growth(record.level)
-    # 엘리트 접사는 spawn_seed 에서 파생한다 — 조회할 때마다 굴리면 도감과 전투가 다른
-    # 적을 보게 된다 (docs/설계/6_몬스터 §1).
-    affixes = list_monster_affixes(record.spawn_seed, tier)
-    return MonsterSnapshot(
-        entity_id=record.entity_slot,
-        zone_floor=int(record.zone_floor or 0),
-        record_id=record.record_id,
-        kind_id=record.catalog_id,
-        tier=record.tier,
-        level=record.level,
-        # **뺏은 장비를 맨 뒤에 건다.** 등급 → 레벨 → 정예 접사 → 뺏은 것 순이다.
-        # 가장 나중이어야 「그 장비 덕에 이만큼 더 단단하다」가 그대로 읽힌다.
-        hp_max=compute_spoiled_stat(
-            compute_affixed_stat(
-                compute_tier_stat(int(base["hp_max"]), tier) * growth.stat_percent // PERCENT_BASE,
-                "hp_max",
-                affixes,
-            ),
-            "hp_max",
-            taken,
-        ),
-        attack=compute_spoiled_stat(
-            compute_affixed_stat(
-                compute_tier_stat(int(base["attack"]), tier) * growth.stat_percent // PERCENT_BASE,
-                "attack",
-                affixes,
-            ),
-            "attack",
-            taken,
-        ),
-        defense=compute_spoiled_stat(
-            compute_affixed_stat(compute_tier_stat(int(base["defense"]), tier), "defense", affixes),
-            "defense",
-            taken,
-        ),
-        rule_slots=int(base.get("rule_slots", 0)) + growth.bonus_rule_slots,
-        cpu_budget=int(base.get("cpu_budget", 0)) + growth.bonus_cpu,
-    )
-
-
-def save_snapshots(
-    pool: ConnectionPool, ticket_id: str, snapshots: tuple[MonsterSnapshot, ...]
-) -> None:
-    """티켓에 스냅샷을 얼려 넣는다.
-
-    Args:
-        pool: 연결 풀.
-        ticket_id: 티켓 id.
-        snapshots: 얼려 둘 상태들.
-    """
-    with pool.connection() as connection:
-        for item in snapshots:
-            connection.execute(
-                "INSERT INTO monster_snapshot (ticket_id, record_id, state)"
-                " VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
-                (ticket_id, item.record_id, Jsonb(build_snapshot_payload(item))),
-            )
-
-
-def load_snapshots(pool: ConnectionPool, ticket_id: str) -> tuple[MonsterSnapshot, ...]:
-    """티켓이 얼려 둔 상태를 읽는다.
-
-    **클라이언트가 보낸 것을 쓰지 않는다.** 여기가 그 원칙이 코드로 나타나는 자리다.
-
-    Args:
-        pool: 연결 풀.
-        ticket_id: 티켓 id.
-
-    Returns:
-        entity_id 순으로 정렬된 스냅샷들.
-    """
-    with pool.connection() as connection:
-        rows = connection.execute(
-            "SELECT state FROM monster_snapshot WHERE ticket_id = %s", (ticket_id,)
-        ).fetchall()
-    parsed = tuple(
-        parse_snapshot(json.loads(row[0]) if isinstance(row[0], str) else row[0]) for row in rows
-    )
-    return sort_snapshots(parsed)
 
 
 def add_monster_xp(

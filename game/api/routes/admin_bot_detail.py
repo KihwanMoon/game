@@ -33,7 +33,7 @@ from game.app.store.accounts import find_player_entity
 from game.app.store.bots import check_is_bot
 from game.app.store.doppels import read_doppel_ruleset
 from game.app.store.maintenance import read_maintenance
-from game.app.store.monsters import load_snapshots
+from game.app.store.monster_snapshots import load_snapshots
 from game.app.store.progress import read_progress, read_reached_floor
 from game.app.store.runs import list_recent_runs
 

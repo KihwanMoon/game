@@ -32,7 +32,7 @@ from game.app.store.drops import (
 from game.app.store.inventory_slots import apply_stack_grant
 from game.app.store.item_catalog import read_generation
 from game.app.store.items import create_item
-from game.app.store.monsters import load_snapshots
+from game.app.store.monster_snapshots import load_snapshots
 from game.schemas.item import GRADE_SEALED_SLOTS, ItemKind, list_grades_downward
 
 # 스냅샷에 없는 종의 기준 레벨. 방이 그때 낳은 잡몹은 개체 레벨이 없다.

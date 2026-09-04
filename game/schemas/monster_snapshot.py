@@ -53,6 +53,22 @@ class MonsterSnapshot:
     # 0 은 「모른다」다. 층을 싣기 전에 발급된 티켓이 그 값이며, 그 티켓은 예전처럼
     # 층을 안 보고 얹는다 — 발급 당시와 다르게 재시뮬하면 정상 제출이 반려된다 (R5).
     zone_floor: int = 0
+    # 이 개체가 실제로 닿는 거리. **0 은 「안 실렸다」**이고 그때는 종의 값을 쓴다.
+    #
+    # 도플갱어 때문에 생겼다. 스탯 셋만 실으니 **장궁 든 봇의 그림자가 사거리 1 근접**으로
+    # 싸웠다 — 빌드에서 가장 그 빌드다운 것이 빠진 채 숫자만 큰 몹이 됐다. 사거리는
+    # 주무기가 정하고(`items/loadout.replace_range`) 그 주무기는 얼려 뒀는데, 나르는 칸이
+    # 없어서 버려지고 있었다.
+    attack_range: int = 0
+    # 이 개체가 쓸 수 있는 스킬. **빈 튜플은 「안 실렸다」**이고 그때는 종의 규칙을 쓴다.
+    #
+    # `Entity.skills` 는 None 이 「전부 허용」이고 빈 튜플이 「아무것도 없음」이라 뜻이
+    # 반대다 — 여기서 빈 것은 **모른다**이므로 None 으로 옮긴다. 그렇게 해야 스킬을 안
+    # 싣던 옛 티켓이 예전과 똑같이 재시뮬된다 (R5).
+    skills: tuple[str, ...] = ()
+    # 들고 들어가는 물약 수. **-1 이 「안 실렸다」**다 — 0 은 「없다」라는 진짜 값이라
+    # 구분해야 한다. 안 실렸으면 종의 기본값을 쓴다.
+    potions: int = -1
 
 
 def build_entity_id(kind_id: str, index: int) -> str:
@@ -89,6 +105,10 @@ def parse_snapshot(raw: dict) -> MonsterSnapshot:
         rule_slots=int(raw["rule_slots"]),
         cpu_budget=int(raw["cpu_budget"]),
         zone_floor=int(raw.get("zone_floor", 0)),
+        attack_range=int(raw.get("attack_range", 0)),
+        # 정렬해서 담는다. 집합·딕셔너리 순회가 게임 상태로 새면 두 코어가 갈린다 (R5).
+        skills=tuple(sorted(str(one) for one in raw.get("skills") or ())),
+        potions=int(raw.get("potions", -1)),
     )
 
 
@@ -113,6 +133,9 @@ def build_snapshot_payload(snapshot: MonsterSnapshot) -> dict:
         "rule_slots": snapshot.rule_slots,
         "cpu_budget": snapshot.cpu_budget,
         "zone_floor": snapshot.zone_floor,
+        "attack_range": snapshot.attack_range,
+        "skills": list(snapshot.skills),
+        "potions": snapshot.potions,
     }
 
 

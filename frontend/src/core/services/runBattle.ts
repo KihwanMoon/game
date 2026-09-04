@@ -298,11 +298,19 @@ export function buildEngine(setup: EngineSetup): TickEngine {
         hpMax: found?.hpMax ?? scaled.hpMax,
         attack: found?.attack ?? scaled.attack,
         defense: found?.defense ?? kind.defense,
-        attackRange: kind.attack_range,
+        // **키트도 얼려 둔 것을 쓴다** (G3 — 파이썬 `run_battle` 과 같은 규칙).
+        // 스탯만 대체하던 때는 장궁 든 봇의 그림자가 사거리 1 근접으로 싸웠다. 안 실린
+        // 값은 종의 것을 그대로 쓰므로, 옛 티켓은 예전과 똑같이 재시뮬된다 (R5).
+        attackRange: found?.attackRange || kind.attack_range,
         initiative: kind.initiative,
         regenBase: kind.regen_base ?? 0,
         cpuBudget: found?.cpuBudget ?? kind.cpu_budget ?? 0,
-        consumables: new Map([['POTION', kind.potions ?? 0]]),
+        consumables: new Map([
+          ['POTION', found !== undefined && found.potions >= 0 ? found.potions : (kind.potions ?? 0)],
+        ]),
+        // undefined 는 「장착 개념이 안 배선됨 = 전부 허용」이다. 빈 것(아무것도 없음)과
+        // 뜻이 반대라, 스냅샷의 빈 것은 **모른다**로 읽어 undefined 로 둔다.
+        ...(found === undefined || found.skills.length === 0 ? {} : { skills: found.skills }),
         // 등급은 이름표로만 나른다. 전투 수식은 안 본다 — 화면이 색으로 가른다.
         tier: kind.tier ?? TIER_NORMAL,
       }),

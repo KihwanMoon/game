@@ -35,9 +35,7 @@ from game.app.store.accounts import find_player_entity
 from game.app.store.equipment import add_currency, mark_item_broken, remove_item
 from game.app.store.items import list_equipment, list_inventory
 from game.app.store.meta import load_meta_payload, save_meta_payload
-from game.app.store.monsters import (
-    load_snapshots,
-)
+from game.app.store.monster_snapshots import load_snapshots
 from game.app.store.progress import (
     add_player_xp,
     read_progress,

@@ -20,11 +20,11 @@ from game.app.simulation.plan import OUTCOME_PLAYER_WIN as OUTCOME_WIN
 from game.app.store.accounts import find_player_entity
 from game.app.store.doppels import remove_doppel
 from game.app.store.items import list_equipment, list_inventory
+from game.app.store.monster_snapshots import load_snapshots
 from game.app.store.monsters import (
     add_monster_xp,
     apply_monster_defeat,
     find_monster,
-    load_snapshots,
 )
 from game.app.store.tickets import IssuedTicket
 from game.app.store.trophies import apply_recovery, create_trophy

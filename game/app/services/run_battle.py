@@ -227,6 +227,14 @@ def build_engine(
         # 지속 몬스터가 이 자리에 있으면 얼려 둔 상태가 층 스케일을 **대체한다**.
         # 얹으면 같은 개체가 층마다 다른 값을 갖게 되어 스냅샷의 뜻이 사라진다.
         found = overrides.get(entity_id)
+        # **키트도 얼려 둔 것을 쓴다.** 스탯 셋만 대체하던 때는 장궁 든 봇의 그림자가
+        # 사거리 1 근접으로 싸웠다 — 빌드에서 가장 그 빌드다운 것이 빠졌다. 안 실린
+        # 값은 종의 것을 그대로 쓰므로, 옛 티켓은 예전과 똑같이 재시뮬된다 (R5).
+        attack_range = kind["attack_range"]
+        potions = int(kind.get("potions", 0))
+        # None 은 「장착 개념이 안 배선됨 = 전부 허용」이다. 빈 튜플(아무것도 없음)과
+        # 뜻이 반대라, 스냅샷의 빈 것은 **모른다**로 읽어 None 으로 둔다.
+        skills: tuple[str, ...] | None = None
         if found is not None:
             hp_max, attack, defense, cpu_budget = (
                 found.hp_max,
@@ -234,6 +242,9 @@ def build_engine(
                 found.defense,
                 found.cpu_budget,
             )
+            attack_range = found.attack_range or attack_range
+            potions = found.potions if found.potions >= 0 else potions
+            skills = found.skills or None
         state.entities[entity_id] = Entity(
             entity_id=entity_id,
             kind_id=kind["id"],
@@ -243,11 +254,12 @@ def build_engine(
             hp_max=hp_max,
             attack=attack,
             defense=defense,
-            attack_range=kind["attack_range"],
+            attack_range=attack_range,
             initiative=kind["initiative"],
             regen_base=kind["regen_base"],
             cpu_budget=cpu_budget,
-            consumables={"POTION": int(kind.get("potions", 0))},
+            consumables={"POTION": potions},
+            skills=skills,
             # 등급은 이름표로만 나른다. 전투 수식은 안 본다 — 화면이 색으로 가른다.
             tier=str(kind.get("tier", TIER_NORMAL)),
         )

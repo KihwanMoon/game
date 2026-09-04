@@ -23,11 +23,11 @@ from game.app.monsters.growth import get_level_cap
 from game.app.services.run_battle import load_balance
 from game.app.services.run_duel import run_monster_duel
 from game.app.store.connection import DATABASE_URL_ENV, create_pool
+from game.app.store.monster_snapshots import build_monster_snapshot
 from game.app.store.monsters import (
     MonsterRecord,
     add_monster_xp,
     apply_monster_defeat,
-    build_monster_snapshot,
     list_monsters,
 )
 from game.config import (

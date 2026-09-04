@@ -201,10 +201,18 @@ def create_doppel(
             return 0
         remove_doppel(pool, record_id)
     level = max(1, floor)
+    # **키트도 함께 얼린다** (개정 2026-09-04). 예전에는 스탯 셋만 담아서, 장궁 든 봇의
+    # 그림자가 사거리 1 근접으로 싸웠다 — 빌드에서 가장 그 빌드다운 것이 빠진 채 숫자만
+    # 큰 몹이 됐다. 사거리·스킬·물약은 장비가 주는 것 중 **숫자로 안 녹는 부분**이고,
+    # 그것이 빠지면 어떤 그림자를 만나도 싸움이 똑같아진다.
     stats = {
         "hp_max": int(loadout.get("hp_max", 0)),
         "attack": int(loadout.get("attack", 0)),
         "defense": int(loadout.get("defense", 0)),
+        "attack_range": int(loadout.get("attack_range", 0)),
+        # 정렬해서 담는다 — 순회 순서가 세계 상태에 새면 두 코어가 갈린다 (R5).
+        "skills": sorted(str(one) for one in loadout.get("skills") or ()),
+        "potions": int((loadout.get("consumables") or {}).get("POTION", 0)),
     }
     with pool.connection() as connection:
         row = connection.execute(

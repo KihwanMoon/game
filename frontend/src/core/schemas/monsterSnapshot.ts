@@ -39,6 +39,23 @@ export interface MonsterSnapshot {
    * 안 보고 얹는다 — 발급 당시와 다르게 재시뮬하면 정상 제출이 반려된다 (R5).
    */
   readonly zoneFloor: number
+  /**
+   * 이 개체가 실제로 닿는 거리. **0 은 「안 실렸다」**이고 그때는 종의 값을 쓴다.
+   *
+   * 도플갱어 때문에 생겼다. 스탯만 실으니 **장궁 든 봇의 그림자가 사거리 1 근접**으로
+   * 싸웠다 — 빌드에서 가장 그 빌드다운 것이 빠진 채 숫자만 큰 몹이 됐다.
+   */
+  readonly attackRange: number
+  /**
+   * 이 개체가 쓸 수 있는 스킬. **빈 배열은 「안 실렸다」**이고 그때는 종의 규칙을 쓴다.
+   *
+   * `Entity.skills` 는 undefined 가 「전부 허용」이고 빈 것이 「아무것도 없음」이라 뜻이
+   * 반대다 — 여기서 빈 것은 **모른다**이므로 undefined 로 옮긴다. 그래야 스킬을 안 싣던
+   * 옛 티켓이 예전과 똑같이 재시뮬된다 (R5).
+   */
+  readonly skills: readonly string[]
+  /** 들고 들어가는 물약 수. **-1 이 「안 실렸다」**다 — 0 은 「없다」라는 진짜 값이다. */
+  readonly potions: number
 }
 
 /** 서버가 주는 절. 파이썬 `build_snapshot_payload` 와 같은 열쇠다. */
@@ -55,6 +72,10 @@ export interface RawMonsterSnapshot {
   readonly cpu_budget: number
   /** 구버전 서버는 안 보낸다. 그때는 0 — 층을 모른다는 뜻이다. */
   readonly zone_floor?: number
+  /** 키트를 싣기 전 서버는 안 보낸다. 그때는 종의 값을 쓴다. */
+  readonly attack_range?: number
+  readonly skills?: readonly string[]
+  readonly potions?: number
 }
 
 /**
@@ -87,6 +108,10 @@ export function parseSnapshot(raw: RawMonsterSnapshot): MonsterSnapshot {
     ruleSlots: raw.rule_slots,
     cpuBudget: raw.cpu_budget,
     zoneFloor: raw.zone_floor ?? 0,
+    attackRange: raw.attack_range ?? 0,
+    // 정렬해서 담는다 — 순회 순서가 게임 상태로 새면 두 코어가 갈린다 (R5).
+    skills: [...(raw.skills ?? [])].map(String).sort(),
+    potions: raw.potions ?? -1,
   }
 }
 

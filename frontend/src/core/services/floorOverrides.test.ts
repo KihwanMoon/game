@@ -28,6 +28,9 @@ function build(zoneFloor: number, level: number, recordId = 0): MonsterSnapshot 
     hpMax: 10 * level,
     attack: level,
     defense: 0,
+    attackRange: 0,
+    skills: [],
+    potions: -1,
     ruleSlots: 0,
     cpuBudget: 0,
     zoneFloor,
@@ -103,5 +106,64 @@ describe('스냅샷이 종을 정한다', () => {
       snapshots: [{ ...build(1, 3), entityId: slot, kindId: 'doppelganger', hpMax: 140 }],
     })
     expect(engine.state.entities.get(slot)?.kindId).toBe('doppelganger')
+  })
+})
+
+describe('★ 얼려 둔 키트가 전투에 도달한다 — 파이썬 `test_doppel_build` 의 짝 (G3)', () => {
+  // 스탯만 대체하던 때는 **장궁 든 봇의 그림자가 사거리 1 근접**으로 싸웠다. 사거리는
+  // 주무기가 정하고 그 주무기는 얼려 뒀는데, 나르는 칸이 없어서 버려지고 있었다.
+  const buildRoom = async () => {
+    const { buildEngine, parseBalance } = await import('./runBattle')
+    const { BALANCE, ROOM_TEMPLATES } = await import('../resources')
+    const template = ROOM_TEMPLATES.find((room) => room.templateId === 'corridor')
+    if (template === undefined) {
+      throw new Error('corridor 가 없다')
+    }
+    const slot = `${template.enemySpawns[0]?.kind ?? ''}_0`
+    return { buildEngine, template, balance: parseBalance(BALANCE), slot }
+  }
+
+  it('사거리·스킬·물약이 종의 값을 덮는다', async () => {
+    const { buildEngine, template, balance, slot } = await buildRoom()
+    const engine = buildEngine({
+      template,
+      balance,
+      seed: 1,
+      isVaried: false,
+      snapshots: [
+        {
+          ...build(1, 3),
+          entityId: slot,
+          kindId: 'doppelganger',
+          attackRange: 4,
+          skills: ['AIMED_SHOT', 'GUARD_BRACE'],
+          potions: 3,
+        },
+      ],
+    })
+    const entity = engine.state.entities.get(slot)
+    expect(entity?.attackRange).toBe(4)
+    expect(entity?.skills).toEqual(['AIMED_SHOT', 'GUARD_BRACE'])
+    expect(entity?.consumables.get('POTION')).toBe(3)
+  })
+
+  it('★ 안 실린 값은 종의 것으로 떨어진다 — 옛 티켓이 예전과 같아야 한다 (R5)', async () => {
+    // 0·빈 것·-1 을 그대로 쓰면 이미 발급된 티켓의 재시뮬이 발급 당시와 달라지고,
+    // 정상 제출이 반려된다.
+    const { buildEngine, template, balance, slot } = await buildRoom()
+    const kind = balance.enemies.find((one) => one.id === 'doppelganger')
+    const engine = buildEngine({
+      template,
+      balance,
+      seed: 1,
+      isVaried: false,
+      snapshots: [{ ...build(1, 3), entityId: slot, kindId: 'doppelganger' }],
+    })
+    const entity = engine.state.entities.get(slot)
+    expect(entity?.attackRange).toBe(kind?.attack_range)
+    // null 이 「장착 개념이 안 배선됨 = 전부 허용」이다. 빈 배열(아무것도 없음)과
+    // 뜻이 반대라, 스냅샷의 빈 것을 그대로 넘기면 스킬이 통째로 막힌다.
+    expect(entity?.skills).toBeNull()
+    expect(entity?.consumables.get('POTION')).toBe(kind?.potions ?? 0)
   })
 })

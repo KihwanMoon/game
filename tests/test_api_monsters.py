@@ -151,7 +151,8 @@ def test_the_same_ticket_replays_identically(client, token, monster):
     from game.api.deps import get_context, get_pool
     from game.app.monsters.growth import get_level_cap
     from game.app.services.verify_run import evaluate_submission
-    from game.app.store.monsters import load_snapshots, set_monster_level
+    from game.app.store.monster_snapshots import load_snapshots
+    from game.app.store.monsters import set_monster_level
     from game.app.store.tickets import find_open_ticket
 
     # **레벨을 이 검사가 정한다.** 앞선 검사들이 먹이고 잡아 온 레벨을 그대로 물려받으면,
@@ -200,7 +201,7 @@ def test_snapshot_changes_the_battle(client, token, monster, monkeypatch):
     monkeypatch.setattr(tickets_store, "create_seed", lambda: 12345)
     from game.api.deps import get_context, get_pool
     from game.app.services.verify_run import evaluate_submission
-    from game.app.store.monsters import load_snapshots
+    from game.app.store.monster_snapshots import load_snapshots
     from game.app.store.tickets import find_open_ticket
 
     headers = build_headers(token)

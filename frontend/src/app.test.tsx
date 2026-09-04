@@ -238,6 +238,9 @@ describe('티켓 → 전투 조립 (E4, 결정 #13)', () => {
         ruleSlots: 6,
         cpuBudget: 10,
         zoneFloor: 1,
+        attackRange: 0,
+        skills: [],
+        potions: -1,
       },
     ],
     loadout: {
