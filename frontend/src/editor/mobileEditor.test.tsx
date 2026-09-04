@@ -54,11 +54,13 @@ function readStrippedCss(name: string): string {
  */
 function cutRule(selector: string): string {
   const css = readStrippedCss('editor.css')
-  const start = css.indexOf(`${selector} {`)
+  // **줄머리에서 찾는다.** 그냥 부분 문자열로 찾으면 `.a > .edit-m__body {` 같은 더
+  // 긴 선택자에 먼저 걸려, 엉뚱한 규칙을 읽고도 통과하거나 빨개진다.
+  const start = css.indexOf(`\n${selector} {`)
   if (start < 0) {
     return ''
   }
-  return css.slice(start, css.indexOf('}', start))
+  return css.slice(start + 1, css.indexOf('}', start))
 }
 
 /**
@@ -721,5 +723,39 @@ describe('★ 좁은 화면이 가로로 밀리지 않는다', () => {
 
   it('몸통이 내용보다 좁아질 수 있다 — 격자 칸의 기본은 안 줄어드는 auto 다', () => {
     expect(cutRule('.edit-m__body')).toContain('min-width: var(--sp-0)')
+  })
+})
+
+describe('★ 세로의 탭 화면은 문서 흐름이다', () => {
+  // 100vh 격자에 가두면 몸통이 제 스크롤을 만들고, 그 안의 패널이 **또** 만든다.
+  // 스크롤이 두 겹이면 어느 것을 밀고 있는지 손가락이 모르고, 패널마다 화면 높이를
+  // 나눠 가지느라 무엇도 제 내용을 다 못 편다.
+  it('세로 목록은 높이를 안 고정한다 — 100dvh 는 하한이다', () => {
+    const rule = cutRule('.edit-m--portrait.edit-m--list')
+    expect(rule).toContain('height: auto')
+    expect(rule).toContain('min-height: 100dvh')
+  })
+
+  it('몸통이 제 스크롤을 안 만든다 — 페이지가 흐른다', () => {
+    expect(cutRule('.edit-m--portrait.edit-m--list > .edit-m__body')).toContain(
+      'overflow-y: visible',
+    )
+  })
+
+  it('안쪽 패널의 높이 제한도 함께 풀린다 — 흐르는 문서에는 가둘 높이가 없다', () => {
+    // 선택자가 두 줄짜리라 `cutRule` 로 못 자른다. 규칙 덩어리를 통째로 본다.
+    const css = readStrippedCss('editor.css')
+    const at = css.indexOf('.edit-m--portrait.edit-m--list .ds-panel,')
+    const rule = css.slice(at, css.indexOf('}', at))
+    expect(rule).toContain('.ds-panel__body')
+    expect(rule).toContain('max-height: none')
+    expect(rule).toContain('overflow: visible')
+  })
+
+  it('★ 가로와 편집 화면은 그대로 둔다 — 흐르게 두면 잃는 것이 있다', () => {
+    // 가로는 높이가 390px 뿐이라 머리 바가 화면 밖으로 나가고, 편집 화면은 하단의
+    // 취소·저장이 늘 손에 닿아야 한다.
+    expect(cutRule('.edit-m--edit')).toContain('var(--bar-edit)')
+    expect(cutRule('.edit-m--landscape.edit-m--edit')).toContain('minmax(var(--sp-0), 1fr)')
   })
 })

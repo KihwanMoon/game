@@ -567,6 +567,36 @@
   grid-template-rows: var(--bar-top) minmax(var(--sp-0), 1fr);
 }
 
+/* ── 세로의 탭 화면은 **문서 흐름**이다 (명세: 「세로는 문서 흐름이다」) ──────────
+   100vh 격자에 가두면 몸통이 제 스크롤을 만들고, 그 안의 패널이 **또** 스크롤을 만든다.
+   스크롤이 두 겹이면 어느 것을 밀고 있는지 손가락이 모르고, 패널마다 화면 높이를 나눠
+   가지느라 무엇도 제 내용을 다 못 편다 — 가방 격자 스무 칸이 그 좁은 창에 갇혔다.
+
+   **가로와 편집 화면은 그대로 둔다.** 가로는 높이가 390px 뿐이라 흐르게 두면 머리 바가
+   화면 밖으로 나가고, 편집 화면은 하단의 취소·저장이 늘 손에 닿아야 한다. */
+.edit-m--portrait.edit-m--list {
+  height: auto;
+  /* 100vh 가 아니라 dvh 다. 모바일에서 100vh 는 주소창을 뺀 높이가 아니라 포함한
+     높이라, 하단이 늘 주소창 뒤에 숨는다 (`app.css` 와 같은 이유). */
+  min-height: 100dvh;
+  grid-template-rows: var(--bar-top) auto auto;
+}
+
+/* 몸통이 제 스크롤을 만들지 않는다 — 페이지가 흐른다. */
+.edit-m--portrait.edit-m--list > .edit-m__body {
+  overflow-y: visible;
+}
+
+/* 안쪽 패널의 높이 제한도 함께 푼다. `Panel scroll` 은 높이가 정해진 열에서 넘치는 것을
+   가두려고 있는 것인데, 흐르는 문서에는 가둘 높이가 없다 — 그대로 두면 내용이 몇 줄만
+   보이는 창에 갇힌다. */
+.edit-m--portrait.edit-m--list .ds-panel,
+.edit-m--portrait.edit-m--list .ds-panel__body {
+  min-height: var(--sp-0);
+  max-height: none;
+  overflow: visible;
+}
+
 .edit-m__bar {
   display: flex;
   align-items: center;

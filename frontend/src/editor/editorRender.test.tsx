@@ -345,3 +345,25 @@ describe('화면 탭 — 규칙표와 곁다리가 동위다', () => {
     expect(renderEditor(PRESSURE)).not.toContain('editor__tabs')
   })
 })
+
+describe('★ 출격 조작부가 가로 폭을 안 넘긴다', () => {
+  // 좁은 화면에서 페이지 전체가 오른쪽으로 밀렸다. 탭 줄을 접게 고친 뒤에도 남았고,
+  // 남은 원인이 **방 고르개**였다 — `select` 는 가장 긴 option 만큼 폭을 잡는다.
+  const css = readStrippedCss('../styles/app.css')
+
+  it('방 고르개가 줄어들 수 있다 — flex-wrap 은 항목 자체를 못 줄인다', () => {
+    const block = /\.launch__field \{([\s\S]*?)\}/.exec(css)?.[1] ?? ''
+    expect(block).toContain('min-inline-size: var(--sp-0)')
+    expect(block).toContain('max-inline-size: 100%')
+  })
+
+  it('방 고르개가 줄의 남는 폭을 쓴다', () => {
+    const block = /\.launch__field--room \{([\s\S]*?)\}/.exec(css)?.[1] ?? ''
+    expect(block).toContain('flex: 1 1 var(--sp-0)')
+  })
+
+  it('조작부 자신도 줄어들 수 있다', () => {
+    const block = /\.launch \{([\s\S]*?)\}/.exec(css)?.[1] ?? ''
+    expect(block).toContain('min-inline-size: var(--sp-0)')
+  })
+})

@@ -78,6 +78,12 @@ describe('첫 화면', () => {
     expect(markup).toContain('launch__field')
   })
 
+  it('★ 방 고르개가 줄어들 수 있는 클래스를 단다 — 없으면 가장 긴 option 만큼 벌어진다', () => {
+    // `select` 는 가장 긴 option 만큼 폭을 잡는다. 방 라벨이 「open_field · 엄폐가 없어
+    // 포위가 성립한다」 처럼 길어서, 이 하나가 좁은 화면의 폭을 넘겼다.
+    expect(markup).toContain('launch__field--room')
+  })
+
   it('★ 시드 칸이 처음에는 숫자가 아니다 — 기본은 판마다 새 시드다', () => {
     // 숫자 칸이 처음부터 보이면 그 수로 도는 줄 알고, 실제로 늘 1번 판만 돌았다.
     expect(markup).not.toContain('id="launch-seed"')

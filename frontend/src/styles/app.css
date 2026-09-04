@@ -54,6 +54,9 @@ body {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
+  /* 자기도 줄어들 수 있어야 한다. 안 걸면 안쪽에 안 줄어드는 항목이 하나 생기는 순간
+     줄 전체가 부모를 넘고, 페이지가 통째로 가로로 밀린다. */
+  min-inline-size: var(--sp-0);
   /* **넘치면 접는다.** 폰에서 한 줄에 다 들어가지 않으면 오른쪽이 잘리고, 잘리는 것은
      늘 마지막에 놓인 것이다. 경계를 여기 적지 않는 이유는 이 저장소가 **breakpoint 를
      토큰 한 곳에만** 두기 때문이다 — 넘칠 때만 접히므로 조건이 필요 없다. */
@@ -100,7 +103,18 @@ body {
   padding: var(--sp-1);
   /* 손가락으로 누를 수 있어야 한다. 데스크톱에서는 토큰이 지금 높이를 유지한다. */
   min-height: var(--btn-tap-h);
+  /* **`select` 는 가장 긴 option 만큼 폭을 잡는다.** 방 목록의 라벨이 「open_field ·
+     엄폐가 없어 포위가 성립한다」 처럼 길어서, 이 하나가 좁은 화면의 폭을 넘겼다 —
+     `flex-wrap` 은 항목을 아래 줄로 내릴 뿐 **항목 자체를 줄이지는 못한다.** */
+  min-inline-size: var(--sp-0);
+  max-inline-size: 100%;
   transition: var(--transition-hover);
+}
+
+/* 방 고르개는 줄에서 남는 폭을 쓴다. 닫힌 상태의 글자는 넘치면 브라우저가 자른다 —
+   고르는 순간에는 목록이 전체 이름을 펴 보이므로 잘려도 잃는 것이 없다. */
+.launch__field--room {
+  flex: 1 1 var(--sp-0);
 }
 
 .launch__field:hover {

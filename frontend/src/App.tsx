@@ -1476,7 +1476,7 @@ export function App(): React.JSX.Element {
       </label>
       <select
         id="launch-room"
-        className="launch__field"
+        className="launch__field launch__field--room"
         value={session.roomId}
         onChange={(event) => {
           const roomId = event.target.value
