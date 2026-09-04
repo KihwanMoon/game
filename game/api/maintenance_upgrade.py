@@ -138,10 +138,17 @@ def count_opened_slots(item: StoredItem) -> int:
 
 
 def find_cheapest_sealed(pool: ConnectionPool, entity_id: int) -> tuple[int, StoredItem] | None:
-    """착용 장비 중 여는 값이 가장 싼 것.
+    """봉인이 남은 것 중 여는 값이 가장 싼 것.
+
+    **착용과 가방을 함께 본다.** 처음에는 착용한 것만 봤다 — 안 쓰는 물건에 돈을 쓰지
+    않게 하려는 것이었는데, 그러면 **가방에서 굴러 나온 유물이 영원히 안 열린다.** 열어
+    봐야 그것이 갈아 낄 만한 물건인지 알 수 있고, 장비 교체 규칙이 그 다음을 잇는다.
 
     **싼 것부터 여는 이유**는 값이 이미 연 칸 수에 따라 오르기 때문이다 — 같은 잔액으로
     더 많이 열 수 있다.
+
+    **순서를 못 박는다.** 착용을 자리 이름 순으로, 그다음 가방을 id 순으로 본다. 값이
+    같을 때 어느 것을 먼저 열지가 흔들리면 같은 가방이 돌 때마다 다른 결과를 낸다 (R5).
 
     Args:
         pool: 연결 풀.
@@ -150,22 +157,33 @@ def find_cheapest_sealed(pool: ConnectionPool, entity_id: int) -> tuple[int, Sto
     Returns:
         (값, 아이템). 열 것이 없으면 None.
     """
-    candidates = [
-        (compute_unseal_cost(count_opened_slots(item)), str(slot), item)
+    candidates: list[tuple[int, int, str, StoredItem]] = [
+        (compute_unseal_cost(count_opened_slots(item)), 0, str(slot), item)
         for slot, item in sorted(list_equipment(pool, entity_id).items(), key=lambda p: str(p[0]))
         if item.sealed_slots > 0
     ]
+    candidates.extend(
+        (
+            compute_unseal_cost(count_opened_slots(entry.item)),
+            1,
+            str(entry.item.item_id),
+            entry.item,
+        )
+        for entry in list_inventory(pool, entity_id)
+        if entry.item is not None and entry.item.sealed_slots > 0
+    )
     if not candidates:
         return None
-    cost, _slot, item = min(candidates, key=lambda one: (one[0], one[1]))
+    cost, _kind, _key, item = min(candidates, key=lambda one: (one[0], one[1], one[2]))
     return cost, item
 
 
 def apply_unseal_rule(pool: ConnectionPool, account_id: int, entity_id: int) -> tuple[int, int]:
-    """착용 중인 장비의 봉인을 잔액 안에서 연다.
+    """가진 장비의 봉인을 잔액 안에서 연다 — 착용과 가방을 함께 본다.
 
-    **착용한 것만 본다.** 가방 것까지 열면 안 쓰는 물건에 돈을 쓰고, 그 돈은 죽을 때
-    가방과 함께 사라진다 (결정 #34). 지금 몸에 붙어 있는 것이라야 연 칸이 바로 값한다.
+    **가방 것도 연다.** 처음에는 착용한 것만 열었는데, 그러면 가방에서 굴러 나온 유물이
+    영원히 안 열린다 — 열어 봐야 갈아 낄 만한 물건인지 알 수 있다. 정비 행을 「봉인 해제
+    → 장비 교체」 순으로 두면 그 둘이 이어진다.
 
     **돈을 먼저 뺀다.** 굴린 뒤에 빼면 굴림은 성공하고 차감이 실패하는 창이 생기고, 그
     창이 공짜 해제가 된다 (`routes/unseal` 과 같은 규율).

@@ -186,3 +186,21 @@ def test_the_scale_is_not_sealed_content():
     from game.app.store.content_draft import DRAFT_ASSETS
 
     assert "gear_priority" not in DRAFT_ASSETS
+
+
+def test_the_unseal_rule_looks_at_the_bag_too():
+    """★ 착용만 열면 가방에서 굴러 나온 유물이 영원히 안 열린다.
+
+    처음에는 착용한 것만 봤다 — 안 쓰는 물건에 돈을 쓰지 않게 하려는 것이었는데, 그러면
+    **열어 봐야 갈아 낄 만한지 알 수 있는** 물건을 영원히 못 연다. 「봉인 해제 → 장비
+    교체」 순으로 두면 그 둘이 이어진다.
+
+    소스를 본다 — DB 없이 확인할 수 있는 것은 「가방을 보기는 하는가」까지다.
+    """
+    import inspect
+
+    from game.api.maintenance_upgrade import find_cheapest_sealed
+
+    source = inspect.getsource(find_cheapest_sealed)
+    assert "list_equipment" in source
+    assert "list_inventory" in source

@@ -585,6 +585,21 @@ describe('★ 「더 좋게 만든다」 셋', () => {
 describe('★ 「더 좋게 만든다」 미리보기는 확실한 것만 센다', () => {
   // 저울(무게표)은 서버에 있다. 화면으로 베끼면 밸런스가 두 벌이 되고, 한쪽을 고칠 때
   // 다른 쪽이 조용히 옛 값으로 남는다 — 그때 미리보기는 서버가 안 할 일을 할 것처럼 적는다.
+  it('★ 봉인 해제가 가방 것도 센다 — 착용만 열면 굴러 나온 유물이 영원히 안 열린다', () => {
+    const sealedInBag = {
+      ...buildBagHelm(2),
+      item: { ...(buildBagHelm(2).item as Record<string, unknown>), sealedSlots: 1, unsealCost: 30 },
+    }
+    const preview = buildMaintenancePreview(
+      [{ action: 'UNSEAL', grade: '' }],
+      { ...INVENTORY, slots: [sealedInBag], equipment: [] } as unknown as InventoryView,
+      CONSUMABLES,
+      BASE_STATS,
+    )
+    expect(preview.rows[0]?.text).toContain('1칸 해제')
+    expect(preview.rows[0]?.moneyDelta).toBe(-30)
+  })
+
   it('봉인 해제는 값을 아는 칸만 센다', () => {
     const preview = buildMaintenancePreview([{ action: 'UNSEAL', grade: '' }], INVENTORY, CONSUMABLES)
     // 준비한 가방의 착용 장비에는 봉인이 없다.

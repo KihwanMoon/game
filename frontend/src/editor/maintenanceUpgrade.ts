@@ -105,13 +105,16 @@ interface SealedItem {
 }
 
 /**
- * 착용 장비 중 봉인이 남은 것들을 값 순으로 모은다.
+ * 봉인이 남은 것들을 값 순으로 모은다 — **착용과 가방을 함께 본다.**
+ *
+ * 처음에는 착용한 것만 봤는데, 그러면 가방에서 굴러 나온 유물이 영원히 안 열린다 —
+ * 열어 봐야 갈아 낄 만한 물건인지 알 수 있다.
  *
  * @param inventory 가방·장비.
  * @returns 값이 싼 것부터.
  */
 export function listSealedWorn(inventory: InventoryView | undefined): readonly SealedItem[] {
-  return (inventory?.equipment ?? [])
+  return [...(inventory?.equipment ?? []), ...(inventory?.slots ?? [])]
     .map((entry) => entry.item)
     .filter((item): item is ItemView => item !== null && item.sealedSlots > 0 && item.unsealCost > 0)
     .map((item) => ({ cost: item.unsealCost, left: item.sealedSlots }))
