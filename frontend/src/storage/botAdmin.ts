@@ -21,6 +21,8 @@ import type {
   RawRuleSet,
   RuleSet,
 } from '../core/schemas'
+import { buildConsumableView } from './consumableSync'
+import type { ConsumableView } from './consumableSync'
 import type { MaintenanceView } from './maintenanceSync'
 import type { SkillPrefView } from './skillSync'
 
@@ -273,6 +275,8 @@ export interface BotDetail {
   readonly maintenance: MaintenanceView
   readonly progress: ProgressView
   readonly skills: SkillPrefView
+  /** **봇도 소모품 칸을 쓴다** — 러너가 빈 칸을 채우고 정비가 보충·교체한다. */
+  readonly consumables: ConsumableView
   readonly runs: readonly BotRunView[]
 }
 
@@ -303,6 +307,7 @@ export async function readBotDetail(
     maintenance: { rows: { action: string; grade: string }[] }
     progress: Record<string, unknown>
     skills: { rows: { skill_id: string; is_on: boolean; is_locked: boolean }[] }
+    consumables: Parameters<typeof buildConsumableView>[0]
     runs: {
       submission_id: number
       room_id: string
@@ -328,6 +333,8 @@ export async function readBotDetail(
         isLocked: row.is_locked,
       })),
     },
+    // 사람 화면과 **같은 빌더**를 쓴다 — 따로 만들면 두 화면이 다른 것을 그린다.
+    consumables: buildConsumableView(raw.consumables),
     runs: raw.runs.map((row) => ({
       submissionId: row.submission_id,
       roomId: row.room_id,

@@ -131,8 +131,24 @@ def read_consumables(account: CurrentAccount) -> ConsumableResponse:
         칸·후보·잔액. 런이 도는 중이면 `is_run_open` 이 참이다 — 지금 채운 것이 이번
         런에는 안 실린다는 안내에 쓴다. 조작을 막지는 않는다.
     """
+    return build_consumable_response(account.account_id)
+
+
+def build_consumable_response(account_id: int) -> ConsumableResponse:
+    """이 계정의 소모품 칸 화면을 만든다.
+
+    **라우트에서 갈라 냈다.** 관리 화면이 봇의 소모품 칸을 같은 모양으로 봐야 하는데,
+    빌더가 라우트 안에 갇혀 있으면 그쪽이 제 것을 하나 더 만들게 된다 — 봇 가방이 한 번
+    그렇게 갈렸고, 그때 「봇에게 뭐가 있지」를 답하려던 화면이 답을 틀리게 했다.
+
+    Args:
+        account_id: 대상 계정.
+
+    Returns:
+        칸·후보·잔액.
+    """
     pool = get_pool()
-    entity_id = find_player_entity(pool, account.account_id)
+    entity_id = find_player_entity(pool, account_id)
     catalog = get_item_catalog()
     return ConsumableResponse(
         slots=[
@@ -140,9 +156,9 @@ def read_consumables(account: CurrentAccount) -> ConsumableResponse:
             for slot in list_consumable_slots(pool, entity_id, read_slot_bonus(pool, entity_id))
         ],
         options=list_bag_options(pool, entity_id, catalog),
-        balance=read_balance(pool, account.account_id),
+        balance=read_balance(pool, account_id),
         free_charges=FREE_CHARGES,
-        is_run_open=count_open_tickets(pool, account.account_id) > 0,
+        is_run_open=count_open_tickets(pool, account_id) > 0,
     )
 
 

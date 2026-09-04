@@ -53,7 +53,7 @@ from scripts.bot_chores import (
     apply_bot_repair,
     apply_bot_shopping,
     apply_bot_supplies,
-    apply_bot_upgrade,
+    apply_bot_upkeep,
 )
 from scripts.bot_client import API_URL_ENV, DEFAULT_API_URL, send_request
 
@@ -210,17 +210,20 @@ def apply_bot_round(pool: ConnectionPool, api_url: str, parts: dict) -> int:
             worn = apply_bot_gear(api_url, bot)
             if worn:
                 note = f"{note} · {worn}"
-            # **끼운 뒤에 갈아 낀다.** 빈 자리 채우기가 먼저 끝나야 「찬 자리」가
-            # 확정되고, 그래야 두 규칙이 같은 자리를 두고 다투지 않는다.
-            swapped = apply_bot_upgrade(api_url, bot, parts["balance"]["player"])
-            if swapped:
-                note = f"{note} · {swapped}"
+            # **갈아 끼우기는 여기 없다.** 정비 규칙의 「장비 교체」가 그 일을 한다 —
+            # 러너와 정비가 각자 갈아 끼우면 저울이 둘이 되고, 한쪽이 낀 것을 다른 쪽이
+            # 매 판 벗긴다 (`bots/upkeep.py`).
             grown = apply_bot_growth(api_url, bot)
             if grown:
                 note = f"{note} · {grown}"
             stocked = apply_bot_supplies(api_url, bot)
             if stocked:
                 note = f"{note} · {stocked}"
+            # **정비 규칙을 세운다.** 한 번 세우면 서버가 판마다 돌린다 — 러너가 죽어
+            # 있는 동안에도 세계는 돌기 때문이다.
+            upkept = apply_bot_upkeep(api_url, bot)
+            if upkept:
+                note = f"{note} · {upkept}"
         except (KeyError, ValueError, TypeError) as error:
             note = f"판이 깨졌다: {error}"
         print(f"[봇] {bot.label} — {note}", flush=True)

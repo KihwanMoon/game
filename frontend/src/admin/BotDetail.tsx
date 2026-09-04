@@ -19,6 +19,7 @@ import { useState } from 'react'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import {
   CharacterPanel,
+  ConsumableGrid,
   formatMaintenanceSentence,
   InventoryGrid,
   MAINTENANCE_ACTIONS,
@@ -284,6 +285,19 @@ export function BotDetailPanel(props: BotDetailProps): React.JSX.Element {
               }
             }}
           />
+        </>
+      ),
+    },
+    {
+      id: 'cns',
+      label: '소모품',
+      body: (
+        <>
+          {/* **봇도 소모품 칸을 쓴다.** 러너가 빈 칸을 채우고(`apply_bot_supplies`),
+              정비가 보충·교체한다 — 쓰는데 볼 자리가 없으면 「왜 안 채워졌지」를 DB 로만
+              알 수 있다. 사람 화면과 **같은 격자**다. */}
+          <ValueExpr text="보기만 한다 — 채우는 것은 러너와 정비 규칙이 한다" size="sm" dim />
+          <ConsumableGrid view={detail.consumables} pickedKey="" onPick={() => undefined} />
         </>
       ),
     },

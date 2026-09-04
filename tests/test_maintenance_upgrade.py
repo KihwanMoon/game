@@ -204,3 +204,62 @@ def test_the_unseal_rule_looks_at_the_bag_too():
     source = inspect.getsource(find_cheapest_sealed)
     assert "list_equipment" in source
     assert "list_inventory" in source
+
+
+def test_the_bot_upkeep_earns_before_it_spends():
+    """★ 파는 행이 쓰는 행보다 위다 — 아래면 판 돈을 이번 정비에서 못 쓴다.
+
+    화면의 검증이 사람에게 일러 주는 바로 그 배치다. 봇이 그 경고를 달고 도는 규칙표를
+    쓰면, 사람에게는 「고쳐라」 하고 봇은 안 고친 것을 쓰는 셈이 된다.
+    """
+    from game.app.bots.upkeep import build_bot_upkeep
+    from game.app.store.maintenance import (
+        ACTION_REFILL,
+        ACTION_REPAIR,
+        ACTION_SELL_STOCK,
+        ACTION_UNSEAL,
+    )
+
+    actions = [row.action for row in build_bot_upkeep("g0_kite")]
+    sells = actions.index(ACTION_SELL_STOCK)
+    for spender in (ACTION_UNSEAL, ACTION_REPAIR, ACTION_REFILL):
+        assert sells < actions.index(spender), f"{spender} 가 파는 행보다 위다"
+
+
+def test_the_bot_upkeep_swaps_before_it_discards():
+    """★ 버리기가 맨 끝이다 — 앞에 두면 갈아 낄 후보를 먼저 버린다."""
+    from game.app.bots.upkeep import build_bot_upkeep
+    from game.app.store.maintenance import ACTION_DISCARD, ACTION_UPGRADE_GEAR
+
+    actions = [row.action for row in build_bot_upkeep("g0_kite")]
+    assert actions.index(ACTION_UPGRADE_GEAR) < actions.index(ACTION_DISCARD)
+    assert actions[-1] == ACTION_DISCARD
+
+
+def test_the_bot_upkeep_puts_swaps_first():
+    """★ 장비 교체·소모품 교체가 맨 앞이다 — 뒤의 행들이 그 결과를 먹고 산다.
+
+    교체가 가방으로 내려보낸 것을 팔고, 판 돈으로 봉인을 연다.
+    """
+    from game.app.bots.upkeep import build_bot_upkeep
+    from game.app.store.maintenance import ACTION_UPGRADE_CONSUMABLE, ACTION_UPGRADE_GEAR
+
+    actions = [row.action for row in build_bot_upkeep("g0_kite")]
+    assert actions[0] == ACTION_UPGRADE_GEAR
+    assert actions[1] == ACTION_UPGRADE_CONSUMABLE
+
+
+def test_the_bot_upkeep_passes_the_server_check():
+    """★ 서버가 저장을 거절하면 봇은 정비 없이 돈다 — 어휘·상한·인자를 다 지켜야 한다."""
+    from game.app.bots.upkeep import build_bot_upkeep
+
+    for ruleset_id in ("g0_kite", "sniper", "g0_pressure", "unknown_ruleset"):
+        assert check_rows(build_bot_upkeep(ruleset_id)) == ""
+
+
+def test_the_persona_picks_the_priority():
+    """★ 성격이 우선순위를 고른다 — 열이 같은 몸을 가지면 규칙표를 갈라 둔 뜻이 준다."""
+    from game.app.bots.upkeep import build_bot_upkeep
+
+    assert build_bot_upkeep("g0_pressure")[0].grade == "DEFENSE"
+    assert build_bot_upkeep("sniper")[0].grade == "ATTACK"

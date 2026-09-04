@@ -18,9 +18,15 @@ from pydantic import BaseModel, Field
 
 from game.api.deps import CurrentAdmin, get_context, get_pool
 from game.api.loadout_service import build_ticket_loadout
+from game.api.routes.consumables import build_consumable_response
 from game.api.routes.skills import build_skill_rows
 from game.api.schemas import ProgressResponse
-from game.api.schemas_gear import MaintenanceRowView, MaintenanceView, SkillPrefView
+from game.api.schemas_gear import (
+    ConsumableResponse,
+    MaintenanceRowView,
+    MaintenanceView,
+    SkillPrefView,
+)
 from game.app.progression.floors import read_floor_cap
 from game.app.progression.levels import STAT_KEYS
 from game.app.store.accounts import find_player_entity
@@ -67,6 +73,9 @@ class BotDetailResponse(BaseModel):
     maintenance: MaintenanceView
     progress: ProgressResponse
     skills: SkillPrefView
+    # **봇도 소모품 칸을 쓴다** (`bot_chores.apply_bot_supplies`). 쓰는데 볼 자리가
+    # 없으면 「왜 안 채워졌지」를 DB 로만 알 수 있다.
+    consumables: ConsumableResponse
     runs: list[BotRunView] = Field(default_factory=list)
 
 
@@ -116,6 +125,7 @@ def read_bot_detail(account_id: int, account: CurrentAdmin) -> BotDetailResponse
             loadout=build_ticket_loadout(account_id),
         ),
         skills=build_skill_rows(account_id),
+        consumables=build_consumable_response(account_id),
         runs=[
             BotRunView(**vars(one)) for one in list_recent_runs(pool, account_id, RECENT_RUN_LIMIT)
         ],
