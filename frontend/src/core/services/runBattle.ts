@@ -13,7 +13,8 @@ import { DeterministicRng } from '../rng'
 import { FallbackPolicy } from '../rules/fallbackPolicy'
 import { buildRuleVm } from '../rules/ruleVm'
 import type { RawBalanceFile } from '../resources'
-import type { BlockCatalog, RoomTemplate, RuleSet } from '../schemas'
+import type { BlockCatalog, RawRuleSet, RoomTemplate, RuleSet } from '../schemas'
+import { parseRuleSet } from '../schemas'
 import { TickEngine } from '../sim/engine'
 import {
   OUTCOME_ONGOING,
@@ -369,11 +370,15 @@ export class EnemyPolicyFactory implements PolicyFactory {
    * @param catalog 동결된 블록 카탈로그.
    * @param kindTypes 엔티티 종류에서 적 유형으로의 대응표.
    * @param rulesetByKind 엔티티 종류에서 규칙표로의 대응표.
+   * @param rulesetByEntity 개체 **하나만의** 규칙표. 종의 표보다 먼저 본다 — 도플갱어의
+   *   뜻이 여기 걸린다. 종으로만 고르면 모든 그림자가 `ai_veteran` 하나로 싸우고,
+   *   다섯을 만나도 다섯 번 같은 싸움이 된다.
    */
   constructor(
     readonly catalog: BlockCatalog,
     readonly kindTypes: ReadonlyMap<string, string>,
     readonly rulesetByKind: ReadonlyMap<string, RuleSet>,
+    readonly rulesetByEntity: ReadonlyMap<string, RuleSet> = new Map(),
   ) {}
 
   /**
@@ -383,7 +388,9 @@ export class EnemyPolicyFactory implements PolicyFactory {
    * @returns 규칙표가 있으면 RuleVM, 없으면 undefined.
    */
   buildPolicy(entity: Entity): DecisionPolicy | undefined {
-    const ruleset = this.rulesetByKind.get(entity.kindId)
+    // **개체 것이 종 것을 이긴다.** 소환물·추격자는 개체 표가 없으므로 종의 것을 탄다.
+    const ruleset =
+      this.rulesetByEntity.get(entity.entityId) ?? this.rulesetByKind.get(entity.kindId)
     if (ruleset === undefined) {
       return undefined
     }
@@ -438,9 +445,43 @@ export function assignEnemyPolicies(
   balance: BalanceData,
   catalog: BlockCatalog,
   enemyRulesets: ReadonlyMap<string, RuleSet>,
+  snapshots: readonly MonsterSnapshot[] = [],
 ): void {
-  engine.policyFactory = buildEnemyPolicyFactory(balance, catalog, enemyRulesets)
+  const base = buildEnemyPolicyFactory(balance, catalog, enemyRulesets)
+  engine.policyFactory = new EnemyPolicyFactory(
+    base.catalog,
+    base.kindTypes,
+    base.rulesetByKind,
+    buildEntityRulesets(snapshots),
+  )
   engine.registerNewcomers()
+}
+
+/**
+ * 얼려 둔 개체 전용 규칙표를 읽는다.
+ *
+ * **못 읽는 것은 조용히 건너뛴다.** 그 개체만 종의 표로 싸우면 되고, 판 전체를 깨뜨릴
+ * 이유가 없다 — 옛 티켓이나 어휘가 바뀐 절이 여기로 온다 (파이썬 `build_entity_rulesets`
+ * 와 같은 규칙, G3).
+ *
+ * @param snapshots 티켓이 얼려 둔 개체들.
+ * @returns 엔티티 id 에서 규칙표로. 실린 것이 없으면 빈 표다.
+ */
+export function buildEntityRulesets(
+  snapshots: readonly MonsterSnapshot[],
+): ReadonlyMap<string, RuleSet> {
+  const found = new Map<string, RuleSet>()
+  for (const item of snapshots) {
+    if (item.ruleset === null) {
+      continue
+    }
+    try {
+      found.set(item.entityId, parseRuleSet(item.ruleset as RawRuleSet))
+    } catch {
+      continue
+    }
+  }
+  return found
 }
 
 /**

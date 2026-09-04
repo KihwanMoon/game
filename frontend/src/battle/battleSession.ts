@@ -184,7 +184,8 @@ function buildSingleRoom(
     ...(setup.loadout === undefined ? {} : { loadout: setup.loadout }),
   })
   engine.policies.set(PLAYER_ENTITY_ID, buildTracer(engine, ruleset))
-  assignEnemyPolicies(engine, balance, BLOCK_CATALOG, ENEMY_RULESETS)
+  // 개체 전용 규칙표가 스냅샷에 실려 있다 — 안 넘기면 도플갱어가 종의 기본표로 돈다.
+  assignEnemyPolicies(engine, balance, BLOCK_CATALOG, ENEMY_RULESETS, setup.snapshots ?? [])
   return engine
 }
 

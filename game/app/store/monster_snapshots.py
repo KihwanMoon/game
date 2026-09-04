@@ -138,6 +138,8 @@ def build_monster_snapshot(
         attack_range=int(frozen.get("attack_range") or 0),
         skills=tuple(sorted(str(one) for one in frozen.get("skills") or ())),
         potions=int(frozen["potions"]) if "potions" in frozen else -1,
+        # 개체 전용 규칙표. 여느 몬스터는 None 이라 종의 표를 쓴다.
+        ruleset=record.ruleset_json,
     )
 
 

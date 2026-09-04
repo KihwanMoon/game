@@ -31,6 +31,7 @@ function build(zoneFloor: number, level: number, recordId = 0): MonsterSnapshot 
     attackRange: 0,
     skills: [],
     potions: -1,
+    ruleset: null,
     ruleSlots: 0,
     cpuBudget: 0,
     zoneFloor,
@@ -165,5 +166,48 @@ describe('★ 얼려 둔 키트가 전투에 도달한다 — 파이썬 `test_do
     // 뜻이 반대라, 스냅샷의 빈 것을 그대로 넘기면 스킬이 통째로 막힌다.
     expect(entity?.skills).toBeNull()
     expect(entity?.consumables.get('POTION')).toBe(kind?.potions ?? 0)
+  })
+})
+
+describe('★ 그림자가 제 규칙표로 싸운다 — 파이썬 `test_doppel_build` 의 짝 (G3)', () => {
+  // 종으로만 고르면 모든 그림자가 `ai_veteran` 하나로 싸운다 — 다섯을 만나도 다섯 번
+  // 같은 싸움이다. 「그 규칙표가 나를 읽는다」가 이 개체의 전부인데 그것이 안 배선돼
+  // 있었다.
+  const SHADOW_RULESET = {
+    ruleset_id: 'shadow_only',
+    version: 1,
+    rules: [
+      {
+        priority: 1,
+        conditions: {
+          op: 'SINGLE',
+          terms: [{ cmp: '>=', lhs: 'self_hp_pct', lhs_param: null, rhs: 0 }],
+        },
+        action: 'RETREAT',
+        target: 'NEAREST',
+        cpu_cost: 1,
+        set_flag: null,
+      },
+    ],
+  }
+
+  it('개체 표가 종 표를 이긴다', async () => {
+    const { buildEntityRulesets } = await import('./runBattle')
+    const found = buildEntityRulesets([
+      { ...build(1, 3), entityId: 'doppelganger_0', ruleset: SHADOW_RULESET as never },
+    ])
+    expect(found.get('doppelganger_0')?.rulesetId).toBe('shadow_only')
+  })
+
+  it('★ 못 읽는 절 하나가 판 전체를 깨뜨리면 안 된다', async () => {
+    // 그 개체만 종의 표로 싸우면 된다 — 옛 티켓이나 어휘가 바뀐 절이 여기로 온다.
+    const { buildEntityRulesets } = await import('./runBattle')
+    const broken = { ...build(1, 3), ruleset: { 이건: '규칙표가 아니다' } as never }
+    expect(buildEntityRulesets([broken]).size).toBe(0)
+  })
+
+  it('개체 표가 없으면 종의 표를 탄다 — 소환물·추격자가 그 길이다', async () => {
+    const { buildEntityRulesets } = await import('./runBattle')
+    expect(buildEntityRulesets([build(1, 3)]).size).toBe(0)
   })
 })

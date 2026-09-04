@@ -4,7 +4,7 @@
 """
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from game.app.combat.damage import build_damage_rules
@@ -23,7 +23,7 @@ from game.schemas.blocks import BlockCatalog
 from game.schemas.loadout import BASE_SKILL_POWER_PCT, PlayerLoadout
 from game.schemas.monster_snapshot import MonsterSnapshot, build_entity_id
 from game.schemas.room import RoomTemplate
-from game.schemas.ruleset import RuleSet
+from game.schemas.ruleset import RuleSet, parse_ruleset
 
 
 @dataclass(frozen=True)
@@ -37,9 +37,17 @@ class EnemyPolicyFactory:
     catalog: BlockCatalog
     kind_types: dict[str, str]
     ruleset_by_kind: dict[str, RuleSet]
+    # 개체 **하나만의** 규칙표. 종의 표보다 먼저 본다.
+    #
+    # 도플갱어의 뜻이 여기 걸린다 — 종으로만 고르면 모든 그림자가 `ai_veteran` 하나로
+    # 싸우고, 그러면 「그 규칙표가 나를 읽는다」가 이름뿐인 말이 된다. 다섯을 만나도
+    # 다섯 번 같은 싸움이었다.
+    ruleset_by_entity: dict[str, RuleSet] = field(default_factory=dict)
 
     def build_policy(self, entity: Entity) -> DecisionPolicy | None:
         """그 엔티티의 결정기를 만든다.
+
+        **개체 것이 종 것을 이긴다.** 소환물·추격자는 개체 표가 없으므로 종의 것을 탄다.
 
         Args:
             entity: 대상 엔티티.
@@ -47,7 +55,9 @@ class EnemyPolicyFactory:
         Returns:
             규칙표가 있으면 RuleVM, 없으면 None.
         """
-        ruleset = self.ruleset_by_kind.get(entity.kind_id)
+        ruleset = self.ruleset_by_entity.get(entity.entity_id) or self.ruleset_by_kind.get(
+            entity.kind_id
+        )
         if ruleset is None:
             return None
         return build_rule_vm(ruleset, self.catalog, self.kind_types)
@@ -296,8 +306,35 @@ def build_engine(
     return TickEngine(state=state, policy=FallbackPolicy(), config=config, pressure=tracker)
 
 
+def build_entity_rulesets(snapshots: tuple[MonsterSnapshot, ...]) -> dict[str, RuleSet]:
+    """얼려 둔 개체 전용 규칙표를 읽는다.
+
+    **못 읽는 것은 조용히 건너뛴다.** 그 개체만 종의 표로 싸우면 되고, 판 전체를 깨뜨릴
+    이유가 없다 — 옛 티켓이나 어휘가 바뀐 절이 여기로 온다.
+
+    Args:
+        snapshots: 티켓이 얼려 둔 개체들.
+
+    Returns:
+        엔티티 id 에서 규칙표로. 실린 것이 없으면 빈 표다.
+    """
+    found: dict[str, RuleSet] = {}
+    for item in snapshots:
+        if not item.ruleset:
+            continue
+        try:
+            found[item.entity_id] = parse_ruleset(item.ruleset)
+        except (KeyError, ValueError, TypeError):
+            continue
+    return found
+
+
 def assign_enemy_policies(
-    engine: TickEngine, balance: dict, catalog: BlockCatalog, enemy_rulesets: dict[str, RuleSet]
+    engine: TickEngine,
+    balance: dict,
+    catalog: BlockCatalog,
+    enemy_rulesets: dict[str, RuleSet],
+    snapshots: tuple[MonsterSnapshot, ...] = (),
 ) -> None:
     """적 엔티티에 각자의 규칙표를 붙인다 (GDD §5).
 
@@ -309,10 +346,13 @@ def assign_enemy_policies(
         balance: 밸런스 딕셔너리.
         catalog: 동결된 블록 카탈로그.
         enemy_rulesets: ruleset_id 에서 규칙표로의 대응표.
+        snapshots: 티켓이 얼려 둔 개체들. 개체 전용 규칙표가 여기서 나온다 — 도플갱어가
+            제 규칙표로 싸우는 유일한 경로다.
     """
     # 공장을 함께 걸어 둔다. 소환물·추격자는 여기 없는 개체이므로 이것이 없으면
     # 그들만 폴백 정책으로 싸운다.
-    engine.policy_factory = build_enemy_policy_factory(balance, catalog, enemy_rulesets)
+    factory = build_enemy_policy_factory(balance, catalog, enemy_rulesets)
+    engine.policy_factory = replace(factory, ruleset_by_entity=build_entity_rulesets(snapshots))
     engine.register_newcomers()
 
 

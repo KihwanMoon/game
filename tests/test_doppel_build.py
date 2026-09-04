@@ -189,3 +189,117 @@ def test_an_old_ticket_still_simulates_the_same(client):
     assert old.attack_range == 0
     assert old.skills == ()
     assert old.potions == -1
+
+
+# 이 그림자만의 규칙표. 종의 기본표(`ai_veteran`)와 **다른 행동**을 골라야 갈렸는지 보인다.
+SHADOW_RULESET = {
+    "ruleset_id": "shadow_only",
+    "version": 1,
+    "rules": [
+        {
+            "priority": 1,
+            "conditions": {
+                "op": "SINGLE",
+                "terms": [{"cmp": ">=", "lhs": "self_hp_pct", "lhs_param": None, "rhs": 0}],
+            },
+            "action": "RETREAT",
+            "target": "NEAREST",
+            "cpu_cost": 1,
+            "set_flag": None,
+        }
+    ],
+}
+
+
+def test_the_shadow_fights_with_its_own_ruleset(client):
+    """★ 「그 규칙표가 나를 읽는다」가 이 개체의 전부다.
+
+    종으로만 고르면 모든 그림자가 `ai_veteran` 하나로 싸운다 — 다섯을 만나도 다섯 번
+    같은 싸움이다. 저장은 되고 있었고(`entity_record.ruleset_json`) 관리자 화면만 그것을
+    읽었다.
+    """
+    from game.api.deps import get_context, get_pool
+    from game.app.services.run_battle import assign_enemy_policies, build_engine
+    from game.app.store.bots import create_bot
+    from game.app.store.doppels import create_doppel
+    from game.app.store.monster_snapshots import build_monster_snapshot
+    from game.app.store.monsters import find_monster
+    from game.config import ROOM_TEMPLATES_PATH
+    from game.schemas.room import load_room_templates
+
+    pool = get_pool()
+    token = client.post("/api/account").json()["token"]
+    account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
+    create_bot(pool, account_id, "그림자봇", "g0_kite", 720, 60)
+    record_id = create_doppel(pool, account_id, 7, "ruleset_slot", BOT_LOADOUT, SHADOW_RULESET)
+    record = find_monster(pool, record_id)
+    assert record is not None
+    context = get_context()
+    base = next(k for k in context.balance["enemies"] if k["id"] == "doppelganger")
+    snapshot = build_monster_snapshot(record, base)
+    assert snapshot.ruleset is not None, "스냅샷이 규칙표를 안 실었다"
+
+    template = next(iter(load_room_templates(ROOM_TEMPLATES_PATH)))
+    slot = f"{template.enemy_spawns[0].kind}_0"
+    frozen = type(snapshot)(**{**vars(snapshot), "entity_id": slot, "kind_id": "doppelganger"})
+    engine = build_engine(
+        template=template, balance=context.balance, seed=1, floor=7, snapshots=(frozen,)
+    )
+    assign_enemy_policies(
+        engine, context.balance, context.catalog, context.enemy_rulesets, (frozen,)
+    )
+
+    policy = engine.policies[slot]
+    assert getattr(policy, "ruleset", None) is not None
+    assert policy.ruleset.ruleset_id == "shadow_only", "종의 기본표로 싸운다"
+
+
+def test_a_broken_ruleset_falls_back_quietly(client):
+    """★ 못 읽는 절 하나가 판 전체를 깨뜨리면 안 된다.
+
+    그 개체만 종의 표로 싸우면 된다 — 옛 티켓이나 어휘가 바뀐 절이 여기로 온다.
+    """
+    from game.app.services.run_battle import build_entity_rulesets
+    from game.schemas.monster_snapshot import parse_snapshot
+
+    broken = parse_snapshot(
+        {
+            "entity_id": "doppelganger_0",
+            "record_id": 1,
+            "kind_id": "doppelganger",
+            "tier": "ELITE",
+            "level": 1,
+            "hp_max": 10,
+            "attack": 2,
+            "defense": 1,
+            "rule_slots": 0,
+            "cpu_budget": 0,
+            "ruleset": {"이건": "규칙표가 아니다"},
+        }
+    )
+
+    assert build_entity_rulesets((broken,)) == {}
+
+
+def test_the_ordinary_monster_keeps_the_kind_ruleset(client):
+    """★ 개체 표가 없으면 종의 표를 탄다 — 소환물·추격자가 그 길로 싸운다."""
+    from game.app.services.run_battle import build_entity_rulesets
+    from game.schemas.monster_snapshot import parse_snapshot
+
+    plain = parse_snapshot(
+        {
+            "entity_id": "goblin_rusher_0",
+            "record_id": 1,
+            "kind_id": "goblin_rusher",
+            "tier": "NORMAL",
+            "level": 1,
+            "hp_max": 10,
+            "attack": 2,
+            "defense": 1,
+            "rule_slots": 0,
+            "cpu_budget": 0,
+        }
+    )
+
+    assert plain.ruleset is None
+    assert build_entity_rulesets((plain,)) == {}

@@ -233,7 +233,16 @@ export class ChainCursor {
           buildRuleVm(rules, this.setup.catalog, target.config.kindTypes))
       engine.policies.set(PLAYER_ENTITY_ID, factory(engine, ruleset))
     }
-    assignEnemyPolicies(engine, this.setup.balance, this.setup.catalog, this.setup.enemyRulesets)
+    // **스냅샷을 함께 넘긴다.** 개체 전용 규칙표가 거기 실려 있다 — 도플갱어가 제
+    // 규칙표로 싸우는 유일한 경로이고, 안 넘기면 모든 그림자가 종의 기본표로 돈다
+    // (파이썬 `run_chain` 과 같은 규칙, G3).
+    assignEnemyPolicies(
+      engine,
+      this.setup.balance,
+      this.setup.catalog,
+      this.setup.enemyRulesets,
+      this.setup.snapshots ?? [],
+    )
     this.current = player
     return engine
   }

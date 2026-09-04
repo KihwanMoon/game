@@ -69,6 +69,15 @@ class MonsterSnapshot:
     # 들고 들어가는 물약 수. **-1 이 「안 실렸다」**다 — 0 은 「없다」라는 진짜 값이라
     # 구분해야 한다. 안 실렸으면 종의 기본값을 쓴다.
     potions: int = -1
+    # 이 개체 **하나만의** 규칙표. None 이면 종의 표를 쓴다.
+    #
+    # 도플갱어의 뜻이 여기 걸린다 — 「그 규칙표가 나를 읽는다」가 이 개체의 전부인데,
+    # 나르는 칸이 없어서 모든 그림자가 종의 기본표(`ai_veteran`) 하나로 싸웠다. 저장은
+    # 되고 있었고(`entity_record.ruleset_json`) 관리자 화면만 그것을 읽었다.
+    #
+    # **개체마다 다르므로 티켓이 싣는다.** 서버가 조회해 얼려 넣는 다른 값과 같은 이유다:
+    # 클라이언트가 되보내면 약한 규칙표로 바꿔 제출할 수 있다 (T8).
+    ruleset: dict | None = None
 
 
 def build_entity_id(kind_id: str, index: int) -> str:
@@ -109,6 +118,7 @@ def parse_snapshot(raw: dict) -> MonsterSnapshot:
         # 정렬해서 담는다. 집합·딕셔너리 순회가 게임 상태로 새면 두 코어가 갈린다 (R5).
         skills=tuple(sorted(str(one) for one in raw.get("skills") or ())),
         potions=int(raw.get("potions", -1)),
+        ruleset=raw.get("ruleset") or None,
     )
 
 
@@ -136,6 +146,7 @@ def build_snapshot_payload(snapshot: MonsterSnapshot) -> dict:
         "attack_range": snapshot.attack_range,
         "skills": list(snapshot.skills),
         "potions": snapshot.potions,
+        "ruleset": snapshot.ruleset,
     }
 
 

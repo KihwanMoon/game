@@ -864,6 +864,7 @@ describe('지속 몬스터 스냅샷 배선 (E4)', () => {
     attackRange: 0,
     skills: [],
     potions: -1,
+    ruleset: null,
   }
 
   it('★ 조립이 스냅샷을 실제로 반영한다', () => {

@@ -15,6 +15,8 @@
  * 조회한다 — 받으면 약한 스냅샷으로 바꿔 제출할 수 있다 (T8).
  */
 
+import type { RawRuleSet } from './ruleset'
+
 /** 엔티티 id 를 만드는 구분자. 방 배치와 같아야 스냅샷이 그 자리에 걸린다. */
 export const ENTITY_ID_SEPARATOR = '_'
 
@@ -56,6 +58,13 @@ export interface MonsterSnapshot {
   readonly skills: readonly string[]
   /** 들고 들어가는 물약 수. **-1 이 「안 실렸다」**다 — 0 은 「없다」라는 진짜 값이다. */
   readonly potions: number
+  /**
+   * 이 개체 **하나만의** 규칙표. null 이면 종의 표를 쓴다.
+   *
+   * 도플갱어의 뜻이 여기 걸린다 — 「그 규칙표가 나를 읽는다」가 이 개체의 전부인데,
+   * 나르는 칸이 없어서 모든 그림자가 종의 기본표 하나로 싸웠다.
+   */
+  readonly ruleset: RawRuleSet | null
 }
 
 /** 서버가 주는 절. 파이썬 `build_snapshot_payload` 와 같은 열쇠다. */
@@ -76,6 +85,7 @@ export interface RawMonsterSnapshot {
   readonly attack_range?: number
   readonly skills?: readonly string[]
   readonly potions?: number
+  readonly ruleset?: RawRuleSet | null
 }
 
 /**
@@ -112,6 +122,7 @@ export function parseSnapshot(raw: RawMonsterSnapshot): MonsterSnapshot {
     // 정렬해서 담는다 — 순회 순서가 게임 상태로 새면 두 코어가 갈린다 (R5).
     skills: [...(raw.skills ?? [])].map(String).sort(),
     potions: raw.potions ?? -1,
+    ruleset: raw.ruleset ?? null,
   }
 }
 
