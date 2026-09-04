@@ -14,8 +14,8 @@ export { formatCanonicalJson, parseJsonText } from './canonicalJson'
 export { readMaintenance, saveMaintenance } from './maintenanceSync'
 export { readSkillPrefs, saveSkillPrefs } from './skillSync'
 export type { SkillPrefView, SkillRowView } from './skillSync'
-export { readBotDetail } from './botAdmin'
-export type { BotDetail, BotRunView } from './botAdmin'
+export { readBotDetail, readDoppelDetail } from './botAdmin'
+export type { BotDetail, BotRunView, DoppelDetail } from './botAdmin'
 export type { MaintenanceView, MaintenanceRowView } from './maintenanceSync'
 export {
   readConsumables,

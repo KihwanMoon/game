@@ -332,3 +332,54 @@ export async function readBotDetail(
     })),
   }
 }
+
+/** 도플갱어 하나의 정체와 규칙표. **봇보다 적다** — 계정이 아니라 얼려 둔 개체 기록이다. */
+export interface DoppelDetail {
+  readonly recordId: number
+  readonly originHandle: string
+  readonly zoneFloor: number
+  readonly level: number
+  readonly isAlive: boolean
+  readonly entitySlot: string
+  /** 죽은 그 순간의 규칙표를 통째로 얼려 갖고 있다 — 그것이 이 개체의 정체다. */
+  readonly ruleset: Record<string, unknown>
+}
+
+/**
+ * 도플갱어 하나의 규칙표와 정체를 읽는다.
+ *
+ * 장비는 따로 읽는다 (`readDoppelGear`) — 그쪽이 이미 사람 화면과 같은 절을 쓴다.
+ *
+ * @param token 기기 토큰.
+ * @param recordId 볼 개체.
+ * @returns 그 도플갱어의 상세. 없거나 못 닿으면 undefined.
+ */
+export async function readDoppelDetail(
+  token: string,
+  recordId: number,
+): Promise<DoppelDetail | undefined> {
+  const response = await sendRequest(`/admin/doppel/detail?record_id=${String(recordId)}`, {
+    headers: { [TOKEN_HEADER]: token },
+  })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  const raw = (await response.json()) as {
+    record_id: number
+    origin_handle: string
+    zone_floor: number
+    level: number
+    is_alive: boolean
+    entity_slot: string
+    ruleset: Record<string, unknown>
+  }
+  return {
+    recordId: raw.record_id,
+    originHandle: raw.origin_handle,
+    zoneFloor: raw.zone_floor,
+    level: raw.level,
+    isAlive: raw.is_alive,
+    entitySlot: raw.entity_slot,
+    ruleset: raw.ruleset,
+  }
+}

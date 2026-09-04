@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from game.api.deps import CurrentAdmin, get_context, get_pool
+from game.api.loadout_service import build_ticket_loadout
 from game.api.routes.skills import build_skill_rows
 from game.api.schemas import ProgressResponse
 from game.api.schemas_gear import MaintenanceRowView, MaintenanceView, SkillPrefView
@@ -24,6 +25,7 @@ from game.app.progression.floors import read_floor_cap
 from game.app.progression.levels import STAT_KEYS
 from game.app.store.accounts import find_player_entity
 from game.app.store.bots import check_is_bot
+from game.app.store.doppels import read_doppel_ruleset
 from game.app.store.maintenance import read_maintenance
 from game.app.store.progress import read_progress, read_reached_floor
 from game.app.store.runs import list_recent_runs
@@ -107,7 +109,10 @@ def read_bot_detail(account_id: int, account: CurrentAdmin) -> BotDetailResponse
             stat_keys=list(STAT_KEYS),
             reached_floor=read_reached_floor(pool, progress.entity_id),
             floor_cap=read_floor_cap(get_context().balance),
-            loadout=None,
+            # **빈 절이 아니라 진짜 로드아웃이다.** 캐릭터 탭이 CPU·슬롯 한도를 여기서
+            # 읽는다 — 비워 두면 그 봇이 실제로 쓰는 한도가 아니라 기본값이 보인다.
+            # (`None` 을 넣었더니 이 라우트가 통째로 500 이었다: 스키마가 `dict` 다.)
+            loadout=build_ticket_loadout(account_id),
         ),
         skills=build_skill_rows(account_id),
         runs=[
@@ -141,3 +146,61 @@ def check_bot_row(account_id: int) -> tuple[str, str]:
     if found is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"없는 봇이다: {account_id}")
     return str(found[0] or ""), str(found[1] or "")
+
+
+class DoppelDetailResponse(BaseModel):
+    """도플갱어 하나를 봇과 같은 눈으로 본 것.
+
+    **봇보다 적다.** 도플갱어는 계정이 아니라 **얼려 둔 개체 기록**이라, 계정에 딸린
+    것들(정비 규칙·성장·제출 기록)이 아예 없다 — 빈 탭으로 두지 않고 그 사실을 화면이
+    적는다.
+    """
+
+    record_id: int
+    origin_handle: str
+    zone_floor: int
+    level: int
+    is_alive: bool
+    entity_slot: str
+    # **id 가 아니라 절이다.** 봇의 규칙표는 우리가 고른 견본이라 id 로 족하지만, 도플갱어는
+    # 죽은 그 순간의 규칙표를 통째로 얼려 갖고 있다 — 그것이 이 개체의 정체다.
+    ruleset: dict = Field(default_factory=dict)
+
+
+@router.get("/api/admin/doppel/detail", response_model=DoppelDetailResponse)
+def read_doppel_detail(record_id: int, account: CurrentAdmin) -> DoppelDetailResponse:
+    """도플갱어 하나의 규칙표와 정체를 읽는다.
+
+    장비는 따로 읽는다 (`/api/admin/doppel/gear`) — 그쪽이 이미 사람 화면과 같은 절을
+    쓰고 있어서다.
+
+    Args:
+        record_id: 볼 개체.
+        account: 관리자 계정.
+
+    Returns:
+        그 도플갱어의 규칙표와 정체.
+
+    Raises:
+        HTTPException: 도플갱어가 아니면 404.
+    """
+    pool = get_pool()
+    with pool.connection() as connection:
+        found = connection.execute(
+            "SELECT e.id, e.zone_floor, e.level, e.alive, e.entity_slot,"
+            " COALESCE(a.handle, '')"
+            " FROM entity_record e LEFT JOIN account a ON a.id = e.origin_account_id"
+            " WHERE e.id = %s AND e.is_doppel",
+            (record_id,),
+        ).fetchone()
+    if found is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"없는 도플갱어다: {record_id}")
+    return DoppelDetailResponse(
+        record_id=int(found[0]),
+        zone_floor=int(found[1] or 0),
+        level=int(found[2] or 0),
+        is_alive=bool(found[3]),
+        entity_slot=str(found[4] or ""),
+        origin_handle=str(found[5] or ""),
+        ruleset=read_doppel_ruleset(pool, record_id),
+    )

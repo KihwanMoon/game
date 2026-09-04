@@ -20,7 +20,6 @@ import type { InventoryView } from '../storage'
 
 /** 아무것도 없을 때 적는 말. 빈 화면은 고장으로 읽힌다. */
 const EMPTY_BOTS = '봇이 없다 — 러너가 처음 뜰 때 열을 세운다'
-const EMPTY_DOPPELS = '아직 도플갱어가 없다 — 봇이 깊은 층에서 죽으면 그 빌드가 여기 선다'
 
 /** 한 시간(초). 리듬을 「시간당 몇 판」으로 되돌릴 때 쓴다. */
 const HOUR_SEC = 3600
@@ -95,10 +94,6 @@ export interface BotPanelProps {
    * 뒤에 두었더니 스크롤을 한참 지나야 나왔고, 봇을 눌러 연 화면이 거기 있었다.
    */
   readonly detail?: React.ReactNode
-  /** 도플갱어 줄을 골랐을 때 부른다. */
-  readonly onPickDoppel?: (recordId: number) => void
-  /** 고른 도플갱어가 끼고 있던 것. 아이템이 아니라 얼려 둔 기록이다. */
-  readonly doppelGear?: InventoryView | undefined
 }
 
 /**
@@ -148,8 +143,6 @@ function renderRow(
  */
 export function BotPanel(props: BotPanelProps): React.JSX.Element {
   const [pickedId, setPickedId] = useState(0)
-  const [pickedDoppel, setPickedDoppel] = useState(0)
-  const [gearKey, setGearKey] = useState('')
   const bots = props.overview?.bots ?? []
   const picked = bots.find((bot) => bot.accountId === pickedId)
   const active = bots.filter((bot) => bot.isActive).length
@@ -219,61 +212,6 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
       {/* 고른 봇의 상세. **표 바로 다음이다** — 뒤로 밀면 스크롤에 묻힌다. */}
       {props.detail}
 
-      <Panel title="도플갱어" meta={`${String(props.overview?.doppels.length ?? 0)}`} tone="panel" padded>
-        {(props.overview?.doppels.length ?? 0) === 0 ? (
-          <ValueExpr text={EMPTY_DOPPELS} size="sm" dim />
-        ) : (
-          <div className="bots__grid">
-            {(props.overview?.doppels ?? []).map((item) => (
-              <button
-                type="button"
-                className={`botrow${item.recordId === pickedDoppel ? ' botrow--picked' : ''}`}
-                key={item.recordId}
-                onClick={() => {
-                  const next = pickedDoppel === item.recordId ? 0 : item.recordId
-                  setPickedDoppel(next)
-                  if (next !== 0) {
-                    props.onPickDoppel?.(next)
-                  }
-                }}
-              >
-                <span className="botrow__name">{`#${String(item.recordId)}`}</span>
-                <GlyphState
-                  state={item.alive ? 'true' : 'false'}
-                  size="sm"
-                  label={item.alive ? '살아 있다' : '죽었다'}
-                />
-                <span className="botrow__cell">{`${String(item.zoneFloor)}층`}</span>
-                <span className="botrow__cell">{`레벨 ${String(item.level)}`}</span>
-                <span className="botrow__cell">{item.entitySlot}</span>
-                <span className="botrow__cell">
-                  {item.originHandle === '' ? '주인 없음' : `${item.originHandle} 의 그림자`}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-        {pickedDoppel === 0 ? null : (
-          <div className="bots__bags">
-            <div className="inv bots__inv">
-              {/* 봇과 **같은 격자**다. 같은 것을 두 모양으로 그리면 답이 갈린다. */}
-              <InventoryGrid
-                inventory={props.doppelGear}
-                pickedKey={gearKey}
-                ownerLabel={`#${String(pickedDoppel)}`}
-                onPick={(cell) => {
-                  setGearKey((current) => (current === cell.key ? '' : cell.key))
-                }}
-              />
-              <ValueExpr
-                text="얼려 둔 기록이다 — 이 개체는 아이템을 갖지 않고, 잡아도 떨어지지 않는다"
-                size="sm"
-                dim
-              />
-            </div>
-          </div>
-        )}
-      </Panel>
     </div>
   )
 }

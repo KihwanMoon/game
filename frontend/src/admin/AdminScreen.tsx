@@ -19,6 +19,7 @@ import { ALL_ITEM_TAGS, ALL_SKILL_IDS } from '../core/resources'
 import { BENCHMARK_RULESETS, G0_RULESETS } from '../core/resources'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import { BotDetailPanel } from './BotDetail'
+import { DoppelPanel } from './DoppelPanel'
 import { BotPanel } from './BotPanel'
 import { readInventory, type InventoryView } from '../storage'
 import {
@@ -27,6 +28,7 @@ import {
   readBotAdmin,
   readBotBag,
   readBotDetail,
+  readDoppelDetail,
   readDoppelGear,
   type BotOverview,
 } from '../storage/botAdmin'
@@ -40,6 +42,7 @@ import {
   readContentAdmin,
   readContentAsset,
   type BotDetail,
+  type DoppelDetail,
   type CatalogAdminView,
   type ContentAssetView,
   type ContentDraftView,
@@ -51,7 +54,7 @@ const PLAYER_BASE = (readActivePack().balance as Record<string, unknown>).player
   number
 >
 
-type Tab = 'balance' | 'enemies' | 'skills' | 'rooms' | 'catalog' | 'bots' | 'content'
+type Tab = 'balance' | 'enemies' | 'skills' | 'rooms' | 'catalog' | 'bots' | 'doppel' | 'content'
 
 const TABS: readonly { readonly id: Tab; readonly label: string }[] = [
   { id: 'balance', label: '밸런스' },
@@ -62,6 +65,7 @@ const TABS: readonly { readonly id: Tab; readonly label: string }[] = [
   // 봇은 우리가 들인 것이라 우리가 봐야 한다 (T11). 표시만 하고 보는 자리가 없으면
   // 「몇 마리가 무엇을 하고 있는지」를 DB 로만 알 수 있고, 그러면 아무도 안 본다.
   { id: 'bots', label: '봇' },
+  { id: 'doppel', label: '도플갱어' },
   // 원문은 마지막이다. 드물고 위험한 일에 쓰는 탈출구이지 기본 도구가 아니다.
   { id: 'content', label: '원문' },
 ]
@@ -116,6 +120,8 @@ export function AdminScreen(): React.JSX.Element {
   // 고른 봇의 규칙표·성장·스킬·지나간 판. 가방과 따로인 것은 가방이 이미 사람 화면과
   // 같은 라우트를 쓰고 있어서다.
   const [botDetail, setBotDetail] = useState<BotDetail | undefined>(undefined)
+  // 고른 도플갱어. **봇과 갈라 둔다** — 계정과 얼려 둔 개체 기록은 다른 것이다.
+  const [doppelDetail, setDoppelDetail] = useState<DoppelDetail | undefined>(undefined)
   const [myBag, setMyBag] = useState<InventoryView | undefined>(undefined)
   const [doppelGear, setDoppelGear] = useState<InventoryView | undefined>(undefined)
 
@@ -259,11 +265,6 @@ export function AdminScreen(): React.JSX.Element {
             rulesetIds={RULESET_IDS}
             botBag={botBag}
             myBag={myBag}
-            doppelGear={doppelGear}
-            onPickDoppel={(recordId) => {
-              setDoppelGear(undefined)
-              void readDoppelGear(token, recordId).then(setDoppelGear)
-            }}
             onPickBot={(accountId) => {
               setBotBag(undefined)
               setBotDetail(undefined)
@@ -305,6 +306,18 @@ export function AdminScreen(): React.JSX.Element {
                 allItems={ALL_ITEM_TAGS}
               />
             }
+          />
+        ) : tab === 'doppel' ? (
+          <DoppelPanel
+            overview={bots}
+            detail={doppelDetail}
+            gear={doppelGear}
+            onPick={(recordId) => {
+              setDoppelDetail(undefined)
+              setDoppelGear(undefined)
+              void readDoppelDetail(token, recordId).then(setDoppelDetail)
+              void readDoppelGear(token, recordId).then(setDoppelGear)
+            }}
           />
         ) : tab === 'content' ? (
           <ContentAdminPanel

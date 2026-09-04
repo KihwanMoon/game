@@ -103,49 +103,11 @@ describe('봇 패널', () => {
     expect(html).not.toContain('아직 아무 봇도 못 이겼다')
   })
 
-  it('도플갱어가 없으면 왜 없는지 말한다 — 빈 화면은 고장으로 읽힌다', () => {
-    expect(html).toContain('아직 도플갱어가 없다')
-  })
-
-  it('★ 도플갱어를 안 골랐으면 장비 격자를 안 그린다', () => {
-    const withOne = {
-      ...OVERVIEW,
-      doppels: [
-        {
-          recordId: 7,
-          zoneFloor: 3,
-          level: 6,
-          alive: true,
-          entitySlot: 'goblin_rusher_0',
-          originHandle: 'bot1',
-        },
-      ],
-    }
-    const shown = renderToStaticMarkup(
-      <BotPanel overview={withOne} rulesetIds={[]} onSave={() => undefined} />,
-    )
-    expect(shown).not.toContain('얼려 둔 기록이다')
-  })
-
-  it('도플갱어가 있으면 누구의 그림자인지 적는다', () => {
-    const withOne = {
-      ...OVERVIEW,
-      doppels: [
-        {
-          recordId: 7,
-          zoneFloor: 3,
-          level: 6,
-          alive: true,
-          entitySlot: 'doppel_7',
-          originHandle: 'bot1',
-        },
-      ],
-    }
-    const shown = renderToStaticMarkup(
-      <BotPanel overview={withOne} rulesetIds={[]} onSave={() => undefined} />,
-    )
-    expect(shown).toContain('bot1 의 그림자')
-    expect(shown).toContain('3층')
+  it('★ 도플갱어가 여기 없다 — 제 탭으로 갈라 나갔다', () => {
+    // 한 탭에 봇 표와 도플갱어 표가 함께 있어서, 봇 하나를 열면 그 상세가 도플갱어
+    // 목록 뒤로 밀렸다 — 두 표가 서로의 자리를 다퉜다.
+    expect(html).not.toContain('도플갱어')
+    expect(html).not.toContain('의 그림자')
   })
 
   it('★ 넘기기는 되돌릴 수 없다고 먼저 말한다 — 귀속은 눌러 본 뒤에 알면 늦다', () => {

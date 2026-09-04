@@ -244,10 +244,14 @@ body {
 /* 줄 자체가 버튼이다 — 좁은 화면에서 줄마다 조작을 펴면 한 줄이 서너 줄로 꺾인다. */
 .botrow {
   display: grid;
-  /* **`1fr` 이 아니라 `minmax(0, 1fr)` 이다.** 격자 칸의 기본 최소는 `auto` 라 내용보다
-     안 줄어든다 — 규칙표 id 나 「화폐 1240 · 물건 13」 이 길면 그 칸이 안 줄고, 줄
-     전체가 페이지 폭을 넘겨 관리 화면이 가로로 밀린다. */
-  grid-template-columns: 7ch 8ch 14ch 5ch minmax(0, 1fr) 9ch 10ch 7ch minmax(0, 1fr);
+  /* **접히는 표다.** 아홉 칸을 한 줄에 박아 두면 좁은 폭에서 줄이 페이지를 넘긴다 —
+     `minmax(0, 1fr)` 로 칸을 줄여도 아홉 칸의 최소 폭 합이 화면보다 넓으면 소용이 없다.
+     `auto-fit` 은 들어가는 만큼만 한 줄에 두고 나머지를 아래로 내린다: 넓으면 한 줄,
+     좁으면 두세 줄이다. 머리줄도 같은 template 을 쓰므로 칸이 계속 맞는다.
+
+     **미디어쿼리를 안 쓴다** — 이 저장소는 breakpoint 를 토큰 한 곳에만 둔다. 넘칠 때만
+     접히므로 조건이 필요 없다(`.launch` 와 같은 규율). */
+  grid-template-columns: repeat(auto-fit, minmax(10ch, 1fr));
   gap: var(--sp-2);
   align-items: center;
   padding: var(--sp-1) var(--sp-2);

@@ -23,17 +23,58 @@ import {
   InventoryGrid,
   MAINTENANCE_ACTIONS,
 } from '../editor'
-import type { BotDetail, InventoryView } from '../storage'
+import type { BotDetail, DoppelDetail, InventoryView } from '../storage'
 
-/** 이 화면이 여는 탭들. 사람 화면의 탭 이름을 그대로 쓴다 — 같은 것을 다르게 부르지 않는다. */
-const TABS: readonly (readonly [string, string])[] = [
-  ['combat', '전투 규칙'],
-  ['upkeep', '정비 규칙'],
-  ['me', '캐릭터'],
-  ['bag', '가방'],
-  ['skill', '스킬'],
-  ['replay', '리플레이'],
-]
+/** 탭 하나. 몸통은 부르는 쪽이 만든다. */
+export interface DetailTab {
+  readonly id: string
+  readonly label: string
+  readonly body: React.ReactNode
+}
+
+/**
+ * 탭 껍데기 — **봇과 도플갱어가 함께 쓴다.**
+ *
+ * 도플갱어가 봇과 같은 UI 를 쓰되 **탭 수가 다르다.** 계정이 아니라 얼려 둔 개체 기록이라
+ * 정비 규칙도 제출 기록도 없다 — 없는 탭을 빈 채로 세우지 않고, 무엇이 왜 없는지를
+ * 화면이 적는다.
+ *
+ * @param props 제목과 탭들.
+ * @returns 렌더 트리.
+ */
+export function DetailShell(props: {
+  readonly title: string
+  readonly meta: string
+  readonly tabs: readonly DetailTab[]
+  /** 없는 탭에 대해 적을 한 줄. 비어 있으면 안 적는다. */
+  readonly missing?: string
+}): React.JSX.Element {
+  const [tabId, setTabId] = useState(props.tabs[0]?.id ?? '')
+  const open = props.tabs.find((tab) => tab.id === tabId) ?? props.tabs[0]
+  return (
+    <Panel title={props.title} meta={props.meta} tone="panel" padded scroll>
+      <nav className="botd__tabs" aria-label="화면">
+        {props.tabs.map((tab) => (
+          <Button
+            key={tab.id}
+            size="sm"
+            variant={tab.id === open?.id ? 'primary' : 'ghost'}
+            active={tab.id === open?.id}
+            onClick={() => {
+              setTabId(tab.id)
+            }}
+          >
+            {tab.label}
+          </Button>
+        ))}
+      </nav>
+      <div className="botd__body">{open?.body}</div>
+      {props.missing === undefined || props.missing === '' ? null : (
+        <ValueExpr text={props.missing} size="sm" dim />
+      )}
+    </Panel>
+  )
+}
 
 export interface BotDetailProps {
   readonly detail: BotDetail | undefined
@@ -153,35 +194,20 @@ function BotUpkeep(props: { readonly rows: BotDetail['maintenance']['rows'] }): 
  * @returns 렌더 트리.
  */
 export function BotDetailPanel(props: BotDetailProps): React.JSX.Element {
-  const [tabId, setTabId] = useState('combat')
   const { detail } = props
   if (detail === undefined) {
     return (
       <Panel title="봇 상세" tone="panel" padded>
-        <ValueExpr text="봇 줄을 고르면 그 봇의 규칙표·가방·판을 연다" size="sm" dim />
+        <ValueExpr text="위에서 봇 줄을 고르면 그 봇의 규칙표·가방·판을 연다" size="sm" dim />
       </Panel>
     )
   }
-  return (
-    <Panel title={`봇 · ${detail.handle}`} meta={detail.rulesetId} tone="panel" padded scroll>
-      <nav className="botd__tabs" aria-label="봇 화면">
-        {TABS.map(([id, label]) => (
-          <Button
-            key={id}
-            size="sm"
-            variant={id === tabId ? 'primary' : 'ghost'}
-            active={id === tabId}
-            onClick={() => {
-              setTabId(id)
-            }}
-          >
-            {label}
-          </Button>
-        ))}
-      </nav>
-
-      {tabId === 'combat' ? (
-        <div className="botd__body">
+  const tabs: readonly DetailTab[] = [
+    {
+      id: 'combat',
+      label: '전투 규칙',
+      body: (
+        <>
           {/* **절이 아니라 id 다.** 봇의 전투 규칙표는 우리가 고른 견본이고, 그 내용은
               사람 화면의 견본 목록에 이미 있다 — 여기 베끼면 두 곳이 갈린다. */}
           <ValueExpr text={`전투 규칙표 · ${detail.rulesetId}`} size="sm" />
@@ -190,34 +216,41 @@ export function BotDetailPanel(props: BotDetailProps): React.JSX.Element {
             size="sm"
             dim
           />
-        </div>
-      ) : null}
-
-      {tabId === 'upkeep' ? (
-        <div className="botd__body">
+        </>
+      ),
+    },
+    {
+      id: 'upkeep',
+      label: '정비 규칙',
+      body: (
+        <>
           <ValueExpr
             text={`정비 행동 ${String(MAINTENANCE_ACTIONS.length)}종 중 이 봇이 켠 것`}
             size="sm"
             dim
           />
           <BotUpkeep rows={detail.maintenance.rows} />
-        </div>
-      ) : null}
-
-      {tabId === 'me' ? (
-        <div className="botd__body">
-          <CharacterPanel
-            progress={detail.progress}
-            baseStats={props.baseStats}
-            allSkills={props.allSkills}
-            allItems={props.allItems}
-            link="online"
-          />
-        </div>
-      ) : null}
-
-      {tabId === 'bag' ? (
-        <div className="botd__body">
+        </>
+      ),
+    },
+    {
+      id: 'me',
+      label: '캐릭터',
+      body: (
+        <CharacterPanel
+          progress={detail.progress}
+          baseStats={props.baseStats}
+          allSkills={props.allSkills}
+          allItems={props.allItems}
+          link="online"
+        />
+      ),
+    },
+    {
+      id: 'bag',
+      label: '가방',
+      body: (
+        <>
           {/* **착용을 걸지 않는다.** 관리자가 봇에게 장비를 입히기 시작하면 그 봇이 만든
               순위·경매 기록이 무엇을 뜻하는지 알 수 없게 된다 — 넘기는 것까지가 관리다. */}
           <ValueExpr text="보기만 한다 — 입히는 것은 봇이 제 규칙으로 한다" size="sm" dim />
@@ -232,40 +265,143 @@ export function BotDetailPanel(props: BotDetailProps): React.JSX.Element {
               }
             }}
           />
-        </div>
-      ) : null}
-
-      {tabId === 'skill' ? (
-        <div className="botd__body">
-          {detail.skills.rows.length === 0 ? (
-            <ValueExpr text="장비가 연 스킬이 없다" size="sm" dim />
-          ) : (
-            <ul className="botd__skills">
-              {detail.skills.rows.map((row) => (
-                <li className="botd__skill" key={row.skillId}>
-                  <GlyphState
-                    state={row.isOn ? 'true' : 'false'}
-                    size="sm"
-                    label={row.skillId}
-                  />
-                  {row.isLocked ? <ValueExpr text="못 끈다" size="sm" dim /> : null}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      ) : null}
-
-      {tabId === 'replay' ? (
-        <div className="botd__body">
+        </>
+      ),
+    },
+    {
+      id: 'skill',
+      label: '스킬',
+      body:
+        detail.skills.rows.length === 0 ? (
+          <ValueExpr text="장비가 연 스킬이 없다" size="sm" dim />
+        ) : (
+          <ul className="botd__skills">
+            {detail.skills.rows.map((row) => (
+              <li className="botd__skill" key={row.skillId}>
+                <GlyphState state={row.isOn ? 'true' : 'false'} size="sm" label={row.skillId} />
+                {row.isLocked ? <ValueExpr text="못 끈다" size="sm" dim /> : null}
+              </li>
+            ))}
+          </ul>
+        ),
+    },
+    {
+      id: 'replay',
+      label: '리플레이',
+      body: (
+        <>
           <ValueExpr
             text={`최근 ${String(detail.runs.length)}판 — 기록이지 재생이 아니다 (이벤트 로그는 안 남긴다)`}
             size="sm"
             dim
           />
           <BotRuns runs={detail.runs} />
-        </div>
-      ) : null}
-    </Panel>
+        </>
+      ),
+    },
+  ]
+  return <DetailShell title={`봇 · ${detail.handle}`} meta={detail.rulesetId} tabs={tabs} />
+}
+
+/** 도플갱어에 없는 것들. **빈 탭으로 두지 않고 왜 없는지를 적는다.** */
+const DOPPEL_MISSING =
+  '정비 규칙·스킬·리플레이는 없다 — 계정이 아니라 얼려 둔 개체 기록이라 그것들이 딸려 있지 않다'
+
+export interface DoppelDetailProps {
+  readonly detail: DoppelDetail | undefined
+  /** 죽던 순간 끼고 있던 것. **가진 아이템이 아니라 기록이라** 조작을 걸 자리가 없다. */
+  readonly gear: InventoryView | undefined
+}
+
+/**
+ * 도플갱어 하나의 상세를 **봇과 같은 UI 로** 그린다.
+ *
+ * **탭 수가 다르다.** 도플갱어는 계정이 아니라 얼려 둔 개체 기록이라 정비 규칙도, 켠
+ * 스킬도, 제출 기록도 없다 — 없는 탭을 빈 채로 세우면 「고장」으로 읽히므로 세우지 않고
+ * 무엇이 왜 없는지를 한 줄로 적는다.
+ *
+ * **규칙표는 id 가 아니라 절이다.** 봇의 것은 우리가 고른 견본이지만, 도플갱어는 죽던
+ * 그 순간의 규칙표를 통째로 얼려 갖고 있다 — 그것이 이 개체의 정체다.
+ *
+ * @param props 상세와 장비.
+ * @returns 렌더 트리.
+ */
+export function DoppelDetailPanel(props: DoppelDetailProps): React.JSX.Element {
+  const { detail } = props
+  if (detail === undefined) {
+    return (
+      <Panel title="도플갱어 상세" tone="panel" padded>
+        <ValueExpr text="위에서 줄을 고르면 그 개체의 규칙표와 장비를 연다" size="sm" dim />
+      </Panel>
+    )
+  }
+  const rules = (detail.ruleset.rules ?? []) as readonly Record<string, unknown>[]
+  const tabs: readonly DetailTab[] = [
+    {
+      id: 'combat',
+      label: '전투 규칙',
+      body:
+        rules.length === 0 ? (
+          <ValueExpr text="얼려 둔 규칙표가 비었다" size="sm" dim />
+        ) : (
+          <ul className="mnt__list">
+            {rules.map((rule, index) => (
+              <li className="mnt__row" key={`rule-${String(index)}`}>
+                <span className="mnt__when">{`[${String(rule.priority ?? index + 1)}]`}</span>
+                <span className="mnt__what">{String(rule.action ?? '')}</span>
+              </li>
+            ))}
+          </ul>
+        ),
+    },
+    {
+      id: 'me',
+      label: '캐릭터',
+      body: (
+        <ul className="botd__skills">
+          <li className="botd__skill">
+            <ValueExpr text={`원본 · ${detail.originHandle || '(알 수 없음)'}`} size="sm" />
+          </li>
+          <li className="botd__skill">
+            <ValueExpr text={`레벨 ${String(detail.level)}`} size="sm" />
+          </li>
+          <li className="botd__skill">
+            <ValueExpr text={`${String(detail.zoneFloor)}층 · ${detail.entitySlot}`} size="sm" />
+          </li>
+          <li className="botd__skill">
+            <GlyphState
+              state={detail.isAlive ? 'true' : 'false'}
+              size="sm"
+              label={detail.isAlive ? '서 있다' : '쓰러졌다'}
+            />
+          </li>
+        </ul>
+      ),
+    },
+    {
+      id: 'bag',
+      label: '장비',
+      body: (
+        <>
+          {/* **가진 아이템이 아니라 얼려 둔 기록이다.** 그 개체는 어떤 아이템도 소유하지
+              않으므로 칸의 id 가 0 이고, 넘기기도 착용도 걸 자리가 없다. */}
+          <ValueExpr text="얼려 둔 기록이다 — 아이템이 아니라 그때의 모습이다" size="sm" dim />
+          <InventoryGrid
+            inventory={props.gear}
+            pickedKey=""
+            ownerLabel={detail.originHandle}
+            onPick={() => undefined}
+          />
+        </>
+      ),
+    },
+  ]
+  return (
+    <DetailShell
+      title={`도플갱어 · ${detail.originHandle || String(detail.recordId)}`}
+      meta={`${String(detail.zoneFloor)}층 · lv${String(detail.level)}`}
+      tabs={tabs}
+      missing={DOPPEL_MISSING}
+    />
   )
 }
