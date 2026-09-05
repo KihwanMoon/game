@@ -48,7 +48,7 @@ def build_headers(token):
 def build_admin(client):
     """가입한 계정 하나를 만들어 관리자로 올린다. **스크립트와 같은 경로를 쓴다.**"""
     from game.api.deps import get_pool
-    from game.app.store.admin import set_admin
+    from game.app.store.admin import ROLE_OWNER, set_admin_role
 
     account = client.post("/api/account").json()
     login_id = f"admin{account['account_id']}"
@@ -57,7 +57,7 @@ def build_admin(client):
         json={"login_id": login_id, "password": PASSWORD},
         headers=build_headers(account["token"]),
     )
-    assert set_admin(get_pool(), login_id, True)
+    assert set_admin_role(get_pool(), login_id, ROLE_OWNER)
     return account["token"]
 
 

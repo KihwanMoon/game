@@ -50,7 +50,7 @@ def list_targets(
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT a.id, coalesce(a.login_id, ''), a.is_admin,"
+            "SELECT a.id, coalesce(a.login_id, ''), a.admin_role IS NOT NULL,"
             " (SELECT count(*) FROM run_ticket t WHERE t.account_id = a.id)"
             " FROM account a"
             " WHERE (a.login_id IS NULL OR lower(a.login_id) <> ALL(%s))"

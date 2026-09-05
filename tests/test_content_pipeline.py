@@ -37,7 +37,7 @@ def client():
 @pytest.fixture
 def admin(client):
     from game.api.deps import get_pool
-    from game.app.store.admin import set_admin
+    from game.app.store.admin import ROLE_OWNER, set_admin_role
 
     account = client.post("/api/account").json()
     login_id = f"content{account['account_id']}"
@@ -46,7 +46,7 @@ def admin(client):
         json={"login_id": login_id, "password": "probe-password-1"},
         headers={"X-Game-Token": account["token"]},
     )
-    assert set_admin(get_pool(), login_id, True)
+    assert set_admin_role(get_pool(), login_id, ROLE_OWNER)
     return account["token"]
 
 

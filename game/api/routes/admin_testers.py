@@ -14,7 +14,11 @@
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from game.api.deps import CurrentAdmin, get_pool
+from game.api.deps import (
+    CurrentAdmin,
+    CurrentOperator,
+    get_pool,
+)
 from game.app.store.admin import record_admin_action
 from game.app.store.testers import (
     MIN_TESTERS,
@@ -116,7 +120,7 @@ def read_testers(account: CurrentAdmin) -> TesterListResponse:
 
 
 @router.post("/api/admin/testers/mark", response_model=TesterListResponse)
-def save_tester_mark(request: TesterMarkRequest, account: CurrentAdmin) -> TesterListResponse:
+def save_tester_mark(request: TesterMarkRequest, account: CurrentOperator) -> TesterListResponse:
     """계정 하나의 테스터 표시를 바꾼다.
 
     Args:

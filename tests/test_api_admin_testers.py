@@ -61,7 +61,7 @@ def build_admin(client):
 
     token, account_id = build_account(client)
     with get_pool().connection() as connection:
-        connection.execute("UPDATE account SET is_admin = TRUE WHERE id = %s", (account_id,))
+        connection.execute("UPDATE account SET admin_role = 'owner' WHERE id = %s", (account_id,))
     return token
 
 

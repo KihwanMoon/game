@@ -402,7 +402,27 @@ CREATE UNIQUE INDEX IF NOT EXISTS auction_open_item_idx
 -- DB 접속이 있어야 돈다 — 관리자 승격이 엔드포인트로 열려 있으면 그 하나가 뚫리는 순간
 -- 세계 전체가 뚫린다. 이 게임은 클라이언트를 적대적이라고 전제하는데(CLAUDE.md),
 -- 관리자 경로는 그 전제가 가장 크게 걸리는 자리다.
-ALTER TABLE account ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;
+-- 관리자 등급 (설계/9_에이전트_운영 §3.1). NULL 이면 관리자가 아니다.
+--
+-- **불리언 하나로는 에이전트를 못 붙인다.** 예전에는 `is_admin` 하나가 콘텐츠 발행·
+-- 아이템 지급·회수·카탈로그 편집·몬스터 레벨을 전부 열었다. CS 에이전트가 콘텐츠를
+-- 발행할 수 있으면 안 되고, 밸런스 에이전트가 아이템을 지급할 수 있으면 안 된다.
+--
+--   observer  읽기 전량. 쓰기 없음
+--   author    콘텐츠 초안. 발행 불가
+--   operator  계정·세계 개입(아이템 회수·봇 멈춤·테스터 표시). 콘텐츠 불가
+--   owner     전부. **사람만** — 발행과 카탈로그 즉시 반영이 여기 있다
+--
+-- 발행은 어느 에이전트에게도 안 준다. 시즌을 가르는 행위라 사람이 누른다.
+ALTER TABLE account ADD COLUMN IF NOT EXISTS admin_role TEXT;
+
+-- 등급 이름을 DB 가 지킨다. 오타 하나가 조용히 「권한 없음」이 되면, 막힌 것인지 이름을
+-- 틀린 것인지 화면에서 구별되지 않는다.
+DO $$ BEGIN
+    ALTER TABLE account ADD CONSTRAINT account_admin_role_check
+        CHECK (admin_role IS NULL OR admin_role IN ('observer', 'author', 'operator', 'owner'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- 관리자가 세계에 손댄 기록.
 --

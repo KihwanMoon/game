@@ -20,7 +20,12 @@ from fastapi import APIRouter, HTTPException, status
 
 from game.api.catalog_admin import build_entry_from_request, list_locked_changes
 from game.api.catalog_view import format_affix
-from game.api.deps import CurrentAdmin, apply_catalog_reload, get_pool
+from game.api.deps import (
+    CurrentAdmin,
+    CurrentOwner,
+    apply_catalog_reload,
+    get_pool,
+)
 from game.api.routes.admin import check_reason
 from game.api.view_schemas import (
     CatalogAdminResponse,
@@ -154,7 +159,7 @@ def apply_drop_entry(catalog_id: str, grade: str) -> None:
 
 
 @router.post("/api/admin/catalog/item", response_model=CatalogAdminResponse)
-def create_catalog_item(request: CatalogItemRequest, account: CurrentAdmin) -> CatalogAdminResponse:
+def create_catalog_item(request: CatalogItemRequest, account: CurrentOwner) -> CatalogAdminResponse:
     """아이템 종류를 등록하거나 이름·최소 층을 고친다.
 
     Args:
@@ -205,7 +210,7 @@ def create_catalog_item(request: CatalogItemRequest, account: CurrentAdmin) -> C
 
 @router.post("/api/admin/catalog/retire", response_model=CatalogAdminResponse)
 def create_catalog_retire(
-    request: CatalogRetireRequest, account: CurrentAdmin
+    request: CatalogRetireRequest, account: CurrentOwner
 ) -> CatalogAdminResponse:
     """아이템 종류를 폐기하거나 되살린다. 지우지 않는다.
 
@@ -269,7 +274,7 @@ def read_monster_drops(kind_id: str, account: CurrentAdmin) -> MonsterDropRespon
 
 
 @router.post("/api/admin/drops", response_model=MonsterDropResponse)
-def create_monster_drop(request: MonsterDropRequest, account: CurrentAdmin) -> MonsterDropResponse:
+def create_monster_drop(request: MonsterDropRequest, account: CurrentOwner) -> MonsterDropResponse:
     """몬스터별 드롭 줄을 세운다 (D3).
 
     **첫 줄을 세우는 순간 그 몬스터는 `ANY` 를 안 본다.** 두 표를 합치면 "이 몬스터만
@@ -305,7 +310,7 @@ def create_monster_drop(request: MonsterDropRequest, account: CurrentAdmin) -> M
 
 
 @router.post("/api/admin/catalog/edit", response_model=CatalogAdminResponse)
-def create_catalog_edit(request: CatalogEditRequest, account: CurrentAdmin) -> CatalogAdminResponse:
+def create_catalog_edit(request: CatalogEditRequest, account: CurrentOwner) -> CatalogAdminResponse:
     """이미 있는 아이템의 이름과 최소 층을 고친다 (§15.7).
 
     **고칠 수 있는 것만 받는다.** 접사·등급·분류를 받을 자리가 없으므로 소급 수정이

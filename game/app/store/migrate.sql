@@ -455,3 +455,24 @@ UPDATE entity_record
 -- 한 대만 맞으면 사라지게 되므로, 여기서 셋으로 올려 준다 — 배포 한 번에 세계가 비는
 -- 것을 막는다.
 UPDATE entity_record SET lives = 3 WHERE is_doppel AND lives < 3;
+
+-- ── 관리자 권한을 이분법에서 등급으로 (설계/9_에이전트_운영 §3.1) ─────────
+--
+-- **두 번째 실제 마이그레이션이다.** 컬럼을 지우므로 멱등이어야 하고, 이미 지운 DB 에서
+-- 다시 돌아도 터지면 안 된다 — `apply_schema` 가 매 기동에 이 파일을 통째로 돌린다.
+--
+-- 있던 관리자는 전부 `owner` 로 옮긴다. 좁히는 것은 사람이 판단할 일이고, 이행이
+-- 조용히 권한을 뺏으면 그날 아무도 관리 화면에 못 들어간다.
+--
+-- 옮긴 뒤 `is_admin` 을 **지운다.** 남겨 두면 「관리자인가」와 「무엇을 할 수 있는가」가
+-- 두 곳에 적히고, 둘이 어긋난 계정이 생기면 어느 쪽이 맞는지 물을 자리가 없다.
+DO $$ BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'account' AND column_name = 'is_admin'
+    ) THEN
+        EXECUTE 'UPDATE account SET admin_role = ''owner''
+                 WHERE admin_role IS NULL AND is_admin';
+        EXECUTE 'ALTER TABLE account DROP COLUMN is_admin';
+    END IF;
+END $$;

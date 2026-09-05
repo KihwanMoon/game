@@ -67,7 +67,7 @@ def client():
 def admin(client):
     """관리자 토큰. 승격은 스크립트와 같은 경로(저장 층)로만 한다."""
     from game.api.deps import get_pool
-    from game.app.store.admin import set_admin
+    from game.app.store.admin import ROLE_OWNER, set_admin_role
 
     account = client.post("/api/account").json()
     login_id = f"catadmin{account['account_id']}"
@@ -76,7 +76,7 @@ def admin(client):
         json={"login_id": login_id, "password": "probe-password-1"},
         headers=build_headers(account["token"]),
     )
-    assert set_admin(get_pool(), login_id, True)
+    assert set_admin_role(get_pool(), login_id, ROLE_OWNER)
     return account["token"]
 
 

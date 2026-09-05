@@ -24,6 +24,7 @@ from game.api.catalog_view import (
 )
 from game.api.deps import (
     CurrentAdmin,
+    CurrentOperator,
     get_context,
     get_core_version,
     get_item_catalog,
@@ -126,7 +127,7 @@ def build_monster_view(row: MonsterRow) -> AdminMonsterView:
 
 @router.put("/api/admin/monster/level", response_model=AdminOverviewResponse)
 def save_monster_level(
-    request: MonsterLevelRequest, account: CurrentAdmin
+    request: MonsterLevelRequest, account: CurrentOperator
 ) -> AdminOverviewResponse:
     """지속 몬스터의 레벨을 고친다.
 
@@ -187,7 +188,7 @@ def check_reason(reason: str) -> str:
 
 @router.post("/api/admin/auction/cancel", response_model=AdminOverviewResponse)
 def create_listing_cancel(
-    request: AdminReasonRequest, account: CurrentAdmin
+    request: AdminReasonRequest, account: CurrentOperator
 ) -> AdminOverviewResponse:
     """열린 매물을 강제로 내린다.
 
@@ -213,7 +214,9 @@ def create_listing_cancel(
 
 
 @router.post("/api/admin/item/recall", response_model=AdminOverviewResponse)
-def create_item_recall(request: AdminReasonRequest, account: CurrentAdmin) -> AdminOverviewResponse:
+def create_item_recall(
+    request: AdminReasonRequest, account: CurrentOperator
+) -> AdminOverviewResponse:
     """아이템 하나를 세계에서 거둔다.
 
     **지우지 않고 파손으로 둔다.** 원장이 이 id 를 가리키므로, 지우면 "이 아이템이 어디로

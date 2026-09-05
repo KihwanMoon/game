@@ -14,7 +14,14 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, status
 
-from game.api.deps import CurrentAdmin, apply_content_reload, get_core_version, get_pool
+from game.api.deps import (
+    CurrentAdmin,
+    CurrentAuthor,
+    CurrentOwner,
+    apply_content_reload,
+    get_core_version,
+    get_pool,
+)
 from game.api.routes.admin import check_reason
 from game.api.view_schemas import (
     ContentAssetResponse,
@@ -104,7 +111,7 @@ def read_content_drafts(account: CurrentAdmin) -> ContentDraftResponse:
 
 @router.post("/api/admin/content/draft", response_model=ContentDraftResponse)
 def create_content_draft(
-    request: ContentDraftRequest, account: CurrentAdmin
+    request: ContentDraftRequest, account: CurrentAuthor
 ) -> ContentDraftResponse:
     """초안을 저장한다. 저장 전에 코어의 로더로 읽어 본다.
 
@@ -135,7 +142,7 @@ def create_content_draft(
 
 @router.post("/api/admin/content/discard", response_model=ContentDraftResponse)
 def create_content_discard(
-    request: ContentDraftRequest, account: CurrentAdmin
+    request: ContentDraftRequest, account: CurrentAuthor
 ) -> ContentDraftResponse:
     """초안을 버린다. 파일은 안 건드린다 — 발행 전이라 게임에 없던 것이다.
 
@@ -187,7 +194,7 @@ def read_content_asset(asset: str, account: CurrentAdmin) -> ContentAssetRespons
 
 @router.post("/api/admin/content/publish", response_model=ContentPublishResponse)
 def create_content_publish(
-    request: ContentPublishRequest, account: CurrentAdmin
+    request: ContentPublishRequest, account: CurrentOwner
 ) -> ContentPublishResponse:
     """쌓인 초안을 한 번에 발행한다 (설계/4_아이템 §18).
 

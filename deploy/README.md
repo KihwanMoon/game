@@ -187,8 +187,11 @@ docker compose -f deploy/docker-compose.yml run --rm -e GAME_SEED=424242 sim | g
 export COMPOSE_FILE=deploy/docker-compose.yml
 RUN="docker compose run --rm --entrypoint /opt/venv/bin/python backend"
 
-$RUN -m scripts.grant_admin <아이디>            # 관리자 부여
-$RUN -m scripts.grant_admin <아이디> --revoke   # 해제
+$RUN -m scripts.grant_admin <아이디> --role owner      # 사람 관리자
+$RUN -m scripts.grant_admin <아이디> --role operator   # 개입만 (에이전트)
+$RUN -m scripts.grant_admin <아이디> --role author     # 콘텐츠 초안만 (에이전트)
+$RUN -m scripts.grant_admin <아이디> --role observer   # 읽기만 (에이전트)
+$RUN -m scripts.grant_admin <아이디> --revoke          # 해제
 $RUN -m scripts.run_world_tick <시드>           # 세계 한 틱 (몬스터끼리 전투)
 $RUN -m scripts.report_g1                       # G1 판정 자료
 ```

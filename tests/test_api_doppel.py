@@ -381,5 +381,5 @@ def build_admin_token(client):
     token = client.post("/api/account").json()["token"]
     account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
     with get_pool().connection() as connection:
-        connection.execute("UPDATE account SET is_admin = TRUE WHERE id = %s", (account_id,))
+        connection.execute("UPDATE account SET admin_role = 'owner' WHERE id = %s", (account_id,))
     return token

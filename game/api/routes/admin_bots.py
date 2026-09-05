@@ -15,7 +15,12 @@
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from game.api.deps import CurrentAdmin, get_item_catalog, get_pool
+from game.api.deps import (
+    CurrentAdmin,
+    CurrentOperator,
+    get_item_catalog,
+    get_pool,
+)
 from game.api.routes.items import build_inventory_response
 from game.api.schemas import (
     AdminBotOverviewResponse,
@@ -91,7 +96,9 @@ def read_admin_bots(account: CurrentAdmin) -> AdminBotOverviewResponse:
 
 
 @router.put("/api/admin/bot", response_model=AdminBotOverviewResponse)
-def apply_admin_bot(request: BotSettingsRequest, account: CurrentAdmin) -> AdminBotOverviewResponse:
+def apply_admin_bot(
+    request: BotSettingsRequest, account: CurrentOperator
+) -> AdminBotOverviewResponse:
     """봇 하나의 성격을 고친다.
 
     Args:
@@ -190,7 +197,7 @@ def read_doppel_bag(record_id: int, account: CurrentAdmin) -> InventoryResponse:
 
 
 @router.post("/api/admin/bot/gift", response_model=AdminBotOverviewResponse)
-def create_bot_gift(request: BotGiftRequest, account: CurrentAdmin) -> AdminBotOverviewResponse:
+def create_bot_gift(request: BotGiftRequest, account: CurrentOperator) -> AdminBotOverviewResponse:
     """내 가방의 아이템 하나를 봇에게 넘긴다.
 
     **한 방향이다.** 도착하는 순간 귀속되고(결정 #07), 귀속된 물건은 경매에 못 걸린다 —

@@ -17,7 +17,14 @@ from game.app.content_versions import read_content_versions
 from game.app.services.run_battle import load_balance
 from game.app.services.verify_run import VerifyContext
 from game.app.store.accounts import Account, find_account
-from game.app.store.admin import check_is_admin
+from game.app.store.admin import (
+    ROLE_AUTHOR,
+    ROLE_OBSERVER,
+    ROLE_OPERATOR,
+    ROLE_OWNER,
+    check_role_allows,
+    read_admin_role,
+)
 from game.app.store.catalog_seed import apply_catalog_seed
 from game.app.store.content_pack import read_asset, read_pack_generation
 from game.app.store.drops import apply_drop_seed
@@ -189,27 +196,87 @@ def resolve_account(token: Annotated[str | None, Header(alias=TOKEN_HEADER)] = N
 CurrentAccount = Annotated[Account, Depends(resolve_account)]
 
 
-def resolve_admin(account: CurrentAccount) -> Account:
-    """관리자만 통과시킨다.
+def check_role(account: Account, wanted: str) -> Account:
+    """이 계정이 그 등급의 일을 할 수 있는지 본다.
 
-    **403 이 아니라 404 로 답한다.** 403 은 "여기 뭔가 있는데 너는 못 본다" 를 알려 주고,
-    그것은 관리자 경로의 존재 자체를 노출한다 — 없는 것처럼 보이는 편이 낫다.
+    **두 답을 가른다.** 관리자가 아니면 404 다 — 403 은 "여기 뭔가 있는데 너는 못 본다"
+    를 알려 주고, 그것은 관리자 경로의 존재 자체를 노출한다. 반대로 **관리자인데 등급이
+    모자라면 403** 이다: 그 사람은 경로가 있다는 것을 이미 알고 있고, 여기서 404 를 주면
+    「막혔다」와 「없어졌다」가 구별되지 않아 고장으로 신고된다.
+
+    Args:
+        account: 토큰으로 푼 계정.
+        wanted: 그 일에 필요한 등급.
+
+    Returns:
+        통과한 계정.
+
+    Raises:
+        HTTPException: 관리자가 아니면 404, 등급이 모자라면 403.
+    """
+    role = read_admin_role(get_pool(), account.account_id)
+    if not role:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "없는 경로다")
+    if not check_role_allows(role, wanted):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, f"이 일에는 {wanted} 등급이 필요하다")
+    return account
+
+
+def resolve_admin(account: CurrentAccount) -> Account:
+    """등급이 무엇이든 관리자면 통과시킨다 — 읽기 경로가 쓴다.
 
     Args:
         account: 토큰으로 푼 계정.
 
     Returns:
         관리자 계정.
-
-    Raises:
-        HTTPException: 관리자가 아닌 경우.
     """
-    if not check_is_admin(get_pool(), account.account_id):
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "없는 경로다")
-    return account
+    return check_role(account, ROLE_OBSERVER)
+
+
+def resolve_author(account: CurrentAccount) -> Account:
+    """콘텐츠 **초안**을 쓸 수 있는 계정만 통과시킨다. 발행은 여기 없다.
+
+    Args:
+        account: 토큰으로 푼 계정.
+
+    Returns:
+        통과한 계정.
+    """
+    return check_role(account, ROLE_AUTHOR)
+
+
+def resolve_operator(account: CurrentAccount) -> Account:
+    """계정·세계에 개입할 수 있는 계정만 통과시킨다. 콘텐츠는 여기 없다.
+
+    Args:
+        account: 토큰으로 푼 계정.
+
+    Returns:
+        통과한 계정.
+    """
+    return check_role(account, ROLE_OPERATOR)
+
+
+def resolve_owner(account: CurrentAccount) -> Account:
+    """전부 할 수 있는 계정만 통과시킨다.
+
+    **사람만 받는다.** 발행과 카탈로그 즉시 반영이 여기 있고, 그 둘은 시즌을 가른다 —
+    에이전트가 누르면 아무도 모르게 세계가 바뀐다 (설계/9_에이전트_운영 §8).
+
+    Args:
+        account: 토큰으로 푼 계정.
+
+    Returns:
+        통과한 계정.
+    """
+    return check_role(account, ROLE_OWNER)
 
 
 CurrentAdmin = Annotated[Account, Depends(resolve_admin)]
+CurrentAuthor = Annotated[Account, Depends(resolve_author)]
+CurrentOperator = Annotated[Account, Depends(resolve_operator)]
+CurrentOwner = Annotated[Account, Depends(resolve_owner)]
 
 
 def get_item_catalog() -> dict:

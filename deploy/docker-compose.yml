@@ -172,7 +172,7 @@ services:
   # 안 남고, 그러면 지우는 명령이 어디에 떨어지는지 모르게 된다.
   #
   #   docker compose run --rm ops uv run python -m scripts.purge_test_accounts
-  #   docker compose run --rm ops uv run python -m scripts.grant_admin <아이디>
+  #   docker compose run --rm ops uv run python -m scripts.grant_admin <아이디> --role owner
   ops:
     profiles: ["tools"]
     build:

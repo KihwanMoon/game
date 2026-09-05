@@ -60,7 +60,7 @@ def test_a_deactivated_token_stops_working(client):
 def test_a_deactivated_admin_loses_the_admin_path(client):
     """★ 검사가 만든 관리자 계정이 프로덕션에 남아 있었다 — 끄면 그 길도 닫혀야 한다."""
     from game.api.deps import get_pool
-    from game.app.store.admin import set_admin
+    from game.app.store.admin import ROLE_OWNER, set_admin_role
 
     token, account_id = build_account(client)
     login_id = f"deact{account_id}"
@@ -69,7 +69,7 @@ def test_a_deactivated_admin_loses_the_admin_path(client):
         json={"login_id": login_id, "password": "probe-password-1"},
         headers=build_headers(token),
     )
-    assert set_admin(get_pool(), login_id, True)
+    assert set_admin_role(get_pool(), login_id, ROLE_OWNER)
     assert client.get("/api/admin/overview", headers=build_headers(token)).status_code == 200
     deactivate(account_id)
     # 토큰 자체가 안 통하므로 401 이다. 404 였다면 "관리자가 아니다" 이고, 그것도 막힌
