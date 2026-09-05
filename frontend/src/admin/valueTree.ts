@@ -122,3 +122,79 @@ export function parseLeafText(kind: LeafKind, text: string, current: unknown): u
 export function formatKeyLabel(key: string): string {
   return key.startsWith('_') ? `${key} (설명)` : key
 }
+
+/** 목록 항목의 이름으로 쓸 열쇠들. 앞엣것이 먼저다 — id 가 가장 안 흔들린다. */
+const NAME_KEYS = ['id', 'kind_id', 'catalog_id', 'template_id', 'skill_id'] as const
+
+/** 이름 옆에 붙일 사람 말. */
+const LABEL_KEYS = ['label_ko', 'name'] as const
+
+/**
+ * 목록 항목 하나의 이름을 짓는다.
+ *
+ * **번호만으로는 아무것도 못 찾는다.** 적 14마리가 `0 1 2 …` 로 서 있으면 고치려는 그
+ * 한 마리를 찾으려고 열넷을 다 열어 봐야 한다 — 실제로 「뭔지 하나도 인지가 안 된다」는
+ * 신고가 그 자리였다. 절 안에 이미 이름이 들어 있는데 화면이 그것을 안 읽고 있었다.
+ *
+ * @param index 목록에서의 자리.
+ * @param item 그 자리의 값.
+ * @returns `3 · bomb_slime · 폭탄 슬라임` 꼴. 이름이 없으면 번호만.
+ */
+export function formatItemLabel(index: number, item: unknown): string {
+  if (item === null || typeof item !== 'object' || Array.isArray(item)) {
+    return String(index)
+  }
+  const row = item as Record<string, unknown>
+  const read = (keys: readonly string[]): string => {
+    for (const key of keys) {
+      const found = row[key]
+      if (typeof found === 'string' && found !== '') {
+        return found
+      }
+    }
+    return ''
+  }
+  const name = read(NAME_KEYS)
+  const label = read(LABEL_KEYS)
+  return [String(index), name, label].filter((part) => part !== '').join(' · ')
+}
+
+/**
+ * 이 키가 설명인가.
+ *
+ * 밸런스 파일은 왜 그 값인지를 절 안에 적어 둔다 — 좋은 규율이지만, 편집기가 그것을
+ * 값과 나란히 세우면 **스무 줄짜리 산문이 첫 화면을 통째로 먹는다.** 고칠 일은 거의
+ * 없고 읽을 일은 가끔이므로 접어 둔다.
+ *
+ * @param key 볼 키.
+ * @returns 설명이면 참.
+ */
+export function checkIsNote(key: string): boolean {
+  return key.startsWith('_')
+}
+
+/**
+ * 이 가지가 찾는 말을 품고 있는가.
+ *
+ * **키만 본다.** 값까지 뒤지면 숫자 `12` 를 찾을 때 절반이 걸려서 거르는 뜻이 사라진다.
+ *
+ * @param key 이 가지의 키.
+ * @param value 이 가지의 값.
+ * @param needle 찾는 말. 소문자로 온다.
+ * @returns 자기나 후손이 걸리면 참.
+ */
+export function checkMatches(key: string, value: unknown, needle: string): boolean {
+  if (needle === '') {
+    return true
+  }
+  if (key.toLowerCase().includes(needle)) {
+    return true
+  }
+  if (value === null || typeof value !== 'object') {
+    return typeof value === 'string' && value.toLowerCase().includes(needle)
+  }
+  const entries: [string, unknown][] = Array.isArray(value)
+    ? value.map((item, index) => [String(index), item])
+    : Object.entries(value as Record<string, unknown>)
+  return entries.some(([childKey, child]) => checkMatches(childKey, child, needle))
+}

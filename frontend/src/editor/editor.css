@@ -2056,6 +2056,26 @@
   inline-size: var(--sp-12);
 }
 
+/* 찾기 줄. **값 칸보다 넓다** — 키 이름은 `cpu_cost_by_term_count` 처럼 길고, 잘리면
+   무엇을 치고 있는지 안 보인다. 값 칸과 같은 폭으로 두면 찾기가 못 쓸 것이 된다. */
+.vtr__find {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  min-inline-size: 0;
+  padding-block-end: var(--sp-2);
+  border-block-end: var(--bw) solid var(--line);
+}
+
+.vtr__find .vtr__input {
+  /* 값 칸은 고정폭이지만 찾기 칸은 늘어난다. 키 이름은 `cpu_cost_by_term_count` 처럼
+     길어서, 값 칸과 같은 폭이면 무엇을 치고 있는지 안 보인다. */
+  flex: 1 1 auto;
+  inline-size: auto;
+  min-inline-size: var(--sp-12);
+}
+
 /* ── 소모품 칸 (설계/4_아이템 §5) ────────────────────────────────────────
    가방과 다른 화면이다. 가방은 「가진 것」, 여기는 「들고 갈 것」이다.
    행 구조를 인벤토리와 같게 두어 등급 색·글리프가 같은 자리에 온다. */

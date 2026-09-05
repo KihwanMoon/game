@@ -249,7 +249,10 @@ export function AdminScreen(): React.JSX.Element {
         {tab === 'balance' ? (
           <ValueTree
             file={readAssetFile(asset, 'balance')}
-            title="밸런스 · 몬스터 스탯"
+            // 제목이 「몬스터 스탯」이었는데 이 파일에는 플레이어 기본값·피해 공식·
+            // 층 스케일·어뷰징 방지도 들어 있다. 안에 없는 것을 적으면 찾는 사람이
+            // 다른 탭을 뒤진다.
+            title="밸런스 · 플레이어 · 적 · 피해 공식 · 층 스케일"
             onSave={(text, note) => {
               applyContent('/admin/content/draft', 'balance', text, note)
             }}

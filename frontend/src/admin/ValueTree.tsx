@@ -12,6 +12,9 @@ import { useState } from 'react'
 
 import {
   applyValueAt,
+  checkIsNote,
+  checkMatches,
+  formatItemLabel,
   formatKeyLabel,
   parseLeafText,
   readLeafKind,
@@ -31,6 +34,12 @@ interface BranchProps {
   readonly label: string
   readonly depth: number
   readonly onEdit: (path: ValuePath, next: unknown) => void
+  /** 찾는 말. 소문자다. 안 걸리는 가지는 아예 안 그린다. */
+  readonly needle: string
+  /** 원래 키. 찾기가 보는 값이라 꾸민 이름과 따로 든다. */
+  readonly rawKey: string
+  /** 설명 가지인가. 기본으로 접힌다. */
+  readonly isNote: boolean
 }
 
 /** 처음부터 펴 둘 깊이. 이보다 깊으면 접힌 채로 뜬다. */
@@ -42,9 +51,14 @@ const OPEN_DEPTH = 1
  * @param props 값·자리·이름·깊이·편집 콜백.
  * @returns 렌더 트리.
  */
-function Branch(props: BranchProps): React.JSX.Element {
-  const [isOpen, setOpen] = useState(props.depth <= OPEN_DEPTH)
+function Branch(props: BranchProps): React.JSX.Element | null {
+  // **찾을 때는 펴 둔다.** 걸린 가지가 접혀 있으면 찾은 것이 안 보이고, 그러면 찾기가
+  // 「몇 개 걸렸는지만 알려주는 기능」이 된다.
+  const [isOpen, setOpen] = useState(props.depth <= OPEN_DEPTH && !props.isNote)
   const kind = readLeafKind(props.value)
+  if (!checkMatches(props.rawKey, props.value, props.needle)) {
+    return null
+  }
 
   if (kind !== undefined) {
     return (
@@ -100,9 +114,14 @@ function Branch(props: BranchProps): React.JSX.Element {
               key={key}
               value={item}
               path={[...props.path, Array.isArray(props.value) ? Number(key) : key]}
-              label={formatKeyLabel(key)}
+              // **목록 항목은 번호가 아니라 이름으로 부른다.** 절 안에 이미 이름이
+              // 들어 있는데 화면이 그것을 안 읽어서 적 열넷이 `0 1 2 …` 로 서 있었다.
+              label={Array.isArray(props.value) ? formatItemLabel(Number(key), item) : formatKeyLabel(key)}
               depth={props.depth + 1}
               onEdit={props.onEdit}
+              needle={props.needle}
+              rawKey={key}
+              isNote={checkIsNote(key)}
             />
           ))}
         </div>
@@ -120,7 +139,11 @@ function Branch(props: BranchProps): React.JSX.Element {
 export function ValueTree(props: ValueTreeProps): React.JSX.Element {
   const [draft, setDraft] = useState<Record<string, unknown> | undefined>(undefined)
   const [note, setNote] = useState('')
+  const [needle, setNeedle] = useState('')
   const file = draft ?? props.file
+  const search = needle.trim().toLowerCase()
+  const entries = Object.entries(file ?? {})
+  const shown = entries.filter(([key, value]) => checkMatches(key, value, search)).length
 
   return (
     <Panel title={props.title} tone="panel" padded scroll>
@@ -130,11 +153,28 @@ export function ValueTree(props: ValueTreeProps): React.JSX.Element {
           size="sm"
           label="값만 바꾼다 — 키를 더하거나 지우려면 원문 편집기를 쓴다"
         />
+        {/* **찾기가 없으면 눈으로 훑는 수밖에 없다.** 이 파일 하나에 값이 300개 가까이
+            있어서, 고치려는 그 하나를 찾는 데 화면을 위아래로 몇 번씩 굴리게 된다. */}
+        <label className="vtr__find">
+          <span className="vtr__key">찾기</span>
+          <input
+            className="cat__input vtr__input"
+            aria-label="키 이름으로 찾기"
+            placeholder="키 이름 — 예: hp_max, goblin, floor"
+            value={needle}
+            onChange={(event) => {
+              setNeedle(event.target.value)
+            }}
+          />
+          {search === '' ? null : (
+            <ValueExpr text={`${String(shown)} / ${String(entries.length)} 절`} size="sm" dim />
+          )}
+        </label>
         {file === undefined ? (
           <ValueExpr text="아직 안 읽었다" size="sm" dim />
         ) : (
           <div className="vtr">
-            {Object.entries(file).map(([key, value]) => (
+            {entries.map(([key, value]) => (
               <Branch
                 key={key}
                 value={value}
@@ -144,8 +184,14 @@ export function ValueTree(props: ValueTreeProps): React.JSX.Element {
                 onEdit={(path, next) => {
                   setDraft(applyValueAt(file, path, next) as Record<string, unknown>)
                 }}
+                needle={search}
+                rawKey={key}
+                isNote={checkIsNote(key)}
               />
             ))}
+            {search !== '' && shown === 0 ? (
+              <ValueExpr text={`「${needle}」 를 품은 절이 없다`} size="sm" dim />
+            ) : null}
           </div>
         )}
         <label className="cat__field">
