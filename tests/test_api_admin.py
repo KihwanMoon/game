@@ -295,19 +295,30 @@ def test_only_the_item_catalog_is_writable(client):
         assert not [word for word in banned if word in path], f"{path} 에 런타임 쓰기가 생겼다"
 
 
-def test_every_catalog_write_moves_the_generation(client):
+def test_only_publishing_moves_the_generation(client):
     """★ 아이템을 고치는 것은 시즌을 가르는 일이다 (§15.8).
 
     세대를 안 올리면 관리자가 조용히 과거 기록을 무효로 만든다 — 저장된 리플레이가
     거짓이 되는데 코어 버전은 그대로다.
+
+    **길이 하나여야 한다** (2026-09-05, 설계/9_에이전트_운영 §3.2). 예전에는 등록·수정·
+    폐기가 각자 카탈로그를 쓰고 각자 세대를 올렸다. 지금은 전부 초안으로 가고 발행
+    하나가 반영한다 — 그래서 세대를 올리는 자리도 하나여야 한다. 둘이 되는 순간
+    「한 번 발행이 한 번 경계」가 깨진다.
     """
     import inspect
 
+    from game.api.routes import catalog_draft
+
+    source = inspect.getsource(catalog_draft)
+    assert source.count("apply_generation_bump(") == 1, "세대를 올리는 자리가 하나가 아니다"
+    published = inspect.getsource(catalog_draft.create_catalog_publish)
+    assert "apply_generation_bump" in published, "발행이 세대를 안 올린다"
+
+    # 카탈로그를 직접 쓰는 자리도 발행 경로 하나뿐이다.
     from game.api.routes import catalog_admin
 
-    for name in ("create_catalog_item", "create_catalog_retire"):
-        source = inspect.getsource(getattr(catalog_admin, name))
-        assert "apply_generation_bump" in source, f"{name} 이 세대를 안 올린다"
+    assert "save_catalog_entry" not in inspect.getsource(catalog_admin)
 
 
 def test_the_level_curve_carries_the_real_distribution(client):

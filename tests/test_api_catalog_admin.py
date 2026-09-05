@@ -80,6 +80,12 @@ def admin(client):
     return account["token"]
 
 
+@pytest.fixture
+def publishing(client, admin):
+    """올리면 곧바로 발행하는 클라이언트."""
+    return PublishingClient(client, admin)
+
+
 def build_headers(token):
     return {"X-Game-Token": token}
 
@@ -92,15 +98,56 @@ def find_row(body, catalog_id):
     return next((row for row in body["items"] if row["catalog_id"] == catalog_id), None)
 
 
+# 아이템 편집이 초안을 거치게 됐다 (2026-09-05, 설계/9_에이전트_운영 §3.2). **이 파일이
+# 재는 것은 「무엇이 반영되는가」이지 「언제 반영되는가」가 아니다** — 시점은
+# `test_catalog_draft.py` 가 따로 못 박는다. 그래서 여기서는 올리고 곧바로 발행한다.
+CATALOG_WRITES = ("/api/admin/catalog/item", "/api/admin/catalog/edit", "/api/admin/catalog/retire")
+
+
+class PublishingClient:
+    """카탈로그 쓰기를 올리고 곧바로 발행하는 클라이언트.
+
+    실패(400·409)는 초안 단계에서 나므로 그대로 돌려준다 — 발행까지 갔다가 실패하면
+    무엇이 거절됐는지가 흐려진다.
+    """
+
+    def __init__(self, inner, token):
+        self.inner = inner
+        self.token = token
+
+    def __getattr__(self, name):
+        return getattr(self.inner, name)
+
+    def post(self, path, **kwargs):
+        """올리고, 카탈로그 쓰기였고 통과했으면 발행한다.
+
+        Args:
+            path: 라우트 경로.
+            **kwargs: `TestClient.post` 에 그대로 넘긴다.
+
+        Returns:
+            발행했으면 발행 응답, 아니면 올린 응답.
+        """
+        response = self.inner.post(path, **kwargs)
+        if path not in CATALOG_WRITES or response.status_code != 200:
+            return response
+        generation = read_items(self.inner, self.token)["generation"]
+        return self.inner.post(
+            "/api/admin/catalog/publish",
+            json={"generation": generation, "reason": REASON},
+            headers=build_headers(self.token),
+        )
+
+
 def test_a_stranger_gets_404(client):
     """★ 403 이면 「거기 뭔가 있다」를 알려 준다."""
     token = client.post("/api/account").json()["token"]
     assert client.get("/api/admin/catalog/items", headers=build_headers(token)).status_code == 404
 
 
-def test_the_list_shows_retired_items_too(client, admin):
+def test_the_list_shows_retired_items_too(publishing, client, admin):
     """★ 폐기는 「없다」가 아니라 「새로 안 나온다」다 — 관리자가 되살릴 수 있어야 한다."""
-    client.post(
+    publishing.post(
         "/api/admin/catalog/retire",
         json={"catalog_id": "helm_iron", "is_retired": True, "reason": REASON},
         headers=build_headers(admin),
@@ -116,10 +163,10 @@ def test_the_list_shows_retired_items_too(client, admin):
         )
 
 
-def test_registering_an_item_puts_it_on_the_drop_table(client, admin):
+def test_registering_an_item_puts_it_on_the_drop_table(publishing, client, admin):
     """★ 드롭 표에 안 올리면 등록해도 굴려서 안 나온다 — 그 답이 화면 어디에도 없다."""
     item = build_item(client, admin)
-    response = client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
+    response = publishing.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
     assert response.status_code == 200
     row = find_row(response.json(), item["id"])
     assert row is not None
@@ -128,10 +175,10 @@ def test_registering_an_item_puts_it_on_the_drop_table(client, admin):
     assert row["drop_weight"] > 0, "드롭 표에 안 올랐다"
 
 
-def test_a_write_moves_the_generation(client, admin):
+def test_a_write_moves_the_generation(publishing, client, admin):
     """★ 아이템을 고치는 것은 순위표 시즌을 가르는 일이다."""
     before = read_items(client, admin)["generation"]
-    client.post(
+    publishing.post(
         "/api/admin/catalog/retire",
         json={"catalog_id": "helm_iron", "is_retired": False, "reason": REASON},
         headers=build_headers(admin),
@@ -139,21 +186,23 @@ def test_a_write_moves_the_generation(client, admin):
     assert read_items(client, admin)["generation"] > before
 
 
-def test_a_retroactive_edit_is_refused(client, admin):
+def test_a_retroactive_edit_is_refused(publishing, client, admin):
     """★ 접사를 고치면 남의 가방에 있는 아이템의 성능이 바뀐다 (§15.7).
 
     인스턴스가 굴린 접사가 없으면 카탈로그 기본값을 쓴다. 그래서 이런 수정은 "새 id
     등록 + 옛 id 폐기" 로만 해야 하고, 그 규율을 사람의 기억이 아니라 서버가 지킨다.
     """
     item = build_item(client, admin)
-    client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
+    publishing.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
     changed = {**item, "affixes": [{"stat": "attack", "flat": 99, "label_ko": "표본 날"}]}
-    response = client.post("/api/admin/catalog/item", json=changed, headers=build_headers(admin))
+    response = publishing.post(
+        "/api/admin/catalog/item", json=changed, headers=build_headers(admin)
+    )
     assert response.status_code == 409
     assert "새 id" in response.json()["detail"]
 
 
-def test_the_name_and_floor_can_be_fixed_in_place(client, admin):
+def test_the_name_and_floor_can_be_fixed_in_place(publishing, client, admin):
     """★ 이미 나온 것에 소급하지 않는 것은 고칠 수 있어야 한다.
 
     **화면이 실제로 보내는 절로 부른다.** 예전 검사는 전체 절을 되풀이해 보냈고, 그래서
@@ -161,8 +210,8 @@ def test_the_name_and_floor_can_be_fixed_in_place(client, admin):
     클라이언트가 안 쓰는 모양을 쓰고 있었다.
     """
     item = build_item(client, admin)
-    client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
-    response = client.post(
+    publishing.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
+    response = publishing.post(
         "/api/admin/catalog/edit",
         json={
             "catalog_id": item["id"],
@@ -192,11 +241,11 @@ def test_editing_cannot_touch_the_slot(client, admin):
     assert {"affixes", "grade"} <= fields
 
 
-def test_editing_the_affixes_changes_what_drops_next(client, admin):
+def test_editing_the_affixes_changes_what_drops_next(publishing, client, admin):
     """★ 접사를 고칠 수 있어야 밸런스가 손에 잡힌다 — 그것이 §15.11 이 연 것이다."""
     item = build_item(client, admin)
-    client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
-    response = client.post(
+    publishing.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
+    response = publishing.post(
         "/api/admin/catalog/edit",
         json={
             "catalog_id": item["id"],
@@ -215,7 +264,7 @@ def test_editing_the_affixes_changes_what_drops_next(client, admin):
     assert row["affixes"] == ["다시 벼림 · 공격력 +12"]
 
 
-def test_an_edit_does_not_reach_into_a_bag(client, admin):
+def test_an_edit_does_not_reach_into_a_bag(publishing, client, admin):
     """★ 카탈로그를 고쳐도 이미 나온 아이템은 안 바뀐다 (§15.11).
 
     인스턴스가 자기 접사를 갖는 것이 그 근거다. 이 성질이 깨지면 접사 편집을 다시
@@ -226,12 +275,12 @@ def test_an_edit_does_not_reach_into_a_bag(client, admin):
     from game.app.store.items import create_item, find_item
 
     item = build_item(client, admin)
-    client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
+    publishing.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
     account_id = client.get("/api/account", headers=build_headers(admin)).json()["account_id"]
     entity_id = find_player_entity(get_pool(), account_id)
     held = create_item(get_pool(), entity_id, item["id"], get_item_catalog()[item["id"]].affixes)
     before = find_item(get_pool(), entity_id, held)
-    client.post(
+    publishing.post(
         "/api/admin/catalog/edit",
         json={
             "catalog_id": item["id"],
@@ -247,12 +296,12 @@ def test_an_edit_does_not_reach_into_a_bag(client, admin):
     assert after.affixes == before.affixes, "카탈로그 수정이 가방까지 닿았다"
 
 
-def test_an_empty_affix_list_keeps_the_current_ones(client, admin):
+def test_an_empty_affix_list_keeps_the_current_ones(publishing, client, admin):
     """★ 빈 목록을 「지운다」로 읽으면 이름만 고치려던 요청이 아이템을 맹탕으로 만든다."""
     item = build_item(client, admin)
-    client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
+    publishing.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
     before = find_row(read_items(client, admin), item["id"])
-    response = client.post(
+    response = publishing.post(
         "/api/admin/catalog/edit",
         json={
             "catalog_id": item["id"],
@@ -267,12 +316,12 @@ def test_an_empty_affix_list_keeps_the_current_ones(client, admin):
     assert after["affixes"] == before["affixes"]
 
 
-def test_an_item_keeps_its_affixes_after_a_rename(client, admin):
+def test_an_item_keeps_its_affixes_after_a_rename(publishing, client, admin):
     """★ 이름만 고쳤는데 접사가 사라지면 그 아이템이 성능을 잃는다."""
     item = build_item(client, admin)
-    client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
+    publishing.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
     before = find_row(read_items(client, admin), item["id"])
-    response = client.post(
+    response = publishing.post(
         "/api/admin/catalog/edit",
         json={
             "catalog_id": item["id"],
@@ -288,11 +337,11 @@ def test_an_item_keeps_its_affixes_after_a_rename(client, admin):
     assert after["grade"] == before["grade"]
 
 
-def test_registering_an_existing_id_says_where_to_go(client, admin):
+def test_registering_an_existing_id_says_where_to_go(publishing, client, admin):
     """★ 있는 id 로 등록하려는 것은 십중팔구 「고치려던 것」이다."""
     item = build_item(client, admin)
-    client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
-    response = client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
+    publishing.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
+    response = publishing.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
     assert response.status_code == 409
     assert "고치기" in response.json()["detail"]
 

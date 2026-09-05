@@ -194,18 +194,32 @@ def test_a_zero_weight_keeps_the_row(client, admin):
     assert [(row["catalog_id"], row["weight"]) for row in rows] == [("helm_iron", 0)]
 
 
-def test_registering_refreshes_what_the_server_holds(client, admin):
-    """★ 등록해도 서버가 모르면 그 아이템은 영영 안 나온다.
+def test_publishing_refreshes_what_the_server_holds(client, admin):
+    """★ 발행해도 서버가 모르면 그 아이템은 영영 안 나온다.
 
-    굴림이 보는 것은 기동 시점에 읽은 사본이다. 등록이 그 사본을 갈아 끼우지 않으면
+    굴림이 보는 것은 기동 시점에 읽은 사본이다. 발행이 그 사본을 갈아 끼우지 않으면
     새 아이템이 드롭 표에는 있는데 카탈로그에는 없는 상태가 되고, 굴림이 그 자리에서
     터진다.
+
+    **등록이 아니라 발행이 하는 일이다** (2026-09-05, 설계/9_에이전트_운영 §3.2).
+    올린 것은 아직 아이템이 아니므로 사본도 안 움직여야 한다 — 움직이면 초안이 굴림에
+    나온다.
     """
     from game.api.deps import get_item_catalog
 
-    item = build_item(client, admin, id=f"probe_fresh_{REASON and 1}")
     account_id = client.get("/api/account", headers=build_headers(admin)).json()["account_id"]
-    item = {**item, "id": f"probe_fresh_{account_id}"}
+    item = {**build_item(client, admin), "id": f"probe_fresh_{account_id}"}
     assert item["id"] not in get_item_catalog()
     client.post("/api/admin/catalog/item", json=item, headers=build_headers(admin))
-    assert item["id"] in get_item_catalog(), "등록했는데 서버가 모른다"
+    assert item["id"] not in get_item_catalog(), "초안이 굴림에 닿았다"
+
+    generation = client.get("/api/admin/catalog/items", headers=build_headers(admin)).json()[
+        "generation"
+    ]
+    published = client.post(
+        "/api/admin/catalog/publish",
+        json={"generation": generation, "reason": REASON},
+        headers=build_headers(admin),
+    )
+    assert published.status_code == 200, published.json()
+    assert item["id"] in get_item_catalog(), "발행했는데 서버가 모른다"

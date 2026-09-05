@@ -1676,33 +1676,6 @@ export async function readAdminItems(token: string): Promise<CatalogAdminView | 
   return readCatalogAdmin((await response.json()) as Record<string, unknown>)
 }
 
-/**
- * 카탈로그를 고친다. **사유가 반드시 붙는다** — 되돌릴 수 없는 조작이다.
- *
- * @param token 기기 토큰.
- * @param path `/admin/catalog/item` 또는 `/admin/catalog/retire`.
- * @param body 보낼 절.
- * @returns 갱신된 카탈로그와 한 줄 설명.
- */
-export async function applyCatalogAdmin(
-  token: string,
-  path: string,
-  body: unknown,
-): Promise<{ view: CatalogAdminView | undefined; detail: string }> {
-  const response = await sendRequest(path, {
-    method: 'POST',
-    headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (response === undefined) {
-    return { view: undefined, detail: '서버에 닿지 못했다' }
-  }
-  const raw = (await response.json()) as Record<string, unknown>
-  if (!response.ok) {
-    return { view: undefined, detail: String(raw.detail ?? '거절됐다') }
-  }
-  return { view: readCatalogAdmin(raw), detail: '' }
-}
 
 /** 콘텐츠 카탈로그. 읽기 전용이다. */
 export interface AdminCatalog {

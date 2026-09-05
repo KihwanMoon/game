@@ -111,9 +111,16 @@ def test_there_is_no_route_that_grants_admin(client):
         "/api/admin/bot/gift",
         "/api/admin/bots",
         "/api/admin/catalog",
+        # 아이템 편집은 **초안으로 간다** (2026-09-05, 설계/9 §3.2). 예전에는 이 셋이
+        # 즉시 카탈로그를 바꿨다 — 다른 다섯 자산은 사람이 발행을 눌러야 반영되는데
+        # 아이템만 문이 열려 있었고, 그 문으로 에이전트가 들어오면 검토가 없어진다.
+        "/api/admin/catalog/draft/discard",
+        "/api/admin/catalog/drafts",
         "/api/admin/catalog/edit",
         "/api/admin/catalog/item",
         "/api/admin/catalog/items",
+        # 쌓인 것을 한 번에 반영한다. **사람만** — 세대가 여기서 한 번 오른다.
+        "/api/admin/catalog/publish",
         "/api/admin/catalog/retire",
         "/api/admin/content",
         "/api/admin/content/discard",

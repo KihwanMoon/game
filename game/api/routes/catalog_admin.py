@@ -14,25 +14,18 @@
 관리자 라우트는 404 로 답한다 — 존재 자체를 흘리지 않는다.
 """
 
-from dataclasses import replace
-
 from fastapi import APIRouter, HTTPException, status
 
-from game.api.catalog_admin import build_entry_from_request, list_locked_changes
 from game.api.catalog_view import format_affix
 from game.api.deps import (
     CurrentAdmin,
     CurrentOwner,
-    apply_catalog_reload,
     get_pool,
 )
 from game.api.routes.admin import check_reason
 from game.api.view_schemas import (
     CatalogAdminResponse,
     CatalogAdminRow,
-    CatalogEditRequest,
-    CatalogItemRequest,
-    CatalogRetireRequest,
     MonsterDropRequest,
     MonsterDropResponse,
     MonsterDropRow,
@@ -43,22 +36,15 @@ from game.app.store.drops import (
     find_source,
     list_monster_drops,
     save_monster_drop,
-    save_source,
 )
 from game.app.store.item_catalog import (
     DEFAULT_GRADES,
-    apply_generation_bump,
-    apply_retire,
     list_catalog,
     read_generation,
-    save_catalog_entry,
 )
 from game.schemas.item import (
     COMBAT_STATS,
     ItemCatalogEntry,
-    list_grades_above,
-    list_unknown_stats,
-    parse_affix,
 )
 
 router = APIRouter()
@@ -134,113 +120,6 @@ def read_catalog_items(account: CurrentAdmin) -> CatalogAdminResponse:
     )
 
 
-def apply_drop_entry(catalog_id: str, grade: str) -> None:
-    """새 아이템을 드롭 표에 올린다. 가중치는 1 로 시작한다.
-
-    올리지 않으면 등록해도 **굴려서 나오지 않는다.** 등록과 드롭 표를 따로 두면 "왜 안
-    나오지" 가 되고, 그 답은 화면 어디에도 없다.
-
-    **등급마다 한 줄씩 올린다.** 카탈로그의 `grade` 는 「이 등급부터」라는 뜻이므로, 한
-    칸에만 올리면 상위 등급을 뽑았을 때 후보가 없어 굴림이 증발한다 (§15.4).
-
-    Args:
-        catalog_id: 새 아이템.
-        grade: 그 아이템의 최저 등급.
-    """
-    pool = get_pool()
-    source_id = save_source(pool, SOURCE_ANY)
-    with pool.connection() as connection:
-        for code in list_grades_above(grade):
-            connection.execute(
-                "INSERT INTO drop_item_weight (source_id, grade, catalog_id, weight)"
-                " VALUES (%s, %s, %s, 1) ON CONFLICT DO NOTHING",
-                (source_id, code, catalog_id),
-            )
-
-
-@router.post("/api/admin/catalog/item", response_model=CatalogAdminResponse)
-def create_catalog_item(request: CatalogItemRequest, account: CurrentOwner) -> CatalogAdminResponse:
-    """아이템 종류를 등록하거나 이름·최소 층을 고친다.
-
-    Args:
-        request: 아이템 절과 사유.
-        account: 관리자.
-
-    Returns:
-        갱신된 카탈로그.
-
-    Raises:
-        HTTPException: 절이 규격을 어겼거나, 제자리에서 고칠 수 없는 것을 고치려는 경우.
-    """
-    reason = check_reason(request.reason)
-    payload = request.model_dump(exclude={"reason"})
-    try:
-        entry = build_entry_from_request(payload)
-    except ValueError as error:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(error)) from error
-
-    pool = get_pool()
-    catalog = list_catalog(pool)
-    before = catalog.get(entry.catalog_id)
-    if before is not None:
-        # **고치기는 `/edit` 이 한다.** 여기로 오는 것은 등록뿐이고, 있는 id 로 등록하려는
-        # 것은 십중팔구 "고치려던 것" 이다 — 그 사실을 사유에 적어 돌려준다.
-        locked = list_locked_changes(before, entry)
-        detail = (
-            "이미 있는 id 다 — 이름·최소 층은 고치기로,"
-            " 나머지는 새 id 로 등록하고 옛 id 를 폐기한다"
-        )
-        if locked:
-            detail = f"{detail} ({', '.join(locked)} 이(가) 다르다)"
-        raise HTTPException(status.HTTP_409_CONFLICT, detail)
-    save_catalog_entry(pool, entry)
-    if before is None:
-        apply_drop_entry(entry.catalog_id, entry.grade)
-    generation = apply_generation_bump(pool)
-    apply_catalog_reload()
-    record_admin_action(
-        pool,
-        account.account_id,
-        "catalog_item",
-        entry.catalog_id,
-        f"세대 {generation} · {reason}",
-    )
-    return read_catalog_items(account)
-
-
-@router.post("/api/admin/catalog/retire", response_model=CatalogAdminResponse)
-def create_catalog_retire(
-    request: CatalogRetireRequest, account: CurrentOwner
-) -> CatalogAdminResponse:
-    """아이템 종류를 폐기하거나 되살린다. 지우지 않는다.
-
-    Args:
-        request: 대상과 사유.
-        account: 관리자.
-
-    Returns:
-        갱신된 카탈로그.
-
-    Raises:
-        HTTPException: 없는 id 인 경우.
-    """
-    reason = check_reason(request.reason)
-    pool = get_pool()
-    if request.catalog_id not in list_catalog(pool):
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "없는 아이템이다")
-    apply_retire(pool, request.catalog_id, request.is_retired)
-    generation = apply_generation_bump(pool)
-    apply_catalog_reload()
-    record_admin_action(
-        pool,
-        account.account_id,
-        "catalog_retire" if request.is_retired else "catalog_restore",
-        request.catalog_id,
-        f"세대 {generation} · {reason}",
-    )
-    return read_catalog_items(account)
-
-
 @router.get("/api/admin/drops/{kind_id}", response_model=MonsterDropResponse)
 def read_monster_drops(kind_id: str, account: CurrentAdmin) -> MonsterDropResponse:
     """그 몬스터에게만 걸린 드롭 표를 본다 (D3).
@@ -307,66 +186,3 @@ def create_monster_drop(request: MonsterDropRequest, account: CurrentOwner) -> M
         f"가중치 {request.weight} · {reason}",
     )
     return read_monster_drops(request.kind_id, account)
-
-
-@router.post("/api/admin/catalog/edit", response_model=CatalogAdminResponse)
-def create_catalog_edit(request: CatalogEditRequest, account: CurrentOwner) -> CatalogAdminResponse:
-    """이미 있는 아이템의 이름과 최소 층을 고친다 (§15.7).
-
-    **고칠 수 있는 것만 받는다.** 접사·등급·분류를 받을 자리가 없으므로 소급 수정이
-    표현 불가능하고, 그러면 "화면이 빠뜨린 필드가 바뀐 것으로 읽히는" 사고도 같이
-    사라진다 — 전체 절을 받던 때는 그 사고로 이름 바꾸기가 전부 거절됐다.
-
-    나머지 필드는 **저장된 것을 그대로 쓴다.** 부르는 쪽이 되풀이해 보내지 않는다.
-
-    Args:
-        request: 대상과 새 이름·최소 층, 사유.
-        account: 관리자.
-
-    Returns:
-        갱신된 카탈로그.
-
-    Raises:
-        HTTPException: 없는 아이템이거나, 정본에 없는 스탯에 접사를 붙인 경우.
-    """
-    reason = check_reason(request.reason)
-    pool = get_pool()
-    before = list_catalog(pool).get(request.catalog_id)
-    if before is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "없는 아이템이다")
-    # **접사를 안 보내면 지금 것을 그대로 둔다.** 빈 목록을 "접사를 지운다" 로 읽으면
-    # 이름만 고치려던 요청이 아이템을 맹탕으로 만든다.
-    affixes = (
-        before.affixes
-        if not request.affixes
-        else tuple(parse_affix(item) for item in request.affixes)
-    )
-    # 등록과 같은 문지기를 둔다. 여기만 비면 **실제로 쓰는 경로**가 검사를 안 받는다 —
-    # 수치를 고치는 일은 등록보다 훨씬 자주 일어난다.
-    unknown = list_unknown_stats(affixes)
-    if unknown:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"모르는 스탯이다: {', '.join(unknown)}")
-    save_catalog_entry(
-        pool,
-        replace(
-            before,
-            label_ko=request.label_ko,
-            min_floor=request.min_floor,
-            grade=request.grade or before.grade,
-            affixes=affixes,
-            attack_range=(
-                before.attack_range if request.attack_range is None else request.attack_range
-            ),
-            use_tag=before.use_tag if request.use_tag is None else (request.use_tag or None),
-        ),
-    )
-    generation = apply_generation_bump(pool)
-    apply_catalog_reload()
-    record_admin_action(
-        pool,
-        account.account_id,
-        "catalog_edit",
-        request.catalog_id,
-        f"세대 {generation} · {reason}",
-    )
-    return read_catalog_items(account)

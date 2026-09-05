@@ -36,9 +36,14 @@ import {
   type BotOverview,
 } from '../storage/botAdmin'
 import { applyTesterMark, readTesters, type TesterList } from '../storage/testerAdmin'
+import {
+  applyCatalogDraft,
+  readCatalogDrafts,
+  type CatalogDraftView,
+} from '../storage/catalogDraft'
+import { CatalogDraftBar } from '../editor/CatalogDraftBar'
 import { CatalogAdminPanel, ContentAdminPanel } from '../editor'
 import {
-  applyCatalogAdmin,
   applyContentAdmin,
   ensureToken,
   getLocalStorage,
@@ -137,6 +142,9 @@ export function AdminScreen(): React.JSX.Element {
   // 표시할 수 있는 계정들. **탭을 열 때만 읽는다** — 익명 계정이 계속 늘어나므로
   // 첫 화면에서 함께 읽으면 안 볼 목록을 늘 끌고 온다.
   const [testers, setTesters] = useState<TesterList | undefined>(undefined)
+  // 쌓인 아이템 초안. **카탈로그와 갈라 둔다** — 올린 것은 아직 아이템이 아니라서,
+  // 한 상태에 섞으면 화면이 "반영됐다" 로 보인다 (설계/9_에이전트_운영 §3.2).
+  const [drafts, setDrafts] = useState<CatalogDraftView | undefined>(undefined)
   // 고른 봇의 규칙표·성장·스킬·지나간 판. 가방과 따로인 것은 가방이 이미 사람 화면과
   // 같은 라우트를 쓰고 있어서다.
   const [botDetail, setBotDetail] = useState<BotDetail | undefined>(undefined)
@@ -205,6 +213,27 @@ export function AdminScreen(): React.JSX.Element {
     })
   }
 
+  /**
+   * 카탈로그 조작 하나를 초안으로 올린다.
+   *
+   * **카탈로그를 안 건드린다.** 올린 것은 아직 아이템이 아니므로, 여기서 목록을
+   * 갈아 끼우면 화면이 "반영됐다" 로 보인다 (설계/9_에이전트_운영 §3.2).
+   *
+   * @param path 라우트 경로.
+   * @param body 보낼 절.
+   */
+  function draftCatalog(path: string, body: Record<string, unknown>): void {
+    if (token === undefined) {
+      return
+    }
+    void applyCatalogDraft(token, path, body).then((outcome) => {
+      setDetail(outcome.detail)
+      if (outcome.view !== undefined) {
+        setDrafts(outcome.view)
+      }
+    })
+  }
+
   return (
     <div className="adm">
       {/* **재생은 화면을 덮는다.** 판 하나를 도는 동안 뒤의 표를 볼 이유가 없고, 전투
@@ -234,6 +263,8 @@ export function AdminScreen(): React.JSX.Element {
                   void readContentAsset(token, 'balance').then(setAsset)
                 } else if (item.id === 'enemies' || item.id === 'skills' || item.id === 'rooms') {
                   void readContentAsset(token, item.id).then(setAsset)
+                } else if (item.id === 'catalog') {
+                  void readCatalogDrafts(token).then(setDrafts)
                 } else if (item.id === 'testers') {
                   void readTesters(token).then(setTesters)
                 } else if (item.id === 'bots') {
@@ -387,49 +418,45 @@ export function AdminScreen(): React.JSX.Element {
               }}
             />
         ) : (
-          <CatalogAdminPanel
-            catalog={catalog}
-            detail=""
-            onRetire={(catalogId, isRetired, reason) => {
-              void applyCatalogAdmin(token, '/admin/catalog/retire', {
-                catalog_id: catalogId,
-                is_retired: isRetired,
-                reason,
-              }).then((outcome) => {
-                setDetail(outcome.detail)
-                if (outcome.view !== undefined) {
-                  setCatalog(outcome.view)
-                }
-              })
-            }}
-            onEdit={(catalogId, patch, reason) => {
-              // **고칠 수 있는 것만 보낸다.** 절에 분류·슬롯을 담을 자리가 없으므로
-              // 소급 수정이 표현 불가능하다 (설계/4_아이템 §15.11).
-              void applyCatalogAdmin(token, '/admin/catalog/edit', {
-                catalog_id: catalogId,
-                ...patch,
-                reason,
-              }).then((outcome) => {
-                setDetail(outcome.detail)
-                if (outcome.view !== undefined) {
-                  setCatalog(outcome.view)
-                }
-              })
-            }}
-            onCreate={(payload, reason) => {
-              // 접사는 폼이 이미 절로 만들어 준다 — JSON 을 손으로 치던 때는 따옴표
-              // 하나가 틀리면 파서 이야기를 사유로 받았다.
-              void applyCatalogAdmin(token, '/admin/catalog/item', {
-                ...payload,
-                reason,
-              }).then((outcome) => {
-                setDetail(outcome.detail)
-                if (outcome.view !== undefined) {
-                  setCatalog(outcome.view)
-                }
-              })
-            }}
-          />
+          <>
+            {/* **발행이 편집과 갈라져 있다.** 아이템 편집은 이제 초안으로 가고, 내는
+                것은 사람이 누른다 (설계/9_에이전트_운영 §3.2). */}
+            <CatalogDraftBar
+              token={token}
+              view={drafts}
+              onDone={(said) => {
+                setDetail(said)
+                // 발행이 끝났으면 카탈로그가 움직였다. 둘을 함께 다시 읽는다.
+                void readCatalogDrafts(token).then(setDrafts)
+                void readAdminItems(token).then(setCatalog)
+              }}
+            />
+            <CatalogAdminPanel
+              catalog={catalog}
+              detail=""
+              onRetire={(catalogId, isRetired, reason) => {
+                draftCatalog('/admin/catalog/retire', {
+                  catalog_id: catalogId,
+                  is_retired: isRetired,
+                  reason,
+                })
+              }}
+              onEdit={(catalogId, patch, reason) => {
+                // **고칠 수 있는 것만 보낸다.** 절에 분류·슬롯을 담을 자리가 없으므로
+                // 소급 수정이 표현 불가능하다 (설계/4_아이템 §15.11).
+                draftCatalog('/admin/catalog/edit', {
+                  catalog_id: catalogId,
+                  ...patch,
+                  reason,
+                })
+              }}
+              onCreate={(payload, reason) => {
+                // 접사는 폼이 이미 절로 만들어 준다 — JSON 을 손으로 치던 때는 따옴표
+                // 하나가 틀리면 파서 이야기를 사유로 받았다.
+                draftCatalog('/admin/catalog/item', { ...payload, reason })
+              }}
+            />
+          </>
         )}
       </div>
     </div>

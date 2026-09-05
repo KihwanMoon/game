@@ -76,6 +76,7 @@ WANTED = {
     "/api/admin/catalog": "resolve_admin",
     "/api/admin/catalog/items": "resolve_admin",
     "/api/admin/drops/{kind_id}": "resolve_admin",
+    "/api/admin/catalog/drafts": "resolve_admin",
     "/api/admin/content": "resolve_admin",
     "/api/admin/content/{asset}": "resolve_admin",
     "/api/admin/bots": "resolve_admin",
@@ -88,6 +89,11 @@ WANTED = {
     # 콘텐츠 초안. **발행은 여기 없다.**
     "/api/admin/content/draft": "resolve_author",
     "/api/admin/content/discard": "resolve_author",
+    # 아이템 편집도 이제 초안이다 (§3.2). 즉시 반영되던 셋이 여기로 내려왔다.
+    "/api/admin/catalog/item": "resolve_author",
+    "/api/admin/catalog/edit": "resolve_author",
+    "/api/admin/catalog/retire": "resolve_author",
+    "/api/admin/catalog/draft/discard": "resolve_author",
     # 계정·세계 개입. 콘텐츠는 여기 없다.
     "/api/admin/monster/level": "resolve_operator",
     "/api/admin/auction/cancel": "resolve_operator",
@@ -95,14 +101,12 @@ WANTED = {
     "/api/admin/bot": "resolve_operator",
     "/api/admin/bot/gift": "resolve_operator",
     "/api/admin/testers/mark": "resolve_operator",
-    # 검토를 안 거치고 세계가 바뀌는 문. **사람만.**
+    # 발행. 시즌을 가르는 행위라 **사람만** 누른다.
     #
-    # 발행은 시즌을 가른다. 카탈로그 넷은 정본이 DB 라 초안도 세대도 안 거치고 즉시
-    # 반영되므로(§3.2), 초안 경로가 생기기 전까지는 발행과 같은 무게다.
+    # 드롭 가중치가 아직 owner 인 것은 그것만 초안을 안 거치기 때문이다 — 카탈로그는
+    # 2026-09-05 에 초안 경로가 생겼고(§3.2), 드롭 표는 아직이다.
     "/api/admin/content/publish": "resolve_owner",
-    "/api/admin/catalog/item": "resolve_owner",
-    "/api/admin/catalog/edit": "resolve_owner",
-    "/api/admin/catalog/retire": "resolve_owner",
+    "/api/admin/catalog/publish": "resolve_owner",
     "/api/admin/drops": "resolve_owner",
 }
 

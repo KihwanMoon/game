@@ -24,6 +24,7 @@ from game.api.routes import (
     auth,
     bestiary,
     catalog_admin,
+    catalog_draft,
     consumables,
     content_admin,
     content_pack,
@@ -95,6 +96,7 @@ def create_app() -> FastAPI:
         admin_bots,
         admin_testers,
         catalog_admin,
+        catalog_draft,
         content_admin,
         content_pack,
     ):

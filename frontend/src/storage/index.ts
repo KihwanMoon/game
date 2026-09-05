@@ -106,7 +106,6 @@ export {
   applyContentPublish,
   applyLogout,
   listenEviction,
-  applyCatalogAdmin,
   readAdminOverview,
   readProgress,
   readServerMeta,

@@ -76,8 +76,47 @@ def build_item(account_id, **patch):
     }
 
 
+def publish(client, token):
+    """쌓인 초안을 반영한다.
+
+    아이템 편집이 초안을 거치게 됐다 (2026-09-05, 설계/9_에이전트_운영 §3.2). **이 파일이
+    재는 것은 접사 스탯 문지기**이지 발행 시점이 아니므로, 올린 뒤 곧바로 발행한다.
+
+    Args:
+        client: 테스트 클라이언트.
+        token: 관리자 토큰.
+
+    Returns:
+        발행 응답.
+    """
+    generation = client.get("/api/admin/catalog/items", headers={"X-Game-Token": token}).json()[
+        "generation"
+    ]
+    return client.post(
+        "/api/admin/catalog/publish",
+        json={"generation": generation, "reason": REASON},
+        headers={"X-Game-Token": token},
+    )
+
+
+def write_catalog(client, token, path, body):
+    """초안을 올리고, 통과했으면 곧바로 발행한다.
+
+    Args:
+        client: 테스트 클라이언트.
+        token: 관리자 토큰.
+        path: 라우트 경로.
+        body: 보낼 절.
+
+    Returns:
+        발행했으면 발행 응답, 거절됐으면 올린 응답.
+    """
+    response = client.post(path, json=body, headers={"X-Game-Token": token})
+    return response if response.status_code != 200 else publish(client, token)
+
+
 def create_item(client, token, payload):
-    return client.post("/api/admin/catalog/item", json=payload, headers={"X-Game-Token": token})
+    return write_catalog(client, token, "/api/admin/catalog/item", payload)
 
 
 def test_an_unknown_stat_is_refused_on_registration(client, admin):
@@ -93,16 +132,17 @@ def test_an_unknown_stat_is_refused_on_edit(client, admin):
     token, account_id = admin
     payload = build_item(account_id)
     assert create_item(client, token, payload).status_code in {200, 409}
-    response = client.post(
+    response = write_catalog(
+        client,
+        token,
         "/api/admin/catalog/edit",
-        json={
+        {
             "catalog_id": payload["id"],
             "label_ko": payload["label_ko"],
             "min_floor": 1,
             "affixes": [TYPO_AFFIX],
             "reason": REASON,
         },
-        headers={"X-Game-Token": token},
     )
     assert response.status_code == 400
     assert "atttack" in response.json()["detail"]
@@ -113,16 +153,17 @@ def test_a_known_stat_still_goes_through(client, admin):
     token, account_id = admin
     payload = build_item(account_id)
     assert create_item(client, token, payload).status_code in {200, 409}
-    response = client.post(
+    response = write_catalog(
+        client,
+        token,
         "/api/admin/catalog/edit",
-        json={
+        {
             "catalog_id": payload["id"],
             "label_ko": payload["label_ko"],
             "min_floor": 1,
             "affixes": [{"stat": "cpu_budget", "percent": -25, "label_ko": "굼뜬 제어"}],
             "reason": REASON,
         },
-        headers={"X-Game-Token": token},
     )
     assert response.status_code == 200
     row = next(item for item in response.json()["items"] if item["catalog_id"] == payload["id"])

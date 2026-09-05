@@ -594,6 +594,35 @@ CREATE TABLE IF NOT EXISTS content_draft (
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ── 카탈로그 초안 (설계/9_에이전트_운영 §3.2) ───────────────────────────
+--
+-- **아이템만 초안을 안 거치고 있었다.** 다른 다섯 자산(skills·blocks·balance·rooms·
+-- enemies)은 사람이 발행을 눌러야 반영되는데, 카탈로그는 정본이 DB 라 등록·수정·폐기가
+-- 즉시 세계를 바꿨다. 아이템 에이전트를 붙이면 검토 없이 바로 반영된다는 뜻이다.
+--
+-- `content_draft` 와 모양이 다른 이유는 **바뀌는 것의 성질이 다르기 때문이다.** 저쪽은
+-- 파일 하나를 통째로 갈아 끼우므로 자산당 한 줄이면 되는데, 이쪽은 아이템마다 다른
+-- 조작(등록·수정·폐기)이 쌓이므로 조작마다 한 줄이 필요하다.
+--
+-- 아이템 하나에 하나만 쌓인다. 같은 아이템을 두 번 고치면 나중 것이 앞의 것을 덮는다 —
+-- 쌓아 두면 발행할 때 어느 순서로 먹일지가 문제가 되고, 그 순서는 아무도 안 정했다.
+CREATE TABLE IF NOT EXISTS catalog_draft (
+    catalog_id  TEXT        PRIMARY KEY,
+    action      TEXT        NOT NULL,
+    payload     JSONB       NOT NULL,
+    reason      TEXT        NOT NULL,
+    updated_by  BIGINT      REFERENCES account(id) ON DELETE SET NULL,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 조작 이름을 DB 가 지킨다. 오타가 발행 때 조용히 건너뛰어지면, 초안을 올렸는데
+-- 아무 일도 안 일어난 것이 된다.
+DO $$ BEGIN
+    ALTER TABLE catalog_draft ADD CONSTRAINT catalog_draft_action_check
+        CHECK (action IN ('item', 'edit', 'retire', 'restore'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 -- ── 발행된 콘텐츠 (설계/4_아이템 §18) ───────────────────────────────────
 --
 -- 초안(`content_draft`)과 갈라 둔다. 초안은 게임에 영향이 없고, 이쪽은 **지금 돌고 있는
