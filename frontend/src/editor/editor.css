@@ -2348,6 +2348,17 @@
   gap: var(--sp-2);
 }
 
+/* 손으로 돌리는 줄. **설명 윗줄이다** — 규칙을 고친 직후가 돌리고 싶은 순간이라,
+   「언제 도는가」를 읽고 나서 찾는 것이 아니라 먼저 눈에 들어와야 한다.
+   결과 한 줄이 옆에 서므로 줄바꿈을 허용한다 — 좁은 화면에서 버튼을 밀어내면 안 된다. */
+.mnt__run {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  min-inline-size: 0;
+}
+
 .mnt__list {
   display: flex;
   flex-direction: column;

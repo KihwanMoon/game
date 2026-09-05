@@ -103,3 +103,13 @@ class SkillPrefView(BaseModel):
     """스킬 세팅 화면·요청 겸용."""
 
     rows: list[SkillRowView] = []
+
+
+class MaintenanceRunView(BaseModel):
+    """손으로 돌린 정비의 결과.
+
+    **한 줄뿐이다.** 무엇이 바뀌었는지는 가방·소모품을 다시 읽어서 안다 — 여기에 바뀐
+    상태를 실으면 화면이 두 곳에서 같은 것을 읽게 되고, 둘이 어긋나는 날이 온다.
+    """
+
+    detail: str = ""

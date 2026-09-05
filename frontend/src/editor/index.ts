@@ -79,7 +79,12 @@ export { renderCell } from './GridCellView'
 export type { CellFace } from './gridCell'
 export { InventoryPanel } from './InventoryPanel'
 export { InventoryGrid } from './InventoryGrid'
-export { MaintenanceEditor, MaintenancePalette, MaintenanceCheck } from './MaintenanceEditor'
+export {
+  IDLE_TEXT,
+  MaintenanceEditor,
+  MaintenancePalette,
+  MaintenanceCheck,
+} from './MaintenanceEditor'
 export type { MaintenanceEditorProps } from './MaintenanceEditor'
 export {
   checkBlocked,

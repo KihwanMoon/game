@@ -63,3 +63,30 @@ export async function saveMaintenance(
   }
   return { view: buildView((await response.json()) as RawBody), detail: '' }
 }
+
+/**
+ * 지금 정비를 한 번 돌린다.
+ *
+ * **저장된 행 그대로 돈다.** 무엇을 할지 여기서 고르지 않는다 — 화면이 보여주는 순서와
+ * 실제로 도는 순서가 갈리는 순간 미리보기가 거짓말이 된다.
+ *
+ * @param token 기기 토큰.
+ * @returns 무슨 일이 있었는지 한 줄과, 못 닿았는지 여부. 한 일이 없으면 detail 이 빈
+ *   문자열이다 — 그것도 답이라 화면이 「할 일이 없었다」로 적는다.
+ */
+export async function applyMaintenanceNow(
+  token: string,
+): Promise<{ detail: string; isDone: boolean }> {
+  const response = await sendRequest('/maintenance/run', {
+    method: 'POST',
+    headers: { [TOKEN_HEADER]: token },
+  })
+  if (response === undefined) {
+    return { detail: '서버에 닿지 못했다', isDone: false }
+  }
+  if (!response.ok) {
+    return { detail: await readErrorDetail(response), isDone: false }
+  }
+  const body = (await response.json()) as { detail?: string }
+  return { detail: String(body.detail ?? ''), isDone: true }
+}

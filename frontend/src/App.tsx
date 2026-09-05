@@ -86,6 +86,7 @@ import {
   checkLinked,
   describeGlobalLink,
   InventoryPanel,
+  IDLE_TEXT,
   MaintenanceEditor,
   MaintenancePalette,
   MaintenanceCheck,
@@ -155,6 +156,7 @@ import {
   applyItemAction,
   buildRuleSetPayload,
   readBagState,
+  applyMaintenanceNow,
   readMaintenance,
   readSkillPrefs,
   saveMaintenance,
@@ -1659,6 +1661,25 @@ export function App(): React.JSX.Element {
   }
 
   /**
+   * 지금 정비를 한 번 돌린다.
+   *
+   * **돌린 뒤에 가방·소모품을 다시 읽는다.** 정비는 그 둘을 바꾸는 일이라, 안 읽으면
+   * 「돌았다」고 적힌 화면이 옛 가방을 그대로 보여 준다.
+   */
+  function runUpkeepNow(): void {
+    if (account === undefined) {
+      return
+    }
+    setUpkeepDetail('')
+    void applyMaintenanceNow(account).then((outcome) => {
+      setUpkeepDetail(outcome.isDone && outcome.detail === '' ? IDLE_TEXT : outcome.detail)
+      if (outcome.isDone) {
+        refreshBag(account)
+      }
+    })
+  }
+
+  /**
    * 규칙표 에디터의 정비 탭을 만든다.
    *
    * **가방 탭에서 규칙표로 옮겼다.** 정비는 「무엇을 가졌는가」가 아니라 「무엇을 자동으로
@@ -1691,6 +1712,8 @@ export function App(): React.JSX.Element {
           consumables={consumables}
           baseStats={PLAYER_BASE}
           onChange={saveUpkeep}
+          onRun={runUpkeepNow}
+          runDetail={upkeepDetail}
         />
       ),
       check: (

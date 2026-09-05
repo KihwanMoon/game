@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from game.api.deps import CurrentAccount, get_context, get_core_version, get_pool
 from game.api.loadout_service import build_ticket_loadout
+from game.api.maintenance_service import apply_maintenance
 from game.api.schemas import TicketRequest, TicketResponse
 from game.api.world_seed import apply_floor_seed, list_floor_range_monsters
 from game.app.progression.floors import BOSS_ROOM_ID, read_boss_floor, resolve_floor
@@ -40,6 +41,14 @@ def create_run_ticket(request: TicketRequest, account: CurrentAccount) -> Ticket
     if request.room_id not in context.rooms:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"없는 방이다: {request.room_id}")
     pool = get_pool()
+    # **나가기 직전에 정비한다** (개정 2026-09-05). 예전에는 티켓이 닫힐 때만 돌았는데,
+    # 티켓은 죽거나 마지막 층을 깨야 닫힌다 — 7층까지 이기고 그만두는 판은 영영 안 닫혀
+    # **한 번도 정비가 안 돌았다.** 봇은 매판 죽어서 늘 닫히므로 봇에서만 도는 것처럼
+    # 보였다. 「판과 판 사이」의 확실한 신호는 다음 판을 시작하는 이 순간뿐이다.
+    #
+    # **로드아웃을 짜기 전이어야 한다.** 뒤에 두면 고친 장비와 채운 물약을 두고 나가게
+    # 되고, 그러면 정비가 한 판 늦게 반영된다.
+    apply_maintenance(account.account_id)
     entity_id = find_player_entity(pool, account.account_id)
     # **층을 서버가 정한다.** 요청한 층은 「어디로 갈까」의 제안일 뿐이고, 도달 층을
     # 넘길 수 없다 — 넘기면 1층 캐릭터로 10층 보상을 뽑는다 (T2 와 같은 자리).

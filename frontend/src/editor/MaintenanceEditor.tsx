@@ -61,13 +61,30 @@ export interface MaintenanceEditorProps {
    */
   readonly baseStats: Readonly<Record<string, number>>
   readonly onChange: (view: MaintenanceView) => void
+  /**
+   * 지금 한 번 돌린다. 없으면 버튼을 안 그린다.
+   *
+   * **자동으로 도는 것과 같은 행을 같은 순서로 돈다** — 여기서 무엇을 할지 고르게 하면
+   * 화면이 보여주는 순서와 실제로 도는 순서가 갈리고, 그 순간 미리보기가 거짓말이 된다.
+   */
+  readonly onRun?: () => void
+  /** 손으로 돌린 결과 한 줄. 빈 문자열이면 아직 안 돌렸다는 뜻이다. */
+  readonly runDetail?: string
 }
 
-/** 언제 도는가. 화면 맨 위에 한 번 적는다 — 이것을 모르면 순서를 짤 이유가 없다. */
-const WHEN_TEXT = '티켓이 닫힐 때(죽거나 완주) 위에서 아래로 한 번 돈다'
+/**
+ * 언제 도는가. 화면 맨 위에 한 번 적는다 — 이것을 모르면 순서를 짤 이유가 없다.
+ *
+ * 예전에는 「티켓이 닫힐 때(죽거나 완주)」였고 그것이 사실이었다. 그래서 **7층까지
+ * 이기고 그만두는 사람에게는 한 번도 안 돌았다** — 그 판은 영영 안 닫히기 때문이다.
+ */
+const WHEN_TEXT = '다음 판에 나갈 때, 그리고 판이 끝났을 때 위에서 아래로 한 번 돈다'
+
+/** 손으로 돌렸는데 할 일이 없었을 때. 빈 응답을 그냥 두면 눌린 건지 아닌지 모른다. */
+export const IDLE_TEXT = '지금은 할 일이 없었다'
 
 /** 미리보기가 어림이라는 사실. **확정처럼 적으면 틀렸을 때 화면이 거짓말한 것이 된다.** */
-const ESTIMATE_TEXT = '지금 가방으로 잰 어림이다 — 실제로는 판이 끝난 뒤의 가방으로 돈다'
+const ESTIMATE_TEXT = '지금 가방으로 잰 어림이다 — 실제로 도는 시점의 가방은 다를 수 있다'
 
 /** 인자 칸 옆에 붙일 한 줄. 고르는 값이 무엇을 뜻하는지 말한다. */
 const ARG_NOTES: Readonly<Record<string, string>> = {
@@ -403,6 +420,24 @@ export function MaintenanceEditor(props: MaintenanceEditorProps): React.JSX.Elem
       scroll
     >
       <div className="mnt">
+        {/* **설명 윗줄이다.** 「언제 도는가」를 읽고 나서 누르는 것이 아니라, 지금 돌리고
+            싶은 사람이 먼저 찾는 자리다 — 규칙을 고친 직후가 그 순간이다. */}
+        {props.onRun === undefined ? null : (
+          <div className="mnt__run">
+            <Button
+              size="sm"
+              variant="secondary"
+              glyph="▶"
+              disabled={disabled || rows.length === 0}
+              onClick={props.onRun}
+            >
+              지금 정비 돌리기
+            </Button>
+            {props.runDetail === undefined || props.runDetail === '' ? null : (
+              <ValueExpr text={props.runDetail} size="sm" />
+            )}
+          </div>
+        )}
         <ValueExpr text={WHEN_TEXT} size="sm" dim />
         {checkBlocked(problems) ? (
           <GlyphState state="danger" size="sm" label="이대로는 서버가 저장을 거절한다" />

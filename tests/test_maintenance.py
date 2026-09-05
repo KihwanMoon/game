@@ -280,3 +280,75 @@ def test_discard_all_is_in_the_closed_vocabulary(client, token):
         ("UPGRADE_GEAR", "ATTACK"),
         ("DISCARD", "ALL"),
     ]
+
+
+def test_the_run_route_applies_the_saved_rows(client, token):
+    """★ 손으로 한 번 돌린다.
+
+    정비가 「티켓이 닫힐 때만」 돌던 시절, 7층까지 이기고 그만두는 사람에게는 한 번도
+    안 돌았다 — 그 판은 영영 안 닫히기 때문이다. 봇은 매판 죽어 늘 닫히므로 봇에서만
+    도는 것처럼 보였다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.consumables import apply_slot_load, list_consumable_slots
+    from game.app.store.equipment import add_currency
+
+    account_id, entity_id = find_ids(client, token)
+    pool = get_pool()
+    apply_slot_load(pool, entity_id, "POTION", 0, "potion_heal", 0)
+    add_currency(pool, account_id, 5000)
+    client.put(
+        "/api/maintenance",
+        json={"rows": [{"action": "REFILL", "grade": ""}]},
+        headers=build_headers(token),
+    )
+
+    response = client.post("/api/maintenance/run", headers=build_headers(token))
+
+    assert response.status_code == 200, response.text
+    assert "보충" in response.json()["detail"]
+    loaded = [one for one in list_consumable_slots(pool, entity_id) if one.catalog_id]
+    assert loaded and loaded[0].charges > 0, "채워지지 않았다"
+
+
+def test_running_with_nothing_to_do_is_quiet(client, token):
+    """★ 할 일이 없었다는 것도 답이다 — 빈 줄을 그냥 두면 눌린 건지 아닌지 모른다."""
+    client.put(
+        "/api/maintenance",
+        json={"rows": [{"action": "REPAIR", "grade": ""}]},
+        headers=build_headers(token),
+    )
+
+    response = client.post("/api/maintenance/run", headers=build_headers(token))
+
+    assert response.status_code == 200
+    assert response.json()["detail"] == ""
+
+
+def test_a_ticket_issue_runs_maintenance(client, token):
+    """★ 나가기 직전에 정비한다 — 「판과 판 사이」의 확실한 신호는 이 순간뿐이다.
+
+    **로드아웃을 짜기 전이어야 한다.** 뒤에 두면 고친 장비와 채운 물약을 두고 나가게
+    되고, 정비가 한 판 늦게 반영된다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.consumables import apply_slot_load, list_consumable_slots
+    from game.app.store.equipment import add_currency
+
+    account_id, entity_id = find_ids(client, token)
+    pool = get_pool()
+    apply_slot_load(pool, entity_id, "POTION", 0, "potion_heal", 0)
+    add_currency(pool, account_id, 5000)
+    client.put(
+        "/api/maintenance",
+        json={"rows": [{"action": "REFILL", "grade": ""}]},
+        headers=build_headers(token),
+    )
+
+    issued = client.post("/api/ticket", json={"room_id": "corridor"}, headers=build_headers(token))
+
+    assert issued.status_code == 200, issued.text
+    loaded = [one for one in list_consumable_slots(pool, entity_id) if one.catalog_id]
+    assert loaded and loaded[0].charges > 0, "티켓을 받았는데 안 채워졌다"
+    # 그 판에 실제로 들고 나가는 값에도 반영돼야 한다 — 아니면 한 판 늦는다.
+    assert issued.json()["loadout"]["consumables"].get("POTION", 0) > 0

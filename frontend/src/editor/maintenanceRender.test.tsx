@@ -504,7 +504,7 @@ describe('정비 검증 화면', () => {
       />,
     )
     expect(html).toContain('어림이다')
-    expect(html).toContain('판이 끝난 뒤')
+    expect(html).toContain('도는 시점의 가방은 다를 수 있다')
   })
 
   it('★ 잔액이 CPU 의 자리다 — 정비가 재는 예산은 돈이다', () => {
@@ -800,5 +800,63 @@ describe('★ 양손은 자리가 아니라 관계로 막는다', () => {
 
   it('무기가 아닌 자리는 애초에 이 규칙과 무관하다', () => {
     expect(checkBlockedByHands('', 'HEAD', 'TWO')).toBe(false)
+  })
+})
+
+describe('★ 손으로 돌리는 버튼', () => {
+  // 정비가 「티켓이 닫힐 때만」 돌던 시절, 7층까지 이기고 그만두는 사람에게는 한 번도
+  // 안 돌았다 — 그 판은 영영 안 닫히기 때문이다. 자동 시점을 고친 뒤에도, 규칙을 고친
+  // 직후에 바로 확인하고 싶은 순간은 남는다.
+  const render = (extra: Record<string, unknown> = {}) =>
+    renderToStaticMarkup(
+      <MaintenanceEditor
+        view={ROWS}
+        link="online"
+        detail=""
+        inventory={INVENTORY}
+        consumables={CONSUMABLES}
+        baseStats={{}}
+        onChange={() => undefined}
+        {...extra}
+      />,
+    )
+
+  it('처리기를 안 주면 버튼이 없다 — 못 돌리는 화면에 버튼이 서면 안 된다', () => {
+    expect(render()).not.toContain('지금 정비 돌리기')
+  })
+
+  it('처리기를 주면 버튼이 선다', () => {
+    expect(render({ onRun: () => undefined })).toContain('지금 정비 돌리기')
+  })
+
+  it('★ 설명 윗줄이다 — 규칙을 고친 직후가 돌리고 싶은 순간이다', () => {
+    const html = render({ onRun: () => undefined })
+    expect(html.indexOf('지금 정비 돌리기')).toBeLessThan(html.indexOf('다음 판에 나갈 때'))
+  })
+
+  it('언제 도는지 다시 적는다 — 옛 문구는 「티켓이 닫힐 때」였고 그것이 구멍이었다', () => {
+    expect(render()).toContain('다음 판에 나갈 때, 그리고 판이 끝났을 때')
+  })
+
+  it('돌린 결과를 옆에 적는다', () => {
+    expect(render({ onRun: () => undefined, runDetail: '정비: 파손 1개 복구' })).toContain(
+      '파손 1개 복구',
+    )
+  })
+
+  it('행이 없으면 못 누른다 — 빈 규칙표를 돌려 봐야 아무 일도 안 난다', () => {
+    const html = renderToStaticMarkup(
+      <MaintenanceEditor
+        view={{ rows: [] }}
+        link="online"
+        detail=""
+        inventory={INVENTORY}
+        consumables={CONSUMABLES}
+        baseStats={{}}
+        onChange={() => undefined}
+        onRun={() => undefined}
+      />,
+    )
+    expect(html).toContain('disabled')
   })
 })
