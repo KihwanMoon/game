@@ -724,6 +724,37 @@ ALTER TABLE entity_record ADD COLUMN IF NOT EXISTS loadout_json JSONB;
 ALTER TABLE entity_record ADD COLUMN IF NOT EXISTS lives SMALLINT NOT NULL DEFAULT 1;
 
 
+-- ── 지킴이가 본 것 (설계/9_에이전트_운영 §4.1) ──────────────────────────
+--
+-- **로그에서 죽고 있었다.** 지킴이는 5분마다 정확히 판단해 컨테이너 로그에 뱉었고,
+-- 컨테이너 로그를 읽는 사람은 없다 (알려진이슈 Z1). 화면에 올리려면 남아 있어야 한다.
+--
+-- **표를 둘로 나눈다.** 지금 상태는 지표당 한 줄이고 매 틱 덮어쓴다. 이력은 **등급이
+-- 바뀔 때만** 한 줄 쌓는다 — 매 틱을 다 쌓으면 하루에 2천 줄이 되고, 그 안에서 「언제부터
+-- 틀렸나」를 찾는 것이 다시 일이 된다. 바뀐 순간만 남기면 그 질문이 곧 답이다.
+CREATE TABLE IF NOT EXISTS watch_state (
+    key         TEXT        PRIMARY KEY,
+    level       TEXT        NOT NULL,
+    text        TEXT        NOT NULL,
+    detail      TEXT        NOT NULL DEFAULT '',
+    -- 이 등급이 된 때. **「어제 낮부터 틀렸다」가 여기서 읽힌다.**
+    changed_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- 마지막으로 본 때. 이것이 오래됐으면 지킴이 자신이 안 도는 것이다.
+    seen_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 등급이 바뀐 순간들. 알림을 붙일 때 「상태가 바뀐 순간」을 여기서 안다.
+CREATE TABLE IF NOT EXISTS watch_event (
+    id          BIGSERIAL   PRIMARY KEY,
+    key         TEXT        NOT NULL,
+    level       TEXT        NOT NULL,
+    text        TEXT        NOT NULL,
+    detail      TEXT        NOT NULL DEFAULT '',
+    happened_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS watch_event_time_idx ON watch_event(happened_at DESC);
+
 -- 티켓이 왜 못 쓰게 됐는가 (설계/9_에이전트_운영 §3.3). 위 CREATE 는 이미 있는 표에는
 -- 안 돈다 — 기존 DB 에도 붙이려면 이 줄이 있어야 한다.
 ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS voided_reason TEXT;

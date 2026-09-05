@@ -86,6 +86,7 @@ WANTED = {
     "/api/admin/doppel/gear": "resolve_admin",
     "/api/admin/replay": "resolve_admin",
     "/api/admin/testers": "resolve_admin",
+    "/api/admin/watch": "resolve_admin",
     # 콘텐츠 초안. **발행은 여기 없다.**
     "/api/admin/content/draft": "resolve_author",
     "/api/admin/content/discard": "resolve_author",

@@ -147,6 +147,9 @@ def test_there_is_no_route_that_grants_admin(client):
         # 경로인 이유는, 분모를 아무나 바꿀 수 있으면 게이트가 판정이 아니게 되기 때문이다.
         "/api/admin/testers",
         "/api/admin/testers/mark",
+        # 지킴이가 남긴 것을 보여 준다 (2026-09-05). **읽기 전용이고 게이트를 안 돌린다** —
+        # 라우트가 pytest·npm 을 띄우면 그 API 가 임의 실행 통로가 된다.
+        "/api/admin/watch",
     ]
 
 

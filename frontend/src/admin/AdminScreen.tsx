@@ -24,6 +24,7 @@ import { DoppelPanel } from './DoppelPanel'
 import { ReplayView } from './ReplayView'
 import { BotPanel } from './BotPanel'
 import { TesterPanel } from './TesterPanel'
+import { WatchPanel } from './WatchPanel'
 import { readInventory, type InventoryView } from '../storage'
 import {
   applyBotGift,
@@ -42,6 +43,7 @@ import {
   type CatalogDraftView,
 } from '../storage/catalogDraft'
 import { CatalogDraftBar } from '../editor/CatalogDraftBar'
+import { readWatch, type WatchView } from '../storage/watchAdmin'
 import { CatalogAdminPanel, ContentAdminPanel } from '../editor'
 import {
   applyContentAdmin,
@@ -73,6 +75,7 @@ type Tab =
   | 'bots'
   | 'doppel'
   | 'testers'
+  | 'watch'
   | 'content'
 
 const TABS: readonly { readonly id: Tab; readonly label: string }[] = [
@@ -88,6 +91,10 @@ const TABS: readonly { readonly id: Tab; readonly label: string }[] = [
   // G1 의 **분모**를 정하는 자리다. 익명으로 시작하는 게임이라 자동으로 세면 한 판
   // 내고 떠난 계정까지 테스터가 되고, 그 숫자는 「재미있었는가」를 안 잰다.
   { id: 'testers', label: '테스터' },
+  // 지킴이가 5분마다 판단해 놓고 컨테이너 로그에서 죽고 있었다 (Z1).
+  // 다른 탭은 수치는 있는데 소견이 없다 — 「매물 3건」은 있어도 「그 3건이
+  // 창을 지나도록 안 팔린다」는 없다.
+  { id: 'watch', label: '지킴이' },
   // 원문은 마지막이다. 드물고 위험한 일에 쓰는 탈출구이지 기본 도구가 아니다.
   { id: 'content', label: '원문' },
 ]
@@ -145,6 +152,9 @@ export function AdminScreen(): React.JSX.Element {
   // 쌓인 아이템 초안. **카탈로그와 갈라 둔다** — 올린 것은 아직 아이템이 아니라서,
   // 한 상태에 섞으면 화면이 "반영됐다" 로 보인다 (설계/9_에이전트_운영 §3.2).
   const [drafts, setDrafts] = useState<CatalogDraftView | undefined>(undefined)
+  // 지킴이가 남긴 것. **탭을 열 때만 읽는다** — 5분마다 바뀌므로 첫 화면에서
+  // 함께 읽으면 안 볼 것을 늘 끌고 오고, 그러면서도 늘 낡아 있다.
+  const [watch, setWatch] = useState<WatchView | undefined>(undefined)
   // 고른 봇의 규칙표·성장·스킬·지나간 판. 가방과 따로인 것은 가방이 이미 사람 화면과
   // 같은 라우트를 쓰고 있어서다.
   const [botDetail, setBotDetail] = useState<BotDetail | undefined>(undefined)
@@ -265,6 +275,8 @@ export function AdminScreen(): React.JSX.Element {
                   void readContentAsset(token, item.id).then(setAsset)
                 } else if (item.id === 'catalog') {
                   void readCatalogDrafts(token).then(setDrafts)
+                } else if (item.id === 'watch') {
+                  void readWatch(token).then(setWatch)
                 } else if (item.id === 'testers') {
                   void readTesters(token).then(setTesters)
                 } else if (item.id === 'bots') {
@@ -390,6 +402,13 @@ export function AdminScreen(): React.JSX.Element {
               setDoppelGear(undefined)
               void readDoppelDetail(token, recordId).then(setDoppelDetail)
               void readDoppelGear(token, recordId).then(setDoppelGear)
+            }}
+          />
+        ) : tab === 'watch' ? (
+          <WatchPanel
+            view={watch}
+            onRefresh={() => {
+              void readWatch(token).then(setWatch)
             }}
           />
         ) : tab === 'testers' ? (

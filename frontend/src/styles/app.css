@@ -503,3 +503,17 @@ body {
   height: 100%;
   min-block-size: var(--sp-0);
 }
+
+/* 지킴이 화면의 묶음 하나. 배포 브리핑 넷이 같은 모양으로 선다 — 되돌리는 법이 다른
+   셋과 달라 보이면 그것만 안 읽히고, 그것이 없으면 컨펌이 아니라 도박이다. */
+.watch__block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-1) 0;
+  border-bottom: var(--border);
+}
+
+.watch__block:last-child {
+  border-bottom: 0;
+}

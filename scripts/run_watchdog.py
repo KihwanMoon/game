@@ -23,6 +23,7 @@ from psycopg_pool import ConnectionPool
 
 from game.app.store.connection import DATABASE_URL_ENV, create_pool
 from game.app.store.watch import read_world
+from game.app.store.watch_log import save_watch_findings
 from game.app.watch.checks import (
     GLYPHS,
     LEVEL_ALARM,
@@ -76,7 +77,12 @@ def build_report(findings: tuple[Finding, ...]) -> str:
 
 
 def apply_watch(pool: ConnectionPool) -> str:
-    """한 번 훑고 보고서를 낸다.
+    """한 번 훑고, 남기고, 보고서를 낸다.
+
+    **남기는 것이 로그에 찍는 것보다 중요하다.** 예전에는 찍기만 했고, 컨테이너 로그를
+    읽는 사람은 없었다 (알려진이슈 Z1) — 5분마다 정확히 판단해서 아무에게도 안 갔다.
+
+    남기는 것은 **지킴이 자신이 본 것**뿐이다. 세계 상태는 안 건드린다 (§8).
 
     Args:
         pool: 연결 풀.
@@ -85,7 +91,10 @@ def apply_watch(pool: ConnectionPool) -> str:
         가장 나쁜 등급.
     """
     findings = list_findings(read_world(pool, WINDOW_HOURS, FIRST_LOOK_HOURS))
-    print(build_report(findings), flush=True)
+    changed = save_watch_findings(pool, findings)
+    report = build_report(findings)
+    # 판단이 바뀐 틱만 그 사실을 적는다. 매 틱 적으면 그 줄이 배경이 되어 안 읽힌다.
+    print(f"{report}\n  ({changed}개 지표의 등급이 바뀌었다)" if changed else report, flush=True)
     return resolve_worst(findings)
 
 
