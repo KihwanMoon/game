@@ -7,6 +7,11 @@ G1 은 사람 게이트다 — 테스터가 있어야 성립한다. 이 스크�
     [ ] 같은 방을 클리어하는 규칙표가 서로 다른 2가지 이상 나왔는가
     [ ] 평균 재도전 횟수 3회 이상인가
 
+**봇은 세지 않는다.** G1 은 사람 게이트다 — 「첫 패배 후 규칙을 고쳐 재도전했는가」는
+사람에게만 뜻이 있는 질문이고, 봇은 정의상 늘 재도전한다. 안 거르면 봇이 표본을 덮는다:
+실측으로 검증된 제출 4,178건 중 **3,196건(76%)이 봇의 것**이었다. 그 상태로 낸 숫자는
+「사람이 재미있어했는가」가 아니라 「러너가 몇 번 돌았는가」다.
+
 세는 방법에 판단이 하나 들어 있다. **"규칙을 고쳐 재도전" 은 규칙표가 실제로 달라진
 다음 제출**이다. 같은 규칙표로 다시 돌린 것은 재도전이 아니라 재실행이며, 그것까지
 세면 P1("실패는 정보다")이 통했는지가 아니라 사람이 버튼을 몇 번 눌렀는지를 재게 된다.
@@ -59,7 +64,7 @@ def build_ruleset_key(payload: dict) -> str:
 
 
 def load_attempts(connection: psycopg.Connection) -> list[Attempt]:
-    """검증된 제출을 시간 순으로 읽는다.
+    """**사람이** 검증받은 제출을 시간 순으로 읽는다.
 
     Args:
         connection: 열린 연결.
@@ -72,6 +77,10 @@ def load_attempts(connection: psycopg.Connection) -> list[Attempt]:
         " FROM run_submission s"
         " JOIN run_ticket t ON t.id = s.ticket_id"
         " JOIN run_result r ON r.submission_id = s.id"
+        " JOIN account a ON a.id = t.account_id"
+        # **봇을 뺀다.** 질의에서 빼는 이유는, 읽고 나서 거르면 거르는 것을 잊는 자리가
+        # 하나 더 생기기 때문이다 — 세는 함수마다 같은 조건을 다시 써야 한다.
+        " WHERE NOT a.is_bot"
         " ORDER BY s.submitted_at"
     ).fetchall()
     return [
@@ -162,18 +171,42 @@ def format_check(label: str, is_ok: bool, detail: str) -> str:
     return f"  {mark}  {label}\n          {detail}"
 
 
-def render_report(attempts: list[Attempt]) -> str:
+def count_bot_attempts(connection: psycopg.Connection) -> int:
+    """봇이 낸 검증된 제출 수.
+
+    **뺀 것을 적기 위해서다.** 보고서가 사람 것만 센다는 사실이 화면에 안 보이면, 봇이
+    다시 섞여도 숫자가 그럴듯해서 아무도 눈치채지 못한다 — 실제로 그 상태로 한동안 돌았다.
+
+    Args:
+        connection: 열린 연결.
+
+    Returns:
+        제외된 제출 수.
+    """
+    row = connection.execute(
+        "SELECT count(*)"
+        " FROM run_submission s"
+        " JOIN run_ticket t ON t.id = s.ticket_id"
+        " JOIN run_result r ON r.submission_id = s.id"
+        " JOIN account a ON a.id = t.account_id"
+        " WHERE a.is_bot"
+    ).fetchone()
+    return int(row[0]) if row else 0
+
+
+def render_report(attempts: list[Attempt], bot_attempts: int = 0) -> str:
     """판정 자료를 글로 만든다.
 
     Args:
-        attempts: 시간 순 시도들.
+        attempts: 시간 순 시도들. **사람 것만이다.**
+        bot_attempts: 제외한 봇 제출 수. 뺀 것을 적어야 다시 섞였을 때 눈에 띈다.
 
     Returns:
         사람이 읽을 보고서.
     """
     if not attempts:
         return (
-            "제출 기록이 없다.\n"
+            "사람이 낸 제출 기록이 없다.\n"
             "  G1 은 테스터가 있어야 성립한다. 사람이 실제로 돌린 판이 서버에 남아야\n"
             "  이 숫자가 나온다 — 로컬 티켓으로 돈 판은 여기 잡히지 않는다."
         )
@@ -188,7 +221,8 @@ def render_report(attempts: list[Attempt]) -> str:
     lines = [
         "G1 판정 자료 (로드맵 §게이트 G1)",
         "",
-        f"  테스터 {testers}명 · 검증된 제출 {len(attempts)}건",
+        f"  테스터 {testers}명 · 검증된 제출 {len(attempts)}건"
+        + (f" (봇 {bot_attempts}건 제외)" if bot_attempts else ""),
         "",
         format_check(
             "첫 패배 후 자발적으로 규칙을 고쳐 재도전",
@@ -229,7 +263,7 @@ def main() -> int:
         print(f"{DATABASE_URL_ENV} 가 없다")
         return 1
     with psycopg.connect(url) as connection:
-        print(render_report(load_attempts(connection)))
+        print(render_report(load_attempts(connection), count_bot_attempts(connection)))
     return 0
 
 

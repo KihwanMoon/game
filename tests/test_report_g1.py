@@ -93,7 +93,7 @@ def test_clears_are_counted_per_room():
 def test_empty_report_says_why_it_is_empty():
     """숫자가 없는 것과 게이트를 통과하지 못한 것은 다르다."""
     text = render_report([])
-    assert "제출 기록이 없다" in text
+    assert "사람이 낸 제출 기록이 없다" in text
     assert "테스터" in text
 
 
@@ -107,3 +107,35 @@ def test_report_marks_each_criterion():
     # 참·거짓을 글리프와 글자 둘로 적는다 — 색을 못 쓰는 터미널에서도 구분되어야 한다.
     assert "[X] 미달" in text or "[O] 통과" in text
     assert text.count("[") >= 3
+
+
+def test_the_report_says_how_many_bots_it_dropped():
+    """★ 뺀 것을 적어야 다시 섞였을 때 눈에 띈다.
+
+    실측으로 봇을 안 거를 때와 거를 때의 **판정이 뒤집혔다** — 「첫 패배 후 규칙을 고쳐
+    재도전」이 7명(통과)에서 1명(미달)이 됐다. 여섯은 봇이었다. 뺐다는 사실이 화면에
+    안 보이면, 봇이 다시 섞여도 숫자가 그럴듯해서 아무도 눈치채지 못한다.
+    """
+    text = render_report([build_attempt(1, "a"), build_attempt(1, "b")], 3201)
+    assert "봇 3201건 제외" in text
+
+
+def test_the_report_stays_quiet_when_there_are_no_bots():
+    """★ 뺀 것이 없으면 안 적는다 — 「봇 0건 제외」는 읽는 사람에게 잡음이다."""
+    text = render_report([build_attempt(1, "a"), build_attempt(1, "b")])
+    assert "제외" not in text
+
+
+def test_the_query_excludes_bots():
+    """★ G1 은 **사람** 게이트다 — 봇이 표본을 덮으면 재는 것이 달라진다.
+
+    질의에서 빼는 이유는, 읽고 나서 거르면 거르는 것을 잊는 자리가 하나 더 생기기
+    때문이다. 세는 함수마다 같은 조건을 다시 써야 한다.
+    """
+    from pathlib import Path
+
+    source = Path("scripts/report_g1.py").read_text(encoding="utf-8")
+    # 문자열로 확인하는 이유는 이 검사가 DB 없이 돌기 때문이다 — 질의를 실제로 돌리는
+    # 검사는 컨테이너 게이트의 몫이고, 여기서 지키는 것은 **조건이 사라지지 않는 것**이다.
+    assert "JOIN account a ON a.id = t.account_id" in source
+    assert "WHERE NOT a.is_bot" in source
