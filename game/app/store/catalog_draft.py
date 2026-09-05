@@ -129,7 +129,7 @@ def remove_catalog_draft(pool: ConnectionPool, catalog_id: str) -> bool:
     return cursor.rowcount == 1
 
 
-def clear_catalog_drafts(pool: ConnectionPool) -> int:
+def purge_catalog_drafts(pool: ConnectionPool) -> int:
     """쌓인 것을 전부 비운다 — 발행이 끝난 뒤에 부른다.
 
     Args:

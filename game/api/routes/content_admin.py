@@ -45,6 +45,7 @@ from game.app.store.content_pack import (
     save_pack_generation,
     save_published,
 )
+from game.app.store.tickets import VOID_PUBLISH, apply_ticket_void, count_open_by_account
 
 router = APIRouter()
 
@@ -93,6 +94,7 @@ def build_response(problem: str = "") -> ContentDraftResponse:
         assets=sorted(DRAFT_ASSETS),
         problem=problem,
         publish_hint=PUBLISH_HINT,
+        open_runs=count_open_by_account(get_pool()),
     )
 
 
@@ -206,12 +208,16 @@ def create_content_publish(
     **서버 컨텍스트도 갈아 끼운다.** 안 하면 브라우저는 새 팩으로 돌고 서버는 옛
     데이터로 재시뮬한다 — G3 가 잡으려는 바로 그 상태다.
 
+    **그리고 그 순간 놀던 판을 무효로 만든다** (§3.3). 갈아 끼운 데이터로 재시뮬하면
+    그 판은 `mismatch` 가 나는데, 그것은 변조 신호와 같은 값이다 — 결백한 사람이
+    변조자처럼 기록된다. 판은 똑같이 잃지만 잃은 이유가 남는다.
+
     Args:
         request: 세대와 사유.
         account: 관리자.
 
     Returns:
-        발행한 자산들과 새 코어 버전.
+        발행한 자산들과 새 코어 버전, 그리고 무효로 만든 판 수.
 
     Raises:
         HTTPException: 낼 초안이 없거나, 세대가 지금보다 낮거나, 읽히지 않는 절이 있는 경우.
@@ -241,15 +247,21 @@ def create_content_publish(
             remove_draft(pool, asset)
     save_pack_generation(pool, request.generation)
     apply_content_reload()
+    # **놀던 판을 무효로 만든다** (설계/9_에이전트_운영 §3.3). 재시뮬이 쓰는 데이터를
+    # 방금 갈아 끼웠는데, 제출의 코어 버전 검사는 클라이언트를 티켓과만 대조한다 —
+    # 그래서 검사는 통과하고 재시뮬만 새 데이터로 돌아 `mismatch` 가 나고, **결백한
+    # 사람이 변조와 같은 값으로 기록된다** (결정 #47). 판은 똑같이 잃지만 이유가 남는다.
+    voided = apply_ticket_void(pool, VOID_PUBLISH)
     record_admin_action(
         pool,
         account.account_id,
         "content_publish",
         ",".join(drafts),
-        f"세대 {request.generation} · {reason}",
+        f"세대 {request.generation} · 무효 {voided}건 · {reason}",
     )
     return ContentPublishResponse(
         generation=request.generation,
         published=drafts,
         core_version=get_core_version(),
+        voided=voided,
     )

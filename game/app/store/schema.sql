@@ -67,6 +67,17 @@ CREATE TABLE IF NOT EXISTS run_ticket (
     core_version  TEXT        NOT NULL,
     issued_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     expires_at    TIMESTAMPTZ NOT NULL,
+    -- 왜 못 쓰게 됐는가 (설계/9_에이전트_운영 §3.3). 빈 값이면 그냥 시간이 지난 것이다.
+    --
+    -- **발행이 열린 티켓을 무효로 만든다.** 발행은 서버가 재시뮬에 쓰는 밸런스·룸·적
+    -- 규칙표를 갈아 끼우는데, 제출의 코어 버전 검사는 클라이언트를 **티켓과만** 대조한다
+    -- — 그래서 검사는 통과하고 재시뮬만 다른 데이터로 돌아 `mismatch` 가 난다. 그
+    -- 사람은 아무 잘못이 없는데 **변조와 같은 값으로 기록된다** (결정 #47).
+    --
+    -- 무효로 만들면 판은 똑같이 잃지만, 잃은 이유가 「발행」이라고 남는다. 지금은
+    -- 발행이 드물어 안 드러나지만, 에이전트를 붙이면 발행이 잦아지는 것이 요점이라
+    -- 이것이 상시가 된다.
+    voided_reason TEXT,
     -- 이 런이 **이미 깎은** 소모품 충전. 쓰임새에서 개수로.
     --
     -- 층마다 서버가 처음부터 다시 돌려 「몇 개 썼는가」를 낸다. 그 값은 누적이라,
@@ -712,6 +723,10 @@ ALTER TABLE entity_record ADD COLUMN IF NOT EXISTS loadout_json JSONB;
 -- 여느 몬스터는 1 이다 — 그쪽은 애초에 지워지지 않고 감쇠만 하므로 이 값을 안 본다.
 ALTER TABLE entity_record ADD COLUMN IF NOT EXISTS lives SMALLINT NOT NULL DEFAULT 1;
 
+
+-- 티켓이 왜 못 쓰게 됐는가 (설계/9_에이전트_운영 §3.3). 위 CREATE 는 이미 있는 표에는
+-- 안 돈다 — 기존 DB 에도 붙이려면 이 줄이 있어야 한다.
+ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS voided_reason TEXT;
 
 -- 부른 테스터인가 (G1, 2026-09-05). **분모를 사람이 정하기 위한 칸이다.**
 --

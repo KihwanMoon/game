@@ -1470,6 +1470,11 @@ export interface ContentDraftView {
   readonly problem: string
   /** 발행이 사람 손을 탄다는 사실. 화면이 이것을 말해야 한다. */
   readonly publishHint: string
+  /**
+   * 지금 돌고 있는 판. **발행이 이것을 전부 무효로 만든다** (설계/9_에이전트_운영 §3.3) —
+   * 누르기 전에 보여야 하고, 누른 뒤에 알면 이미 끊긴 뒤다.
+   */
+  readonly openRuns: number
 }
 
 /** 자산 하나의 지금 내용과 초안. */
@@ -1499,6 +1504,7 @@ function readContentDrafts(raw: Record<string, unknown>): ContentDraftView {
     assets: (raw.assets ?? []) as string[],
     problem: String(raw.problem ?? ''),
     publishHint: String(raw.publish_hint ?? ''),
+    openRuns: Number(raw.open_runs ?? 0),
   }
 }
 
@@ -1786,8 +1792,12 @@ export async function applyContentPublish(
   if (!response.ok) {
     return { view: undefined, detail: String(raw.detail ?? '거절됐다') }
   }
+  // **끊은 판 수를 말한다** (설계/9_에이전트_운영 §3.3). 발행은 그 순간 놀던 판을
+  // 무효로 만든다 — 몇 개를 끊었는지가 안 보이면 발행이 공짜로 보인다.
+  const voided = Number(raw.voided ?? 0)
+  const said = voided > 0 ? `발행했다 — 돌고 있던 판 ${String(voided)}건이 무효가 됐다` : ''
   // 발행 뒤에는 초안이 비어 있다. 목록을 다시 읽어 화면이 그것을 알게 한다.
-  return { view: await readContentAdmin(token), detail: '' }
+  return { view: await readContentAdmin(token), detail: said }
 }
 
 

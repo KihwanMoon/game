@@ -53,6 +53,7 @@ from game.app.store.tickets import (
     apply_floor_claim,
     find_open_ticket,
     mark_ticket_consumed,
+    read_void_reason,
 )
 from game.schemas.loadout import parse_loadout
 from game.schemas.meta_save import MetaSave, build_meta_payload, parse_meta_save
@@ -286,7 +287,15 @@ def create_run_submission(
     pool = get_pool()
     ticket = find_open_ticket(pool, request.ticket_id, account.account_id)
     if ticket is None:
-        raise HTTPException(status.HTTP_409_CONFLICT, "쓸 수 없는 티켓이다")
+        # **왜 못 쓰는지 말한다.** 만료·이미 씀·발행 무효가 한 마디로 뭉치면, 쓰는
+        # 사람에게 그것은 전부 「판이 사라졌다」로 보인다 (설계/9_에이전트_운영 §3.3).
+        voided = read_void_reason(pool, request.ticket_id, account.account_id)
+        detail = (
+            f"{voided} 때문에 이 판이 무효가 됐다 — 새 판을 받아 다시 시작한다"
+            if voided
+            else "쓸 수 없는 티켓이다"
+        )
+        raise HTTPException(status.HTTP_409_CONFLICT, detail)
     claimed = resolve_claim(ticket, request.floor)
     # **먼저 자리를 잡는다.** 층 단위 보상 때문에 한 티켓으로 여러 번 제출하는데, 같은
     # 층을 두 번 제출해 보상을 두 번 받는 경쟁 상태를 여기서 끊는다 — T6 의 「한 티켓

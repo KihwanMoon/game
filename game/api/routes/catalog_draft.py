@@ -46,8 +46,8 @@ from game.app.store.catalog_draft import (
     ACTION_ITEM,
     ACTION_RESTORE,
     ACTION_RETIRE,
-    clear_catalog_drafts,
     list_catalog_drafts,
+    purge_catalog_drafts,
     remove_catalog_draft,
     save_catalog_draft,
 )
@@ -318,7 +318,7 @@ def create_catalog_publish(
             ) from error
 
     next_generation = apply_generation_bump(pool)
-    clear_catalog_drafts(pool)
+    purge_catalog_drafts(pool)
     apply_catalog_reload()
     record_admin_action(
         pool,

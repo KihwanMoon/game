@@ -20,6 +20,7 @@ const VIEW: ContentDraftView = {
   drafts: [{ asset: 'skills', note: '계수 조정', updatedAt: '2026-08-31 12:00', currentVersion: 2 }],
   assets: ['balance', 'blocks', 'enemies', 'rooms', 'skills'],
   problem: '',
+  openRuns: 0,
   publishHint: '초안은 게임에 반영되지 않는다. 커밋·배포해야 두 코어가 그것을 읽는다.',
 }
 

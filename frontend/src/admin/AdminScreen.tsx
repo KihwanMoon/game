@@ -289,6 +289,7 @@ export function AdminScreen(): React.JSX.Element {
       <PublishBar
         token={token}
         drafts={content?.drafts.length ?? 0}
+        openRuns={content?.openRuns ?? 0}
         onDone={(next, said) => {
           setDetail(said)
           setContent(next)

@@ -22,6 +22,11 @@ from game.schemas.run_ticket import MAX_SEED, RunMode
 # 런 목표 시간이 15~25분이므로(GDD §1) 그 두 배로 잡았다 (결정/1_결정대기목록 #46).
 TICKET_TTL = timedelta(minutes=50)
 
+# 왜 못 쓰게 됐는가. **빈 값은 「그냥 시간이 지났다」다** — 그것과 「발행 때문에 무효」는
+# 쓰는 사람에게 전혀 다른 말이고, 하나로 묶으면 결백한 사람이 자기 판이 왜 사라졌는지
+# 물을 데가 없다 (설계/9_에이전트_운영 §3.3).
+VOID_PUBLISH = "발행"
+
 # 한 티켓이 도는 방 수 (로드맵 W3). 발급 시점의 값을 티켓에 **적어 둔다** — 여기를
 # 고쳐도 이미 발급한 티켓은 그대로여야 서버가 그 판을 다시 계산할 수 있다.
 CHAIN_LENGTH = 5  # 층당 방 수. 3→5 (난이도 개편) — 층이 길어진 만큼 층 보상도 커진다
@@ -312,3 +317,70 @@ def apply_spent_charges(pool: ConnectionPool, ticket_id: str, spent: dict[str, i
             "UPDATE run_ticket SET spent_charges = %s WHERE id = %s",
             (Jsonb(payload), ticket_id),
         )
+
+
+def apply_ticket_void(pool: ConnectionPool, reason: str) -> int:
+    """열려 있는 티켓을 전부 무효로 만든다 — 발행이 부른다.
+
+    **발행은 서버가 재시뮬에 쓰는 데이터를 갈아 끼운다.** 제출의 코어 버전 검사는
+    클라이언트를 **티켓과만** 대조하므로 검사는 통과하고, 재시뮬만 새 데이터로 돌아
+    `mismatch` 가 난다 — 그 사람은 아무 잘못이 없는데 변조와 같은 값으로 기록된다
+    (결정 #47).
+
+    무효로 만들어도 **판은 똑같이 잃는다.** 달라지는 것은 잃은 이유가 남는다는 것뿐이고,
+    그것이 이 함수의 전부다.
+
+    **이미 쓴 티켓은 안 건드린다.** 지나간 제출은 그때의 데이터로 이미 확정됐다.
+
+    Args:
+        pool: 연결 풀.
+        reason: 왜 무효인가. `VOID_PUBLISH` 같은 짧은 말.
+
+    Returns:
+        무효로 만든 티켓 수. 0 이면 그 순간 놀던 사람이 없었다는 뜻이다.
+    """
+    with pool.connection() as connection:
+        cursor = connection.execute(
+            "UPDATE run_ticket SET voided_reason = %s, expires_at = now()"
+            " WHERE consumed_at IS NULL AND expires_at > now()",
+            (reason,),
+        )
+    return cursor.rowcount
+
+
+def read_void_reason(pool: ConnectionPool, ticket_id: str, account_id: int) -> str:
+    """그 티켓이 왜 못 쓰게 됐는지 읽는다.
+
+    **못 찾은 이유를 말하기 위해서다.** 「쓸 수 없는 티켓이다」 하나로는 만료·이미 씀·
+    발행 무효가 구별되지 않고, 쓰는 사람에게 그것은 전부 「판이 사라졌다」로 보인다.
+
+    Args:
+        pool: 연결 풀.
+        ticket_id: 찾을 티켓.
+        account_id: 그 티켓의 주인. 남의 티켓 상태를 알려 주지 않는다.
+
+    Returns:
+        무효 사유. 그냥 만료됐거나 없는 티켓이면 빈 문자열.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT COALESCE(voided_reason, '') FROM run_ticket WHERE id = %s AND account_id = %s",
+            (ticket_id, account_id),
+        ).fetchone()
+    return str(row[0]) if row else ""
+
+
+def count_open_by_account(pool: ConnectionPool) -> int:
+    """지금 열려 있는 티켓 수 — 발행 전에 「몇 명이 놀고 있는가」를 보이는 데 쓴다.
+
+    Args:
+        pool: 연결 풀.
+
+    Returns:
+        열린 티켓 수.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT count(*) FROM run_ticket WHERE consumed_at IS NULL AND expires_at > now()"
+        ).fetchone()
+    return int(row[0]) if row else 0

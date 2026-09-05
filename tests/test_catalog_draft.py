@@ -40,11 +40,11 @@ def empty_queue(client):
     (검토는 사람이 한 번에 한다), 그래서 검사끼리도 서로의 초안을 본다.
     """
     from game.api.deps import get_pool
-    from game.app.store.catalog_draft import clear_catalog_drafts
+    from game.app.store.catalog_draft import purge_catalog_drafts
 
-    clear_catalog_drafts(get_pool())
+    purge_catalog_drafts(get_pool())
     yield
-    clear_catalog_drafts(get_pool())
+    purge_catalog_drafts(get_pool())
 
 
 def build_headers(token):

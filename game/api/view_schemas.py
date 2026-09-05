@@ -233,6 +233,9 @@ class ContentDraftResponse(BaseModel):
     problem: str = ""
     # 발행이 사람 손을 탄다는 사실을 화면이 말해야 한다.
     publish_hint: str = ""
+    # 지금 돌고 있는 판. **누르기 전에 보여야 한다** (설계/9_에이전트_운영 §3.3) —
+    # 발행이 이것을 전부 무효로 만들고, 누른 뒤에 알면 이미 끊긴 뒤다.
+    open_runs: int = 0
 
 
 class ContentAssetResponse(BaseModel):
@@ -300,6 +303,9 @@ class ContentPublishResponse(BaseModel):
     published: list[str] = Field(default_factory=list)
     core_version: str = ""
     problem: str = ""
+    # 이 발행이 무효로 만든 판 수 (설계/9_에이전트_운영 §3.3). **누른 사람이 알아야
+    # 한다** — 남의 판을 몇 개 끊었는지가 화면에 안 보이면, 발행이 공짜로 보인다.
+    voided: int = 0
 
 
 class ContentPackResponse(BaseModel):

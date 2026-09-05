@@ -27,7 +27,7 @@ const CLEAN: CatalogDraftView = {
 
 const BLOCKED: CatalogDraftView = {
   ...CLEAN,
-  drafts: [{ ...CLEAN.drafts[0], problem: '이미 있는 id 다' }],
+  drafts: [{ ...CLEAN.drafts[0]!, problem: '이미 있는 id 다' }],
 }
 
 function render(view: CatalogDraftView | undefined) {

@@ -15,6 +15,11 @@ export interface PublishBarProps {
   readonly token: string
   /** 쌓인 초안 수. 없으면 낼 것이 없다. */
   readonly drafts: number
+  /**
+   * 지금 돌고 있는 판. **발행이 이것을 전부 무효로 만든다** (설계/9_에이전트_운영 §3.3).
+   * 누른 뒤에 알면 이미 끊긴 뒤라, 버튼 위에서 말한다.
+   */
+  readonly openRuns?: number
   readonly onDone: (view: ContentDraftView | undefined, detail: string) => void
 }
 
@@ -39,6 +44,15 @@ export function PublishBar(props: PublishBarProps): React.JSX.Element {
         size="sm"
         label={`발행하면 코어 버전이 바뀐다 — 순위표 시즌이 갈린다 · 초안 ${String(props.drafts)}건`}
       />
+      {/* **끊길 판을 누르기 전에 말한다.** 발행은 서버가 재시뮬에 쓰는 데이터를 갈아
+          끼우므로, 그 순간 돌고 있던 판은 무효가 된다 (§3.3). */}
+      {(props.openRuns ?? 0) > 0 ? (
+        <GlyphState
+          state="danger"
+          size="sm"
+          label={`지금 돌고 있는 판 ${String(props.openRuns ?? 0)}건이 무효가 된다 — 최대 50분 뒤면 저절로 빈다`}
+        />
+      ) : null}
       <div className="cat__row">
         <input
           className="cat__input"
