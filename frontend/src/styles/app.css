@@ -242,7 +242,11 @@ body {
 }
 
 /* 줄 자체가 버튼이다 — 좁은 화면에서 줄마다 조작을 펴면 한 줄이 서너 줄로 꺾인다. */
-.botrow {
+/* 테스터 표시 표도 같은 줄을 쓴다 — 접히는 규칙이 같으므로 사본을 두면 한쪽만
+   고쳐질 자리가 생긴다. 이름을 갈라 둔 것은 봇 표가 아닌 곳에서 `botrow` 를 읽는 사람이
+   "봇인가?" 를 되묻지 않게 하려는 것이다. */
+.botrow,
+.adminrow {
   display: grid;
   /* **접히는 표다.** 아홉 칸을 한 줄에 박아 두면 좁은 폭에서 줄이 페이지를 넘긴다 —
      `minmax(0, 1fr)` 로 칸을 줄여도 아홉 칸의 최소 폭 합이 화면보다 넓으면 소용이 없다.
@@ -265,19 +269,22 @@ body {
   cursor: pointer;
 }
 
-.botrow--picked {
+.botrow--picked,
+.adminrow--picked {
   background: var(--surface-row-active);
 }
 
 /* 이름도 자른다. 셀만 자르고 이름을 안 자르면 이름이 긴 봇 하나가 줄을 벌린다. */
-.botrow__name {
+.botrow__name,
+.adminrow__name {
   overflow: hidden;
   color: var(--text-body);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.botrow__cell {
+.botrow__cell,
+.adminrow__cell {
   overflow: hidden;
   color: var(--text-dim);
   white-space: nowrap;
@@ -348,14 +355,17 @@ body {
 
 
 /* 머리글 줄. 눌리지 않으므로 커서를 바꾸지 않고, 글자만 흐리게 둔다. */
-.botrow--head {
+.botrow--head,
+.adminrow--head {
   border-bottom: var(--border);
   color: var(--text-dim);
   cursor: default;
 }
 
 .botrow--head .botrow__name,
-.botrow--head .botrow__cell {
+.botrow--head .botrow__cell,
+.adminrow--head .adminrow__name,
+.adminrow--head .adminrow__cell {
   color: var(--text-dim);
 }
 

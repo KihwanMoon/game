@@ -7,6 +7,15 @@ G1 은 사람 게이트다 — 테스터가 있어야 성립한다. 이 스크�
     [ ] 같은 방을 클리어하는 규칙표가 서로 다른 2가지 이상 나왔는가
     [ ] 평균 재도전 횟수 3회 이상인가
 
+**분모는 표시된 테스터다** (2026-09-05). 이 게임은 익명으로 시작하므로 접속할 때마다
+계정이 하나 생긴다 — 「제출이 있는 사람 계정」을 세면 한 판 내고 떠난 사람까지 전부
+테스터가 된다. 실측으로 36명 중 17명이 한 판짜리였고, 그 절반이 평균 재도전을 1.2회로
+눌러 놓고 있었다. 그래서 세는 대상은 `account.is_tester` 가 켜진 계정뿐이고, 그 표시는
+관리자 화면에서 사람이 켠다 — 누구를 불렀는지는 사람만 알고 있다.
+
+제출 수로 거르지 않은 이유는 그것이 **순환**이기 때문이다. 「많이 논 계정」만 분모에
+넣고 「평균 재도전 3회 이상」을 재면 기준이 저절로 통과된다.
+
 **봇은 세지 않는다.** G1 은 사람 게이트다 — 「첫 패배 후 규칙을 고쳐 재도전했는가」는
 사람에게만 뜻이 있는 질문이고, 봇은 정의상 늘 재도전한다. 안 거르면 봇이 표본을 덮는다:
 실측으로 검증된 제출 4,178건 중 **3,196건(76%)이 봇의 것**이었다. 그 상태로 낸 숫자는
@@ -27,9 +36,10 @@ import psycopg
 
 from game.app.store.connection import DATABASE_URL_ENV
 from game.app.store.runs import VERDICT_VERIFIED
+from game.app.store.testers import MIN_TESTERS
 
-# 로드맵이 정한 통과선.
-MIN_TESTERS = 5
+# 로드맵이 정한 통과선. 테스터 수만 `store/testers.py` 에서 읽는다 — 화면도 그것을 쓰므로
+# 정본이 하나여야 한다.
 MIN_RETRYING_TESTERS = 3
 MIN_DISTINCT_CLEARS = 2
 MIN_AVERAGE_RETRIES = 3.0
@@ -64,13 +74,14 @@ def build_ruleset_key(payload: dict) -> str:
 
 
 def load_attempts(connection: psycopg.Connection) -> list[Attempt]:
-    """**사람이** 검증받은 제출을 시간 순으로 읽는다.
+    """**표시된 테스터가** 검증받은 제출을 시간 순으로 읽는다.
 
     Args:
         connection: 열린 연결.
 
     Returns:
-        오래된 것부터 늘어놓은 시도들.
+        오래된 것부터 늘어놓은 시도들. 아무도 표시하지 않았으면 빈 목록이다 —
+        그것과 "테스터가 안 돌았다" 는 다르므로, 부르는 쪽이 갈라서 말해야 한다.
     """
     rows = connection.execute(
         "SELECT t.account_id, t.room_id, s.ruleset, r.outcome, r.verdict"
@@ -78,9 +89,10 @@ def load_attempts(connection: psycopg.Connection) -> list[Attempt]:
         " JOIN run_ticket t ON t.id = s.ticket_id"
         " JOIN run_result r ON r.submission_id = s.id"
         " JOIN account a ON a.id = t.account_id"
-        # **봇을 뺀다.** 질의에서 빼는 이유는, 읽고 나서 거르면 거르는 것을 잊는 자리가
-        # 하나 더 생기기 때문이다 — 세는 함수마다 같은 조건을 다시 써야 한다.
-        " WHERE NOT a.is_bot"
+        # **표시된 테스터만 본다.** 질의에서 거르는 이유는, 읽고 나서 거르면 거르는 것을
+        # 잊는 자리가 하나 더 생기기 때문이다 — 세는 함수마다 같은 조건을 다시 써야 한다.
+        # `is_tester` 는 봇에 안 붙으므로 봇 조건을 따로 적지 않아도 봇이 안 섞인다.
+        " WHERE a.is_tester AND NOT a.is_bot"
         " ORDER BY s.submitted_at"
     ).fetchall()
     return [
@@ -171,58 +183,127 @@ def format_check(label: str, is_ok: bool, detail: str) -> str:
     return f"  {mark}  {label}\n          {detail}"
 
 
-def count_bot_attempts(connection: psycopg.Connection) -> int:
-    """봇이 낸 검증된 제출 수.
+@dataclass(frozen=True)
+class Excluded:
+    """분모 밖에 있는 것들.
 
-    **뺀 것을 적기 위해서다.** 보고서가 사람 것만 센다는 사실이 화면에 안 보이면, 봇이
-    다시 섞여도 숫자가 그럴듯해서 아무도 눈치채지 못한다 — 실제로 그 상태로 한동안 돌았다.
+    **뺀 것을 적기 위해서다.** 보고서가 무엇을 세는지가 화면에 안 보이면, 분모가 다시
+    틀어져도 숫자가 그럴듯해서 아무도 눈치채지 못한다 — 실제로 봇이 섞인 채로 한동안
+    돌았고, 그 뒤로는 한 판짜리 익명 계정이 섞인 채로 돌았다.
+    """
+
+    testers: int
+    bot_attempts: int
+    guest_attempts: int
+
+
+def count_excluded(connection: psycopg.Connection) -> Excluded:
+    """분모와, 분모 밖으로 뺀 제출 수를 센다.
+
+    표시된 테스터 수를 **제출이 아니라 계정 표에서** 읽는다. 제출에서 세면 부르고도 한
+    판도 안 돌린 사람이 분모에서 사라지고, 그러면 "5명 중 3명" 이 조용히 "3명 중 3명" 이
+    된다 — G1 이 묻는 것은 부른 사람 가운데 몇이 다시 왔는가다.
 
     Args:
         connection: 열린 연결.
 
     Returns:
-        제외된 제출 수.
+        표시된 테스터 수와, 제외한 봇·비테스터 제출 수.
     """
     row = connection.execute(
-        "SELECT count(*)"
+        "SELECT (SELECT count(*) FROM account WHERE is_tester AND NOT is_bot),"
+        " count(*) FILTER (WHERE a.is_bot),"
+        " count(*) FILTER (WHERE NOT a.is_bot AND NOT a.is_tester)"
         " FROM run_submission s"
         " JOIN run_ticket t ON t.id = s.ticket_id"
         " JOIN run_result r ON r.submission_id = s.id"
         " JOIN account a ON a.id = t.account_id"
-        " WHERE a.is_bot"
     ).fetchone()
-    return int(row[0]) if row else 0
+    if row is None:
+        return Excluded(testers=0, bot_attempts=0, guest_attempts=0)
+    return Excluded(
+        testers=int(row[0] or 0),
+        bot_attempts=int(row[1] or 0),
+        guest_attempts=int(row[2] or 0),
+    )
 
 
-def render_report(attempts: list[Attempt], bot_attempts: int = 0) -> str:
-    """판정 자료를 글로 만든다.
+def render_no_testers(excluded: Excluded) -> str:
+    """아무도 표시되지 않았을 때의 보고서.
+
+    **0 과 "안 쟀다" 는 다르다.** 표시가 비었는데 0명·0회를 적으면 미달로 읽히고, 그러면
+    분모를 안 정했다는 사실이 미달이라는 판정 뒤에 숨는다.
 
     Args:
-        attempts: 시간 순 시도들. **사람 것만이다.**
-        bot_attempts: 제외한 봇 제출 수. 뺀 것을 적어야 다시 섞였을 때 눈에 띈다.
+        excluded: 분모 밖 제출 수.
 
     Returns:
         사람이 읽을 보고서.
     """
-    if not attempts:
-        return (
-            "사람이 낸 제출 기록이 없다.\n"
-            "  G1 은 테스터가 있어야 성립한다. 사람이 실제로 돌린 판이 서버에 남아야\n"
-            "  이 숫자가 나온다 — 로컬 티켓으로 돈 판은 여기 잡히지 않는다."
-        )
+    return (
+        "G1 판정 자료 (로드맵 §게이트 G1)\n"
+        "\n"
+        "  테스터로 표시된 계정이 없다 — 판정할 분모가 없다.\n"
+        "\n"
+        f"  서버에는 사람 제출 {excluded.guest_attempts}건이 있다"
+        f" (봇 {excluded.bot_attempts}건 제외).\n"
+        "  이 게임은 익명으로 시작하므로 접속마다 계정이 하나 생긴다 — 그것을 다 세면\n"
+        "  한 판 내고 떠난 계정까지 테스터가 되고, 그 숫자는 「재미있었는가」가 아니라\n"
+        "  「몇 명이 지나갔는가」다.\n"
+        "\n"
+        "  관리자 화면 〈테스터〉 탭에서 부른 사람의 계정을 표시한 뒤 다시 돌린다."
+    )
+
+
+def render_excluded(excluded: Excluded) -> list[str]:
+    """분모 밖으로 뺀 것을 적는다.
+
+    뺀 것이 화면에 안 보이면, 분모가 다시 틀어져도 숫자가 그럴듯해서 아무도 눈치채지
+    못한다 — 봇이 섞인 채로 한동안 돌았던 것이 그렇게 됐다.
+
+    Args:
+        excluded: 분모 밖 제출 수.
+
+    Returns:
+        적을 줄들. 뺀 것이 없으면 빈 목록이다.
+    """
+    parts = []
+    if excluded.bot_attempts:
+        parts.append(f"봇 {excluded.bot_attempts}건")
+    if excluded.guest_attempts:
+        parts.append(f"표시 안 된 계정 {excluded.guest_attempts}건")
+    return [f"  ({' · '.join(parts)} 제외)"] if parts else []
+
+
+def render_report(attempts: list[Attempt], excluded: Excluded) -> str:
+    """판정 자료를 글로 만든다.
+
+    Args:
+        attempts: 시간 순 시도들. **표시된 테스터 것만이다.**
+        excluded: 분모와 분모 밖 제출 수.
+
+    Returns:
+        사람이 읽을 보고서.
+    """
+    if not excluded.testers:
+        return render_no_testers(excluded)
 
     retries = count_edited_retries(attempts)
     retried_after_loss = list_retry_after_loss(attempts)
     clears = count_distinct_clears(attempts)
-    testers = len(retries)
-    average = sum(retries.values()) / testers if testers else 0.0
+    # **분모는 표시된 수다.** 실제로 돌린 사람으로 나누면 부르고도 안 온 사람이 사라져,
+    # "5명 중 3명" 이 조용히 "3명 중 3명" 이 된다.
+    average = sum(retries.values()) / excluded.testers
     best_room = max(clears.values(), default=0)
+    played = len(retries)
 
     lines = [
         "G1 판정 자료 (로드맵 §게이트 G1)",
         "",
-        f"  테스터 {testers}명 · 검증된 제출 {len(attempts)}건"
-        + (f" (봇 {bot_attempts}건 제외)" if bot_attempts else ""),
+        f"  테스터 {excluded.testers}명 중 {played}명이 돌림 · 검증된 제출 {len(attempts)}건",
+        # **뺀 것이 있을 때만 적는다.** 「봇 0건 제외」는 읽는 사람에게 잡음이고, 잡음이
+        # 섞인 줄은 곧 안 읽히게 된다 — 그러면 진짜로 뺐을 때도 안 보인다.
+        *render_excluded(excluded),
         "",
         format_check(
             "첫 패배 후 자발적으로 규칙을 고쳐 재도전",
@@ -240,13 +321,15 @@ def render_report(attempts: list[Attempt], bot_attempts: int = 0) -> str:
         format_check(
             "평균 재도전 횟수",
             average >= MIN_AVERAGE_RETRIES,
-            f"{average:.1f}회 / 기준 {MIN_AVERAGE_RETRIES}회 이상",
+            f"{average:.1f}회 / 기준 {MIN_AVERAGE_RETRIES}회 이상"
+            + (f" — 표시 {excluded.testers}명으로 나눔" if played < excluded.testers else ""),
         ),
     ]
-    if testers < MIN_TESTERS:
+    if excluded.testers < MIN_TESTERS:
         lines += [
             "",
-            f"  주의: 테스터가 {testers}명이다. 로드맵은 {MIN_TESTERS}명을 전제한다 —",
+            f"  주의: 표시된 테스터가 {excluded.testers}명이다."
+            f" 로드맵은 {MIN_TESTERS}명을 전제한다 —",
             "  표본이 모자라면 위 숫자는 참고값이지 판정이 아니다.",
         ]
     return "\n".join(lines)
@@ -263,7 +346,7 @@ def main() -> int:
         print(f"{DATABASE_URL_ENV} 가 없다")
         return 1
     with psycopg.connect(url) as connection:
-        print(render_report(load_attempts(connection), count_bot_attempts(connection)))
+        print(render_report(load_attempts(connection), count_excluded(connection)))
     return 0
 
 

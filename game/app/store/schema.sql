@@ -34,6 +34,12 @@ CREATE TABLE IF NOT EXISTS account_token (
     last_seen_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- 계정으로 토큰을 찾는 길. 기본키는 `token_hash` 라 계정으로 여는 질의가 전수 스캔이
+-- 된다 — 로그인이 다른 기기 토큰을 지울 때(`apply_single_session`)와 마지막 접속을
+-- 읽을 때가 그 경로다. 운영 DB 는 계정이 백 단위라 안 드러났는데, 계정이 5만 개 쌓인
+-- 검사 DB 에서 조회 하나가 분 단위로 걸리면서 보였다.
+CREATE INDEX IF NOT EXISTS account_token_account_idx ON account_token(account_id);
+
 -- 메타 세이브. 계정당 하나이며 통째로 갈아 끼운다 (manage_meta.py 와 같은 규약).
 CREATE TABLE IF NOT EXISTS meta_save (
     account_id    BIGINT      PRIMARY KEY REFERENCES account(id) ON DELETE CASCADE,
@@ -657,3 +663,14 @@ ALTER TABLE entity_record ADD COLUMN IF NOT EXISTS loadout_json JSONB;
 -- 여느 몬스터는 1 이다 — 그쪽은 애초에 지워지지 않고 감쇠만 하므로 이 값을 안 본다.
 ALTER TABLE entity_record ADD COLUMN IF NOT EXISTS lives SMALLINT NOT NULL DEFAULT 1;
 
+
+-- 부른 테스터인가 (G1, 2026-09-05). **분모를 사람이 정하기 위한 칸이다.**
+--
+-- G1 은 「테스터 5명 중 3명」을 묻는데, 익명 계정이 접속마다 새로 생기므로 「제출이 있는
+-- 사람 계정」을 세면 한 판 내고 떠난 계정까지 전부 분모에 들어간다. 실측으로 36명 중
+-- 17명이 한 판짜리였고, 그것이 평균 재도전을 1.2회로 눌러 놓았다 — 통계가 「사람이
+-- 재미있어했는가」가 아니라 「사람이 몇 명 지나갔는가」를 재고 있었다.
+--
+-- 제출 수로 거르지 않은 이유는 그것이 순환이기 때문이다. 「많이 논 계정」만 분모에 넣고
+-- 「평균 재도전 3회」를 재면 기준이 저절로 통과된다.
+ALTER TABLE account ADD COLUMN IF NOT EXISTS is_tester BOOLEAN NOT NULL DEFAULT FALSE;

@@ -23,6 +23,7 @@ import { BotDetailPanel } from './BotDetail'
 import { DoppelPanel } from './DoppelPanel'
 import { ReplayView } from './ReplayView'
 import { BotPanel } from './BotPanel'
+import { TesterPanel } from './TesterPanel'
 import { readInventory, type InventoryView } from '../storage'
 import {
   applyBotGift,
@@ -34,6 +35,7 @@ import {
   readDoppelGear,
   type BotOverview,
 } from '../storage/botAdmin'
+import { applyTesterMark, readTesters, type TesterList } from '../storage/testerAdmin'
 import { CatalogAdminPanel, ContentAdminPanel } from '../editor'
 import {
   applyCatalogAdmin,
@@ -57,7 +59,16 @@ const PLAYER_BASE = (readActivePack().balance as Record<string, unknown>).player
   number
 >
 
-type Tab = 'balance' | 'enemies' | 'skills' | 'rooms' | 'catalog' | 'bots' | 'doppel' | 'content'
+type Tab =
+  | 'balance'
+  | 'enemies'
+  | 'skills'
+  | 'rooms'
+  | 'catalog'
+  | 'bots'
+  | 'doppel'
+  | 'testers'
+  | 'content'
 
 const TABS: readonly { readonly id: Tab; readonly label: string }[] = [
   { id: 'balance', label: '밸런스' },
@@ -69,6 +80,9 @@ const TABS: readonly { readonly id: Tab; readonly label: string }[] = [
   // 「몇 마리가 무엇을 하고 있는지」를 DB 로만 알 수 있고, 그러면 아무도 안 본다.
   { id: 'bots', label: '봇' },
   { id: 'doppel', label: '도플갱어' },
+  // G1 의 **분모**를 정하는 자리다. 익명으로 시작하는 게임이라 자동으로 세면 한 판
+  // 내고 떠난 계정까지 테스터가 되고, 그 숫자는 「재미있었는가」를 안 잰다.
+  { id: 'testers', label: '테스터' },
   // 원문은 마지막이다. 드물고 위험한 일에 쓰는 탈출구이지 기본 도구가 아니다.
   { id: 'content', label: '원문' },
 ]
@@ -120,6 +134,9 @@ export function AdminScreen(): React.JSX.Element {
   const [detail, setDetail] = useState('')
   const [bots, setBots] = useState<BotOverview | undefined>(undefined)
   const [botBag, setBotBag] = useState<InventoryView | undefined>(undefined)
+  // 표시할 수 있는 계정들. **탭을 열 때만 읽는다** — 익명 계정이 계속 늘어나므로
+  // 첫 화면에서 함께 읽으면 안 볼 목록을 늘 끌고 온다.
+  const [testers, setTesters] = useState<TesterList | undefined>(undefined)
   // 고른 봇의 규칙표·성장·스킬·지나간 판. 가방과 따로인 것은 가방이 이미 사람 화면과
   // 같은 라우트를 쓰고 있어서다.
   const [botDetail, setBotDetail] = useState<BotDetail | undefined>(undefined)
@@ -217,6 +234,8 @@ export function AdminScreen(): React.JSX.Element {
                   void readContentAsset(token, 'balance').then(setAsset)
                 } else if (item.id === 'enemies' || item.id === 'skills' || item.id === 'rooms') {
                   void readContentAsset(token, item.id).then(setAsset)
+                } else if (item.id === 'testers') {
+                  void readTesters(token).then(setTesters)
                 } else if (item.id === 'bots') {
                   void readBotAdmin(token).then(setBots)
                   // 내 가방을 함께 읽는다. 넘길 것을 고르려면 무엇이 있는지 보여야 한다.
@@ -339,6 +358,17 @@ export function AdminScreen(): React.JSX.Element {
               setDoppelGear(undefined)
               void readDoppelDetail(token, recordId).then(setDoppelDetail)
               void readDoppelGear(token, recordId).then(setDoppelGear)
+            }}
+          />
+        ) : tab === 'testers' ? (
+          <TesterPanel
+            list={testers}
+            onMark={(accountId, isTester) => {
+              void applyTesterMark(token, accountId, isTester).then((next) => {
+                if (next !== undefined) {
+                  setTesters(next)
+                }
+              })
             }}
           />
         ) : tab === 'content' ? (
