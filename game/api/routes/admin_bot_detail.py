@@ -27,6 +27,7 @@ from game.api.schemas_gear import (
     MaintenanceView,
     SkillPrefView,
 )
+from game.api.schemas_replay import ReplayResponse
 from game.app.progression.floors import read_floor_cap
 from game.app.progression.levels import STAT_KEYS
 from game.app.store.accounts import find_player_entity
@@ -215,32 +216,6 @@ def read_doppel_detail(record_id: int, account: CurrentAdmin) -> DoppelDetailRes
         origin_handle=str(found[5] or ""),
         ruleset=read_doppel_ruleset(pool, record_id),
     )
-
-
-class ReplayResponse(BaseModel):
-    """지나간 판 하나를 **다시 돌릴 수 있는 입력 전부**.
-
-    **결과가 아니라 입력이다.** 이벤트 로그는 저장하지 않으므로 재생은 「그때 찍은 화면을
-    트는 것」이 아니라 **같은 입력으로 다시 돌리는 것**이다 — 코어가 결정론이라 같은
-    입력이면 같은 판이 나온다 (R5·G3). 그래서 서버가 돌려주는 것도 결과가 아니라 입력이고,
-    그 입력은 전부 **티켓의 것**이다: 제출이 실어 온 것은 규칙표 하나뿐이다 (§4).
-    """
-
-    submission_id: int
-    ruleset: dict = Field(default_factory=dict)
-    room_id: str
-    seed: int
-    floor: int
-    rooms_per_floor: int
-    room_ids: list[str] = Field(default_factory=list)
-    loadout: dict = Field(default_factory=dict)
-    # 티켓이 얼려 둔 지속 몬스터. **이것이 없으면 재생이 다른 판을 돈다** — 화면은 기본
-    # 적을 그리는데 그때는 엘리트가 서 있었다 (설계/6_몬스터 §5).
-    snapshots: list[dict] = Field(default_factory=list)
-    # 그때 확정된 결과. 재생이 같은 답을 내는지 눈으로 대조할 수 있어야 한다.
-    outcome: str
-    ticks: int
-    player_hp: int
 
 
 @router.get("/api/admin/replay", response_model=ReplayResponse)

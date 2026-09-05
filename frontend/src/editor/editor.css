@@ -2582,3 +2582,33 @@
   background: var(--surface-raised);
   color: var(--text-body);
 }
+
+/* ── 지나간 판 (결정 #09) ────────────────────────────────────────────────
+   한 줄이 판 하나다. 「▶ 다시 보기」가 오른쪽 끝에 서고, 좁은 화면에서는 줄이 접힌다 —
+   버튼이 밀려 나가면 다시 볼 수가 없다. */
+.runs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.runs__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  min-inline-size: 0;
+  padding: var(--sp-1) var(--sp-2);
+  border: var(--bw) solid var(--line);
+  background: var(--surface-raised);
+}
+
+.runs__cell {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  color: var(--text-data);
+  white-space: nowrap;
+}

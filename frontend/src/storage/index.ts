@@ -12,10 +12,12 @@
 export { formatBase64Url, parseBase64Url, BASE64_BLOCK } from './base64'
 export { formatCanonicalJson, parseJsonText } from './canonicalJson'
 export { applyMaintenanceNow, readMaintenance, saveMaintenance } from './maintenanceSync'
+export { readOwnReplay, readReplay, readRunHistory } from './replaySync'
+export type { ReplayInput, RunHistoryRow } from './replaySync'
 export { readSkillPrefs, saveSkillPrefs } from './skillSync'
 export type { SkillPrefView, SkillRowView } from './skillSync'
-export { readBotDetail, readDoppelDetail, readReplay } from './botAdmin'
-export type { BotDetail, BotRunView, DoppelDetail, ReplayInput } from './botAdmin'
+export { readBotDetail, readDoppelDetail, } from './botAdmin'
+export type { BotDetail, BotRunView, DoppelDetail, } from './botAdmin'
 export type { MaintenanceView, MaintenanceRowView } from './maintenanceSync'
 export {
   readConsumables,

@@ -15,6 +15,7 @@ import { SkillTable } from './SkillTable'
 import { ValueTree } from './ValueTree'
 import { PublishBar } from './PublishBar'
 import { readActivePack } from '../content/pack'
+import { readReplay } from '../storage/replaySync'
 import { ALL_ITEM_TAGS, ALL_SKILL_IDS } from '../core/resources'
 import { BENCHMARK_RULESETS, G0_RULESETS } from '../core/resources'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
@@ -30,7 +31,6 @@ import {
   readBotBag,
   readBotDetail,
   readDoppelDetail,
-  readReplay,
   readDoppelGear,
   type BotOverview,
 } from '../storage/botAdmin'

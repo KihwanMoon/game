@@ -61,6 +61,8 @@ const PLAYER_BASE = BALANCE.player as Record<string, number>
 import type { RawBalanceFile } from './core/resources'
 import { validateRuleSet } from './core/rules/validator'
 import type { RuleSet } from './core/schemas'
+import { ReplayView } from './admin/ReplayView'
+import type { ReplayInput, RunHistoryRow } from './storage'
 import { OUTCOME_ONGOING, OUTCOME_PLAYER_WIN } from './core/sim/phases'
 import { Button, GlyphState, Panel, ValueExpr } from './ds'
 import {
@@ -88,6 +90,7 @@ import {
   InventoryPanel,
   IDLE_TEXT,
   MaintenanceEditor,
+  RunHistoryPanel,
   MaintenancePalette,
   MaintenanceCheck,
   MAX_MAINTENANCE_ROWS,
@@ -158,6 +161,8 @@ import {
   readBagState,
   applyMaintenanceNow,
   readMaintenance,
+  readOwnReplay,
+  readRunHistory,
   readSkillPrefs,
   saveMaintenance,
   saveSkillPrefs,
@@ -592,6 +597,8 @@ export function App(): React.JSX.Element {
   const [consumableDetail, setConsumableDetail] = useState('')
   const [upkeep, setUpkeep] = useState<MaintenanceView | undefined>(undefined)
   const [upkeepDetail, setUpkeepDetail] = useState('')
+  const [runs, setRuns] = useState<readonly RunHistoryRow[]>([])
+  const [replay, setReplay] = useState<ReplayInput | undefined>(undefined)
   const [skillPrefs, setSkillPrefs] = useState<SkillPrefView | undefined>(undefined)
   const [skillDetail, setSkillDetail] = useState('')
   const [itemDetail, setItemDetail] = useState('')
@@ -995,6 +1002,7 @@ export function App(): React.JSX.Element {
     setProgress(await readProgress(token))
     setLeaderboard(await readLeaderboard(token))
     setAuction(await readAuction(token))
+    setRuns(await readRunHistory(token))
     // 관리자가 아니면 undefined 로 남는다 — 서버가 404 로 답한다.
     setAdmin(await readAdminOverview(token))
     setUpkeep(await readMaintenance(token))
@@ -1566,6 +1574,16 @@ export function App(): React.JSX.Element {
   if (run === undefined || isEditing) {
     return (
       <div className="app">
+        {/* **재생은 화면을 덮는다.** 판 하나를 도는 동안 뒤의 에디터를 볼 이유가 없고,
+            전투 화면은 제 높이를 다 써야 도면과 로그가 함께 선다. */}
+        {replay === undefined ? null : (
+          <ReplayView
+            replay={replay}
+            onClose={() => {
+              setReplay(undefined)
+            }}
+          />
+        )}
         <RuleEditor
           ruleset={ruleset}
           catalog={BLOCK_CATALOG}
@@ -1658,6 +1676,21 @@ export function App(): React.JSX.Element {
       }
       setUpkeep(outcome.view)
     })
+  }
+
+  /**
+   * 지나간 판 하나를 다시 돌린다.
+   *
+   * **화면을 덮는다.** 판 하나를 도는 동안 뒤의 목록을 볼 이유가 없고, 전투 화면은 제
+   * 높이를 다 써야 도면과 로그가 함께 선다 — 관리 화면과 같은 규약이다.
+   *
+   * @param submissionId 다시 돌릴 제출.
+   */
+  function openReplay(submissionId: number): void {
+    if (account === undefined) {
+      return
+    }
+    void readOwnReplay(account, submissionId).then(setReplay)
   }
 
   /**
@@ -1782,6 +1815,7 @@ export function App(): React.JSX.Element {
                   applyLogoutHere()
                 }}
               />
+              <RunHistoryPanel runs={runs} link={link} onReplay={openReplay} />
               <GrowthPanel
                 progress={progress}
                 link={link}

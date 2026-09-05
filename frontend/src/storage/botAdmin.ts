@@ -12,15 +12,6 @@ import {
   sendRequest,
 } from './serverSync'
 import type { InventoryView, ProgressView } from './serverSync'
-import { parseLoadout, parseRuleSet, parseSnapshot, sortSnapshots } from '../core/schemas'
-import type {
-  MonsterSnapshot,
-  PlayerLoadout,
-  RawMonsterSnapshot,
-  RawPlayerLoadout,
-  RawRuleSet,
-  RuleSet,
-} from '../core/schemas'
 import { buildConsumableView } from './consumableSync'
 import type { ConsumableView } from './consumableSync'
 import type { MaintenanceView } from './maintenanceSync'
@@ -412,67 +403,3 @@ export async function readDoppelDetail(
  * 트는 것」이 아니라 **같은 입력으로 다시 돌리는 것**이다 — 코어가 결정론이라 같은 입력이면
  * 같은 판이 나온다 (R5·G3).
  */
-export interface ReplayInput {
-  readonly submissionId: number
-  readonly ruleset: RuleSet | undefined
-  readonly roomId: string
-  readonly seed: number
-  readonly floor: number
-  readonly roomsPerFloor: number
-  readonly roomIds: readonly string[]
-  readonly loadout: PlayerLoadout | undefined
-  readonly snapshots: readonly MonsterSnapshot[]
-  /** 그때 확정된 결과. 재생이 같은 답을 내는지 눈으로 대조할 수 있어야 한다. */
-  readonly outcome: string
-  readonly ticks: number
-  readonly playerHp: number
-}
-
-/**
- * 지나간 판을 다시 돌릴 입력을 읽는다.
- *
- * @param token 기기 토큰.
- * @param submissionId 볼 제출.
- * @returns 재현 입력. 없거나 못 닿으면 undefined.
- */
-export async function readReplay(
-  token: string,
-  submissionId: number,
-): Promise<ReplayInput | undefined> {
-  const response = await sendRequest(`/admin/replay?submission_id=${String(submissionId)}`, {
-    headers: { [TOKEN_HEADER]: token },
-  })
-  if (response === undefined || !response.ok) {
-    return undefined
-  }
-  const raw = (await response.json()) as {
-    submission_id: number
-    ruleset: RawRuleSet | null
-    room_id: string
-    seed: number
-    floor: number
-    rooms_per_floor: number
-    room_ids: string[]
-    loadout: RawPlayerLoadout | null
-    snapshots: RawMonsterSnapshot[]
-    outcome: string
-    ticks: number
-    player_hp: number
-  }
-  return {
-    submissionId: raw.submission_id,
-    // 규칙표가 안 읽히면 undefined 다 — 빈 규칙표로 돌리면 **다른 판**이 나오고, 그것을
-    // 재생이라 부르면 화면이 거짓말을 한다.
-    ruleset: raw.ruleset === null ? undefined : parseRuleSet(raw.ruleset),
-    roomId: raw.room_id,
-    seed: raw.seed,
-    floor: raw.floor,
-    roomsPerFloor: raw.rooms_per_floor,
-    roomIds: raw.room_ids,
-    loadout: raw.loadout === null ? undefined : parseLoadout(raw.loadout),
-    snapshots: sortSnapshots(raw.snapshots.map(parseSnapshot)),
-    outcome: raw.outcome,
-    ticks: raw.ticks,
-    playerHp: raw.player_hp,
-  }
-}
