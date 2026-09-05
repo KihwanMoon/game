@@ -591,6 +591,18 @@ const TIER_RING_UNITS: ReadonlyMap<string, number> = new Map([
 const TIER_RING_RATIO = 0.34
 
 /**
+ * 방어 태세 호의 반지름. 등급 고리(0.34)보다 밖이라 둘이 겹쳐도 각각 읽힌다.
+ *
+ * **고리가 아니라 호다.** 등급은 닫힌 원이고 방어는 아래로 열린 호라, 모양만으로 갈린다 —
+ * 색을 못 가르는 사람에게도 「등급이 붙었다」와 「지금 단단하다」가 달라야 한다.
+ */
+const GUARD_ARC_RATIO = 0.46
+
+/** 호가 도는 각도. 아래쪽만 감싼다 — 받쳐 주는 모양이 「막는다」로 읽힌다. */
+const GUARD_ARC_START = Math.PI * 0.18
+const GUARD_ARC_END = Math.PI * 0.82
+
+/**
  * 등급이 정하는 색을 고른다.
  *
  * @param tier 등급 코드.
@@ -628,6 +640,37 @@ export function resolveActorColor(actor: PlanActorView, theme: PlanTheme): strin
   return resolveTierColor(actor.tier, theme)
 }
 
+/**
+ * 방어 태세를 글리프 아래 호로 적는다.
+ *
+ * **모델에 있는데 화면에 없던 것이다.** `GUARD_BRACE` 는 받는 피해를 50% 깎고 2틱 가는데
+ * 도면에도 로그에도 안 나왔다 — 보는 사람에게는 「왜 갑자기 덜 아프지」가 설명 없이
+ * 일어났다. 설명 없는 것은 버그와 구별되지 않는다 (P1).
+ *
+ * @param ctx 캔버스 문맥.
+ * @param cx 글리프 중심 x.
+ * @param cy 글리프 중심 y.
+ * @param size 칸 크기.
+ * @param theme 토큰에서 읽은 값들.
+ */
+function drawGuard(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  size: number,
+  theme: PlanTheme,
+): void {
+  ctx.save()
+  ctx.strokeStyle = theme.guard
+  // 등급 고리보다 굵다. 등급은 오래 가는 성질이고 방어는 지금 이 순간이라, 굵기가
+  // 「지금 일어나는 일」을 앞으로 당긴다.
+  ctx.lineWidth = theme.lineWidth * 2
+  ctx.beginPath()
+  ctx.arc(cx, cy, size * GUARD_ARC_RATIO, GUARD_ARC_START, GUARD_ARC_END)
+  ctx.stroke()
+  ctx.restore()
+}
+
 function drawActor(ctx: CanvasRenderingContext2D, actor: PlanActorView, theme: PlanTheme): void {
   const rect = getCellRect(actor.x, actor.y, theme)
   const cx = rect.left + rect.size * HALF
@@ -646,6 +689,10 @@ function drawActor(ctx: CanvasRenderingContext2D, actor: PlanActorView, theme: P
     ctx.arc(cx, cy - rect.size * GLYPH_OFFSET_RATIO, rect.size * TIER_RING_RATIO, 0, Math.PI * 2)
     ctx.stroke()
     ctx.restore()
+  }
+
+  if (actor.isGuarding) {
+    drawGuard(ctx, cx, cy - rect.size * GLYPH_OFFSET_RATIO, rect.size, theme)
   }
 
   ctx.save()

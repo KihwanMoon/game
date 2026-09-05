@@ -217,6 +217,7 @@ const FAKE_TOKENS: ReadonlyMap<string, string> = new Map([
   ['--plan-actor-elite', '#F2D14A'],
   ['--plan-actor-boss', '#F08A3C'],
   ['--plan-actor-doppel', '#A65A42'],
+  ['--plan-guard', '#4F8F7E'],
   ['--text-dim', '#7C889A'],
   ['--plan-cell', '64px'],
   ['--hatch-gap', '4px'],
@@ -426,6 +427,7 @@ describe('도면 렌더러', () => {
           kind: 'self',
           tier: 'NORMAL',
           isDoppel: false,
+          isGuarding: false,
           label: '자신',
           hpPercent: 100,
           isSelf: true,
@@ -438,6 +440,7 @@ describe('도면 렌더러', () => {
           kind: 'charge',
           tier: 'NORMAL',
           isDoppel: false,
+          isGuarding: false,
           label: '돌진',
           hpPercent: 50,
           isSelf: false,
@@ -854,6 +857,7 @@ describe('지속 몬스터 스냅샷 배선 (E4)', () => {
     kindId: 'goblin_rusher',
     tier: 'ELITE',
     isDoppel: false,
+    isGuarding: false,
     level: 7,
     hpMax: 96,
     attack: 17,
@@ -987,6 +991,7 @@ describe('★ 도플갱어는 정예가 아니라 사람이다', () => {
     kind: 'charge',
     tier: 'NORMAL',
     isDoppel: false,
+    isGuarding: false,
     label: '돌진',
     hpPercent: 100,
     isSelf: false,
@@ -1049,5 +1054,66 @@ describe('★ 도플갱어는 정예가 아니라 사람이다', () => {
     expect(actor?.label).toBe('분신')
     // 플레이어에게는 절대 안 붙는다 — 나는 나다.
     expect(buildPlanScene(session.engine).actors.find((one) => one.isSelf)?.isDoppel).toBe(false)
+  })
+})
+
+describe('★ 방어 태세는 피해를 절반으로 깎는데 화면에 없었다', () => {
+  // `GUARD_BRACE` 는 받는 피해를 50% 깎고 2틱 간다. 그런데 도면에도 로그에도 안 나와서,
+  // 보는 사람에게는 「왜 갑자기 덜 아프지」가 설명 없이 일어났다 — 설명 없는 것은
+  // 버그와 구별되지 않는다 (P1). 도면은 브라우저 전용이라 G3 와 무관하다.
+  it('토큰이 design/ 에 실제로 있다', () => {
+    // 렌더러가 읽는 토큰이 사본에 없으면 정의 안 된 변수를 칠하게 된다.
+    expect(readDesignTokens()).toContain('--plan-guard:')
+  })
+
+  it('방어 중인 개체를 장면이 싣는다', () => {
+    const session = buildBattleSession(CHECK_SETUP, G0_RULESETS)
+    const entity = [...session.engine.state.entities.values()].find(
+      (one) => one.entityId !== PLAYER_ENTITY_ID,
+    )
+    expect(entity, '적이 하나도 없다').toBeDefined()
+    if (entity === undefined) {
+      return
+    }
+    entity.statuses.set('GUARD', 2)
+
+    const actor = buildPlanScene(session.engine).actors.find(
+      (one) => one.entityId === entity.entityId,
+    )
+    expect(actor?.isGuarding).toBe(true)
+  })
+
+  it('방어가 끝나면 표시도 사라진다 — 남으면 「아직 단단하다」로 읽힌다', () => {
+    const session = buildBattleSession(CHECK_SETUP, G0_RULESETS)
+    const entity = [...session.engine.state.entities.values()].find(
+      (one) => one.entityId !== PLAYER_ENTITY_ID,
+    )
+    if (entity === undefined) {
+      return
+    }
+    entity.statuses.set('GUARD', 0)
+    const actor = buildPlanScene(session.engine).actors.find(
+      (one) => one.entityId === entity.entityId,
+    )
+    expect(actor?.isGuarding).toBe(false)
+  })
+
+  it('★ 색만으로 안 가른다 — 장면 설명에도 글로 남는다', () => {
+    // 캔버스는 읽히지 않는다. 색과 모양은 눈으로 읽는 채널이라, 여기서 빠지면 화면을
+    // 안 보는 사람에게 이 상태가 통째로 사라진다.
+    const session = buildBattleSession(CHECK_SETUP, G0_RULESETS)
+    const entity = [...session.engine.state.entities.values()].find(
+      (one) => one.entityId !== PLAYER_ENTITY_ID,
+    )
+    if (entity === undefined) {
+      return
+    }
+    entity.statuses.set('GUARD', 2)
+    expect(describeScene(buildPlanScene(session.engine))).toContain('방어 태세')
+  })
+
+  it('방어가 없으면 설명도 조용하다', () => {
+    const session = buildBattleSession(CHECK_SETUP, G0_RULESETS)
+    expect(describeScene(buildPlanScene(session.engine))).not.toContain('방어 태세')
   })
 })

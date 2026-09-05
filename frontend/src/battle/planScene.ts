@@ -20,6 +20,7 @@ import { FACTION_PLAYER, type Entity, getHpPercent } from '../core/sim/state'
 import type { LogEntry } from '../core/eventLog'
 import { PHASE_ACT } from '../core/sim/phases'
 
+import { GUARD_STATUS } from '../core/sim/abilities'
 import { checkDoppel, resolveActorKind, resolveActorLabel } from './actorKind'
 
 /** 도면에 그릴 말 하나. */
@@ -38,6 +39,14 @@ export interface PlanActorView {
    * 알아야 하고 그 앎이 캔버스·DOM 두 곳으로 갈리기 때문이다.
    */
   readonly isDoppel: boolean
+  /**
+   * 지금 방어 태세인가 (`GUARD_BRACE`).
+   *
+   * **모델에 있는데 화면에 없던 것이다.** 받는 피해를 50% 깎고 2틱 가는데 도면에도
+   * 로그에도 안 나왔다 — 보는 사람에게는 「왜 갑자기 덜 아프지」가 설명 없이 일어났다.
+   * 설명 없는 것은 버그와 구별되지 않는다 (P1).
+   */
+  readonly isGuarding: boolean
   /** 글리프 아래 두 글자 표기. 글리프가 겹치는 자리를 이것이 가른다. */
   readonly label: string
   /** 남은 체력 백분율. 말 아래 명도 막대가 이 값을 쓴다. */
@@ -136,6 +145,7 @@ function convertEntityToActor(
     label: isSelf ? '자신' : resolveActorLabel(entity.kindId),
     tier: entity.tier,
     isDoppel: !isSelf && checkDoppel(entity.kindId),
+    isGuarding: (entity.statuses.get(GUARD_STATUS) ?? 0) > 0,
     hpPercent: getHpPercent(entity),
     isSelf,
   }

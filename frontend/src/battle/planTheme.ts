@@ -29,6 +29,7 @@ export const PLAN_COLOR_TOKENS: ReadonlyMap<string, string> = new Map([
   ['actorElite', '--plan-actor-elite'],
   ['actorBoss', '--plan-actor-boss'],
   ['actorDoppel', '--plan-actor-doppel'],
+  ['guard', '--plan-guard'],
   ['dim', '--text-dim'],
 ])
 
@@ -90,6 +91,8 @@ export interface PlanTheme {
   readonly actorBoss: string
   /** 도플갱어. 등급이 아니라 정체라 등급 색과 따로 산다. */
   readonly actorDoppel: string
+  /** 방어 태세. 받는 피해가 깎이는 동안 글리프 아래에 호가 선다. */
+  readonly guard: string
   /** 보조 표기. */
   readonly dim: string
 }
@@ -210,6 +213,7 @@ export function readPlanTheme(read: TokenReader): PlanTheme {
     actorElite: color('actorElite'),
     actorBoss: color('actorBoss'),
     actorDoppel: color('actorDoppel'),
+    guard: color('guard'),
     dim: color('dim'),
   }
 }

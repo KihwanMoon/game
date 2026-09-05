@@ -32,6 +32,7 @@ function buildActor(over: Partial<PlanActorView> = {}): PlanActorView {
     kind: 'self',
     tier: 'NORMAL',
     isDoppel: false,
+    isGuarding: false,
     label: 'PL',
     hpPercent: 100,
     isSelf: true,

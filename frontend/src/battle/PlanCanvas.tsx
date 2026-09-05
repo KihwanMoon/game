@@ -64,7 +64,10 @@ export function describeScene(scene: PlanScene): string {
   const actors = scene.actors
     .map((actor) => {
       const name = actor.isSelf ? '자신' : (ACTOR_NAMES.get(actor.kind) ?? actor.kind)
-      return `${name} ${actor.label} (${String(actor.x)}, ${String(actor.y)})`
+      // **캔버스는 읽히지 않는다.** 도면에 붙는 표시는 여기 글로도 남아야 화면을 안 보는
+      // 사람에게 남는다 — 색·모양에 이어 세 번째 채널이다.
+      const guard = actor.isGuarding ? ' 방어 태세' : ''
+      return `${name} ${actor.label} (${String(actor.x)}, ${String(actor.y)})${guard}`
     })
     .join(', ')
   const hazards = scene.hazards
