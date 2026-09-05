@@ -194,6 +194,7 @@ $RUN -m scripts.grant_admin <아이디> --role observer   # 읽기만 (에이전
 $RUN -m scripts.grant_admin <아이디> --revoke          # 해제
 $RUN -m scripts.run_world_tick <시드>           # 세계 한 틱 (몬스터끼리 전투)
 $RUN -m scripts.report_g1                       # G1 판정 자료
+$RUN -m scripts.run_deploybot                   # 배포 전에 게이트와 세계를 함께 본다
 ```
 
 **가입한 계정만 관리자가 될 수 있다.** 익명은 토큰만 있으면 되므로, 그 계정이 관리자면
