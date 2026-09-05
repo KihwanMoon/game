@@ -112,6 +112,7 @@ def apply_bot_shopping(api_url: str, bot: BotProfile, base_stats: dict[str, int]
                 if isinstance(affix, dict)
             ),
             attack_range=int(row.get("attack_range", 0)),
+            hands=str(row.get("hands") or ""),
         )
         for row in market.get("listings", [])
     )

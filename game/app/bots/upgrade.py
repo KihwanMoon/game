@@ -15,8 +15,11 @@
 **근소한 차이로는 안 바꾼다.** 벗은 것은 가방으로 가고, 가방에 있는 것은 죽을 때
 **삭제**된다 (결정 #34). 1점 이득을 보려고 바꾸면 그 1점보다 큰 것을 잃을 수 있다.
 
-**양손 자리는 건드리지 않는다.** 양손무기가 보조 칸을 봉인하므로(`items/stats.py`) 그
-자리의 교체는 두 칸을 동시에 보는 판단이고, 한 칸씩 보는 이 규칙으로는 틀린다.
+**양손은 자리가 아니라 관계로 막는다** (개정 2026-09-05). 예전에는 주무기·보조 두 자리를
+통째로 뺐다 — 「두 칸을 함께 봐야 하니 한 칸씩 보는 규칙으로는 틀린다」는 조심이었는데,
+그것이 **무기와 방패를 영영 안 바꾸게** 만들었다. 정비 규칙의 「장비 교체」가 한 번도
+안 뜬 이유이고, 봇이 경매에서 무기를 안 산 이유이기도 하다. 막아야 하는 것은 양손무기를
+끼우는 것과 이미 봉인된 보조 칸에 끼우는 것뿐이다 (`check_blocked_by_hands`).
 """
 
 import json
@@ -63,8 +66,12 @@ GEAR_PRIORITY_WEIGHTS: dict[str, dict[str, int]] = {
 # 이 값도 파일에서 온다 — 미리보기가 같은 여유폭으로 세야 같은 답을 낸다.
 UPGRADE_MARGIN: int = int(_PRIORITY_FILE["margin"])
 
-# 교체 판단에서 빼는 자리. 양손무기가 보조 칸을 봉인해 두 칸을 함께 봐야 한다.
-TWO_HANDED_SLOTS = frozenset(_PRIORITY_FILE["two_handed_slots"])
+_TWO_HANDED = _PRIORITY_FILE["two_handed"]
+
+# 양손무기가 걸치는 두 자리와 「양손」의 표기.
+MAIN_SLOT = str(_TWO_HANDED["main_slot"])
+OFF_SLOT = str(_TWO_HANDED["off_slot"])
+HANDS_TWO = str(_TWO_HANDED["hands_two"])
 
 
 @dataclass(frozen=True)
@@ -155,6 +162,32 @@ def find_upgrades(
     )
 
 
+def check_blocked_by_hands(candidate: GearItem, worn_main: GearItem | None) -> bool:
+    """양손 관계 때문에 이 후보를 못 끼우는가.
+
+    **자리를 통째로 빼지 않는다.** 예전에는 주무기·보조 두 자리를 판단에서 통째로
+    제외했다 — 「두 칸을 함께 봐야 하니 한 칸씩 보는 규칙으로는 틀린다」는 조심이었는데,
+    그것이 **무기와 방패를 영영 안 바꾸게** 만들었다. 정비 규칙의 「장비 교체」가 한 번도
+    안 뜬 이유이고, 봇이 경매에서 무기를 안 산 이유이기도 하다 — 실측으로 공격 +2 를
+    끼고 가방에 +15 를 둔 채 여유폭 6 을 훌쩍 넘는데도 교체가 0 이었다.
+
+    막아야 하는 것은 둘뿐이다.
+
+    Args:
+        candidate: 끼우려는 것.
+        worn_main: 지금 낀 주무기. 없으면 None.
+
+    Returns:
+        막히면 참.
+    """
+    # 양손무기를 끼우면 보조 칸이 봉인돼 거기 있던 것이 조용히 죽는다. 두 칸을 함께
+    # 보는 판단이라 한 칸씩 보는 이 규칙의 몫이 아니다.
+    if candidate.hands == HANDS_TWO:
+        return True
+    # 주무기가 양손이면 보조 칸은 이미 봉인돼 있다 — 거기엔 아무것도 못 낀다.
+    return candidate.slot == OFF_SLOT and worn_main is not None and worn_main.hands == HANDS_TWO
+
+
 def find_upgrades_by_weights(
     bag: tuple[GearItem, ...],
     worn: tuple[GearItem, ...],
@@ -179,7 +212,7 @@ def find_upgrades_by_weights(
     for candidate in bag:
         if not candidate.can_equip or candidate.is_broken or not candidate.slot:
             continue
-        if candidate.slot in TWO_HANDED_SLOTS or candidate.hands == "TWO":
+        if check_blocked_by_hands(candidate, wearing.get(MAIN_SLOT)):
             continue
         current = wearing.get(candidate.slot)
         if current is None or current.is_broken:

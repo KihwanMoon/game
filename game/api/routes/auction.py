@@ -82,6 +82,7 @@ def build_listing_view(listing: Listing, catalog: dict) -> ListingView:
         slot="" if entry.slot is None else str(entry.slot),
         grade=listing.grade,
         attack_range=entry.attack_range or 0,
+        hands="" if entry.hands is None else str(entry.hands),
     )
 
 

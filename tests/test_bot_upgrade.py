@@ -116,10 +116,25 @@ def test_a_broken_item_is_not_worn_and_not_taken_off():
     assert find_upgrades((build_gear(3, is_broken=True),), worn, "brawler_v2", BASE) == ()
 
 
-def test_weapon_slots_are_left_alone():
-    """★ 양손무기가 보조 칸을 봉인하므로 한 칸씩 보는 이 규칙으로는 틀린다."""
-    worn = (build_gear(1, slot="WEAPON_MAIN", affixes=[("attack", 1, 0)]),)
-    bag = (build_gear(2, slot="WEAPON_MAIN", affixes=[("attack", 40, 0)]),)
+def test_a_one_handed_weapon_does_get_swapped():
+    """★ 무기를 바꿀 수 있어야 봇의 장비가 안 굳는다.
+
+    예전에는 주무기·보조 두 자리를 **통째로** 뺐다 — 양손무기가 보조 칸을 봉인한다는
+    이유였는데, 그 조심이 봇을 첫 무기로 영영 돌게 만들었다. 막아야 하는 것은 자리가
+    아니라 **양손이라는 관계**다.
+    """
+    worn = (build_gear(1, slot="WEAPON_MAIN", affixes=[("attack", 1, 0)], hands="ONE"),)
+    bag = (build_gear(2, slot="WEAPON_MAIN", affixes=[("attack", 40, 0)], hands="ONE"),)
+
+    swaps = find_upgrades(bag, worn, "brawler_v2", BASE)
+
+    assert [pair[1].item_id for pair in swaps] == [2]
+
+
+def test_a_two_handed_candidate_is_left_alone():
+    """★ 양손무기를 끼우면 보조 칸이 봉인돼 거기 있던 것이 조용히 죽는다."""
+    worn = (build_gear(1, slot="WEAPON_MAIN", affixes=[("attack", 1, 0)], hands="ONE"),)
+    bag = (build_gear(2, slot="WEAPON_MAIN", affixes=[("attack", 40, 0)], hands="TWO"),)
     assert find_upgrades(bag, worn, "brawler_v2", BASE) == ()
 
 

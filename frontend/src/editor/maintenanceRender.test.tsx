@@ -18,6 +18,7 @@ import type { ConsumableView, InventoryView, MaintenanceView } from '../storage'
 import { MaintenanceCheck, MaintenanceEditor, MaintenancePalette } from './MaintenanceEditor'
 import { buildMaintenancePreview, checkPreviewIdle, formatMoneyDelta } from './maintenancePreview'
 import { readArgNote } from './MaintenanceEditor'
+import { checkBlockedByHands } from './maintenanceUpgrade'
 import {
   checkBlocked,
   checkMaintenanceRows,
@@ -774,5 +775,30 @@ describe('★ 전부 버리기 — 조심이 가방을 영영 안 비웠다', ()
     // 행동 하나에 문구 하나를 붙여 두면 「전부」를 골라 놓고 「유물은 안 버린다」를 읽는다.
     expect(readArgNote('DISCARD', 'COMMON')).toContain('유물은 자동으로 안 버린다')
     expect(readArgNote('DISCARD', DISCARD_ALL)).toContain('되돌릴 수 없다')
+  })
+})
+
+describe('★ 양손은 자리가 아니라 관계로 막는다', () => {
+  // 예전에는 주무기·보조 두 자리를 통째로 뺐다 — 그것이 무기와 방패를 **영영 안 바꾸게**
+  // 만들었고, 「장비 교체」가 한 번도 안 뜬 이유였다. 미리보기와 서버가 같은 규칙을
+  // 써야 「1개 교체」라 적고 서버가 0 을 바꾸는 일이 안 생긴다.
+  it('한 손 무기는 갈아 낀다', () => {
+    expect(checkBlockedByHands('ONE', 'WEAPON_MAIN', 'ONE')).toBe(false)
+  })
+
+  it('양손 후보는 안 건드린다 — 보조 칸이 봉인돼 거기 있던 것이 조용히 죽는다', () => {
+    expect(checkBlockedByHands('TWO', 'WEAPON_MAIN', 'ONE')).toBe(true)
+  })
+
+  it('주무기가 양손이면 보조 칸은 이미 봉인돼 있다', () => {
+    expect(checkBlockedByHands('ONE', 'WEAPON_OFF', 'TWO')).toBe(true)
+  })
+
+  it('주무기가 한 손이면 보조 칸은 열려 있다', () => {
+    expect(checkBlockedByHands('ONE', 'WEAPON_OFF', 'ONE')).toBe(false)
+  })
+
+  it('무기가 아닌 자리는 애초에 이 규칙과 무관하다', () => {
+    expect(checkBlockedByHands('', 'HEAD', 'TWO')).toBe(false)
   })
 })

@@ -30,9 +30,10 @@
 from dataclasses import dataclass
 
 from game.app.bots.upgrade import (
-    TWO_HANDED_SLOTS,
+    MAIN_SLOT,
     UPGRADE_MARGIN,
     GearItem,
+    check_blocked_by_hands,
     compute_weighted_score,
 )
 
@@ -67,6 +68,8 @@ class Listing:
     slot: str = ""
     affixes: tuple[tuple[str, int, int], ...] = ()
     attack_range: int = 0
+    # 한 손인가 양손인가. 못 끼울 것을 사면 가방에서 버려질 뿐이다.
+    hands: str = ""
 
 
 def check_is_open_to_bots(listing: Listing) -> bool:
@@ -145,7 +148,19 @@ def find_upgrade_buy(
     """
     scored: list[tuple[int, int, int]] = []
     for item in buyable:
-        if not item.slot or item.slot in TWO_HANDED_SLOTS:
+        if not item.slot:
+            continue
+        offered_hands = GearItem(
+            item_id=0,
+            slot=item.slot,
+            can_equip=True,
+            is_broken=False,
+            hands=item.hands,
+            affixes=(),
+            attack_range=0,
+        )
+        # 못 끼울 것은 안 산다 — 사도 가방에서 버려질 뿐이고, 그때 돈만 나간다.
+        if check_blocked_by_hands(offered_hands, (worn or {}).get(MAIN_SLOT)):
             continue
         current = worn.get(item.slot)
         if current is None:
@@ -157,7 +172,7 @@ def find_upgrade_buy(
             slot=item.slot,
             can_equip=True,
             is_broken=False,
-            hands="",
+            hands=item.hands,
             affixes=item.affixes,
             attack_range=item.attack_range,
         )

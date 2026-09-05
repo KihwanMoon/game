@@ -107,12 +107,61 @@ def test_a_narrow_win_does_not_swap():
     assert swaps[0][1].item_id == 3
 
 
-def test_two_handed_slots_stay_untouched():
-    """★ 양손 자리는 두 칸을 함께 보는 판단이라 한 칸씩 보는 규칙으로는 틀린다."""
+def test_a_one_handed_weapon_does_get_swapped():
+    """★ 무기를 바꿀 수 있어야 「장비 교체」가 뜻을 갖는다.
+
+    예전에는 주무기·보조 두 자리를 **통째로** 판단에서 뺐다 — 「두 칸을 함께 봐야 하니
+    한 칸씩 보는 규칙으로는 틀린다」는 조심이었는데, 그것이 무기와 방패를 영영 안 바꾸게
+    만들었다. 실측으로 공격 +2 를 끼고 가방에 +15 를 둔 채, 여유폭 6 을 훌쩍 넘는데도
+    교체가 0 이었다 — 정비 규칙의 그 행이 한 번도 안 뜬 이유다.
+    """
     weights = GEAR_PRIORITY_WEIGHTS["ATTACK"]
-    worn = (build_gear(1, slot="WEAPON_MAIN", affixes=(("attack", 1, 0),)),)
-    bag = (build_gear(2, slot="WEAPON_MAIN", affixes=(("attack", 40, 0),)),)
+    worn = (build_gear(1, slot="WEAPON_MAIN", affixes=(("attack", 1, 0),), hands="ONE"),)
+    bag = (build_gear(2, slot="WEAPON_MAIN", affixes=(("attack", 40, 0),), hands="ONE"),)
+
+    swaps = find_upgrades_by_weights(bag, worn, weights, BASE_STATS)
+
+    assert len(swaps) == 1
+    assert swaps[0][1].item_id == 2
+
+
+def test_a_two_handed_candidate_is_left_alone():
+    """★ 양손무기를 끼우면 보조 칸이 봉인돼 거기 있던 것이 조용히 죽는다.
+
+    두 칸을 함께 보는 판단이라 한 칸씩 보는 이 규칙의 몫이 아니다 — 여기서 막는 것은
+    **후보가 양손일 때**이지 그 자리 전부가 아니다.
+    """
+    weights = GEAR_PRIORITY_WEIGHTS["ATTACK"]
+    worn = (build_gear(1, slot="WEAPON_MAIN", affixes=(("attack", 1, 0),), hands="ONE"),)
+    bag = (build_gear(2, slot="WEAPON_MAIN", affixes=(("attack", 40, 0),), hands="TWO"),)
+
     assert find_upgrades_by_weights(bag, worn, weights, BASE_STATS) == ()
+
+
+def test_a_sealed_offhand_takes_nothing():
+    """★ 주무기가 양손이면 보조 칸은 이미 봉인돼 있다 — 거기엔 아무것도 못 낀다."""
+    weights = GEAR_PRIORITY_WEIGHTS["ATTACK"]
+    worn = (
+        build_gear(1, slot="WEAPON_MAIN", affixes=(("attack", 1, 0),), hands="TWO"),
+        build_gear(2, slot="WEAPON_OFF", affixes=(("defense", 1, 0),), hands="ONE"),
+    )
+    bag = (build_gear(3, slot="WEAPON_OFF", affixes=(("attack", 40, 0),), hands="ONE"),)
+
+    assert find_upgrades_by_weights(bag, worn, weights, BASE_STATS) == ()
+
+
+def test_a_free_offhand_does_take_an_upgrade():
+    """★ 주무기가 한 손이면 보조 칸은 열려 있다 — 방패도 갈아 낀다."""
+    weights = GEAR_PRIORITY_WEIGHTS["ATTACK"]
+    worn = (
+        build_gear(1, slot="WEAPON_MAIN", affixes=(("attack", 1, 0),), hands="ONE"),
+        build_gear(2, slot="WEAPON_OFF", affixes=(("attack", 1, 0),), hands="ONE"),
+    )
+    bag = (build_gear(3, slot="WEAPON_OFF", affixes=(("attack", 40, 0),), hands="ONE"),)
+
+    swaps = find_upgrades_by_weights(bag, worn, weights, BASE_STATS)
+
+    assert [pair[1].item_id for pair in swaps] == [3]
 
 
 def test_the_consumable_score_puts_charges_first():

@@ -294,6 +294,9 @@ class ListingView(BaseModel):
     # **무기가 정하는 사거리** (§2.2). 접사가 아니라 필드라, 안 보내면 활과 단검이
     # 같아 보인다 — 값을 매기는 쪽에서 이것이 가장 무거운 항이다 (`GEAR_PRIORITY_WEIGHTS`).
     attack_range: int = 0
+    # 한 손인가 양손인가. **양손무기는 보조 칸을 봉인한다** — 사고 나서야 알면 방패가
+    # 조용히 죽는다. 봇도 이 값을 보고 못 끼울 것을 안 산다 (`check_blocked_by_hands`).
+    hands: str = ""
     # 남은 시간(분). 절대 시각이 아니라 남은 양으로 보내는 이유는 기기 시계가 어긋나도
     # 같은 값을 보여야 하기 때문이다.
     expires_in_minutes: int = 0

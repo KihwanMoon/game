@@ -32,7 +32,35 @@ import type { AffixView, ConsumableView, InventoryView, ItemView } from '../stor
 const PERCENT_BASE = 100
 
 /** 양손무기가 보조 칸을 봉인하므로 두 칸을 함께 봐야 한다 — 파일이 정한다. */
-const TWO_HANDED_SLOTS: ReadonlySet<string> = new Set(priorityFile.two_handed_slots)
+/** 양손무기가 걸치는 두 자리와 「양손」의 표기. 파이썬과 같은 파일을 읽는다. */
+const MAIN_SLOT = String(priorityFile.two_handed.main_slot)
+const OFF_SLOT = String(priorityFile.two_handed.off_slot)
+const HANDS_TWO = String(priorityFile.two_handed.hands_two)
+
+/**
+ * 양손 관계 때문에 이 후보를 못 끼우는가.
+ *
+ * **자리를 통째로 빼지 않는다** (파이썬 `check_blocked_by_hands` 와 같은 규칙). 예전에는
+ * 주무기·보조 두 자리를 판단에서 통째로 제외했고, 그것이 무기와 방패를 **영영 안 바꾸게**
+ * 만들었다 — 「장비 교체」가 한 번도 안 뜬 이유다.
+ *
+ * @param hands 후보가 몇 손인가.
+ * @param slot 후보의 자리.
+ * @param wornMainHands 지금 낀 주무기가 몇 손인가. 빈 자리면 빈 문자열.
+ * @returns 막히면 참.
+ */
+export function checkBlockedByHands(
+  hands: string,
+  slot: string,
+  wornMainHands: string,
+): boolean {
+  // 양손무기를 끼우면 보조 칸이 봉인돼 거기 있던 것이 조용히 죽는다.
+  if (hands === HANDS_TWO) {
+    return true
+  }
+  // 주무기가 양손이면 보조 칸은 이미 봉인돼 있다.
+  return slot === OFF_SLOT && wornMainHands === HANDS_TWO
+}
 
 /** 이만큼은 이겨야 바꾼다. 서버와 **같은 파일에서** 온다. */
 const UPGRADE_MARGIN: number = priorityFile.margin
@@ -198,8 +226,7 @@ export function runUpgradeGear(
       item.slot === null ||
       item.isBroken ||
       !item.canEquip ||
-      item.hands === 'TWO' ||
-      TWO_HANDED_SLOTS.has(item.slot)
+      checkBlockedByHands(item.hands ?? '', item.slot, worn.get(MAIN_SLOT)?.hands ?? '')
     ) {
       continue
     }
