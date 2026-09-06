@@ -8,6 +8,8 @@
 얼마나 컸는가이고, 이쪽은 무엇을 들고 있는가다.
 """
 
+import json
+
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
@@ -17,6 +19,46 @@ from game.app.store.items import find_empty_slot, record_item_event
 # 발급된 아이템과 돌려받은 아이템은 경제에서 뜻이 다르다.
 EVENT_RECOVER = "recover"
 
+# 한 개체가 들 수 있는 전리품 수 (2026-09-06).
+#
+# **상한이 없어서 무한히 쌓였다.** 패배마다 하나씩 들어오는데 봇이 쉼 없이 죽으므로,
+# 1층 고블린 하나가 **696개**를 들고 있었다 — 도감이 못 읽을 화면이 되고, 「저 놈이 내
+# 걸 들고 있다」가 목록에 묻힌다.
+#
+# 다섯인 이유는 그것이 **보여 주기에 충분한 수**이기 때문이다. 이 사본의 목적은 도감이
+# 그 한 줄을 말하는 것이지 몬스터를 키우는 것이 아니다.
+MAX_TROPHIES = 5
+
+
+def compute_affix_score(raw: object) -> int:
+    """이 절이 개체를 얼마나 세게 만드는가.
+
+    **거친 척도다.** 스탯마다 값어치가 다르지만(공격 1 과 체력 1 은 같지 않다), 여기서
+    필요한 것은 순위지 균형이 아니다 — 「더 강해지는가」만 가르면 된다. 정교한 값어치는
+    밸런스의 몫이고 그것을 여기 두면 두 곳이 어긋난다.
+
+    퍼센트를 그대로 더하는 이유도 같다. 기준값을 모르면 환산할 수 없고, 그것을 알려면
+    개체 스탯을 여기까지 끌고 와야 한다.
+
+    Args:
+        raw: 접사 절. 문자열이거나 이미 풀린 목록이다.
+
+    Returns:
+        합. 절이 아니면 0.
+    """
+    if isinstance(raw, str):
+        # **터지면 그 판의 결산이 통째로 죽는다.** 절이 아닌 값이 어디서 오든(옛 행,
+        # 손으로 고친 데이터), 값어치를 못 매기는 것과 판이 안 끝나는 것은 다른 일이다.
+        try:
+            raw = json.loads(raw)
+        except json.JSONDecodeError:
+            return 0
+    if not isinstance(raw, list):
+        return 0
+    return sum(
+        int(one.get("flat", 0)) + int(one.get("percent", 0)) for one in raw if isinstance(one, dict)
+    )
+
 
 def create_trophy(
     pool: ConnectionPool,
@@ -24,8 +66,11 @@ def create_trophy(
     catalog_id: str,
     affixes: list[dict],
     taken_from: int,
-) -> None:
+) -> bool:
     """몬스터가 플레이어의 장비 사본을 가져간다 (결정 #34).
+
+    **다섯까지만 들고, 더 강해질 때만 받는다** (2026-09-06). 상한이 없던 때는 패배마다
+    하나씩 영원히 쌓여 한 마리가 696개를 들고 있었다.
 
     **별도 표가 아니라 그 개체가 소유한 아이템으로 넣는다.** 표를 가르면 "몬스터가 내
     장비를 들고 있다" 가 다시 특수 케이스가 되고, 나중에 몬스터가 그것을 장착하거나
@@ -37,13 +82,29 @@ def create_trophy(
         catalog_id: 아이템 카탈로그 id.
         affixes: 접사 절.
         taken_from: 누구에게서 가져왔는가.
+
+    Returns:
+        실제로 가져갔으면 True. 상한에 걸렸고 더 강해지지도 않으면 False.
     """
+    score = compute_affix_score(affixes)
     with pool.connection() as connection:
+        held = connection.execute(
+            "SELECT id, affixes FROM item_instance WHERE owner_entity_id = %s ORDER BY id",
+            (record_id,),
+        ).fetchall()
+        if len(held) >= MAX_TROPHIES:
+            # **더 강해질 때만 받는다.** 가장 약한 것과 견주어 못 이기면 안 가져간다 —
+            # 그러면 개체가 「지금까지 본 것 중 가장 좋은 다섯」으로 수렴한다.
+            weakest = min(held, key=lambda row: compute_affix_score(row[1]))
+            if score <= compute_affix_score(weakest[1]):
+                return False
+            connection.execute("DELETE FROM item_instance WHERE id = %s", (weakest[0],))
         connection.execute(
             "INSERT INTO item_instance (owner_entity_id, catalog_id, affixes, taken_from)"
             " VALUES (%s, %s, %s, %s)",
             (record_id, catalog_id, Jsonb(affixes), taken_from),
         )
+    return True
 
 
 def list_trophies(pool: ConnectionPool, record_id: int) -> tuple[dict, ...]:

@@ -26,9 +26,9 @@ from dataclasses import replace
 
 from psycopg_pool import ConnectionPool
 
-from game.app.items.stats import merge_stat_deltas
+from game.app.items.stats import StatDelta
 from game.app.store.item_catalog import list_catalog
-from game.schemas.item import Affix, EquipSlot, ItemCatalogEntry
+from game.schemas.item import COMBAT_STATS, Affix, ItemCatalogEntry
 
 # 퍼센트의 분모. 100 이 1.0배다.
 PERCENT_BASE = 100
@@ -63,11 +63,15 @@ def read_affixes(raw: object) -> tuple[Affix, ...]:
 
 def build_worn_items(
     rows: list[tuple], catalog: dict[str, ItemCatalogEntry]
-) -> dict[EquipSlot, ItemCatalogEntry]:
-    """뺏은 것들 중 **칸마다 하나씩**을 고른다.
+) -> tuple[ItemCatalogEntry, ...]:
+    """뺏은 것들 중 **스탯에 붙는 것 전부**를 낸다 (개정 2026-09-06).
 
-    줄은 최근 것이 먼저 오도록 정렬되어 들어온다. 그래서 칸을 처음 채운 것이 곧 가장
-    최근에 뺏은 것이고, 뒤에 오는 같은 칸은 버린다.
+    예전에는 칸마다 하나씩만 골랐다. 몬스터가 든 것에 상한이 없던 때는 그 골라내기가
+    폭주를 막는 유일한 자리였는데(실측으로 한 마리가 696개를 들고 있었다), 이제
+    `create_trophy` 가 다섯으로 막는다 — 막는 자리가 둘이면 어느 쪽이 실제 한도인지가
+    코드에서 안 읽힌다.
+
+    **칸이 없는 것은 여전히 안 붙는다.** 몬스터가 물약을 마시지는 않는다.
 
     접사는 카탈로그가 아니라 **그 개체의 것**을 쓴다. 굴림으로 붙은 접사가 카탈로그와
     다르기 때문이다 — 카탈로그에서 가져오는 것은 칸과 손 쓰는 방식뿐이다.
@@ -77,15 +81,14 @@ def build_worn_items(
         catalog: 카탈로그. 칸과 손 쓰는 방식의 정본이다.
 
     Returns:
-        칸에서 그 칸에 든 것으로의 대응표.
+        붙는 것들. 최근 것이 앞이다.
     """
-    worn: dict[EquipSlot, ItemCatalogEntry] = {}
-    for catalog_id, raw in rows:
-        entry = catalog.get(str(catalog_id))
-        if entry is None or entry.slot is None or entry.slot in worn:
-            continue
-        worn[entry.slot] = replace(entry, affixes=read_affixes(raw))
-    return worn
+    return tuple(
+        replace(entry, affixes=read_affixes(raw))
+        for catalog_id, raw in rows
+        for entry in [catalog.get(str(catalog_id))]
+        if entry is not None and entry.slot is not None
+    )
 
 
 def list_spoil_deltas(pool: ConnectionPool, record_id: int) -> dict[str, tuple[int, int]]:
@@ -108,7 +111,34 @@ def list_spoil_deltas(pool: ConnectionPool, record_id: int) -> dict[str, tuple[i
             (record_id,),
         ).fetchall()
     worn = build_worn_items(rows, list_catalog(pool))
-    return {stat: (delta.flat, delta.percent) for stat, delta in merge_stat_deltas(worn).items()}
+    return {stat: (delta.flat, delta.percent) for stat, delta in merge_spoil_deltas(worn).items()}
+
+
+def merge_spoil_deltas(items: tuple[ItemCatalogEntry, ...]) -> dict[str, StatDelta]:
+    """뺏은 것들의 접사를 스탯별로 합친다.
+
+    **플레이어의 합산과 갈라 둔다.** 저쪽(`merge_stat_deltas`)은 칸 규율을 담는다 —
+    양손무기가 보조 칸을 봉인하고, 한 칸에 하나만 든다. 몬스터는 그것을 입은 것이 아니라
+    **가진 것**이라 그 규율이 없다: 다섯을 가지면 다섯이 다 붙는다 (2026-09-06 결정).
+
+    같은 함수를 쓰려고 칸 규율을 느슨하게 하면 **사람 쪽이 함께 느슨해진다.**
+
+    Args:
+        items: 붙는 것들.
+
+    Returns:
+        스탯 이름에서 합계로의 대응표.
+    """
+    totals: dict[str, StatDelta] = {}
+    for entry in items:
+        for affix in entry.affixes:
+            if affix.stat not in COMBAT_STATS:
+                continue
+            found = totals.get(affix.stat, StatDelta(flat=0, percent=0))
+            totals[affix.stat] = StatDelta(
+                flat=found.flat + affix.flat, percent=found.percent + affix.percent
+            )
+    return totals
 
 
 def compute_spoiled_stat(base: int, stat: str, spoils: dict[str, tuple[int, int]]) -> int:

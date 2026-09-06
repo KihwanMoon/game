@@ -217,7 +217,9 @@ def apply_trophy_transfer(account_id: int, record_id: int) -> str:
     if not candidates:
         return ""
     picked = candidates[secrets.randbelow(len(candidates))]
-    create_trophy(
+    # **안 가져갈 수도 있다** (2026-09-06). 다섯이 차 있고 더 강해지지도 않으면 그냥
+    # 지나간다 — 그때 「빼앗겼다」고 적으면 화면이 거짓말을 한다.
+    took = create_trophy(
         pool,
         record_id,
         picked.catalog_id,
@@ -227,4 +229,4 @@ def apply_trophy_transfer(account_id: int, record_id: int) -> str:
         ],
         account_id,
     )
-    return f"{picked.catalog_id} 를 빼앗겼다"
+    return f"{picked.catalog_id} 를 빼앗겼다" if took else ""

@@ -5,9 +5,12 @@
 """
 
 from game.app.items.stats import merge_stat_deltas
-from game.app.store.spoils import build_worn_items, compute_spoiled_stat
+from game.app.store.spoils import (
+    build_worn_items,
+    compute_spoiled_stat,
+    merge_spoil_deltas,
+)
 from game.schemas.item import (
-    SLOT_ORDER,
     EquipSlot,
     ItemCatalogEntry,
     ItemKind,
@@ -86,34 +89,20 @@ def build_armor_rows(count: int) -> list[tuple]:
     return [("armor", [{"stat": "defense", "flat": 10}]) for _ in range(count)]
 
 
-def test_seventeen_stolen_armours_still_fill_one_slot():
-    """★ **칸 상한이 진짜로 있다.**
+def test_everything_held_counts():
+    """★ 든 것이 **다 붙는다** (개정 2026-09-06).
 
-    예전에는 뺏은 것을 전부 더했다 — 같은 개체에게 열일곱 번 죽으면 열일곱 벌이 한꺼번에
-    붙어 1층 몬스터의 방어가 2 에서 52 가 되어 있었다. 사람은 여섯 칸뿐인데 몬스터만
-    무제한이면 그것은 성장이 아니라 구멍이다.
+    예전에는 칸마다 하나만 골랐다. 상한이 없던 때는 그 골라내기가 폭주를 막는 유일한
+    자리였는데(실측으로 한 마리가 696개를 들고 있었다), 이제 `create_trophy` 가 다섯으로
+    막는다 — 막는 자리가 둘이면 어느 쪽이 실제 한도인지가 코드에서 안 읽힌다.
     """
-    worn = build_worn_items(build_armor_rows(17), BODY_CATALOG)
-    assert len(worn) == 1
-    deltas = merge_stat_deltas(worn)
-    assert deltas["defense"].flat == 10
-
-
-def test_the_newest_take_wears_the_slot():
-    """★ 칸을 차지하는 것은 **가장 최근에 뺏은 것**이다.
-
-    몬스터는 값을 매기지 않고 방금 뜯어낸 것을 걸친다. 줄이 최근 순으로 오므로 첫 줄이
-    이긴다 — 낡은 것을 계속 입고 있으면 「방금 내 갑옷을 뜯어 갔다」가 화면에서 거짓이 된다.
-    """
-    rows = [
-        ("armor", [{"stat": "defense", "flat": 3}]),
-        ("armor", [{"stat": "defense", "flat": 99}]),
-    ]
-    assert merge_stat_deltas(build_worn_items(rows, BODY_CATALOG))["defense"].flat == 3
+    worn = build_worn_items(build_armor_rows(5), BODY_CATALOG)
+    assert len(worn) == 5
+    assert merge_spoil_deltas(worn)["defense"].flat == 50
 
 
 def test_six_slots_all_count():
-    """★ 칸이 다르면 여섯 벌이 전부 붙는다 — 상한은 칸마다 하나이지 전체 하나가 아니다."""
+    """칸이 달라도 같아도 전부 붙는다 — 세는 것은 칸이 아니라 개수다."""
     catalog = {
         "w": build_entry("w", EquipSlot.WEAPON_MAIN, WeaponHands.ONE),
         "o": build_entry("o", EquipSlot.WEAPON_OFF, WeaponHands.OFFHAND),
@@ -123,16 +112,15 @@ def test_six_slots_all_count():
         "n": build_entry("n", EquipSlot.HANDS),
     }
     rows = [(key, [{"stat": "defense", "flat": 1}]) for key in sorted(catalog)]
-    worn = build_worn_items(rows, catalog)
-    assert len(worn) == len(SLOT_ORDER)
-    assert merge_stat_deltas(worn)["defense"].flat == len(SLOT_ORDER)
+    assert merge_spoil_deltas(build_worn_items(rows, catalog))["defense"].flat == len(catalog)
 
 
-def test_a_two_handed_take_seals_the_off_hand():
-    """★ 양손무기는 몬스터에게도 보조 칸을 봉인한다.
+def test_a_two_handed_take_does_not_seal_anything():
+    """★ 몬스터는 **입은 것이 아니라 가진 것**이다 (개정 2026-09-06).
 
-    사람 쪽 합산을 그대로 부르므로 이 규칙이 따라온다. 갈라 두면 같은 장비가 사람에게
-    붙을 때와 몬스터에게 붙을 때 다른 값을 낸다.
+    사람 쪽 합산은 칸 규율을 담는다 — 양손무기가 보조 칸을 봉인하고 한 칸에 하나만 든다.
+    같은 함수를 쓰려고 그 규율을 느슨하게 하면 **사람 쪽이 함께 느슨해지므로** 합산을
+    갈랐다. 몬스터는 다섯을 가지면 다섯이 다 붙는다.
     """
     catalog = {
         "great": build_entry("great", EquipSlot.WEAPON_MAIN, WeaponHands.TWO),
@@ -142,9 +130,22 @@ def test_a_two_handed_take_seals_the_off_hand():
         ("great", [{"stat": "attack", "flat": 5}]),
         ("shield", [{"stat": "defense", "flat": 40}]),
     ]
-    deltas = merge_stat_deltas(build_worn_items(rows, catalog))
+    deltas = merge_spoil_deltas(build_worn_items(rows, catalog))
     assert deltas["attack"].flat == 5
-    assert "defense" not in deltas
+    assert deltas["defense"].flat == 40
+
+
+def test_the_player_side_still_seals():
+    """★ 사람 쪽 규율은 그대로다 — 갈라 둔 값이 여기서 나온다."""
+    catalog = {
+        "great": build_entry("great", EquipSlot.WEAPON_MAIN, WeaponHands.TWO),
+        "shield": build_entry("shield", EquipSlot.WEAPON_OFF, WeaponHands.OFFHAND),
+    }
+    worn = {
+        EquipSlot.WEAPON_MAIN: catalog["great"],
+        EquipSlot.WEAPON_OFF: catalog["shield"],
+    }
+    assert "defense" not in merge_stat_deltas(worn)
 
 
 def test_a_consumable_is_not_worn():
@@ -153,7 +154,7 @@ def test_a_consumable_is_not_worn():
         "potion": ItemCatalogEntry(catalog_id="potion", kind=ItemKind.CONSUMABLE, label_ko="물약")
     }
     rows = [("potion", [{"stat": "hp_max", "flat": 500}])]
-    assert build_worn_items(rows, catalog) == {}
+    assert build_worn_items(rows, catalog) == ()
 
 
 def test_an_unknown_catalog_id_is_not_worn():
@@ -162,4 +163,4 @@ def test_an_unknown_catalog_id_is_not_worn():
     폐기된 아이템이 개체에 남아 있을 수 있다. 그때 KeyError 로 티켓 발급이 통째로
     죽으면, 아이템 하나 때문에 그 층 전체가 못 도는 일이 된다.
     """
-    assert build_worn_items([("gone", [{"stat": "attack", "flat": 9}])], BODY_CATALOG) == {}
+    assert build_worn_items([("gone", [{"stat": "attack", "flat": 9}])], BODY_CATALOG) == ()
