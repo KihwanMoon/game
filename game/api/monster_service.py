@@ -189,10 +189,35 @@ def apply_monster_outcome(
     # 사본을 가져갈 개체를 고를 때 도플갱어를 건너뛴다. 들면 그 순간 「내 것을 들고 있는
     # 개체」가 되고, 되찾기가 그 위에 길을 낸다 — 봇의 장비가 사람에게 가는 통로다.
     holders = [item for item in snapshots if not check_is_doppel(item.kind_id)]
-    taken = apply_trophy_transfer(account_id, holders[0].record_id) if holders else ""
+    taken = apply_trophy_transfer(account_id, find_holder(holders, verified.killer_slot))
     if taken:
         notes.append(taken)
     return " · ".join(notes)
+
+
+def find_holder(holders: list, killer_slot: str) -> int:
+    """전리품을 가져갈 개체를 고른다 — **막타를 친 것**이다 (2026-09-06).
+
+    예전에는 늘 `holders[0]` 였다. 그래서 한 마리에 몰렸고(실측으로 996개), 「저 놈이 내
+    걸 들고 있다」가 죽인 놈과 무관해졌다.
+
+    **못 찾으면 아무도 안 가져간다.** 막타가 지속 개체가 아니면(그 방에만 있는 잡몹,
+    지형 피해) 가져갈 자격이 있는 개체가 없는 것이다 — 그때 아무나 골라 주면 그 사본이
+    어디서 왔는지가 다시 거짓이 된다.
+
+    Args:
+        holders: 가져갈 수 있는 개체들. 도플갱어는 이미 빠져 있다.
+        killer_slot: 막타를 친 개체의 자리. 모르면 빈 문자열.
+
+    Returns:
+        개체 id. 없으면 0.
+    """
+    if not killer_slot:
+        return 0
+    return next(
+        (item.record_id for item in holders if item.entity_id == killer_slot),
+        0,
+    )
 
 
 def apply_trophy_transfer(account_id: int, record_id: int) -> str:

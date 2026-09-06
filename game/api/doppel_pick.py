@@ -57,7 +57,7 @@ def list_floor_rooms(room_ids: tuple[str, ...], rooms_per_floor: int, step: int)
     return room_ids[start : start + rooms_per_floor]
 
 
-def pick_room_doppels(
+def build_room_doppels(
     records: list[MonsterRecord],
     rooms: dict[str, RoomTemplate],
     room_ids: tuple[str, ...],

@@ -18,6 +18,7 @@
 from dataclasses import dataclass
 from typing import Any
 
+from game.app.core.event_log import LogEntry
 from game.app.progression.floors import read_floor_cap, resolve_deepest_floor
 from game.app.rules.validator import validate_ruleset
 from game.app.services.manage_meta import RunSummary
@@ -76,6 +77,37 @@ class VerifiedRun:
     # 이 재시뮬이 끝났을 때 남은 소모품. **충전을 여기서 깎는다** — 클라이언트가 몇 개를
     # 썼다고 보고할 자리를 만들지 않는다 (T9). 쓴 수는 「티켓이 실은 수 − 이것」이다.
     remaining_consumables: tuple[tuple[str, int], ...] = ()
+    # **막타를 친 개체의 자리** (2026-09-06). 전리품이 그 개체에게 간다 — 예전에는 늘
+    # 스냅샷의 첫 개체가 가져가서 한 마리에 몰렸다. 죽인 것이 가져가는 편이 「저 놈이
+    # 내 걸 들고 있다」와도 맞는다. 지속 개체가 아닌 것이 죽였으면 빈 문자열이다.
+    killer_slot: str = ""
+
+
+def resolve_killer(entries: tuple[LogEntry, ...], player_id: str) -> str:
+    """플레이어에게 **마지막으로 피해를 준** 개체의 자리.
+
+    **막타다.** 죽인 것이 전리품을 가져간다 — 예전에는 늘 스냅샷의 첫 개체가 가져가서
+    한 마리에 996개가 몰렸고, 그것은 「저 놈이 내 걸 들고 있다」와도 어긋났다.
+
+    지형 피해(용암·가시)는 행위자가 플레이어 자신이라 여기서 걸러진다 — 함정이 전리품을
+    가져갈 수는 없다.
+
+    Args:
+        entries: 그 방의 로그. 남긴 순서를 유지한다.
+        player_id: 플레이어 개체 id.
+
+    Returns:
+        막타를 친 개체의 자리. 없으면 빈 문자열.
+    """
+    for entry in reversed(entries):
+        if (
+            entry.target_id == player_id
+            and entry.entity_id != player_id
+            and entry.delta is not None
+            and entry.delta < 0
+        ):
+            return entry.entity_id
+    return ""
 
 
 def check_submission_version(claimed: str, server: str) -> str:
@@ -156,6 +188,9 @@ def evaluate_submission(
     def run_and_tally(engine: TickEngine) -> BattleResult:
         """방 하나를 돌리고 그 방의 전과를 적어 둔다.
 
+        **막타도 적어 둔다.** 마지막 방이 곧 죽은 방이므로, 매 방 덮어쓰면 남는 것이
+        죽인 개체다 — 이긴 판은 이 값을 안 쓴다.
+
         Args:
             engine: 조립된 엔진.
 
@@ -164,8 +199,10 @@ def evaluate_submission(
         """
         outcome = run_battle(engine)
         tallies.append(count_enemy_kinds(engine.state))
+        killed_by.append(resolve_killer(tuple(engine.log.entries), PLAYER_ID))
         return outcome
 
+    killed_by: list[str] = []
     rooms = room_ids or (room_id,)
     if room_limit > 0:
         rooms = rooms[:room_limit]
@@ -199,6 +236,7 @@ def evaluate_submission(
         cleared_rooms=result.cleared_rooms,
         room_kinds=tuple(tallies),
         remaining_consumables=result.remaining_consumables,
+        killer_slot=killed_by[-1] if killed_by else "",
         summary=build_run_summary(
             encountered,
             defeated,

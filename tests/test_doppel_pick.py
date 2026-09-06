@@ -6,7 +6,7 @@
 한 방의 `bomb_slime_0·_1·_2` 가 모두 차면 셋이 같은 방에 섰다. 실측으로 4층에 열한 마리.
 """
 
-from game.api.doppel_pick import list_floor_rooms, list_room_slots, pick_room_doppels
+from game.api.doppel_pick import build_room_doppels, list_floor_rooms, list_room_slots
 from game.app.store.monsters import MonsterRecord
 from game.schemas.room import EnemySpawn, RoomTemplate
 
@@ -45,7 +45,7 @@ ROOM_IDS = ("a", "b", "c")
 
 
 def pick(records, roll=lambda _n: 0):
-    return pick_room_doppels(records, ROOMS, ROOM_IDS, 3, 4, roll)
+    return build_room_doppels(records, ROOMS, ROOM_IDS, 3, 4, roll)
 
 
 def count_shadows(found):

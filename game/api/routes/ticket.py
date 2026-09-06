@@ -9,7 +9,7 @@ import secrets
 from fastapi import APIRouter, HTTPException, status
 
 from game.api.deps import CurrentAccount, get_context, get_core_version, get_pool
-from game.api.doppel_pick import pick_room_doppels
+from game.api.doppel_pick import build_room_doppels
 from game.api.loadout_service import build_ticket_loadout
 from game.api.maintenance_service import apply_maintenance
 from game.api.schemas import TicketRequest, TicketResponse
@@ -106,7 +106,7 @@ def create_run_ticket(request: TicketRequest, account: CurrentAccount) -> Ticket
             )
             # **방마다 그림자 하나만 세운다** (2026-09-06). 빈 자리가 있는 만큼 서던
             # 때는 4층에 열한 마리가 있었고, 자리 이름이 방을 안 담아 셋이 한 방에 섰다.
-            for record in pick_room_doppels(
+            for record in build_room_doppels(
                 list_floor_range_monsters(pool, floor, ticket.room_ids, CHAIN_LENGTH),
                 context.rooms,
                 ticket.room_ids,
