@@ -12,6 +12,8 @@
  */
 import rawLooks from '@resources/balance/item_looks.json'
 
+import { PLAYER_ENTITY_ID } from '../core/services/runBattle'
+
 import { resolveMotion, resolveShape } from './weaponSwing'
 import type { SwingMotion, WeaponShape } from './weaponSwing'
 
@@ -47,6 +49,9 @@ function parseLook(raw: { shape: string; motion: string }): WeaponLook {
 /** 아무것도 안 꼈거나 모르는 무기일 때. 맨몸도 적도 이것으로 휘두른다. */
 export const DEFAULT_LOOK: WeaponLook = parseLook(SOURCE.default)
 
+/** 이 판에서 누가 무엇을 휘두르는가. 화면이 도면에 넘긴다. */
+export type LookTable = (entityId: string) => WeaponLook
+
 /**
  * 이 무기가 어떻게 휘둘러지는가.
  *
@@ -56,4 +61,20 @@ export const DEFAULT_LOOK: WeaponLook = parseLook(SOURCE.default)
 export function resolveWeaponLook(catalogId: string): WeaponLook {
   const found = SOURCE.looks[catalogId]
   return found === undefined ? DEFAULT_LOOK : parseLook(found)
+}
+
+/**
+ * 이 판의 겉모습 표를 만든다.
+ *
+ * **화면 둘이 같은 표를 봐야 한다.** 관전과 사후 분석이 각자 만들면 되감기가 방금 본
+ * 것과 다른 칼을 그린다 — 실제로 그랬다. 사후 분석이 표를 아예 안 받아 **리플레이만
+ * 기본 자국 하나로** 돌았다(실제 신고).
+ *
+ * @param weaponCatalogId 플레이어가 낀 무기의 카탈로그 id. 빈 문자열이면 맨몸이다.
+ * @returns entityId 를 겉모습으로 바꾸는 함수.
+ */
+export function buildLookOf(weaponCatalogId: string): LookTable {
+  const mine = resolveWeaponLook(weaponCatalogId)
+  // 적은 아직 표가 없어 전부 기본 자국이다 — 몬스터 겉모습 표가 생기면 이 자리가 본다.
+  return (entityId: string) => (entityId === PLAYER_ENTITY_ID ? mine : DEFAULT_LOOK)
 }

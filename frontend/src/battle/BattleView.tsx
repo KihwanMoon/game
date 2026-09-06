@@ -65,7 +65,7 @@ import { buildRuleRows } from './ruleRows'
 import { LeaderLine, buildLeaderPath, type LeaderPath } from './leaderLine'
 import { formatOutcome } from './outcomeText'
 import { PlanCanvas } from './PlanCanvas'
-import { DEFAULT_LOOK, resolveWeaponLook } from './weaponLook'
+import { buildLookOf } from './weaponLook'
 import { buildPlanScene } from './planScene'
 import {
   checkPlanThemeSame,
@@ -331,10 +331,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
   const scene = useMemo(() => buildPlanScene(session.engine), [session, frame])
   // **내 무기만 내 것이다.** 적의 겉모습은 아직 없으므로 기본 꼴로 휘두른다 — 그림자가
   // 남의 빌드를 이어받는 자리(#55)가 정해지면 여기가 그 자리다.
-  const lookOf = useMemo(() => {
-    const mine = resolveWeaponLook(props.weaponCatalogId ?? '')
-    return (entityId: string) => (entityId === PLAYER_ENTITY_ID ? mine : DEFAULT_LOOK)
-  }, [props.weaponCatalogId])
+  const lookOf = useMemo(() => buildLookOf(props.weaponCatalogId ?? ''), [props.weaponCatalogId])
   const player = session.engine.state.entities.get(PLAYER_ENTITY_ID)
   const trace = session.tracer.trace
 

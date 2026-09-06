@@ -18,7 +18,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
-import { PlanCanvas } from '../battle'
+import { PlanCanvas, buildLookOf } from '../battle'
 import { BLOCK_CATALOG } from '../core/resources'
 import { OUTCOME_PLAYER_LOSS } from '../core/sim/phases'
 import { Button, Panel, RuleRow, RuleTable, StatusBar, ThreatNotice, TopBar } from '../ds'
@@ -45,6 +45,11 @@ export interface HudScreenProps {
   readonly location: string
   /** 상단 바 오른쪽에 덧붙일 조작부. 확인용 페이지가 조합 선택을 여기에 끼운다. */
   readonly controls?: ReactNode
+  /**
+   * 그 판에서 낀 무기. 도면과 사후 분석의 칼자국이 이것으로 갈린다 (계약 C1).
+   * 확인용 페이지는 장비 개념이 없어 안 넘긴다 — 그때는 맨몸 자국이다.
+   */
+  readonly weaponCatalogId?: string
 }
 
 /**
@@ -62,6 +67,7 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
   const [follow, setFollow] = useState(true)
   const [postState, setPostState] = useState<PostState>('auto')
   const { theme, intervalMs } = usePlanTheme()
+  const lookOf = useMemo(() => buildLookOf(props.weaponCatalogId ?? ''), [props.weaponCatalogId])
 
   // 배속만큼 프레임을 건너뛴다. 끝에 닿으면 첨자가 더 늘지 않으므로 저절로 멈춘다.
   useEffect(() => {
@@ -166,7 +172,9 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
               />
             )}
           </div>
-          {theme === undefined ? null : <PlanCanvas scene={frame.scene} theme={theme} />}
+          {theme === undefined ? null : (
+            <PlanCanvas scene={frame.scene} theme={theme} lookOf={lookOf} />
+          )}
           <div className="hud__plan-foot">
             <TickScrubber
               min={0}
@@ -219,6 +227,7 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
         <PostMortem
           recording={recording}
           theme={theme}
+          {...(props.weaponCatalogId === undefined ? {} : { weaponCatalogId: props.weaponCatalogId })}
           onClose={() => {
             setPostState('closed')
           }}

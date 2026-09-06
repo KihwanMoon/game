@@ -8,7 +8,9 @@ import { describe, expect, it } from 'vitest'
 
 import rawLooks from '@resources/balance/item_looks.json'
 
-import { DEFAULT_LOOK, resolveWeaponLook } from './weaponLook'
+import { PLAYER_ENTITY_ID } from '../core/services/runBattle'
+
+import { DEFAULT_LOOK, buildLookOf, resolveWeaponLook } from './weaponLook'
 
 const LOOKS = (rawLooks as unknown as { looks: Record<string, { shape: string }> }).looks
 
@@ -53,5 +55,26 @@ describe('겉모습이 코어에 안 낀다', () => {
     }
     const keys = Object.keys(raw as Record<string, unknown>)
     expect(keys.some((key) => key.includes('version'))).toBe(false)
+  })
+})
+
+describe('★ 화면 둘이 같은 표를 본다 — 리플레이만 기본 자국이었다 (실제 신고)', () => {
+  it('플레이어는 낀 무기로, 나머지는 기본 자국으로 휘두른다', () => {
+    const lookOf = buildLookOf('axe_heavy')
+    expect(lookOf(PLAYER_ENTITY_ID)).toEqual(resolveWeaponLook('axe_heavy'))
+    expect(lookOf('goblin_rusher_0')).toEqual(DEFAULT_LOOK)
+  })
+
+  it('맨몸은 기본 자국이다 — 안 넘긴 것과 맨몸은 같은 그림이되 다른 뜻이다', () => {
+    expect(buildLookOf('')(PLAYER_ENTITY_ID)).toEqual(DEFAULT_LOOK)
+  })
+
+  it('★ 관전과 되감기가 같은 답을 낸다', () => {
+    // 두 화면이 각자 표를 만들면 방금 본 판과 다른 칼이 되감기에 뜬다. 사후 분석이
+    // 표를 아예 안 받아 실제로 그랬다 — 관전은 도끼, 되감기는 직검이었다.
+    const watching = buildLookOf('sword_saber')
+    const rewinding = buildLookOf('sword_saber')
+    expect(rewinding(PLAYER_ENTITY_ID)).toEqual(watching(PLAYER_ENTITY_ID))
+    expect(watching(PLAYER_ENTITY_ID)).not.toEqual(DEFAULT_LOOK)
   })
 })

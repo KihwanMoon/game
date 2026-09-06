@@ -2197,6 +2197,7 @@ export function App(): React.JSX.Element {
           <PostMortem
             recording={recording}
             theme={theme}
+            weaponCatalogId={mainWeapon}
             onClose={() => {
               setPostState('closed')
             }}

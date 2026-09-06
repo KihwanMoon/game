@@ -21,6 +21,11 @@ export { BattleCheck } from './BattleCheck'
 export { PlanCanvas, describeScene } from './PlanCanvas'
 export type { PlanCanvasProps } from './PlanCanvas'
 
+// **겉모습 표도 배럴을 거친다.** 사후 분석이 이것을 못 받아 리플레이만 기본 자국
+// 하나로 돌았다(실제 신고) — 도면을 그리는 화면은 표를 함께 받아야 한다.
+export { DEFAULT_LOOK, buildLookOf, resolveWeaponLook } from './weaponLook'
+export type { LookTable, WeaponLook } from './weaponLook'
+
 export {
   addExtraEnemies,
   buildBattleSession,

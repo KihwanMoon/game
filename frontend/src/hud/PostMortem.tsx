@@ -14,7 +14,7 @@
  */
 import { useMemo, useState } from 'react'
 
-import { PlanCanvas } from '../battle'
+import { PlanCanvas, buildLookOf } from '../battle'
 import type { PlanTheme } from '../battle'
 import { Button, Panel } from '../ds'
 
@@ -35,6 +35,13 @@ export interface PostMortemProps {
   readonly recording: BattleRecording
   /** 도면 테마. 아직 토큰을 읽지 못했으면 undefined 이고 그동안 도면을 그리지 않는다. */
   readonly theme: PlanTheme | undefined
+  /**
+   * 그 판에서 낀 무기. 되감기의 칼자국이 이것으로 갈린다 (설계/10_외형과_모션 C1).
+   *
+   * **안 받던 때는 리플레이만 기본 자국 하나로 돌았다**(실제 신고). 관전에서 도끼로
+   * 찍던 것이 되감기에서 직검이 되면, 방금 본 판과 다른 판을 보는 것이 된다.
+   */
+  readonly weaponCatalogId?: string
   readonly onClose: () => void
 }
 
@@ -74,6 +81,8 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
     [recording.hits, recording.template, recording.playerId],
   )
 
+  const lookOf = useMemo(() => buildLookOf(props.weaponCatalogId ?? ''), [props.weaponCatalogId])
+
   const frame: RecordedFrame | undefined = recording.frames[tick]
   const anchorIndex = findTickIndex(recording.entries, tick)
 
@@ -111,7 +120,7 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
                 {frame === undefined || props.theme === undefined ? (
                   <p className="hud-log__cut">그 틱의 화면이 없다</p>
                 ) : (
-                  <PlanCanvas scene={frame.scene} theme={props.theme} />
+                  <PlanCanvas scene={frame.scene} theme={props.theme} lookOf={lookOf} />
                 )}
               </div>
               <div className="hud-post__log">
