@@ -10,6 +10,7 @@
  * 직전 색을 그대로 쓰므로, 오타 하나가 "어딘가 색이 이상한데 원인을 모르겠는" 화면이
  * 된다. 이름을 달고 즉시 실패하는 편이 싸다.
  */
+import { DEFAULT_MOTION, DEFAULT_SHAPE } from './weaponSwing'
 
 /** 렌더러가 쓰는 색 토큰. 키가 곧 `PlanTheme` 의 필드 이름이다. */
 export const PLAN_COLOR_TOKENS: ReadonlyMap<string, string> = new Map([
@@ -77,6 +78,16 @@ export interface PlanTheme {
   readonly spring: string
   /** 용암·함정·예고 타일. */
   readonly hazard: string
+  /**
+   * 무기 꼴과 모션 (설계/10_외형과_모션).
+   *
+   * **테마에 두는 것은 이것이 코어 밖이라는 뜻이다.** 장면(`PlanScene`)은 엔진만 보고
+   * 외형을 모른다 — 계약 C1. 화면이 로드아웃에서 골라 여기로 넘긴다.
+   *
+   * 둘을 갈라 둔 이유는 곱하기 위해서다 (계약 C7) — 꼴 3 + 모션 3 이 조합 9 가 된다.
+   */
+  readonly weaponShape: string
+  readonly weaponMotion: string
   /** 플레이어 말. 화면의 황동 예산 한 자리를 쓴다. */
   /** 내가 건 행동을 잇는 선. */
   readonly linkSelf: string
@@ -215,5 +226,9 @@ export function readPlanTheme(read: TokenReader): PlanTheme {
     actorDoppel: color('actorDoppel'),
     guard: color('guard'),
     dim: color('dim'),
+    // **기본값을 둔다.** 아직 장비에서 안 오므로, 안 정해졌을 때 그릴 것이 있어야
+    // 한다 — 모르는 값이 와도 `resolveShape`·`resolveMotion` 이 이것으로 접는다.
+    weaponShape: DEFAULT_SHAPE,
+    weaponMotion: DEFAULT_MOTION,
   }
 }

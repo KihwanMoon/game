@@ -219,14 +219,76 @@ describe('연결선 그리기', () => {
         hazards: [],
         links: [],
         pulses: [
-          { x: 4, y: 3, isGain: false, delta: -7, label: '' },
-          { x: 1, y: 1, isGain: true, delta: null, label: '방어' },
+          { x: 4, y: 3, isGain: false, delta: -7, label: '', from: null, isStrike: false },
+          {
+            x: 1,
+            y: 1,
+            isGain: true,
+            delta: null,
+            label: '방어',
+            from: { x: 1, y: 1 },
+            isStrike: false,
+          },
         ],
       },
       readPlanTheme(readFake),
     )
     expect(fake.calls).toContain('text:-7')
     expect(fake.calls).toContain('text:방어')
+  })
+
+  it('★ 때린 자리에 무기 자국이 지나간다 (설계/10_외형과_모션)', async () => {
+    // 자국은 **긋기 한 번을 더한다.** 말은 안 움직이고 고리와 수치는 그대로 남는다 —
+    // 모션은 네 번째 채널이지 유일한 채널이 아니다 (계약 C5).
+    const { renderPlan } = await import('./planRenderer')
+    const { readPlanTheme } = await import('./planTheme')
+
+    const draw = (isStrike: boolean): number => {
+      const fake = buildFakeContext()
+      renderPlan(
+        fake.ctx as never,
+        {
+          tick: 1,
+          cols: 6,
+          rows: 6,
+          tiles: [],
+          actors: [PLAYER, FOE],
+          hazards: [],
+          links: [],
+          pulses: [
+            { x: 4, y: 3, isGain: false, delta: -7, label: '', from: { x: 1, y: 1 }, isStrike },
+          ],
+        },
+        readPlanTheme(readFake),
+        0.5,
+      )
+      return fake.calls.filter((call) => call === 'stroke').length
+    }
+
+    expect(draw(true)).toBeGreaterThan(draw(false))
+  })
+
+  it('★ 때린 말을 모르면 자국 없이 고리만 남는다', async () => {
+    const { renderPlan } = await import('./planRenderer')
+    const { readPlanTheme } = await import('./planTheme')
+    const fake = buildFakeContext()
+    renderPlan(
+      fake.ctx as never,
+      {
+        tick: 1,
+        cols: 6,
+        rows: 6,
+        tiles: [],
+        actors: [PLAYER, FOE],
+        hazards: [],
+        links: [],
+        pulses: [{ x: 4, y: 3, isGain: false, delta: -7, label: '', from: null, isStrike: true }],
+      },
+      readPlanTheme(readFake),
+      0.5,
+    )
+    // 수치는 그대로다. 판이 읽히는 데 자국이 필요하지 않다.
+    expect(fake.calls).toContain('text:-7')
   })
 
   it('★ 한 방에 죽인 적의 자리에도 이펙트가 남는다 — 마지막 타격이 안 보이면 안 된다', async () => {
@@ -256,7 +318,16 @@ describe('연결선 그리기', () => {
     }
     // actors 에 적이 없어도(죽어서) 그 자리에 이펙트가 선다.
     expect(buildPulsesFromLog(engine as never, [PLAYER])).toEqual([
-      { x: 4, y: 3, isGain: false, delta: -40, label: '스킬1' },
+      {
+        x: 4,
+        y: 3,
+        isGain: false,
+        delta: -40,
+        label: '스킬1',
+        // 자국은 때린 말에서 맞은 말 쪽으로 간다 (설계/10_외형과_모션).
+        from: { x: 1, y: 1 },
+        isStrike: true,
+      },
     ])
   })
 
@@ -279,7 +350,9 @@ describe('수치 이펙트 (간단한 표시)', () => {
       }))
     }
     const pulses = buildPulsesFromLog({ log, state: { tick: 3 } } as never, [PLAYER, FOE])
-    expect(pulses).toEqual([{ x: 4, y: 3, isGain: false, delta: -2, label: '' }])
+    expect(pulses).toEqual([
+      { x: 4, y: 3, isGain: false, delta: -2, label: '', from: { x: 1, y: 1 }, isStrike: true },
+    ])
   })
 
   it('★ 피해는 대상에게 붉게, 회복은 자신에게 초록으로 — 뜻은 기존 색 그대로다', async () => {
@@ -301,8 +374,18 @@ describe('수치 이펙트 (간단한 표시)', () => {
     }))
     const pulses = buildPulsesFromLog({ log, state: { tick: 3 } } as never, [PLAYER, FOE])
     expect(pulses).toEqual([
-      { x: 4, y: 3, isGain: false, delta: -7, label: '' },
-      { x: 4, y: 3, isGain: true, delta: 12, label: '소모품' },
+      { x: 4, y: 3, isGain: false, delta: -7, label: '', from: { x: 1, y: 1 }, isStrike: true },
+      // **회복은 무기를 안 든다.** 칼을 휘두르면 무슨 일이 있었는지가 뒤집혀 읽힌다.
+      // 쓴 것이 적이라 그 자리가 (4,3) 이다.
+      {
+        x: 4,
+        y: 3,
+        isGain: true,
+        delta: 12,
+        label: '소모품',
+        from: { x: 4, y: 3 },
+        isStrike: false,
+      },
     ])
   })
 })
@@ -345,7 +428,10 @@ describe('장비줄 자리', () => {
       fired: true,
     }))
     const pulses = buildPulsesFromLog({ log, state: { tick: 3 } } as never, [PLAYER, FOE])
-    expect(pulses).toEqual([{ x: 1, y: 1, isGain: true, delta: null, label: '방어' }])
+    expect(pulses).toEqual([
+      // 방어는 제자리다 — 때린 자리와 맞은 자리가 같고, 무기도 안 든다.
+      { x: 1, y: 1, isGain: true, delta: null, label: '방어', from: { x: 1, y: 1 }, isStrike: false },
+    ])
   })
 
 

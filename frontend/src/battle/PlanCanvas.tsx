@@ -25,6 +25,14 @@ const SWAP_CLASS = 'battle-plan__canvas--swap'
 /** 배율을 모를 때 쓰는 값. 서버 렌더에는 화면이 없다. */
 const DEFAULT_PIXEL_RATIO = 1
 
+/**
+ * 무기 자국이 지나가는 시간(ms).
+ *
+ * **틱 하나(`--dur-tick` 140ms)를 안 넘는다** (설계/10_외형과_모션 C3). 넘으면 배속에서
+ * 앞뒤 틱의 자국이 겹치고, 되감기에서 앞 틱의 것이 남는다.
+ */
+const SWING_MS = 130
+
 /** PlanCanvas 가 받는 props. */
 export interface PlanCanvasProps {
   readonly scene: PlanScene
@@ -52,6 +60,31 @@ function usePixelRatio(): number {
   }, [ratio])
 
   return ratio
+}
+
+/**
+ * 이 장면에 휘두르는 자국이 있는가.
+ *
+ * @param scene 그릴 장면.
+ * @returns 하나라도 있으면 참.
+ */
+function checkHasSwing(scene: PlanScene): boolean {
+  return scene.pulses.some((pulse) => pulse.isStrike && pulse.from !== null)
+}
+
+/**
+ * 움직임을 줄여 달라고 했는가.
+ *
+ * **물어보고 따른다.** 모션은 네 번째 채널이지 유일한 채널이 아니다 — 꺼도 고리와 수치가
+ * 남으므로 판은 똑같이 읽힌다 (설계/10_외형과_모션 C5).
+ *
+ * @returns 줄여 달라고 했으면 참. 화면이 없는 자리(서버 렌더)에서도 참이다.
+ */
+function checkPrefersStill(): boolean {
+  return (
+    typeof window === 'undefined' ||
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
 }
 
 /**
@@ -99,7 +132,28 @@ export function PlanCanvas(props: PlanCanvasProps): React.JSX.Element {
     if (ctx === undefined) {
       return
     }
-    renderPlan(ctx, props.scene, props.theme)
+    // **자국이 없으면 프레임을 안 돈다.** 틱마다 한 번 그리는 것이 이 캔버스의 기본이고
+    // (12×9=108칸), 루프는 휘두르는 동안에만 돈다.
+    if (!checkHasSwing(props.scene) || checkPrefersStill()) {
+      // 모션을 끈 사람에게는 **다 끝난 자국**을 한 장 그린다 — 고리와 수치는 그대로
+      // 남으므로 무슨 일이 있었는지는 똑같이 읽힌다 (계약 C5).
+      renderPlan(ctx, props.scene, props.theme)
+      return
+    }
+    let frame = 0
+    let start = 0
+    const step = (now: number): void => {
+      start = start === 0 ? now : start
+      const phase = Math.min((now - start) / SWING_MS, 1)
+      renderPlan(ctx, props.scene, props.theme, phase)
+      if (phase < 1) {
+        frame = requestAnimationFrame(step)
+      }
+    }
+    frame = requestAnimationFrame(step)
+    return () => {
+      cancelAnimationFrame(frame)
+    }
   }, [props.scene, props.theme, pixelRatio])
 
   useEffect(() => {

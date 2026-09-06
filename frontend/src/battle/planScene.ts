@@ -107,6 +107,17 @@ export interface PlanPulseView {
   readonly delta: number | null
   /** 무슨 스킬이었는지 두세 글자. 방어·소환처럼 수치가 없는 스킬은 이것만 남는다. */
   readonly label: string
+  /**
+   * 때린 말의 자리. **방향이 여기서 나온다** — 무기를 어디서 어디로 휘두르는가
+   * (설계/10_외형과_모션).
+   *
+   * 자해·장판처럼 때린 자리와 맞은 자리가 같으면 이 값도 같고, 그때 무기는 위를 향한다.
+   * 때린 말을 못 찾으면 `null` 이며 그러면 자국 없이 고리만 남는다 — 계약 C5 대로
+   * 모션이 없어도 판이 읽혀야 한다.
+   */
+  readonly from: { readonly x: number; readonly y: number } | null
+  /** 무기를 휘두르는 행동인가. 치유·방어·소환은 아니다. */
+  readonly isStrike: boolean
 }
 
 /** 도면 한 장. 순수 값이며 엔진을 참조하지 않는다. */
@@ -200,6 +211,14 @@ const PULSE_LABELS: ReadonlyMap<string, string> = new Map([
   ['USE_ITEM', '소모품'],
   ['USE_POTION', '물약'],
 ])
+
+/**
+ * 무기를 휘두르는 행동들 (설계/10_외형과_모션).
+ *
+ * **광역은 뺐다.** 대상이 여럿이라 한 방향으로 휘두르는 그림이 거짓이 된다 — 그쪽은
+ * 지금대로 고리가 맞다.
+ */
+const STRIKE_ACTIONS: ReadonlySet<string> = new Set(['ATTACK', 'SKILL_1', 'SKILL_2'])
 
 /** 수치가 없어도 이펙트를 남기는 행동들 — 방어 태세·소환은 delta 가 없다. */
 const SILENT_PULSE_ACTIONS: ReadonlySet<string> = new Set(['GUARD_BRACE', 'SUMMON'])
@@ -300,13 +319,32 @@ export function buildPulsesFromLog(
       // 피해는 대상에게, 회복·방어는 행위자 자신에게 적힌다.
       const spot = spots.get(entry.targetId ?? entry.entityId)
       if (spot !== undefined) {
-        pulses.push({ x: spot.x, y: spot.y, isGain: entry.delta > 0, delta: entry.delta, label })
+        const from = spots.get(entry.entityId) ?? null
+        pulses.push({
+          x: spot.x,
+          y: spot.y,
+          isGain: entry.delta > 0,
+          delta: entry.delta,
+          label,
+          from,
+          // **깎는 것만 무기를 든다.** 회복에 칼을 휘두르면 무슨 일이 있었는지가 뒤집혀
+          // 읽힌다 — 색만으로 가르지 않는 규율과 같은 자리다.
+          isStrike: entry.delta < 0 && STRIKE_ACTIONS.has(action),
+        })
       }
     } else if (SILENT_PULSE_ACTIONS.has(action)) {
       // 방어 태세·소환은 수치가 없다 — 이름표라도 남겨야 「뭔가 했다」가 보인다.
       const spot = spots.get(entry.entityId)
       if (spot !== undefined) {
-        pulses.push({ x: spot.x, y: spot.y, isGain: true, delta: null, label })
+        pulses.push({
+          x: spot.x,
+          y: spot.y,
+          isGain: true,
+          delta: null,
+          label,
+          from: spot,
+          isStrike: false,
+        })
       }
     }
   }

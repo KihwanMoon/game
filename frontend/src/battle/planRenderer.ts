@@ -10,6 +10,10 @@
  * 칸에 있었는가** 다. 틱 경계의 140ms 명도 전환은 캔버스 위가 아니라 캔버스 자체의 CSS
  * transition 이 맡는다 (battle.css).
  *
+ * **자국은 다르다** (2026-09-06, 설계/10_외형과_모션). 무기를 휘두르는 자국은 **말을 안
+ * 옮긴다** — 때린 칸에 날이 한 번 지나갈 뿐이고, 좌표도 수치도 그대로다. 위상(0→1)은
+ * 그리는 쪽이 넘겨주며 안 넘기면 다 끝난 상태로 그린다.
+ *
  * 좌표는 CSS px 로 계산하고, devicePixelRatio 는 `resizePlanCanvas` 가 변환행렬로만
  * 반영한다. 그래서 이 파일 어디에도 배율이 섞이지 않는다.
  */
@@ -27,6 +31,7 @@ import {
   TILE_WALL,
 } from '../core/schemas'
 import { ACTOR_GLYPHS } from '../ds'
+import { buildSwing, resolveMotion, resolveShape } from './weaponSwing'
 import type {
   PlanActorView,
   PlanHazardView,
@@ -815,7 +820,63 @@ const PULSE_RATIO = 0.46
  * @param pulse 그릴 자리.
  * @param theme 토큰 값들.
  */
-function drawPulse(ctx: CanvasRenderingContext2D, pulse: PlanPulseView, theme: PlanTheme): void {
+function drawSwing(
+  ctx: CanvasRenderingContext2D,
+  pulse: PlanPulseView,
+  theme: PlanTheme,
+  phase: number,
+): void {
+  if (!pulse.isStrike || pulse.from === null) {
+    return
+  }
+  const fromRect = getCellRect(pulse.from.x, pulse.from.y, theme)
+  const toRect = getCellRect(pulse.x, pulse.y, theme)
+  const stroke = buildSwing(
+    { x: fromRect.left + fromRect.size / 2, y: fromRect.top + fromRect.size / 2 },
+    { x: toRect.left + toRect.size / 2, y: toRect.top + toRect.size / 2 },
+    theme.cell,
+    resolveShape(theme.weaponShape),
+    resolveMotion(theme.weaponMotion),
+    phase,
+  )
+  ctx.save()
+  ctx.strokeStyle = theme.hazard
+  ctx.lineWidth = theme.lineWidth * 2
+  ctx.lineJoin = 'round'
+  ctx.lineCap = 'round'
+  ctx.beginPath()
+  const [head, ...rest] = stroke.blade
+  if (head !== undefined) {
+    ctx.moveTo(head.x, head.y)
+    for (const point of rest) {
+      ctx.lineTo(point.x, point.y)
+    }
+    ctx.stroke()
+  }
+  if (stroke.head.length > 0) {
+    ctx.beginPath()
+    const [first, ...tail] = stroke.head
+    if (first !== undefined) {
+      ctx.moveTo(first.x, first.y)
+      for (const point of tail) {
+        ctx.lineTo(point.x, point.y)
+      }
+      ctx.stroke()
+    }
+  }
+  ctx.restore()
+}
+
+
+function drawPulse(
+  ctx: CanvasRenderingContext2D,
+  pulse: PlanPulseView,
+  theme: PlanTheme,
+  phase: number,
+): void {
+  // **자국이 먼저, 고리가 나중이다.** 고리와 수치는 모션을 꺼도 남아야 하므로 위에
+  // 그린다 (계약 C5).
+  drawSwing(ctx, pulse, theme, phase)
   const rect = getCellRect(pulse.x, pulse.y, theme)
   const color = pulse.isGain ? theme.spring : theme.hazard
   ctx.save()
@@ -852,6 +913,7 @@ export function renderPlan(
   ctx: CanvasRenderingContext2D,
   scene: PlanScene,
   theme: PlanTheme,
+  phase = 1,
 ): void {
   const width = scene.cols * theme.cell
   const height = scene.rows * theme.cell
@@ -882,7 +944,7 @@ export function renderPlan(
     drawLink(ctx, link, theme)
   }
   for (const pulse of scene.pulses) {
-    drawPulse(ctx, pulse, theme)
+    drawPulse(ctx, pulse, theme, phase)
   }
   for (const actor of scene.actors) {
     drawActor(ctx, actor, theme)
