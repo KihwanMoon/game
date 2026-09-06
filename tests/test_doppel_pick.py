@@ -43,6 +43,17 @@ ROOMS = {
 }
 ROOM_IDS = ("a", "b", "c")
 
+# 이 층의 모든 자리. 여느 개체가 다 차지하면 그림자가 앉을 데가 없다.
+ROOM_SLOTS = sorted(
+    {
+        slot
+        for room_id in ROOM_IDS
+        for slot in (
+            f"{spawn.kind}_{index}" for index, spawn in enumerate(ROOMS[room_id].enemy_spawns)
+        )
+    }
+)
+
 
 def pick(records, roll=lambda _n: 0):
     return build_room_doppels(records, ROOMS, ROOM_IDS, 3, 4, roll)
@@ -52,12 +63,42 @@ def count_shadows(found):
     return len([one for one in found if one.catalog_id == "doppelganger"])
 
 
-def test_a_room_gets_at_most_one_shadow():
-    """★ **이것이 이 변경의 전부다.** 셋이 한 방에 서면 난이도가 통째로 오른다."""
+def test_a_floor_gets_at_most_one_shadow():
+    """★ **이것이 이 변경의 전부다.** 여럿이 서면 난이도가 통째로 오른다.
+
+    **층당 하나여야 방당 하나가 성립한다.** 자리 이름에 방이 안 담기므로 자리를
+    배정해도 그 방에 가둘 수 없다 — 첫 고침에서 방마다 하나씩 골랐더니 한 방이 여러
+    자리를 갖고 있어 둘이 같은 방에 보였다(실제 신고). 하나면 그 문제가 없다.
+    """
     shadows = [build_record(i, "doppelganger") for i in range(1, 12)]
-    found = pick(shadows)
-    # 방이 셋이므로 셋까지다. 열한 마리가 아니다.
-    assert count_shadows(found) == 3
+    assert count_shadows(pick(shadows)) == 1
+
+
+def test_two_shadows_never_share_a_room():
+    """★ 자리가 하나뿐이라 어느 방이든 최대 하나다."""
+    shadows = [build_record(i, "doppelganger") for i in range(1, 12)]
+    slots = [one.entity_slot for one in pick(shadows) if one.catalog_id == "doppelganger"]
+    assert len(slots) == len(set(slots))
+
+
+def test_a_shadow_does_not_take_an_occupied_slot():
+    """★ 같은 자리에 둘이 앉으면 스냅샷이 서로를 덮어쓴다.
+
+    그러면 하나는 개체가 있는데 아무도 못 만난다.
+    """
+    plain = [build_record(90 + index, slot=slot) for index, slot in enumerate(ROOM_SLOTS[:-1])]
+    found = pick([*plain, build_record(1, "doppelganger")])
+    shadow = next(one for one in found if one.catalog_id == "doppelganger")
+    assert shadow.entity_slot == ROOM_SLOTS[-1]
+
+
+def test_a_full_floor_gets_no_shadow():
+    """★ 앉을 자리가 없으면 안 선다 — 덮어쓰고 서느니 안 서는 편이 낫다."""
+    plain = [build_record(90 + index, slot=slot) for index, slot in enumerate(ROOM_SLOTS)]
+    found = pick([*plain, build_record(1, "doppelganger")])
+    assert count_shadows(found) == 0
+    # 여느 개체는 그대로 남는다.
+    assert len(found) == len(plain)
 
 
 def test_shadows_sit_in_the_room_they_appear_in():
@@ -72,8 +113,7 @@ def test_shadows_sit_in_the_room_they_appear_in():
 def test_the_same_shadow_never_appears_twice():
     """★ 두 번 나오면 목숨을 두 번 깎는다 — 「세 번 만나되 약해진다」와 어긋난다."""
     shadows = [build_record(i, "doppelganger") for i in (1, 2, 3)]
-    found = pick(shadows)
-    ids = [one.record_id for one in found]
+    ids = [one.record_id for one in pick(shadows)]
     assert len(ids) == len(set(ids))
 
 

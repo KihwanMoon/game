@@ -7,7 +7,15 @@
 일반 지속 몬스터는 층당 셋이 상한인데(`MAX_PERSISTENT_PER_FLOOR`) 그림자만 상한이 없었다.
 
 **저장은 그대로 두고 출현만 고른다.** 스무 마리를 계속 들고 있되(순위표가 그 뜻이다),
-한 판에는 방마다 하나만 나온다 — 「특별한 조우」가 되려면 여럿이면 안 된다.
+한 판에는 **층마다 하나만** 나온다 — 「특별한 조우」가 되려면 여럿이면 안 된다.
+
+**「방당 하나」는 자리 이름으로 표현이 안 된다** (2026-09-06 두 번째 고침). 자리에 방이
+안 담기므로 자리를 배정해도 그 방에 가둘 수 없다 — 한 방이 여러 자리를 갖고 있어서,
+다른 방에 배정한 그림자가 같은 방에도 나타난다. 실제로 첫 고침 뒤에도 4층에 다섯이 섰고
+둘이 한 방에 보였다.
+
+**층당 하나면 결과가 같아진다.** 그림자 하나가 자리 하나를 쓰므로, 어느 방이든 그 자리를
+가졌으면 하나, 아니면 없다 — 방당 최대 하나가 저절로 성립한다.
 
 **고르는 것은 티켓을 낼 때다.** 골라 둔 것이 티켓에 얼어붙으므로 재시뮬은 같은 판을
 본다 — 굴림이 코어 밖이라 R5 를 안 건드리는 것도 전리품 굴림과 같은 자리다 (결정 #02).
@@ -65,11 +73,12 @@ def build_room_doppels(
     start_floor: int,
     roll: Callable[[int], int],
 ) -> list[MonsterRecord]:
-    """층마다 방당 그림자 하나만 남기고, 그 방의 자리에 앉힌다.
+    """층마다 그림자 하나만 남기고, 그 층에 있는 자리에 앉힌다.
 
-    **같은 그림자가 두 방에 나오지 않는다.** 뽑은 것은 그 층에서 빼므로 한 하강에 한 번만
-    만난다 — 두 번 나오면 목숨을 두 번 깎게 되고, 그것은 「세 번 만나되 약해진다」는
-    설계와 어긋난다.
+    **자리는 여느 지속 개체가 안 쓰는 것으로 고른다.** 같은 자리에 둘이 앉으면 스냅샷이
+    서로를 덮어써, 하나는 개체가 있는데 아무도 못 만난다.
+
+    **같은 그림자가 두 층에 나오지 않는다.** 층마다 그 층의 것에서만 고르므로 저절로다.
 
     **여느 몬스터는 안 건드린다.** 층당 셋 상한은 이미 `apply_floor_seed` 가 지킨다.
 
@@ -99,12 +108,15 @@ def build_room_doppels(
             (record for record in shadows if record.zone_floor == floor),
             key=lambda record: record.record_id,
         )
-        for room_id in list_floor_rooms(room_ids, rooms_per_floor, step):
-            slots = list_room_slots(rooms, room_id)
-            if not pool or not slots:
-                continue
-            chosen = pool.pop(roll(len(pool)))
-            # **그 방의 자리에 앉힌다.** 저장된 자리는 다른 방의 것일 수 있고, 그러면
-            # 스냅샷이 아무에게도 안 붙어 개체는 있는데 아무도 못 만난다.
-            picked.append(replace(chosen, entity_slot=slots[roll(len(slots))]))
+        taken = {record.entity_slot for record in plain if record.zone_floor == floor}
+        free = [
+            slot
+            for room_id in list_floor_rooms(room_ids, rooms_per_floor, step)
+            for slot in list_room_slots(rooms, room_id)
+            if slot not in taken
+        ]
+        if not pool or not free:
+            continue
+        chosen = pool[roll(len(pool))]
+        picked.append(replace(chosen, entity_slot=sorted(set(free))[roll(len(set(free)))]))
     return plain + picked
