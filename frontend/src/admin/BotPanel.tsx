@@ -21,6 +21,9 @@ import type { InventoryView } from '../storage'
 /** 아무것도 없을 때 적는 말. 빈 화면은 고장으로 읽힌다. */
 const EMPTY_BOTS = '봇이 없다 — 러너가 처음 뜰 때 열을 세운다'
 
+/** 10진수. `parseInt` 가 밑을 안 받으면 0 으로 시작한 값을 8진수로 읽는다. */
+const DECIMAL_RADIX = 10
+
 /** 한 시간(초). 리듬을 「시간당 몇 판」으로 되돌릴 때 쓴다. */
 const HOUR_SEC = 3600
 
@@ -80,6 +83,13 @@ export interface BotPanelProps {
   }) => void
   /** 내 가방의 아이템 하나를 이 봇에게 넘긴다. **한 방향이다** — 돌아오는 길은 없다. */
   readonly onGift?: (accountId: number, itemId: number) => void
+  /**
+   * 내 화폐를 봇에게 넘긴다 (2026-09-06).
+   *
+   * **밑천을 주는 자리다.** 벌이가 느린 봇은 경매에서 영영 못 산다 — 그러면 「봇이
+   * 아무것도 안 산다」가 봇의 규칙이 아니라 잔액의 문제가 된다.
+   */
+  readonly onCoin?: (accountId: number, amount: number) => void
   /** 내 가방. */
   readonly myBag?: InventoryView | undefined
   /** 줄을 골랐을 때 부른다. 그 봇의 가방을 읽어 오라는 신호다. */
@@ -199,6 +209,7 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
                 minCadenceSec={props.overview?.minCadenceSec ?? 0}
                 onSave={props.onSave}
                 onGift={props.onGift}
+                onCoin={props.onCoin}
                 myBag={props.myBag}
               />
             )}
@@ -222,6 +233,7 @@ interface BotEditorProps {
   readonly minCadenceSec: number
   readonly onSave: BotPanelProps['onSave']
   readonly onGift?: BotPanelProps['onGift']
+  readonly onCoin?: BotPanelProps['onCoin']
   /** 내 가방. 여기서 골라 넘긴다 — id 를 손으로 적게 하지 않는다. */
   readonly myBag?: InventoryView | undefined
 }
@@ -241,6 +253,7 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
   // 고른 칸이 아니라 **넘길 아이템**을 따로 든다. 칸을 고르는 것과 넘기는 것을 한 번에
   // 묶으면 잘못 누른 칸이 곧 되돌릴 수 없는 이관이 된다.
   const [giftId, setGiftId] = useState(0)
+  const [coin, setCoin] = useState('')
   return (
     <div className="bots__edit">
       <span className="bots__edit-name">{`${bot.handle} · ${bot.label}`}</span>
@@ -308,6 +321,35 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
           것을 한 화면에 두 번 그리면 어느 쪽이 최신인지 알 수 없고, 실제로 넘긴 뒤에
           한쪽만 갱신되는 창이 생긴다. 여기 남길 이유는 하나뿐이다: **넘길 물건을 고르는
           곳**이라는 것. */}
+      {/* **화폐는 가방과 따로다.** 물건을 고르는 흐름에 숫자 입력이 끼면 「무엇을
+          넘기는 중인지」가 흐려진다. */}
+      {props.onCoin === undefined ? null : (
+        <div className="bots__gift">
+          <ValueExpr text={`화폐 ${String(bot.balance)} · ${bot.handle} 에게 넘김`} size="sm" />
+          <input
+            className="cat__input"
+            inputMode="numeric"
+            value={coin}
+            placeholder="양"
+            aria-label="넘길 화폐"
+            onChange={(event) => {
+              setCoin(event.target.value)
+            }}
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={!(Number.parseInt(coin, DECIMAL_RADIX) > 0)}
+            title="한 방향이다 — 넘긴 화폐는 돌아오지 않는다"
+            onClick={() => {
+              props.onCoin?.(bot.accountId, Number.parseInt(coin, DECIMAL_RADIX))
+              setCoin('')
+            }}
+          >
+            넘기기
+          </Button>
+        </div>
+      )}
       {props.onGift === undefined ? null : (
         <div className="bots__bags">
           <div className="inv bots__inv">

@@ -41,9 +41,20 @@ from game.app.store.bots import (
     check_is_bot,
 )
 from game.app.store.doppels import read_doppel_gear
-from game.app.store.gifts import apply_bot_gift
+from game.app.store.gifts import apply_bot_coin_gift, apply_bot_gift
 
 router = APIRouter()
+
+
+class BotCoinRequest(BaseModel):
+    """내 화폐를 봇에게 넘긴다.
+
+    **한 방향이다.** 아이템 선물과 같은 규율이며(결정 #07), 돌려받는 길을 두면 봇을
+    금고로 쓰는 계정이 생긴다.
+    """
+
+    account_id: int = Field(ge=1)
+    amount: int = Field(ge=1)
 
 
 class BotGiftRequest(BaseModel):
@@ -230,6 +241,49 @@ def create_bot_gift(request: BotGiftRequest, account: CurrentOperator) -> AdminB
         "bot.gift",
         f"#{request.account_id}",
         f"{catalog_id} (#{request.item_id}) 넘김 — 귀속됨",
+    )
+    return build_bot_overview(account)
+
+
+@router.post("/api/admin/bot/coin", response_model=AdminBotOverviewResponse)
+def create_bot_coin(request: BotCoinRequest, account: CurrentOperator) -> AdminBotOverviewResponse:
+    """내 화폐를 봇에게 넘긴다 (2026-09-06).
+
+    **봇에게 밑천을 주는 자리다.** 봇이 경매에서 사려면 화폐가 있어야 하는데, 벌이가
+    느린 봇은 영영 못 산다 — 그러면 「봇이 아무것도 안 산다」가 봇의 규칙이 아니라 잔액의
+    문제가 되고, 우리가 보려던 것(봇이 무엇을 고르는가)이 안 보인다.
+
+    **한 방향이다.** 아이템 선물과 같은 규율이며(결정 #07), 돌려받는 길을 두면 봇을
+    금고로 쓰는 계정이 생긴다.
+
+    **화폐를 만들지 않는다.** 주는 쪽에서 빠진 만큼만 들어가므로 총량이 그대로다 —
+    늘리는 문은 검증된 런 하나뿐이다 (결정 #02).
+
+    Args:
+        request: 받을 봇과 넘길 양.
+        account: 관리자 계정. **주는 쪽은 이 계정 자신이다.**
+
+    Returns:
+        넘긴 뒤의 현황.
+
+    Raises:
+        HTTPException: 봇이 아니거나, 잔액이 모자라거나, 자기 자신에게 주는 경우.
+    """
+    pool = get_pool()
+    if not check_is_bot(pool, request.account_id):
+        # 사람에게 넘기는 길을 두면 계정 사이 화폐 이동이 열리고, 그 순간 봇 파밍으로
+        # 번 것을 사람 계정에 모을 수 있다 (T11).
+        raise HTTPException(status.HTTP_409_CONFLICT, "봇에게만 넘길 수 있다")
+    try:
+        left = apply_bot_coin_gift(pool, request.amount, account.account_id, request.account_id)
+    except ValueError as error:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
+    record_admin_action(
+        pool,
+        account.account_id,
+        "bot.coin",
+        f"#{request.account_id}",
+        f"{request.amount} 넘김 — 남은 잔액 {left}",
     )
     return build_bot_overview(account)
 

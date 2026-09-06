@@ -203,6 +203,36 @@ export async function applyBotGift(
 }
 
 /**
+ * 내 화폐를 봇에게 넘긴다 (2026-09-06).
+ *
+ * **봇에게 밑천을 주는 자리다.** 봇이 경매에서 사려면 화폐가 있어야 하는데, 벌이가 느린
+ * 봇은 영영 못 산다 — 그러면 「봇이 아무것도 안 산다」가 봇의 규칙이 아니라 잔액의
+ * 문제가 되고, 우리가 보려던 것이 안 보인다.
+ *
+ * **한 방향이고 화폐를 만들지 않는다.** 주는 쪽에서 빠진 만큼만 들어간다.
+ *
+ * @param token 기기 토큰.
+ * @param accountId 받을 봇의 계정.
+ * @param amount 넘길 양.
+ * @returns 넘긴 뒤의 현황. 실패하면 undefined.
+ */
+export async function applyBotCoin(
+  token: string,
+  accountId: number,
+  amount: number,
+): Promise<BotOverview | undefined> {
+  const response = await sendRequest('/admin/bot/coin', {
+    method: 'POST',
+    headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ account_id: accountId, amount }),
+  })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  return parseBotOverview((await response.json()) as Parameters<typeof parseBotOverview>[0])
+}
+
+/**
  * 봇 하나의 가방을 읽는다.
  *
  * **사람 화면과 같은 모양이다** — 서버가 같은 빌더로 만든다. 여기서 따로 만들면 두

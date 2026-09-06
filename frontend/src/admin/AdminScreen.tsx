@@ -27,6 +27,7 @@ import { TesterPanel } from './TesterPanel'
 import { WatchPanel } from './WatchPanel'
 import { readInventory, type InventoryView } from '../storage'
 import {
+  applyBotCoin,
   applyBotGift,
   applyBotSettings,
   readBotAdmin,
@@ -351,6 +352,16 @@ export function AdminScreen(): React.JSX.Element {
               setBotDetail(undefined)
               void readBotBag(token, accountId).then(setBotBag)
               void readBotDetail(token, accountId).then(setBotDetail)
+            }}
+            onCoin={(accountId, amount) => {
+              void applyBotCoin(token, accountId, amount).then((updated) => {
+                if (updated === undefined) {
+                  setDetail('못 넘겼다 — 잔액이 모자라거나 받는 쪽이 봇이 아니다')
+                  return
+                }
+                setBots(updated)
+                setDetail(`화폐 ${String(amount)} 을 넘겼다 — 돌아오지 않는다`)
+              })
             }}
             onGift={(accountId, itemId) => {
               void applyBotGift(token, accountId, itemId).then((updated) => {

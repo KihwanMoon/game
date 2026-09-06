@@ -101,6 +101,7 @@ WANTED = {
     "/api/admin/item/recall": "resolve_operator",
     "/api/admin/bot": "resolve_operator",
     "/api/admin/bot/gift": "resolve_operator",
+    "/api/admin/bot/coin": "resolve_operator",
     "/api/admin/testers/mark": "resolve_operator",
     # 발행. 시즌을 가르는 행위라 **사람만** 누른다.
     #

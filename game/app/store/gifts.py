@@ -76,3 +76,54 @@ def apply_bot_gift(
             (to_entity_id, index, item_id),
         )
     return str(moved[0])
+
+
+def apply_bot_coin_gift(
+    pool: ConnectionPool, amount: int, from_account_id: int, to_account_id: int
+) -> int:
+    """화폐를 봇에게 넘긴다 (2026-09-06).
+
+    **한 트랜잭션에 넣는다.** 빼기와 넣기가 갈리면 중간에 끊겼을 때 돈이 어느 쪽에도
+    없거나 양쪽에 있다 — 아이템 선물과 같은 이유다.
+
+    **한 방향이다.** 아이템 선물과 같은 규율이며(결정 #07), 돌려받는 길을 두면 봇을
+    금고로 쓰는 계정이 생긴다.
+
+    **화폐를 만들지 않는다.** 주는 쪽에서 빠진 만큼만 받는 쪽에 들어가므로 총량이 그대로다
+    — 늘리는 문은 검증된 런 하나뿐이다.
+
+    Args:
+        pool: 연결 풀.
+        amount: 넘길 양. 0 이하는 거절한다.
+        from_account_id: 주는 계정.
+        to_account_id: 받을 봇의 계정.
+
+    Returns:
+        주고 난 뒤 **주는 쪽**의 잔액.
+
+    Raises:
+        ValueError: 양이 0 이하이거나, 잔액이 모자라거나, 자기 자신에게 주는 경우.
+    """
+    if amount <= 0:
+        raise ValueError("넘길 양이 0 보다 커야 한다")
+    if from_account_id == to_account_id:
+        # 자기에게 주면 잔액이 그대로인데 원장에는 오간 것으로 남는다.
+        raise ValueError("자기 자신에게는 넘길 수 없다")
+    with pool.connection() as connection:
+        for account_id in (from_account_id, to_account_id):
+            connection.execute(
+                "INSERT INTO wallet (account_id, balance) VALUES (%s, 0) ON CONFLICT DO NOTHING",
+                (account_id,),
+            )
+        row = connection.execute(
+            "UPDATE wallet SET balance = balance - %s, updated_at = now()"
+            " WHERE account_id = %s AND balance >= %s RETURNING balance",
+            (amount, from_account_id, amount),
+        ).fetchone()
+        if row is None:
+            raise ValueError("잔액이 모자란다")
+        connection.execute(
+            "UPDATE wallet SET balance = balance + %s, updated_at = now() WHERE account_id = %s",
+            (amount, to_account_id),
+        )
+    return int(row[0])
