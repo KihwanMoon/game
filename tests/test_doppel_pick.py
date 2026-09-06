@@ -6,7 +6,11 @@
 한 방의 `bomb_slime_0·_1·_2` 가 모두 차면 셋이 같은 방에 섰다. 실측으로 4층에 열한 마리.
 """
 
-from game.api.doppel_pick import build_room_doppels, list_floor_rooms, list_room_slots
+from game.api.doppel_pick import (
+    build_room_doppels,
+    list_floor_rooms,
+    list_room_slots,
+)
 from game.app.store.monsters import MonsterRecord
 from game.schemas.room import EnemySpawn, RoomTemplate
 
@@ -63,42 +67,54 @@ def count_shadows(found):
     return len([one for one in found if one.catalog_id == "doppelganger"])
 
 
-def test_a_floor_gets_at_most_one_shadow():
-    """★ **이것이 이 변경의 전부다.** 여럿이 서면 난이도가 통째로 오른다.
+def test_a_floor_gets_exactly_one_shadow():
+    """★ **그림자는 층에 귀속이다.** 그 층에서 죽은 빌드가 그 층을 지킨다.
 
-    **층당 하나여야 방당 하나가 성립한다.** 자리 이름에 방이 안 담기므로 자리를
-    배정해도 그 방에 가둘 수 없다 — 첫 고침에서 방마다 하나씩 골랐더니 한 방이 여러
-    자리를 갖고 있어 둘이 같은 방에 보였다(실제 신고). 하나면 그 문제가 없다.
+    방에 매어 두면 「이 층의 주인」이 아니라 「저 방의 몹」이 된다. 방마다 따로 고르던
+    때는 4층에 다섯이 섰고 둘이 한 방에 보였다 (실제 신고).
     """
     shadows = [build_record(i, "doppelganger") for i in range(1, 12)]
     assert count_shadows(pick(shadows)) == 1
 
 
-def test_two_shadows_never_share_a_room():
-    """★ 자리가 하나뿐이라 어느 방이든 최대 하나다."""
+def test_the_shadow_stands_in_every_room_of_the_floor():
+    """★ **모든 방에 선다.** 자리 이름이 곧 그 배정이다.
+
+    공통 자리가 있으면 그것을 골라야 다섯 방 어디서 만나도 같은 그림자다.
+    """
+    common = {
+        "a": build_room(["bomb_slime", "goblin_archer"]),
+        "b": build_room(["goblin_archer", "dire_wolf"]),
+        "c": build_room(["goblin_archer"]),
+    }
+    found = build_room_doppels(
+        [build_record(1, "doppelganger")], common, ("a", "b", "c"), 3, 4, lambda _n: 0
+    )
+    shadow = next(one for one in found if one.catalog_id == "doppelganger")
+    # goblin_archer_0 만 세 방에 다 있다.
+    assert shadow.entity_slot == "goblin_archer_0"
+
+
+def test_it_falls_back_to_the_widest_slot():
+    """공통 자리가 없으면 **가장 많이 걸친 것**을 고른다 — 방 하나에 가두지 않는다."""
+    # 자리 이름은 `{종류}_{방 안 순번}` 이다 — 같은 종이라도 순번이 다르면 다른 이름이다.
+    spread = {
+        "a": build_room(["goblin_archer", "bomb_slime"]),
+        "b": build_room(["goblin_archer"]),
+        "c": build_room(["dire_wolf"]),
+    }
+    found = build_room_doppels(
+        [build_record(1, "doppelganger")], spread, ("a", "b", "c"), 3, 4, lambda _n: 0
+    )
+    shadow = next(one for one in found if one.catalog_id == "doppelganger")
+    assert shadow.entity_slot == "goblin_archer_0"
+
+
+def test_a_room_gets_at_most_one_shadow():
+    """★ 층당 하나이므로 방당 하나가 저절로 성립한다."""
     shadows = [build_record(i, "doppelganger") for i in range(1, 12)]
     slots = [one.entity_slot for one in pick(shadows) if one.catalog_id == "doppelganger"]
-    assert len(slots) == len(set(slots))
-
-
-def test_a_shadow_does_not_take_an_occupied_slot():
-    """★ 같은 자리에 둘이 앉으면 스냅샷이 서로를 덮어쓴다.
-
-    그러면 하나는 개체가 있는데 아무도 못 만난다.
-    """
-    plain = [build_record(90 + index, slot=slot) for index, slot in enumerate(ROOM_SLOTS[:-1])]
-    found = pick([*plain, build_record(1, "doppelganger")])
-    shadow = next(one for one in found if one.catalog_id == "doppelganger")
-    assert shadow.entity_slot == ROOM_SLOTS[-1]
-
-
-def test_a_full_floor_gets_no_shadow():
-    """★ 앉을 자리가 없으면 안 선다 — 덮어쓰고 서느니 안 서는 편이 낫다."""
-    plain = [build_record(90 + index, slot=slot) for index, slot in enumerate(ROOM_SLOTS)]
-    found = pick([*plain, build_record(1, "doppelganger")])
-    assert count_shadows(found) == 0
-    # 여느 개체는 그대로 남는다.
-    assert len(found) == len(plain)
+    assert len(slots) == len(set(slots)) == 1
 
 
 def test_shadows_sit_in_the_room_they_appear_in():

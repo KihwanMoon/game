@@ -15,6 +15,7 @@ import json
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
+from game.app.bots.doppel import check_is_doppel
 from game.app.monsters.affixes import compute_affixed_stat, list_monster_affixes
 from game.app.monsters.growth import build_growth
 from game.app.monsters.tiers import MonsterTier, compute_tier_stat
@@ -137,7 +138,14 @@ def build_monster_snapshot(
         # 전투 쪽이 그때 종의 값을 쓴다.
         attack_range=int(frozen.get("attack_range") or 0),
         skills=tuple(sorted(str(one) for one in frozen.get("skills") or ())),
-        potions=int(frozen["potions"]) if "potions" in frozen else -1,
+        # **그림자는 물약을 안 쓴다** (2026-09-06). 원본 봇이 들고 다니던 것이 그대로
+        # 얼어붙어 있었는데, 그림자는 목숨 셋을 쓰며 세 번 만나는 개체다 — 거기에 회복까지
+        # 붙으면 한 판이 아니라 소모전이 된다. 잡을 수 있어야 「끝내 지웠다」가 성립한다.
+        potions=(
+            0
+            if check_is_doppel(record.catalog_id)
+            else (int(frozen["potions"]) if "potions" in frozen else -1)
+        ),
         # 개체 전용 규칙표. 여느 몬스터는 None 이라 종의 표를 쓴다.
         ruleset=record.ruleset_json,
     )
