@@ -209,6 +209,7 @@ export class ChainCursor {
       pressure: this.pressure,
       snapshots: this.setup.snapshots ?? [],
       isVaried: this.setup.isVaried ?? true,
+      roomIndex: this.index,
       floor: resolveRoomFloor(
         this.setup.floor ?? DEFAULT_FLOOR,
         this.index,

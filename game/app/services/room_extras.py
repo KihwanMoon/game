@@ -11,13 +11,21 @@
 판을 낸다 (R5). 규칙은 「플레이어에게서 가장 먼 빈 칸, 같으면 위·왼쪽」 하나뿐이라 두
 코어가 같은 답을 낸다.
 
+**어느 방에 서는지도 여기서 가린다.** 「한 방에 하나」가 규칙이라 스냅샷이 방 번호를
+싣고(`room_index`), 층 거르기와 같은 자리에서 함께 걸러진다 — 층만 보고 방을 안 보면
+그 층 다섯 방에 같은 그림자가 다섯 번 선다.
+
 **있던 판은 안 흔들린다.** 더할 것이 없으면 아무 일도 안 일어난다 — 지금까지 발급된
 티켓의 스냅샷은 전부 방 배치의 자리를 쓰므로 골든이 그대로다.
 """
 
 from game.app.simulation.scaling import FloorScale, get_scaled_enemy_stats
 from game.app.simulation.state import FACTION_ENEMY, TIER_NORMAL, Entity
-from game.schemas.monster_snapshot import MonsterSnapshot, check_is_extra_slot
+from game.schemas.monster_snapshot import (
+    MonsterSnapshot,
+    check_is_extra_slot,
+    check_room_match,
+)
 from game.schemas.room import WALKABLE_TILES, RoomTemplate
 
 
@@ -154,3 +162,37 @@ def build_enemy_entity(
         skills=skills,
         tier=str(kind.get("tier", TIER_NORMAL)),
     )
+
+
+def build_floor_overrides(
+    snapshots: tuple[MonsterSnapshot, ...], floor: int, room_index: int = -1
+) -> dict[str, MonsterSnapshot]:
+    """이 층에 얹을 스냅샷만 골라 이름으로 건다.
+
+    **이름이 층을 구분하지 않는다.** 자리 이름은 `{종}_{순번}` 이라 `goblin_rusher_0` 이
+    1층부터 9층까지 따로 살고, 하강 티켓은 그 전부를 싣는다. 층을 안 보고 이름만으로
+    겹치면 나중 것이 이기는데 그것이 가장 깊은 층의 개체다 — **1층 방에 9층 레벨 10 짜리가
+    섰다.** 신규 계정이 첫 방에서 그것을 만났고, 규칙표 17개 어느 것으로도 1층을 못
+    깼다(실측 136판, 돌파 0).
+
+    두 코어가 같은 값을 썼기 때문에 검증은 어긋나지 않았다. 어긋난 것은 검증이 아니라
+    게임이며, 그래서 조용했다.
+
+    **층을 모르는 스냅샷(0)은 그대로 얹는다.** 층을 싣기 전에 발급된 티켓이 그 값이고,
+    발급 당시와 다르게 재시뮬하면 정상 제출이 반려된다 (R5).
+
+    Args:
+        snapshots: 티켓이 얼려 둔 개체들. 하강 전체의 층이 섞여 있다.
+        floor: 지금 도는 방의 층.
+        room_index: 지금 조립하는 방의 번호. -1 이면 방을 안 가린다.
+
+    Returns:
+        entity_id → 스냅샷. 이 층 것과 층을 모르는 것만 들어 있다.
+    """
+    # **방도 가린다** (2026-09-06). 더해서 세우는 개체는 「한 방에 하나」가 규칙이라
+    # 어느 방인지가 실려 온다 — 안 실린 것(-1)은 예전대로 모든 방이다.
+    return {
+        item.entity_id: item
+        for item in snapshots
+        if item.zone_floor in (0, floor) and check_room_match(item.room_index, room_index)
+    }

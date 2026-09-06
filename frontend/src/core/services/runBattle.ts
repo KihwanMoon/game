@@ -31,7 +31,11 @@ import type { RawAntiAbuse } from '../sim/pressure'
 import type { RawDamageFormula } from '../combat/damage'
 import { FACTION_ENEMY, FACTION_PLAYER, TIER_NORMAL, WorldState, createEntity } from '../sim/state'
 import type { Entity } from '../sim/state'
-import { buildEntityId, type MonsterSnapshot } from '../schemas/monsterSnapshot'
+import {
+  buildEntityId,
+  checkRoomMatch,
+  type MonsterSnapshot,
+} from '../schemas/monsterSnapshot'
 import { resolveEliteKind, resolveSpawnSpot } from '../sim/variance'
 import { BASE_SKILL_POWER_PCT, type PlayerLoadout } from '../schemas/loadout'
 
@@ -151,6 +155,11 @@ export interface EngineSetup {
   readonly maxTicks?: number
   readonly floor?: number
   /**
+   * 하강 전체에서 지금이 몇 번째 방인가 (0부터). 그림자가 방을 고르는 근거다.
+   * 생략하면 방을 안 가린다 — 방 하나만 도는 자리(연습·골든)가 그 경우다.
+   */
+  readonly roomIndex?: number
+  /**
    * 배치 흔들기·정예 승격을 켤지. 기본은 켬 — **골든과 튜토리얼이 끈다**.
    * 파이썬의 `is_varied` 와 같은 뜻이다 (G3).
    */
@@ -195,17 +204,25 @@ export interface EngineSetup {
  * **층을 모르는 스냅샷(0)은 그대로 얹는다.** 층을 싣기 전에 발급된 티켓이 그 값이고,
  * 발급 당시와 다르게 재시뮬하면 정상 제출이 반려된다 (R5).
  *
+ * **방도 같은 이유로 본다.** 그림자는 「한 방에 하나」라 어느 방인지를 티켓이 싣는다
+ * (`roomIndex`). -1 은 「모든 방」이고, 싣기 전에 발급된 티켓이 그 값이다.
+ *
  * @param snapshots 티켓이 얼려 둔 개체들. 하강 전체의 층이 섞여 있다.
  * @param floor 지금 도는 방의 층.
- * @returns entityId → 스냅샷. 이 층 것과 층을 모르는 것만 들어 있다.
+ * @param roomIndex 지금 도는 방 번호. 생략하면 방을 안 가린다.
+ * @returns entityId → 스냅샷. 이 층·이 방 것과, 층·방을 모르는 것만 들어 있다.
  */
 export function buildFloorOverrides(
   snapshots: readonly MonsterSnapshot[],
   floor: number,
+  roomIndex = -1,
 ): ReadonlyMap<string, MonsterSnapshot> {
   const picked = new Map<string, MonsterSnapshot>()
   for (const item of snapshots) {
-    if (item.zoneFloor === 0 || item.zoneFloor === floor) {
+    if (
+      (item.zoneFloor === 0 || item.zoneFloor === floor) &&
+      checkRoomMatch(item.roomIndex, roomIndex)
+    ) {
       picked.set(item.entityId, item)
     }
   }
@@ -258,7 +275,7 @@ export function buildEngine(setup: EngineSetup): TickEngine {
   const scale = buildFloorScale(balance.floorScale)
   // 스냅샷은 entityId 로 겹친다. 방 배치가 `{kind}_{index}` 로 붙이므로 그 이름을
   // 겨냥하며, 이름이 갈리면 스냅샷이 아무에게도 적용되지 않고 조용히 넘어간다.
-  const overrides = buildFloorOverrides(setup.snapshots ?? [], floor)
+  const overrides = buildFloorOverrides(setup.snapshots ?? [], floor, setup.roomIndex ?? -1)
   // **변수 축을 따로 판다** (R5) — 파이썬과 같은 라벨·같은 순서다 (G3).
   // **끌 수 있어야 한다** — 파이썬의 `is_varied` 와 같은 뜻이다 (G3). 골든·튜토리얼이 끈다.
   const isVaried = setup.isVaried ?? true

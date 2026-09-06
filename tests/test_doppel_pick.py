@@ -4,6 +4,9 @@
 
 밀집이 난이도를 통째로 올렸다 — 빈 스폰 자리가 있는 만큼 섰고, 자리 이름이 방을 안 담아
 한 방의 `bomb_slime_0·_1·_2` 가 모두 차면 셋이 같은 방에 섰다. 실측으로 4층에 열한 마리.
+
+**세는 단위는 방이다.** 층당 하나로 두었던 앞 판은 방이 다섯인 층과 셋인 층에서 「한 방에
+몇을 만나는가」가 달라졌다.
 """
 
 from game.api.doppel_pick import (
@@ -60,24 +63,31 @@ ROOM_SLOTS = sorted(
 
 
 def pick(records, roll=lambda _n: 0):
-    return build_room_doppels(records, ROOMS, ROOM_IDS, 3, 4, roll)
+    return build_room_doppels(records, ROOM_IDS, 3, 4, roll)
+
+
+def list_rooms(found):
+    return sorted(one.room_index for one in found if one.catalog_id == "doppelganger")
 
 
 def count_shadows(found):
     return len([one for one in found if one.catalog_id == "doppelganger"])
 
 
-def test_a_floor_gets_exactly_one_shadow():
-    """★ **그림자는 층에 귀속이다.** 그 층에서 죽은 빌드가 그 층을 지킨다.
+def test_each_room_gets_exactly_one_shadow():
+    """★ **한 방에 하나가 규칙이다.** 방이 셋이면 셋이 서고, 방마다 하나씩이다.
 
-    방마다 따로 고르던 때는 4층에 다섯이 섰고 둘이 한 방에 보였다 (실제 신고).
+    자리 이름이 방을 안 담던 때는 방마다 아무 자리나 골랐다가 둘이 한 방에 보였다
+    (실제 신고).
     """
     shadows = [build_record(i, "doppelganger") for i in range(1, 12)]
-    assert count_shadows(pick(shadows)) == 1
+    found = pick(shadows)
+    assert count_shadows(found) == len(ROOM_IDS)
+    assert list_rooms(found) == [0, 1, 2]
 
 
 def test_the_shadow_gets_a_slot_no_room_has():
-    """★ **전용 자리라 모든 방에 선다.**
+    """★ **전용 자리라 어느 방에든 설 수 있다.**
 
     방 배치의 자리를 덮어쓰면 그 자리가 있는 방에만 설 수 있다 — 실측으로 다섯 방 중
     두세 방이었다. `room_extras` 가 방 배치에 없는 자리를 그 방에 더해 준다.
@@ -108,8 +118,23 @@ def test_the_same_shadow_never_appears_twice():
 
 
 def test_fewer_shadows_than_rooms_is_fine():
+    """★ 남은 방은 그냥 빈다 — 모자란다고 같은 그림자를 두 방에 세우지 않는다."""
     found = pick([build_record(1, "doppelganger")])
     assert count_shadows(found) == 1
+    assert list_rooms(found) == [0]
+
+
+def test_the_shadow_names_the_room_it_stands_in():
+    """★ 방을 안 실으면 스냅샷이 모든 방에 얹혀 다시 방마다 하나가 아니게 된다."""
+    shadows = [build_record(i, "doppelganger") for i in (1, 2)]
+    assert list_rooms(pick(shadows)) == [0, 1]
+
+
+def test_room_numbers_are_global_across_floors():
+    """★ 방 번호는 하강 전체 기준이다 — 층마다 0 부터 세면 2층 그림자가 1층에 선다."""
+    shadows = [build_record(i, "doppelganger", floor=5) for i in (1, 2)]
+    found = build_room_doppels(shadows, ("a", "b", "c", "d"), 2, 4, lambda _n: 0)
+    assert list_rooms(found) == [2, 3]
 
 
 def test_ordinary_monsters_pass_through():
@@ -141,6 +166,13 @@ def test_the_roll_actually_chooses():
         one.record_id for one in pick(shadows, lambda n: n - 1) if one.catalog_id == "doppelganger"
     ]
     assert first != last
+
+
+def test_the_last_partial_floor_still_gets_one():
+    """★ 방 수가 딱 안 떨어지는 마지막 층이 보스층이다 — 내림으로 자르면 통째로 빈다."""
+    shadows = [build_record(1, "doppelganger", floor=6)]
+    found = build_room_doppels(shadows, ("a", "b", "c", "d", "e"), 2, 4, lambda _n: 0)
+    assert list_rooms(found) == [4]
 
 
 def test_floor_rooms_are_split_by_the_chain():

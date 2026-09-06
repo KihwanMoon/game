@@ -108,7 +108,6 @@ def create_run_ticket(request: TicketRequest, account: CurrentAccount) -> Ticket
             # 때는 4층에 열한 마리가 있었고, 자리 이름이 방을 안 담아 셋이 한 방에 섰다.
             for record in build_room_doppels(
                 list_floor_range_monsters(pool, floor, ticket.room_ids, CHAIN_LENGTH),
-                context.rooms,
                 ticket.room_ids,
                 CHAIN_LENGTH,
                 floor,

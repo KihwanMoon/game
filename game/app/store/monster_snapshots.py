@@ -81,6 +81,7 @@ def build_monster_snapshot(
     return MonsterSnapshot(
         entity_id=record.entity_slot,
         zone_floor=int(record.zone_floor or 0),
+        room_index=record.room_index,
         record_id=record.record_id,
         kind_id=record.catalog_id,
         tier=record.tier,

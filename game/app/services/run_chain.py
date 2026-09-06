@@ -122,6 +122,9 @@ def run_room_chain(
             snapshots=snapshots,
             loadout=loadout,
             floor=resolve_room_floor(floor, index, rooms_per_floor),
+            # **몇 번째 방인가.** 더해서 세우는 개체가 이 값으로 갈린다 — 「한 방에
+            # 하나」가 규칙이라 어느 방인지가 필요하다 (2026-09-06).
+            room_index=index,
         )
         player = engine.state.entities["player"]
         if carried_hp is not None:

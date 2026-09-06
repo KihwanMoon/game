@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { MonsterSnapshot } from '../schemas/monsterSnapshot'
-import { sortSnapshots } from '../schemas/monsterSnapshot'
+import { parseSnapshot, sortSnapshots } from '../schemas/monsterSnapshot'
 import { buildFloorOverrides } from './runBattle'
 
 /**
@@ -16,9 +16,15 @@ import { buildFloorOverrides } from './runBattle'
  * @param zoneFloor 사는 층.
  * @param level 레벨.
  * @param recordId 개체 기록 id.
+ * @param roomIndex 설 방. -1 이면 모든 방이다.
  * @returns 스냅샷.
  */
-function build(zoneFloor: number, level: number, recordId = 0): MonsterSnapshot {
+function build(
+  zoneFloor: number,
+  level: number,
+  recordId = 0,
+  roomIndex = -1,
+): MonsterSnapshot {
   return {
     entityId: 'goblin_rusher_0',
     recordId: recordId || zoneFloor,
@@ -35,6 +41,7 @@ function build(zoneFloor: number, level: number, recordId = 0): MonsterSnapshot 
     ruleSlots: 0,
     cpuBudget: 0,
     zoneFloor,
+    roomIndex,
   }
 }
 
@@ -89,6 +96,40 @@ describe('층별 스냅샷', () => {
     expect(parseSnapshot(raw).zoneFloor).toBe(0)
   })
 })
+
+describe('★ 방별 스냅샷 — 파이썬 `test_snapshot_floor` 의 짝 (G3)', () => {
+  it('그림자는 제 방에만 선다 — 한 방에 하나가 규칙이다', () => {
+    const snapshots = [build(4, 4, 0, 2)]
+    expect(buildFloorOverrides(snapshots, 4, 2).size).toBe(1)
+    expect(buildFloorOverrides(snapshots, 4, 1).size).toBe(0)
+  })
+
+  it('★ 방을 모르는 스냅샷(-1)은 모든 방에 얹힌다', () => {
+    // 여느 지속 몬스터가 그 값이고, 방을 싣기 전에 발급된 티켓도 그렇다. 발급 당시와
+    // 다르게 재시뮬하면 정상 제출이 반려된다 (R5).
+    const snapshots = [build(4, 4)]
+    for (const room of [0, 1, 2, 3, 4]) {
+      expect(buildFloorOverrides(snapshots, 4, room).size).toBe(1)
+    }
+  })
+
+  it('★ 옛 절에는 방이 없다 — -1 로 읽어야 옛 티켓이 예전처럼 돈다', () => {
+    const parsed = parseSnapshot({
+      entityId: 'goblin_rusher_0',
+      recordId: 1,
+      kindId: 'goblin_rusher',
+      tier: 'NORMAL',
+      level: 1,
+      hp_max: 10,
+      attack: 1,
+      defense: 0,
+      rule_slots: 0,
+      cpu_budget: 0,
+    } as never)
+    expect(parsed.roomIndex).toBe(-1)
+  })
+})
+
 
 describe('스냅샷이 종을 정한다', () => {
   it('★ 도플갱어가 방에 선다 — 파이썬 `test_doppel_spawn` 의 짝 (G3)', async () => {

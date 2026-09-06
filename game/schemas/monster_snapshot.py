@@ -53,6 +53,14 @@ class MonsterSnapshot:
     # 0 은 「모른다」다. 층을 싣기 전에 발급된 티켓이 그 값이며, 그 티켓은 예전처럼
     # 층을 안 보고 얹는다 — 발급 당시와 다르게 재시뮬하면 정상 제출이 반려된다 (R5).
     zone_floor: int = 0
+    # **어느 방에 서는가** (2026-09-06). -1 은 「그 층 모든 방」이다.
+    #
+    # 방 배치를 덮어쓰는 개체는 자기 자리가 있는 방에만 서므로 이 값을 안 본다. 더해서
+    # 세우는 개체(그림자)만 쓴다 — **한 방에 하나**가 규칙이라 어느 방인지가 필요하다.
+    #
+    # 기본이 -1 인 이유는 옛 티켓 때문이다. 안 실린 값은 「모든 방」으로 읽혀 예전과
+    # 똑같이 재시뮬된다 (R5).
+    room_index: int = -1
     # 이 개체가 실제로 닿는 거리. **0 은 「안 실렸다」**이고 그때는 종의 값을 쓴다.
     #
     # 도플갱어 때문에 생겼다. 스탯 셋만 실으니 **장궁 든 봇의 그림자가 사거리 1 근접**으로
@@ -89,6 +97,22 @@ class MonsterSnapshot:
 # 지속 몬스터는 자기 자리를 덮어쓰는 개체라, 자리가 없는 방에 더하면 그 방의 적이 늘어난다
 # — 실제로 세계 몬스터(w1·w2·w3)가 모든 방에 더해져 방당 다섯이 됐다.
 DOPPEL_SLOT_PREFIX = "doppel_"
+
+
+def check_room_match(room_index: int, wanted: int) -> bool:
+    """이 개체가 그 방에 서는가.
+
+    **-1 은 모든 방이다.** 방 배치를 덮어쓰는 개체와 옛 티켓이 그 값을 쓰며, 그때는
+    자리 이름이 어느 방인지를 이미 정한다.
+
+    Args:
+        room_index: 개체가 실은 값.
+        wanted: 지금 조립하는 방의 번호.
+
+    Returns:
+        서면 True.
+    """
+    return room_index < 0 or room_index == wanted
 
 
 def check_is_extra_slot(slot: str) -> bool:
@@ -137,6 +161,7 @@ def parse_snapshot(raw: dict) -> MonsterSnapshot:
         rule_slots=int(raw["rule_slots"]),
         cpu_budget=int(raw["cpu_budget"]),
         zone_floor=int(raw.get("zone_floor", 0)),
+        room_index=int(raw.get("room_index", -1)),
         attack_range=int(raw.get("attack_range", 0)),
         # 정렬해서 담는다. 집합·딕셔너리 순회가 게임 상태로 새면 두 코어가 갈린다 (R5).
         skills=tuple(sorted(str(one) for one in raw.get("skills") or ())),
@@ -166,6 +191,7 @@ def build_snapshot_payload(snapshot: MonsterSnapshot) -> dict:
         "rule_slots": snapshot.rule_slots,
         "cpu_budget": snapshot.cpu_budget,
         "zone_floor": snapshot.zone_floor,
+        "room_index": snapshot.room_index,
         "attack_range": snapshot.attack_range,
         "skills": list(snapshot.skills),
         "potions": snapshot.potions,

@@ -13,13 +13,14 @@ from game.app.services.run_battle import build_floor_overrides
 from game.schemas.monster_snapshot import MonsterSnapshot, sort_snapshots
 
 
-def build_snapshot(zone_floor, level, record_id=0):
+def build_snapshot(zone_floor, level, record_id=0, room_index=-1):
     """같은 자리 이름을 가진 스냅샷 하나.
 
     Args:
         zone_floor: 사는 층.
         level: 레벨.
         record_id: 개체 기록 id.
+        room_index: 설 방. -1 이면 모든 방이다.
 
     Returns:
         스냅샷.
@@ -36,6 +37,7 @@ def build_snapshot(zone_floor, level, record_id=0):
         rule_slots=0,
         cpu_budget=0,
         zone_floor=zone_floor,
+        room_index=room_index,
     )
 
 
@@ -67,6 +69,35 @@ def test_an_old_snapshot_still_applies_anywhere():
     old = build_snapshot(0, 4)
     assert build_floor_overrides((old,), 1)["goblin_rusher_0"].level == 4
     assert build_floor_overrides((old,), 7)["goblin_rusher_0"].level == 4
+
+
+def test_a_shadow_stands_only_in_its_own_room():
+    """★ **한 방에 하나가 규칙이다.** 방을 안 가리면 다시 방마다 하나가 아니게 된다."""
+    snapshots = (build_snapshot(4, 4, room_index=2),)
+    assert build_floor_overrides(snapshots, 4, 2) != {}
+    assert build_floor_overrides(snapshots, 4, 1) == {}
+
+
+def test_a_roomless_snapshot_stands_in_every_room():
+    """★ 방을 모르는 스냅샷(-1)은 그대로 얹는다.
+
+    여느 지속 몬스터가 그 값이고, 방을 싣기 전에 발급된 티켓도 그렇다. 발급 당시와
+    다르게 재시뮬하면 **정상 제출이 반려된다** (R5).
+    """
+    snapshots = (build_snapshot(4, 4),)
+    for room in range(5):
+        assert build_floor_overrides(snapshots, 4, room) != {}
+
+
+def test_the_payload_carries_the_room():
+    """★ 방이 실려 나가지 않으면 브라우저는 모든 방에 얹는다."""
+    from game.schemas.monster_snapshot import build_snapshot_payload, parse_snapshot
+
+    payload = build_snapshot_payload(build_snapshot(6, 6, room_index=3))
+    assert payload["room_index"] == 3
+    assert parse_snapshot(payload).room_index == 3
+    del payload["room_index"]
+    assert parse_snapshot(payload).room_index == -1
 
 
 def test_sorting_is_total():

@@ -42,6 +42,16 @@ export interface MonsterSnapshot {
    */
   readonly zoneFloor: number
   /**
+   * 어느 방에 서는가. **-1 은 「그 층 모든 방」**이다.
+   *
+   * 그림자만 이것을 쓴다 — 「한 방에 하나」가 규칙이라 어느 방인지를 티켓이 정해야 한다.
+   * 여느 지속 몬스터는 방 배치의 자리를 채우므로 방을 안 고른다.
+   *
+   * 싣기 전에 발급된 티켓은 -1 이고, 그 티켓은 예전처럼 방을 안 보고 얹는다 — 발급
+   * 당시와 다르게 재시뮬하면 정상 제출이 반려된다 (R5).
+   */
+  readonly roomIndex: number
+  /**
    * 이 개체가 실제로 닿는 거리. **0 은 「안 실렸다」**이고 그때는 종의 값을 쓴다.
    *
    * 도플갱어 때문에 생겼다. 스탯만 실으니 **장궁 든 봇의 그림자가 사거리 1 근접**으로
@@ -81,6 +91,8 @@ export interface RawMonsterSnapshot {
   readonly cpu_budget: number
   /** 구버전 서버는 안 보낸다. 그때는 0 — 층을 모른다는 뜻이다. */
   readonly zone_floor?: number
+  /** 구버전 서버는 안 보낸다. 그때는 -1 — 모든 방이라는 뜻이다. */
+  readonly room_index?: number
   /** 키트를 싣기 전 서버는 안 보낸다. 그때는 종의 값을 쓴다. */
   readonly attack_range?: number
   readonly skills?: readonly string[]
@@ -118,6 +130,7 @@ export function parseSnapshot(raw: RawMonsterSnapshot): MonsterSnapshot {
     ruleSlots: raw.rule_slots,
     cpuBudget: raw.cpu_budget,
     zoneFloor: raw.zone_floor ?? 0,
+    roomIndex: raw.room_index ?? -1,
     attackRange: raw.attack_range ?? 0,
     // 정렬해서 담는다 — 순회 순서가 게임 상태로 새면 두 코어가 갈린다 (R5).
     skills: [...(raw.skills ?? [])].map(String).sort(),
@@ -172,4 +185,15 @@ export const DOPPEL_SLOT_PREFIX = 'doppel_'
  */
 export function checkIsExtraSlot(slot: string): boolean {
   return slot.startsWith(DOPPEL_SLOT_PREFIX)
+}
+
+/**
+ * 이 스냅샷이 그 방에 서는가.
+ *
+ * @param roomIndex 개체가 실은 값. 음수면 「모든 방」이다.
+ * @param wanted 지금 도는 방 번호 (하강 전체에서 0부터).
+ * @returns 서면 참.
+ */
+export function checkRoomMatch(roomIndex: number, wanted: number): boolean {
+  return roomIndex < 0 || roomIndex === wanted
 }
