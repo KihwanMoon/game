@@ -65,6 +65,7 @@ import { buildRuleRows } from './ruleRows'
 import { LeaderLine, buildLeaderPath, type LeaderPath } from './leaderLine'
 import { formatOutcome } from './outcomeText'
 import { PlanCanvas } from './PlanCanvas'
+import { DEFAULT_LOOK, resolveWeaponLook } from './weaponLook'
 import { buildPlanScene } from './planScene'
 import {
   checkPlanThemeSame,
@@ -128,6 +129,15 @@ export interface BattleViewProps {
    * 정산은 사라지는 알림이 아니라 쌓이는 기록이므로 로그와 같은 급의 탭으로 옮겼다.
    */
   readonly settlements?: readonly FloorSettlement[]
+  /**
+   * 내가 낀 주무기의 카탈로그 id (설계/10_외형과_모션).
+   *
+   * **자국이 여기서 갈린다.** 도신검이면 굽은 날이 옆으로 훑고, 전투 도끼면 날이 얹힌
+   * 채 내려오고, 장궁이면 아무 자국도 없다 — 활은 휘두르지 않는다.
+   *
+   * 비어 있으면 맨몸이며 기본 꼴로 휘두른다. 적은 언제나 기본 꼴이다.
+   */
+  readonly weaponCatalogId?: string
 }
 
 /**
@@ -319,6 +329,12 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
   }, [session, handleBatch, outcome])
 
   const scene = useMemo(() => buildPlanScene(session.engine), [session, frame])
+  // **내 무기만 내 것이다.** 적의 겉모습은 아직 없으므로 기본 꼴로 휘두른다 — 그림자가
+  // 남의 빌드를 이어받는 자리(#55)가 정해지면 여기가 그 자리다.
+  const lookOf = useMemo(() => {
+    const mine = resolveWeaponLook(props.weaponCatalogId ?? '')
+    return (entityId: string) => (entityId === PLAYER_ENTITY_ID ? mine : DEFAULT_LOOK)
+  }, [props.weaponCatalogId])
   const player = session.engine.state.entities.get(PLAYER_ENTITY_ID)
   const trace = session.tracer.trace
 
@@ -428,7 +444,8 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
   // 말을 쓴다 — 사후 분석이 이 화면을 덮으므로 두 말이 한 화면에 보이면 안 된다.
   const outcomeLabel = checkOngoing(outcome) ? undefined : formatOutcome(outcome)
   const threatText = threat === undefined ? undefined : `${threat.glyph} ${threat.text}`
-  const plan = theme === undefined ? null : <PlanCanvas scene={scene} theme={theme} />
+  const plan =
+    theme === undefined ? null : <PlanCanvas scene={scene} theme={theme} lookOf={lookOf} />
 
   // 세로 모바일은 같은 값들을 다른 배열로 그린다. 세션·시계·판정은 위에서 이미 다 나왔고
   // 여기서 갈리는 것은 트리뿐이라, 기기를 돌려도 보고 있던 판이 그대로 이어진다.

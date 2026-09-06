@@ -117,6 +117,13 @@ export interface PlanPulseView {
    */
   readonly from: { readonly x: number; readonly y: number } | null
   /**
+   * 때린 말의 엔티티 id. **어느 무기로 휘두를지를 화면이 여기서 고른다.**
+   *
+   * 장면은 겉모습을 모른다 (계약 C1) — 엔진이 아는 것(누가 때렸는가)만 싣고, 그 사람이
+   * 무엇을 끼고 있는지는 화면이 안다. 그래야 겉모습이 시뮬 입력이 되지 않는다.
+   */
+  readonly byEntityId: string
+  /**
    * 무기를 휘두르는 행동인가. 치유·방어·소환은 아니다.
    *
    * **이번 틱에 실제로 일어난 것만 참이다.** 펄스는 두 틱을 머무는데(`EFFECT_LINGER_TICKS`)
@@ -335,6 +342,7 @@ export function buildPulsesFromLog(
           delta: entry.delta,
           label,
           from,
+          byEntityId: entry.entityId,
           // **깎는 것만, 그리고 이번 틱만 무기를 든다.** 회복에 칼을 휘두르면 무슨 일이
           // 있었는지가 뒤집혀 읽히고, 잔상에까지 휘두르면 공격이 없는 틱에 공격이 보인다.
           isStrike:
@@ -352,6 +360,7 @@ export function buildPulsesFromLog(
           delta: null,
           label,
           from: spot,
+          byEntityId: entry.entityId,
           isStrike: false,
         })
       }

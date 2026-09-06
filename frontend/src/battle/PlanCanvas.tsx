@@ -18,6 +18,8 @@ import { ACTOR_NAMES } from '../ds'
 import type { PlanScene } from './planScene'
 import { renderPlan, resizePlanCanvas } from './planRenderer'
 import type { PlanTheme } from './planTheme'
+import { DEFAULT_LOOK } from './weaponLook'
+import type { WeaponLook } from './weaponLook'
 
 /** 틱이 바뀔 때 한 번 다시 도는 명도 전환 클래스. */
 const SWAP_CLASS = 'battle-plan__canvas--swap'
@@ -37,6 +39,13 @@ const SWING_MS = 130
 export interface PlanCanvasProps {
   readonly scene: PlanScene
   readonly theme: PlanTheme
+  /**
+   * 이 말이 무엇을 들고 휘두르는가 (설계/10_외형과_모션).
+   *
+   * **장면이 아니라 화면이 안다.** 겉모습은 시뮬 입력이 아니므로 엔진도 티켓도 안
+   * 거친다 — 화면이 장착 무기의 `catalogId` 에서 골라 넘긴다 (계약 C1).
+   */
+  readonly lookOf?: (entityId: string) => WeaponLook
 }
 
 /**
@@ -122,6 +131,7 @@ export function describeScene(scene: PlanScene): string {
 export function PlanCanvas(props: PlanCanvasProps): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pixelRatio = usePixelRatio()
+  const lookOf = props.lookOf ?? ((): WeaponLook => DEFAULT_LOOK)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -137,7 +147,7 @@ export function PlanCanvas(props: PlanCanvasProps): React.JSX.Element {
     if (!checkHasSwing(props.scene) || checkPrefersStill()) {
       // 모션을 끈 사람에게는 **다 끝난 자국**을 한 장 그린다 — 고리와 수치는 그대로
       // 남으므로 무슨 일이 있었는지는 똑같이 읽힌다 (계약 C5).
-      renderPlan(ctx, props.scene, props.theme)
+      renderPlan(ctx, props.scene, props.theme, 1, lookOf)
       return
     }
     let frame = 0
@@ -145,7 +155,7 @@ export function PlanCanvas(props: PlanCanvasProps): React.JSX.Element {
     const step = (now: number): void => {
       start = start === 0 ? now : start
       const phase = Math.min((now - start) / SWING_MS, 1)
-      renderPlan(ctx, props.scene, props.theme, phase)
+      renderPlan(ctx, props.scene, props.theme, phase, lookOf)
       if (phase < 1) {
         frame = requestAnimationFrame(step)
       }
@@ -154,6 +164,8 @@ export function PlanCanvas(props: PlanCanvasProps): React.JSX.Element {
     return () => {
       cancelAnimationFrame(frame)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- lookOf 는 매 렌더 새 함수라
+    // 의존성에 넣으면 자국이 매 렌더 처음부터 다시 돈다. 장면이 바뀔 때만 다시 그린다.
   }, [props.scene, props.theme, pixelRatio])
 
   useEffect(() => {

@@ -2162,6 +2162,12 @@ export function App(): React.JSX.Element {
     postState === 'open' ||
     (postState === 'auto' && recording !== undefined && recording.outcome !== OUTCOME_PLAYER_WIN)
 
+  // 낀 주무기가 자국을 정한다 (설계/10_외형과_모션). 도신검이면 굽은 날이 옆으로 훑고,
+  // 장궁이면 아무 자국도 없다 — 활은 휘두르지 않는다.
+  const mainWeapon =
+    inventory?.equipment.find((slot) => slot.item?.equippedSlot === 'WEAPON_MAIN')?.item
+      ?.catalogId ?? ''
+
   return (
     <div className="app">
       <ErrorBoundary onReset={goToEditor}>
@@ -2171,6 +2177,7 @@ export function App(): React.JSX.Element {
           location={formatLocation(roomFloor, run.setup.roomId)}
           controls={battleControls}
           settlements={settlements}
+          weaponCatalogId={mainWeapon}
           onOutcome={setOutcome}
         />
         {showPost && recording !== undefined ? (

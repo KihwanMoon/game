@@ -31,7 +31,9 @@ import {
   TILE_WALL,
 } from '../core/schemas'
 import { ACTOR_GLYPHS } from '../ds'
-import { buildSwing, resolveMotion, resolveShape } from './weaponSwing'
+import { DEFAULT_LOOK } from './weaponLook'
+import type { WeaponLook } from './weaponLook'
+import { buildSwing } from './weaponSwing'
 import type {
   PlanActorView,
   PlanHazardView,
@@ -825,8 +827,11 @@ function drawSwing(
   pulse: PlanPulseView,
   theme: PlanTheme,
   phase: number,
+  look: WeaponLook,
 ): void {
-  if (!pulse.isStrike || pulse.from === null) {
+  // **활은 안 휘두른다.** 사거리 넷 다섯에서 칼자국이 뜨면 무슨 일이 있었는지가 거짓으로
+  // 읽힌다 — 그래서 꼴에 `none` 이 있다.
+  if (!pulse.isStrike || pulse.from === null || look.shape === 'none') {
     return
   }
   const fromRect = getCellRect(pulse.from.x, pulse.from.y, theme)
@@ -835,8 +840,8 @@ function drawSwing(
     { x: fromRect.left + fromRect.size / 2, y: fromRect.top + fromRect.size / 2 },
     { x: toRect.left + toRect.size / 2, y: toRect.top + toRect.size / 2 },
     theme.cell,
-    resolveShape(theme.weaponShape),
-    resolveMotion(theme.weaponMotion),
+    look.shape,
+    look.motion,
     phase,
   )
   ctx.save()
@@ -873,10 +878,11 @@ function drawPulse(
   pulse: PlanPulseView,
   theme: PlanTheme,
   phase: number,
+  look: WeaponLook,
 ): void {
   // **자국이 먼저, 고리가 나중이다.** 고리와 수치는 모션을 꺼도 남아야 하므로 위에
   // 그린다 (계약 C5).
-  drawSwing(ctx, pulse, theme, phase)
+  drawSwing(ctx, pulse, theme, phase, look)
   const rect = getCellRect(pulse.x, pulse.y, theme)
   const color = pulse.isGain ? theme.spring : theme.hazard
   ctx.save()
@@ -914,6 +920,7 @@ export function renderPlan(
   scene: PlanScene,
   theme: PlanTheme,
   phase = 1,
+  lookOf: (entityId: string) => WeaponLook = () => DEFAULT_LOOK,
 ): void {
   const width = scene.cols * theme.cell
   const height = scene.rows * theme.cell
@@ -944,7 +951,7 @@ export function renderPlan(
     drawLink(ctx, link, theme)
   }
   for (const pulse of scene.pulses) {
-    drawPulse(ctx, pulse, theme, phase)
+    drawPulse(ctx, pulse, theme, phase, lookOf(pulse.byEntityId))
   }
   for (const actor of scene.actors) {
     drawActor(ctx, actor, theme)

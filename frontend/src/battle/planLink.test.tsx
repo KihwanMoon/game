@@ -219,7 +219,16 @@ describe('연결선 그리기', () => {
         hazards: [],
         links: [],
         pulses: [
-          { x: 4, y: 3, isGain: false, delta: -7, label: '', from: null, isStrike: false },
+          {
+            x: 4,
+            y: 3,
+            isGain: false,
+            delta: -7,
+            label: '',
+            from: null,
+            byEntityId: 'player',
+            isStrike: false,
+          },
           {
             x: 1,
             y: 1,
@@ -227,6 +236,7 @@ describe('연결선 그리기', () => {
             delta: null,
             label: '방어',
             from: { x: 1, y: 1 },
+            byEntityId: 'player',
             isStrike: false,
           },
         ],
@@ -256,7 +266,16 @@ describe('연결선 그리기', () => {
           hazards: [],
           links: [],
           pulses: [
-            { x: 4, y: 3, isGain: false, delta: -7, label: '', from: { x: 1, y: 1 }, isStrike },
+            {
+              x: 4,
+              y: 3,
+              isGain: false,
+              delta: -7,
+              label: '',
+              from: { x: 1, y: 1 },
+              byEntityId: 'player',
+              isStrike,
+            },
           ],
         },
         readPlanTheme(readFake),
@@ -266,6 +285,46 @@ describe('연결선 그리기', () => {
     }
 
     expect(draw(true)).toBeGreaterThan(draw(false))
+  })
+
+  it('★ 활은 자국을 안 남긴다 — 사거리 넷에서 칼자국이 뜨면 거짓으로 읽힌다', async () => {
+    const { renderPlan } = await import('./planRenderer')
+    const { readPlanTheme } = await import('./planTheme')
+    const { resolveWeaponLook } = await import('./weaponLook')
+
+    const strokes = (catalogId: string): number => {
+      const fake = buildFakeContext()
+      renderPlan(
+        fake.ctx as never,
+        {
+          tick: 1,
+          cols: 6,
+          rows: 6,
+          tiles: [],
+          actors: [PLAYER, FOE],
+          hazards: [],
+          links: [],
+          pulses: [
+            {
+              x: 4,
+              y: 3,
+              isGain: false,
+              delta: -7,
+              label: '',
+              from: { x: 1, y: 1 },
+              byEntityId: 'player',
+              isStrike: true,
+            },
+          ],
+        },
+        readPlanTheme(readFake),
+        0.5,
+        () => resolveWeaponLook(catalogId),
+      )
+      return fake.calls.filter((call) => call === 'stroke').length
+    }
+
+    expect(strokes('sword_saber')).toBeGreaterThan(strokes('bow_long'))
   })
 
   it('★ 때린 말을 모르면 자국 없이 고리만 남는다', async () => {
@@ -282,7 +341,18 @@ describe('연결선 그리기', () => {
         actors: [PLAYER, FOE],
         hazards: [],
         links: [],
-        pulses: [{ x: 4, y: 3, isGain: false, delta: -7, label: '', from: null, isStrike: true }],
+        pulses: [
+          {
+            x: 4,
+            y: 3,
+            isGain: false,
+            delta: -7,
+            label: '',
+            from: null,
+            byEntityId: 'player',
+            isStrike: true,
+          },
+        ],
       },
       readPlanTheme(readFake),
       0.5,
@@ -326,6 +396,7 @@ describe('연결선 그리기', () => {
         label: '스킬1',
         // 자국은 때린 말에서 맞은 말 쪽으로 간다 (설계/10_외형과_모션).
         from: { x: 1, y: 1 },
+        byEntityId: 'player',
         isStrike: true,
       },
     ])
@@ -353,7 +424,16 @@ describe('수치 이펙트 (간단한 표시)', () => {
     expect(pulses).toEqual([
       // **잔상은 무기를 안 든다.** 이 펄스는 지난 틱(2)의 것이라 고리와 수치만 남는다 —
       // 공격이 없는 틱에 칼이 휘둘러지면 무슨 일이 있었는지가 거짓으로 읽힌다.
-      { x: 4, y: 3, isGain: false, delta: -2, label: '', from: { x: 1, y: 1 }, isStrike: false },
+      {
+        x: 4,
+        y: 3,
+        isGain: false,
+        delta: -2,
+        label: '',
+        from: { x: 1, y: 1 },
+        byEntityId: 'player',
+        isStrike: false,
+      },
     ])
   })
 
@@ -427,7 +507,16 @@ describe('수치 이펙트 (간단한 표시)', () => {
     }))
     const pulses = buildPulsesFromLog({ log, state: { tick: 3 } } as never, [PLAYER, FOE])
     expect(pulses).toEqual([
-      { x: 4, y: 3, isGain: false, delta: -7, label: '', from: { x: 1, y: 1 }, isStrike: true },
+      {
+        x: 4,
+        y: 3,
+        isGain: false,
+        delta: -7,
+        label: '',
+        from: { x: 1, y: 1 },
+        byEntityId: 'player',
+        isStrike: true,
+      },
       // **회복은 무기를 안 든다.** 칼을 휘두르면 무슨 일이 있었는지가 뒤집혀 읽힌다.
       // 쓴 것이 적이라 그 자리가 (4,3) 이다.
       {
@@ -437,6 +526,7 @@ describe('수치 이펙트 (간단한 표시)', () => {
         delta: 12,
         label: '소모품',
         from: { x: 4, y: 3 },
+        byEntityId: 'goblin_0',
         isStrike: false,
       },
     ])
@@ -483,7 +573,16 @@ describe('장비줄 자리', () => {
     const pulses = buildPulsesFromLog({ log, state: { tick: 3 } } as never, [PLAYER, FOE])
     expect(pulses).toEqual([
       // 방어는 제자리다 — 때린 자리와 맞은 자리가 같고, 무기도 안 든다.
-      { x: 1, y: 1, isGain: true, delta: null, label: '방어', from: { x: 1, y: 1 }, isStrike: false },
+      {
+        x: 1,
+        y: 1,
+        isGain: true,
+        delta: null,
+        label: '방어',
+        from: { x: 1, y: 1 },
+        byEntityId: 'player',
+        isStrike: false,
+      },
     ])
   })
 
