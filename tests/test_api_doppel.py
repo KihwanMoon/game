@@ -102,13 +102,24 @@ def test_a_doppel_never_takes_a_players_gear(client, token, monkeypatch):
         lambda _account, record_id: holders.append(record_id) or "",
     )
     account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
-    monster_service.apply_monster_outcome(
-        build_probe_ticket(),
-        1,
-        VerifiedRun("PLAYER_LOSS", 10, 0, VERDICT_VERIFIED, ""),
-        account_id,
-    )
-    # 첫 자리의 도플갱어를 건너뛰고 뒤의 일반 몬스터가 가져갔다.
+
+    def apply(killer_slot):
+        monster_service.apply_monster_outcome(
+            build_probe_ticket(),
+            1,
+            VerifiedRun("PLAYER_LOSS", 10, 0, VERDICT_VERIFIED, "", killer_slot=killer_slot),
+            account_id,
+        )
+
+    pair = build_doppel_pair()
+    # **그림자가 막타를 쳐도 안 가져간다.** 들면 그 순간 「내 것을 들고 있는 개체」가
+    # 되고, 되찾기가 그 위에 길을 낸다 — 봇의 장비가 사람에게 가는 통로다.
+    apply(pair[0].entity_id)
+    assert holders == [0], "그림자가 전리품을 가져갔다"
+
+    # 여느 몬스터가 막타를 치면 그것이 가져간다 (2026-09-06).
+    holders.clear()
+    apply(pair[1].entity_id)
     assert holders == [9002]
 
 
