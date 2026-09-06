@@ -11,6 +11,7 @@
  * **무작위를 안 쓴다.** 자리를 굴려 뽑으면 흔들기 축의 호출 횟수가 바뀌어 같은 시드가
  * 다른 판을 낸다 (R5). 규칙은 「플레이어에게서 가장 먼 빈 칸, 같으면 위·왼쪽」 하나다.
  */
+import { checkIsExtraSlot } from '../schemas/monsterSnapshot'
 import { WALKABLE_TILES, getRoomTile } from '../schemas/room'
 import type { RoomTemplate } from '../schemas/room'
 
@@ -91,7 +92,10 @@ function isBefore(
 }
 
 /**
- * 방 배치가 안 쓴 스냅샷 자리들 — 이것이 더할 것이다.
+ * 방 배치가 안 쓴 스냅샷 자리들 중 **더해야 하는 것**.
+ *
+ * **아무것이나 더하면 안 된다.** 그 층의 지속 몬스터는 자기 자리를 덮어쓰는 개체라,
+ * 자리가 없는 방에 더하면 그 방의 적이 늘어난다 (실제 신고).
  *
  * **정렬해서 낸다.** 순회 순서로 자리를 정하면 같은 티켓이 두 번 다른 판을 낸다 (R5).
  *
@@ -103,5 +107,7 @@ export function listExtraSlots(
   overrides: ReadonlyMap<string, unknown>,
   consumed: ReadonlySet<string>,
 ): readonly string[] {
-  return [...overrides.keys()].filter((slot) => !consumed.has(slot)).sort()
+  return [...overrides.keys()]
+    .filter((slot) => !consumed.has(slot) && checkIsExtraSlot(slot))
+    .sort()
 }

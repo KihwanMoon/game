@@ -17,7 +17,7 @@
 
 from game.app.simulation.scaling import FloorScale, get_scaled_enemy_stats
 from game.app.simulation.state import FACTION_ENEMY, TIER_NORMAL, Entity
-from game.schemas.monster_snapshot import MonsterSnapshot
+from game.schemas.monster_snapshot import MonsterSnapshot, check_is_extra_slot
 from game.schemas.room import WALKABLE_TILES, RoomTemplate
 
 
@@ -67,7 +67,11 @@ def find_far_spot(
 
 
 def list_extra_slots(overrides: dict, consumed: set[str]) -> tuple[str, ...]:
-    """방 배치가 안 쓴 스냅샷 자리들 — 이것이 더할 것이다.
+    """방 배치가 안 쓴 스냅샷 자리들 중 **더해야 하는 것**.
+
+    **아무것이나 더하면 안 된다.** 그 층의 지속 몬스터는 자기 자리를 덮어쓰는 개체라,
+    자리가 없는 방에 더하면 그 방의 적이 늘어난다 — 실제로 세계 몬스터(w1·w2·w3)가 모든
+    방에 더해져 방당 둘이 다섯이 됐다 (실제 신고).
 
     **정렬해서 낸다.** 딕셔너리 순회 순서로 자리를 정하면 같은 티켓이 두 번 다른 판을
     낸다 (R5).
@@ -79,7 +83,9 @@ def list_extra_slots(overrides: dict, consumed: set[str]) -> tuple[str, ...]:
     Returns:
         더할 자리 이름들. 정렬돼 있다.
     """
-    return tuple(sorted(slot for slot in overrides if slot not in consumed))
+    return tuple(
+        sorted(slot for slot in overrides if slot not in consumed and check_is_extra_slot(slot))
+    )
 
 
 def build_enemy_entity(

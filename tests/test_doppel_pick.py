@@ -154,3 +154,18 @@ def test_floor_rooms_are_split_by_the_chain():
 def test_an_unknown_room_has_no_slots():
     """방 목록에 없는 id 로 터지면 티켓 발급이 통째로 죽는다."""
     assert list_room_slots(ROOMS, "없는방") == ()
+
+
+def test_only_shadows_are_added_to_rooms():
+    """★ 그림자만 더한다 — 여느 지속 몬스터를 더하면 그 방의 적이 늘어난다.
+
+    **실제 신고다.** 세계 몬스터(`w1`·`w2`·`w3`)는 방 배치에 없는 자리라, 「방 배치에
+    없는 것을 더한다」가 그것까지 집어 모든 방에 세웠다 — 방당 둘이 다섯이 됐다.
+
+    여느 지속 몬스터는 **자기 자리를 덮어쓰는** 개체다. 자리가 없는 방에는 안 서는 것이
+    맞다. 층에 귀속이라 모든 방에 서야 하는 것은 그림자뿐이다.
+    """
+    from game.app.services.room_extras import list_extra_slots
+
+    assert list_extra_slots({"w1": 1, "w2": 1, "goblin_rusher_0": 1}, set()) == ()
+    assert list_extra_slots({"w1": 1, "doppel_42": 1}, set()) == ("doppel_42",)

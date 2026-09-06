@@ -80,6 +80,29 @@ class MonsterSnapshot:
     ruleset: dict | None = None
 
 
+# 도플갱어의 자리 이름 머리 (2026-09-06).
+#
+# **자리 이름 규약이라 스키마의 것이다.** 코어는 이 머리로 「방 배치에 없어도 더해야 하는
+# 개체」를 가른다 — 그 판단을 `app/bots` 에 두면 코어가 봇 계층을 알게 된다.
+#
+# 더하는 것이 도플갱어뿐인 이유: 그림자만 층에 귀속이고 그 층 모든 방에 서야 한다. 여느
+# 지속 몬스터는 자기 자리를 덮어쓰는 개체라, 자리가 없는 방에 더하면 그 방의 적이 늘어난다
+# — 실제로 세계 몬스터(w1·w2·w3)가 모든 방에 더해져 방당 다섯이 됐다.
+DOPPEL_SLOT_PREFIX = "doppel_"
+
+
+def check_is_extra_slot(slot: str) -> bool:
+    """방 배치에 없어도 방에 **더해야** 하는 자리인가.
+
+    Args:
+        slot: 자리 이름.
+
+    Returns:
+        더해야 하면 True.
+    """
+    return slot.startswith(DOPPEL_SLOT_PREFIX)
+
+
 def build_entity_id(kind_id: str, index: int) -> str:
     """방 배치와 같은 규칙으로 엔티티 id 를 만든다.
 

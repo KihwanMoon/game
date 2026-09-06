@@ -80,6 +80,16 @@ describe('listExtraSlots', () => {
     expect(listExtraSlots(overrides, new Set(['goblin_rusher_0']))).toEqual(['doppel_7'])
   })
 
+  it('★ 그림자만 더한다 — 여느 지속 몬스터를 더하면 그 방의 적이 늘어난다', () => {
+    // 실제로 세계 몬스터(w1·w2·w3)가 모든 방에 더해져 방당 둘이 다섯이 됐다.
+    const overrides = new Map([
+      ['w1', {}],
+      ['w2', {}],
+      ['goblin_rusher_0', {}],
+    ])
+    expect(listExtraSlots(overrides, new Set())).toEqual([])
+  })
+
   it('★ 정렬해서 낸다 — 순회 순서가 판을 흔들면 안 된다 (R5)', () => {
     const overrides = new Map([
       ['doppel_9', {}],

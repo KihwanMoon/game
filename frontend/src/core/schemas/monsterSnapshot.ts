@@ -152,3 +152,24 @@ export function sortSnapshots(
     return left.recordId - right.recordId
   })
 }
+
+/**
+ * 도플갱어의 자리 이름 머리 (G3 — 파이썬 `schemas/monster_snapshot.py` 와 같은 값).
+ *
+ * 코어는 이 머리로 「방 배치에 없어도 더해야 하는 개체」를 가른다.
+ */
+export const DOPPEL_SLOT_PREFIX = 'doppel_'
+
+/**
+ * 방 배치에 없어도 방에 **더해야** 하는 자리인가.
+ *
+ * **아무것이나 더하면 안 된다.** 그 층의 지속 몬스터는 자기 자리를 덮어쓰는 개체라,
+ * 자리가 없는 방에 더하면 그 방의 적이 늘어난다 — 실제로 세계 몬스터가 모든 방에
+ * 더해져 방당 둘이 다섯이 됐다.
+ *
+ * @param slot 자리 이름.
+ * @returns 더해야 하면 true.
+ */
+export function checkIsExtraSlot(slot: string): boolean {
+  return slot.startsWith(DOPPEL_SLOT_PREFIX)
+}
