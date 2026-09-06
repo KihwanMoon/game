@@ -6,7 +6,11 @@
  */
 import { describe, expect, it } from 'vitest'
 
+import rawLooks from '@resources/balance/item_looks.json'
+
 import { DEFAULT_LOOK, resolveWeaponLook } from './weaponLook'
+
+const LOOKS = (rawLooks as unknown as { looks: Record<string, { shape: string }> }).looks
 
 describe('resolveWeaponLook', () => {
   it('무기마다 다르게 휘두른다 — 자유도가 여기서 나온다', () => {
@@ -15,10 +19,18 @@ describe('resolveWeaponLook', () => {
     expect(resolveWeaponLook('sword_short')).toEqual({ shape: 'straight', motion: 'thrust' })
   })
 
-  it('★ 활은 안 휘두른다', () => {
-    // 사거리 넷 다섯에서 칼자국이 뜨면 무슨 일이 있었는지가 거짓으로 읽힌다.
-    expect(resolveWeaponLook('bow_long').shape).toBe('none')
-    expect(resolveWeaponLook('bow_storm').shape).toBe('none')
+  it('★ 활은 안 휘두른다 — 대신 화살이 난다', () => {
+    // 사거리 넷 다섯에서 칼자국이 뜨면 거짓으로 읽히고, 아무것도 안 그리면 고리 하나만
+    // 남아 무슨 일이 있었는지가 화면에 없다.
+    expect(resolveWeaponLook('bow_long')).toEqual({ shape: 'arrow', motion: 'fly' })
+    expect(resolveWeaponLook('bow_storm')).toEqual({ shape: 'arrow', motion: 'fly' })
+  })
+
+  it('★ 「아무것도 안 그림」은 여전히 표현할 수 있다', () => {
+    // `none` 은 지우지 않았다 — 그릴 것이 정말 없는 자리가 나중에 생긴다. 다만 지금
+    // 표에는 쓰는 무기가 없다: 활은 이제 화살을 날린다.
+    const shapes = Object.values(LOOKS).map((one) => one.shape)
+    expect(shapes).not.toContain('none')
   })
 
   it('★ 모르는 무기도 도면을 안 깬다', () => {

@@ -287,7 +287,7 @@ describe('연결선 그리기', () => {
     expect(draw(true)).toBeGreaterThan(draw(false))
   })
 
-  it('★ 활은 자국을 안 남긴다 — 사거리 넷에서 칼자국이 뜨면 거짓으로 읽힌다', async () => {
+  it('★ 활은 칼자국 대신 화살을 날린다 — 사거리 넷에서 칼자국은 거짓이다', async () => {
     const { renderPlan } = await import('./planRenderer')
     const { readPlanTheme } = await import('./planTheme')
     const { resolveWeaponLook } = await import('./weaponLook')
@@ -319,12 +319,18 @@ describe('연결선 그리기', () => {
         },
         readPlanTheme(readFake),
         0.5,
-        () => resolveWeaponLook(catalogId),
+        () =>
+          catalogId === '__none__'
+            ? ({ shape: 'none', motion: 'chop' } as const)
+            : resolveWeaponLook(catalogId),
       )
       return fake.calls.filter((call) => call === 'stroke').length
     }
 
-    expect(strokes('sword_saber')).toBeGreaterThan(strokes('bow_long'))
+    // 활도 무언가를 그린다 — 아무것도 안 그리면 사거리 넷에서 고리 하나만 남는다.
+    expect(strokes('bow_long')).toBeGreaterThan(0)
+    // 그릴 것이 정말 없는 무기(`none`)는 자국을 안 남긴다.
+    expect(strokes('sword_saber')).toBeGreaterThan(strokes('__none__'))
   })
 
   it('★ 때린 말을 모르면 자국 없이 고리만 남는다', async () => {

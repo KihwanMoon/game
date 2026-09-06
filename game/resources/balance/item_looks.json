@@ -1,13 +1,37 @@
 {
-  "_note": "무기 겉모습 — 꼴과 모션 (설계/10_외형과_모션). **버전 키가 없다**: 이 파일은 core_version 의 여섯 축에 안 낀다 (계약 C2). 겉모습을 고쳤다고 순위표 시즌이 갈리면 안 되기 때문이다. shape 가 none 이면 자국을 안 그린다 — 활처럼 휘두르지 않는 무기다.",
-  "default": { "shape": "straight", "motion": "chop" },
+  "_note": "무기 겉모습 — 꼴과 모션 (설계/10_외형과_모션). **버전 키가 없다**: 이 파일은 core_version 의 여섯 축에 안 낀다 (계약 C2). 겉모습을 고쳤다고 순위표 시즌이 갈리면 안 되기 때문이다. 훑는 모션(chop·slash·thrust)은 자루가 때린 말에 붙어 있고, fly 만 날붙이가 맞은 말로 날아간다 — 활이 그것이다. shape 가 none 이면 아무것도 안 그린다.",
+  "default": {
+    "shape": "straight",
+    "motion": "chop"
+  },
   "looks": {
-    "sword_short": { "shape": "straight", "motion": "thrust" },
-    "sword_great": { "shape": "straight", "motion": "chop" },
-    "sword_saber": { "shape": "curved", "motion": "slash" },
-    "sword_edge": { "shape": "straight", "motion": "slash" },
-    "axe_heavy": { "shape": "axe", "motion": "chop" },
-    "bow_long": { "shape": "none", "motion": "chop" },
-    "bow_storm": { "shape": "none", "motion": "chop" }
+    "sword_short": {
+      "shape": "straight",
+      "motion": "thrust"
+    },
+    "sword_great": {
+      "shape": "straight",
+      "motion": "chop"
+    },
+    "sword_saber": {
+      "shape": "curved",
+      "motion": "slash"
+    },
+    "sword_edge": {
+      "shape": "straight",
+      "motion": "slash"
+    },
+    "axe_heavy": {
+      "shape": "axe",
+      "motion": "chop"
+    },
+    "bow_long": {
+      "shape": "arrow",
+      "motion": "fly"
+    },
+    "bow_storm": {
+      "shape": "arrow",
+      "motion": "fly"
+    }
   }
 }

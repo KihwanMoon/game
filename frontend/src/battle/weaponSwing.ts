@@ -15,18 +15,29 @@
  */
 
 /** 무기 꼴. **닫힌 집합이다** (계약 C6) — 임의 값을 열면 도면이 무너진다. */
-export type WeaponShape = 'straight' | 'curved' | 'axe'
+export type WeaponShape = 'straight' | 'curved' | 'axe' | 'arrow'
 
-/** 휘두르는 모션. 꼴과 **곱해진다.** */
-export type SwingMotion = 'chop' | 'slash' | 'thrust'
+/**
+ * 모션. 꼴과 **곱해진다.**
+ *
+ * 앞의 셋은 **자루가 때린 말에 붙어 있고** 날이 그 둘레를 훑는다. `fly` 만 다르다 —
+ * 날붙이가 때린 말에서 맞은 말로 **날아간다.** 활이 그것이며, 그 자리에 아무것도 안
+ * 그리면 사거리 넷에서 「무슨 일이 있었는지」가 고리 하나로만 남는다.
+ */
+export type SwingMotion = 'chop' | 'slash' | 'thrust' | 'fly'
 
 /** 기본 꼴·모션. 무기가 아무것도 안 말하면 이것으로 그린다. */
 export const DEFAULT_SHAPE: WeaponShape = 'straight'
 export const DEFAULT_MOTION: SwingMotion = 'chop'
 
 /** 아는 값인지 본다 — 서버가 모르는 값을 보내도 도면이 안 깨져야 한다. */
-const SHAPES: ReadonlySet<string> = new Set<WeaponShape>(['straight', 'curved', 'axe'])
-const MOTIONS: ReadonlySet<string> = new Set<SwingMotion>(['chop', 'slash', 'thrust'])
+const SHAPES: ReadonlySet<string> = new Set<WeaponShape>([
+  'straight',
+  'curved',
+  'axe',
+  'arrow',
+])
+const MOTIONS: ReadonlySet<string> = new Set<SwingMotion>(['chop', 'slash', 'thrust', 'fly'])
 
 /** 칼날 길이. 셀 한 변에 대한 비율이며, 1 을 넘으면 옆 칸을 침범해 누가 때렸는지가 흐려진다. */
 const BLADE_RATIO = 0.62
@@ -37,6 +48,16 @@ const CURVE_RATIO = 0.26
 /** 도끼 날의 폭·자리. 자루 끝에서 이만큼 앞에 이 폭으로 붙는다. */
 const AXE_HEAD_AT = 0.72
 const AXE_HEAD_WIDTH = 0.34
+
+/** 화살촉의 폭·자리. 도끼보다 좁고 뾰족하다 — 그 차이가 곧 「베는 것」과 「꽂히는 것」이다. */
+const ARROW_HEAD_AT = 0.66
+const ARROW_HEAD_WIDTH = 0.22
+
+/** 화살은 짧다. 날붙이 길이를 그대로 쓰면 두 칸을 걸쳐 어디쯤 날고 있는지가 흐려진다. */
+const ARROW_LENGTH_RATIO = 0.5
+
+/** 나는 것이 출발하는 자리. 말 위에 겹치면 글리프를 가려 누가 쐈는지가 안 읽힌다. */
+const FLIGHT_START_RATIO = 0.34
 
 /** 호를 그리는 모션이 훑는 각도(라디안). 좁으면 안 보이고 넓으면 뒤를 친 것처럼 보인다. */
 const ARC_SWEEP = Math.PI * 0.62
@@ -130,6 +151,23 @@ function buildBlade(shape: WeaponShape, length: number): SwingStroke {
       head: [],
     }
   }
+  if (shape === 'arrow') {
+    // 대와 촉. **도끼보다 좁고 뾰족하다** — 그 차이가 「베는 것」과 「꽂히는 것」이다.
+    const shaft = length * ARROW_LENGTH_RATIO
+    const at = shaft * ARROW_HEAD_AT
+    const half = shaft * ARROW_HEAD_WIDTH * 0.5
+    return {
+      blade: [
+        { x: 0, y: 0 },
+        { x: shaft, y: 0 },
+      ],
+      head: [
+        { x: at, y: -half },
+        { x: shaft, y: 0 },
+        { x: at, y: half },
+      ],
+    }
+  }
   const blade = [
     { x: 0, y: 0 },
     { x: length, y: 0 },
@@ -167,6 +205,36 @@ function moveTo(point: SwingPoint, angle: number, origin: SwingPoint): SwingPoin
 }
 
 /**
+ * 나는 것이 이 위상에 놓이는 자리.
+ *
+ * **때린 말에서 나가 맞은 말에 꽂힌다.** 위상 0 에서 말 바로 앞, 1 에서 대상 칸이다 —
+ * 고리와 수치가 뜨는 순간과 화살이 닿는 순간이 같아야 「맞았다」로 읽힌다.
+ *
+ * @param from 때린 자리(px).
+ * @param to 맞은 자리(px).
+ * @param cell 셀 한 변(px).
+ * @param phase 0 에서 1.
+ * @returns 대 끝이 놓일 자리.
+ */
+function buildFlight(
+  point: SwingPoint,
+  target: SwingPoint,
+  cell: number,
+  phase: number,
+): SwingPoint {
+  const facing = resolveFacing(point, target)
+  const start = {
+    x: point.x + Math.cos(facing) * cell * FLIGHT_START_RATIO,
+    y: point.y + Math.sin(facing) * cell * FLIGHT_START_RATIO,
+  }
+  return {
+    x: start.x + (target.x - start.x) * phase,
+    y: start.y + (target.y - start.y) * phase,
+  }
+}
+
+
+/**
  * 이 위상의 무기 자국을 만든다.
  *
  * @param from 때린 자리(px).
@@ -187,6 +255,16 @@ export function buildSwing(
 ): SwingStroke {
   const held = Math.min(Math.max(phase, 0), 1)
   const facing = resolveFacing(from, to)
+  const shaped = buildBlade(shape, cell * BLADE_RATIO)
+  // **나는 것은 자루가 옮겨 간다.** 훑는 모션은 자루가 때린 말에 붙어 있고 날이 그
+  // 둘레를 도는데, 화살은 반대다 — 각도는 고정이고 자리가 움직인다.
+  if (motion === 'fly') {
+    const origin = buildFlight(from, to, cell, held)
+    return {
+      blade: shaped.blade.map((point) => moveTo(point, facing, origin)),
+      head: shaped.head.map((point) => moveTo(point, facing, origin)),
+    }
+  }
   const sweep = resolveSweep(motion, held)
   const angle = facing + sweep.angle
   // 자루는 때린 말의 자리에서 바라보는 쪽으로 조금 나가 있다. 말 위에 겹치면 글리프를
@@ -195,7 +273,6 @@ export function buildSwing(
     x: from.x + Math.cos(facing) * cell * (0.2 + sweep.reach),
     y: from.y + Math.sin(facing) * cell * (0.2 + sweep.reach),
   }
-  const shaped = buildBlade(shape, cell * BLADE_RATIO)
   return {
     blade: shaped.blade.map((point) => moveTo(point, angle, origin)),
     head: shaped.head.map((point) => moveTo(point, angle, origin)),

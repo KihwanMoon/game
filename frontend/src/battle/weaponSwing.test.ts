@@ -87,6 +87,43 @@ describe('buildSwing', () => {
     }
   })
 
+  it('★ 나는 것은 자루가 옮겨 간다 — 훑는 것과 종류가 다르다', () => {
+    // 훑는 모션은 자루가 때린 말에 붙어 있고 날이 그 둘레를 돈다. 화살은 반대다.
+    const at = (phase: number) => {
+      const tip = buildSwing(FROM, TO, CELL, 'arrow', 'fly', phase).blade.at(-1)
+      return Math.hypot((tip?.x ?? 0) - FROM.x, (tip?.y ?? 0) - FROM.y)
+    }
+    expect(at(0)).toBeLessThan(at(0.5))
+    expect(at(0.5)).toBeLessThan(at(1))
+  })
+
+  it('★ 화살은 위상 1 에 대상 칸에 꽂힌다', () => {
+    // 고리와 수치가 뜨는 순간과 닿는 순간이 같아야 「맞았다」로 읽힌다.
+    const far = { x: FROM.x + CELL * 4, y: FROM.y }
+    const shaft = buildSwing(FROM, far, CELL, 'arrow', 'fly', 1).blade[0]
+    expect(Math.hypot((shaft?.x ?? 0) - far.x, (shaft?.y ?? 0) - far.y)).toBeLessThan(CELL)
+  })
+
+  it('★ 화살은 쏜 말 위에서 출발하지 않는다 — 글리프를 가리면 누가 쐈는지 안 읽힌다', () => {
+    const shaft = buildSwing(FROM, TO, CELL, 'arrow', 'fly', 0).blade[0]
+    expect(Math.hypot((shaft?.x ?? 0) - FROM.x, (shaft?.y ?? 0) - FROM.y)).toBeGreaterThan(0)
+  })
+
+  it('화살은 촉을 단다 — 도끼보다 좁고 뾰족하다', () => {
+    const arrow = swing('arrow', 'fly', 0.5)
+    expect(arrow.head.length).toBeGreaterThan(0)
+    const width = (stroke: { head: readonly { x: number; y: number }[] }) => {
+      const ys = stroke.head.map((one) => one.y)
+      return Math.max(...ys) - Math.min(...ys)
+    }
+    expect(width(arrow)).toBeLessThan(width(swing('axe', 'chop', 0.5)))
+  })
+
+  it('꼴과 모션이 여전히 곱한다 — 던진 칼도 표현된다', () => {
+    // 4 꼴 × 4 모션이라 조합 16 이다. 나는 모션에 곧은 날을 태우면 던진 칼이 된다.
+    expect(swing('straight', 'fly')).not.toEqual(swing('arrow', 'fly'))
+  })
+
   it('찌르기는 중간에 가장 멀리 나갔다 돌아온다', () => {
     const reach = (phase: number) => {
       const tip = buildSwing(FROM, TO, CELL, 'straight', 'thrust', phase).blade.at(-1)
