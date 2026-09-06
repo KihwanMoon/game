@@ -41,6 +41,13 @@ export interface AccountState {
   readonly accountId: number
   readonly handle: string
   readonly loginId: string | undefined
+  /**
+   * 내 빌드가 남의 던전에 그림자로 서도 되는가 (설계/6_몬스터).
+   *
+   * **기본은 꺼져 있다** — 그림자는 내 규칙표로 싸우므로 관전하며 행동을 보면 내 해답이
+   * 어느 정도 역산된다.
+   */
+  readonly doppelOptIn: boolean
 }
 
 /** 가입·로그인 결과. 실패 사유를 그대로 화면에 띄운다. */
@@ -215,11 +222,13 @@ function readAccountState(body: {
   account_id: number
   handle: string
   login_id?: string | null
+  doppel_opt_in?: boolean
 }): AccountState {
   return {
     accountId: body.account_id,
     handle: body.handle,
     loginId: body.login_id ?? undefined,
+    doppelOptIn: body.doppel_opt_in ?? false,
   }
 }
 
@@ -250,7 +259,44 @@ export async function readAccount(token: string): Promise<AccountState | undefin
     return undefined
   }
   return readAccountState(
-    (await response.json()) as { account_id: number; handle: string; login_id?: string | null },
+    (await response.json()) as {
+      account_id: number
+      handle: string
+      login_id?: string | null
+      doppel_opt_in?: boolean
+    },
+  )
+}
+
+/**
+ * 내 빌드가 남의 던전에 그림자로 서도 되는지 정한다 (설계/6_몬스터).
+ *
+ * **기본은 꺼져 있다.** 그림자는 내 규칙표로 싸우므로, 관전하며 행동을 보면 내 해답이
+ * 어느 정도 역산된다 — 켜는 사람이 알고 켜야 하는 대가다.
+ *
+ * @param token 기기 토큰.
+ * @param isOn 켤지.
+ * @returns 바뀐 계정. 실패하면 undefined.
+ */
+export async function applyDoppelOptIn(
+  token: string,
+  isOn: boolean,
+): Promise<AccountState | undefined> {
+  const response = await sendRequest('/account/doppel', {
+    method: 'PUT',
+    headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_on: isOn }),
+  })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  return readAccountState(
+    (await response.json()) as {
+      account_id: number
+      handle: string
+      login_id?: string | null
+      doppel_opt_in?: boolean
+    },
   )
 }
 

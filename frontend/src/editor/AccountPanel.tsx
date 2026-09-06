@@ -32,6 +32,13 @@ export interface AccountPanelProps {
    * 앞사람의 규칙표를 보게 된다.
    */
   readonly onLogout: () => void
+  /**
+   * 내 빌드가 남의 던전에 그림자로 서도 되는지 정한다 (설계/6_몬스터).
+   *
+   * **기본은 꺼져 있다.** 그림자는 내 규칙표로 싸우므로, 관전하며 행동을 보면 내 해답이
+   * 어느 정도 역산된다 — 켜는 사람이 알고 켜야 하는 대가다.
+   */
+  readonly onDoppelOptIn?: (isOn: boolean) => void
 }
 
 type Mode = 'idle' | 'register' | 'login'
@@ -117,6 +124,33 @@ export function AccountPanel(props: AccountPanelProps): React.JSX.Element {
         {/* **누르기 전에 알아야 한다.** 로그인하면 다른 기기가 튕기는데, 그 사실을
             튕긴 뒤에 알면 이미 그쪽에서 뭔가를 잃은 뒤다. */}
         {isOnline ? <ValueExpr text={SINGLE_DEVICE_HINT} size="sm" dim /> : null}
+
+        {/* **내 그림자를 세울지는 내가 정한다** (설계/6_몬스터). 그림자는 내 규칙표로
+            싸우므로 관전하며 행동을 보면 내 해답이 어느 정도 역산된다 — 켜는 사람이
+            알고 켜야 하는 대가라 기본은 꺼져 있다. */}
+        {isOnline && props.onDoppelOptIn !== undefined ? (
+          <div className="account__actions">
+            <GlyphState
+              state={account?.doppelOptIn ? 'true' : 'false'}
+              size="sm"
+              label={
+                account?.doppelOptIn
+                  ? '깊은 층에서 죽으면 내 빌드가 남의 던전에 그림자로 선다'
+                  : '내 그림자는 안 선다'
+              }
+            />
+            <Button
+              size="sm"
+              variant="ghost"
+              title="그림자는 내 규칙표로 싸운다 — 관전하는 사람이 내 해답을 어느 정도 읽게 된다"
+              onClick={() => {
+                props.onDoppelOptIn?.(!(account?.doppelOptIn ?? false))
+              }}
+            >
+              {account?.doppelOptIn ? '그림자 끄기' : '그림자 켜기'}
+            </Button>
+          </div>
+        ) : null}
 
         {mode === 'idle' ? (
           <div className="account__actions">

@@ -759,6 +759,15 @@ CREATE INDEX IF NOT EXISTS watch_event_time_idx ON watch_event(happened_at DESC)
 -- 안 돈다 — 기존 DB 에도 붙이려면 이 줄이 있어야 한다.
 ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS voided_reason TEXT;
 
+-- 내 빌드가 남의 던전에 그림자로 서도 되는가 (2026-09-06).
+--
+-- **기본은 꺼져 있다.** 그림자는 원본의 규칙표로 싸우므로, 관전하며 행동을 보면 남의
+-- 해답이 어느 정도 역산된다 — 그러면 베끼는 것이 최선이 되고 P1(실패는 정보다)이 죽는다.
+-- 그것은 켜는 사람이 알고 켜야 하는 대가다.
+--
+-- 봇은 이 칸을 안 본다. 우리가 들인 것이라 동의를 물을 상대가 없다.
+ALTER TABLE account ADD COLUMN IF NOT EXISTS doppel_opt_in BOOLEAN NOT NULL DEFAULT FALSE;
+
 -- 부른 테스터인가 (G1, 2026-09-05). **분모를 사람이 정하기 위한 칸이다.**
 --
 -- G1 은 「테스터 5명 중 3명」을 묻는데, 익명 계정이 접속마다 새로 생기므로 「제출이 있는

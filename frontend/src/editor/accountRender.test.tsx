@@ -61,7 +61,8 @@ describe('계정 패널 — 익명', () => {
 describe('계정 패널 — 로그인됨', () => {
   const markup = renderToStaticMarkup(
     <AccountPanel
-      account={{ accountId: 7, handle: 'user_x', loginId: 'victor' }}
+      account={{ accountId: 7, handle: 'user_x', doppelOptIn: false,
+  loginId: 'victor' }}
       link="online"
       hasLocalProgress
       onRegister={noop}
@@ -149,7 +150,8 @@ describe('세이브 기준', () => {
 describe('로그아웃과 한 기기 규율 (2026-09-01)', () => {
   const signedIn = renderToStaticMarkup(
     <AccountPanel
-      account={{ accountId: 7, handle: 'probe', loginId: 'sinindra' }}
+      account={{ accountId: 7, handle: 'probe', doppelOptIn: false,
+  loginId: 'sinindra' }}
       link="online"
       hasLocalProgress
       onRegister={async () => ''}

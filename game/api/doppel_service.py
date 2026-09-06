@@ -14,7 +14,7 @@ from game.app.bots.doppel import MIN_DOPPEL_FLOOR
 from game.app.services.verify_run import VERDICT_VERIFIED, VerifiedRun
 from game.app.simulation.plan import OUTCOME_PLAYER_WIN
 from game.app.store.bots import check_is_bot
-from game.app.store.doppels import create_doppel, find_free_slot
+from game.app.store.doppels import check_doppel_opt_in, create_doppel, find_free_slot
 from game.schemas.monster_snapshot import build_entity_id
 from game.schemas.room import RoomTemplate
 
@@ -53,7 +53,11 @@ def apply_doppel_from_death(
     loadout: dict,
     ruleset: dict,
 ) -> str:
-    """봇이 죽은 자리에 그림자를 세운다.
+    """죽은 자리에 그림자를 세운다.
+
+    **봇은 늘 세우고, 사람은 켠 사람만** (2026-09-06). 그림자가 원본의 규칙표로 싸우므로
+    관전하며 행동을 보면 남의 해답이 어느 정도 역산된다 — 그것은 켜는 사람이 알고 켜야
+    하는 대가라, 기본은 꺼져 있다.
 
     Args:
         pool: 연결 풀.
@@ -70,7 +74,11 @@ def apply_doppel_from_death(
     """
     if verified.verdict != VERDICT_VERIFIED or verified.outcome == OUTCOME_PLAYER_WIN:
         return ""
-    if floor < MIN_DOPPEL_FLOOR or not check_is_bot(pool, account_id):
+    # **봇은 늘, 사람은 켠 사람만** (2026-09-06). 그림자는 원본의 규칙표로 싸우므로
+    # 관전하며 행동을 보면 남의 해답이 어느 정도 역산된다 — 켜는 사람이 알고 켜야 한다.
+    if floor < MIN_DOPPEL_FLOOR:
+        return ""
+    if not check_is_bot(pool, account_id) and not check_doppel_opt_in(pool, account_id):
         return ""
     slot = find_free_slot(pool, floor, list_floor_slots(rooms, room_ids))
     record_id = create_doppel(pool, account_id, floor, slot, loadout, ruleset)

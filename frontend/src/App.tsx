@@ -140,8 +140,10 @@ import {
   listenEviction,
   TOKEN_STORAGE_KEY,
   createSaveScheduler,
+  applyDoppelOptIn,
   ensureToken,
   getLocalStorage,
+  readToken,
   readMeta,
   readSave,
   readAccount,
@@ -1813,6 +1815,17 @@ export function App(): React.JSX.Element {
                 onLogin={applyLogin}
                 onLogout={() => {
                   applyLogoutHere()
+                }}
+                onDoppelOptIn={(isOn) => {
+                  const token = readToken(getLocalStorage())
+                  if (token === undefined) {
+                    return
+                  }
+                  void applyDoppelOptIn(token, isOn).then((next: AccountState | undefined) => {
+                    if (next !== undefined) {
+                      setProfile(next)
+                    }
+                  })
                 }}
               />
               <RunHistoryPanel runs={runs} link={link} onReplay={openReplay} />

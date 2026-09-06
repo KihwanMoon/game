@@ -88,6 +88,7 @@ export {
   applyAuctionAction,
   applyItemAction,
   createLogin,
+  applyDoppelOptIn,
   ensureToken,
   readAccount,
   readAuction,

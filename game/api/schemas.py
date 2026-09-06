@@ -25,6 +25,9 @@ class AccountResponse(BaseModel):
     handle: str
     token: str | None = None
     login_id: str | None = None
+    # 내 빌드가 남의 던전에 그림자로 서도 되는가 (2026-09-06). **기본은 꺼져 있다** —
+    # 그림자는 원본의 규칙표로 싸우므로 관전하며 행동을 보면 해답이 어느 정도 역산된다.
+    doppel_opt_in: bool = False
 
 
 class CredentialRequest(BaseModel):

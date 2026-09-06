@@ -296,3 +296,45 @@ def read_doppel_ruleset(pool: ConnectionPool, record_id: int) -> dict:
     if isinstance(raw, str):
         raw = json.loads(raw)
     return dict(raw) if isinstance(raw, dict) else {}
+
+
+def check_doppel_opt_in(pool: ConnectionPool, account_id: int) -> bool:
+    """이 계정이 자기 그림자를 세우기로 했는가 (2026-09-06).
+
+    **기본은 꺼져 있다.** 그림자는 원본의 규칙표로 싸우므로, 관전하며 행동을 보면 남의
+    해답이 어느 정도 역산된다 — 그러면 베끼는 것이 최선이 되고 P1(실패는 정보다)이
+    죽는다. 켜는 사람이 알고 켜야 하는 대가다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 볼 계정.
+
+    Returns:
+        켰으면 True. 없는 계정도 False.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT doppel_opt_in FROM account WHERE id = %s", (account_id,)
+        ).fetchone()
+    return bool(row[0]) if row else False
+
+
+def apply_doppel_opt_in(pool: ConnectionPool, account_id: int, is_on: bool) -> bool:
+    """자기 그림자를 세울지 정한다.
+
+    **이미 선 그림자는 안 지운다.** 끄는 것은 「앞으로 안 세운다」이고, 지우는 것은 남의
+    던전에서 개체가 사라지는 일이라 뜻이 다르다 — 목숨을 다 쓰면 저절로 사라진다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 대상 계정.
+        is_on: 켤지.
+
+    Returns:
+        바뀐 계정이 있으면 True.
+    """
+    with pool.connection() as connection:
+        cursor = connection.execute(
+            "UPDATE account SET doppel_opt_in = %s WHERE id = %s", (is_on, account_id)
+        )
+    return cursor.rowcount == 1
