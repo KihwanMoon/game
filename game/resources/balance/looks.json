@@ -1,0 +1,91 @@
+{
+  "_note": "겉모습 표 — 무엇이 어떻게 휘둘러지는가 (설계/10_외형과_모션). 버전 키를 두지 않는다: 두면 core_version 의 축이 되어 칼 모양 하나에 순위표 시즌이 갈린다 (계약 C2). 코어는 이 파일을 안 읽는다 — 화면만 읽는다 (계약 C1).",
+  "default": {
+    "shape": "straight",
+    "motion": "chop"
+  },
+  "looks": {
+    "sword_short": {
+      "shape": "straight",
+      "motion": "thrust"
+    },
+    "sword_great": {
+      "shape": "straight",
+      "motion": "chop"
+    },
+    "sword_saber": {
+      "shape": "curved",
+      "motion": "slash"
+    },
+    "sword_edge": {
+      "shape": "straight",
+      "motion": "slash"
+    },
+    "axe_heavy": {
+      "shape": "axe",
+      "motion": "chop"
+    },
+    "bow_long": {
+      "shape": "arrow",
+      "motion": "fly"
+    },
+    "bow_storm": {
+      "shape": "arrow",
+      "motion": "fly"
+    }
+  },
+  "monsters": {
+    "goblin_rusher": {
+      "shape": "straight",
+      "motion": "thrust"
+    },
+    "veteran_rusher": {
+      "shape": "straight",
+      "motion": "chop"
+    },
+    "dire_wolf": {
+      "shape": "fang",
+      "motion": "chop"
+    },
+    "bomb_slime": {
+      "shape": "fist",
+      "motion": "chop"
+    },
+    "shield_golem": {
+      "shape": "fist",
+      "motion": "chop"
+    },
+    "stone_gatekeeper": {
+      "shape": "fist",
+      "motion": "chop"
+    },
+    "goblin_archer": {
+      "shape": "arrow",
+      "motion": "fly"
+    },
+    "longbow_archer": {
+      "shape": "arrow",
+      "motion": "fly"
+    },
+    "hex_archer": {
+      "shape": "arrow",
+      "motion": "fly"
+    },
+    "goblin_summoner": {
+      "shape": "bolt",
+      "motion": "fly"
+    },
+    "arch_summoner": {
+      "shape": "bolt",
+      "motion": "fly"
+    },
+    "mender_acolyte": {
+      "shape": "bolt",
+      "motion": "fly"
+    },
+    "plague_mender": {
+      "shape": "bolt",
+      "motion": "fly"
+    }
+  }
+}

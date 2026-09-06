@@ -32,7 +32,7 @@ import {
 } from '../core/schemas'
 import { ACTOR_GLYPHS } from '../ds'
 import { DEFAULT_LOOK } from './weaponLook'
-import type { WeaponLook } from './weaponLook'
+import type { LookTable, WeaponLook } from './weaponLook'
 import { buildSwing } from './weaponSwing'
 import type {
   PlanActorView,
@@ -813,6 +813,25 @@ function drawLink(ctx: CanvasRenderingContext2D, link: PlanLinkView, theme: Plan
 const PULSE_RATIO = 0.46
 
 /**
+ * 이 한 방을 무엇으로 그리는가.
+ *
+ * **거리를 재서 넘긴다.** 표가 모르는 적·그림자에 칼자국을 씌우지 않기 위한 근거이며,
+ * 선언된 사거리가 아니라 **실측**이라 사거리 다섯짜리가 코앞을 쳤으면 코앞으로 그린다.
+ * 격자가 여덟 방향이라 체비셰프가 곧 「몇 칸」이다 (`compute_far_rank` 와 같은 이유).
+ *
+ * @param pulse 그릴 자리.
+ * @param lookOf 화면이 준 겉모습 표.
+ * @returns 이 자국의 꼴과 모션.
+ */
+function resolveLook(pulse: PlanPulseView, lookOf: LookTable): WeaponLook {
+  const cells =
+    pulse.from === null
+      ? 0
+      : Math.max(Math.abs(pulse.x - pulse.from.x), Math.abs(pulse.y - pulse.from.y))
+  return lookOf(pulse.byEntityId, pulse.byKindId, cells)
+}
+
+/**
  * 수치가 움직인 자리에 고리를 그린다 (간단한 이펙트).
  *
  * 피해는 붉게, 회복·방어는 초록으로 — 화면의 기존 뜻(rust=아프다, verdigris=참·회복)을
@@ -920,7 +939,7 @@ export function renderPlan(
   scene: PlanScene,
   theme: PlanTheme,
   phase = 1,
-  lookOf: (entityId: string) => WeaponLook = () => DEFAULT_LOOK,
+  lookOf: LookTable = () => DEFAULT_LOOK,
 ): void {
   const width = scene.cols * theme.cell
   const height = scene.rows * theme.cell
@@ -951,7 +970,7 @@ export function renderPlan(
     drawLink(ctx, link, theme)
   }
   for (const pulse of scene.pulses) {
-    drawPulse(ctx, pulse, theme, phase, lookOf(pulse.byEntityId))
+    drawPulse(ctx, pulse, theme, phase, resolveLook(pulse, lookOf))
   }
   for (const actor of scene.actors) {
     drawActor(ctx, actor, theme)

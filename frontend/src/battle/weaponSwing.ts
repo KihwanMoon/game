@@ -14,8 +14,21 @@
  * 파는 것이라 화면도 그래야 한다.
  */
 
-/** 무기 꼴. **닫힌 집합이다** (계약 C6) — 임의 값을 열면 도면이 무너진다. */
-export type WeaponShape = 'straight' | 'curved' | 'axe' | 'arrow'
+/**
+ * 무기 꼴. **닫힌 집합이다** (계약 C6) — 임의 값을 열면 도면이 무너진다.
+ *
+ * 앞의 넷은 사람이 드는 것이고, 뒤의 셋은 **몸이 무기인 것**들이다. 늑대에게 직검을
+ * 쥐여 주면 그것도 거짓이라 갈랐다 — 자국이 거짓이면 고리와 수치가 맞아도 판이 틀리게
+ * 읽힌다.
+ */
+export type WeaponShape =
+  | 'straight'
+  | 'curved'
+  | 'axe'
+  | 'arrow'
+  | 'fang'
+  | 'bolt'
+  | 'fist'
 
 /**
  * 모션. 꼴과 **곱해진다.**
@@ -36,6 +49,9 @@ const SHAPES: ReadonlySet<string> = new Set<WeaponShape>([
   'curved',
   'axe',
   'arrow',
+  'fang',
+  'bolt',
+  'fist',
 ])
 const MOTIONS: ReadonlySet<string> = new Set<SwingMotion>(['chop', 'slash', 'thrust', 'fly'])
 
@@ -52,6 +68,18 @@ const AXE_HEAD_WIDTH = 0.34
 /** 화살촉의 폭·자리. 도끼보다 좁고 뾰족하다 — 그 차이가 곧 「베는 것」과 「꽂히는 것」이다. */
 const ARROW_HEAD_AT = 0.66
 const ARROW_HEAD_WIDTH = 0.22
+
+/** 엄니 둘의 벌어짐과, 앞에서 다물리는 자리. 딱 붙이면 부리로 읽힌다. */
+const FANG_GAP = 0.34
+const FANG_CLOSE_AT = 0.86
+
+/** 술법 탄의 폭. 화살촉보다 넓고 마름모라 **꽂히는 것이 아니라 터지는 것**으로 읽힌다. */
+const BOLT_WIDTH = 0.34
+const BOLT_LENGTH_RATIO = 0.44
+
+/** 후려치는 덩이의 자루 길이와 덩이 크기. 날이 없어 뭉툭한 것이 곧 이 꼴의 뜻이다. */
+const FIST_ARM_AT = 0.55
+const FIST_SIZE = 0.3
 
 /** 화살은 짧다. 날붙이 길이를 그대로 쓰면 두 칸을 걸쳐 어디쯤 날고 있는지가 흐려진다. */
 const ARROW_LENGTH_RATIO = 0.5
@@ -165,6 +193,55 @@ function buildBlade(shape: WeaponShape, length: number): SwingStroke {
         { x: at, y: -half },
         { x: shaft, y: 0 },
         { x: at, y: half },
+      ],
+    }
+  }
+  if (shape === 'fang') {
+    // **두 짝이 앞에서 다물린다.** 위 엄니를 `blade`, 아래를 `head` 로 낸다 — 렌더러가
+    // 둘을 따로 긋기 때문이고, 그래야 사이가 벌어진 채로 보인다.
+    const half = length * FANG_GAP * 0.5
+    const close = length * FANG_CLOSE_AT
+    return {
+      blade: [
+        { x: 0, y: -half },
+        { x: close, y: -half * 0.25 },
+      ],
+      head: [
+        { x: 0, y: half },
+        { x: close, y: half * 0.25 },
+      ],
+    }
+  }
+  if (shape === 'bolt') {
+    // 마름모 하나. 닫아 두는 것이 뜻이다 — 열린 선은 날붙이로 읽힌다.
+    const span = length * BOLT_LENGTH_RATIO
+    const half = span * BOLT_WIDTH
+    return {
+      blade: [
+        { x: 0, y: 0 },
+        { x: span * 0.5, y: -half },
+        { x: span, y: 0 },
+        { x: span * 0.5, y: half },
+        { x: 0, y: 0 },
+      ],
+      head: [],
+    }
+  }
+  if (shape === 'fist') {
+    // 짧은 자루 끝에 네모난 덩이. 뾰족한 데가 없는 것이 이 꼴의 전부다.
+    const arm = length * FIST_ARM_AT
+    const half = length * FIST_SIZE * 0.5
+    return {
+      blade: [
+        { x: 0, y: 0 },
+        { x: arm, y: 0 },
+      ],
+      head: [
+        { x: arm, y: -half },
+        { x: arm + half * 2, y: -half },
+        { x: arm + half * 2, y: half },
+        { x: arm, y: half },
+        { x: arm, y: -half },
       ],
     }
   }

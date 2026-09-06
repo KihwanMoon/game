@@ -124,6 +124,17 @@ export interface PlanPulseView {
    */
   readonly byEntityId: string
   /**
+   * 때린 말의 **종** id. 적이 제 무장으로 휘두르는 근거다.
+   *
+   * **개체 id 에서 잘라 쓰지 않는다.** `{종}_{순번}` 이 규칙이지만 더해서 세우는 개체는
+   * `doppel_{기록id}` 라 그 규칙 밖이고, 종 이름에도 밑줄이 들어 있어 자르는 자리가
+   * 모호하다 — 엔진이 아는 값을 그대로 싣는 편이 싸다.
+   *
+   * 이것도 겉모습이 아니라 **엔진이 아는 것**이다 (계약 C1). 그 종이 무엇을 들고
+   * 있는지는 여전히 화면이 답한다.
+   */
+  readonly byKindId: string
+  /**
    * 무기를 휘두르는 행동인가. 치유·방어·소환은 아니다.
    *
    * **이번 틱에 실제로 일어난 것만 참이다.** 펄스는 두 틱을 머무는데(`EFFECT_LINGER_TICKS`)
@@ -317,8 +328,12 @@ export function buildPulsesFromLog(
   // 이펙트가 붙을 자리를 잃어 마지막 타격이 화면에 안 보였다(실제 신고). 엔진의
   // 엔티티 표는 죽은 것도 들고 있으므로 그 좌표를 받침으로 쓴다.
   const spots = new Map<string, { x: number; y: number }>()
+  // **죽은 말의 종도 안다.** 때린 그 틱에 죽은 적의 자국이 종을 잃으면 늑대가 마지막
+  // 한 입만 직검으로 문다 — 자리와 같은 이유로 엔진 표에서 받는다.
+  const kinds = new Map<string, string>()
   for (const [entityId, entity] of engine.state.entities ?? []) {
     spots.set(entityId, { x: entity.position.x, y: entity.position.y })
+    kinds.set(entityId, entity.kindId)
   }
   for (const actor of actors) {
     spots.set(actor.entityId, { x: actor.x, y: actor.y })
@@ -343,6 +358,7 @@ export function buildPulsesFromLog(
           label,
           from,
           byEntityId: entry.entityId,
+          byKindId: kinds.get(entry.entityId) ?? '',
           // **깎는 것만, 그리고 이번 틱만 무기를 든다.** 회복에 칼을 휘두르면 무슨 일이
           // 있었는지가 뒤집혀 읽히고, 잔상에까지 휘두르면 공격이 없는 틱에 공격이 보인다.
           isStrike:
@@ -361,6 +377,7 @@ export function buildPulsesFromLog(
           label,
           from: spot,
           byEntityId: entry.entityId,
+          byKindId: kinds.get(entry.entityId) ?? '',
           isStrike: false,
         })
       }

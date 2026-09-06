@@ -74,16 +74,44 @@ describe('buildSwing', () => {
     expect(swing('curved').blade.length).toBeGreaterThan(swing('straight').blade.length)
   })
 
-  it('도끼만 날을 얹는다', () => {
+  it('도끼만 날을 얹는다 — 칼 셋 중에서', () => {
     expect(swing('axe').head.length).toBeGreaterThan(0)
     expect(swing('straight').head).toHaveLength(0)
   })
 
+  it('★ 몸이 무기인 것들도 저마다 다르게 그려진다', () => {
+    // 늑대에게 직검을 쥐여 주면 그것도 거짓이다. 일곱 꼴이 서로 겹치면 안 나뉜다.
+    const drawn = ['straight', 'curved', 'axe', 'arrow', 'fang', 'bolt', 'fist'].map((shape) =>
+      JSON.stringify(swing(shape, 'chop', 0.5)),
+    )
+    expect(new Set(drawn).size).toBe(drawn.length)
+  })
+
+  it('엄니는 두 짝이다 — 한 줄이면 그냥 칼이다', () => {
+    const bite = swing('fang')
+    expect(bite.blade.length).toBeGreaterThan(0)
+    expect(bite.head.length).toBeGreaterThan(0)
+  })
+
+  it('술법 탄은 닫힌 마름모다 — 열린 선은 날붙이로 읽힌다', () => {
+    const bolt = swing('bolt', 'fly').blade
+    expect(bolt.length).toBeGreaterThan(3)
+    expect(bolt.at(0)).toEqual(bolt.at(-1))
+  })
+
+  it('덩이는 뾰족한 데가 없다 — 네 귀가 닫혀 있다', () => {
+    const fist = swing('fist').head
+    expect(fist.length).toBe(5)
+    expect(fist.at(0)).toEqual(fist.at(-1))
+  })
+
   it('★ 자국이 때린 말의 칸을 크게 벗어나지 않는다', () => {
     // 옆 칸을 침범하면 **누가 때렸는지**가 흐려진다.
-    const points = [...swing('axe', 'slash', 0.5).blade, ...swing('axe', 'slash', 0.5).head]
-    for (const point of points) {
-      expect(Math.hypot(point.x - FROM.x, point.y - FROM.y)).toBeLessThan(CELL * 1.5)
+    for (const shape of ['axe', 'fang', 'fist']) {
+      const drawn = swing(shape, 'slash', 0.5)
+      for (const point of [...drawn.blade, ...drawn.head]) {
+        expect(Math.hypot(point.x - FROM.x, point.y - FROM.y)).toBeLessThan(CELL * 1.5)
+      }
     }
   })
 

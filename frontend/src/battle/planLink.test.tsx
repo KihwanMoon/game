@@ -70,6 +70,26 @@ async function collect(
 const PLAYER = buildActor()
 const FOE = buildActor({ entityId: 'goblin_0', kindId: 'goblin_rusher', x: 4, y: 3, isSelf: false })
 
+/**
+ * 가짜 엔진 하나. **엔티티 표를 함께 준다** — 자국이 종을 여기서 받는다.
+ *
+ * @param log 이벤트 로그.
+ * @param tick 지금 틱.
+ * @returns `buildPulsesFromLog` 가 받는 모양의 가짜.
+ */
+function buildFakeEngine(log: unknown, tick: number): unknown {
+  return {
+    log,
+    state: {
+      tick,
+      entities: new Map([
+        ['player', { position: { x: 1, y: 1 }, kindId: 'player' }],
+        ['goblin_0', { position: { x: 4, y: 3 }, kindId: 'goblin_rusher' }],
+      ]),
+    },
+  }
+}
+
 describe('대상 연결선', () => {
   it('★ 로그가 이미 아는 것을 쓴다 — 코어를 고칠 이유가 없는 자리다', async () => {
     const links = await collect([{ from: 'player', to: 'goblin_0' }], [PLAYER, FOE])
@@ -226,7 +246,8 @@ describe('연결선 그리기', () => {
             delta: -7,
             label: '',
             from: null,
-            byEntityId: 'player',
+            byKindId: 'player',
+        byEntityId: 'player',
             isStrike: false,
           },
           {
@@ -236,7 +257,8 @@ describe('연결선 그리기', () => {
             delta: null,
             label: '방어',
             from: { x: 1, y: 1 },
-            byEntityId: 'player',
+            byKindId: 'player',
+        byEntityId: 'player',
             isStrike: false,
           },
         ],
@@ -273,7 +295,8 @@ describe('연결선 그리기', () => {
               delta: -7,
               label: '',
               from: { x: 1, y: 1 },
-              byEntityId: 'player',
+              byKindId: 'player',
+        byEntityId: 'player',
               isStrike,
             },
           ],
@@ -312,7 +335,8 @@ describe('연결선 그리기', () => {
               delta: -7,
               label: '',
               from: { x: 1, y: 1 },
-              byEntityId: 'player',
+              byKindId: 'player',
+        byEntityId: 'player',
               isStrike: true,
             },
           ],
@@ -355,7 +379,8 @@ describe('연결선 그리기', () => {
             delta: -7,
             label: '',
             from: null,
-            byEntityId: 'player',
+            byKindId: 'player',
+        byEntityId: 'player',
             isStrike: true,
           },
         ],
@@ -389,7 +414,10 @@ describe('연결선 그리기', () => {
       log,
       state: {
         tick: 3,
-        entities: new Map([['goblin_0', { position: { x: 4, y: 3 } }]]),
+        entities: new Map([
+          ['player', { position: { x: 1, y: 1 }, kindId: 'player' }],
+          ['goblin_0', { position: { x: 4, y: 3 }, kindId: 'goblin_rusher' }],
+        ]),
       },
     }
     // actors 에 적이 없어도(죽어서) 그 자리에 이펙트가 선다.
@@ -402,6 +430,7 @@ describe('연결선 그리기', () => {
         label: '스킬1',
         // 자국은 때린 말에서 맞은 말 쪽으로 간다 (설계/10_외형과_모션).
         from: { x: 1, y: 1 },
+        byKindId: 'player',
         byEntityId: 'player',
         isStrike: true,
       },
@@ -426,7 +455,7 @@ describe('수치 이펙트 (간단한 표시)', () => {
         targetId: 'goblin_0', delta: -tick, fired: true,
       }))
     }
-    const pulses = buildPulsesFromLog({ log, state: { tick: 3 } } as never, [PLAYER, FOE])
+    const pulses = buildPulsesFromLog(buildFakeEngine(log, 3) as never, [PLAYER, FOE])
     expect(pulses).toEqual([
       // **잔상은 무기를 안 든다.** 이 펄스는 지난 틱(2)의 것이라 고리와 수치만 남는다 —
       // 공격이 없는 틱에 칼이 휘둘러지면 무슨 일이 있었는지가 거짓으로 읽힌다.
@@ -437,6 +466,7 @@ describe('수치 이펙트 (간단한 표시)', () => {
         delta: -2,
         label: '',
         from: { x: 1, y: 1 },
+        byKindId: 'player',
         byEntityId: 'player',
         isStrike: false,
       },
@@ -462,7 +492,7 @@ describe('수치 이펙트 (간단한 표시)', () => {
           fired: true,
         }),
       )
-      const pulses = buildPulsesFromLog({ log, state: { tick: now } } as never, [PLAYER, FOE])
+      const pulses = buildPulsesFromLog(buildFakeEngine(log, now) as never, [PLAYER, FOE])
       return pulses.some((pulse) => pulse.isStrike)
     }
 
@@ -488,7 +518,7 @@ describe('수치 이펙트 (간단한 표시)', () => {
         fired: true,
       }),
     )
-    const pulses = buildPulsesFromLog({ log, state: { tick: 3 } } as never, [PLAYER, FOE])
+    const pulses = buildPulsesFromLog(buildFakeEngine(log, 3) as never, [PLAYER, FOE])
     expect(pulses).toHaveLength(1)
     expect(pulses[0]?.delta).toBe(-7)
     expect(pulses[0]?.isStrike).toBe(false)
@@ -511,7 +541,7 @@ describe('수치 이펙트 (간단한 표시)', () => {
     log.record(createLogEntry({
       tick: 3, entityId: 'player', phase: PHASE_ACT, expr: 'MOVE_TO', outcome: '', fired: true,
     }))
-    const pulses = buildPulsesFromLog({ log, state: { tick: 3 } } as never, [PLAYER, FOE])
+    const pulses = buildPulsesFromLog(buildFakeEngine(log, 3) as never, [PLAYER, FOE])
     expect(pulses).toEqual([
       {
         x: 4,
@@ -520,6 +550,7 @@ describe('수치 이펙트 (간단한 표시)', () => {
         delta: -7,
         label: '',
         from: { x: 1, y: 1 },
+        byKindId: 'player',
         byEntityId: 'player',
         isStrike: true,
       },
@@ -532,6 +563,7 @@ describe('수치 이펙트 (간단한 표시)', () => {
         delta: 12,
         label: '소모품',
         from: { x: 4, y: 3 },
+        byKindId: 'goblin_rusher',
         byEntityId: 'goblin_0',
         isStrike: false,
       },
@@ -576,7 +608,7 @@ describe('장비줄 자리', () => {
       tick: 3, entityId: 'player', phase: PHASE_ACT, expr: 'GUARD_BRACE', outcome: '방어 50% / 8틱',
       fired: true,
     }))
-    const pulses = buildPulsesFromLog({ log, state: { tick: 3 } } as never, [PLAYER, FOE])
+    const pulses = buildPulsesFromLog(buildFakeEngine(log, 3) as never, [PLAYER, FOE])
     expect(pulses).toEqual([
       // 방어는 제자리다 — 때린 자리와 맞은 자리가 같고, 무기도 안 든다.
       {
@@ -586,6 +618,7 @@ describe('장비줄 자리', () => {
         delta: null,
         label: '방어',
         from: { x: 1, y: 1 },
+        byKindId: 'player',
         byEntityId: 'player',
         isStrike: false,
       },

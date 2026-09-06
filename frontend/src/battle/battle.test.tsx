@@ -494,6 +494,30 @@ describe('장면 만들기', () => {
     }
   })
 
+  it('★ 자국이 때린 말의 종을 싣는다 — 적이 제 무장으로 치는 근거다', async () => {
+    const { buildLookOf } = await import('./weaponLook')
+    const session = buildBattleSession(CHECK_SETUP, G0_RULESETS)
+    const lookOf = buildLookOf('')
+    const shapes = new Set<string>()
+    for (let tick = 0; tick < 60; tick += 1) {
+      runTickBatch(session.engine, 1)
+      for (const pulse of buildPlanScene(session.engine).pulses) {
+        if (!pulse.isStrike || pulse.from === null) {
+          continue
+        }
+        // 종이 비면 표를 못 찾아 전부 기본 직검이 된다 — 고치기 전이 그 상태였다.
+        expect(pulse.byKindId).not.toBe('')
+        const cells = Math.max(
+          Math.abs(pulse.x - pulse.from.x),
+          Math.abs(pulse.y - pulse.from.y),
+        )
+        shapes.add(lookOf(pulse.byEntityId, pulse.byKindId, cells).shape)
+      }
+    }
+    // 이 방에는 돌진병·궁수·슬라임이 함께 선다. 하나로 모이면 표가 안 먹은 것이다.
+    expect(shapes.size).toBeGreaterThan(1)
+  })
+
   it('보조 기술이 읽을 한 줄을 낸다', () => {
     const session = buildBattleSession(CHECK_SETUP, G0_RULESETS)
     const text = describeScene(buildPlanScene(session.engine))
