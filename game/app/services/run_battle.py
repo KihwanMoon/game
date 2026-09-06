@@ -11,12 +11,17 @@ from game.app.combat.damage import build_damage_rules
 from game.app.core.rng import DeterministicRng
 from game.app.rules.fallback_policy import FallbackPolicy
 from game.app.rules.rule_vm import build_rule_vm
+from game.app.services.room_extras import (
+    build_enemy_entity,
+    find_far_spot,
+    list_extra_slots,
+)
 from game.app.simulation.engine import TickEngine
 from game.app.simulation.plan import OUTCOME_ONGOING, DecisionPolicy, EngineConfig
 from game.app.simulation.pressure import PressureTracker, build_pressure_rules
-from game.app.simulation.scaling import build_floor_scale, get_scaled_enemy_stats
+from game.app.simulation.scaling import build_floor_scale
 from game.app.simulation.springs import init_spring_pools
-from game.app.simulation.state import FACTION_ENEMY, FACTION_PLAYER, TIER_NORMAL, Entity, WorldState
+from game.app.simulation.state import FACTION_PLAYER, Entity, WorldState
 from game.app.simulation.variance import resolve_elite_kind, resolve_spawn_spot
 from game.config import SKILLS_PATH
 from game.schemas.blocks import BlockCatalog
@@ -201,7 +206,24 @@ def build_engine(
     # **끌 수 있어야 한다.** 튜토리얼은 가르치는 배치가 고정이어야 하고(같은 자리에서
     # 같은 교훈이 나와야 한다), 골든은 흔들리면 대조가 성립하지 않는다.
     variance = rng.create_stream("variance")
+
+    def place_enemy(entity_id: str, kind_id: str, spot: tuple[int, int]) -> None:
+        """적 하나를 방에 세운다.
+
+        방 배치가 부르는 자리와 **더해서 세우는 자리**가 같은 코드를 써야 한다 — 갈라
+        두면 얼려 둔 상태가 한쪽에만 붙는다.
+
+        Args:
+            entity_id: 자리 이름.
+            kind_id: 종.
+            spot: 설 칸.
+        """
+        state.entities[entity_id] = build_enemy_entity(
+            entity_id, by_id[kind_id], overrides.get(entity_id), scale, floor, spot
+        )
+
     taken: set[tuple[int, int]] = {template.player_spawn}
+    consumed: set[str] = set()
     for index, spawn in enumerate(template.enemy_spawns):
         # 지속 몬스터가 앉은 자리는 안 흔들고 안 바꾼다 — 스냅샷이 그 개체를 덮어야
         # 하는데 종이나 자리가 갈리면 얼려 둔 상태가 아무에게도 안 붙는다.
@@ -227,52 +249,23 @@ def build_engine(
         found_kind = overrides.get(slot_id)
         if found_kind is not None and found_kind.kind_id in by_id:
             kind_id = found_kind.kind_id
-        kind = by_id[kind_id]
         # **자리 이름은 템플릿의 종으로 짓는다.** 승격으로 종이 바뀌어도 스냅샷·
         # 도감이 겨냥하는 이름이 그대로여야 한다.
-        entity_id = slot_id
-        hp_max, attack = get_scaled_enemy_stats(kind, scale, floor)
-        defense = kind["defense"]
-        cpu_budget = kind.get("cpu_budget", 0)
-        # 지속 몬스터가 이 자리에 있으면 얼려 둔 상태가 층 스케일을 **대체한다**.
-        # 얹으면 같은 개체가 층마다 다른 값을 갖게 되어 스냅샷의 뜻이 사라진다.
-        found = overrides.get(entity_id)
-        # **키트도 얼려 둔 것을 쓴다.** 스탯 셋만 대체하던 때는 장궁 든 봇의 그림자가
-        # 사거리 1 근접으로 싸웠다 — 빌드에서 가장 그 빌드다운 것이 빠졌다. 안 실린
-        # 값은 종의 것을 그대로 쓰므로, 옛 티켓은 예전과 똑같이 재시뮬된다 (R5).
-        attack_range = kind["attack_range"]
-        potions = int(kind.get("potions", 0))
-        # None 은 「장착 개념이 안 배선됨 = 전부 허용」이다. 빈 튜플(아무것도 없음)과
-        # 뜻이 반대라, 스냅샷의 빈 것은 **모른다**로 읽어 None 으로 둔다.
-        skills: tuple[str, ...] | None = None
-        if found is not None:
-            hp_max, attack, defense, cpu_budget = (
-                found.hp_max,
-                found.attack,
-                found.defense,
-                found.cpu_budget,
-            )
-            attack_range = found.attack_range or attack_range
-            potions = found.potions if found.potions >= 0 else potions
-            skills = found.skills or None
-        state.entities[entity_id] = Entity(
-            entity_id=entity_id,
-            kind_id=kind["id"],
-            faction=FACTION_ENEMY,
-            position=spot,
-            hp=hp_max,
-            hp_max=hp_max,
-            attack=attack,
-            defense=defense,
-            attack_range=attack_range,
-            initiative=kind["initiative"],
-            regen_base=kind["regen_base"],
-            cpu_budget=cpu_budget,
-            consumables={"POTION": potions},
-            skills=skills,
-            # 등급은 이름표로만 나른다. 전투 수식은 안 본다 — 화면이 색으로 가른다.
-            tier=str(kind.get("tier", TIER_NORMAL)),
-        )
+        consumed.add(slot_id)
+        place_enemy(slot_id, kind_id, spot)
+
+    # **방 배치에 없는 개체를 더한다** (2026-09-06). 그림자는 층에 귀속이라 그 층 모든
+    # 방에 서야 하는데, 덮어쓰기로는 그 자리가 있는 방에만 설 수 있다 — 실측으로 다섯
+    # 방 중 두세 방이었다. 무작위를 안 쓰므로 더할 것이 없으면 판이 그대로다 (R5).
+    for slot_id in list_extra_slots(overrides, consumed):
+        extra = overrides[slot_id]
+        if extra.kind_id not in by_id:
+            continue
+        spot = find_far_spot(template, taken, template.player_spawn)
+        if spot is None:
+            continue
+        taken.add(spot)
+        place_enemy(slot_id, extra.kind_id, spot)
 
     config = EngineConfig(
         damage_rules=build_damage_rules(balance["damage_formula"]),

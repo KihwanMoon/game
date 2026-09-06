@@ -24,6 +24,7 @@ import {
   type RawEnemyKind,
 } from '../sim/plan'
 import { PressureTracker, buildPressureRules, initSpringPools } from '../sim/pressure'
+import { findFarSpot, listExtraSlots } from './roomExtras'
 import { buildFloorScale, getScaledEnemyStats } from '../sim/scaling'
 import type { RawFloorScale } from '../sim/scaling'
 import type { RawAntiAbuse } from '../sim/pressure'
@@ -265,28 +266,24 @@ export function buildEngine(setup: EngineSetup): TickEngine {
   const taken = new Set<string>([
     `${String(template.playerSpawn.x)},${String(template.playerSpawn.y)}`,
   ])
-  template.enemySpawns.forEach((spawn, index) => {
-    // 지속 몬스터가 앉은 자리는 안 흔들고 안 바꾼다 — 스냅샷이 그 개체를 덮어야 하는데
-    // 종이나 자리가 갈리면 얼려 둔 상태가 아무에게도 안 붙는다.
-    const entityId = buildEntityId(spawn.kind, index)
-    const found = overrides.get(entityId)
-    const kindId =
-      found === undefined && isVaried
-        ? resolveEliteKind(spawn.kind, floor, variance)
-        : spawn.kind
-    const spot =
-      found === undefined && isVaried
-        ? resolveSpawnSpot(template, spawn.position, taken, variance)
-        : spawn.position
-    taken.add(`${String(spot.x)},${String(spot.y)}`)
-    // **스냅샷이 종도 정한다.** 얼려 둔 것은 그 개체의 상태 전부이고 종은 그 일부다.
-    // 이것이 없으면 도플갱어가 방에 설 자리가 없다 (G3 — 파이썬과 같은 규칙).
-    const namedKind =
-      found !== undefined && byId.has(found.kindId) ? found.kindId : kindId
-    const kind = byId.get(namedKind)
+  const consumed = new Set<string>()
+
+  /**
+   * 적 하나를 방에 세운다.
+   *
+   * 방 배치가 부르는 자리와 **더해서 세우는 자리**가 같은 코드를 써야 한다 — 갈라 두면
+   * 얼려 둔 상태가 한쪽에만 붙는다.
+   *
+   * @param entityId 자리 이름.
+   * @param kindId 종.
+   * @param spot 설 칸.
+   */
+  function placeEnemy(entityId: string, kindId: string, spot: { x: number; y: number }): void {
+    const kind = byId.get(kindId)
     if (kind === undefined) {
       throw new Error(`balance.json 에 없는 적 종류다: ${kindId}`)
     }
+    const found = overrides.get(entityId)
     const scaled = getScaledEnemyStats(kind, scale, floor)
     state.entities.set(
       entityId,
@@ -307,7 +304,10 @@ export function buildEngine(setup: EngineSetup): TickEngine {
         regenBase: kind.regen_base ?? 0,
         cpuBudget: found?.cpuBudget ?? kind.cpu_budget ?? 0,
         consumables: new Map([
-          ['POTION', found !== undefined && found.potions >= 0 ? found.potions : (kind.potions ?? 0)],
+          [
+            'POTION',
+            found !== undefined && found.potions >= 0 ? found.potions : (kind.potions ?? 0),
+          ],
         ]),
         // undefined 는 「장착 개념이 안 배선됨 = 전부 허용」이다. 빈 것(아무것도 없음)과
         // 뜻이 반대라, 스냅샷의 빈 것은 **모른다**로 읽어 undefined 로 둔다.
@@ -316,7 +316,44 @@ export function buildEngine(setup: EngineSetup): TickEngine {
         tier: kind.tier ?? TIER_NORMAL,
       }),
     )
+  }
+
+  template.enemySpawns.forEach((spawn, index) => {
+    // 지속 몬스터가 앉은 자리는 안 흔들고 안 바꾼다 — 스냅샷이 그 개체를 덮어야 하는데
+    // 종이나 자리가 갈리면 얼려 둔 상태가 아무에게도 안 붙는다.
+    const entityId = buildEntityId(spawn.kind, index)
+    const found = overrides.get(entityId)
+    const kindId =
+      found === undefined && isVaried
+        ? resolveEliteKind(spawn.kind, floor, variance)
+        : spawn.kind
+    const spot =
+      found === undefined && isVaried
+        ? resolveSpawnSpot(template, spawn.position, taken, variance)
+        : spawn.position
+    taken.add(`${String(spot.x)},${String(spot.y)}`)
+    // **스냅샷이 종도 정한다.** 얼려 둔 것은 그 개체의 상태 전부이고 종은 그 일부다.
+    // 이것이 없으면 도플갱어가 방에 설 자리가 없다 (G3 — 파이썬과 같은 규칙).
+    const namedKind = found !== undefined && byId.has(found.kindId) ? found.kindId : kindId
+    consumed.add(entityId)
+    placeEnemy(entityId, namedKind, spot)
   })
+
+  // **방 배치에 없는 개체를 더한다** (2026-09-06, G3 — 파이썬과 같은 규칙). 그림자는
+  // 층에 귀속이라 그 층 모든 방에 서야 하는데, 덮어쓰기로는 그 자리가 있는 방에만 설 수
+  // 있다. 무작위를 안 쓰므로 더할 것이 없으면 판이 그대로다 (R5).
+  for (const slot of listExtraSlots(overrides, consumed)) {
+    const extra = overrides.get(slot)
+    if (extra === undefined || !byId.has(extra.kindId)) {
+      continue
+    }
+    const spot = findFarSpot(template, taken, template.playerSpawn)
+    if (spot === undefined) {
+      continue
+    }
+    taken.add(`${String(spot.x)},${String(spot.y)}`)
+    placeEnemy(slot, extra.kindId, spot)
+  }
 
   const enemyStats = new Map(balance.enemies.map((kind) => [kind.id, kind]))
   const config: EngineConfig = {

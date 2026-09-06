@@ -12,12 +12,12 @@
 **저장은 그대로 두고 출현만 고른다.** 스무 마리를 계속 들고 있되(순위표가 그 뜻이다),
 한 판에는 **층마다 하나만** 나오고 그 하나가 **그 층 모든 방에** 선다.
 
-**그래서 자리는 모든 방에 공통으로 있는 것을 고른다.** 자리 이름(`{종류}_{순번}`)에 방이
-안 담기므로, 배정한 이름이 있는 방마다 그 개체가 나타난다 — 그 성질을 고치는 대신 쓴다.
-공통 자리가 없으면 **가장 많은 방에 있는 것**을 고른다.
+**자리는 방 배치에 없는 전용 이름을 쓴다** (`doppel_{개체id}`). 방 배치의 자리를 덮어쓰면
+그 자리가 있는 방에만 설 수 있는데, 다섯 방의 적 구성이 서로 달라 실측으로 두세 방에만
+섰다 — 전용 이름이면 `room_extras` 가 **모든 방에 더해 준다.**
 
 방마다 따로 고르던 때는 4층에 다섯이 섰고 둘이 한 방에 보였다 (실제 신고). 층당 하나면
-어느 방이든 그 자리를 하나 가지므로 **방당 하나가 저절로 성립한다.**
+방마다 하나가 저절로 성립한다.
 
 **목숨은 판당 한 번만 깎인다.** 스냅샷에 개체가 하나이므로 여러 방에서 만나도 결산은
 한 번이다 — 다섯 방에서 다섯 번 죽는 것이 아니다.
@@ -29,7 +29,7 @@
 from collections.abc import Callable
 from dataclasses import replace
 
-from game.app.bots.doppel import check_is_doppel
+from game.app.bots.doppel import build_doppel_slot, check_is_doppel
 from game.app.store.monsters import MonsterRecord
 from game.schemas.monster_snapshot import build_entity_id
 from game.schemas.room import RoomTemplate
@@ -70,28 +70,6 @@ def list_floor_rooms(room_ids: tuple[str, ...], rooms_per_floor: int, step: int)
     return room_ids[start : start + rooms_per_floor]
 
 
-def count_slot_rooms(
-    rooms: dict[str, RoomTemplate], floor_rooms: tuple[str, ...]
-) -> dict[str, int]:
-    """자리 이름마다 그 층의 **몇 개 방에** 있는가.
-
-    **많이 걸친 자리일수록 좋다.** 그림자는 층에 귀속이라 그 층 모든 방에 서야 하고,
-    자리 이름이 곧 그 배정이다.
-
-    Args:
-        rooms: 방 템플릿 대응표.
-        floor_rooms: 그 층이 도는 방들.
-
-    Returns:
-        자리 이름에서 방 수로의 대응표.
-    """
-    found: dict[str, int] = {}
-    for room_id in floor_rooms:
-        for slot in set(list_room_slots(rooms, room_id)):
-            found[slot] = found.get(slot, 0) + 1
-    return found
-
-
 def build_room_doppels(
     records: list[MonsterRecord],
     rooms: dict[str, RoomTemplate],
@@ -100,13 +78,13 @@ def build_room_doppels(
     start_floor: int,
     roll: Callable[[int], int],
 ) -> list[MonsterRecord]:
-    """층마다 그림자 하나만 남기고, 그 층 **모든 방에 서는** 자리에 앉힌다.
+    """층마다 그림자 하나만 남기고, 방 배치에 없는 **전용 자리**를 준다.
 
-    **자리는 여느 지속 개체가 안 쓰는 것으로 고른다.** 같은 자리에 둘이 앉으면 스냅샷이
-    서로를 덮어써, 하나는 개체가 있는데 아무도 못 만난다.
+    **전용 자리라 모든 방에 선다.** `room_extras` 가 방 배치에 없는 자리를 그 방에
+    더해 주므로, 그 층의 다섯 방 어디서든 같은 그림자를 만난다.
 
-    **가장 많은 방에 걸친 자리를 고른다.** 모든 방에 있는 이름이 있으면 그것이고, 없으면
-    가장 많이 걸친 것이다 — 층에 귀속인 개체를 방 하나에 가두지 않는다.
+    **여느 지속 개체와 안 겹친다.** 자리 이름이 `doppel_{개체id}` 라 방 템플릿의
+    `{종류}_{순번}` 과 부딪히지 않는다.
 
     **여느 몬스터는 안 건드린다.** 층당 셋 상한은 이미 `apply_floor_seed` 가 지킨다.
 
@@ -136,15 +114,10 @@ def build_room_doppels(
             (record for record in shadows if record.zone_floor == floor),
             key=lambda record: record.record_id,
         )
-        taken = {record.entity_slot for record in plain if record.zone_floor == floor}
-        spread = count_slot_rooms(rooms, list_floor_rooms(room_ids, rooms_per_floor, step))
-        free = sorted(
-            (slot for slot in spread if slot not in taken),
-            # 많이 걸친 것 먼저. 같으면 이름순 — 굴림 밖의 순서가 판을 흔들면 안 된다.
-            key=lambda slot: (-spread[slot], slot),
-        )
-        if not pool or not free:
+        if not pool:
             continue
-        best = [slot for slot in free if spread[slot] == spread[free[0]]]
-        picked.append(replace(pool[roll(len(pool))], entity_slot=best[roll(len(best))]))
+        chosen = pool[roll(len(pool))]
+        # **전용 자리를 준다.** 방 배치의 자리를 덮어쓰면 그 자리가 있는 방에만 서는데,
+        # 그림자는 층에 귀속이라 그 층 모든 방에 서야 한다.
+        picked.append(replace(chosen, entity_slot=build_doppel_slot(chosen.record_id)))
     return plain + picked

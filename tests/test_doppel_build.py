@@ -116,14 +116,18 @@ def test_the_frozen_build_replaces_and_never_stacks(client):
 
 
 def test_the_kit_reaches_the_snapshot(client):
-    """★ 사거리·스킬·물약이 실린다 — 장궁 든 봇의 그림자가 근접으로 싸우면 안 된다."""
+    """★ 사거리·스킬이 실린다 — 장궁 든 봇의 그림자가 근접으로 싸우면 안 된다.
+
+    **물약만 빠진다** (2026-09-06). 목숨 셋에 회복까지 붙으면 한 판이 아니라 소모전이
+    된다 — 잡을 수 있어야 「끝내 지웠다」가 성립한다.
+    """
     snapshot, base = build_shadow(client)
 
     assert snapshot.attack_range == BOT_LOADOUT["attack_range"]
     assert snapshot.attack_range != base["attack_range"], "카탈로그 사거리 그대로다"
     # 정렬해서 담는다 — 순회 순서가 티켓에 새면 두 코어가 갈린다 (R5).
     assert snapshot.skills == ("AIMED_SHOT", "GUARD_BRACE")
-    assert snapshot.potions == 3
+    assert snapshot.potions == 0, "그림자가 물약을 들고 있다"
 
 
 def test_the_kit_reaches_the_battle(client):
@@ -157,7 +161,9 @@ def test_the_kit_reaches_the_battle(client):
     entity = engine.state.entities[slot]
     assert entity.kind_id == "doppelganger"
     assert entity.attack_range == BOT_LOADOUT["attack_range"], "사거리가 종의 값으로 떨어졌다"
-    assert entity.count_item("POTION") == 3
+    # **물약만 뺀다** (2026-09-06). 목숨 셋에 회복까지 붙으면 한 판이 아니라 소모전이
+    # 되고, 잡을 수 있어야 「끝내 지웠다」가 성립한다. 나머지 키트는 그대로 온다.
+    assert entity.count_item("POTION") == 0
     assert entity.skills == ("AIMED_SHOT", "GUARD_BRACE")
     assert entity.hp_max == BOT_LOADOUT["hp_max"]
 
