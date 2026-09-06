@@ -351,8 +351,61 @@ describe('수치 이펙트 (간단한 표시)', () => {
     }
     const pulses = buildPulsesFromLog({ log, state: { tick: 3 } } as never, [PLAYER, FOE])
     expect(pulses).toEqual([
-      { x: 4, y: 3, isGain: false, delta: -2, label: '', from: { x: 1, y: 1 }, isStrike: true },
+      // **잔상은 무기를 안 든다.** 이 펄스는 지난 틱(2)의 것이라 고리와 수치만 남는다 —
+      // 공격이 없는 틱에 칼이 휘둘러지면 무슨 일이 있었는지가 거짓으로 읽힌다.
+      { x: 4, y: 3, isGain: false, delta: -2, label: '', from: { x: 1, y: 1 }, isStrike: false },
     ])
+  })
+
+  it('★ 자국은 일어난 그 틱에만 — 잔상에까지 휘두르면 공격이 두 번 보인다 (실제 신고)', async () => {
+    const { buildPulsesFromLog } = await import('./planScene')
+    const { EventLog, createLogEntry } = await import('../core/eventLog')
+    const { PHASE_ACT } = await import('../core/sim/phases')
+
+    const strikesAt = (tick: number, now: number): boolean => {
+      const log = new EventLog()
+      log.record(
+        createLogEntry({
+          tick,
+          entityId: 'player',
+          phase: PHASE_ACT,
+          expr: 'ATTACK',
+          outcome: '',
+          targetId: 'goblin_0',
+          delta: -7,
+          fired: true,
+        }),
+      )
+      const pulses = buildPulsesFromLog({ log, state: { tick: now } } as never, [PLAYER, FOE])
+      return pulses.some((pulse) => pulse.isStrike)
+    }
+
+    // 잔상은 수치를 읽으라고 두 틱 머무는 것이지 자국을 두 번 그리라는 뜻이 아니다.
+    expect(strikesAt(3, 3)).toBe(true)
+    expect(strikesAt(2, 3)).toBe(false)
+  })
+
+  it('★ 잔상이어도 수치는 남는다 — 자국만 빠지고 판독은 그대로다', async () => {
+    const { buildPulsesFromLog } = await import('./planScene')
+    const { EventLog, createLogEntry } = await import('../core/eventLog')
+    const { PHASE_ACT } = await import('../core/sim/phases')
+    const log = new EventLog()
+    log.record(
+      createLogEntry({
+        tick: 2,
+        entityId: 'player',
+        phase: PHASE_ACT,
+        expr: 'ATTACK',
+        outcome: '',
+        targetId: 'goblin_0',
+        delta: -7,
+        fired: true,
+      }),
+    )
+    const pulses = buildPulsesFromLog({ log, state: { tick: 3 } } as never, [PLAYER, FOE])
+    expect(pulses).toHaveLength(1)
+    expect(pulses[0]?.delta).toBe(-7)
+    expect(pulses[0]?.isStrike).toBe(false)
   })
 
   it('★ 피해는 대상에게 붉게, 회복은 자신에게 초록으로 — 뜻은 기존 색 그대로다', async () => {

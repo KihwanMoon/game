@@ -116,7 +116,15 @@ export interface PlanPulseView {
    * 모션이 없어도 판이 읽혀야 한다.
    */
   readonly from: { readonly x: number; readonly y: number } | null
-  /** 무기를 휘두르는 행동인가. 치유·방어·소환은 아니다. */
+  /**
+   * 무기를 휘두르는 행동인가. 치유·방어·소환은 아니다.
+   *
+   * **이번 틱에 실제로 일어난 것만 참이다.** 펄스는 두 틱을 머무는데(`EFFECT_LINGER_TICKS`)
+   * 그것은 수치 `-7` 을 배속에서 읽으라고 둔 것이지 자국을 두 번 그리라는 뜻이 아니다 —
+   * 공격이 없는 틱에 칼이 한 번 더 휘둘러지면 무슨 일이 있었는지가 거짓으로 읽힌다.
+   *
+   * 잔상은 고리와 수치의 몫이고, 자국은 일어난 그 틱의 몫이다 (설계/10_외형과_모션 C3).
+   */
   readonly isStrike: boolean
 }
 
@@ -327,9 +335,10 @@ export function buildPulsesFromLog(
           delta: entry.delta,
           label,
           from,
-          // **깎는 것만 무기를 든다.** 회복에 칼을 휘두르면 무슨 일이 있었는지가 뒤집혀
-          // 읽힌다 — 색만으로 가르지 않는 규율과 같은 자리다.
-          isStrike: entry.delta < 0 && STRIKE_ACTIONS.has(action),
+          // **깎는 것만, 그리고 이번 틱만 무기를 든다.** 회복에 칼을 휘두르면 무슨 일이
+          // 있었는지가 뒤집혀 읽히고, 잔상에까지 휘두르면 공격이 없는 틱에 공격이 보인다.
+          isStrike:
+            entry.delta < 0 && STRIKE_ACTIONS.has(action) && entry.tick === engine.state.tick,
         })
       }
     } else if (SILENT_PULSE_ACTIONS.has(action)) {
