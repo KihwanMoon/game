@@ -40,13 +40,13 @@ import {
 import { buildDefaultRhs } from './draft'
 import { EditCard, EditField, EditNumber, EditSegments, type EditOptionGroup } from './EditParts'
 import { FLAG_FALSE, FLAG_NONE, FLAG_TRUE, buildSetFlag, getFlagName, getFlagValue } from './flagClause'
-import type { RuleRowActions } from './RuleRowEditor'
+import type { RuleRowActions } from './ruleRowActions'
 import { MEASURE_SOURCE, formatMeasuredTerm, resolveMeasureState, type TermReadings } from './termMeasure'
 
 /** 항이 둘 이상일 때 고를 수 있는 연산자. 괄호가 없는 문법이라 한 줄에 한 종류만 온다. */
 const EDIT_OPS: readonly ConditionOp[] = [OP_AND, OP_OR]
 
-/** 우변이 리터럴인지 자기 스탯 참조인지 (F-2). 데스크톱 `TermEditor` 와 같은 두 갈래다. */
+/** 우변이 리터럴인지 자기 스탯 참조인지 (F-2). */
 const RHS_LITERAL = 'literal'
 const RHS_STAT = 'stat'
 

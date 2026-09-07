@@ -29,20 +29,10 @@
  * 세운다 — 도면(가변) + 우측 340px 시트. 세 배치가 같은 값 묶음을 받으므로, 기기를
  * 돌리면 트리만 바뀌고 판은 그대로 이어진다.
  */
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
-import {
-  Button,
-  LogPanel,
-  Panel,
-  RuleRow,
-  RuleTable,
-  StatusBar,
-  TopBar,
-  useViewportMode,
-  watchViewport,
-} from '../ds'
+import { useViewportMode, watchViewport } from '../ds'
 import { BLOCK_CATALOG } from '../core/resources'
 import { PLAYER_ENTITY_ID } from '../core/services/runBattle'
 import { countItem } from '../core/sim/state'
@@ -62,8 +52,6 @@ import { BattlePortrait } from './BattlePortrait'
 import { buildBattleSession, checkOngoing, type BattleSetup } from './battleSession'
 import { buildRunRulesets, toggleRulePriority, type SheetTab } from './portraitSheet'
 import { buildRuleRows } from './ruleRows'
-import { LeaderLine, buildLeaderPath, type LeaderPath } from './leaderLine'
-import { formatOutcome } from './outcomeText'
 import { PlanCanvas } from './PlanCanvas'
 import { buildLookOf } from './weaponLook'
 import { buildPlanScene } from './planScene'
@@ -77,28 +65,11 @@ import {
 /** 로그 열에 남기는 줄 수. 전량을 DOM 에 두면 400틱짜리 판에서 수천 노드가 된다. */
 const LOG_TAIL = 200
 
-/** 4px 모듈. 지시선의 어깨 길이를 이 배수로 잡는다. */
-const MODULE_TOKEN = '--sp-1'
-
-/** 발동한 규칙 줄을 찾는 선택자. ds 가 그 상태에만 붙이는 클래스다. */
-const ARMED_ROW_SELECTOR = '.ds-rule-row--armed'
-
-/**
- * 로그 열의 스크롤 영역. Panel 이 `scroll` 일 때만 붙는 클래스다.
- *
- * 관전 중에는 마지막 줄이 화면의 기본값이어야 한다. 매 틱 손으로 내려야 한다면 로그는
- * 사실상 없는 것과 같다 (P1).
- */
-const LOG_SCROLL_SELECTOR = '.ds-panel__body--scroll'
-
 /** 처음 열었을 때의 배속. 정지로 두면 화면이 죽은 것처럼 보인다. */
 const INITIAL_SPEED = 1
 
 /** 정지 단계. 즉시 실행을 누르면 시계를 세운다 — 이미 끝까지 돌렸기 때문이다. */
 const SPEED_PAUSED = 0
-
-/** 셀 한가운데를 가리키는 비율. */
-const HALF = 0.5
 
 /** `한 틱` 버튼이 돌리는 틱 수. */
 const ONE_TICK = 1
@@ -254,13 +225,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
   const [runKey, setRunKey] = useState(0)
   const [frame, setFrame] = useState(0)
   const [theme, setTheme] = useState<PlanTheme | undefined>(undefined)
-  const [module, setModule] = useState(0)
   const [intervalMs, setIntervalMs] = useState(0)
-  const [leader, setLeader] = useState<LeaderPath | undefined>(undefined)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const planRef = useRef<HTMLDivElement>(null)
-  const logRef = useRef<HTMLDivElement>(null)
-  const rulesRef = useRef<HTMLDivElement>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
 
   // 꺼진 규칙을 뺀 대응표로 판을 조립한다. 아무것도 끄지 않았으면 받은 대응표가 그대로
@@ -294,7 +259,6 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
       // 값이 같으면 상태를 그대로 둔다. 새 객체를 넣으면 창을 1px 끌 때마다 도면을
       // 다시 그린다.
       setTheme((prev) => (checkPlanThemeSame(prev, next) ? prev : next))
-      setModule(Number.parseFloat(read(MODULE_TOKEN)))
       setIntervalMs(readBatchIntervalMs(read))
     }
     update()
@@ -335,61 +299,8 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
   const player = session.engine.state.entities.get(PLAYER_ENTITY_ID)
   const trace = session.tracer.trace
 
-  // 지시선은 실제로 그려진 두 요소의 자리를 재서 잇는다. 규칙 줄의 높이는 조건문의 길이에
-  // 따라 달라지므로 계산으로 맞출 수 없다.
-  useLayoutEffect(() => {
-    const container = containerRef.current
-    const plan = planRef.current
-    const rules = rulesRef.current
-    // 세로 배치에는 지시선이 없다. 규칙 줄과 도면이 위아래로 떨어져 있어 선을 그으면
-    // 시트를 가로지르고, 황동 예산 셋도 그쪽에서는 다른 자리가 가져간다.
-    if (container === null || plan === null || rules === null || theme === undefined) {
-      setLeader(undefined)
-      return
-    }
-    const row = rules.querySelector(ARMED_ROW_SELECTOR)
-    const self = scene.actors.find((actor) => actor.isSelf)
-    if (row === null || self === undefined) {
-      setLeader(undefined)
-      return
-    }
-    const base = container.getBoundingClientRect()
-    const rowRect = row.getBoundingClientRect()
-    const planRect = plan.getBoundingClientRect()
-    // 규칙표가 길어 그 줄이 스크롤 밖으로 나가면 선을 긋지 않는다. 보이지 않는 줄에서
-    // 나오는 선은 어느 규칙이 발동했는지 알려 주는 대신 엉뚱한 줄을 가리킨다.
-    const rulesRect = rules.getBoundingClientRect()
-    const anchorY = rowRect.top + rowRect.height * HALF
-    if (anchorY < rulesRect.top || anchorY > rulesRect.bottom) {
-      setLeader(undefined)
-      return
-    }
-    setLeader(
-      buildLeaderPath({
-        from: {
-          x: rowRect.right - base.left,
-          y: anchorY - base.top,
-        },
-        to: {
-          x: planRect.left - base.left + (self.x + HALF) * theme.cell,
-          y: planRect.top - base.top + (self.y + HALF) * theme.cell,
-        },
-        cell: theme.cell,
-        module,
-      }),
-    )
-  }, [scene, trace, theme, module])
-
-  // 로그는 늘 마지막 줄을 보고 있어야 한다.
-  useEffect(() => {
-    const body = logRef.current?.querySelector(LOG_SCROLL_SELECTOR)
-    if (body !== null && body !== undefined) {
-      body.scrollTop = body.scrollHeight
-    }
-  }, [scene])
-
-  // 세로 시트도 같다. 로그 탭일 때만 내린다 — 규칙표 탭에서 내리면 방금 누른 줄이
-  // 화면 밖으로 밀려난다.
+  // 로그는 늘 마지막 줄을 보고 있어야 한다. 로그 탭일 때만 내린다 — 규칙표 탭에서
+  // 내리면 방금 누른 줄이 화면 밖으로 밀려난다.
   useEffect(() => {
     const body = sheetRef.current
     if (body !== null && tab === 'log') {
@@ -419,7 +330,6 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
     setDisabled((current) => toggleRulePriority(current, priority))
   }, [])
 
-  const armedRow = trace?.rows.find((row) => row.armed)
   const cpuBudget = player?.cpuBudget ?? 0
   // 누적 CPU 는 **판에 실린** 규칙만 센다. 끈 줄은 비용을 쓰지 않는다.
   const cpuUsed = session.ruleset.rules.reduce((sum, rule) => sum + rule.cpuCost, 0)
@@ -439,54 +349,11 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
       : buildThreatNotice(session.engine.telegraphs, player.position, foresight)
   // 진행 중에는 판정을 적지 않는다. 라벨표는 `outcomeText` 한 곳이며 사후 분석과 같은
   // 말을 쓴다 — 사후 분석이 이 화면을 덮으므로 두 말이 한 화면에 보이면 안 된다.
-  const outcomeLabel = checkOngoing(outcome) ? undefined : formatOutcome(outcome)
   const threatText = threat === undefined ? undefined : `${threat.glyph} ${threat.text}`
   const plan =
     theme === undefined ? null : <PlanCanvas scene={scene} theme={theme} lookOf={lookOf} />
-
-  // 세로 모바일은 같은 값들을 다른 배열로 그린다. 세션·시계·판정은 위에서 이미 다 나왔고
-  // 여기서 갈리는 것은 트리뿐이라, 기기를 돌려도 보고 있던 판이 그대로 이어진다.
-  if (mode === 'portrait') {
-    return (
-      <BattlePortrait
-        location={props.location}
-        controls={props.controls}
-        tick={scene.tick}
-        speed={speed}
-        onSpeedChange={setSpeed}
-        onInstant={runInstant}
-        onStep={runStep}
-        onRestart={runRestart}
-        outcome={outcome}
-        threat={threatText}
-        plan={plan}
-        rows={rows}
-        onToggleRule={toggleRule}
-        cpuUsed={cpuUsed}
-        cpuBudget={cpuBudget}
-        entries={session.engine.log.entries.slice(-LOG_TAIL)}
-        settlements={props.settlements ?? []}
-        hp={player?.hp ?? 0}
-        hpMax={player?.hpMax ?? 1}
-        potions={player === undefined ? 0 : countItem(player, 'POTION')}
-        potionsMax={readCarried(props.setup, 'POTION')}
-        scrolls={player === undefined ? 0 : countItem(player, 'SCROLL')}
-        scrollsMax={readCarried(props.setup, 'SCROLL')}
-        cooldowns={formatCooldowns(
-          player?.cooldowns,
-          listRulesetSkills(session.ruleset.rules),
-          session.engine.config.skillCooldowns,
-        )}
-        tab={tab}
-        onTabChange={setTab}
-        bodyRef={sheetRef}
-      />
-    )
-  }
-
-  // 가로 모바일은 2열이다 — 도면과 시트. 세로와 같은 값 묶음을 받고 배열만 다르다.
-  // 앱의 조작부(사후 분석·규칙 고치기)는 상단 바 안으로 들어간다. 세로와 달리 자리가
-  // 있고, 없으면 가로에서는 에디터로 돌아갈 길이 사라진다.
+  // **가로 폰만 다르게 선다.** 세로 골격의 고정 높이 합(44+44+270+34+48=440)이
+  // 390px 짜리 가로 폰에 안 들어간다. 화면이 커서가 아니라 높이가 모자라서다.
   if (mode === 'landscape') {
     return (
       <BattleLandscape
@@ -525,86 +392,41 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
     )
   }
 
+  // 세로가 기본이다. 세션·시계·판정은 위에서 이미 다 나왔고 여기서 갈리는 것은
+  // 트리뿐이라, 기기를 돌려도 보고 있던 판이 그대로 이어진다.
   return (
-    <div className="battle" ref={containerRef}>
-      <div className="battle__top">
-        <TopBar
-          location={props.location}
-          tick={scene.tick}
-          speed={speed}
-          onSpeedChange={setSpeed}
-        />
-        <Button size="sm" variant="secondary" glyph="≫" onClick={runInstant}>
-          즉시
-        </Button>
-        {props.controls}
-      </div>
-
-      <div className="battle__body">
-        <div className="battle__col" ref={rulesRef}>
-          <Panel
-            title="규칙표"
-            meta={`cpu ${String(cpuUsed)} / ${String(cpuBudget)}`}
-            tone="panel"
-            scroll
-          >
-            <RuleTable>
-              {rows.map((row) => (
-                <RuleRow
-                  key={row.priority}
-                  index={row.priority}
-                  state={row.state}
-                  condition={row.condition}
-                  action={row.action}
-                  cpu={row.cpu}
-                  armed={row.armed}
-                />
-              ))}
-            </RuleTable>
-          </Panel>
-        </div>
-
-        <div className="battle__rule-line" />
-
-        <div className="battle__col battle__col--plan">
-          <div className="battle__frame" ref={planRef}>
-            {plan}
-          </div>
-          <div className="battle__plan-foot">
-            <span className="ds-label">{session.template.templateId}</span>
-            {outcomeLabel === undefined ? null : (
-              <span className="battle__outcome">{outcomeLabel}</span>
-            )}
-          </div>
-        </div>
-
-        <div className="battle__rule-line" />
-
-        <div className="battle__col" ref={logRef}>
-          <Panel title="이벤트 로그" meta={`${String(session.engine.log.count())}줄`} scroll>
-            <LogPanel entries={session.engine.log.entries.slice(-LOG_TAIL)} />
-          </Panel>
-        </div>
-      </div>
-
-      <StatusBar
-        hp={player?.hp ?? 0}
-        hpMax={player?.hpMax ?? 1}
-        potions={player === undefined ? 0 : countItem(player, 'POTION')}
-        potionsMax={readCarried(props.setup, 'POTION')}
-        scrolls={player === undefined ? 0 : countItem(player, 'SCROLL')}
-        scrollsMax={readCarried(props.setup, 'SCROLL')}
-        {...(threatText === undefined ? {} : { threat: threatText })}
-      />
-
-      <LeaderLine
-        path={leader}
-        label={
-          armedRow === undefined
-            ? '발동한 규칙 없음'
-            : `규칙 ${String(armedRow.priority)} 이 플레이어를 움직였다`
-        }
-      />
-    </div>
+    <BattlePortrait
+      location={props.location}
+      controls={props.controls}
+      tick={scene.tick}
+      speed={speed}
+      onSpeedChange={setSpeed}
+      onInstant={runInstant}
+      onStep={runStep}
+      onRestart={runRestart}
+      outcome={outcome}
+      threat={threatText}
+      plan={plan}
+      rows={rows}
+      onToggleRule={toggleRule}
+      cpuUsed={cpuUsed}
+      cpuBudget={cpuBudget}
+      entries={session.engine.log.entries.slice(-LOG_TAIL)}
+      settlements={props.settlements ?? []}
+      hp={player?.hp ?? 0}
+      hpMax={player?.hpMax ?? 1}
+      potions={player === undefined ? 0 : countItem(player, 'POTION')}
+      potionsMax={readCarried(props.setup, 'POTION')}
+      scrolls={player === undefined ? 0 : countItem(player, 'SCROLL')}
+      scrollsMax={readCarried(props.setup, 'SCROLL')}
+      cooldowns={formatCooldowns(
+        player?.cooldowns,
+        listRulesetSkills(session.ruleset.rules),
+        session.engine.config.skillCooldowns,
+      )}
+      tab={tab}
+      onTabChange={setTab}
+      bodyRef={sheetRef}
+    />
   )
 }

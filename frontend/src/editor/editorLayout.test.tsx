@@ -16,9 +16,9 @@ const DECIMAL_RADIX = 10
 
 const TOKENS = readFileSync(`${DESIGN_DIR}tokens/spacing.css`, 'utf8')
 
-/** 세로 블록. 폭 리터럴이 아니라 `--layout-mode:portrait` 로 찾는다. */
-const PORTRAIT_MEDIA =
-  /@media[^{]*(?=\{[^}]*--layout-mode:\s*portrait)/.exec(TOKENS)?.[0]?.trimEnd() ?? ''
+/** 가로 블록. 폭 리터럴이 아니라 `--layout-mode:landscape` 로 찾는다. */
+const LANDSCAPE_MEDIA =
+  /@media[^{]*(?=\{[^}]*--layout-mode:\s*landscape)/.exec(TOKENS)?.[0]?.trimEnd() ?? ''
 
 /**
  * 토큰 하나를 읽는다.
@@ -59,8 +59,8 @@ describe('가로 — 세 열이 화면 안에 들어온다', () => {
 describe('세로 — 열이 없다', () => {
   it('★ 토큰이 세로에서 열을 100% 로 만든다', () => {
     // 이 값 자체는 의도된 것이다. 문제는 아래에서 본다.
-    expect(readToken('--col-rules', PORTRAIT_MEDIA)).toBe('100%')
-    expect(readToken('--col-log', PORTRAIT_MEDIA)).toBe('100%')
+    expect(readToken('--col-rules')).toBe('100%')
+    expect(readToken('--col-log')).toBe('100%')
   })
 
   it('★ **세로에서 3열 그리드를 세우면 안 된다**', () => {
@@ -72,8 +72,10 @@ describe('세로 — 열이 없다', () => {
     //
     // **고치는 자리는 토큰이다.** 화면 CSS 는 미디어쿼리를 스스로 적지 않는다 —
     // 브레이크포인트가 한 곳에만 있어야 세 화면이 같은 경계에서 함께 바뀐다.
-    expect(readToken('--editor-cols', PORTRAIT_MEDIA)).toBe('minmax(0, 1fr)')
-    expect(readToken('--editor-cols')).toContain('--col-rules')
+    // **기본이 세로다** (2026-09-07). 예전에는 이 값이 미디어쿼리 안에 있었고 :root 가
+    // 3열이었다 — 이제 반대다.
+    expect(readToken('--editor-cols')).toBe('minmax(0, 1fr)')
+    expect(readToken('--editor-cols')).not.toContain('--col-rules')
   })
 
   it('★ 격자가 토큰을 읽는다 — 값만 바꾸고 아무도 안 읽으면 그대로다', () => {
@@ -81,12 +83,12 @@ describe('세로 — 열이 없다', () => {
   })
 
   it('★ 세로에서 열 사이 괘선을 감춘다 — 쌓이면 1px 짜리 빈 줄이 된다', () => {
-    expect(readToken('--rule-line', PORTRAIT_MEDIA)).toBe('none')
+    expect(readToken('--rule-line')).toBe('none')
     expect(readRule('.editor__rule-line')).toContain('var(--rule-line)')
   })
 
   it('★ 세로에서는 격자가 스크롤한다 — 열마다 스크롤하면 어디를 밀지 모른다', () => {
-    expect(readToken('--editor-overflow', PORTRAIT_MEDIA)).toBe('auto')
+    expect(readToken('--editor-overflow')).toBe('auto')
     expect(readRule('.editor__body')).toContain('var(--editor-overflow)')
   })
 })
@@ -95,8 +97,8 @@ describe('세로 바 높이의 합', () => {
   it('★ 상·하단 바가 화면 높이를 다 먹지 않는다', () => {
     // .editor 는 100vh 에 `상단 1fr 하단` 이다. 바 둘이 화면을 다 먹으면 가운데가 0 이
     // 되어 내용이 바 위로 올라온다 — 그것이 "버튼끼리 겹친다" 로 보인다.
-    const top = Number.parseInt(readToken('--bar-top', PORTRAIT_MEDIA), DECIMAL_RADIX)
-    const bottom = Number.parseInt(readToken('--bar-bottom', PORTRAIT_MEDIA), DECIMAL_RADIX)
+    const top = Number.parseInt(readToken('--bar-top', LANDSCAPE_MEDIA), DECIMAL_RADIX)
+    const bottom = Number.parseInt(readToken('--bar-bottom', LANDSCAPE_MEDIA), DECIMAL_RADIX)
     // 폰 세로 최소 높이는 568(iPhone SE)이다.
     expect(top + bottom).toBeLessThan(568 / 2)
   })
@@ -112,9 +114,10 @@ describe('가운데가 넘치면 스크롤한다', () => {
 })
 
 describe('바가 넘칠 때 무엇을 버리는가', () => {
-  it('★ 좁아지면 키보드 안내부터 버린다 — 터치 화면에서 Alt+↑ 는 뜻이 없다', () => {
-    expect(readToken('--bar-hint', PORTRAIT_MEDIA)).toBe('none')
-    expect(readToken('--bar-hint')).toBe('inline')
+  it('★ 키보드 안내를 안 싣는다 — 터치 화면에서 Alt+↑ 는 뜻이 없다', () => {
+    // 예전에는 데스크톱만 이것을 켰다. 데스크톱 배치를 지웠으니 켜는 자리가 없다 —
+    // 그래도 토큰은 남긴다. 바가 넘칠 때 **먼저 버릴 것**을 정해 둔 자리이기 때문이다.
+    expect(readToken('--bar-hint')).toBe('none')
     expect(readRule('.editor__hint')).toContain('var(--bar-hint)')
   })
 

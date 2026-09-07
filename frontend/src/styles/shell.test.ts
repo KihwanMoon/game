@@ -39,6 +39,14 @@ describe('앱 껍데기는 상한이 아니라 바닥이다', () => {
     expect(shell).not.toContain('overflow: hidden')
   })
 
+  it('★ 한 열로 못 박혔다 — 애매하게 늘어난 열은 「만들다 말았다」로 읽힌다', () => {
+    expect(shell).toContain('max-inline-size: var(--app-max)')
+    expect(shell).toContain('margin-inline: auto')
+    // 그림자 없이 1px 괘선 하나. 성격이 기계 도면이라 그림자를 안 쓴다.
+    expect(shell).toContain('border-inline: var(--bw) solid var(--line)')
+    expect(shell).not.toContain('box-shadow')
+  })
+
   it('안전 영역 네 변을 모두 피한다 — 하단 바가 제스처 바 뒤로 들어가면 못 누른다', () => {
     for (const side of ['top', 'right', 'bottom', 'left']) {
       expect(shell).toContain(`env(safe-area-inset-${side}`)
@@ -51,5 +59,12 @@ describe('★ 덮는 패널은 뷰포트에 붙는다 — 껍데기가 흐르면
     // 하나만 fixed 면 껍데기가 길어졌을 때 다른 하나의 닫기 버튼이 화면 밖으로 나간다.
     expect(readRule(HUD_CSS, '.hud-post')).toContain('position: fixed')
     expect(readRule(APP_CSS, '.replay')).toContain('position: fixed')
+  })
+
+  it('★ 덮는 패널도 같은 한 열 안이다 — 폭이 다르면 다른 화면처럼 보인다', () => {
+    for (const rule of [readRule(HUD_CSS, '.hud-post'), readRule(APP_CSS, '.replay')]) {
+      expect(rule).toContain('max-inline-size: var(--app-max)')
+      expect(rule).toContain('margin-inline: auto')
+    }
   })
 })

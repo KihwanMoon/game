@@ -436,8 +436,10 @@ describe('배치 이름 (반응형 기반)', () => {
     expect(readLayoutMode(() => 'tablet')).toBe(DEFAULT_LAYOUT_MODE)
   })
 
-  it('배치는 셋뿐이고 이름은 토큰에서 온다', () => {
-    expect(LAYOUT_MODES).toEqual(['desktop', 'portrait', 'landscape'])
+  it('★ 배치는 둘뿐이고 이름은 토큰에서 온다 (2026-09-07)', () => {
+    // 데스크톱 배치를 지웠다. 가로가 남은 것은 화면이 커서가 아니라 **가로 폰의 높이**
+    // 때문이다 — 세로 골격의 고정 높이 합(440)이 390px 짜리 가로 폰에 안 들어간다.
+    expect(LAYOUT_MODES).toEqual(['portrait', 'landscape'])
     expect(LAYOUT_MODE_TOKEN).toBe('--layout-mode')
   })
 })

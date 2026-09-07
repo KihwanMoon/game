@@ -371,7 +371,11 @@
      때 함께 늘어나 닫기 버튼이 화면 밖으로 나간다 — 재생 패널(`.replay`)과 같은
      이유로 뷰포트에 붙인다. */
   position: fixed;
-  inset: var(--sp-0);
+  inset-block: var(--sp-0);
+  inset-inline: var(--sp-0);
+  /* 앱과 같은 한 열 안에 선다 — 덮은 것과 덮인 것의 폭이 다르면 다른 화면처럼 보인다. */
+  max-inline-size: var(--app-max);
+  margin-inline: auto;
   z-index: 10;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);

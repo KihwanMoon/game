@@ -58,8 +58,10 @@ describe('첫 화면', () => {
   const markup = renderToStaticMarkup(<App />)
 
   it('규칙 에디터가 먼저 뜬다', () => {
-    expect(markup).toContain('규칙 에디터')
-    expect(markup).toContain('우선순위 리스트')
+    // 데스크톱 세 열을 지우면서 제목이 「규칙 에디터」에서 「규칙표」로 바뀌었다 —
+    // 명세 C 가 그린 화면의 이름이 그것이다.
+    expect(markup).toContain('규칙표')
+    expect(markup).toContain('edit-m__rules')
   })
 
   // **첫 페인트가 경보를 띄우면 안 된다.** 앱은 서버에 붙어 보기도 전에
@@ -112,7 +114,7 @@ describe('첫 화면', () => {
     // 「서랍」이라는 또 하나의 탭 줄 안에 갇혀 있었다. 가방에 가려면 어느 탭 안의 어느
     // 탭인지를 외워야 했고, 두 줄이 서로 다른 것을 뜻한다는 근거도 없었다.
     expect(markup).not.toContain('>서랍<')
-    expect(markup).toContain('editor__tabs')
+    expect(markup).toContain('edit-m__tabs')
     // 묶음은 「무엇에 대한 것인가」로 가른다. 「나」가 「캐릭터」가 되고 스킬이 가방에서
     // 갈라진 것은, 레벨·능력치가 세계에서 이쪽으로 오면서 탭의 뜻이 분명해져서다.
     for (const label of ['전투 규칙', '정비 규칙', '캐릭터', '가방', '스킬', '경매', '세계', '배움']) {
@@ -123,11 +125,11 @@ describe('첫 화면', () => {
   it('★ 탭 줄이 출격 조작부보다 아래에 선다 — 접히면 출격이 밀린다', () => {
     // 탭이 여덟이라 좁은 폭에서 두세 줄로 접힌다. 그것이 위에 있으면 이 화면에서 가장
     // 자주 누르는 출격 버튼이 그만큼 아래로 밀린다.
-    expect(markup.indexOf('launch__field')).toBeLessThan(markup.indexOf('editor__tabs'))
+    expect(markup.indexOf('launch__field')).toBeLessThan(markup.indexOf('edit-m__tabs'))
   })
 
   it('★ 처음 열리는 것은 전투 규칙이다 — 이 게임의 규칙표는 전투가 중심이다', () => {
-    expect(markup).toContain('우선순위 리스트')
+    expect(markup).toContain('edit-m__rules')
     // 안 열린 탭의 내용은 안 그려진다 — 그려지면 탭이 갈린 뜻이 없다.
     expect(markup).not.toContain('>성장<')
     expect(markup).not.toContain('장비와 가방')
@@ -139,7 +141,8 @@ describe('첫 화면', () => {
     // 편집의 일부다.
     expect(markup).toContain('코드 라이브러리')
     expect(markup).not.toContain('>서고<')
-    expect(markup.slice(markup.indexOf('editor__col--palette'))).toContain('코드 라이브러리')
+    // 규칙 목록과 같은 화면에 있다 — 탭을 골라 가는 것이 아니라 편집의 일부다.
+    expect(markup.slice(markup.indexOf('edit-m__rules'))).toContain('코드 라이브러리')
   })
 
   it('★ 관리 탭은 관리자에게만 생긴다 — 빈 탭도 경로의 존재를 알려 준다', () => {

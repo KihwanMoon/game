@@ -25,7 +25,7 @@ import { renderTerm } from '../core/rules/ruleVm'
 import type { Rule, RuleSet, Term } from '../core/schemas'
 import { PRIORITY_NOTE } from './RuleEditCards'
 import { RuleEditMobile, type RuleEditMobileProps } from './RuleEditMobile'
-import type { RuleRowActions } from './RuleRowEditor'
+import type { RuleRowActions } from './ruleRowActions'
 import {
   MEASURE_SOURCE,
   UNMEASURED,
@@ -62,12 +62,11 @@ function cutRule(selector: string): string {
   }
   return css.slice(start + 1, css.indexOf('}', start))
 }
-
 /**
  * 토큰 하나의 값을 읽는다. 단위는 px 뿐이다.
  *
  * @param name 토큰 이름.
- * @param media 읽을 미디어쿼리의 머리. 생략하면 :root.
+ * @param media 읽을 미디어쿼리의 머리. 생략하면 :root — 세로가 기본이라 그쪽이 세로다.
  * @returns 값(px). 그 블록에 없으면 NaN.
  */
 function readToken(name: string, media?: string): number {
@@ -80,14 +79,8 @@ function readToken(name: string, media?: string): number {
   return found === null ? Number.NaN : Number.parseInt(found[1] ?? '', DECIMAL_RADIX)
 }
 
-// 폭 리터럴을 박지 않는다. 경계는 실측을 따라 바뀐다(599 → 840: 데스크톱 골격이
-// 841px 부터 성립하고 그 아래는 iPad 세로가 가로로 넘쳤다). 이 블록의 정체는
-// 폭이 아니라 --layout-mode:portrait 다.
-const PORTRAIT_MEDIA = (
-  /@media[^{]*(?=\{[^}]*--layout-mode:\s*portrait)/.exec(
-    readFileSync(`${DESIGN_DIR}tokens/spacing.css`, 'utf8'),
-  )?.[0] ?? ''
-).trimEnd()
+// 세로가 **기본 배치**다 (2026-09-07). 데스크톱을 지웠으므로 세로 값은 :root 에 있고,
+// 미디어쿼리는 가로 폰 하나만 남았다 — 폭이 아니라 높이로 가른다.
 const LANDSCAPE_MEDIA = '@media (max-width:1023px)'
 
 const PRESSURE = G0_RULESETS.get('g0_pressure') as RuleSet
@@ -99,7 +92,6 @@ const PRESSURE = G0_RULESETS.get('g0_pressure') as RuleSet
  */
 function buildActions(): RuleRowActions {
   return {
-    select: vi.fn(),
     update: vi.fn(),
     changeLhs: vi.fn(),
     changeTerm: vi.fn(),
@@ -584,14 +576,16 @@ describe('토큰 규율', () => {
     expect(readToken('--card-head-h')).toBe(32)
     expect(readToken('--edit-cmp-w')).toBe(78)
     expect(readToken('--edit-op-h')).toBe(36)
-    expect(readToken('--bar-edit', PORTRAIT_MEDIA)).toBe(60)
-    expect(readToken('--edit-btn-h', PORTRAIT_MEDIA)).toBe(44)
-    expect(readToken('--edit-btn-h')).toBe(36)
+    expect(readToken('--bar-edit')).toBe(60)
+    expect(readToken('--edit-btn-h')).toBe(44)
     expect(readToken('--bar-edit', LANDSCAPE_MEDIA)).toBe(0)
+    // **가로가 세로 값을 물려받으면 안 되는 하나.** 기본이 세로가 되면서 44 로 올라오는데,
+    // 가로 폰은 높이가 빠듯해 일부러 버튼을 낮춰 둔 배치다.
+    expect(readToken('--edit-btn-h', LANDSCAPE_MEDIA)).toBe(36)
   })
 
   it('세로 취소·저장은 히트 영역 하한을 넘는다', () => {
-    expect(readToken('--edit-btn-h', PORTRAIT_MEDIA)).toBeGreaterThanOrEqual(readToken('--tap-min'))
+    expect(readToken('--edit-btn-h')).toBeGreaterThanOrEqual(readToken('--tap-min'))
     expect(cutRule('.edit-m__btn')).toContain('height: var(--edit-btn-h)')
     expect(cutRule('.edit-m__hit')).toContain('min-height: var(--row-h)')
   })
@@ -600,7 +594,7 @@ describe('토큰 규율', () => {
     // 화면 390 − 본문 여백(--plan-pad) 좌우 − 카드 테두리 2 − 카드 본문 여백(--sp-3) 좌우.
     const screen = 390
     const inner =
-      screen - readToken('--plan-pad', PORTRAIT_MEDIA) * 2 - 2 - readToken('--sp-3') * 2
+      screen - readToken('--plan-pad') * 2 - 2 - readToken('--sp-3') * 2
     // 비교 칸은 고정이고 좌·우변이 남는 자리를 나눈다. 사이 간격은 --sp-2 둘.
     const sides = inner - readToken('--edit-cmp-w') - readToken('--sp-2') * 2
     expect(sides).toBeGreaterThan(0)
@@ -753,5 +747,67 @@ describe('★ 세로에서는 스크롤 컨테이너가 하나다', () => {
 
   it('★ 가로는 그대로 둔다 — 390px 에서 안쪽이 다 펴지면 한 패널이 화면을 먹는다', () => {
     expect(cutRule('.edit-m--landscape.edit-m--edit')).toContain('minmax(var(--sp-0), 1fr)')
+  })
+})
+
+describe('★ 블록 전량에 손이 닿는다 — 팔레트가 하던 일이다', () => {
+  // 데스크톱 팔레트가 「카탈로그 전량을 싣는가」를 지키고 있었다. 세 열을 지웠으니
+  // 그 약속을 규칙 편집 화면이 이어받는다 — 고를 수 없는 블록은 없는 블록과 같다.
+  const markup = render(buildProps())
+
+  it('인지 변수가 전부 좌변 목록에 있다', () => {
+    for (const block of BLOCK_CATALOG.perceptions.values()) {
+      expect(markup).toContain(block.labelKo)
+    }
+  })
+
+  it('행동이 전부 행동 목록에 있다 — 별칭 하나만 뺀다', () => {
+    // `USE_POTION` 은 `USE_ITEM[물약]` 과 같은 일이라 고르는 자리에서 일부러 숨긴다.
+    // 저장된 규칙표와 골든이 쓰므로 코어에서는 안 지운다 (`listActionGroups`).
+    for (const block of BLOCK_CATALOG.actions.values()) {
+      if (block.blockId === 'USE_POTION') {
+        continue
+      }
+      expect(markup).toContain(block.labelKo)
+    }
+  })
+
+  it('셀렉터가 전부 어느 한 행동에서는 고를 수 있다', () => {
+    // 대상 목록은 **행동을 따라간다** — 공격에 「부상한 아군」이 뜨면 그것이 거짓말이다.
+    // 그래서 전량은 한 화면이 아니라 행동 둘의 합집합에서 본다.
+    const withAction = (action: string, target: string): string =>
+      render(
+        buildProps({
+          ruleset: {
+            ...PRESSURE,
+            rules: PRESSURE.rules.map((rule, at) => (at === 0 ? { ...rule, action, target } : rule)),
+          },
+        }),
+      )
+    const both = withAction('ATTACK', 'NEAREST') + withAction('HEAL', 'ALLY_WOUNDED')
+    for (const block of BLOCK_CATALOG.selectors.values()) {
+      expect(both).toContain(block.labelKo)
+    }
+  })
+})
+
+describe('★ 글로 보기가 남았다 — 배치가 아니라 기능이다', () => {
+  it('토글이 서고, 켜면 규칙 목록 대신 글이 선다', () => {
+    // 데스크톱 세 열과 함께 지웠으면 규칙표를 통째로 붙여 넣거나 남에게 보내는 길이
+    // 사라졌을 것이다. 한 열에서도 넓은 칸 하나면 된다.
+    const off = render(buildProps({ editIndex: -1, onToggleText: () => undefined }))
+    expect(off).toContain('글로 보기')
+    expect(off).toContain('edit-m__rules')
+
+    const on = render(
+      buildProps({
+        editIndex: -1,
+        isTextMode: true,
+        onToggleText: () => undefined,
+        textView: <p>글 화면이다</p>,
+      }),
+    )
+    expect(on).toContain('글 화면이다')
+    expect(on).not.toContain('edit-m__rules')
   })
 })

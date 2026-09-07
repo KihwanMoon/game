@@ -50,7 +50,6 @@ import {
   BattleView,
   KIND_BY_ENEMY_TYPE,
   resizePlanCanvas,
-  LeaderLine,
   SHORT_LABEL_BY_KIND_ID,
   DOPPEL_KIND_ID,
   checkDoppel,
@@ -58,7 +57,6 @@ import {
   TILE_DRAWERS,
   addExtraEnemies,
   buildBattleSession,
-  buildLeaderPath,
   buildPlanScene,
   resolveTierColor,
   describeScene,
@@ -78,8 +76,6 @@ import {
   PLAN_COLOR_TOKENS,
   PLAN_FONT_TOKEN,
   PLAN_LENGTH_TOKENS,
-  RING_RATIO,
-  SHOULDER_MODULES,
 } from '.'
 import type { PlanScene, PlanTheme } from '.'
 
@@ -124,22 +120,6 @@ function readDesignTokens(): string {
     'typography.css',
   ]
   return names.map((name) => readFileSync(`${DESIGN_DIR}tokens/${name}`, 'utf8')).join('\n')
-}
-
-/**
- * 세로 배치 블록의 @media 머리를 찾는다.
- *
- * 폭 리터럴을 박지 않는 이유는 경계가 실측을 따르기 때문이다 — 599 로 뒀더니
- * iPad 세로(768·810·834)가 desktop 배치를 받아 가로로 넘쳤고, 데스크톱 골격이
- * 841px 부터 성립한다는 실측에 맞춰 840 으로 옮겼다. 이 블록의 정체는 폭이 아니라
- * `--layout-mode:portrait` 다.
- *
- * @returns `@media (...)` 머리 문자열.
- */
-function findPortraitMedia(): string {
-  const found = /@media[^{]*(?=\{[^}]*--layout-mode:\s*portrait)/.exec(readDesignTokens())
-  expect(found, '--layout-mode:portrait 를 정의하는 @media 블록이 없다').not.toBeNull()
-  return (found?.[0] ?? '').trimEnd()
 }
 
 /** 캔버스 호출 한 건. */
@@ -625,62 +605,6 @@ describe('규칙 추적 — 상태 셋 (design/README.md §2)', () => {
   })
 })
 
-describe('지시선', () => {
-  it('고리 바깥에서 멈춘다 — 글리프를 가로지르지 않는다', () => {
-    const path = buildLeaderPath({
-      from: { x: 0, y: 100 },
-      to: { x: 600, y: 300 },
-      cell: 64,
-      module: 4,
-    })
-    expect(path).toBeDefined()
-    const distance = Math.hypot(
-      (path?.end.x ?? 0) - (path?.center.x ?? 0),
-      (path?.end.y ?? 0) - (path?.center.y ?? 0),
-    )
-    expect(distance).toBeCloseTo(64 * RING_RATIO)
-  })
-
-  it('어깨는 4px 모듈의 배수만큼 나간다', () => {
-    const path = buildLeaderPath({
-      from: { x: 10, y: 10 },
-      to: { x: 600, y: 300 },
-      cell: 64,
-      module: 4,
-    })
-    expect(path?.shoulder.x).toBe(10 + 4 * SHOULDER_MODULES)
-    expect(path?.shoulder.y).toBe(10)
-  })
-
-  it('말이 어깨 바로 옆이면 선을 긋지 않는다', () => {
-    expect(
-      buildLeaderPath({ from: { x: 0, y: 0 }, to: { x: 20, y: 0 }, cell: 64, module: 4 }),
-    ).toBeUndefined()
-  })
-
-  it('황동은 클래스로만 준다 — 인라인 색이 없다', () => {
-    const html = renderToStaticMarkup(
-      <LeaderLine
-        path={{
-          start: { x: 0, y: 0 },
-          shoulder: { x: 16, y: 0 },
-          end: { x: 100, y: 50 },
-          center: { x: 120, y: 60 },
-          radius: 23,
-        }}
-        label="규칙 2"
-      />,
-    )
-    expect(html).toContain('battle__leader-line')
-    expect(html).toContain('battle__leader-ring')
-    expect(html).not.toContain('stroke=')
-  })
-
-  it('그릴 것이 없으면 아무것도 그리지 않는다', () => {
-    expect(renderToStaticMarkup(<LeaderLine path={undefined} label="없음" />)).toBe('')
-  })
-})
-
 /**
  * 규칙표를 붙인 판을 조립한다. 추적기 없이 파이썬과 같은 배선만 쓴다.
  *
@@ -744,24 +668,22 @@ describe('결정론 — 화면을 켜도 판이 달라지지 않는다 (R5)', ()
 })
 
 describe('전투 화면 골격', () => {
-  it('세 열과 위아래 바가 실제 전투 상태로 그려진다', () => {
-    // 서버 렌더에는 화면이 없으므로 캔버스는 나오지 않는다. 여기서 보는 것은 골격과
-    // 규칙표·로그가 **실제 엔진 값**으로 채워지는가다.
+  it('★ 세로가 기본이다 — 배치가 둘뿐이라 나머지 하나는 가로 폰이다', () => {
+    // 서버 렌더에는 화면이 없어 토큰을 못 읽으므로 `DEFAULT_LAYOUT_MODE` 가 선다.
+    // 그것이 세로라는 것이 이 검사의 전부다 — 세로 골격 자체는 portrait.test.tsx 가 본다.
     const html = renderToStaticMarkup(
       <BattleView setup={CHECK_SETUP} rulesets={G0_RULESETS} location="1층 · pillars" />,
     )
-    expect(html).toContain('class="battle"')
-    expect(html).toContain('battle__rule-line')
-    expect(html).toContain('ds-topbar')
-    expect(html).toContain('ds-rule-table')
-    expect(html).toContain('ds-statusbar')
+    expect(html).toContain('battle--portrait')
     expect(html).toContain('1층 · pillars')
     // 아직 한 틱도 돌지 않았으므로 규칙 줄은 전부 미평가다.
     expect(html).toContain('ds-rule-row--pending')
     expect(html).not.toContain('ds-rule-row--armed')
   })
 
-  it('상단의 버튼은 primary 를 쓰지 않는다 — 황동 예산 셋은 도면·규칙·지시선이다', () => {
+  it('상단의 버튼은 primary 를 쓰지 않는다 — 황동 예산은 도면과 규칙 줄이 쓴다', () => {
+    // 예전에는 셋이었다(도면·규칙·지시선). 지시선은 데스크톱 배치와 함께 사라졌다 —
+    // 세로에서는 규칙 줄이 시트 탭 뒤로 숨을 수 있어 선의 한쪽 끝이 없어진다.
     const html = renderToStaticMarkup(
       <BattleView setup={CHECK_SETUP} rulesets={G0_RULESETS} location="1층 · pillars" />,
     )
@@ -770,7 +692,7 @@ describe('전투 화면 골격', () => {
 })
 
 describe('반응형 토큰 (design/tokens/spacing.css)', () => {
-  /** 토큰 CSS 에서 미디어쿼리 블록 하나를 잘라 낸다. */
+  /** 남은 미디어쿼리 하나의 본문을 잘라 낸다. */
   const cutMedia = (query: string): string => {
     const tokens = readDesignTokens()
     const start = tokens.indexOf(query)
@@ -778,29 +700,32 @@ describe('반응형 토큰 (design/tokens/spacing.css)', () => {
     return tokens.slice(start, tokens.indexOf('}\n}', start))
   }
 
-  it('데스크톱 기본값은 그대로 64px 이다 — 기존 화면이 흔들리지 않는다', () => {
+  it('★ 기본값이 세로다 — 데스크톱 배치를 지웠다 (2026-09-07)', () => {
+    // 미디어쿼리가 아니라 :root 가 세로여야 한다. 여기가 뒤집힌 자리다.
     const root = readDesignTokens().split('@media')[0] ?? ''
-    expect(root).toContain('--plan-cell:64px')
-    expect(root).toContain('--bar-top:56px')
-    expect(root).toContain('--bar-bottom:48px')
-    expect(root).toContain('--col-rules:320px')
-    expect(root).toContain('--col-log:300px')
-  })
-
-  it('세로 모바일은 셀 30px 로 12x9 를 390px 안에 넣는다', () => {
-    // 폭 리터럴로 찾지 않는다. 경계는 실측에 따라 바뀌지만(599 → 840, 데스크톱
-    // 골격이 841px 부터 성립한다) 이 블록의 정체는 --layout-mode:portrait 다.
-    const block = cutMedia(findPortraitMedia())
-    expect(block).toContain('--layout-mode:portrait')
-    expect(block).toContain('--plan-cell:30px')
-    expect(block).toContain('--bar-top:44px')
-    expect(block).toContain('--bar-status:34px')
-    expect(block).toContain('--row-h:54px')
+    expect(root).toContain('--layout-mode:portrait')
+    expect(root).toContain('--plan-cell:30px')
+    expect(root).toContain('--bar-top:44px')
+    expect(root).toContain('--bar-status:34px')
+    expect(root).toContain('--row-h:54px')
     // 12x30 = 360 에 좌우 여백을 더해도 390 을 넘지 않아야 한다.
     const cell = 30
     const pad = 14
     expect(cell * 12 + pad * 2).toBeLessThanOrEqual(390)
     expect(cell * 9).toBe(270)
+  })
+
+  it('★ 미디어쿼리가 하나뿐이다 — 데스크톱을 가르던 경계는 사라졌다', () => {
+    // 남은 하나는 폭이 아니라 **높이**로 가른다. 세로 골격의 고정 높이 합(440)이
+    // 가로 폰의 390px 에 안 들어가기 때문이지, 화면이 커서가 아니다.
+    const tokens = readDesignTokens()
+    expect(tokens.split('@media')).toHaveLength(2)
+    expect(tokens).not.toContain('--layout-mode:desktop')
+  })
+
+  it('앱 한 열의 폭 상한이 세로 기준이다 — 넓히면 옆이 빌 뿐이다', () => {
+    const root = readDesignTokens().split('@media')[0] ?? ''
+    expect(root).toContain('--app-max:390px')
   })
 
   it('가로 모바일은 셀 32px 로 12x9 를 도면 열 안에 넣는다', () => {
@@ -823,9 +748,12 @@ describe('반응형 토큰 (design/tokens/spacing.css)', () => {
 
 describe('판정 라벨은 한 벌이다', () => {
   it('전투 화면에 라벨표가 따로 없다', () => {
-    const source = readFileSync(`${BATTLE_DIR}BattleView.tsx`, 'utf8')
-    expect(source).not.toContain('OUTCOME_LABELS')
-    expect(source).toContain('formatOutcome')
+    // 데스크톱 세 열이 사라지면서 판정을 적는 자리가 두 배치로 내려갔다. 라벨표를
+    // 베껴 두면 사후 분석과 다른 말이 한 화면에 보인다 — 그것이 이 검사의 뜻이다.
+    for (const name of ['BattleView.tsx', 'BattlePortrait.tsx', 'BattleLandscape.tsx']) {
+      expect(readFileSync(`${BATTLE_DIR}${name}`, 'utf8')).not.toContain('OUTCOME_LABELS')
+    }
+    expect(readFileSync(`${BATTLE_DIR}BattlePortrait.tsx`, 'utf8')).toContain('formatOutcome')
   })
 
   it('쓰러짐을 쓴다 — 명세의 판정 표시가 정본이다', () => {

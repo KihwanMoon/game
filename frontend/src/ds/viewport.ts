@@ -12,17 +12,23 @@
  */
 import { useEffect, useState } from 'react'
 
-/** 배치 이름. `--layout-mode` 토큰의 값과 같다. */
-export type LayoutMode = 'desktop' | 'portrait' | 'landscape'
+/**
+ * 배치 이름. `--layout-mode` 토큰의 값과 같다.
+ *
+ * **둘뿐이다** (2026-09-07). 데스크톱 배치를 지웠고, 세로가 기본이다. 가로가 남은 것은
+ * 화면이 커서가 아니라 **가로 폰의 높이 때문**이다 — 세로 골격의 고정 높이 합이 440px 라
+ * 390px 짜리 가로 폰에 안 들어간다.
+ */
+export type LayoutMode = 'portrait' | 'landscape'
 
-/** 토큰이 낼 수 있는 배치 이름 전부. 모르는 값이 오면 데스크톱으로 접는다. */
-export const LAYOUT_MODES: readonly LayoutMode[] = ['desktop', 'portrait', 'landscape']
+/** 토큰이 낼 수 있는 배치 이름 전부. 모르는 값이 오면 세로로 접는다. */
+export const LAYOUT_MODES: readonly LayoutMode[] = ['portrait', 'landscape']
 
 /** 배치 이름이 실린 토큰. */
 export const LAYOUT_MODE_TOKEN = '--layout-mode'
 
-/** 아직 읽지 못했을 때의 배치. 서버 렌더에는 화면이 없다. */
-export const DEFAULT_LAYOUT_MODE: LayoutMode = 'desktop'
+/** 아직 읽지 못했을 때의 배치. 서버 렌더에는 화면이 없고, 기본은 세로다. */
+export const DEFAULT_LAYOUT_MODE: LayoutMode = 'portrait'
 
 /** 토큰 이름 하나를 값으로 바꾸는 함수. 테스트가 이 자리에 가짜를 끼운다. */
 export type TokenRead = (name: string) => string

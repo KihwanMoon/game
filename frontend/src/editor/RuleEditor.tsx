@@ -15,16 +15,15 @@
  *
  * 황동은 세 곳까지다 — 상단의 적용 버튼(primary), 선택된 규칙의 좌측 세로바, 포커스 링.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
-import { Button, GlyphState, Panel, SegmentedGauge, ValueExpr, useViewportMode } from '../ds'
+import { useViewportMode } from '../ds'
 import { validateRuleSet } from '../core/rules/validator'
 import type { BlockCatalog, Rule, RuleSet, Term } from '../core/schemas'
 import { writeClipboard } from './clipboard'
-import { PalettePanel } from './PalettePanel'
 import { RuleEditMobile } from './RuleEditMobile'
-import { RuleRowEditor, type RuleRowActions } from './RuleRowEditor'
+import type { RuleRowActions } from './ruleRowActions'
 import { TextView } from './TextView'
 import {
   addRule,
@@ -32,7 +31,6 @@ import {
   applyActionChoice,
   applyParamChoice,
   applyLhsChoice,
-  calculateTotalCpu,
   duplicateRule,
   moveRule,
   removeRule,
@@ -40,7 +38,7 @@ import {
   updateRule,
   updateTerm,
 } from './draft'
-import { COMBAT_TAB_ID, checkWideTab, type EditorTab } from './editorTabs'
+import { COMBAT_TAB_ID, type EditorTab } from './editorTabs'
 import { formatRuleText, parseRuleText } from './ruleText'
 import type { TermReadings } from './termMeasure'
 
@@ -51,9 +49,6 @@ export type { EditorTab }
 const PROBLEM_LABEL_PATTERN = /^\[(\d+)\]\s*(.*)$/
 
 const DECIMAL_RADIX = 10
-
-/** 규칙 행 하나를 가리키는 선택자. 새로 만든 규칙으로 포커스를 옮길 때 쓴다. */
-const ROW_SELECTOR = '.rule-row'
 
 /** 측정값이 하나도 없는 표. 새 Map 을 렌더마다 만들지 않으려고 상수로 둔다. */
 const EMPTY_READINGS: TermReadings = new Map()
@@ -145,21 +140,6 @@ function buildProblemIndex(problems: readonly string[]): ProblemIndex {
 }
 
 /**
- * 누적 CPU 가 예산을 넘는 규칙의 자리를 표시한다.
- *
- * @param ruleset 규칙표.
- * @param cpuBudget 예산.
- * @returns 규칙 자리마다 초과 여부.
- */
-function buildOverBudgetFlags(ruleset: RuleSet, cpuBudget: number): readonly boolean[] {
-  let running = 0
-  return ruleset.rules.map((rule) => {
-    running += rule.cpuCost
-    return running > cpuBudget
-  })
-}
-
-/**
  * 규칙 에디터 화면.
  *
  * @param props 규칙표와 제약, 변경 콜백.
@@ -167,13 +147,8 @@ function buildOverBudgetFlags(ruleset: RuleSet, cpuBudget: number): readonly boo
  */
 export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
   const { ruleset, catalog, cpuBudget, ruleSlots, onChange } = props
-  const [selectedIndex, setSelectedIndex] = useState(0)
   const [textMode, setTextMode] = useState(false)
   const [textDraft, setTextDraft] = useState('')
-  const [dragIndex, setDragIndex] = useState(-1)
-  const [dropIndex, setDropIndex] = useState(-1)
-  const [focusIndex, setFocusIndex] = useState(-1)
-  const listRef = useRef<HTMLDivElement>(null)
   // 모바일에서 편집 중인 규칙의 자리. 음수면 규칙표 목록이다.
   const [editIndex, setEditIndex] = useState(-1)
   // 편집 화면을 열었을 때의 규칙표. `취소` 가 이 지점으로 되돌린다. 상태가 아니라 ref 인
@@ -188,42 +163,21 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
     [ruleset, catalog, cpuBudget, ruleSlots],
   )
   const index = useMemo(() => buildProblemIndex(problems), [problems])
-  const totalCpu = calculateTotalCpu(ruleset)
-  const overFlags = buildOverBudgetFlags(ruleset, cpuBudget)
   const textParse = useMemo(
     () => parseRuleText(textDraft, ruleset.rulesetId, ruleset.version),
     [textDraft, ruleset.rulesetId, ruleset.version],
   )
 
-  useEffect(() => {
-    if (focusIndex < 0) {
-      return
-    }
-    const rows = listRef.current?.querySelectorAll<HTMLElement>(ROW_SELECTOR)
-    rows?.item(focusIndex)?.focus()
-    setFocusIndex(-1)
-  }, [focusIndex])
-
   /**
-   * 새 규칙표를 부모로 올리고 선택을 그 자리에 맞춘다.
+   * 새 규칙표를 부모로 올린다.
    *
    * @param next 새 규칙표.
-   * @param select 선택할 자리. 없으면 그대로 둔다.
-   * @param focus 포커스까지 옮길지.
    */
-  function commit(next: RuleSet, select?: number, focus = false): void {
+  function commit(next: RuleSet): void {
     onChange(next)
-    if (select !== undefined) {
-      const clamped = Math.min(Math.max(select, 0), Math.max(next.rules.length - 1, 0))
-      setSelectedIndex(clamped)
-      if (focus) {
-        setFocusIndex(clamped)
-      }
-    }
   }
 
   const actions: RuleRowActions = {
-    select: (at: number) => { setSelectedIndex(at) },
     update: (at: number, patch: Partial<Rule>) => { commit(updateRule(ruleset, at, patch)) },
     changeLhs: (ruleIndex: number, termIndex: number, blockId: string) => {
       commit(applyLhsChoice(ruleset, catalog, ruleIndex, termIndex, blockId))
@@ -241,63 +195,10 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
     removeTerm: (ruleIndex: number, termIndex: number) => {
       commit(removeTerm(ruleset, ruleIndex, termIndex))
     },
-    addRule: (at: number) => { commit(addRule(ruleset, catalog, at), at + 1, true) },
-    duplicate: (at: number) => { commit(duplicateRule(ruleset, at), at + 1, true) },
-    remove: (at: number) => { commit(removeRule(ruleset, at), Math.max(at - 1, 0), true) },
-    move: (from: number, to: number) => { commit(moveRule(ruleset, from, to), to, true) },
-  }
-
-  // 모바일은 데스크톱 세 열을 줄인 것이 아니라 **다른 화면**이다 (명세 C). 규칙표를 고치는
-  // 조작(`actions`)과 검증은 위에서 이미 다 나왔고, 여기서 갈리는 것은 트리뿐이라 기기를
-  // 돌려도 고치던 규칙이 그대로 이어진다.
-  if (mode !== 'desktop') {
-    return (
-      <RuleEditMobile
-        mode={mode}
-        ruleset={ruleset}
-        catalog={catalog}
-        cpuBudget={cpuBudget}
-        ruleSlots={ruleSlots}
-        problems={index.byPriority}
-        globalProblems={index.global}
-        editIndex={editIndex}
-        readings={props.readings ?? EMPTY_READINGS}
-        actions={actions}
-        backLabel={BACK_LABEL}
-        onOpen={(at) => {
-          restoreRef.current = ruleset
-          setSelectedIndex(at)
-          setEditIndex(at)
-        }}
-        onAdd={() => {
-          restoreRef.current = ruleset
-          actions.addRule(ruleset.rules.length - 1)
-          setEditIndex(ruleset.rules.length)
-        }}
-        onReorder={(to) => {
-          actions.move(editIndex, to)
-          setEditIndex(to)
-        }}
-        onCancel={() => {
-          const restore = restoreRef.current
-          if (restore !== undefined) {
-            onChange(restore)
-          }
-          restoreRef.current = undefined
-          setEditIndex(-1)
-        }}
-        onSave={() => {
-          restoreRef.current = undefined
-          setEditIndex(-1)
-        }}
-        {...(props.controls === undefined ? {} : { controls: props.controls })}
-        {...(props.library === undefined ? {} : { library: props.library })}
-        tabs={props.tabs ?? []}
-        tabId={tabId}
-        onTab={setTabId}
-        {...(props.status === undefined ? {} : { status: props.status })}
-      />
-    )
+    addRule: (at: number) => { commit(addRule(ruleset, catalog, at)) },
+    duplicate: (at: number) => { commit(duplicateRule(ruleset, at)) },
+    remove: (at: number) => { commit(removeRule(ruleset, at)) },
+    move: (from: number, to: number) => { commit(moveRule(ruleset, from, to)) },
   }
 
   /**
@@ -323,249 +224,67 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
     }
   }
 
-  const hasSelection = ruleset.rules.length > 0
-  const validGlyph = index.total === 0 ? 'true' : 'danger'
-  const cpuReadout = `${String(totalCpu)} / ${String(cpuBudget)}`
-  // 전투 말고 다른 규칙표를 고르고 있는가. 골랐으면 **세 열이 통째로 바뀐다** — 본문만
-  // 갈아 끼우면 왼쪽에 전투 팔레트가 남고, 그것을 누르면 안 보이는 규칙표가 바뀐다.
-  const openTab = (props.tabs ?? []).find((tab) => tab.id === tabId)
-  const tabStrip =
-    (props.tabs ?? []).length === 0 ? null : (
-      // **머리 바에 안 둔다.** 거기엔 이미 제목·게이지·출격 조작부가 있어 탭 아홉이
-      // 들어가면 넘치고, 넘치면 오른쪽 끝의 출격 버튼부터 밀려 나간다 — 가장 중요한
-      // 것이 먼저 사라진다(`editor__top` 주석). 제 줄을 주면 접혀도 아래로 접힌다.
-      <nav className="editor__tabs" aria-label="화면">
-        <Button
-          size="sm"
-          variant={openTab === undefined ? 'primary' : 'ghost'}
-          active={openTab === undefined}
-          title="전투 규칙 — 던전에서 캐릭터가 돌린다"
-          onClick={() => {
-            setTabId(COMBAT_TAB_ID)
-          }}
-        >
-          전투 규칙
-        </Button>
-        {(props.tabs ?? []).map((tab) => (
-          <Button
-            key={tab.id}
-            size="sm"
-            variant={tab.id === tabId ? 'primary' : 'ghost'}
-            active={tab.id === tabId}
-            onClick={() => {
-              setTabId(tab.id)
-            }}
-          >
-            {tab.label}
-          </Button>
-        ))}
-        {props.status === undefined ? null : (
-          <span className="editor__status">{props.status}</span>
-        )}
-      </nav>
-    )
-
+  // **화면은 하나다** (2026-09-07). 데스크톱 세 열을 지웠고, 남은 것이 명세 C 가 그린
+  // 이 화면이다 — 줄인 것이 아니라 따로 그린 것이라 검증이 규칙 줄 바로 아래에 붙고
+  // 팔레트가 규칙 하나의 전용 화면이 된다. 여기 남은 상태(고치는 조작·검증·텍스트)는
+  // 배치와 무관해서 기기를 돌려도 고치던 규칙이 그대로 이어진다.
   return (
-    <div className="editor">
-      <header className="editor__top">
-        {/* **제목이 열린 화면을 가리킨다.** 탭이 규칙표뿐일 때는 「규칙 에디터」가 늘
-            맞았지만, 가방·세계가 동위로 들어온 뒤로는 가방을 보면서 「규칙 에디터」를
-            읽게 된다 — 좁은 화면은 이미 그렇게 하고 있었다(`RuleEditMobile`). */}
-        <h1 className="editor__title">{openTab?.label ?? '규칙 에디터'}</h1>
-        {openTab === undefined ? (
-          <span className="editor__hint">
-            <ValueExpr text={ruleset.rulesetId} size="sm" dim />
-          </span>
-        ) : null}
-        <span className="editor__spacer" />
-        {/* **계량도 탭을 따라간다.** 정비 규칙을 고치는데 상단에 전투 CPU 가 서 있으면,
-            그 숫자가 지금 고치는 것의 예산인 줄로 읽힌다. */}
-        {openTab === undefined ? (
-          <>
-            <SegmentedGauge
-              value={totalCpu}
-              max={cpuBudget}
-              tone="cpu"
-              label="cpu"
-              readout={cpuReadout}
-            />
-            <ValueExpr text={`규칙 ${String(ruleset.rules.length)} / ${String(ruleSlots)}`} size="sm" />
-            <GlyphState
-              state={validGlyph}
-              size="sm"
-              label={index.total === 0 ? '검증 통과' : `위반 ${String(index.total)}`}
-            />
-            <Button
-              variant={textMode ? 'primary' : 'secondary'}
-              size="sm"
-              glyph="≡"
-              active={textMode}
-              title="텍스트 뷰 토글"
-              onClick={toggleTextMode}
-            >
-              텍스트 뷰
-            </Button>
-          </>
-        ) : (
-          openTab.gauge
-        )}
-        {props.controls}
-      </header>
-
-      {tabStrip}
-
-      {/* **본문 하나뿐인 탭.** 가방·세계처럼 팔레트도 검증도 없는 탭까지 세 열로 세우면
-          화면의 3분의 2가 빈 채로 남는다 — 열은 규칙표를 고치는 데 필요한 것이지 탭이
-          있다고 늘 있어야 하는 것이 아니다. */}
-      {openTab !== undefined && !checkWideTab(openTab) ? (
-        <div className="editor__body editor__body--single">
-          <div className="editor__col editor__col--single">{openTab.main}</div>
-        </div>
-      ) : (
-      <div className="editor__body">
-        <div className="editor__col editor__col--palette">
-          {openTab === undefined ? (
-          <PalettePanel
-            catalog={catalog}
-            hasSelection={hasSelection}
-            selectedPriority={ruleset.rules[selectedIndex]?.priority}
-            onPickPerception={(blockId) => {
-              commit(addRule(ruleset, catalog, ruleset.rules.length - 1, blockId), ruleset.rules.length, true)
-            }}
-            onPickAction={(actionId) => {
-              commit(applyActionChoice(ruleset, catalog, selectedIndex, actionId))
-            }}
-            onPickSelector={(selectorId) => {
-              commit(updateRule(ruleset, selectedIndex, { target: selectorId }))
-            }}
-          />
-          ) : (
-            openTab.palette
-          )}
-          {/* **코드 라이브러리는 전투 탭에만 있다.** 프리셋 8슬롯은 전투 규칙표를 담는
-              서랍이고, 정비 규칙을 고치는 동안 그것이 서 있으면 무엇이 저장되는지가
-              헷갈린다. 예전에는 여기 남겨 두었는데, 그때는 이 열이 가방·세계로 나가는
-              유일한 길이었기 때문이다 — 이제 탭 줄이 그 길이다. */}
-          {openTab === undefined ? props.library : null}
-        </div>
-
-        <span className="editor__rule-line" aria-hidden="true" />
-
-        <div className="editor__col editor__col--main">
-          {openTab !== undefined ? (
-            openTab.main
-          ) : textMode ? (
-            <TextView
-              text={textDraft}
-              errors={textParse.errors}
-              ruleCount={textParse.ruleset?.rules.length ?? 0}
-              onTextChange={handleTextChange}
-              onCopy={() => { writeClipboard(textDraft) }}
-            />
-          ) : (
-            <Panel
-              title="우선순위 리스트"
-              meta="위에서부터 평가 · 최초로 참인 규칙 하나만 실행"
-              padded={false}
-              scroll
-            >
-              <div className="rule-list" ref={listRef}>
-                {ruleset.rules.map((rule, at) => (
-                  <RuleRowEditor
-                    key={`rule-${String(at)}`}
-                    rule={rule}
-                    index={at}
-                    total={ruleset.rules.length}
-                    catalog={catalog}
-                    selected={at === selectedIndex}
-                    overBudget={overFlags[at] ?? false}
-                    problems={index.byPriority.get(rule.priority) ?? []}
-                    dropTarget={dragIndex >= 0 && at === dropIndex && at !== dragIndex}
-                    actions={actions}
-                    onDragBegin={(from) => { setDragIndex(from); setDropIndex(from) }}
-                    onDragOverRow={setDropIndex}
-                    onDrop={(to) => {
-                      if (dragIndex >= 0) {
-                        commit(moveRule(ruleset, dragIndex, to), to, true)
-                      }
-                      setDragIndex(-1)
-                      setDropIndex(-1)
-                    }}
-                  />
-                ))}
-                <div className="rule-list__foot">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    glyph="＋"
-                    onClick={() => { actions.addRule(ruleset.rules.length - 1) }}
-                  >
-                    규칙 추가
-                  </Button>
-                  <ValueExpr
-                    text="전부 거짓이면 기본 행동(가장 가까운 적에게 접근)이 나간다"
-                    size="sm"
-                    dim
-                  />
-                </div>
-              </div>
-            </Panel>
-          )}
-        </div>
-
-        <span className="editor__rule-line" aria-hidden="true" />
-
-        <div className="editor__col editor__col--check">
-          {openTab !== undefined ? (
-            openTab.check
-          ) : (
-          <Panel title="검증" meta={index.total === 0 ? '통과' : String(index.total)} scroll>
-            {index.total === 0 ? (
-              <GlyphState state="true" label="실행 가능한 규칙표다" size="sm" />
-            ) : (
-              <ul className="check-list">
-                {index.global.map((text) => (
-                  <li key={text}>
-                    <GlyphState state="danger" size="sm" label={text} />
-                  </li>
-                ))}
-                {[...index.byPriority].map(([priority, items]) =>
-                  items.map((text) => (
-                    <li key={`${String(priority)}-${text}`}>
-                      <GlyphState state="danger" size="sm" label={`[${String(priority)}] ${text}`} />
-                    </li>
-                  )),
-                )}
-              </ul>
-            )}
-          </Panel>
-          )}
-        </div>
-      </div>
-      )}
-
-      <footer className="editor__bottom">
-        {openTab === undefined ? (
-          <>
-            {/* 터치 화면에서 Alt+↑ 는 뜻이 없다. 좁아지면 이것부터 버린다 — 남겨 두면
-                오른쪽 끝의 `cpu 10 / 8` 이 대신 밀려 나간다. */}
-            <span className="editor__hint">
-              <ValueExpr
-                text="Alt+↑/↓ 순서 · Alt+Enter 추가 · Alt+D 복제 · Alt+T 조건 추가 · Alt+Backspace 삭제 · Ctrl+Z 되돌리기"
-                size="sm"
-                dim
-              />
-            </span>
-            <span className="editor__spacer" />
-            <ValueExpr text={`cpu ${cpuReadout}`} size="sm" dim={totalCpu <= cpuBudget} />
-          </>
-        ) : (
-          <>
-            <span className="editor__hint">{openTab.foot}</span>
-            <span className="editor__spacer" />
-          </>
-        )}
-      </footer>
-    </div>
+    <RuleEditMobile
+      mode={mode}
+      ruleset={ruleset}
+      catalog={catalog}
+      cpuBudget={cpuBudget}
+      ruleSlots={ruleSlots}
+      problems={index.byPriority}
+      globalProblems={index.global}
+      editIndex={editIndex}
+      readings={props.readings ?? EMPTY_READINGS}
+      actions={actions}
+      backLabel={BACK_LABEL}
+      onOpen={(at) => {
+        restoreRef.current = ruleset
+        setEditIndex(at)
+      }}
+      onAdd={() => {
+        restoreRef.current = ruleset
+        actions.addRule(ruleset.rules.length - 1)
+        setEditIndex(ruleset.rules.length)
+      }}
+      onReorder={(to) => {
+        actions.move(editIndex, to)
+        setEditIndex(to)
+      }}
+      onCancel={() => {
+        const restore = restoreRef.current
+        if (restore !== undefined) {
+          onChange(restore)
+        }
+        restoreRef.current = undefined
+        setEditIndex(-1)
+      }}
+      onSave={() => {
+        restoreRef.current = undefined
+        setEditIndex(-1)
+      }}
+      {...(props.controls === undefined ? {} : { controls: props.controls })}
+      {...(props.library === undefined ? {} : { library: props.library })}
+      tabs={props.tabs ?? []}
+      tabId={tabId}
+      onTab={setTabId}
+      {...(props.status === undefined ? {} : { status: props.status })}
+      isTextMode={textMode}
+      onToggleText={toggleTextMode}
+      textView={
+        <TextView
+          text={textDraft}
+          errors={textParse.errors}
+          ruleCount={textParse.ruleset?.rules.length ?? 0}
+          onTextChange={handleTextChange}
+          onCopy={() => {
+            writeClipboard(textDraft)
+          }}
+        />
+      }
+    />
   )
 }

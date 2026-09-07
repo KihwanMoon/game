@@ -130,8 +130,6 @@ export {
 } from './planTheme'
 export type { PlanTheme, TokenReader } from './planTheme'
 
-export { LeaderLine, RING_RATIO, SHOULDER_MODULES, buildLeaderPath } from './leaderLine'
-export type { LeaderPath, LeaderPoint } from './leaderLine'
 
 export {
   NO_TARGET_NOTE,

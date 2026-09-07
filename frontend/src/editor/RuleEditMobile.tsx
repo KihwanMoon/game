@@ -34,7 +34,7 @@ import { formatActionLabel } from './blockOptions'
 import { calculateTotalCpu } from './draft'
 import { COMBAT_TAB_ID, checkWideTab, type EditorTab } from './editorTabs'
 import { ActionCard, ConditionCard, CpuCard, PriorityCard } from './RuleEditCards'
-import type { RuleRowActions } from './RuleRowEditor'
+import type { RuleRowActions } from './ruleRowActions'
 import { formatMeasuredCondition, type TermReadings } from './termMeasure'
 
 /** 화면 글자. 한 곳에 모아 두어 두 배치가 같은 말을 쓰게 한다. */
@@ -44,6 +44,8 @@ const CANCEL_TEXT = '되돌리기'
 const SAVE_TEXT = '저장'
 const CPU_LABEL = 'cpu'
 const PASS_TEXT = '검증 통과'
+const TEXT_ON = '글로 보기'
+const TEXT_OFF = '줄로 보기'
 
 /** 이 화면이 설 수 있는 배치. 데스크톱은 세 열 에디터가 그대로 선다. */
 export type EditLayout = 'portrait' | 'landscape'
@@ -55,6 +57,18 @@ export interface RuleEditMobileProps {
   readonly catalog: BlockCatalog
   readonly cpuBudget: number
   readonly ruleSlots: number
+  /**
+   * 규칙표를 **글로** 보고 있는가.
+   *
+   * **배치가 아니라 기능이다.** 데스크톱 세 열과 함께 살던 것이라, 세 열을 지울 때
+   * 같이 지웠으면 규칙표를 글로 고치는 길이 통째로 사라졌을 것이다 — 한 열에서도
+   * 넓은 칸 하나면 된다.
+   */
+  readonly isTextMode?: boolean
+  /** 글로 보기를 켜고 끈다. */
+  readonly onToggleText?: () => void
+  /** 글로 보는 화면. `isTextMode` 가 참일 때 규칙 목록 대신 선다. */
+  readonly textView?: ReactNode
   /** 규칙 번호별 검증 메시지. 규칙 줄 **아래**에 붙는다 — 목록만 따로 있으면 못 따라간다. */
   readonly problems: ReadonlyMap<number, readonly string[]>
   /** 규칙표 전체에 걸리는 메시지. 목록 화면의 아래에 적는다. */
@@ -189,6 +203,18 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
             size="sm"
             label={problemCount === 0 ? PASS_TEXT : `위반 ${String(problemCount)}`}
           />
+          {/* **글로 보기.** 규칙표를 통째로 붙여 넣거나 남에게 보내는 길이다 — 줄로만
+              고칠 수 있으면 그 둘이 막힌다. */}
+          {props.onToggleText === undefined ? null : (
+            <button
+              type="button"
+              className={`edit-m__tab${props.isTextMode === true ? ' edit-m__tab--on' : ''}`}
+              aria-pressed={props.isTextMode === true}
+              onClick={props.onToggleText}
+            >
+              {props.isTextMode === true ? TEXT_OFF : TEXT_ON}
+            </button>
+          )}
         </span>
       </header>
 
@@ -199,6 +225,10 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
         )}
         {tabStrip}
 
+        {props.isTextMode === true && props.textView !== undefined ? (
+          props.textView
+        ) : (
+          <>
         <ul className="edit-m__rules">
           {ruleset.rules.map((rule, at) => {
             const found = props.problems.get(rule.priority) ?? []
@@ -267,6 +297,8 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
             {ADD_RULE_TEXT}
           </button>
         </div>
+          </>
+        )}
 
         {props.globalProblems.length === 0 ? null : (
           <ul className="edit-m__problems edit-m__problems--global">
