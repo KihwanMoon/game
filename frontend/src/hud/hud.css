@@ -367,8 +367,12 @@
 /* ── 사후 분석 ──────────────────────────────────────────────────────── */
 
 .hud-post {
-  position: absolute;
+  /* **덮는 것이지 잇는 것이 아니다.** 기준이 껍데기(`.app`)면 껍데기가 흐르는 배치일
+     때 함께 늘어나 닫기 버튼이 화면 밖으로 나간다 — 재생 패널(`.replay`)과 같은
+     이유로 뷰포트에 붙인다. */
+  position: fixed;
   inset: var(--sp-0);
+  z-index: 10;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   background: var(--surface-base);

@@ -27,24 +27,30 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
-/* 사후 분석 패널이 `position: absolute; inset: 0` 으로 화면을 덮는다. 그 기준이 되는
-   상자가 여기다 — 없으면 뷰포트가 아니라 문서 전체를 기준으로 잡혀 스크롤과 함께 밀린다. */
 /* 높이는 dvh 다. 100vh 는 모바일에서 주소창을 뺀 높이가 아니라 포함한 높이라,
    하단 바가 브라우저 UI 뒤로 들어가 손이 닿지 않는다.
    안전 영역 여백은 펀치홀·둥근 모서리·제스처 바를 피한다. 데스크톱에서는 env() 가
-   0 이라 아무 변화가 없다. */
+   0 이라 아무 변화가 없다.
+
+   **상한이 아니라 바닥이다.** 예전에는 `height:100dvh` + `overflow:hidden` 인 고정
+   프레임이었는데, 세로 전투 화면은 반대로 **흐르는** 배치다(`.battle--portrait` 는
+   `min-height:100dvh`·`overflow:visible`). 껍데기가 상한이면 자식이 흘러도 갈 데가
+   없어서, 적어도 하단 안전 영역만큼은 잘렸다 — 잘리는 자리가 하단 바다.
+
+   가둘 필요가 없어진 것은 덮는 패널들이 `position: fixed` 로 바뀌었기 때문이다.
+   사후 분석과 재생은 **화면을 덮는 것이지 문서를 잇는 것이 아니라서**, 기준이
+   껍데기가 아니라 뷰포트인 편이 맞다. */
 .app {
   position: relative;
   box-sizing: border-box;
-  height: 100dvh;
+  /* 자식 하나가 행을 통째로 쓴다. 짧으면 늘어나 바닥을 채우고, 길면 행이 자란다. */
+  display: grid;
+  grid-template-rows: minmax(var(--sp-0), 1fr);
+  min-block-size: 100dvh;
   padding-top: env(safe-area-inset-top, var(--sp-0));
   padding-right: env(safe-area-inset-right, var(--sp-0));
   padding-bottom: env(safe-area-inset-bottom, var(--sp-0));
   padding-left: env(safe-area-inset-left, var(--sp-0));
-  /* 이 화면은 고정 프레임이다 — 데스크톱 1440x900, 모바일은 상하 바가 고정된 한 판.
-     안쪽 패널이 저마다 스크롤을 갖고 있으므로 껍데기는 넘침을 가둔다. 가두지 않으면
-     사후 분석을 열 때 문서가 늘어나 패널이 위로 밀리고, 닫기 버튼을 못 찾게 된다. */
-  overflow: hidden;
 }
 
 /* ── 출격 조작부 ─────────────────────────────────────────────────────────
