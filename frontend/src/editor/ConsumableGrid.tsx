@@ -7,7 +7,6 @@
  *
  * 훅을 안 쓴다. 고른 칸은 밖에서 든다.
  */
-import { ValueExpr } from '../ds'
 
 import type { ConsumableView } from '../storage'
 
@@ -16,7 +15,7 @@ import {
   buildConsumableStockCells,
   type ConsumableCell,
 } from './consumableCells'
-import { renderCell } from './GridCellView'
+import { SlotGrid } from './SlotBoard'
 
 export interface ConsumableGridProps {
   readonly view: ConsumableView | undefined
@@ -42,20 +41,21 @@ export function ConsumableGrid(props: ConsumableGridProps): React.JSX.Element {
     <>
       {/* **「들고 갈 것」과 「가진 것」을 가른다.** 이 구분이 이 화면의 존재 이유다 —
           합치면 예전처럼 주운 만큼이 답이 된다. */}
-      <div className="inv__head">
-        {`들고 갈 것 — 칸 ${String(filled)} / ${String(slotCells.length)}`}
-      </div>
-      <div className="invg invg--cns">
-        {slotCells.map((cell) => renderCell(cell, cell.key === props.pickedKey, props.onPick))}
-      </div>
-      <div className="inv__head">가진 것 — 가방 재고</div>
-      {stockCells.length === 0 ? (
-        <ValueExpr text={EMPTY_STOCK} size="sm" dim />
-      ) : (
-        <div className="invg invg--cns">
-          {stockCells.map((cell) => renderCell(cell, cell.key === props.pickedKey, props.onPick))}
-        </div>
-      )}
+      <SlotGrid
+        title={`들고 갈 것 — 칸 ${String(filled)} / ${String(slotCells.length)}`}
+        shape="free"
+        cells={slotCells}
+        pickedKey={props.pickedKey}
+        onPick={props.onPick}
+      />
+      <SlotGrid
+        title="가진 것 — 가방 재고"
+        shape="free"
+        cells={stockCells}
+        pickedKey={props.pickedKey}
+        onPick={props.onPick}
+        emptyText={EMPTY_STOCK}
+      />
     </>
   )
 }

@@ -34,4 +34,12 @@ export interface CellFace {
   readonly fact: string
   /** 쓸 수 없게 막힌 칸인가 (양손무기가 점유한 자리 등). */
   readonly isSealedSlot: boolean
+  /**
+   * 있지만 **안 쓰는** 칸인가 (끈 스킬 등).
+   *
+   * `isSealedSlot` 과 다르다. 막힌 자리는 **아무것도 없어서** 이름을 그릴 것이 없고
+   * `▨` 가 그 자리를 대신하지만, 끈 것은 **있는데 안 쓰는 것**이라 이름이 남아야 한다 —
+   * 이름이 사라지면 무엇을 다시 켤지 고를 수 없다.
+   */
+  readonly isOff?: boolean
 }

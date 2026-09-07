@@ -77,6 +77,11 @@ export type { ListingCell } from './auctionCells'
 export { CompareRows, CompareBlock } from './CompareRows'
 export { renderCell } from './GridCellView'
 export type { CellFace } from './gridCell'
+
+// 도면 격자 판. 네 화면(가방·소모품·경매·스킬)이 같은 부품으로 그린다.
+export { SlotBoard, SlotGrid, usePickedKey } from './SlotBoard'
+export type { SlotBoardProps, SlotGridProps, SlotShape } from './SlotBoard'
+export { buildSkillCells } from './skillCells'
 export { InventoryPanel } from './InventoryPanel'
 export { InventoryGrid } from './InventoryGrid'
 export {

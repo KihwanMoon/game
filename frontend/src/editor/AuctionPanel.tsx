@@ -12,15 +12,13 @@
  *
  * 훅은 고른 칸 하나뿐이다 — 가방과 같다.
  */
-import { useState } from 'react'
-
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import type { AuctionView, ItemView } from '../storage'
 
 import { buildListingCells, findBuyBlocker, type ListingCell } from './auctionCells'
 import { CompareBlock } from './CompareRows'
 import { buildRangeRow, compareToWorn } from './compareItems'
-import { renderCell } from './GridCellView'
+import { SlotBoard, SlotGrid, usePickedKey } from './SlotBoard'
 import { formatGradeClass, renderGrade } from './gradeBadge'
 import { formatAffix } from './InventoryPanel'
 import { EQUIP_CELL_LABELS, RANGE_SLOT } from './inventoryCells'
@@ -167,7 +165,7 @@ export function AuctionDetail(props: {
  */
 export function AuctionPanel(props: AuctionPanelProps): React.JSX.Element {
   const { auction, link } = props
-  const [pickedKey, setPickedKey] = useState('')
+  const [pickedKey, togglePick] = usePickedKey()
 
   const cells = buildListingCells(auction)
   const picked = cells.find((cell) => cell.key === pickedKey)
@@ -188,30 +186,30 @@ export function AuctionPanel(props: AuctionPanelProps): React.JSX.Element {
           <>
             {/* **거는 것은 가방에서 한다.** 걸 물건을 고르는 일은 가방을 뒤지는 일이라
                 거기 있어야 하고, 두 집에 두면 어느 쪽이 진짜인지 알 수 없다. */}
-            <div className="inv__head">
-              {`매물 ${String(cells.length)}${mine === 0 ? '' : ` · 내 것 ${String(mine)}`}`}
-            </div>
-            {cells.length === 0 ? (
-              <ValueExpr text="걸린 매물이 없다" size="sm" dim />
-            ) : (
-              <div className="invg invg--lot">
-                {cells.map((cell) => renderCell(cell, cell.key === pickedKey, (target) => {
-                  setPickedKey((current) => (current === target.key ? '' : target.key))
-                }))}
-              </div>
-            )}
-            {picked === undefined ? (
-              <ValueExpr text="칸을 고르면 여기에 상세와 견줌이 뜬다" size="sm" dim />
-            ) : (
-              <AuctionDetail
-                cell={picked}
-                balance={auction.balance}
-                worn={props.worn}
-                disabled={!checkLinked(link)}
-                onBuy={props.onBuy}
-                onCancel={props.onCancel}
+            <SlotBoard
+              hint="칸을 고르면 여기에 상세와 견줌이 뜬다"
+              detail={
+                picked === undefined ? undefined : (
+                  <AuctionDetail
+                    cell={picked}
+                    balance={auction.balance}
+                    worn={props.worn}
+                    disabled={!checkLinked(link)}
+                    onBuy={props.onBuy}
+                    onCancel={props.onCancel}
+                  />
+                )
+              }
+            >
+              <SlotGrid
+                title={`매물 ${String(cells.length)}${mine === 0 ? '' : ` · 내 것 ${String(mine)}`}`}
+                shape="free"
+                cells={cells}
+                pickedKey={pickedKey}
+                onPick={togglePick}
+                emptyText="걸린 매물이 없다"
               />
-            )}
+            </SlotBoard>
             <ValueExpr text="거는 것은 가방에서 한다 — 걸 물건을 고르는 자리가 거기다" size="sm" dim />
             {props.detail === '' ? null : (
               <div className="wld__warn">

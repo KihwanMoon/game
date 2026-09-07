@@ -8,12 +8,13 @@
  *
  * **빼기만 한다.** 스킬은 장비가 열고, 여기서는 연 것 중 안 들고 갈 것을 끈다.
  */
-import { useState } from 'react'
-
 import skillsRaw from '@resources/balance/skills.json'
 
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import type { SkillPrefView } from '../storage'
+
+import { buildSkillCells } from './skillCells'
+import { SlotGrid, usePickedKey } from './SlotBoard'
 
 import { formatParamLabel } from './blockOptions'
 
@@ -84,7 +85,7 @@ export function listSkillFacts(skillId: string): readonly string[] {
  * @returns 렌더 트리.
  */
 export function SkillPanel(props: SkillPanelProps): React.JSX.Element {
-  const [pickedId, setPicked] = useState('')
+  const [pickedId, togglePick] = usePickedKey()
   const view = props.view
   if (view === undefined) {
     return (
@@ -101,24 +102,13 @@ export function SkillPanel(props: SkillPanelProps): React.JSX.Element {
         size="sm"
         dim
       />
-      <div className="invg invg--equip">
-        {view.rows.map((row) => (
-          <button
-            type="button"
-            className={`invg__cell${row.skillId === pickedId ? ' invg__cell--picked' : ''}${
-              row.isOn ? '' : ' invg__cell--sealed'
-            }`}
-            key={row.skillId}
-            aria-label={`스킬 ${formatParamLabel(row.skillId)}`}
-            onClick={() => {
-              setPicked((current) => (current === row.skillId ? '' : row.skillId))
-            }}
-          >
-            <span className="invg__label">{formatParamLabel(row.skillId)}</span>
-            {row.isOn ? null : <span className="invg__marks">끔</span>}
-          </button>
-        ))}
-      </div>
+      <SlotGrid
+        title={`연 스킬 ${String(view.rows.length)}`}
+        shape="equip"
+        cells={buildSkillCells(view, formatParamLabel)}
+        pickedKey={pickedId}
+        onPick={togglePick}
+      />
       {picked === undefined ? (
         <ValueExpr text="칸을 고르면 여기에 수치·제약과 켬·끔이 뜬다" size="sm" dim />
       ) : (

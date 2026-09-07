@@ -36,8 +36,15 @@ describe('스킬 세팅', () => {
 
   it('★ 꺼진 칸이 격자에서 갈린다 — 색만이 아니라 「끔」 글자로도', () => {
     const html = render(VIEW)
-    expect(html).toContain('invg__cell--sealed')
+    // **막힌 자리가 아니라 끈 것이다.** 막힌 자리(`--sealed`)는 그릴 이름이 없어 `▨` 가
+    // 대신 서는데, 끈 스킬은 이름이 남아야 무엇을 다시 켤지 고를 수 있다.
+    expect(html).toContain('invg__cell--off')
+    expect(html).not.toContain('invg__cell--sealed')
     expect(html).toContain('끔')
+  })
+
+  it('★ 끈 스킬도 이름이 남는다 — 이름이 사라지면 다시 켤 것을 못 고른다', () => {
+    expect(render(VIEW)).toContain('invg__label')
   })
 
   it('★ 누르면 수치가 뜬다 — 격자 자체에는 조작이 없다', async () => {

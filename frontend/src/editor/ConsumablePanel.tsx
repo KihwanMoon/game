@@ -12,8 +12,6 @@
  *
  * 훅은 고른 칸 하나뿐이다. 나머지는 전부 props 로 받는다 — 가방과 같다.
  */
-import { useState } from 'react'
-
 import { GlyphState, Panel, ValueExpr } from '../ds'
 import type { ConsumableView } from '../storage'
 
@@ -28,6 +26,7 @@ import {
 } from './consumableCells'
 import { ConsumableDetail } from './ConsumableDetail'
 import { ConsumableGrid } from './ConsumableGrid'
+import { SlotBoard, usePickedKey } from './SlotBoard'
 import { LinkNoticeLine } from './LinkNoticeLine'
 import { checkLinked, type LinkState } from './linkState'
 
@@ -71,7 +70,7 @@ export interface ConsumablePanelProps {
  */
 export function ConsumablePanel(props: ConsumablePanelProps): React.JSX.Element {
   const { view, link } = props
-  const [pickedKey, setPickedKey] = useState('')
+  const [pickedKey, togglePick] = usePickedKey()
 
   const cells = [...buildConsumableSlotCells(view), ...buildConsumableStockCells(view)]
   const picked = cells.find((cell) => cell.key === pickedKey)
@@ -89,33 +88,33 @@ export function ConsumablePanel(props: ConsumablePanelProps): React.JSX.Element 
           <LinkNoticeLine link={link} missing={MISSING_HINT} />
         ) : (
           <>
-            {view.isRunOpen ? (
-              <GlyphState
-                state="pending"
-                size="sm"
-                label="런이 도는 중 — 지금 채운 것은 다음 런부터 실린다"
-              />
-            ) : null}
-            <ConsumableGrid
-              view={view}
-              pickedKey={pickedKey}
-              onPick={(target) => {
-                setPickedKey((current) => (current === target.key ? '' : target.key))
-              }}
-            />
-            {picked === undefined ? (
-              <ValueExpr text="칸을 고르면 여기에 상세와 조작이 뜬다" size="sm" dim />
-            ) : (
-              <ConsumableDetail
-                cell={picked}
-                view={view}
-                link={link}
-                onClear={props.onClear}
-                onRefill={props.onRefill}
-                onSell={props.onSell}
-                onLoadStock={props.onLoadStock}
-              />
-            )}
+            <SlotBoard
+              hint="칸을 고르면 여기에 상세와 조작이 뜬다"
+              notice={
+                view.isRunOpen ? (
+                  <GlyphState
+                    state="pending"
+                    size="sm"
+                    label="런이 도는 중 — 지금 채운 것은 다음 런부터 실린다"
+                  />
+                ) : null
+              }
+              detail={
+                picked === undefined ? undefined : (
+                  <ConsumableDetail
+                    cell={picked}
+                    view={view}
+                    link={link}
+                    onClear={props.onClear}
+                    onRefill={props.onRefill}
+                    onSell={props.onSell}
+                    onLoadStock={props.onLoadStock}
+                  />
+                )
+              }
+            >
+              <ConsumableGrid view={view} pickedKey={pickedKey} onPick={togglePick} />
+            </SlotBoard>
             {props.detail === '' ? null : <ValueExpr text={props.detail} size="sm" />}
           </>
         )}

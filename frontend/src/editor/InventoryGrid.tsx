@@ -16,7 +16,7 @@
  * 훅을 안 쓴다. 고른 칸은 밖에서 든다 — 유저 화면은 상세를 열고 관리 화면은 넘기기를
  * 거는데, 그 차이가 이 컴포넌트 안에 들어오면 둘 중 하나가 남의 사정을 알게 된다.
  */
-import { renderCell } from './GridCellView'
+import { SlotGrid } from './SlotBoard'
 import {
   BAG_CELL_COUNT,
   buildBagCells,
@@ -24,8 +24,6 @@ import {
   type GridCell,
 } from './inventoryCells'
 import type { InventoryView } from '../storage'
-
-export { renderCell }
 
 /** InventoryGrid 가 받는 props. */
 export interface InventoryGridProps {
@@ -50,16 +48,21 @@ export function InventoryGrid(props: InventoryGridProps): React.JSX.Element {
   const owner = props.ownerLabel === undefined ? '' : `${props.ownerLabel} · `
   return (
     <>
-      <div className="inv__head">{`${owner}장비`}</div>
-      <div className="invg invg--equip">
-        {equipCells.map((cell) => renderCell(cell, cell.key === props.pickedKey, props.onPick))}
-      </div>
-      <div className="inv__head">
-        {`${owner}가방 ${String(filled)} / ${String(BAG_CELL_COUNT)}`}
-      </div>
-      <div className="invg invg--bag">
-        {bagCells.map((cell) => renderCell(cell, cell.key === props.pickedKey, props.onPick))}
-      </div>
+      <SlotGrid
+        title={`${owner}장비`}
+        shape="equip"
+        cells={equipCells}
+        pickedKey={props.pickedKey}
+        onPick={props.onPick}
+      />
+      {/* 스무 칸이 고정이라 빈 칸을 그대로 그린다 — 빈 칸이 있다는 것이 곧 뜻이다. */}
+      <SlotGrid
+        title={`${owner}가방 ${String(filled)} / ${String(BAG_CELL_COUNT)}`}
+        shape="bag"
+        cells={bagCells}
+        pickedKey={props.pickedKey}
+        onPick={props.onPick}
+      />
     </>
   )
 }

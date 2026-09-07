@@ -11,14 +11,13 @@
  * 자체 브레이크포인트를 두지 않는다. 높이는 `--btn-tap-h` 가 정하므로 터치 배치에서
  * 저절로 44px 가 된다.
  */
-import { useState } from 'react'
-
 import { Panel, ValueExpr } from '../ds'
 import type { AffixView, InventoryView, ItemView } from '../storage'
 
 import { formatGradeClass, renderGrade } from './gradeBadge'
 import { buildBagCells, buildEquipCells } from './inventoryCells'
 import { InventoryGrid } from './InventoryGrid'
+import { SlotBoard, usePickedKey } from './SlotBoard'
 import { InventoryDetail, type CellChoice } from './InventoryDetail'
 
 import { LinkNoticeLine } from './LinkNoticeLine'
@@ -103,7 +102,7 @@ export function findWorn(
  */
 export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
   const { inventory, link } = props
-  const [pickedKey, setPickedKey] = useState('')
+  const [pickedKey, togglePick] = usePickedKey()
 
   const equipCells = buildEquipCells(inventory)
   const bagCells = buildBagCells(inventory)
@@ -131,33 +130,36 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
           <LinkNoticeLine link={link} missing={MISSING_HINT} />
         ) : (
           <>
-            <InventoryGrid
-              inventory={inventory}
-              pickedKey={pickedKey}
-              onPick={(target) => {
-                setPickedKey((current) => (current === target.key ? '' : target.key))
-              }}
-            />
-            {filled === 0 ? <ValueExpr text={EMPTY_HINT} size="sm" dim /> : null}
-            {choice === undefined ? (
-              <ValueExpr text="칸을 고르면 여기에 상세와 조작이 뜬다" size="sm" dim />
-            ) : (
-              <InventoryDetail
-                choice={choice}
-                // 그 자리에 지금 낀 것. 「이게 더 좋나」에 답하려면 견줄 상대가 있어야
-                // 한다 — 없으면 화면이 접사만 늘어놓고 판단을 사람에게 통째로 넘긴다.
-                worn={findWorn(inventory, choice)}
-                link={link}
-                repairCost={inventory.repairCost}
-                feePercent={props.feePercent}
-                onEquip={props.onEquip}
-                onUnequip={props.onUnequip}
-                onDiscard={props.onDiscard}
-                onRepair={props.onRepair}
-                onUnseal={props.onUnseal}
-                onList={props.onList}
+            <SlotBoard
+              hint="칸을 고르면 여기에 상세와 조작이 뜬다"
+              notice={filled === 0 ? <ValueExpr text={EMPTY_HINT} size="sm" dim /> : null}
+              detail={
+                choice === undefined ? undefined : (
+                  <InventoryDetail
+                    choice={choice}
+                    // 그 자리에 지금 낀 것. 「이게 더 좋나」에 답하려면 견줄 상대가
+                    // 있어야 한다 — 없으면 화면이 접사만 늘어놓고 판단을 사람에게
+                    // 통째로 넘긴다.
+                    worn={findWorn(inventory, choice)}
+                    link={link}
+                    repairCost={inventory.repairCost}
+                    feePercent={props.feePercent}
+                    onEquip={props.onEquip}
+                    onUnequip={props.onUnequip}
+                    onDiscard={props.onDiscard}
+                    onRepair={props.onRepair}
+                    onUnseal={props.onUnseal}
+                    onList={props.onList}
+                  />
+                )
+              }
+            >
+              <InventoryGrid
+                inventory={inventory}
+                pickedKey={pickedKey}
+                onPick={togglePick}
               />
-            )}
+            </SlotBoard>
             {props.detail === '' ? null : <ValueExpr text={props.detail} size="sm" />}
           </>
         )}

@@ -2149,13 +2149,15 @@
   grid-template-columns: repeat(5, 1fr);
 }
 
-/* 소모품 칸과 경매 매물은 **칸 수가 정해져 있지 않다.**
+/* **칸 수가 정해져 있지 않은 것들.**
    - 소모품 칸은 접사(`potion_slots`)가 늘리고,
    - 경매 매물은 그때그때 걸린 만큼이다.
    그래서 열 수를 박지 않고 최소 폭으로 채운다 — 5열을 박으면 칸이 셋일 때 두 자리가
-   빈 채로 남아 「빈 칸이 있다」로 읽힌다. 가방은 스무 칸이 고정이라 반대다. */
-.invg--cns,
-.invg--lot {
+   빈 채로 남아 「빈 칸이 있다」로 읽힌다. 가방은 스무 칸이 고정이라 반대다.
+
+   예전에는 `--cns`·`--lot` 두 이름이 **같은 규칙**을 들고 있었다. 이름이 둘이면
+   한쪽만 고치는 날이 오고, 그날부터 소모품 칸과 경매 칸이 다른 크기로 그려진다. */
+.invg--free {
   grid-template-columns: repeat(auto-fill, minmax(var(--sp-12), 1fr));
 }
 
@@ -2190,8 +2192,11 @@
   background: var(--surface-raised);
 }
 
-/* 양손무기가 막은 자리 — 「불가」와 같은 해칭 뜻이다. */
-.invg__cell--sealed {
+/* 양손무기가 막은 자리, 그리고 끈 것 — 「지금 안 선다」가 같은 뜻이다.
+   **다른 것은 이름이 남느냐다**: 막힌 자리는 그릴 이름이 없어 `▨` 가 대신하고, 끈 것은
+   이름이 남아야 다시 켤 것을 고를 수 있다. 그 차이는 `GridCellView` 가 낸다. */
+.invg__cell--sealed,
+.invg__cell--off {
   color: var(--text-dim);
   background: var(--surface-base);
 }

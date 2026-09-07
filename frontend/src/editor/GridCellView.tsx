@@ -24,7 +24,7 @@ export function renderCell<T extends CellFace>(
   isPicked: boolean,
   onPick: (cell: T) => void,
 ): React.JSX.Element {
-  const state = cell.isSealedSlot ? ' invg__cell--sealed' : ''
+  const state = cell.isSealedSlot ? ' invg__cell--sealed' : cell.isOff === true ? ' invg__cell--off' : ''
   const picked = isPicked ? ' invg__cell--picked' : ''
   return (
     <button
@@ -34,7 +34,10 @@ export function renderCell<T extends CellFace>(
       // 고름은 색·명도만으로 알리지 않는다. 화면을 못 보는 경로에서는 이것이
       // 유일한 채널이다 — 참/거짓을 3중으로 적는 것과 같은 규칙이다.
       aria-pressed={isPicked}
-      aria-label={`${cell.code} ${cell.label === '' ? '빈 칸' : cell.label}`}
+      // 자리 코드가 없는 칸(스킬)도 있다. 그냥 이어 붙이면 앞에 빈칸이 남는다.
+      aria-label={[cell.code, cell.label === '' ? '빈 칸' : cell.label, cell.isOff === true ? '끔' : '']
+        .filter((part) => part !== '')
+        .join(' ')}
       onClick={() => {
         onPick(cell)
       }}
