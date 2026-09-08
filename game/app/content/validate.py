@@ -12,6 +12,7 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
+from game.app.skills.catalog import load_skill_defs
 from game.app.store.content_draft import DRAFT_ASSETS
 from game.schemas.blocks import load_block_catalog
 from game.schemas.room import load_room_templates
@@ -66,9 +67,15 @@ def check_loads(asset: str, payload: dict) -> str:
 def load_skill_file(path: Path) -> dict:
     """스킬 파일을 읽어 본다.
 
-    스킬은 전용 로더가 없다 — `run_battle.py` 가 절을 그대로 읽어 `skill_coef_pct` 를
-    만든다. 그래서 그쪽이 실제로 읽는 두 필드를 여기서 본다. 없으면 그 스킬을 쓰는
-    규칙이 조용히 계수 100 으로 돈다.
+    **코어의 로더를 그대로 태운다** (`app/skills/catalog.py`). 예전에는 스킬만 전용
+    로더가 없어서 필드 두 개를 여기서 손으로 봤는데, 그러면 규칙이 둘이 되어 검증은
+    통과하는데 배포하면 서버가 안 뜨는 날이 온다 — 아래 `ASSET_LOADERS` 주석이 막으려던
+    바로 그것이다.
+
+    **로더가 관대한 것과 여기가 엄격한 것은 어긋나지 않는다.** 로더는 이미 발행된 팩을
+    읽어야 하므로 없는 필드를 기본값으로 두고(되돌릴 수 없다), 여기는 새 초안을 받는
+    자리라 빠진 것을 돌려보낸다. `coef_pct` 가 없으면 그 스킬을 쓰는 규칙이 조용히 계수
+    100 으로 돈다.
 
     Args:
         path: 초안 파일.
@@ -86,6 +93,8 @@ def load_skill_file(path: Path) -> dict:
     for skill in skills:
         if "id" not in skill or "coef_pct" not in skill:
             raise ValueError(f"스킬에 id·coef_pct 가 없다: {skill}")
+    # 코어가 읽는 그 함수다. 못 읽는 절은 여기서 터지고, 그것이 이 검증의 요점이다.
+    load_skill_defs(skills)
     return raw
 
 

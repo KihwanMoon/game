@@ -31,6 +31,7 @@ from game.app.simulation.telegraph import TelegraphBoard
 # 같은 목록을 봐야 해서), 「행동이 사는 곳」에서 읽어 온 코드가 이미 여럿이다 — 그쪽을
 # 전부 고치는 것보다 파사드를 두는 편이 낫다.
 __all__ = ["ATTACK_ACTIONS", "MELEE_REACH", "ActionExecutor"]
+from game.app.skills.catalog import find_skill
 from game.schemas.room import TILE_DOOR, TILE_SPRING, TILE_STAIRS, WALKABLE_TILES
 
 # 퍼센트 기준. 100 이 1.0배다.
@@ -39,7 +40,6 @@ PERCENT_BASE = 100
 # 어느 방어가 걸렸는지를 상태에 함께 실어야 한다 (지금은 그럴 필요가 없다).
 
 MOVE_ACTIONS = frozenset({"APPROACH", "RETREAT", "MOVE_TO_EXIT", "MOVE_TO_HEAL", "MOVE_TO_COVER"})
-AREA_ATTACK_RADIUS = 2
 
 # 이 사거리까지는 시야를 묻지 않는다. 인접한 적은 벽 너머에 있을 수 없다.
 
@@ -116,7 +116,7 @@ class ActionExecutor(SupportActionMixin):
             entity: 행위자.
             action_id: 사용한 행동 id.
         """
-        ticks = self.config.skill_cooldowns.get(action_id, 0)
+        ticks = find_skill(self.config.skills, action_id).cooldown
         if ticks > 0:
             entity.cooldowns[action_id] = ticks
 
@@ -243,7 +243,7 @@ class ActionExecutor(SupportActionMixin):
         if target is None or not target.is_alive:
             self._record(entity.entity_id, plan, "대상 없음 — 틱 낭비", None)
             return
-        reach = self.config.skill_range.get(plan.action_id) or entity.attack_range
+        reach = find_skill(self.config.skills, plan.action_id).reach or entity.attack_range
         distance = get_manhattan_distance(entity.position, target.position)
         if distance > reach:
             self._record(entity.entity_id, plan, f"사거리 밖({distance} > {reach}) — 틱 낭비", None)
@@ -269,10 +269,13 @@ class ActionExecutor(SupportActionMixin):
         if telegraph is not None:
             self._register_telegraph(entity, plan, telegraph)
             return
+        # **반경의 정본은 데이터다** (설계/5_스킬 §9). 예전에는 여기 상수가 있었고
+        # `skills.json` 의 `shape` 는 아무도 안 읽어 거짓이었다.
+        radius = find_skill(self.config.skills, plan.action_id).shape.radius
         victims = [
             other
             for other in self.state.list_hostiles(entity)
-            if get_manhattan_distance(entity.position, other.position) <= AREA_ATTACK_RADIUS
+            if get_manhattan_distance(entity.position, other.position) <= radius
         ]
         if not victims:
             self._record(entity.entity_id, plan, "반경 안에 적 없음 — 틱 낭비", None)
@@ -317,7 +320,7 @@ class ActionExecutor(SupportActionMixin):
         # 방어 태세는 여기서 본다. 정수 나눗셈이며 내림이다 (R5) — 부동소수를 쓰면
         # 두 코어가 같은 피해에서 갈린다.
         if target.statuses.get(STATUS_GUARD, 0) > 0:
-            reduction = self.config.skill_guard_pct.get(GUARD_SKILL_ID, 0)
+            reduction = find_skill(self.config.skills, GUARD_SKILL_ID).guard_pct
             amount = amount * (PERCENT_BASE - reduction) // PERCENT_BASE
         target.hp = max(0, target.hp - amount)
         self.log.record(
@@ -353,7 +356,7 @@ class ActionExecutor(SupportActionMixin):
         # 스킬 계수(스킬이 정한다)와 스킬위력(개체가 정한다)은 다른 것이다. 곱해서
         # 넘기는 이유는 수식이 계수 하나만 받기 때문이며, 정수 곱 뒤 내림 나눗셈이라
         # 기본값 100 에서는 결과가 한 톨도 바뀌지 않는다 (결정 #51).
-        coef_pct = self.config.skill_coef_pct.get(plan.action_id, PERCENT_BASE)
+        coef_pct = find_skill(self.config.skills, plan.action_id).coef_pct
         amount = calculate_damage(
             attack=entity.attack,
             skill_coef_pct=coef_pct * entity.skill_power_pct // PERCENT_BASE,

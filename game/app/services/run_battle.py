@@ -24,6 +24,7 @@ from game.app.simulation.scaling import build_floor_scale
 from game.app.simulation.springs import init_spring_pools
 from game.app.simulation.state import FACTION_PLAYER, Entity, WorldState
 from game.app.simulation.variance import resolve_elite_kind, resolve_spawn_spot
+from game.app.skills.catalog import load_skill_defs
 from game.config import SKILLS_PATH
 from game.schemas.blocks import BlockCatalog
 from game.schemas.loadout import BASE_SKILL_POWER_PCT, PlayerLoadout
@@ -247,20 +248,7 @@ def build_engine(
     config = EngineConfig(
         damage_rules=build_damage_rules(balance["damage_formula"]),
         kind_types={kind["id"]: kind["type"] for kind in kinds},
-        skill_coef_pct={skill["id"]: skill["coef_pct"] for skill in balance["skills"]},
-        skill_range={skill["id"]: skill.get("range") for skill in balance["skills"]},
-        skill_cooldowns={skill["id"]: skill["cooldown"] for skill in balance["skills"]},
-        skill_guard_pct={
-            skill["id"]: skill["guard_pct"] for skill in balance["skills"] if "guard_pct" in skill
-        },
-        skill_guard_ticks={
-            skill["id"]: skill["guard_ticks"]
-            for skill in balance["skills"]
-            if "guard_ticks" in skill
-        },
-        skill_heal_pct={
-            skill["id"]: skill["heal_pct"] for skill in balance["skills"] if "heal_pct" in skill
-        },
+        skills=load_skill_defs(balance["skills"]),
         summon_rules={k["id"]: k["summon"] for k in kinds if "summon" in k},
         enemy_stats={k["id"]: k for k in kinds},
         floor_scale=scale,

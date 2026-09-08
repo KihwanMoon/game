@@ -30,6 +30,7 @@ from game.app.simulation.plan import STATUS_GUARD, EngineConfig, PlannedAction
 from game.app.simulation.scaling import get_scaled_enemy_stats
 from game.app.simulation.state import Entity, WorldState
 from game.app.simulation.telegraph import TelegraphBoard, build_blast_tiles
+from game.app.skills.catalog import find_skill
 from game.schemas.room import WALKABLE_TILES
 
 # 소환 쿨타임을 다는 키. 인지 변수 self_cooldown_ready[SUMMON] 가 이것을 읽는다.
@@ -215,11 +216,11 @@ def resolve_heal(
     target = state.entities.get(plan.target_id or "")
     if target is None or not target.is_alive:
         return 0, "대상 없음 — 틱 낭비"
-    reach = config.skill_range.get(plan.action_id) or actor.attack_range
+    reach = find_skill(config.skills, plan.action_id).reach or actor.attack_range
     distance = get_manhattan_distance(actor.position, target.position)
     if distance > reach:
         return 0, f"사거리 밖({distance} > {reach}) — 틱 낭비"
-    percent = config.skill_heal_pct.get(plan.action_id, 0)
+    percent = find_skill(config.skills, plan.action_id).heal_pct
     amount = min(target.hp_max - target.hp, target.hp_max * percent // PERCENT_BASE)
     if amount <= 0:
         return 0, f"{target.entity_id} 회복 여지 없음 — 틱 낭비"

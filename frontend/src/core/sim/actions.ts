@@ -49,6 +49,14 @@ export const MOVE_ACTIONS: ReadonlySet<string> = new Set([
 /** 단일 대상 공격 계열 행동. */
 
 /** 예고를 쓰지 않는 즉발 광역기의 반경. 예고형의 반경은 balance.json 이 정한다. */
+/**
+ * 즉발 광역기의 반경.
+ *
+ * **파이썬은 이 값을 데이터에서 읽는다** — `skills.json` 의 `shape.radius` 이며
+ * `app/skills/catalog.py` 가 읽는다 (2026-09-08). 이쪽은 아직 상수라, 지금은 둘 다 2 로
+ * 같지만 **JSON 만 고치면 두 코어가 조용히 갈린다.** 이식은 `설계/1_통합시스템설계`
+ * §6 의 G6 이고, 그때까지는 골든 대조가 이 어긋남을 잡는 마지막 그물이다.
+ */
 export const AREA_ATTACK_RADIUS = 2
 
 /** 이 사거리까지는 시야를 묻지 않는다. 인접한 적은 벽 너머에 있을 수 없다. */

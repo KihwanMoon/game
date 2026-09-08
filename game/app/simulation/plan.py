@@ -25,6 +25,7 @@ from game.app.simulation.phases import (
 )
 from game.app.simulation.scaling import FloorScale
 from game.app.simulation.state import Entity, WorldState
+from game.app.skills.catalog import SkillDef
 
 # 페이즈·판정 이름은 phases.py 가 정본이다. 여기서 다시 내보내는 것은 엔진 쪽
 # 호출자가 계획 타입과 페이즈 이름을 한 곳에서 받게 하기 위한 것이다.
@@ -139,22 +140,11 @@ class EngineConfig:
 
     damage_rules: DamageRules
     kind_types: dict[str, str]
-    skill_coef_pct: dict[str, int]
-    # 스킬이 자체 사거리를 가지면 그것을 쓴다. None 이면 엔티티의 attack_range 다.
-    # 이것이 없으면 balance.json 이 선언한 사거리가 조용히 무시되어, 원거리 스킬을
-    # 전제한 규칙표(GDD §3.5 카이팅)가 매 틱 '사거리 밖'으로 헛돈다.
-    skill_range: dict[str, int | None]
-    # 스킬 id -> 사용 후 걸리는 쿨타임(틱). ACT 가 성공한 행동에만 걸고 UPKEEP 이
-    # 매 틱 1씩 깎는다. 이것이 비어 있으면 `내 쿨타임[스킬] 완료` 가 영구히 참이 되어
-    # 그 항을 쓴 규칙이 사실상 한 항 짧아진다 — 조용히 틀리는 조건이 된다.
-    skill_cooldowns: dict[str, int] = field(default_factory=dict)
-    # 행동 id -> 회복량. 대상 최대 HP 의 정수 퍼센트다 (블록 목록 v4 의 HEAL).
-    # 고정값이 아니라 비율인 이유는 회복이 대상의 덩치에 비례해야 하기 때문이고,
-    # 퍼센트 정수인 이유는 R5 다 — 부동소수를 쓰면 플랫폼마다 결과가 갈린다.
-    skill_heal_pct: dict[str, int] = field(default_factory=dict)
-    # GUARD 계열 (블록 v5, 결정 #16). 받는 피해를 몇 % 줄이고 몇 틱 유지하는가.
-    skill_guard_pct: dict[str, int] = field(default_factory=dict)
-    skill_guard_ticks: dict[str, int] = field(default_factory=dict)
+    # 스킬 id -> 정의. **예전에는 속성마다 표가 따로였다** — 계수·사거리·쿨타임·
+    # 회복률·감쇠율·감쇠틱 여섯이다. 속성을 하나 더할 때마다 표가 늘었고, 무엇보다
+    # 표끼리 어긋날 수 있었다: 계수 표에만 있고 쿨타임 표에 없는 스킬은 「쿨타임 0」
+    # 으로 조용히 돌았다. 레코드 하나면 그 어긋남이 성립하지 않는다 (설계/5_스킬 §9).
+    skills: dict[str, SkillDef] = field(default_factory=dict)
     # kind_id -> 소환 규칙(주기·상한·소환물). 블록 목록 v3 이 SUMMON 을 행동으로
     # 올린 뒤로 '언제 소환하는가' 는 규칙표가 정한다 — 여기 남는 것은 '무엇을 몇 마리
     # 까지' 와, 쿨타임[SUMMON] 의 초기값이 되는 주기(every_ticks)다.

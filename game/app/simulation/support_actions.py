@@ -18,6 +18,7 @@ from game.app.simulation.plan import (
     PlannedAction,
 )
 from game.app.simulation.state import Entity, WorldState
+from game.app.skills.catalog import find_skill
 
 
 class SupportActionMixin:
@@ -90,7 +91,7 @@ class SupportActionMixin:
         """
         kind = plan.item_kind or abilities.ITEM_POTION
         if kind == abilities.ITEM_SCROLL:
-            ticks = self.config.skill_guard_ticks.get(GUARD_SKILL_ID, 0)
+            ticks = find_skill(self.config.skills, GUARD_SKILL_ID).guard_ticks
             held, outcome = abilities.resolve_scroll(entity, ticks)
             self._record(entity.entity_id, plan, outcome, held)
             return
@@ -111,9 +112,9 @@ class SupportActionMixin:
             entity: 시전자.
             plan: 실행할 계획.
         """
-        ticks = self.config.skill_guard_ticks.get(plan.action_id, 0)
+        ticks = find_skill(self.config.skills, plan.action_id).guard_ticks
         entity.statuses[STATUS_GUARD] = ticks
-        percent = self.config.skill_guard_pct.get(plan.action_id, 0)
+        percent = find_skill(self.config.skills, plan.action_id).guard_pct
         self.log.record(
             LogEntry(
                 tick=self.state.tick,

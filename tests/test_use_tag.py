@@ -122,5 +122,5 @@ def build_support(world):
     from game.app.simulation.actions import ActionExecutor
     from game.app.simulation.plan import EngineConfig
 
-    config = EngineConfig(damage_rules=(), kind_types={}, skill_coef_pct={}, skill_range={})
+    config = EngineConfig(damage_rules=(), kind_types={})
     return ActionExecutor(state=world, log=EventLog(), config=config, telegraphs={})
