@@ -9,7 +9,7 @@
 
 from dataclasses import dataclass
 
-from game.api.monster_service import find_holder
+from game.api.monster_service import apply_trophy_transfer, find_holder
 from game.app.core.event_log import LogEntry
 from game.app.services.verify_run import resolve_killer
 
@@ -101,3 +101,25 @@ def test_no_killer_takes_nothing():
 
 def test_no_holders_takes_nothing():
     assert find_holder([], "goblin_rusher_0") == 0
+
+
+# ── 0 을 넘겨받는 쪽 ─────────────────────────────────────────────────────
+
+
+def test_nobody_taking_it_is_not_an_error():
+    """★ **이음매다.** 위의 셋이 돌려준 0 을 받는 쪽이 여기다.
+
+    `find_holder` 가 0 을 돌려주는 것은 위에서 못 박아 뒀는데, 그 0 을 **받는** 쪽은
+    어느 테스트도 지나가지 않았다. 그래서 0 이 그대로 `create_trophy` 까지 흘러가
+    `owner_entity_id = 0` 으로 INSERT 가 나갔고, 외래키가 터져 제출 전체가 500 이 됐다 —
+    죽은 런의 37%가 이 길이었다(실측 134/357).
+
+    `test_a_doppel_never_takes_a_players_gear` 가 `holders == [0]` 으로 **0 이 넘어간다는
+    것 자체는 못 박아** 뒀는데, 같은 테스트가 `apply_trophy_transfer` 를 monkeypatch 로
+    걷어낸다. 어느 record_id 가 뽑히는지를 보려면 그 대체가 맞지만, 그래서 **0 을 받는
+    진짜 함수는 아무도 안 불렀다.** 여기가 그 자리다.
+
+    **DB 를 안 탄다.** 풀을 잡기 전에 돌아서는 것이 이 테스트가 보는 것이다 — 풀을
+    잡은 뒤에 걸러도 결과는 같지만, 그러면 이 파일이 DB 없이 못 돈다.
+    """
+    assert apply_trophy_transfer(account_id=1, record_id=0) == ""

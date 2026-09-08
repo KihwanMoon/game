@@ -229,11 +229,17 @@ def apply_trophy_transfer(account_id: int, record_id: int) -> str:
 
     Args:
         account_id: 죽은 계정.
-        record_id: 가져갈 몬스터.
+        record_id: 가져갈 몬스터. 0 이면 가져갈 개체가 없다.
 
     Returns:
         무슨 일이 있었는지. 가져갈 것이 없으면 빈 문자열.
     """
+    # **0 은 「아무도 안 가져간다」다** — `find_holder` 의 계약이고 드문 일도 아니다.
+    # 막타가 그 방에만 있던 잡몹이거나 도플갱어면(도플갱어는 holders 에서 이미 빠진다)
+    # 매번 0 이 온다. 그대로 넘기면 `owner_entity_id = 0` 으로 INSERT 가 나가고
+    # 외래키가 터져 제출 전체가 500 이 됐다 — 죽은 런의 37%가 이 길이었다.
+    if record_id <= 0:
+        return ""
     pool = get_pool()
     entity_id = find_player_entity(pool, account_id)
     equipped = list(list_equipment(pool, entity_id).values())
