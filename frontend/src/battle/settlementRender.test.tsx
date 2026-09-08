@@ -8,6 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import { BattlePortrait, type BattlePortraitProps } from './BattlePortrait'
+import { buildVitalRows } from './vitalRows'
 import { SettlementPanel } from './SettlementPanel'
 
 const SETTLED = [
@@ -48,14 +49,10 @@ function buildProps(patch: Partial<BattlePortraitProps> = {}): BattlePortraitPro
     rows: [],
     onToggleRule: () => undefined,
     entries: [],
-    cpuUsed: 4,
-    cpuBudget: 8,
-    hp: 80,
-    hpMax: 100,
-    potions: 1,
-    potionsMax: 2,
-    scrolls: 0,
-    scrollsMax: 1,
+    vitals: buildVitalRows({
+      hp: 40, hpMax: 100, potions: 2, potionsMax: 3, scrolls: 1, scrollsMax: 1,
+      cpuUsed: 5, cpuBudget: 8,
+    }),
     outcome: 'OUTCOME_ONGOING',
     ...patch,
   }

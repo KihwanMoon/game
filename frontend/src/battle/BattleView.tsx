@@ -54,6 +54,7 @@ import { buildRunRulesets, toggleRulePriority, type SheetTab } from './portraitS
 import { buildRuleRows } from './ruleRows'
 import { PlanCanvas } from './PlanCanvas'
 import { buildLookOf } from './weaponLook'
+import { buildVitalRows } from './vitalRows'
 import { buildPlanScene } from './planScene'
 import {
   checkPlanThemeSame,
@@ -409,21 +410,21 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
       plan={plan}
       rows={rows}
       onToggleRule={toggleRule}
-      cpuUsed={cpuUsed}
-      cpuBudget={cpuBudget}
       entries={session.engine.log.entries.slice(-LOG_TAIL)}
       settlements={props.settlements ?? []}
-      hp={player?.hp ?? 0}
-      hpMax={player?.hpMax ?? 1}
-      potions={player === undefined ? 0 : countItem(player, 'POTION')}
-      potionsMax={readCarried(props.setup, 'POTION')}
-      scrolls={player === undefined ? 0 : countItem(player, 'SCROLL')}
-      scrollsMax={readCarried(props.setup, 'SCROLL')}
-      cooldowns={formatCooldowns(
-        player?.cooldowns,
-        listRulesetSkills(session.ruleset.rules),
-        session.engine.config.skillCooldowns,
-      )}
+      vitals={buildVitalRows({
+        hp: player?.hp ?? 0,
+        hpMax: player?.hpMax ?? 1,
+        potions: player === undefined ? 0 : countItem(player, 'POTION'),
+        potionsMax: readCarried(props.setup, 'POTION'),
+        scrolls: player === undefined ? 0 : countItem(player, 'SCROLL'),
+        scrollsMax: readCarried(props.setup, 'SCROLL'),
+        cpuUsed,
+        cpuBudget,
+        cooldowns: player?.cooldowns,
+        skills: listRulesetSkills(session.ruleset.rules),
+        totals: session.engine.config.skillCooldowns,
+      })}
       tab={tab}
       onTabChange={setTab}
       bodyRef={sheetRef}

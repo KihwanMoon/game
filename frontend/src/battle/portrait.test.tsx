@@ -31,6 +31,7 @@ import {
   SHEET_TABS,
   buildRunRulesets,
   buildRuleRows,
+  buildVitalRows,
   checkRuleEnabled,
   formatLogTabCount,
   formatRuleCondition,
@@ -95,15 +96,11 @@ function buildProps(patch: Partial<BattlePortraitProps> = {}): BattlePortraitPro
     plan: <canvas className="battle-plan__canvas" />,
     rows: ROWS,
     onToggleRule: () => undefined,
-    cpuUsed: 5,
-    cpuBudget: 8,
     entries: [{ tick: 27, rule: 1, expr: '적거리(2) <= 사거리(3)', outcome: 'SKILL_1 @goblin_runner', delta: -18, fired: true }],
-    hp: 40,
-    hpMax: 100,
-    potions: 2,
-    potionsMax: 3,
-    scrolls: 1,
-    scrollsMax: 1,
+    vitals: buildVitalRows({
+      hp: 40, hpMax: 100, potions: 2, potionsMax: 3, scrolls: 1, scrollsMax: 1,
+      cpuUsed: 5, cpuBudget: 8,
+    }),
     tab: 'rules',
     onTabChange: () => undefined,
     ...patch,
@@ -132,9 +129,11 @@ function collectElements(node: ReactNode): readonly ReactElement[] {
 }
 
 describe('세로 시트 — 탭과 카운트 (명세 A·D)', () => {
-  it('★ 탭은 셋이다 — 정산이 로그와 같은 급으로 붙었다', () => {
+  it('★ 탭은 넷이다 — 상태가 첫 탭으로 붙었다', () => {
     // 층 정산이 상단 알림이던 때는 뜰 때마다 도면·규칙표·로그가 전부 밀렸다.
-    expect(SHEET_TABS).toEqual(['rules', 'log', 'reward'])
+    // 상태(체력·소모품·쿨타임·예산)도 같은 이유로 늘 보이는 줄에서 탭으로 왔다 —
+    // 가로로 이으면 스킬이 둘만 돼도 잘린다.
+    expect(SHEET_TABS).toEqual(['vitals', 'rules', 'log', 'reward'])
   })
 
   it('탭 라벨에 카운트를 함께 적는다', () => {
@@ -168,12 +167,17 @@ describe('세로 시트 — 탭과 카운트 (명세 A·D)', () => {
     expect(log).toContain('ds-log-row')
     expect(log).not.toContain('ds-rule-table')
 
-    // 도면과 상태 줄은 두 탭에서 한 글자도 다르지 않다.
+    // 도면은 어느 탭에서도 한 글자도 다르지 않다 — 시트만 바뀐다.
     for (const html of [rules, log]) {
       expect(html).toContain('battle__col--plan')
       expect(html).toContain('battle-plan__canvas')
-      expect(html).toContain('battle__vitals')
     }
+
+    // 상태 탭은 값을 한 줄에 하나씩 쌓는다.
+    const vitals = renderToStaticMarkup(<BattlePortrait {...buildProps({ tab: 'vitals' })} />)
+    expect(vitals).toContain('battle__vital-name')
+    expect(vitals).toContain('40 / 100')
+    expect(vitals).not.toContain('ds-rule-table')
   })
 
   it('탭을 누르면 그 탭이 올라온다', () => {
@@ -184,11 +188,11 @@ describe('세로 시트 — 탭과 카운트 (명세 A·D)', () => {
     const tabs = elements.filter(
       (element) => (element.props as { role?: string }).role === 'tab',
     )
-    expect(tabs).toHaveLength(3)
+    expect(tabs).toHaveLength(4)
     for (const tab of tabs) {
       ;(tab.props as { onClick: () => void }).onClick()
     }
-    expect(picked).toEqual(['rules', 'log', 'reward'])
+    expect(picked).toEqual(['vitals', 'rules', 'log', 'reward'])
   })
 
   it('지금 탭만 눌린 상태로 나간다', () => {
@@ -381,14 +385,21 @@ describe('상태줄 — 판정 네 가지 (명세 D)', () => {
 
 describe('시트 하단 — CPU 와 두 버튼', () => {
   it('★ 예산을 넘으면 색만 넘어간다 — 오류가 아니라 수치다', () => {
-    // 게이지 한 덩이(48px)를 쓰던 것을 상태 줄의 글자 하나로 줄였다. 전투 중에는
-    // 예산이 변하지 않으므로 눈금이 필요 없고, 그 자리는 체력이 더 급하다.
-    const under = renderToStaticMarkup(<BattlePortrait {...buildProps({ cpuUsed: 5 })} />)
-    expect(under).toContain('cpu 5/8')
-    expect(under).not.toContain('battle__cpu--over')
-    const over = renderToStaticMarkup(<BattlePortrait {...buildProps({ cpuUsed: 10 })} />)
-    expect(over).toContain('cpu 10/8')
-    expect(over).toContain('battle__cpu--over')
+    const build = (cpuUsed: number) =>
+      buildVitalRows({
+        hp: 40, hpMax: 100, potions: 2, potionsMax: 3, scrolls: 1, scrollsMax: 1,
+        cpuUsed, cpuBudget: 8,
+      })
+    const under = renderToStaticMarkup(
+      <BattlePortrait {...buildProps({ vitals: build(5), tab: 'vitals' })} />,
+    )
+    expect(under).toContain('5 / 8')
+    expect(under).not.toContain('battle__vital--warn')
+    const over = renderToStaticMarkup(
+      <BattlePortrait {...buildProps({ vitals: build(10), tab: 'vitals' })} />,
+    )
+    expect(over).toContain('10 / 8')
+    expect(over).toContain('battle__vital--warn')
   })
 
   it('한 틱과 처음부터 두 버튼이 있고 각각이 제 콜백을 부른다', () => {
@@ -527,10 +538,14 @@ describe('★ 한정된 화면의 공간 예산', () => {
     expect(block).toContain('max-inline-size: calc(var(--plan-cell) * var(--plan-cols))')
   })
 
-  it('★ 조작부 줄의 높이가 박혀 있다 — 전투가 끝나면 버튼 셋이 더 나타난다', () => {
-    // 접히게 두면 한 줄이 네 줄이 되고 도면과 시트가 통째로 내려갔다 (실제 스크린샷).
+  it('★ 조작부 줄의 높이가 박혀 있다 — 접혀도 줄 수가 안 변한다', () => {
+    // 예전에는 끝나야 쓸 수 있는 버튼들이 그때 나타나서 한 줄이 네 줄이 됐다(실제
+    // 스크린샷). 이제 전부 늘 그려 두고 못 쓸 때는 꺼 두므로 줄 수가 판과 무관하다.
     expect(cutRule('.battle--portrait .battle__controls')).toContain('height: var(--bar-controls)')
-    expect(cutRule('.battle__controls .launch')).toContain('flex-wrap: nowrap')
+  })
+
+  it('★ 상태 값은 한 줄에 하나씩 쌓인다 — 가로로 이으면 잘린다', () => {
+    expect(cutRule('.battle__vitals')).toContain('flex-direction: column')
   })
 
   it('★ 시트 높이가 하한과 상한이 같다 — 자라면 아래 전부가 밀린다', () => {
@@ -540,11 +555,7 @@ describe('★ 한정된 화면의 공간 예산', () => {
     expect(block).toContain('max-height: var(--sheet-body-h)')
   })
 
-  it('★ 상태 줄이 한 줄에 갇힌다 — 접히면 도면과 시트가 그만큼 내려간다', () => {
-    const block = cutRule('.battle__vitals')
-    expect(block).toContain('height: var(--bar-vitals)')
-    expect(cutRule('.battle__supply')).toContain('white-space: nowrap')
-  })
+
 
   it('★ 머리 두 줄이 스크롤에 안 딸려 간다', () => {
     for (const selector of ['.battle--portrait .battle__bar--top', '.battle--portrait .battle__vitals']) {

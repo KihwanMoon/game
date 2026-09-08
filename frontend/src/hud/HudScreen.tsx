@@ -27,6 +27,7 @@ import { Button, TopBar } from '../ds'
 import type { BattleRecording } from './battleRecorder'
 import { useLogAnchor } from './logWindow'
 import { PostMortem } from './PostMortem'
+import { buildVitalRows } from '../battle'
 import { buildReplayTrace, buildSheetRows, findDecision } from './replayTrace'
 import { TickScrubber } from './TickScrubber'
 import { usePlanTheme } from './usePlanTheme'
@@ -142,14 +143,16 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
         onToggleRule={() => undefined}
         entries={visible}
         tick={frame.tick}
-        hp={frame.playerHp}
-        hpMax={frame.playerHpMax}
-        cpuUsed={cpuTotal}
-        cpuBudget={recording.cpuBudget}
-        potions={frame.potions}
-        potionsMax={recording.potionsMax}
-        scrolls={frame.scrolls}
-        scrollsMax={recording.potionsMax}
+        vitals={buildVitalRows({
+          hp: frame.playerHp,
+          hpMax: frame.playerHpMax,
+          potions: frame.potions,
+          potionsMax: recording.potionsMax,
+          scrolls: frame.scrolls,
+          scrollsMax: recording.potionsMax,
+          cpuUsed: cpuTotal,
+          cpuBudget: recording.cpuBudget,
+        })}
         tab={tab}
         onTabChange={setTab}
         bodyRef={sheetRef}

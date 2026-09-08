@@ -93,12 +93,22 @@ export function formatAutoAdvanceNote(
   roomNumber: number,
   roomTotal: number,
 ): string {
+  // **음수는 「아직 아니다」다.** 도는 중이 아닐 때 줄을 지우면 그만큼 화면이 움직이고,
+  // 여러 줄로 접히는 자리에서는 줄 수까지 바뀐다 — 자리를 지키고 말만 바꾼다.
+  if (secondsLeft < 0) {
+    return `이기면 다음 방(${String(roomNumber)}/${String(roomTotal)})으로 간다`
+  }
   return `${String(secondsLeft)}초 뒤 다음 방(${String(roomNumber)}/${String(roomTotal)})으로 간다`
 }
 
 /** 자동 진행 안내가 받는 props. */
 export interface AutoAdvanceNoticeProps {
-  /** 남은 초. undefined 면 안 그린다. */
+  /**
+   * 남은 초. `undefined` 면 안 그리고, **음수면 자리만 지킨다.**
+   *
+   * 도는 중이 아닐 때 통째로 지우면 그만큼 화면이 움직인다 — 버튼을 없다가 생기게
+   * 하지 않는 규율과 같다 (실제 요청).
+   */
   readonly secondsLeft: number | undefined
   readonly roomNumber: number
   readonly roomTotal: number
@@ -122,8 +132,16 @@ export function AutoAdvanceNotice(props: AutoAdvanceNoticeProps): React.JSX.Elem
         text={formatAutoAdvanceNote(props.secondsLeft, props.roomNumber, props.roomTotal)}
         size="sm"
       />
-      {/* **멈추기가 안내 옆에 붙어 있어야 한다.** 설정 화면에 있으면 지금 멈출 수 없다. */}
-      <Button size="sm" variant="ghost" glyph="⏸" title="여기서 멈춘다 — 규칙을 고칠 수 있다" onClick={props.onStop}>
+      {/* **멈추기가 안내 옆에 붙어 있어야 한다.** 설정 화면에 있으면 지금 멈출 수 없다.
+          도는 중이 아니면 꺼 둔다 — 없애면 그만큼 줄이 움직인다. */}
+      <Button
+        size="sm"
+        variant="ghost"
+        glyph="⏸"
+        disabled={props.secondsLeft < 0}
+        title="여기서 멈춘다 — 규칙을 고칠 수 있다"
+        onClick={props.onStop}
+      >
         멈춤
       </Button>
     </div>

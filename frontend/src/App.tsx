@@ -2100,19 +2100,26 @@ export function App(): React.JSX.Element {
         size="sm"
       />
       <ValueExpr text={`seed ${String(run.setup.seed)}`} size="sm" dim />
-      {finished ? (
-        <Button
-          size="sm"
-          variant="ghost"
-          glyph="◱"
-          title="규칙별 발동 통계·피해 히트맵·직전 15틱 되감기"
-          onClick={() => {
-            setPostState('open')
-          }}
-        >
-          사후 분석
-        </Button>
-      ) : null}
+      {/* **버튼은 없다가 생기지 않는다** (2026-09-08, 실제 요청). 끝나야 쓸 수 있는
+          것들이 그때 나타나면 줄 수가 바뀌고 화면이 통째로 움직인다 — 늘 그려 두고
+          쓸 수 없을 때는 꺼 둔다. 있는데 꺼진 것과 아예 없는 것은 다른 말이고, 앞엣것이
+          「이건 언제 쓰나」에 답한다. */}
+      <Button
+        size="sm"
+        variant="ghost"
+        glyph="◱"
+        disabled={!finished}
+        title={
+          finished
+            ? '규칙별 발동 통계·피해 히트맵·직전 15틱 되감기'
+            : '판이 끝나면 열린다 — 규칙별 발동 통계와 되감기'
+        }
+        onClick={() => {
+          setPostState('open')
+        }}
+      >
+        사후 분석
+      </Button>
       <Button
         size="sm"
         variant="ghost"
@@ -2122,47 +2129,48 @@ export function App(): React.JSX.Element {
       >
         다시
       </Button>
-      {nextRoom === undefined ? null : (
-        <>
-          <Button
-            size="sm"
-            variant="primary"
-            glyph="→"
-            title="체력과 포션을 그대로 들고 다음 방으로 넘어간다"
-            onClick={goToNextRoom}
-          >
-            다음 방 {String((run.setup.chain?.index ?? 0) + 2)}/
-            {String(run.setup.chain?.roomIds.length ?? 1)}
-          </Button>
-          <AutoAdvanceNotice
-            secondsLeft={autoLeft}
-            roomNumber={(run.setup.chain?.index ?? 0) + 2}
-            roomTotal={run.setup.chain?.roomIds.length ?? 1}
-            onStop={() => {
-              setAutoStopped(true)
-            }}
-          />
-          {/* **끄기는 안내와 다른 일이다.** 멈춤은 이번 방만이고, 이것은 앞으로 계속이다.
-              둘을 한 버튼에 두면 한 번 멈추려다 기능을 꺼 버린다. */}
-          <Button
-            size="sm"
-            variant="ghost"
-            glyph={isAutoOn ? '⏩' : '⏸'}
-            title={
-              isAutoOn
-                ? '자동 진행을 끈다 — 방마다 눌러서 넘어간다'
-                : '자동 진행을 켠다 — 이기면 몇 초 뒤 저절로 넘어간다'
-            }
-            onClick={() => {
-              const next = !isAutoOn
-              setAutoOn(next)
-              writeAutoAdvance(getLocalStorage(), next)
-            }}
-          >
-            자동 진행 {isAutoOn ? '켬' : '끔'}
-          </Button>
-        </>
-      )}
+      <Button
+        size="sm"
+        variant={nextRoom === undefined ? 'ghost' : 'primary'}
+        glyph="→"
+        disabled={nextRoom === undefined}
+        title={
+          nextRoom === undefined
+            ? '방을 깨면 열린다 — 체력과 포션을 그대로 들고 넘어간다'
+            : '체력과 포션을 그대로 들고 다음 방으로 넘어간다'
+        }
+        onClick={goToNextRoom}
+      >
+        다음 방 {String((run.setup.chain?.index ?? 0) + 2)}/
+        {String(run.setup.chain?.roomIds.length ?? 1)}
+      </Button>
+      <AutoAdvanceNotice
+        secondsLeft={nextRoom === undefined ? -1 : autoLeft}
+        roomNumber={(run.setup.chain?.index ?? 0) + 2}
+        roomTotal={run.setup.chain?.roomIds.length ?? 1}
+        onStop={() => {
+          setAutoStopped(true)
+        }}
+      />
+      {/* **끄기는 안내와 다른 일이다.** 멈춤은 이번 방만이고, 이것은 앞으로 계속이다.
+          둘을 한 버튼에 두면 한 번 멈추려다 기능을 꺼 버린다. */}
+      <Button
+        size="sm"
+        variant="ghost"
+        glyph={isAutoOn ? '⏩' : '⏸'}
+        title={
+          isAutoOn
+            ? '자동 진행을 끈다 — 방마다 눌러서 넘어간다'
+            : '자동 진행을 켠다 — 이기면 몇 초 뒤 저절로 넘어간다'
+        }
+        onClick={() => {
+          const next = !isAutoOn
+          setAutoOn(next)
+          writeAutoAdvance(getLocalStorage(), next)
+        }}
+      >
+        자동 진행 {isAutoOn ? '켬' : '끔'}
+      </Button>
       <Button size="sm" variant="ghost" glyph="↰" onClick={goToEditor}>
         규칙 고치기
       </Button>

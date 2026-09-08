@@ -22,6 +22,7 @@ import type { ReactNode, Ref } from 'react'
 import { Button, LogPanel, RuleRow, RuleTable, SegmentedGauge } from '../ds'
 import type { LogRowProps } from '../ds'
 import { SHEET_TABS, SHEET_TAB_LABELS, formatRuleCondition, type SheetTab } from './portraitSheet'
+import type { VitalRow } from './vitalRows'
 import type { FloorSettlement } from './settlement'
 import { SettlementPanel } from './SettlementPanel'
 import type { RuleRowView } from './ruleRows'
@@ -159,6 +160,8 @@ export interface BattleSheetProps {
   readonly entries: readonly LogRowProps[]
   /** 지금 보고 있는 틱. 로그에서 그 틱의 줄에 표시가 붙는다. */
   readonly currentTick?: number
+  /** 상태 탭의 줄들. **한 줄에 하나씩** 쌓는다 — 가로로 이으면 잘린다. */
+  readonly vitals?: readonly VitalRow[]
   /** 층별 정산. 로그와 같은 급의 탭으로 선다. */
   readonly settlements?: readonly FloorSettlement[]
   /** 스킬 쿨타임 한 줄. 비어 있으면 안 그린다 — 도는 쿨이 없을 때 빈 줄은 자리 낭비다. */
@@ -222,7 +225,21 @@ export function BattleSheet(props: BattleSheetProps): React.JSX.Element {
       )}
       <SheetTabs active={props.tab} counts={props.counts} onChange={props.onTabChange} />
       <div className="battle__sheet-body" ref={props.bodyRef}>
-        {props.tab === 'log' ? (
+        {props.tab === 'vitals' ? (
+          // **정보 하나에 한 줄** (실제 요청). 정산 탭이 같은 이유로 세로로 쌓는다 —
+          // 가로로 이으면 무엇이 들어 있는지 훑을 수 없다.
+          <ul className="battle__vitals">
+            {(props.vitals ?? []).map((row) => (
+              <li
+                className={`battle__vital${row.isWarning === true ? ' battle__vital--warn' : ''}`}
+                key={row.label}
+              >
+                <span className="battle__vital-name">{row.label}</span>
+                <span className="battle__vital-value">{row.value}</span>
+              </li>
+            ))}
+          </ul>
+        ) : props.tab === 'log' ? (
           <LogPanel
             entries={props.entries}
             {...(props.currentTick === undefined ? {} : { currentTick: props.currentTick })}

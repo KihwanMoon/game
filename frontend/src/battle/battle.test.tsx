@@ -711,7 +711,9 @@ describe('반응형 토큰 (design/tokens/spacing.css)', () => {
     // 전용 줄 둘이 사라졌다 (2026-09-08). 배속은 시트 하단의 시간 조작 줄로 내려갔고
     // 판정·예고는 도면 위에 겹친다 — 고정 줄 하나가 곧 체력을 화면 밖으로 미는 44px 였다.
     expect(root).toContain('--bar-status:0px')
-    expect(root).toContain('--bar-vitals:44px')
+    // 상태는 시트의 첫 탭이 됐다 — 전용 줄이 없다 (2026-09-08).
+    expect(root).toContain('--bar-vitals:0px')
+    expect(root).toContain('--bar-controls:84px')
     expect(root).toContain('--row-h:54px')
     // 12x30 = 360 에 좌우 여백을 더해도 390 을 넘지 않아야 한다.
     const cell = 30

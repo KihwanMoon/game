@@ -31,6 +31,7 @@ import { BattleFrame } from './BattleFrame'
 import type { FloorSettlement } from './settlement'
 import { formatTick, type SheetTab } from './portraitSheet'
 import type { RuleRowView } from './ruleRows'
+import type { VitalRow } from './vitalRows'
 import { SpeedBox } from './SpeedBox'
 
 /**
@@ -86,21 +87,17 @@ export interface BattlePortraitProps {
   readonly rows: readonly RuleRowView[]
   /** 규칙 줄을 눌렀을 때. 켜고 끄는 것이 세로 화면의 유일한 규칙 조작이다. */
   readonly onToggleRule: (priority: number) => void
-  /** 켜진 규칙들의 누적 CPU. */
-  readonly cpuUsed: number
-  readonly cpuBudget: number
   /** 로그 줄들. 코어의 `engine.log.entries` 를 그대로 받는다. */
   readonly entries: readonly LogRowProps[]
   /** 층별 정산. 상단 알림이 아니라 탭이다 — 알림은 뜰 때마다 아래 전부를 밀었다. */
   readonly settlements?: readonly FloorSettlement[]
-  readonly hp: number
-  readonly hpMax: number
-  readonly potions: number
-  readonly potionsMax: number
-  /** 남은 주문서와 실은 수. 물약과 같은 자리다 — 소모품 현황이 플레이 중에 보여야 한다. */
-  readonly scrolls: number
-  readonly scrollsMax: number
-  readonly cooldowns?: string
+  /**
+   * 상태 탭의 줄들 — 체력·소모품·쿨타임·예산.
+   *
+   * **한 줄에 하나씩 쌓는다** (실제 요청). 늘 보이는 한 줄로 이어 두었더니 스킬이 둘만
+   * 돼도 잘렸다 — 가로로 이으면 무엇이 들어 있는지 훑을 수 없다.
+   */
+  readonly vitals: readonly VitalRow[]
   readonly tab: SheetTab
   readonly onTabChange: (tab: SheetTab) => void
   /** 시트 본문. 로그를 마지막 줄에 붙여 두려고 밖에서 잡는다. */
@@ -117,13 +114,9 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
   return (
     <div className="battle battle--portrait">
       {/* **붙어 있는다.** 문서가 화면보다 길어지면 스크롤하는데, 그때 층·실과 틱이
-          함께 올라가면 지금 어디의 몇 틱인지가 화면 밖으로 나간다. 체력 줄도 바로
-          아래에 붙는다 (`battle.css` 의 `--vitals` 규칙). */}
+          함께 올라가면 지금 어디의 몇 틱인지가 화면 밖으로 나간다. */}
       <header className="battle__bar battle__bar--top">
         <h1 className="battle__location">{props.location}</h1>
-        {props.controls === undefined ? null : (
-          <span className="battle__controls">{props.controls}</span>
-        )}
         <span className="battle__tick">
           <span className="battle__tick-glyph" aria-hidden="true">
             {TICK_GLYPH}
@@ -132,6 +125,13 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
           {formatTick(props.tick)}
         </span>
       </header>
+
+      {/* **도면 밑이다** (2026-09-08, 실제 요청). 머리에 두면 화면을 여는 순간 눈이 먼저
+          닿는 것이 「나가는 문」이 되고, 판을 보러 온 사람에게 도면이 그만큼 밀린다.
+          도면을 보고 나서 무엇을 할지 고르는 순서가 맞다. */}
+      {props.controls === undefined ? null : (
+        <span className="battle__controls">{props.controls}</span>
+      )}
 
       <BattleFrame
         {...(props.plan === undefined ? {} : { plan: props.plan })}
@@ -142,15 +142,7 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
         entries={props.entries}
         tick={props.tick}
         settlements={props.settlements ?? []}
-        hp={props.hp}
-        hpMax={props.hpMax}
-        cpuUsed={props.cpuUsed}
-        cpuBudget={props.cpuBudget}
-        {...(props.cooldowns === undefined ? {} : { cooldowns: props.cooldowns })}
-        potions={props.potions}
-        potionsMax={props.potionsMax}
-        scrolls={props.scrolls}
-        scrollsMax={props.scrollsMax}
+        vitals={props.vitals}
         tab={props.tab}
         onTabChange={props.onTabChange}
         {...(props.bodyRef === undefined ? {} : { bodyRef: props.bodyRef })}

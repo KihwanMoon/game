@@ -25,6 +25,7 @@ import { formatOutcome, formatTickLabel } from './analysisText'
 import type { BattleRecording, RecordedFrame } from './battleRecorder'
 import { DamageHeatmap } from './DamageHeatmap'
 import { DEATH_REPLAY_TICKS, useLogAnchor } from './logWindow'
+import { buildVitalRows } from '../battle'
 import { buildReplayTrace, buildSheetRows, findDecision } from './replayTrace'
 import { RuleStatsTable } from './RuleStatsTable'
 import { TickScrubber } from './TickScrubber'
@@ -145,14 +146,16 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
                 onToggleRule={() => undefined}
                 entries={recording.entries.slice(0, frame.logEnd)}
                 tick={tick}
-                hp={frame.playerHp}
-                hpMax={frame.playerHpMax}
-                cpuUsed={trace.at(-1)?.cpuUsed ?? 0}
-                cpuBudget={recording.cpuBudget}
-                potions={frame.potions}
-                potionsMax={recording.potionsMax}
-                scrolls={frame.scrolls}
-                scrollsMax={recording.potionsMax}
+                vitals={buildVitalRows({
+                  hp: frame.playerHp,
+                  hpMax: frame.playerHpMax,
+                  potions: frame.potions,
+                  potionsMax: recording.potionsMax,
+                  scrolls: frame.scrolls,
+                  scrollsMax: recording.potionsMax,
+                  cpuUsed: trace.at(-1)?.cpuUsed ?? 0,
+                  cpuBudget: recording.cpuBudget,
+                })}
                 tab={tab}
                 onTabChange={setTab}
                 bodyRef={sheetRef}

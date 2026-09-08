@@ -420,8 +420,8 @@ describe('시트 — 탭과 규칙 토글은 세로와 같은 부품이다', () 
       const props = one.props as { readonly role?: string }
       return props.role === 'tab'
     })
-    expect(tabs).toHaveLength(3)
-    ;(tabs[1]?.props as { readonly onClick?: () => void }).onClick?.()
+    expect(tabs).toHaveLength(4)
+    ;(tabs[2]?.props as { readonly onClick?: () => void }).onClick?.()
     expect(onTabChange).toHaveBeenCalledWith('log')
   })
 
@@ -467,8 +467,8 @@ describe('가로 화면도 황동 예산을 지킨다', () => {
 describe('세로 배치의 상단 (층·틱은 헤더, 조작은 아래 줄)', () => {
   const css = readStrippedCss('battle.css')
 
-  it('★ 조작이 둘째 줄로 내려간다 — 44px 한 줄에 다 넣으면 층과 틱이 먼저 잘린다', () => {
-    expect(css).toMatch(/\.battle--portrait \.battle__controls \{[\s\S]*?flex-basis: 100%/)
+  it('★ 조작부가 도면 밑에 제 줄로 선다 — 머리에 두면 도면이 그만큼 밀린다', () => {
+    expect(css).toMatch(/\.battle--portrait \.battle__controls \{[\s\S]*?height: var\(--bar-controls\)/)
   })
 
   it('★ 상단이 제 내용 높이를 온전히 갖는다 — 문서 흐름이라 격자 행 배정이 없다', () => {

@@ -21,6 +21,10 @@ export { BattleCheck } from './BattleCheck'
 // **전투 화면의 속.** 관전·되감기·사후 분석이 나눠 쓴다 — 시간축만 다르고 그리는 것은
 // 하나다. 바는 화면마다 다른 것을 실으므로 여기 없다.
 export { BattleFrame } from './BattleFrame'
+
+// 상태 탭의 줄들. **정보 하나에 한 줄** — 세 화면이 같은 값을 같은 모양으로 낸다.
+export { COOLDOWN_LABELS, buildVitalRows, listCooldownRows } from './vitalRows'
+export type { VitalInput, VitalRow } from './vitalRows'
 export type { BattleFrameProps } from './BattleFrame'
 
 export { PlanCanvas, describeScene } from './PlanCanvas'
