@@ -48,6 +48,10 @@ class WorldReading:
     open_listings: int
     # 안 나간 콘텐츠 초안 수. 에이전트가 붙으면 여기가 쌓인다.
     drafts: int
+    # 창 안에 서버가 낸 5xx 수와 가장 많은 경로 (§6 H1). **나머지 여덟은 상태
+    # 정합성만 본다** — /api/run 이 제출의 37%에서 500 을 내는 동안 전부 OK 였다.
+    api_errors: int = 0
+    api_error_path: str = ""
 
 
 def read_world(pool: ConnectionPool, window_hours: int, first_look_hours: int) -> WorldReading:
@@ -143,6 +147,13 @@ def read_world(pool: ConnectionPool, window_hours: int, first_look_hours: int) -
 
         drafts = connection.execute("SELECT count(*) FROM content_draft").fetchone()
 
+        # 5xx 는 오래된 줄이 넣을 때 지워지므로 표가 작다 (`store/api_errors.py`).
+        errors = connection.execute(
+            "SELECT count(*), coalesce(mode() WITHIN GROUP (ORDER BY path), '')"
+            " FROM api_error WHERE happened_at > now() - make_interval(hours => %s)",
+            (window_hours,),
+        ).fetchone()
+
     return WorldReading(
         floor_behind=int(floor[0] or 0) if floor else 0,
         floor_total=int(floor[1] or 0) if floor else 0,
@@ -162,4 +173,6 @@ def read_world(pool: ConnectionPool, window_hours: int, first_look_hours: int) -
         stale_listings=int(auction[0] or 0) if auction else 0,
         open_listings=int(auction[1] or 0) if auction else 0,
         drafts=int(drafts[0] or 0) if drafts else 0,
+        api_errors=int(errors[0] or 0) if errors else 0,
+        api_error_path=str(errors[1] or "") if errors else "",
     )

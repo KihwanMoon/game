@@ -42,6 +42,12 @@ MISMATCH_ALARM_PCT = 20
 # 영영 안 사던 때, 창이 지난 매물이 계속 쌓이기만 했다.
 STALE_LISTING_ALARM = 5
 
+# 창 안의 5xx 가 이만큼이면 경보다. **하나도 정상이 아니다** — 서버가 낸 5xx 는
+# 클라이언트가 못 고치는 실패다. 다만 배포 순간의 한두 건까지 깨우면 아무도 안 보게
+# 되므로, 하나는 살핌이고 여럿이 경보다.
+API_ERROR_WARN = 1
+API_ERROR_ALARM = 5
+
 # 초안이 이만큼 오래 안 나가면 알린다. 지금은 사람이 만들어 드물지만, 콘텐츠 에이전트가
 # 붙으면 여기가 먼저 쌓인다 — 발행은 사람이 누르기 때문이다.
 DRAFT_WARN = 3
@@ -253,9 +259,34 @@ def check_drafts(reading: WorldReading) -> Finding:
     return build_finding("콘텐츠 초안", LEVEL_OK, "쌓인 초안이 적다", detail)
 
 
+def check_api_errors(reading: WorldReading) -> Finding:
+    """서버가 5xx 를 내고 있는가 (§6 H1).
+
+    **나머지 여덟은 상태 정합성만 본다.** 그래서 `/api/run` 이 제출의 37%에서 500 을
+    내는 동안 여덟이 전부 OK 였고, 이틀 뒤에 사람이 컨테이너 로그를 보고서야 잡혔다 —
+    티켓은 소모되고 보상은 들어갔는데 소모품 차감·최고층·정비가 통째로 건너뛴 채였다.
+
+    경로를 함께 낸다. 「12건」과 「12건, 전부 /api/run」은 다른 정보다.
+
+    Args:
+        reading: 읽은 값들.
+
+    Returns:
+        소견.
+    """
+    where = f" · {reading.api_error_path}" if reading.api_error_path else ""
+    detail = f"{reading.api_errors}건{where}"
+    if reading.api_errors >= API_ERROR_ALARM:
+        return build_finding("서버 오류", LEVEL_ALARM, "5xx 가 계속 난다", detail)
+    if reading.api_errors >= API_ERROR_WARN:
+        return build_finding("서버 오류", LEVEL_WARN, "5xx 가 났다", detail)
+    return build_finding("서버 오류", LEVEL_OK, "5xx 가 없다", detail)
+
+
 # 돌릴 판정들. **순서가 곧 보고서의 순서**다 — 세계가 멈추는 것(러너)부터 사람이
 # 겪는 것(정비), 그다음이 경제와 운영이다.
 CHECKS = (
+    check_api_errors,
     check_bot_runner,
     check_maintenance_left,
     check_floor_record,

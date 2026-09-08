@@ -169,3 +169,53 @@ def test_the_worst_level_wins():
     """★ 한 줄 요약은 가장 나쁜 것을 말한다 — 종료 코드가 그것을 본다."""
     assert resolve_worst(list_findings(build_reading(bots_overdue=10))) == LEVEL_ALARM
     assert resolve_worst(list_findings(build_reading(stale_listings=1))) == LEVEL_WARN
+
+
+# ── 서버 오류 (§6 H1) ────────────────────────────────────────────────────
+
+
+def test_quiet_server_is_ok():
+    from game.app.watch.checks import check_api_errors
+
+    assert check_api_errors(build_reading()).level == LEVEL_OK
+
+
+def test_one_error_is_worth_a_look():
+    """★ 5xx 하나도 정상이 아니다 — 클라이언트가 못 고치는 실패다.
+
+    다만 배포 순간의 한두 건까지 깨우면 아무도 안 보게 되므로 하나는 살핌이다.
+    """
+    from game.app.watch.checks import check_api_errors
+
+    assert check_api_errors(build_reading(api_errors=1)).level == LEVEL_WARN
+
+
+def test_a_stream_of_errors_is_an_alarm():
+    """★ **이 검사가 없어서 이틀이 걸렸다.**
+
+    `/api/run` 이 제출의 37%에서 500 을 내는 동안 나머지 여덟이 전부 OK 였다. 그것들이
+    보는 것은 상태 정합성이지 요청이 성공했는가가 아니다.
+    """
+    from game.app.watch.checks import check_api_errors
+
+    assert check_api_errors(build_reading(api_errors=12)).level == LEVEL_ALARM
+
+
+def test_the_path_rides_along():
+    """★ 「12건」과 「12건, 전부 /api/run」은 다른 정보다."""
+    from game.app.watch.checks import check_api_errors
+
+    found = check_api_errors(build_reading(api_errors=12, api_error_path="/api/run"))
+    assert "/api/run" in found.detail
+
+
+def test_the_new_check_is_actually_registered():
+    """★ 검사를 만들고 목록에 안 넣으면 아무것도 안 달라진다.
+
+    모듈 단위 검사는 통과하는데 지킴이는 여전히 여덟만 돈다 — 통합에서 가장 흔한
+    실패 방식이고, 이 저장소가 W6 배선 회귀로 한 번 겪었다.
+    """
+    from game.app.watch.checks import list_findings
+
+    keys = [finding.key for finding in list_findings(build_reading(api_errors=9))]
+    assert "서버 오류" in keys, "아홉 번째 검사가 CHECKS 에 없다"

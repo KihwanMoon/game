@@ -755,6 +755,22 @@ CREATE TABLE IF NOT EXISTS watch_event (
 
 CREATE INDEX IF NOT EXISTS watch_event_time_idx ON watch_event(happened_at DESC);
 
+-- 서버가 낸 5xx (§6 H1). **지킴이 검사 여덟이 상태 정합성만 봐서**, /api/run 이 제출의
+-- 37%에서 500 을 내는 동안 전부 OK 였다. 요청이 성공했는가를 보는 곳이 여기다.
+--
+-- 오래된 줄은 넣을 때 지운다(`store/api_errors.py`). 5xx 는 드물어야 하고, 드물지
+-- 않다면 그것이 곧 경보다.
+CREATE TABLE IF NOT EXISTS api_error (
+    id          BIGSERIAL   PRIMARY KEY,
+    path        TEXT        NOT NULL,
+    method      TEXT        NOT NULL,
+    status      INTEGER     NOT NULL,
+    detail      TEXT        NOT NULL DEFAULT '',
+    happened_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS api_error_time_idx ON api_error(happened_at DESC);
+
 -- 티켓이 왜 못 쓰게 됐는가 (설계/9_에이전트_운영 §3.3). 위 CREATE 는 이미 있는 표에는
 -- 안 돈다 — 기존 DB 에도 붙이려면 이 줄이 있어야 한다.
 ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS voided_reason TEXT;

@@ -8,12 +8,12 @@
 `api/routes/` 가 맡는다 — 규칙이 라우트 안으로 들어오면 그것을 헤드리스로 검증할 수 없다.
 """
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 
-from game.api.deps import init_state
+from game.api.deps import get_pool, init_state
 from game.api.routes import (
     account,
     admin,
@@ -41,7 +41,11 @@ from game.api.routes import (
     unseal,
     world,
 )
+from game.app.store.api_errors import save_api_error
 from game.app.store.connection import apply_schema, create_pool
+
+# 5xx 만 남긴다. 4xx 는 클라이언트가 틀린 것이고, 그것까지 담으면 표가 접근 로그가 된다.
+SERVER_ERROR_FLOOR = 500
 
 
 @asynccontextmanager
@@ -75,6 +79,41 @@ def create_app() -> FastAPI:
     server = FastAPI(
         title="game 검증 서버", docs_url=None, redoc_url=None, lifespan=manage_lifespan
     )
+
+    @server.middleware("http")
+    async def record_server_errors(request: Request, call_next: Callable) -> Response:
+        """5xx 를 표에 남긴다 (§6 H1). **동작은 그대로 둔다** — 다시 던진다.
+
+        예외 처리기(`exception_handler`)가 아니라 미들웨어인 이유는 둘이다. 처리기는
+        응답을 **대신 만들어야** 해서 지금의 본문이 바뀌고, 예외를 안 던지면서 5xx 를
+        돌려주는 라우트는 아예 안 걸린다.
+
+        Args:
+            request: 들어온 요청.
+            call_next: 다음 처리기.
+
+        Returns:
+            아래에서 만든 응답 그대로.
+
+        Raises:
+            Exception: 아래에서 난 것을 그대로 다시 던진다. 여기서 삼키면 클라이언트가
+                받는 응답이 바뀌고, 그것은 기록 장치가 할 일이 아니다.
+        """
+        try:
+            response: Response = await call_next(request)
+        except Exception as error:
+            save_api_error(
+                get_pool(),
+                request.url.path,
+                request.method,
+                SERVER_ERROR_FLOOR,
+                f"{type(error).__name__}: {error}",
+            )
+            raise
+        if response.status_code >= SERVER_ERROR_FLOOR:
+            save_api_error(get_pool(), request.url.path, request.method, response.status_code, "")
+        return response
+
     for module in (
         health,
         account,
