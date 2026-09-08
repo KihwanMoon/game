@@ -85,6 +85,9 @@ class GearItem:
     hands: str
     affixes: tuple[tuple[str, int, int], ...]
     attack_range: int
+    # 이 장비가 여는 스킬. **점수에 안 들어간다** — 스킬은 무게로 견줄 값이 아니라
+    # 「잃으면 규칙표가 죽는다」는 조건이다 (`check_keeps_skill`).
+    grants_skill: str = ""
 
 
 def compute_item_score(item: GearItem, persona: str, base_stats: dict[str, int]) -> int:
@@ -134,6 +137,32 @@ def compute_weighted_score(
     # 무기가 정하는 사거리는 접사가 아니라 필드다 (§2.2). 안 세면 활과 단검이 같아진다.
     total += weights.get("attack_range", 0) * item.attack_range
     return total
+
+
+def check_keeps_skill(current: GearItem, candidate: GearItem) -> bool:
+    """갈아 껴도 지금 열린 스킬이 그대로 열리는가.
+
+    **점수로 견주지 않는다.** 스킬에 무게를 주면 「공격 +4 와 AREA_ATTACK 중 무엇이
+    무거운가」를 저울이 답해야 하는데, 그것은 밸런스가 아니라 그 사람의 규칙표가 정할
+    일이다. 여기서 막는 것은 하나다 — **자동 정비가 사람이 안 고른 상실을 만드는 것.**
+
+    실측으로 오늘 카탈로그에 이런 교체가 16건 있었다. 대검(AREA_ATTACK) → 단층 검이
+    ATTACK 저울에서 12점 앞서므로, 정비를 켜 둔 사람은 출격 버튼을 누른 그 판에
+    `USE_SKILL[AREA_ATTACK]` 이 「불가」로 떨어진 것을 본다 — 규칙표를 안 고쳤는데
+    뜻이 바뀌었으므로 P1 위반이다. 로그는 이유를 말하지만(`BlockedRule`), 말해 주는
+    자리는 **이미 그 판이 돌기 시작한 뒤**다.
+
+    **손으로 바꾸는 길은 막지 않는다.** 장비 교체가 규칙 재설계를 부르는 것은 이 게임이
+    파는 것이고(P3), 파는 것과 몰래 뺏는 것은 다르다.
+
+    Args:
+        current: 지금 낀 것.
+        candidate: 갈아 낄 후보.
+
+    Returns:
+        지금 아무것도 안 열거나 후보가 같은 것을 열면 True.
+    """
+    return not current.grants_skill or current.grants_skill == candidate.grants_skill
 
 
 def find_upgrades(
@@ -216,6 +245,8 @@ def find_upgrades_by_weights(
             continue
         current = wearing.get(candidate.slot)
         if current is None or current.is_broken:
+            continue
+        if not check_keeps_skill(current, candidate):
             continue
         score = compute_weighted_score(candidate, weights, base_stats)
         if score - compute_weighted_score(current, weights, base_stats) < UPGRADE_MARGIN:

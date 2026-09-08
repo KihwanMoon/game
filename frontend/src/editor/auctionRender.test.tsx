@@ -72,6 +72,7 @@ const WORN_HELM: ItemView = {
   affixes: [{ stat: 'hp_max', flat: 3, percent: 0, labelKo: '', statLabel: '최대체력' }],
   requirements: [],
   canEquip: true,
+  grantsSkill: '',
 }
 
 const WORN = new Map([['HEAD', WORN_HELM]])

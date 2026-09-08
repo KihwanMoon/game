@@ -15,6 +15,7 @@ from psycopg_pool import ConnectionPool
 from game.api.deps import get_item_catalog
 from game.api.loadout_service import build_equipped_entries, count_slot_bonus
 from game.app.bots.upgrade import GEAR_PRIORITY_WEIGHTS, GearItem, find_upgrades_by_weights
+from game.app.items.requirements import check_requirements
 from game.app.items.sealed import compute_unseal_cost, create_sealed_affix
 from game.app.store.consumables import apply_slot_clear, apply_slot_load, list_consumable_slots
 from game.app.store.equipment import add_currency, apply_equip, read_balance
@@ -37,28 +38,42 @@ from game.schemas.item import (
 EVENT_UNSEAL = "unseal"
 
 
-def build_gear_item(stored: StoredItem, entry: ItemCatalogEntry) -> GearItem:
+def build_gear_item(
+    stored: StoredItem, entry: ItemCatalogEntry, base_stats: dict[str, int] | None = None
+) -> GearItem:
     """보관된 아이템을 저울이 읽는 절로 바꾼다.
 
     **둘을 합쳐야 한다.** 인스턴스(`StoredItem`)는 굴린 접사와 파손 여부를 갖고, 자리·손
     수·사거리는 **카탈로그**가 갖는다 — 인스턴스만 보면 양손무기를 못 알아보고, 그러면
     양손 자리를 건너뛰는 규칙이 조용히 안 걸린다.
 
+    **`can_equip` 을 실제로 판정한다.** 예전에는 `True` 가 상수로 박혀 있어서, 손으로
+    끼우면 4xx 로 거절되는 장비를 자동 정비가 그냥 끼웠다 — 실측으로 오늘 카탈로그의
+    일곱 종이 그랬다(단층 검·보루 갑옷·붕락 도끼·예지 투구·이지스·전투 도끼·폭풍 활).
+    브라우저 미리보기는 `can_equip` 을 보고 건너뛰므로 **미리보기와 서버가 다른 개수를
+    냈고**, 그것은 `gear_priority.json` 을 함께 읽어 막으려던 바로 그 사고다.
+
     Args:
         stored: 보관된 아이템.
         entry: 그 아이템의 카탈로그 항목.
+        base_stats: 요구조건 판정의 기준. 없으면 판정하지 않고 끼울 수 있다고 본다 —
+            저울 단독 시험처럼 요구조건이 관심 밖인 자리를 위한 것이다.
 
     Returns:
         점수를 매길 수 있는 절.
     """
+    can_equip = base_stats is None or all(
+        check.is_met for check in check_requirements(entry, base_stats)
+    )
     return GearItem(
         item_id=stored.item_id,
         slot=entry.slot.value if entry.slot is not None else "",
-        can_equip=True,
+        can_equip=can_equip,
         is_broken=stored.is_broken,
         hands=entry.hands.value if entry.hands is not None else "",
         affixes=tuple((one.stat, one.flat, one.percent) for one in stored.affixes),
         attack_range=entry.attack_range or 0,
+        grants_skill=entry.grants_skill or "",
     )
 
 
@@ -93,7 +108,7 @@ def apply_upgrade_gear_rule(
         entry = catalog.get(stored.catalog_id)
         if entry is None or entry.slot is None:
             return None
-        return build_gear_item(stored, entry)
+        return build_gear_item(stored, entry, base_stats)
 
     bag = tuple(
         item

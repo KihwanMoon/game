@@ -50,6 +50,7 @@ function buildItem(over: Partial<ItemView> = {}): ItemView {
     affixes: [],
     requirements: [],
     canEquip: true,
+    grantsSkill: '',
     ...over,
   }
 }

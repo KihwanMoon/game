@@ -235,6 +235,11 @@ export function runUpgradeGear(
       // 빈 자리는 교체가 아니다 — 낀 것이 있어야 「갈아 낀다」가 성립한다.
       continue
     }
+    // **스킬을 잃는 교체는 안 센다** (2026-09-08). 파이썬 `check_keeps_skill` 과 같은
+    // 규칙이다 — 여기만 빠지면 미리보기가 「2개 교체」라 적고 서버는 하나만 바꾼다.
+    if (current.grantsSkill !== '' && current.grantsSkill !== item.grantsSkill) {
+      continue
+    }
     const gain =
       computeGearScore(item.affixes, item.attackRange, weights, baseStats) -
       computeGearScore(current.affixes, current.attackRange, weights, baseStats)

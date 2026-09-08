@@ -81,6 +81,7 @@ const INVENTORY = {
         affixes: [],
         requirements: [],
         canEquip: true,
+        grantsSkill: '',
       },
     },
     {
@@ -111,6 +112,7 @@ const INVENTORY = {
         affixes: [],
         requirements: [],
         canEquip: true,
+        grantsSkill: '',
       },
     },
   ],
@@ -142,6 +144,7 @@ const INVENTORY = {
         affixes: [],
         requirements: [],
         canEquip: true,
+        grantsSkill: '',
       },
     },
   ],
@@ -219,6 +222,7 @@ function buildHelm(defense: number, itemId: number, equipped: boolean): Record<s
       affixes: [{ stat: 'defense', flat: defense, percent: 0, labelKo: '', statLabel: '방어' }],
       requirements: [],
       canEquip: true,
+      grantsSkill: '',
     },
   }
 }
@@ -699,6 +703,7 @@ function buildBagSlot(
       affixes: [],
       requirements: [],
       canEquip: true,
+      grantsSkill: '',
     },
   }
 }

@@ -598,6 +598,13 @@ export interface ItemView {
   readonly affixes: readonly AffixView[]
   readonly requirements: readonly RequirementView[]
   readonly canEquip: boolean
+  /**
+   * 이 장비가 여는 스킬. 빈 문자열이면 안 연다.
+   *
+   * **정비 미리보기가 이것을 본다.** 없던 때는 「이 교체가 스킬을 뺏는다」를 알 길이
+   * 없어서, 미리보기가 세는 교체 수와 서버가 실제로 바꾸는 수가 갈렸다.
+   */
+  readonly grantsSkill: string
 }
 
 /** 접사 하나. 고정 합계에 붙거나 퍼센트에 붙는다. */
@@ -702,6 +709,8 @@ interface RawItem {
   attack_range?: number
   requirements: RawRequirement[]
   can_equip: boolean
+  // 구버전 서버는 안 보낸다. 그때는 빈 문자열 — 스킬을 안 여는 것으로 본다.
+  grants_skill?: string
 }
 
 interface RawSlot {
@@ -752,6 +761,7 @@ function readSlot(raw: RawSlot): SlotView {
             attackRange: raw.item.attack_range ?? 0,
             affixes: readAffixRows(raw.item.affixes),
             canEquip: raw.item.can_equip,
+            grantsSkill: raw.item.grants_skill ?? '',
             requirements: raw.item.requirements.map((item) => ({
               stat: item.stat,
               actual: item.actual,

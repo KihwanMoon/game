@@ -163,6 +163,9 @@ class ItemView(BaseModel):
     affixes: list[dict] = Field(default_factory=list)
     requirements: list[RequirementView] = Field(default_factory=list)
     can_equip: bool = False
+    # 이 장비가 여는 스킬 (§6). **가방에서 보여야 한다** — 관리자 카탈로그 뷰에만 있어서,
+    # 정비 미리보기는 「이 교체가 스킬을 뺏는다」를 알고 싶어도 알 길이 없었다.
+    grants_skill: str = ""
 
 
 class InventorySlotView(BaseModel):

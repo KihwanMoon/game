@@ -132,6 +132,7 @@ def build_item_view(
             for c in checks
         ],
         can_equip=all(c.is_met for c in checks) and not stored.is_broken,
+        grants_skill=entry.grants_skill or "",
     )
 
 
