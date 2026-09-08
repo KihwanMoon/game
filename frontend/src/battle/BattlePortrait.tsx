@@ -25,10 +25,9 @@
  */
 import type { ReactNode, Ref } from 'react'
 
-import { HpGauge } from '../ds'
+import { Button } from '../ds'
 import type { LogRowProps } from '../ds'
 import { BattleFrame } from './BattleFrame'
-import { SheetFoot } from './BattleSheet'
 import type { FloorSettlement } from './settlement'
 import { formatTick, type SheetTab } from './portraitSheet'
 import type { RuleRowView } from './ruleRows'
@@ -40,7 +39,10 @@ import { SpeedBox } from './SpeedBox'
  * `HpGauge` 는 폭을 토큰이 아니라 숫자 prop 으로 받는다(design/README.md 컴포넌트 계약).
  * 데스크톱 StatusBar 가 160 을 쓰는 자리이며 세로는 명세가 90 으로 정했다.
  */
-const HP_BAR_WIDTH = 90
+
+/** 시간 조작 두 칸의 이름. 시트 하단에 있던 것이 배속 옆으로 왔다. */
+const STEP_TEXT = '한 틱'
+const RESTART_TEXT = '처음부터'
 
 /** 물약 칸의 글리프와 라벨. ds `StatusBar` 와 같은 것을 쓴다. */
 
@@ -114,6 +116,9 @@ export interface BattlePortraitProps {
 export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
   return (
     <div className="battle battle--portrait">
+      {/* **붙어 있는다.** 문서가 화면보다 길어지면 스크롤하는데, 그때 층·실과 틱이
+          함께 올라가면 지금 어디의 몇 틱인지가 화면 밖으로 나간다. 체력 줄도 바로
+          아래에 붙는다 (`battle.css` 의 `--vitals` 규칙). */}
       <header className="battle__bar battle__bar--top">
         <h1 className="battle__location">{props.location}</h1>
         {props.controls === undefined ? null : (
@@ -128,16 +133,7 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
         </span>
       </header>
 
-      {/* **속은 세 화면이 나눠 쓴다** — 관전·되감기·사후 분석이 같은 것을 그린다.
-          여기서 더하는 것은 위아래 바뿐이고, 그 둘이 화면마다 다른 것을 싣는다. */}
       <BattleFrame
-        timeBox={
-          <SpeedBox
-            value={props.speed}
-            onChange={props.onSpeedChange}
-            onInstant={props.onInstant}
-          />
-        }
         {...(props.plan === undefined ? {} : { plan: props.plan })}
         outcome={props.outcome}
         {...(props.threat === undefined ? {} : { threat: props.threat })}
@@ -146,27 +142,38 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
         entries={props.entries}
         tick={props.tick}
         settlements={props.settlements ?? []}
+        hp={props.hp}
+        hpMax={props.hpMax}
+        cpuUsed={props.cpuUsed}
+        cpuBudget={props.cpuBudget}
+        {...(props.cooldowns === undefined ? {} : { cooldowns: props.cooldowns })}
         potions={props.potions}
         potionsMax={props.potionsMax}
         scrolls={props.scrolls}
         scrollsMax={props.scrollsMax}
-        cooldowns={props.cooldowns ?? ''}
         tab={props.tab}
         onTabChange={props.onTabChange}
         {...(props.bodyRef === undefined ? {} : { bodyRef: props.bodyRef })}
         foot={
-          <SheetFoot
-            cpuUsed={props.cpuUsed}
-            cpuBudget={props.cpuBudget}
-            onStep={props.onStep}
-            onRestart={props.onRestart}
-          />
+          // **시간 조작을 한 줄로 모은다.** 배속은 도면 위 전용 줄에, `한 틱`·`처음부터`
+          // 는 시트 맨 아래에 있어서 같은 종류가 화면 반대쪽에 앉아 있었다.
+          <div className="battle__time">
+            <SpeedBox
+              value={props.speed}
+              onChange={props.onSpeedChange}
+              onInstant={props.onInstant}
+            />
+            <div className="battle__time-acts">
+              <Button size="sm" variant="ghost" onClick={props.onStep}>
+                {STEP_TEXT}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={props.onRestart}>
+                {RESTART_TEXT}
+              </Button>
+            </div>
+          </div>
         }
       />
-
-      <footer className="battle__bar battle__bar--bottom">
-        <HpGauge value={props.hp} max={props.hpMax} width={HP_BAR_WIDTH} />
-      </footer>
     </div>
   )
 }

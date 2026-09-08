@@ -61,8 +61,25 @@
      바뀐다. 근거와 출처는 design/README.md 「반응형」 절. */
   --layout-mode:portrait; /* @kind other — 스크립트가 읽는 현재 배치 이름 */
   --plan-pad:14px;        /* 도면 둘레 여백. 390 - 360 = 30 의 절반이다 */
-  --bar-speed:44px;       /* 배속 전용 줄 */
-  --bar-status:34px;      /* 판정 줄 */
+  /* **전용 줄 둘이 사라졌다** (2026-09-08). 배속은 시간 조작 한 줄로 시트 하단에
+     내려갔고, 판정·예고는 도면 위에 겹친다 — 고정 줄 하나가 곧 체력 게이지를 화면
+     밖으로 미는 44px 이었다. 가로 배치는 원래 둘 다 0 이었다. */
+  --bar-speed:0px;
+  --bar-status:0px;
+  /* 상태 한 줄 — 체력·소모품·예산. 셋이 화면 세 곳에 흩어져 있던 것을 모았다. */
+  --bar-vitals:44px;
+  /* 시간 조작 한 줄 — 배속과 `한 틱`·`처음부터`. 시트 하단에 붙는다. */
+  --bar-time:48px;
+
+  /* **시트 몸통에 남는 높이.** 고정 줄의 합을 화면 높이에서 뺀 것이며, 이 값이 곧
+     「무엇을 고정으로 둘 것인가」의 회계다. 줄 하나를 늘리려면 여기서 빼야 한다.
+
+     세로 기준 844 에서 상단 44 + 상태 44 + 도면 298(30x9 + 여백 14x2) + 탭 44 +
+     시간줄 48 = 478 을 빼고 366 이 남는다. */
+  --sheet-body-h:calc(
+    100dvh - var(--bar-top) - var(--bar-vitals) - var(--plan-cell) * var(--plan-rows) -
+      var(--plan-pad) * 2 - var(--sheet-tab-h) - var(--bar-time)
+  );
   --col-sheet:100%;       /* 규칙표+로그가 합쳐진 시트 폭 */
   --sheet-tab-h:44px;     /* 시트 탭 줄 */
   --tap-min:44px;
@@ -130,8 +147,7 @@
     --plan-cell:32px;    /* 12x9 = 384x288 */
     --plan-pad:8px;
     --bar-top:40px;
-    --bar-speed:0px;     /* 배속 박스는 상단바 안에 있다 */
-    --bar-status:0px;    /* 판정은 하단바가 겸한다 */
+    --bar-vitals:0px;    /* 가로는 상태를 하단 바가 겸한다 */
     --bar-bottom:40px;
     --col-rules:340px;   /* 규칙표와 로그가 한 시트로 합쳐진다 */
     --col-log:340px;

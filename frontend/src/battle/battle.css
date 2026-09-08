@@ -148,6 +148,61 @@
   overflow: hidden;
 }
 
+/* 상태 한 줄 — 체력·소모품·예산. 셋 다 「지금 내가 얼마나 남았나」인데 화면 세 곳에
+   흩어져 있었다(맨 아래·시트 안·시트 하단).
+
+   **고정 높이에 줄바꿈 없음.** 값이 길어지면 가운데 칸만 잘린다 — 접히면 그만큼
+   아래 전부가 밀리고, 그것이 이 화면이 흔들리던 이유 중 하나였다.
+
+   **상단 바 아래에 붙어 있는다.** 문서가 화면보다 길어지면 스크롤하는데, 그때 체력이
+   함께 올라가면 전투에서 가장 자주 보는 수치가 화면 밖으로 나간다 — 고치기 전에는
+   기준 화면(390x844)에서도 16px 넘쳐서, 밀려나는 것이 늘 체력이었다. */
+.battle__vitals {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: var(--bar-vitals);
+  padding: var(--sp-0) var(--plan-pad);
+  border-bottom: var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  color: var(--text-dim);
+}
+
+.battle__supply {
+  flex: 1;
+  min-inline-size: var(--sp-0);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.battle__cpu {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 예산 초과는 오류가 아니라 수치다. 색만 넘어가고 조작은 그대로 계속된다. */
+.battle__cpu--over {
+  color: var(--text-false);
+}
+
+/* 시간 조작 한 줄 — 배속과 `한 틱`·`처음부터`. 같은 종류인데 화면 반대쪽에 앉아
+   있었다(배속은 도면 위, 나머지는 시트 맨 아래). */
+.battle__time {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--plan-pad);
+  border-top: var(--border);
+}
+
+.battle__time-acts {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--sp-1);
+}
+
 .battle--portrait {
   /* **상한이 아니라 흐름이다** (실제 피드백: 「상한을 걸지 말라니까」). 격자 대신 문서
      흐름 — 모든 구역이 제 내용 높이를 온전히 갖고, 넘치면 화면이 통째로 흐른다.
@@ -313,6 +368,8 @@
    가운데 열이 가변이다), 세로에서는 도면이 고정이고 시트만 바뀐다. 규칙을 보면서도
    유닛 위치를 계속 읽을 수 있어야 하므로 도면이 밀려 나가면 배치의 뜻이 사라진다. */
 .battle-frame .battle__col--plan {
+  /* 판정·예고가 이 상자를 기준으로 겹친다. */
+  position: relative;
   display: flex;
   justify-content: center;
   gap: var(--sp-0);
@@ -322,6 +379,21 @@
 }
 
 /* 상태줄 — 좌: 판정 한 줄, 우: 예고. 위아래 1px 괘선. */
+/* **도면 위에 겹친다** (2026-09-08). 전용 줄(34px)이던 때는 예고가 뜨고 사라질 때마다
+   아래 전부가 흔들렸고, 그 34px 이 곧 체력 게이지를 화면 밖으로 미는 34px 이었다.
+   판정과 예고는 둘 다 위치에 대한 말이라 도면 옆이 제자리이기도 하다. */
+.battle__over {
+  position: absolute;
+  inset-inline: var(--sp-0);
+  inset-block-end: var(--sp-0);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  pointer-events: none;
+}
+
 .battle__status {
   display: flex;
   align-items: center;
@@ -418,13 +490,27 @@
 }
 
 /* 시트에서 스크롤하는 것은 여기 하나뿐이다. 도면도 바도 고정이다. */
+/* 문서 흐름에서 유일하게 안에서 흐르는 구역이다. 로그는 수백 줄이라 펴 두면 다른
+   모든 것이 화면 밖으로 밀려난다. */
 .battle__sheet-body {
   flex: 1;
-  /* 문서 흐름에서 유일하게 안에서 흐르는 구역이다. 로그는 수백 줄이라 펴 두면 다른
-     모든 것이 화면 밖으로 밀려난다 — 열 줄을 보이고 그 안에서 흐른다. */
   min-height: calc(var(--log-row-h) * 10);
   max-height: calc(var(--log-row-h) * 14);
   overflow-y: auto;
+}
+
+/* **한 판을 도는 화면에서는 남는 높이를 다 쓴다** (2026-09-08).
+   예전에는 하한 10줄·상한 14줄이라 로그가 차는 동안 시트가 220 → 308 로 자랐고, 그때마다
+   아래 전부가 88px 내려갔다. 고정 줄의 합을 빼고 남는 만큼을 처음부터 차지하면 자랄 일이
+   없다 — 하한과 상한을 같은 값으로 두는 것이 「안 흔들린다」의 뜻이다.
+
+   `100dvh` 를 쓰는 이유는 주소창이다 — `vh` 는 접히기 전 높이라 그만큼이 잘린다.
+
+   다이얼로그 안(`--panel`)은 제외한다. 거기서는 화면 높이가 아니라 패널 높이가 기준이라
+   같은 뺄셈이 성립하지 않는다. */
+.battle-frame:not(.battle-frame--panel) .battle__sheet-body {
+  min-height: var(--sheet-body-h);
+  max-height: var(--sheet-body-h);
 }
 
 .battle__sheet-foot {
@@ -597,6 +683,11 @@
    **미디어쿼리를 안 쓴다.** `.battle--portrait` 는 세로에서만 붙으므로 조건이 이미
    붙어 있고, 이 저장소는 경계를 토큰 한 곳에만 둔다. */
 .battle--portrait .battle__bar--top {
+  /* **붙어 있는다.** 문서가 화면보다 길어지면 스크롤하는데, 그때 층·실과 틱이 함께
+     올라가면 지금 어디의 몇 틱인지가 화면 밖으로 나간다. */
+  position: sticky;
+  inset-block-start: var(--sp-0);
+  z-index: 2;
   height: auto;
   min-height: var(--bar-top);
   flex-wrap: wrap;
@@ -604,6 +695,14 @@
   padding-block: var(--sp-1);
   /* `.battle__bar` 가 한 줄 전제로 잘라 두었다. 둘째 줄이 잘리면 안 된다. */
   overflow: visible;
+}
+
+/* 상태 줄도 붙는다 — 바로 아래에. 전투에서 가장 자주 보는 수치가 체력이라, 이것이
+   스크롤과 함께 올라가면 이 배치의 뜻이 사라진다. */
+.battle--portrait .battle__vitals {
+  position: sticky;
+  inset-block-start: var(--bar-top);
+  z-index: 2;
 }
 
 /* 조작은 통째로 둘째 줄. DOM 순서는 안 바꾼다 — 그것이 탭 순서다. */

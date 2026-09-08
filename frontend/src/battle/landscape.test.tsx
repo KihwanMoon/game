@@ -203,10 +203,12 @@ describe('가로는 2열이다 (명세 B)', () => {
     expect(log).not.toContain('ds-rule-table')
   })
 
-  it('세로의 배속바·상태줄은 가로에 없다 — 그 자리는 상단 바와 하단 바가 겸한다', () => {
-    expect(readLandscapeToken('--bar-speed')).toBe(0)
-    expect(readLandscapeToken('--bar-status')).toBe(0)
+  it('세로의 상태 줄은 가로에 없다 — 그 자리는 상단 바와 하단 바가 겸한다', () => {
+    // `--bar-speed`·`--bar-status` 는 2026-09-08 에 기본값이 0 이 됐다. 세로에서도
+    // 전용 줄이 사라졌기 때문이며, 가로가 재정의할 것은 상태 줄 하나만 남았다.
+    expect(readLandscapeToken('--bar-vitals')).toBe(0)
     const html = renderToStaticMarkup(<BattleLandscape {...buildProps()} />)
+    expect(html).not.toContain('battle__vitals')
     expect(html).not.toContain('battle__speed-bar')
     expect(html).not.toContain('battle__status')
     // 배속은 상단 바 안에 있고 판정은 하단 바 안에 있다.

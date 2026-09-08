@@ -7,34 +7,41 @@
  * 상태였다: 되감기와 갤러리는 **데스크톱 3열 골격을 그대로 들고 있어서** 데스크톱 토큰이
  * 사라진 날 `100% 1px 1fr 1px 100%` 짜리 격자가 됐다.
  *
+ * **상태 한 줄은 여기 있다.** 체력·소모품·예산은 셋 다 「지금 내가 얼마나 남았나」인데
+ * 화면 세 곳에 흩어져 있었다 — 체력은 맨 아래 하단 바, 소모품은 시트 안, 예산은 시트
+ * 하단. 세 화면이 같은 것을 물으므로 속이 답한다.
+ *
  * **바는 여기 없다.** 상·하단 바는 화면마다 다른 것을 싣고(관전은 층·실과 틱, 되감기는
  * 확인용 조작부, 사후 분석은 다이얼로그 머리), 다이얼로그 안에 바를 한 벌 더 세우면
  * 한 화면에 상단 바가 둘이 된다. 바깥 껍데기는 부르는 쪽이 정한다.
  *
- * **시간 조작부도 슬롯이다.** 앞으로만 가는 화면은 배속 박스를, 프레임 위를 걷는 화면은
- * 스크러버를 끼운다 — 이 부품은 둘 중 무엇인지 모른다.
+ * **시간 조작부는 시트 하단이다.** 앞으로만 가는 화면은 배속 박스를, 프레임 위를 걷는
+ * 화면은 스크러버를 끼운다 — 이 부품은 둘 중 무엇인지 모르고 `foot` 으로 받는다.
+ * 예전에는 도면 위에 전용 줄(44px)이 하나 더 있었는데, 세로 화면의 고정 높이 합이
+ * 이미 640px 라 그 줄이 곧 체력 게이지를 화면 밖으로 밀어내는 44px 였다.
+ *
+ * **판정과 예고는 도면에 겹친다.** 둘 다 위치에 대한 말이라 도면 옆이 제자리이고,
+ * 전용 줄(34px)을 두면 예고가 뜨고 사라질 때마다 아래 전부가 흔들린다.
  *
  * 상태를 들지 않는다. 값과 콜백만 받으므로 테스트가 직접 불러 트리를 볼 수 있다.
  */
 import type { ReactNode, Ref } from 'react'
 
-import { ThreatNotice } from '../ds'
+import { HpGauge, ThreatNotice } from '../ds'
 import type { LogRowProps } from '../ds'
 
 import { BattleSheet } from './BattleSheet'
+import { checkOngoing } from './battleSession'
 import { formatSettlementTabCount, type FloorSettlement } from './settlement'
 import { formatOutcomeNotice, resolveOutcomeTone } from './outcomeText'
 import { formatLogTabCount, formatRulesTabCount, type SheetTab } from './portraitSheet'
 import type { RuleRowView } from './ruleRows'
 
+/** 체력 막대 폭(px). `HpGauge` 는 폭을 토큰이 아니라 숫자로 받는다 (컴포넌트 계약). */
+const HP_BAR_WIDTH = 90
+
 /** BattleFrame 이 받는 props. */
 export interface BattleFrameProps {
-  /**
-   * 시간 조작부. 배속 박스(앞으로) 또는 스크러버(앞뒤).
-   *
-   * 없으면 그 줄을 아예 안 그린다 — 빈 줄을 남기면 도면이 그만큼 아래로 밀린다.
-   */
-  readonly timeBox?: ReactNode
   /** 도면. 토큰을 아직 읽지 못했으면 비운다. */
   readonly plan?: ReactNode
   /** 코어가 낸 OUTCOME_* 값. 상태줄이 이것을 문구로 바꾼다. */
@@ -51,11 +58,16 @@ export interface BattleFrameProps {
   readonly tick: number
   /** 층별 정산. 없으면 정산 탭이 0 으로 선다. */
   readonly settlements?: readonly FloorSettlement[]
+  readonly hp: number
+  readonly hpMax: number
   readonly potions: number
   readonly potionsMax: number
   readonly scrolls: number
   readonly scrollsMax: number
   readonly cooldowns?: string
+  /** 켜진 규칙들의 누적 CPU. 예산 초과는 오류가 아니라 수치다. */
+  readonly cpuUsed: number
+  readonly cpuBudget: number
   readonly tab: SheetTab
   readonly onTabChange: (tab: SheetTab) => void
   /** 시트 본문. 로그를 마지막 줄에 붙여 두려고 밖에서 잡는다. */
@@ -85,21 +97,40 @@ export function BattleFrame(props: BattleFrameProps): React.JSX.Element {
     ['reward' as SheetTab, formatSettlementTabCount(props.settlements ?? [])],
   ])
 
+  const isOver = props.cpuUsed > props.cpuBudget
+
   return (
     <div className={`battle-frame${props.isPanel === true ? ' battle-frame--panel' : ''}`}>
-      {props.timeBox === undefined ? null : (
-        <div className="battle__speed-bar">{props.timeBox}</div>
-      )}
+      {/* **상태는 한 줄에 모은다.** 셋 다 「지금 내가 얼마나 남았나」인데 화면 세 곳을
+          봐야 했다. 고정 높이에 줄바꿈이 없어 값이 길어져도 아래가 안 밀린다 — 접히면
+          그만큼 도면과 시트가 내려가고, 그것이 이 화면이 흔들리던 이유였다. */}
+      <div className="battle__vitals">
+        <HpGauge value={props.hp} max={props.hpMax} width={HP_BAR_WIDTH} />
+        <span className="battle__supply">
+          {`◍ ${String(props.potions)}/${String(props.potionsMax)}`}
+          {` · ▤ ${String(props.scrolls)}/${String(props.scrollsMax)}`}
+          {props.cooldowns === undefined || props.cooldowns === '' ? '' : ` · ${props.cooldowns}`}
+        </span>
+        <span className={`battle__cpu${isOver ? ' battle__cpu--over' : ''}`}>
+          {`cpu ${String(props.cpuUsed)}/${String(props.cpuBudget)}`}
+        </span>
+      </div>
 
       <div className="battle__col battle__col--plan">
         <div className="battle__frame">{props.plan}</div>
-      </div>
-
-      <div className="battle__status">
-        <span className={`battle__verdict battle__verdict--${resolveOutcomeTone(props.outcome)}`}>
-          {formatOutcomeNotice(props.outcome)}
-        </span>
-        {props.threat === undefined ? null : <ThreatNotice text={props.threat} tone="danger" />}
+        {/* **도면에 겹친다.** 둘 다 위치에 대한 말이고, 전용 줄을 두면 예고가 뜨고
+            사라질 때마다 아래 전부가 흔들린다. 판정은 판이 끝났을 때만 뜨므로 예고와
+            같은 자리를 놓고 다투지 않는다 — 끝난 판에는 예고가 없다. */}
+        <div className="battle__over">
+          {checkOngoing(props.outcome) ? null : (
+            <span
+              className={`battle__verdict battle__verdict--${resolveOutcomeTone(props.outcome)}`}
+            >
+              {formatOutcomeNotice(props.outcome)}
+            </span>
+          )}
+          {props.threat === undefined ? null : <ThreatNotice text={props.threat} tone="danger" />}
+        </div>
       </div>
 
       <BattleSheet
@@ -111,11 +142,6 @@ export function BattleFrame(props: BattleFrameProps): React.JSX.Element {
         entries={props.entries}
         currentTick={props.tick}
         settlements={props.settlements ?? []}
-        cooldowns={props.cooldowns ?? ''}
-        potions={props.potions}
-        potionsMax={props.potionsMax}
-        scrolls={props.scrolls}
-        scrollsMax={props.scrollsMax}
         bodyRef={props.bodyRef}
         {...(props.foot === undefined ? {} : { foot: props.foot })}
       />

@@ -89,6 +89,11 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
   useLogAnchor(sheetRef, tick, tab)
 
   const frame: RecordedFrame | undefined = recording.frames[tick]
+  const trace = buildReplayTrace(
+    recording.ruleset,
+    BLOCK_CATALOG,
+    findDecision(recording.entries, tick, recording.playerId),
+  )
 
   return (
     <div className="hud-post" role="dialog" aria-label="사후 분석">
@@ -127,15 +132,6 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
             ) : (
               <BattleFrame
                 isPanel
-                timeBox={
-                  <TickScrubber
-                    min={startTick}
-                    max={recording.ticks}
-                    value={tick}
-                    onChange={setTick}
-                    label="되감기"
-                  />
-                }
                 {...(props.theme === undefined
                   ? {}
                   : {
@@ -145,17 +141,14 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
                     })}
                 outcome={frame.outcome}
                 {...(frame.threat === undefined ? {} : { threat: frame.threat.text })}
-                rows={buildSheetRows(
-                  buildReplayTrace(
-                    recording.ruleset,
-                    BLOCK_CATALOG,
-                    findDecision(recording.entries, tick, recording.playerId),
-                  ),
-                  recording.cpuBudget,
-                )}
+                rows={buildSheetRows(trace, recording.cpuBudget)}
                 onToggleRule={() => undefined}
                 entries={recording.entries.slice(0, frame.logEnd)}
                 tick={tick}
+                hp={frame.playerHp}
+                hpMax={frame.playerHpMax}
+                cpuUsed={trace.at(-1)?.cpuUsed ?? 0}
+                cpuBudget={recording.cpuBudget}
                 potions={frame.potions}
                 potionsMax={recording.potionsMax}
                 scrolls={frame.scrolls}
@@ -163,6 +156,17 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
                 tab={tab}
                 onTabChange={setTab}
                 bodyRef={sheetRef}
+                foot={
+                  <div className="hud__rewind-foot">
+                    <TickScrubber
+                      min={startTick}
+                      max={recording.ticks}
+                      value={tick}
+                      onChange={setTick}
+                      label="되감기"
+                    />
+                  </div>
+                }
               />
             )}
           </Panel>

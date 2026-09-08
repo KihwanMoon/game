@@ -168,11 +168,11 @@ describe('세로 시트 — 탭과 카운트 (명세 A·D)', () => {
     expect(log).toContain('ds-log-row')
     expect(log).not.toContain('ds-rule-table')
 
-    // 도면과 그 둘레는 두 탭에서 한 글자도 다르지 않다.
+    // 도면과 상태 줄은 두 탭에서 한 글자도 다르지 않다.
     for (const html of [rules, log]) {
       expect(html).toContain('battle__col--plan')
       expect(html).toContain('battle-plan__canvas')
-      expect(html).toContain('battle__status')
+      expect(html).toContain('battle__vitals')
     }
   })
 
@@ -341,10 +341,12 @@ describe('규칙 행을 눌러 켜고 끈다 (명세 D)', () => {
 })
 
 describe('상태줄 — 판정 네 가지 (명세 D)', () => {
-  it('진행 중에도 판정을 적는다 — 세로에는 판정이 들어갈 다른 자리가 없다', () => {
+  it('★ 진행 중에는 판정을 안 적는다 — 「전투 중」은 늘 참이라 정보가 아니다', () => {
+    // 전용 줄(34px)에 늘 참인 문구를 세워 두던 자리다. 그 34px 이 곧 체력 게이지를
+    // 화면 밖으로 미는 34px 이었다 — 세로에서 고정 줄 하나는 그만큼 비싸다.
     const html = renderToStaticMarkup(<BattlePortrait {...buildProps()} />)
-    expect(html).toContain('◆ 전투 중')
-    expect(html).toContain('battle__verdict--dim')
+    expect(html).not.toContain('◆ 전투 중')
+    expect(html).toContain('battle__over')
   })
 
   it('이기면 녹청, 쓰러지면 위험색이다', () => {
@@ -376,12 +378,15 @@ describe('상태줄 — 판정 네 가지 (명세 D)', () => {
 })
 
 describe('시트 하단 — CPU 와 두 버튼', () => {
-  it('예산을 넘으면 게이지가 위험색으로 넘어간다 — 오류가 아니라 수치다', () => {
+  it('★ 예산을 넘으면 색만 넘어간다 — 오류가 아니라 수치다', () => {
+    // 게이지 한 덩이(48px)를 쓰던 것을 상태 줄의 글자 하나로 줄였다. 전투 중에는
+    // 예산이 변하지 않으므로 눈금이 필요 없고, 그 자리는 체력이 더 급하다.
     const under = renderToStaticMarkup(<BattlePortrait {...buildProps({ cpuUsed: 5 })} />)
-    expect(under).toContain('ds-gauge--cpu')
+    expect(under).toContain('cpu 5/8')
+    expect(under).not.toContain('battle__cpu--over')
     const over = renderToStaticMarkup(<BattlePortrait {...buildProps({ cpuUsed: 10 })} />)
-    expect(over).toContain('ds-gauge--danger')
-    expect(over).toContain('10 / 8')
+    expect(over).toContain('cpu 10/8')
+    expect(over).toContain('battle__cpu--over')
   })
 
   it('한 틱과 처음부터 두 버튼이 있고 각각이 제 콜백을 부른다', () => {
@@ -410,7 +415,8 @@ describe('시트 하단 — CPU 와 두 버튼', () => {
 
   it('배속은 다섯 칸이고 즉시 실행이 마지막이다', () => {
     const html = renderToStaticMarkup(<BattlePortrait {...buildProps()} />)
-    const box = html.slice(html.indexOf('battle__speed'), html.indexOf('battle__col--plan'))
+    // 배속은 이제 시트 하단의 시간 조작 줄에 있다 — 도면 위 전용 줄(44px)이 사라졌다.
+    const box = html.slice(html.indexOf('battle__speed'), html.indexOf('battle__time-acts'))
     expect((box.match(/<button/g) ?? []).length).toBe(5)
     expect(box).toContain('≫')
     // 활성 칸은 색이 아니라 눌림 상태로도 나간다.
@@ -442,6 +448,77 @@ describe('세로 화면은 황동 예산을 지킨다', () => {
       expect(renderToStaticMarkup(<BattlePortrait {...buildProps({ tab })} />)).not.toContain(
         'ds-button--primary',
       )
+    }
+  })
+})
+
+/** 도면 격자의 행 수. 토큰 `--plan-rows` 와 같은 수다. */
+const PLAN_ROWS = 9
+
+/**
+ * `:root` 에서 토큰 하나를 px 로 읽는다. 세로가 기본 배치라 여기가 세로 값이다.
+ *
+ * @param name 토큰 이름.
+ * @returns 값(px). 없으면 NaN.
+ */
+function readToken(name: string): number {
+  const tokens = readFileSync(
+    fileURLToPath(new URL('../../../design/tokens/spacing.css', import.meta.url)),
+    'utf8',
+  )
+  const root = tokens.split('@media')[0] ?? ''
+  const found = new RegExp(`${name}:\\s*(\\d+)px`).exec(root)
+  return found === null ? Number.NaN : Number.parseInt(found[1] ?? '', 10)
+}
+
+describe('★ 한정된 화면의 공간 예산', () => {
+  // **고정 줄의 합이 곧 시트에 남는 높이다.** 고치기 전에는 640px 을 고정으로 쓰고
+  // 있어서 기준 화면(390x844)에서도 16px 넘쳤고, 넘친 만큼 밀려나는 것이 늘 체력
+  // 게이지였다 — 전투에서 가장 자주 보는 수치가 접힌 자리 아래에 있었다.
+  const SCREENS = [
+    { name: 'iPhone SE', height: 667 },
+    { name: '기준 390x844', height: 844 },
+  ] as const
+
+  /** 화면 하나를 채우고 남는 시트 높이. 토큰 합이 곧 이 회계다. */
+  const buildBudget = (height: number): number =>
+    height -
+    readToken('--bar-top') -
+    readToken('--bar-vitals') -
+    readToken('--plan-cell') * PLAN_ROWS -
+    readToken('--plan-pad') * 2 -
+    readToken('--sheet-tab-h') -
+    readToken('--bar-time')
+
+  it('★ 가장 작은 화면에서도 시트가 여덟 줄을 낸다', () => {
+    // 실측: SE(667) 189px = 여덟 줄, 기준(844) 366px = 열여섯 줄. 고치기 전에는 각각
+    // 27px·204px 이었고 둘 다 열 줄(220)에 못 미쳐 체력이 화면 밖으로 밀렸다.
+    //
+    // 여덟 줄로 잡은 것은 그것이 「무슨 일이 있었는지」가 읽히는 하한이기 때문이다.
+    // 더 받으려면 도면 셀을 줄여야 하는데, 도면이 작아지면 이 화면의 주어가 흐려진다.
+    const rows = readToken('--log-row-h') * 8
+    for (const screen of SCREENS) {
+      expect(buildBudget(screen.height), `${screen.name} 에서 시트가 모자란다`)
+        .toBeGreaterThanOrEqual(rows)
+    }
+  })
+
+  it('★ 시트 높이가 하한과 상한이 같다 — 자라면 아래 전부가 밀린다', () => {
+    // 예전에는 하한 10줄·상한 14줄이라 로그가 차는 동안 88px 이 한 번 밀렸다.
+    const block = cutRule('.battle-frame:not(.battle-frame--panel) .battle__sheet-body')
+    expect(block).toContain('min-height: var(--sheet-body-h)')
+    expect(block).toContain('max-height: var(--sheet-body-h)')
+  })
+
+  it('★ 상태 줄이 한 줄에 갇힌다 — 접히면 도면과 시트가 그만큼 내려간다', () => {
+    const block = cutRule('.battle__vitals')
+    expect(block).toContain('height: var(--bar-vitals)')
+    expect(cutRule('.battle__supply')).toContain('white-space: nowrap')
+  })
+
+  it('★ 머리 두 줄이 스크롤에 안 딸려 간다', () => {
+    for (const selector of ['.battle--portrait .battle__bar--top', '.battle--portrait .battle__vitals']) {
+      expect(cutRule(selector), selector).toContain('position: sticky')
     }
   })
 })

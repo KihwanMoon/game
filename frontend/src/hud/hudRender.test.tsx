@@ -260,7 +260,8 @@ describe('PostMortem', () => {
 
   it('★ 관전과 같은 속을 쓴다 — 방금 본 판과 다른 모양으로 그리면 안 된다', () => {
     expect(html).toContain('battle__sheet')
-    expect(html).toContain('battle__status')
+    // 체력·소모품·예산이 한 줄로 모였다. 사후 분석은 전에 그 셋을 하나도 안 그렸다.
+    expect(html).toContain('battle__vitals')
   })
 })
 
@@ -276,7 +277,9 @@ describe('HudScreen', () => {
     expect(html).toContain('battle-frame')
     expect(html).toContain('ds-rule-table')
     expect(html).toContain('battle__col--plan')
-    expect(html).toContain('ds-statusbar')
+    // 체력은 속의 상태 줄이 든다 — 하단 바를 따로 두면 같은 수치가 한 화면에 둘이다.
+    expect(html).toContain('battle__vitals')
+    expect(html).not.toContain('ds-statusbar')
     expect(html).not.toContain('hud__cols')
   })
 

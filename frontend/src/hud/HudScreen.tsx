@@ -22,7 +22,7 @@ import { BattleFrame, PlanCanvas, buildLookOf } from '../battle'
 import type { SheetTab } from '../battle'
 import { BLOCK_CATALOG } from '../core/resources'
 import { OUTCOME_PLAYER_LOSS } from '../core/sim/phases'
-import { Button, StatusBar, TopBar } from '../ds'
+import { Button, TopBar } from '../ds'
 
 import type { BattleRecording } from './battleRecorder'
 import { useLogAnchor } from './logWindow'
@@ -132,15 +132,6 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
           하나다 — 각자 골격을 들고 있어서, 데스크톱 토큰이 사라진 날 이 화면의 3열이
           `100% 1px 1fr 1px 100%` 가 됐다. */}
       <BattleFrame
-        timeBox={
-          <TickScrubber
-            min={0}
-            max={lastIndex}
-            value={Math.min(frameIndex, lastIndex)}
-            onChange={moveTo}
-            label="틱"
-          />
-        }
         {...(theme === undefined
           ? {}
           : { plan: <PlanCanvas scene={frame.scene} theme={theme} lookOf={lookOf} /> })}
@@ -151,6 +142,10 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
         onToggleRule={() => undefined}
         entries={visible}
         tick={frame.tick}
+        hp={frame.playerHp}
+        hpMax={frame.playerHpMax}
+        cpuUsed={cpuTotal}
+        cpuBudget={recording.cpuBudget}
         potions={frame.potions}
         potionsMax={recording.potionsMax}
         scrolls={frame.scrolls}
@@ -160,7 +155,13 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
         bodyRef={sheetRef}
         foot={
           <div className="hud__rewind-foot">
-            <span className="ds-label">{`cpu ${String(cpuTotal)} / ${String(recording.cpuBudget)}`}</span>
+            <TickScrubber
+              min={0}
+              max={lastIndex}
+              value={Math.min(frameIndex, lastIndex)}
+              onChange={moveTo}
+              label="틱"
+            />
             {decision === undefined ? (
               <span className="hud-log__cut">이 틱에는 플레이어의 결정이 없다</span>
             ) : null}
@@ -178,13 +179,6 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
         }
       />
 
-      <StatusBar
-        hp={frame.playerHp}
-        hpMax={frame.playerHpMax}
-        potions={frame.potions}
-        potionsMax={recording.potionsMax}
-        {...(frame.threat === undefined ? {} : { threat: frame.threat.text })}
-      />
 
       {showPost ? (
         <PostMortem
