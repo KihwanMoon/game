@@ -310,3 +310,63 @@ def test_a_new_shadow_stands_with_its_lives(client):
             "SELECT lives FROM entity_record WHERE id = %s", (record_id,)
         ).fetchone()[0]
     assert lives == DOPPEL_LIVES
+
+
+# ── 자리 고갈 (알려진 이슈 Z10) ──────────────────────────────────────────
+
+
+def test_a_full_floor_hands_its_oldest_slot_over(client):
+    """★ **자리 고갈은 「순위에 못 듦」과 다르다.**
+
+    예전에는 둘 다 0 을 돌려줘 구분되지 않았고, `apply_doppel_from_death` 가
+    `find_free_slot` 을 먼저 부르므로 그 층 자리가 차는 순간 **순위표가 한 번도 안
+    돌았다.** 실측: 4층 자리 열하나가 다 찬 뒤 봇이 4층을 115번 깼는데 새 그림자가
+    하나도 안 섰다 — 「자리가 굳는 것이 원래 고치려던 병」이라고 `create_doppel` 의
+    머리말이 적어 둔 그 병이 다른 문으로 돌아와 있었다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.doppels import count_doppels, create_doppel
+
+    pool = get_pool()
+    account_id = build_bot_account(client)
+    first = create_doppel(pool, account_id, 4, "only_slot", {"hp_max": 100}, {})
+    assert first != 0
+
+    # 자리를 못 찾았다는 뜻으로 빈 문자열을 넘긴다 — `find_free_slot` 이 내는 값이다.
+    second = create_doppel(pool, account_id, 4, "", {"hp_max": 110}, {})
+    assert second != 0, "자리가 찼다고 새 그림자가 아예 안 서면 보토가 굳는다"
+    assert second != first
+    assert count_doppels(pool) == 1, "물려받는 것이지 늘어나는 것이 아니다"
+
+
+def test_the_inherited_slot_is_the_old_one(client):
+    """★ 물려받은 자리가 그 층의 자리여야 한다.
+
+    전체에서 가장 얕은 것을 지우면 그것이 **다른 층**일 수 있고, 그러면 지워 봐야 이
+    층의 자리는 그대로 차 있다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.doppels import create_doppel
+
+    pool = get_pool()
+    account_id = build_bot_account(client)
+    create_doppel(pool, account_id, 4, "taken_slot", {"hp_max": 100}, {})
+    heir = create_doppel(pool, account_id, 4, "", {"hp_max": 110}, {})
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT entity_slot, zone_floor FROM entity_record WHERE id = %s", (heir,)
+        ).fetchone()
+    assert row[0] == "taken_slot"
+    assert row[1] == 4
+
+
+def test_an_empty_floor_still_refuses_without_a_slot(client):
+    """★ 물려받을 것이 없으면 안 선다.
+
+    빈 문자열을 그대로 통과시키면 자리 없는 개체가 생기고, 그것은 스냅샷에 안 실려
+    **아무도 못 만나는 그림자**가 된다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.doppels import create_doppel
+
+    assert create_doppel(get_pool(), build_bot_account(client), 7, "", {"hp_max": 100}, {}) == 0

@@ -60,6 +60,34 @@ def find_shallowest_doppel(pool: ConnectionPool) -> tuple[int, int]:
     return (int(row[0]), int(row[1] or 0)) if row else (0, 0)
 
 
+def find_oldest_doppel_on_floor(pool: ConnectionPool, floor: int) -> tuple[int, str]:
+    """그 층에서 가장 오래된 그림자와 그 자리.
+
+    **자리가 다 찼을 때 물려받을 하나를 고른다.** 순위표(`find_shallowest_doppel`)는
+    전체에서 가장 얕은 것을 고르는데, 그것이 다른 층에 있으면 지워 봐야 **이 층의 자리는
+    그대로 차 있다.** 실측으로 4층 자리 열하나가 다 차자 그 사이 봇이 4층을 115번 깼는데
+    새 그림자가 하나도 안 섰다 (알려진 이슈 Z10).
+
+    같은 깊이면 오래된 것을 내보낸다 — `create_doppel` 의 머리말이 「밀려나는 것은 그
+    깊이에서 가장 오래된 그림자다」라고 적어 둔 그 규칙이다. id 순이 곧 생성 순이다.
+
+    Args:
+        pool: 연결 풀.
+        floor: 볼 층.
+
+    Returns:
+        (개체 id, 자리 이름). 그 층에 그림자가 없으면 (0, "").
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT id, coalesce(entity_slot, '') FROM entity_record"
+            " WHERE kind = 'MONSTER' AND is_doppel AND alive AND zone_floor = %s"
+            " ORDER BY id ASC LIMIT 1",
+            (floor,),
+        ).fetchone()
+    return (int(row[0]), str(row[1])) if row else (0, "")
+
+
 def remove_doppel(pool: ConnectionPool, record_id: int) -> bool:
     """그림자 하나를 세계에서 지운다.
 
@@ -224,7 +252,14 @@ def create_doppel(
         만들어진 개체 id. 자리가 없거나 순위에 못 들면 0.
     """
     if not slot:
-        return 0
+        # **자리 고갈은 「순위에 못 듦」과 다르다** (Z10). 예전에는 둘 다 0 을 돌려줘
+        # 구분되지 않았고, 그래서 아래 순위표가 **한 번도 안 돌았다** — 그 층 자리가
+        # 차는 순간 뒤의 모든 죽음이 조용히 버려졌다. 「자리가 굳는 것이 원래 고치려던
+        # 병」이라고 이 머리말이 적어 둔 그 병이 다른 문으로 돌아와 있었다.
+        evicted, slot = find_oldest_doppel_on_floor(pool, floor)
+        if evicted == 0 or not slot:
+            return 0
+        remove_doppel(pool, evicted)
     if count_doppels(pool) >= MAX_DOPPELS:
         record_id, shallowest = find_shallowest_doppel(pool)
         if record_id == 0 or floor < shallowest:
