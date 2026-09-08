@@ -10,7 +10,11 @@
 from psycopg_pool import ConnectionPool
 
 from game.app.items.catalog import load_item_catalog
-from game.app.store.item_catalog import apply_grade_seed, save_catalog_entry
+from game.app.store.item_catalog import (
+    apply_generation_bump,
+    apply_grade_seed,
+    save_catalog_entry,
+)
 from game.config import ITEMS_PATH
 
 
@@ -38,6 +42,14 @@ def apply_catalog_seed(pool: ConnectionPool) -> int:
     **한 번 채우고 끝내지도 않는다.** 예전에는 표가 비어 있을 때만 돌아서, 콘텐츠를 파일에
     더해도 이미 돌고 있는 서버에는 영영 안 들어갔다 — 드롭 표에서 겪은 것과 같은 구멍이다.
 
+    **심은 것이 있으면 세대를 올린다** (§15.8). 세대는 `core_version` 의 `i` 축이라, 안
+    올리면 파일로 아이템을 더하는 것이 **게임을 바꾸면서 시즌 문자열은 그대로 두는** 일이
+    된다 — §15.8 이 관리자 편집에 대해 막아 둔 바로 그 구멍이 배포 경로에 열려 있었다
+    (`apply_generation_bump` 은 관리자 라우트에서만 불리고 있었다).
+
+    **첫 채움은 세지 않는다.** 그때는 카탈로그가 바뀐 것이 아니라 생긴 것이고, 견줄 과거
+    기록도 아직 없다.
+
     Args:
         pool: 연결 풀.
 
@@ -50,4 +62,6 @@ def apply_catalog_seed(pool: ConnectionPool) -> int:
     fresh = [entry for key, entry in sorted(catalog.items()) if key not in known]
     for entry in fresh:
         save_catalog_entry(pool, entry)
+    if fresh and known:
+        apply_generation_bump(pool)
     return len(fresh)

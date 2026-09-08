@@ -1,6 +1,6 @@
 {
   "_comment": "아이템 카탈로그 (docs/설계/4_아이템). 접사 굴림은 아직 없다 — 시드 파생식이 결정 대기(#02)이고, 정하기 전에 굴린 아이템은 나중에 검증할 수 없다. 여기 있는 것은 굴림 없이 값이 고정된 정의뿐이다. 요구조건이 참조하는 능력치는 지금 코어에 실제로 있는 것만 쓴다 — level·str 같은 축은 #10·#11 이 정해진 뒤에 들어온다. grants_skill 은 그 장비가 여는 스킬이다.",
-  "item_list_version": 2,
+  "item_list_version": 4,
   "items": [
     {
       "id": "sword_short",
@@ -269,6 +269,38 @@
       "_note": "대검의 상급. 대가가 CPU 가 아니라 선공권이라, 대검과 무엇을 내주는가가 다르다."
     },
     {
+      "id": "bow_recurve",
+      "kind": "EQUIPMENT",
+      "label_ko": "곡궁",
+      "slot": "WEAPON_MAIN",
+      "hands": "TWO",
+      "grade": "FINE",
+      "min_floor": 3,
+      "attack_range": 4,
+      "affixes": [
+        {
+          "stat": "attack",
+          "flat": 3,
+          "label_ko": "당김"
+        },
+        {
+          "stat": "initiative",
+          "flat": 4,
+          "label_ko": "가벼운 시위"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "initiative",
+          "min": 50
+        }
+      ],
+      "tags": [
+        "RANGED"
+      ],
+      "_note": "장궁의 상급. **사거리는 그대로 4 다** — 5 는 유물(폭풍 활)만 준다. 올라가는 것이 사거리면 카이팅 규칙표가 등급마다 다시 짜여야 하는데, 그것은 P3 가 아니라 그냥 세금이다. 여기서 오르는 것은 화력과 선공권이라 같은 규칙표가 더 잘 돈다. 이 자리가 비어 있던 동안 3~5층에서 카이팅 빌드의 업그레이드 경로가 끊겨 있었다 (GDD §11 의 「전략 2가지 이상」 중 하나다)."
+    },
+    {
       "id": "shield_tower",
       "kind": "EQUIPMENT",
       "label_ko": "탑 방패",
@@ -444,6 +476,40 @@
         "CURSED"
       ],
       "_note": "장궁의 유물. 사거리가 5 라 규칙 한 줄로 방 하나를 건너다본다 — 대가는 CPU 다."
+    },
+    {
+      "id": "axe_collapse",
+      "kind": "EQUIPMENT",
+      "label_ko": "붕락 도끼",
+      "slot": "WEAPON_MAIN",
+      "hands": "TWO",
+      "grade": "RELIC",
+      "min_floor": 6,
+      "attack_range": 1,
+      "affixes": [
+        {
+          "stat": "attack",
+          "flat": 12,
+          "label_ko": "무너뜨림"
+        },
+        {
+          "stat": "hp_max",
+          "flat": -18,
+          "label_ko": "[반동] 갈라진 자세"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "attack",
+          "min": 18
+        }
+      ],
+      "grants_skill": "AREA_ATTACK",
+      "tags": [
+        "MELEE",
+        "CURSED"
+      ],
+      "_note": "대검 → 전투 도끼로 이어지던 양손 근접 줄의 유물. **이 자리가 비어 있어서 유물 등급에 AREA_ATTACK 이 아예 없었다** — 최고 등급 무기를 끼면 범위공격을 잃고 규칙표의 USE_SKILL[AREA_ATTACK] 이 「불가」가 됐다. 대가는 줄마다 다르다: 대검은 CPU, 전투 도끼는 선공권, 이것은 최대 체력이다 — 때리는 힘을 맞고 버티는 힘으로 산다."
     },
     {
       "id": "shield_aegis",
@@ -657,6 +723,27 @@
           "label_ko": "지킴"
         }
       ]
+    },
+    {
+      "id": "scroll_sigil",
+      "kind": "CONSUMABLE",
+      "label_ko": "인장 주문서",
+      "grade": "RELIC",
+      "min_floor": 6,
+      "stack_max": 2,
+      "charges": 6,
+      "tags": [
+        "SCROLL"
+      ],
+      "use_tag": "SCROLL",
+      "affixes": [
+        {
+          "stat": "defense",
+          "flat": 6,
+          "label_ko": "지킴"
+        }
+      ],
+      "_note": "물약은 세 등급이 다 있는데(회복·큰 회복·영약) 주문서는 보통·상급뿐이라 소모품 축만 등급이 덜 자라 있었다. 충전은 1 → 3 → 6, 쌓임은 5 → 3 → 2 로 물약과 같은 방향이다 — 한 번에 많이 들지 못하는 대신 한 장이 오래 간다."
     }
   ]
 }

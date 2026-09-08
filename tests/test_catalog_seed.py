@@ -101,3 +101,57 @@ def test_seeding_twice_adds_nothing(pool):
 
     apply_catalog_seed(pool)
     assert apply_catalog_seed(pool) == 0
+
+
+def test_planting_a_new_item_splits_the_season(pool, tmp_path, monkeypatch):
+    """★ 카탈로그가 바뀌면 세대가 오른다 (§15.8).
+
+    세대는 `core_version` 의 `i` 축이다. 안 올리면 파일로 아이템을 더하는 것이 **게임을
+    바꾸면서 시즌 문자열은 그대로 두는** 일이 된다 — §15.8 이 관리자 편집에 대해 막아 둔
+    바로 그 구멍이 배포 경로에는 열려 있었다. `apply_generation_bump` 은 관리자 라우트
+    한 곳에서만 불렸고, 서버가 뜰 때 도는 시딩은 반환값을 버렸다.
+    """
+    import json
+
+    from game.app.store import catalog_seed
+    from game.app.store.item_catalog import read_generation
+
+    catalog_seed.apply_catalog_seed(pool)
+    before = read_generation(pool)
+    source = tmp_path / "items.json"
+    source.write_text(
+        json.dumps(
+            {
+                "item_list_version": 1,
+                "items": [
+                    {
+                        "id": f"genprobe_{tmp_path.name}",
+                        "kind": "EQUIPMENT",
+                        "label_ko": "세대 시험용 검",
+                        "slot": "WEAPON_MAIN",
+                        "hands": "ONE",
+                    }
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(catalog_seed, "ITEMS_PATH", source)
+    assert catalog_seed.apply_catalog_seed(pool) == 1
+    assert read_generation(pool) == before + 1, "아이템을 더했는데 시즌이 안 갈렸다"
+
+
+def test_seeding_the_same_file_twice_does_not_split_the_season(pool):
+    """★ 심을 것이 없으면 세대도 그대로다.
+
+    서버가 뜰 때마다 오르면 재기동 한 번이 시즌 하나가 된다 — 저장된 기록이 매번 무효가
+    되고, 그러면 세대라는 값이 아무것도 안 뜻하게 된다.
+    """
+    from game.app.store.catalog_seed import apply_catalog_seed
+    from game.app.store.item_catalog import read_generation
+
+    apply_catalog_seed(pool)
+    before = read_generation(pool)
+    assert apply_catalog_seed(pool) == 0
+    assert read_generation(pool) == before

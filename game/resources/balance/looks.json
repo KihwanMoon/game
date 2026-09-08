@@ -21,11 +21,19 @@
       "shape": "straight",
       "motion": "slash"
     },
+    "axe_collapse": {
+      "shape": "axe",
+      "motion": "chop"
+    },
     "axe_heavy": {
       "shape": "axe",
       "motion": "chop"
     },
     "bow_long": {
+      "shape": "arrow",
+      "motion": "fly"
+    },
+    "bow_recurve": {
       "shape": "arrow",
       "motion": "fly"
     },
