@@ -735,6 +735,14 @@
   overscroll-behavior-x: contain;
 }
 
+/* **조작부 안의 글은 안 접힌다.** 줄 높이가 44px 로 박혀 있으므로, 안에서 글이 접히면
+   둘째 줄이 잘려 나간다 — 실측으로 「2초 뒤 다음 방(2/50)으로 간다」가 세 줄이 되어
+   「으로 가」에서 끊겼다. 접지 말고 옆으로 흐르게 두면 밀어서 읽을 수 있다. */
+.battle--portrait .battle__controls .launch,
+.battle--portrait .battle__controls .launch * {
+  white-space: nowrap;
+}
+
 /* **세로에서는 시드를 감춘다.** 좁아지면 먼저 버릴 것을 정해 두는 규율 그대로다
    (`--bar-hint`). 시드는 열여섯 자리라 조작부 폭의 삼분의 일을 먹는데, 전투 중에
    읽을 일이 없다 — 사후 분석과 재생이 그 값을 따로 적는다. */

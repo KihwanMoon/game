@@ -47,6 +47,14 @@ describe('앱 껍데기는 상한이 아니라 바닥이다', () => {
     expect(shell).not.toContain('box-shadow')
   })
 
+  it('★ 칸이 내용에 밀려 넓어지지 않는다 — 넘치면 폰이 화면을 축소한다', () => {
+    // 격자 칸의 기본은 `min-width: auto` 다. 안에 안 줄어드는 것이 하나 생기면 칸이
+    // 껍데기보다 넓어지고, 폰 브라우저는 문서를 축소해서 맞춘다 — 실측 412px 화면에서
+    // 문서가 419px 가 됐고 도면도 글자도 전부 작아졌다 (실제 신고).
+    const rule = readRule(APP_CSS, '.app > *')
+    expect(rule).toContain('min-inline-size: var(--sp-0)')
+  })
+
   it('안전 영역 네 변을 모두 피한다 — 하단 바가 제스처 바 뒤로 들어가면 못 누른다', () => {
     for (const side of ['top', 'right', 'bottom', 'left']) {
       expect(shell).toContain(`env(safe-area-inset-${side}`)
