@@ -25,6 +25,7 @@ from game.app.items.catalog import find_item as find_catalog_item
 from game.app.items.requirements import check_requirements
 from game.app.items.sealed import compute_unseal_cost
 from game.app.items.stats import get_effective_slots
+from game.app.progression.attributes import build_attribute_bonus
 from game.app.store.accounts import find_player_entity
 from game.app.store.equipment import (
     REPAIR_COST,
@@ -36,28 +37,50 @@ from game.app.store.equipment import (
     remove_item,
 )
 from game.app.store.items import StoredItem, find_item, list_equipment, list_inventory
+from game.app.store.progress import read_progress
 from game.schemas.item import GRADE_SEALED_SLOTS, EquipSlot, ItemKind
 
 router = APIRouter()
 
-# 요구조건 판정에 쓰는 소재 능력치. #51(힘·민첩·지능 변환표)이 정해지기 전이라
-# 지금은 코어에 실제로 있는 값만 본다 — 없는 축을 요구하면 언제나 미달로 읽힌다.
-BASE_STAT_KEYS = ("attack", "defense", "hp_max", "cpu_budget")
+# 요구조건 판정에 쓰는 소재 능력치.
+#
+# **`initiative` 가 빠져 있었다.** 없는 축은 0 으로 읽히므로(`check_requirement`),
+# 선공권을 요구하는 활 둘(곡궁 50 · 폭풍 활 55)이 기본값 50 을 이미 갖고도 언제나
+# 「0 >= 50 거짓」이었다 — 원거리 업그레이드 줄이 통째로 장착 불가였다.
+BASE_STAT_KEYS = ("attack", "defense", "hp_max", "cpu_budget", "initiative")
 
 
-def build_base_stats(context_balance: dict) -> dict[str, int]:
+def build_base_stats(context_balance: dict, stats: dict[str, int] | None = None) -> dict[str, int]:
     """요구조건 판정의 기준이 되는 소재 능력치.
 
     **장비 보너스가 들어가지 않는다.** 들어가면 착용 순서가 결과를 바꾼다 (§7).
 
+    **배분한 능력치는 들어간다** (결정 #51). 안 넣던 때는 시작값이 영원히 고정이라
+    유물 일곱이 **전부** 장착 불가였다 — 붕락 도끼 `attack 12/18`, 보루 갑옷
+    `hp_max 100/130`, 연산 기관 `cpu_budget 8/10` 처럼 아무리 커도 안 열리는 벽이었다.
+    #51 이 정해지기 전에 쓴 주석이 그대로 남아 있었고, 그 사이 `attributes.py` 가
+    구현됐다. 배분은 장비와 달리 착용 순서를 안 타므로 §7 의 규율과 어긋나지 않는다.
+
     Args:
         context_balance: balance.json 을 읽은 딕셔너리.
+        stats: 배분표(`str`·`dex`·`int`). 없으면 배분이 없는 것으로 본다.
 
     Returns:
         능력치 이름에서 값으로의 대응표.
     """
     player = context_balance["player"]
-    return {key: int(player[key]) for key in BASE_STAT_KEYS if key in player}
+    base = {key: int(player[key]) for key in BASE_STAT_KEYS if key in player}
+    bonus = build_attribute_bonus(stats or {})
+    for key, added in (
+        ("attack", bonus.attack),
+        ("hp_max", bonus.hp_max),
+        ("defense", bonus.defense),
+        ("initiative", bonus.initiative),
+        ("cpu_budget", bonus.cpu_budget),
+    ):
+        if key in base:
+            base[key] += added
+    return base
 
 
 def build_item_view(
@@ -163,7 +186,7 @@ def build_inventory_response(account_id: int) -> InventoryResponse:
     pool = get_pool()
     entity_id = find_player_entity(pool, account_id)
     catalog = get_item_catalog()
-    base_stats = build_base_stats(get_context().balance)
+    base_stats = build_base_stats(get_context().balance, read_progress(pool, entity_id).stats)
 
     equipped = list_equipment(pool, entity_id)
     entries = {slot: find_catalog_item(catalog, item.catalog_id) for slot, item in equipped.items()}
@@ -241,7 +264,7 @@ def create_equip(request: EquipRequest, account: CurrentAccount) -> InventoryRes
     if stored.is_broken:
         raise HTTPException(status.HTTP_409_CONFLICT, "파손된 장비다 — 먼저 복구한다")
 
-    base_stats = build_base_stats(get_context().balance)
+    base_stats = build_base_stats(get_context().balance, read_progress(pool, entity_id).stats)
     unmet = [c for c in check_requirements(entry, base_stats) if not c.is_met]
     if unmet:
         first = unmet[0]
