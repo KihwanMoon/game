@@ -753,7 +753,8 @@ describe('판정 라벨은 한 벌이다', () => {
     for (const name of ['BattleView.tsx', 'BattlePortrait.tsx', 'BattleLandscape.tsx']) {
       expect(readFileSync(`${BATTLE_DIR}${name}`, 'utf8')).not.toContain('OUTCOME_LABELS')
     }
-    expect(readFileSync(`${BATTLE_DIR}BattlePortrait.tsx`, 'utf8')).toContain('formatOutcome')
+    // 판정 문구는 세 화면이 나눠 쓰는 속(`BattleFrame`)에서 한 번만 만든다.
+    expect(readFileSync(`${BATTLE_DIR}BattleFrame.tsx`, 'utf8')).toContain('formatOutcome')
   })
 
   it('쓰러짐을 쓴다 — 명세의 판정 표시가 정본이다', () => {

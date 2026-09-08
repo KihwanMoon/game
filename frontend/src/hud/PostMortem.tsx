@@ -14,7 +14,9 @@
  */
 import { useMemo, useState } from 'react'
 
-import { PlanCanvas, buildLookOf } from '../battle'
+import { BattleFrame, PlanCanvas, buildLookOf } from '../battle'
+import type { SheetTab } from '../battle'
+import { BLOCK_CATALOG } from '../core/resources'
 import type { PlanTheme } from '../battle'
 import { Button, Panel } from '../ds'
 
@@ -22,13 +24,10 @@ import { buildDamageHeatmap, buildRuleStats } from './analysis'
 import { formatOutcome, formatTickLabel } from './analysisText'
 import type { BattleRecording, RecordedFrame } from './battleRecorder'
 import { DamageHeatmap } from './DamageHeatmap'
-import { LogStream } from './LogStream'
-import { DEATH_REPLAY_TICKS, findTickIndex } from './logWindow'
+import { DEATH_REPLAY_TICKS } from './logWindow'
+import { buildReplayTrace, buildSheetRows, findDecision } from './replayTrace'
 import { RuleStatsTable } from './RuleStatsTable'
 import { TickScrubber } from './TickScrubber'
-
-/** 리플레이 로그에 한 번에 그릴 줄 수. 15틱이면 이 안에 들어온다. */
-const REPLAY_LOG_ROWS = 120
 
 /** PostMortem 이 받는 props. */
 export interface PostMortemProps {
@@ -65,6 +64,8 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
   const { recording } = props
   const startTick = getReplayStartTick(recording.ticks)
   const [tick, setTick] = useState(recording.ticks)
+  // 시트가 처음 여는 탭. 관전·되감기와 같다 — 규칙표가 이 게임의 주어다.
+  const [tab, setTab] = useState<SheetTab>('rules')
 
   const stats = useMemo(
     () => buildRuleStats(recording.entries, recording.playerId),
@@ -84,7 +85,6 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
   const lookOf = useMemo(() => buildLookOf(props.weaponCatalogId ?? ''), [props.weaponCatalogId])
 
   const frame: RecordedFrame | undefined = recording.frames[tick]
-  const anchorIndex = findTickIndex(recording.entries, tick)
 
   return (
     <div className="hud-post" role="dialog" aria-label="사후 분석">
@@ -115,34 +115,51 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
             meta={formatTickLabel(tick)}
             padded={false}
           >
-            <div className="hud-post__replay">
-              <div className="hud-post__plan">
-                {frame === undefined || props.theme === undefined ? (
-                  <p className="hud-log__cut">그 틱의 화면이 없다</p>
-                ) : (
-                  <PlanCanvas scene={frame.scene} theme={props.theme} lookOf={lookOf} />
+            {/* **관전·되감기와 같은 속이다.** 짚은 틱에서 무엇이 있었는지를 묻는 자리라
+                그리는 것이 전투 화면과 다를 이유가 없다 — 다른 모양으로 그리면 방금
+                본 판과 다른 판을 보는 것이 된다. 바는 이 다이얼로그가 이미 들었다. */}
+            {frame === undefined ? (
+              <p className="hud-log__cut">그 틱의 화면이 없다</p>
+            ) : (
+              <BattleFrame
+                isPanel
+                timeBox={
+                  <TickScrubber
+                    min={startTick}
+                    max={recording.ticks}
+                    value={tick}
+                    onChange={setTick}
+                    label="되감기"
+                  />
+                }
+                {...(props.theme === undefined
+                  ? {}
+                  : {
+                      plan: (
+                        <PlanCanvas scene={frame.scene} theme={props.theme} lookOf={lookOf} />
+                      ),
+                    })}
+                outcome={frame.outcome}
+                {...(frame.threat === undefined ? {} : { threat: frame.threat.text })}
+                rows={buildSheetRows(
+                  buildReplayTrace(
+                    recording.ruleset,
+                    BLOCK_CATALOG,
+                    findDecision(recording.entries, tick, recording.playerId),
+                  ),
+                  recording.cpuBudget,
                 )}
-              </div>
-              <div className="hud-post__log">
-                <LogStream
-                  entries={recording.entries}
-                  follow={false}
-                  onFollowChange={() => undefined}
-                  currentTick={tick}
-                  maxRows={REPLAY_LOG_ROWS}
-                  {...(anchorIndex === undefined ? {} : { anchorIndex })}
-                />
-              </div>
-            </div>
-            <div className="hud-post__scrub">
-              <TickScrubber
-                min={startTick}
-                max={recording.ticks}
-                value={tick}
-                onChange={setTick}
-                label="되감기"
+                onToggleRule={() => undefined}
+                entries={recording.entries.slice(0, frame.logEnd)}
+                tick={tick}
+                potions={frame.potions}
+                potionsMax={recording.potionsMax}
+                scrolls={frame.scrolls}
+                scrollsMax={recording.potionsMax}
+                tab={tab}
+                onTabChange={setTab}
               />
-            </div>
+            )}
           </Panel>
         </div>
       </div>

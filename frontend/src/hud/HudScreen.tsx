@@ -18,17 +18,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
-import { PlanCanvas, buildLookOf } from '../battle'
+import { BattleFrame, PlanCanvas, buildLookOf } from '../battle'
+import type { SheetTab } from '../battle'
 import { BLOCK_CATALOG } from '../core/resources'
 import { OUTCOME_PLAYER_LOSS } from '../core/sim/phases'
-import { Button, Panel, RuleRow, RuleTable, StatusBar, ThreatNotice, TopBar } from '../ds'
+import { Button, StatusBar, TopBar } from '../ds'
 
-import { formatOutcome, formatTickLabel } from './analysisText'
 import type { BattleRecording } from './battleRecorder'
-import { LogStream } from './LogStream'
-import { findTickIndex } from './logWindow'
 import { PostMortem } from './PostMortem'
-import { buildReplayTrace, findDecision } from './replayTrace'
+import { buildReplayTrace, buildSheetRows, findDecision } from './replayTrace'
 import { TickScrubber } from './TickScrubber'
 import { usePlanTheme } from './usePlanTheme'
 
@@ -64,7 +62,8 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
   const lastIndex = recording.frames.length - 1
   const [frameIndex, setFrameIndex] = useState(0)
   const [speed, setSpeed] = useState(INITIAL_SPEED)
-  const [follow, setFollow] = useState(true)
+  // 시트가 처음 여는 탭. 규칙표가 이 화면의 주어다 — 관전과 같다.
+  const [tab, setTab] = useState<SheetTab>('rules')
   const [postState, setPostState] = useState<PostState>('auto')
   const { theme, intervalMs } = usePlanTheme()
   const lookOf = useMemo(() => buildLookOf(props.weaponCatalogId ?? ''), [props.weaponCatalogId])
@@ -96,7 +95,6 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
   const decision = findDecision(recording.entries, frame.tick, recording.playerId)
   const trace = buildReplayTrace(recording.ruleset, BLOCK_CATALOG, decision)
   const cpuTotal = trace.at(-1)?.cpuUsed ?? 0
-  const anchorIndex = findTickIndex(visible, frame.tick)
 
   const atEnd = frameIndex >= lastIndex
   const isDefeat = recording.outcome === OUTCOME_PLAYER_LOSS
@@ -109,8 +107,8 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
    */
   const moveTo = (next: number): void => {
     setFrameIndex(next)
+    // 손으로 옮기는 동안에는 재생을 멈춘다 — 안 멈추면 민 자리에서 곧 밀려난다.
     setSpeed(0)
-    setFollow(false)
   }
 
   return (
@@ -120,69 +118,46 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
           location={props.location}
           tick={frame.tick}
           speed={speed}
-          onSpeedChange={(value) => {
-            setSpeed(value)
-            if (value > 0) {
-              setFollow(true)
-            }
-          }}
+          onSpeedChange={setSpeed}
         />
         {props.controls}
       </div>
 
-      <div className="hud__cols">
-        <div className="hud__col">
-          <Panel
-            title="규칙표"
-            meta={`cpu ${String(cpuTotal)} / ${String(recording.cpuBudget)}`}
-            padded={false}
-            scroll
-          >
-            <RuleTable>
-              {trace.map((row) => (
-                <RuleRow
-                  key={row.priority}
-                  index={row.priority}
-                  state={row.state}
-                  armed={row.armed}
-                  condition={row.condition}
-                  action={row.action}
-                  cpu={{ used: row.cpuUsed, budget: recording.cpuBudget }}
-                />
-              ))}
-            </RuleTable>
+      {/* **전투 화면과 같은 속을 쓴다.** 되감기는 시간축만 다르고 그리는 것은 관전과
+          하나다 — 각자 골격을 들고 있어서, 데스크톱 토큰이 사라진 날 이 화면의 3열이
+          `100% 1px 1fr 1px 100%` 가 됐다. */}
+      <BattleFrame
+        timeBox={
+          <TickScrubber
+            min={0}
+            max={lastIndex}
+            value={Math.min(frameIndex, lastIndex)}
+            onChange={moveTo}
+            label="틱"
+          />
+        }
+        {...(theme === undefined
+          ? {}
+          : { plan: <PlanCanvas scene={frame.scene} theme={theme} lookOf={lookOf} /> })}
+        outcome={frame.outcome}
+        {...(frame.threat === undefined ? {} : { threat: frame.threat.text })}
+        rows={buildSheetRows(trace, recording.cpuBudget)}
+        // 지나간 판이라 끄고 켤 수 없다.
+        onToggleRule={() => undefined}
+        entries={visible}
+        tick={frame.tick}
+        potions={frame.potions}
+        potionsMax={recording.potionsMax}
+        scrolls={frame.scrolls}
+        scrollsMax={recording.potionsMax}
+        tab={tab}
+        onTabChange={setTab}
+        foot={
+          <div className="hud__rewind-foot">
+            <span className="ds-label">{`cpu ${String(cpuTotal)} / ${String(recording.cpuBudget)}`}</span>
             {decision === undefined ? (
-              <p className="hud-log__cut">이 틱에는 플레이어의 결정이 없다</p>
+              <span className="hud-log__cut">이 틱에는 플레이어의 결정이 없다</span>
             ) : null}
-          </Panel>
-        </div>
-
-        <div className="hud__gap" />
-
-        <div className="hud__plan">
-          <div className="hud__plan-head">
-            {frame.threat === undefined ? (
-              <span className="ds-label">예고 없음</span>
-            ) : (
-              <ThreatNotice
-                text={frame.threat.text}
-                ticks={frame.threat.ticks}
-                glyph={frame.threat.glyph}
-                tone={frame.threat.tone === 'danger' ? 'danger' : 'neutral'}
-              />
-            )}
-          </div>
-          {theme === undefined ? null : (
-            <PlanCanvas scene={frame.scene} theme={theme} lookOf={lookOf} />
-          )}
-          <div className="hud__plan-foot">
-            <TickScrubber
-              min={0}
-              max={lastIndex}
-              value={Math.min(frameIndex, lastIndex)}
-              onChange={moveTo}
-              label="틱"
-            />
             <Button
               size="sm"
               variant="secondary"
@@ -194,26 +169,8 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
               사후 분석
             </Button>
           </div>
-        </div>
-
-        <div className="hud__gap" />
-
-        <div className="hud__col">
-          <Panel
-            title="실행 로그"
-            meta={`${formatTickLabel(frame.tick)} · ${formatOutcome(frame.outcome)}`}
-            padded={false}
-          >
-            <LogStream
-              entries={visible}
-              follow={follow}
-              onFollowChange={setFollow}
-              currentTick={frame.tick}
-              {...(anchorIndex === undefined ? {} : { anchorIndex })}
-            />
-          </Panel>
-        </div>
-      </div>
+        }
+      />
 
       <StatusBar
         hp={frame.playerHp}

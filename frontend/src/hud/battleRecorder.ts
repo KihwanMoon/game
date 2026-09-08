@@ -49,6 +49,8 @@ export interface RecordedFrame {
   readonly playerHp: number
   readonly playerHpMax: number
   readonly potions: number
+  /** 남은 주문서. 물약과 같은 자리다 — 되감기가 소모품 현황을 그대로 그린다. */
+  readonly scrolls: number
   /** 플레이어가 선 칸에 걸린 예고. 없으면 undefined 다 — 0 으로 접지 마라. */
   readonly threat: ThreatNotice | undefined
   /** 이 틱이 끝난 시점의 승패. 진행 중이면 OUTCOME_ONGOING. */
@@ -117,6 +119,7 @@ export function recordFrame(
     playerHp: player.hp,
     playerHpMax: player.hpMax,
     potions: countItem(player, 'POTION'),
+    scrolls: countItem(player, 'SCROLL'),
     threat: buildThreatNotice(engine.telegraphs, player.position, getForesightTicks(player)),
     outcome,
   }

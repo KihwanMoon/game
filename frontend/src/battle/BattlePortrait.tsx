@@ -25,17 +25,12 @@
  */
 import type { ReactNode, Ref } from 'react'
 
-import { HpGauge, ThreatNotice } from '../ds'
+import { HpGauge } from '../ds'
 import type { LogRowProps } from '../ds'
-import { BattleSheet, SheetFoot } from './BattleSheet'
-import { formatSettlementTabCount, type FloorSettlement } from './settlement'
-import { formatOutcomeNotice, resolveOutcomeTone } from './outcomeText'
-import {
-  formatLogTabCount,
-  formatRulesTabCount,
-  formatTick,
-  type SheetTab,
-} from './portraitSheet'
+import { BattleFrame } from './BattleFrame'
+import { SheetFoot } from './BattleSheet'
+import type { FloorSettlement } from './settlement'
+import { formatTick, type SheetTab } from './portraitSheet'
 import type { RuleRowView } from './ruleRows'
 import { SpeedBox } from './SpeedBox'
 
@@ -117,13 +112,6 @@ export interface BattlePortraitProps {
  * @returns 렌더 트리.
  */
 export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
-  const enabledRules = props.rows.filter((row) => row.enabled).length
-  const counts: ReadonlyMap<SheetTab, string> = new Map([
-    ['rules' as SheetTab, formatRulesTabCount(enabledRules, props.rows.length)],
-    ['log' as SheetTab, formatLogTabCount(props.tick)],
-    ['reward' as SheetTab, formatSettlementTabCount(props.settlements ?? [])],
-  ])
-
   return (
     <div className="battle battle--portrait">
       <header className="battle__bar battle__bar--top">
@@ -140,39 +128,32 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
         </span>
       </header>
 
-      <div className="battle__speed-bar">
-        <SpeedBox
-          value={props.speed}
-          onChange={props.onSpeedChange}
-          onInstant={props.onInstant}
-        />
-      </div>
-
-      <div className="battle__col battle__col--plan">
-        <div className="battle__frame">{props.plan}</div>
-      </div>
-
-      <div className="battle__status">
-        <span className={`battle__verdict battle__verdict--${resolveOutcomeTone(props.outcome)}`}>
-          {formatOutcomeNotice(props.outcome)}
-        </span>
-        {props.threat === undefined ? null : <ThreatNotice text={props.threat} tone="danger" />}
-      </div>
-
-      <BattleSheet
-        tab={props.tab}
-        counts={counts}
-        onTabChange={props.onTabChange}
-        rules={props.rows}
+      {/* **속은 세 화면이 나눠 쓴다** — 관전·되감기·사후 분석이 같은 것을 그린다.
+          여기서 더하는 것은 위아래 바뿐이고, 그 둘이 화면마다 다른 것을 싣는다. */}
+      <BattleFrame
+        timeBox={
+          <SpeedBox
+            value={props.speed}
+            onChange={props.onSpeedChange}
+            onInstant={props.onInstant}
+          />
+        }
+        {...(props.plan === undefined ? {} : { plan: props.plan })}
+        outcome={props.outcome}
+        {...(props.threat === undefined ? {} : { threat: props.threat })}
+        rows={props.rows}
         onToggleRule={props.onToggleRule}
         entries={props.entries}
+        tick={props.tick}
         settlements={props.settlements ?? []}
-        cooldowns={props.cooldowns ?? ''}
         potions={props.potions}
         potionsMax={props.potionsMax}
         scrolls={props.scrolls}
         scrollsMax={props.scrollsMax}
-        bodyRef={props.bodyRef}
+        cooldowns={props.cooldowns ?? ''}
+        tab={props.tab}
+        onTabChange={props.onTabChange}
+        {...(props.bodyRef === undefined ? {} : { bodyRef: props.bodyRef })}
         foot={
           <SheetFoot
             cpuUsed={props.cpuUsed}

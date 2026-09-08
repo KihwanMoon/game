@@ -17,7 +17,9 @@
 }
 
 .gal__note {
-  max-width: calc(var(--col-rules) * 2);
+  /* 세로가 기본이라 `--col-rules` 는 100% 다. 그것의 두 배를 상한으로 걸면 상한이
+     아니게 된다 — 읽는 폭은 배치가 아니라 글줄 길이가 정한다. */
+  max-width: 64ch;
   font-size: var(--fs-body-s);
   color: var(--text-dim);
 }
@@ -39,12 +41,12 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
-  min-width: var(--col-log);
+  min-width: var(--cell-min);
 }
 
 .gal__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--col-log), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(var(--cell-min), 1fr));
   gap: var(--sp-4);
 }
 
@@ -62,8 +64,10 @@
 
 .gal__cols {
   display: grid;
-  grid-template-columns:
-    var(--col-rules) var(--gap-col) minmax(0, 1fr) var(--gap-col) var(--col-log);
+  /* **데스크톱 3열을 지운 뒤 남아 있던 격자다** (2026-09-08). `--col-rules`·`--col-log`
+     가 100% 라 `100% 1px 1fr 1px 100%` 를 요구했고, 열이 서로 밀려 겹쳐 보였다.
+     확인용 페이지는 부품을 늘어놓는 자리라 폭이 채우는 만큼 접으면 된다. */
+  grid-template-columns: repeat(auto-fill, minmax(var(--cell-min), 1fr));
   min-height: 0;
 }
 

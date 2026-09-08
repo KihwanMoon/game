@@ -250,8 +250,17 @@ describe('PostMortem', () => {
     expect(html).toContain('hazard_field')
   })
 
-  it('도면 테마를 아직 못 읽었으면 캔버스 대신 그렇게 적는다', () => {
-    expect(html).toContain('그 틱의 화면이 없다')
+  it('★ 도면 테마가 없어도 되감기는 선다 — 캔버스만 비운다', () => {
+    // 예전에는 테마가 없으면 되감기 영역 통째로 「그 틱의 화면이 없다」였다. 그러면
+    // 토큰을 읽기 전에는 스크러버도 규칙표도 없어서, 짚어 볼 수가 없었다.
+    expect(html).toContain('되감기')
+    expect(html).toContain('battle-frame--panel')
+    expect(html).not.toContain('그 틱의 화면이 없다')
+  })
+
+  it('★ 관전과 같은 속을 쓴다 — 방금 본 판과 다른 모양으로 그리면 안 된다', () => {
+    expect(html).toContain('battle__sheet')
+    expect(html).toContain('battle__status')
   })
 })
 
@@ -260,17 +269,19 @@ describe('HudScreen', () => {
     <HudScreen recording={VICTORY} location="1층 · 개활지" />,
   )
 
-  it('골격 다섯 자리를 낸다 — 상단·규칙표·도면·로그·하단', () => {
+  it('★ 골격이 관전과 같다 — 되감기는 시간축만 다르다', () => {
+    // 예전에는 제 3열 골격을 들고 있었다. 데스크톱 토큰이 사라진 날 그 격자가
+    // `100% 1px 1fr 1px 100%` 가 됐고, 화면 폭의 두 배를 요구했다.
     expect(html).toContain('ds-topbar')
-    expect(html).toContain('hud__cols')
+    expect(html).toContain('battle-frame')
     expect(html).toContain('ds-rule-table')
-    expect(html).toContain('hud__plan')
-    expect(html).toContain('hud-log')
+    expect(html).toContain('battle__col--plan')
     expect(html).toContain('ds-statusbar')
+    expect(html).not.toContain('hud__cols')
   })
 
-  it('열 사이는 괘선 하나씩 둘이다', () => {
-    expect(html.match(/hud__gap/g)).toHaveLength(2)
+  it('★ 시간 조작부가 스크러버다 — 앞으로만 가는 화면이 아니다', () => {
+    expect(html).toContain('hud-scrub')
   })
 
   it('황동 예산 때문에 primary 버튼을 쓰지 않는다', () => {

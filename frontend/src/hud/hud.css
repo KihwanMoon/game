@@ -56,51 +56,9 @@
   color: var(--text-dim);
 }
 
-.hud__cols {
-  display: grid;
-  grid-template-columns:
-    var(--col-rules) var(--gap-col) minmax(0, 1fr) var(--gap-col) var(--col-log);
-  min-height: 0;
-}
-
-/* 열 사이는 괘선 하나다. 여백으로 벌리지 않는다. */
-.hud__gap {
-  background: var(--line);
-}
-
-.hud__col {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow-y: auto;
-  background: var(--surface-panel);
-}
-
-.hud__plan {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--sp-3);
-  min-width: 0;
-  padding: var(--sp-4);
-  overflow: auto;
-  background: var(--surface-plan);
-}
-
-.hud__plan-head,
-.hud__plan-foot {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
-  width: 100%;
-  min-height: var(--sp-8);
-}
-
-.hud__plan-foot {
-  justify-content: space-between;
-}
-
-/* ── 도면 위의 지형 ─────────────────────────────────────────────────── */
+/* **열이 없다** (2026-09-08). 되감기는 관전과 같은 속(`BattleFrame`)을 쓴다 — 시간축만
+   다르고 그리는 것은 하나라, 제 3열 골격을 들고 있던 시절에는 데스크톱 토큰이 사라진 날
+   `100% 1px 1fr 1px 100%` 짜리 격자가 됐다. 골격은 `battle.css` 한 곳에 있다. */
 
 .hud-tile {
   position: absolute;
@@ -425,36 +383,16 @@
   min-height: 0;
 }
 
-.hud-post__replay {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--gap-col);
-  min-height: 0;
-  background: var(--line);
-}
+/* 되감기 영역은 `BattleFrame` 이 그린다 — 도면·시트·스크러버 배치는 `battle.css` 다.
+   여기에 한 벌 더 두면 사후 분석만 다른 모양이 되고, 그것이 예전 상태였다. */
 
-.hud-post__plan {
+/* 되감기 시트의 하단 — CPU 수치와 사후 분석 문. 관전의 `한 틱`·`처음부터` 자리다.
+   지나간 판이라 밀 것이 없고, 대신 어디로 나가는지가 있어야 한다. */
+.hud__rewind-foot {
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: var(--sp-3);
-  background: var(--surface-plan);
-}
-
-/* 로그는 안에서 스크롤한다. 좁은 배치에서는 한 줄이 여러 줄로 접혀(실측값 병기를
-   자르지 않기 위해서다) 그룹 하나가 1,000px 을 넘는데, 내부 스크롤이 없으면 그 높이가
-   그대로 문서 높이가 된다. 실제로 사후 분석 문서가 12,327px 이 되어 패널이 위로
-   밀려 사라지고 '닫기' 를 못 찾는 상태였다. */
-.hud-post__log {
-  display: flex;
-  min-width: 0;
-  max-height: calc(var(--plan-cell) * var(--plan-rows));
-  overflow-y: auto;
-  background: var(--surface-panel);
-}
-
-.hud-post__scrub {
-  display: flex;
-  padding: var(--sp-3);
-  border-top: var(--border);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-top: var(--bw) solid var(--line);
 }

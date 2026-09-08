@@ -37,17 +37,6 @@
   border-bottom: none;
 }
 
-.battle__body {
-  display: grid;
-  grid-template-columns:
-    var(--col-rules) var(--gap-col) minmax(var(--sp-0), 1fr)
-    var(--gap-col) var(--col-log);
-  min-height: var(--sp-0);
-}
-
-.battle__rule-line {
-  background: var(--line);
-}
 
 .battle__col {
   display: flex;
@@ -145,6 +134,20 @@
        도면의 좌우 끝과 글자의 좌우 끝이 같은 선에 서야 한 장의 도면처럼 읽힌다.
      · 시트 하단의 gap 10 → `--sp-3`(12). 10 은 4px 모듈에 없는 수다. */
 
+/* **속은 자리를 안 차지한다.** 세로 전투는 문서 흐름이라 이 상자가 끼면 그 흐름이 한 번
+   끊긴다 — `display:contents` 면 자식들이 지금까지와 똑같이 흐른다. 다이얼로그 안에서만
+   제 상자를 갖는다(`--panel`): 거기서는 시트가 그 상자 안에서 스크롤해야 한다. */
+.battle-frame {
+  display: contents;
+}
+
+.battle-frame--panel {
+  display: flex;
+  flex-direction: column;
+  min-block-size: var(--sp-0);
+  overflow: hidden;
+}
+
 .battle--portrait {
   /* **상한이 아니라 흐름이다** (실제 피드백: 「상한을 걸지 말라니까」). 격자 대신 문서
      흐름 — 모든 구역이 제 내용 높이를 온전히 갖고, 넘치면 화면이 통째로 흐른다.
@@ -161,13 +164,13 @@
 /* **높이 100% 가 사슬로 이어져야 캔버스가 줄어든다.** max-height 만 주면 frame 의 제
    높이가 내용 크기라 100% 가 아무것도 못 잡고, 캔버스는 제 크기를 고집한 채 잘려
    나갔다 — 축소가 아니라 절단이었다(실제 피드백). */
-.battle--portrait .battle__frame {
+.battle-frame .battle__frame {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.battle--portrait .battle__frame canvas {
+.battle-frame .battle__frame canvas {
   /* 가로만 화면에 맞춘다 — 세로는 자연 높이다. 상한이 아니라 「화면보다 넓을 수 없다」다. */
   max-width: 100%;
   height: auto;
@@ -309,7 +312,7 @@
 /* 도면 — **스크롤하지 않는다.** 데스크톱의 도면 열은 좁아지면 스크롤되지만(그쪽은
    가운데 열이 가변이다), 세로에서는 도면이 고정이고 시트만 바뀐다. 규칙을 보면서도
    유닛 위치를 계속 읽을 수 있어야 하므로 도면이 밀려 나가면 배치의 뜻이 사라진다. */
-.battle--portrait .battle__col--plan {
+.battle-frame .battle__col--plan {
   display: flex;
   justify-content: center;
   gap: var(--sp-0);
@@ -627,15 +630,6 @@
   font-size: var(--fs-mono-s);
 }
 
-
-/* **껍데기가 문서를 가두면 흐름의 아래가 없는 화면이 된다** (실제 피드백: 상한은
-   풀렸는데 스크롤이 안 된다). 앱 껍데기는 고정 프레임(100dvh · overflow hidden)이
-   원칙이지만 — 세로 전투는 문서 흐름이라, 그때만 껍데기도 함께 흐른다. */
-.app:has(.battle--portrait) {
-  height: auto;
-  min-height: 100dvh;
-  overflow: visible;
-}
 
 /* ── 정산 탭 ──────────────────────────────────────────────────────────────
    **한 줄에 정보 하나.** 서버가 ` · ` 로 이어 보내는 것을 끊어 세로로 쌓는다 — 가로로

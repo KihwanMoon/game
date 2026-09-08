@@ -212,15 +212,21 @@ describe('상한이 아니라 흐름이다 (실제 피드백)', () => {
   })
 
   it('★ 캔버스는 가로만 화면에 맞춘다 — 세로는 자연 높이다', () => {
-    const block = cutRule('.battle--portrait .battle__frame canvas')
+    const block = cutRule('.battle-frame .battle__frame canvas')
     expect(block).toContain('max-width: 100%')
     expect(block).toContain('height: auto')
   })
 
   it('★ 껍데기도 함께 흐른다 — 가두면 흐름의 아래가 없는 화면이 된다', () => {
-    const block = cutRule('.app:has(.battle--portrait)')
-    expect(block).toContain('height: auto')
-    expect(block).toContain('overflow: visible')
+    // 예전에는 `.app:has(.battle--portrait)` 로 그때만 껍데기를 풀었다. 이제 껍데기
+    // 자체가 상한이 아니라 바닥이라(`styles/shell.test.ts`) 그 되돌림이 필요 없다.
+    const shell = readFileSync(
+      fileURLToPath(new URL('../styles/app.css', import.meta.url)),
+      'utf-8',
+    )
+    const block = shell.slice(shell.indexOf('.app {'), shell.indexOf('}', shell.indexOf('.app {')))
+    expect(block).toContain('min-block-size: 100dvh')
+    expect(block).not.toContain('overflow: hidden')
   })
 
   it('★ 안에서 흐르는 곳은 시트 몸통 하나다 — 로그는 수백 줄이다', () => {

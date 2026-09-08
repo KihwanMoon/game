@@ -13,6 +13,7 @@
  */
 
 import { formatActionText, formatPendingCondition } from '../battle'
+import type { RuleRowView } from '../battle'
 import type { LogEntry } from '../core/eventLog'
 import type { BlockCatalog, RuleSet } from '../core/schemas'
 import { PHASE_DECIDE } from '../core/sim/phases'
@@ -110,4 +111,31 @@ export function buildReplayTrace(
       cpuUsed,
     }
   })
+}
+
+/**
+ * 되감기의 추적 줄을 전투 시트가 읽는 모양으로 접는다.
+ *
+ * **화면 셋이 같은 시트를 쓴다** — 관전은 엔진에서, 되감기와 사후 분석은 기록에서 값을
+ * 얻지만 그리는 것은 하나다. 접는 자리를 화면마다 두면 셋이 조금씩 달라진다.
+ *
+ * @param trace 그 틱의 추적 줄들.
+ * @param cpuBudget 예산. 초과는 오류가 아니라 수치라 넘겨도 그대로 적는다.
+ * @returns 전투 시트가 읽는 규칙 줄들.
+ */
+export function buildSheetRows(
+  trace: readonly ReplayTraceRow[],
+  cpuBudget: number,
+): readonly RuleRowView[] {
+  return trace.map((row) => ({
+    priority: row.priority,
+    state: row.state,
+    condition: row.condition,
+    action: row.action,
+    cpu: { used: row.cpuUsed, budget: cpuBudget },
+    armed: row.armed,
+    // **되감기에서는 끄고 켤 수 없다.** 지나간 판이라 전부 켜져 있던 것으로 적는다 —
+    // 꺼진 줄로 그리면 그 판이 실제로 그 줄을 안 썼다는 뜻이 되어 거짓이다.
+    enabled: true,
+  }))
 }

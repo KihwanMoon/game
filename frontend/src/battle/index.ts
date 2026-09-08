@@ -18,6 +18,11 @@ export type { BattleViewProps } from './BattleView'
 // 딸려오지 않아 토큰 없는 맨 마크업이 나온다 (ds 배럴과 같은 규약).
 export { BattleCheck } from './BattleCheck'
 
+// **전투 화면의 속.** 관전·되감기·사후 분석이 나눠 쓴다 — 시간축만 다르고 그리는 것은
+// 하나다. 바는 화면마다 다른 것을 실으므로 여기 없다.
+export { BattleFrame } from './BattleFrame'
+export type { BattleFrameProps } from './BattleFrame'
+
 export { PlanCanvas, describeScene } from './PlanCanvas'
 export type { PlanCanvasProps } from './PlanCanvas'
 
