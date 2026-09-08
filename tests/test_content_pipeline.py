@@ -92,25 +92,41 @@ def test_a_draft_does_not_need_a_version_bump(client, admin):
 
 
 def test_publishing_needs_a_higher_generation(client, admin):
-    """★ 세대를 안 올리고 발행하면 저장된 리플레이가 조용히 거짓이 된다."""
-    discard_all(client, admin)
-    raw = read_skills()
-    client.post(
-        "/api/admin/content/draft",
-        json={"asset": "skills", "payload": raw, "note": "검사용 초안"},
-        headers=build_headers(admin),
-    )
-    # **지금 세대와 같은 값으로 낸다.** 0 으로 내면 스키마의 ge=1 이 먼저 막아서
-    # 라우트의 세대 검사를 아무도 안 보게 된다 — 실제로 그렇게 통과했다.
+    """★ 세대를 안 올리고 발행하면 저장된 리플레이가 조용히 거짓이 된다.
+
+    **세대를 스스로 세운다.** 예전에는 `max(1, 지금 세대)` 를 냈는데, 그것은 검사 DB 에
+    남아 있던 세대가 1 이상이라야 뜻이 있었다 — DB 를 비우자 저장된 세대가 0 이 됐고,
+    스키마의 `ge=1` 을 피하려고 낸 1 이 0 보다 **높아서 그냥 발행됐다.** 검사가 남은
+    찌꺼기에 기대고 있었던 자리다 (알려진 이슈 Z8).
+    """
     from game.api.deps import get_pool
     from game.app.store.content_pack import read_pack_generation
 
-    current = max(1, read_pack_generation(get_pool()))
-    response = client.post(
-        "/api/admin/content/publish",
-        json={"generation": current, "note": "세대 안 올림"},
-        headers=build_headers(admin),
-    )
+    def push_draft():
+        client.post(
+            "/api/admin/content/draft",
+            json={"asset": "skills", "payload": read_skills(), "note": "검사용 초안"},
+            headers=build_headers(admin),
+        )
+
+    def publish(generation, note):
+        return client.post(
+            "/api/admin/content/publish",
+            json={"generation": generation, "note": note},
+            headers=build_headers(admin),
+        )
+
+    discard_all(client, admin)
+    push_draft()
+    # 먼저 한 번 올려서 「지금 세대」를 세운다. 이래야 같은 값을 다시 내는 것이
+    # 「안 올렸다」가 된다.
+    standing = read_pack_generation(get_pool()) + 1
+    assert publish(standing, "세대 세우기").status_code == 200
+
+    # **초안을 다시 넣는다.** 발행이 초안을 비우고, 라우트는 「낼 초안이 없다」를 세대
+    # 검사보다 **먼저** 본다 — 둘 다 409 라서 안 넣으면 엉뚱한 이유로 초록이 된다.
+    push_draft()
+    response = publish(standing, "세대 안 올림")
     assert response.status_code == 409
     assert "올려야" in response.json()["detail"]
 

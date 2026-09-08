@@ -61,13 +61,73 @@ def ensure_test_database(url: str) -> str:
     return build_sibling_url(url, TEST_DATABASE_NAME)
 
 
+def check_is_test_database(url: str) -> bool:
+    """이 연결 문자열이 검사 전용 데이터베이스를 가리키는가.
+
+    **포함이 아니라 이름 일치로 본다.** 포함으로 두면 `game_test_backup` 같은 옆 DB 가
+    검사 전용으로 읽혀 통째로 비워진다. 물음표 뒤(`?sslmode=require`)는 이름이 아니므로
+    먼저 떼어 낸다 — 안 떼면 검사 전용 DB 를 못 알아보고 비우지 못한 채 지나간다.
+
+    Args:
+        url: 볼 연결 문자열.
+
+    Returns:
+        검사 전용이면 True.
+    """
+    return url.partition("?")[0].rpartition("/")[2] == TEST_DATABASE_NAME
+
+
+def clear_test_database(url: str) -> None:
+    """검사 전용 데이터베이스의 행을 전부 지운다.
+
+    **검사가 남긴 것이 다음 검사의 입력이 된다.** 비우지 않던 때, 한 개체가 지난 실행들이
+    쌓아 둔 전리품 920개를 들고 있었다 — 상한이 5인데. 그래서 `create_trophy` 가 늘
+    「상한에 걸렸고 더 강해지지도 않았다」로 False 를 냈고, 전리품·되찾기·도감 검사
+    다섯이 코드와 무관하게 빨간불이었다. 그 다섯이 빨간 동안에는 그 영역의 **진짜**
+    회귀도 빨간불에 묻힌다.
+
+    스키마는 지우지 않는다. 행만 비우면 `apply_schema` 가 다시 돌 필요가 없고,
+    `migrate.sql` 의 이행문은 옮길 행이 없어 no-op 이 된다.
+
+    Args:
+        url: 검사 전용 데이터베이스를 가리키는 연결 문자열.
+
+    Raises:
+        RuntimeError: 검사 전용이 아닌 데이터베이스를 가리킬 때.
+    """
+    # **이름을 여기서 한 번 더 본다.** 이 함수는 넘겨받은 곳의 모든 행을 지운다 —
+    # 부르는 쪽이 언젠가 바뀌어 운영 URL 이 들어오면 그것으로 끝이다.
+    if not check_is_test_database(url):
+        raise RuntimeError(f"검사 전용 DB 가 아니다: {url.partition('?')[0]}")
+    with psycopg.connect(url, autocommit=True) as connection:
+        found = connection.execute(
+            "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
+        ).fetchall()
+        # 갓 만든 DB 는 표가 없다. 스키마는 앱이 뜰 때 선다.
+        names = sorted(row[0] for row in found)
+        if not names:
+            return
+        # 정렬해서 한 문장으로 자른다. 외래키가 얽혀 있어 하나씩 지우면 순서를 타고,
+        # CASCADE 가 그 순서 문제를 없앤다. 식별자는 매개변수로 넘길 수 없다 —
+        # 이름은 이 DB 의 pg_tables 에서 온 것이라 밖에서 들어올 자리가 없다.
+        targets = ", ".join(f'public."{name}"' for name in names)
+        connection.execute(f"TRUNCATE {targets} RESTART IDENTITY CASCADE")
+
+
 def pytest_configure() -> None:
-    """검사가 도는 동안 연결 문자열을 검사 전용으로 바꾼다."""
+    """검사가 도는 동안 연결 문자열을 검사 전용으로 바꾸고, 남은 행을 비운다.
+
+    **이미 검사 전용을 가리켜도 비운다.** 컴포즈의 `test` 서비스는 처음부터
+    `.../game_test` 를 넘기므로, 「검사 전용이면 할 일 없음」으로 돌아서면 정작 매일 도는
+    경로에서만 안 비워진다 — 실제로 그렇게 개체 하나가 전리품 920개를 쌓았다.
+    """
     url = os.environ.get(DATABASE_URL_ENV, "").strip()
-    if not url or f"/{TEST_DATABASE_NAME}" in url:
+    if not url:
         return
     try:
-        os.environ[DATABASE_URL_ENV] = ensure_test_database(url)
+        test_url = url if check_is_test_database(url) else ensure_test_database(url)
+        clear_test_database(test_url)
+        os.environ[DATABASE_URL_ENV] = test_url
     except psycopg.Error:
         # 붙지 못하면 DB 검사는 어차피 건너뛴다. 여기서 죽으면 나머지 검사까지 막힌다.
         os.environ.pop(DATABASE_URL_ENV, None)
