@@ -135,6 +135,15 @@ export interface PlanPulseView {
    */
   readonly byKindId: string
   /**
+   * 내가 한 것인가.
+   *
+   * **자국이 누구 것인지 안 보였다** (실제 신고). 내 칼자국과 적의 칼자국이 둘 다
+   * 붉은색이라, 붙어 선 두 말 사이에서 누가 누구를 쳤는지 구분되지 않았다 — 지시선은
+   * 이미 색으로 가르고 있었는데(`--plan-link-self` 황동 / `--plan-link-enemy` 붉은색)
+   * 자국만 그 규율 밖에 있었다.
+   */
+  readonly bySelf: boolean
+  /**
    * 무기를 휘두르는 행동인가. 치유·방어·소환은 아니다.
    *
    * **이번 틱에 실제로 일어난 것만 참이다.** 펄스는 두 틱을 머무는데(`EFFECT_LINGER_TICKS`)
@@ -359,6 +368,7 @@ export function buildPulsesFromLog(
           from,
           byEntityId: entry.entityId,
           byKindId: kinds.get(entry.entityId) ?? '',
+          bySelf: entry.entityId === PLAYER_ENTITY_ID,
           // **깎는 것만, 그리고 이번 틱만 무기를 든다.** 회복에 칼을 휘두르면 무슨 일이
           // 있었는지가 뒤집혀 읽히고, 잔상에까지 휘두르면 공격이 없는 틱에 공격이 보인다.
           isStrike:
@@ -378,6 +388,7 @@ export function buildPulsesFromLog(
           from: spot,
           byEntityId: entry.entityId,
           byKindId: kinds.get(entry.entityId) ?? '',
+          bySelf: entry.entityId === PLAYER_ENTITY_ID,
           isStrike: false,
         })
       }

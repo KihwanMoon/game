@@ -812,6 +812,10 @@ function drawLink(ctx: CanvasRenderingContext2D, link: PlanLinkView, theme: Plan
 /** 이펙트 고리의 반지름 비율. 지시선 고리보다 조금 크다 — 겹쳐도 구분된다. */
 const PULSE_RATIO = 0.46
 
+/** 자국 굵기(괘선의 배수). 내 것이 한 단 굵다 — 색을 못 가르는 사람에게 남는 채널이다. */
+const SELF_STROKE = 3
+const ENEMY_STROKE = 2
+
 /**
  * 이 한 방을 무엇으로 그리는가.
  *
@@ -864,8 +868,13 @@ function drawSwing(
     phase,
   )
   ctx.save()
-  ctx.strokeStyle = theme.hazard
-  ctx.lineWidth = theme.lineWidth * 2
+  // **누가 쳤는지를 색이 가른다.** 지시선이 이미 그 뜻으로 두 색을 쓰고 있었는데
+  // (황동은 언제나 「이것이 너다」, 붉은색은 「이것이 아프다」) 자국만 둘 다 붉은색이라,
+  // 붙어 선 두 말 사이에서 누가 누구를 쳤는지 안 보였다 (실제 신고).
+  //
+  // **색 하나에 안 기댄다.** 내 자국이 한 단 굵다 — 색을 못 가르는 사람에게도 남는다.
+  ctx.strokeStyle = pulse.bySelf ? theme.linkSelf : theme.linkEnemy
+  ctx.lineWidth = theme.lineWidth * (pulse.bySelf ? SELF_STROKE : ENEMY_STROKE)
   ctx.lineJoin = 'round'
   ctx.lineCap = 'round'
   ctx.beginPath()

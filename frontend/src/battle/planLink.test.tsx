@@ -156,8 +156,9 @@ describe('연결선 그리기', () => {
         set fillStyle(_value: string) {
           /* 배경·글리프 채움은 검사 대상이 아니다 */
         },
-        set lineWidth(_value: number) {
-          /* 굵기는 토큰이 정한다 */
+        set lineWidth(value: number) {
+          // 굵기는 토큰이 정하지만, **누가 쳤는지의 둘째 채널**이라 기록한다.
+          calls.push(`lineWidth=${String(value)}`)
         },
         set font(_value: string) {
           /* 활자는 토큰이 정한다 */
@@ -248,6 +249,7 @@ describe('연결선 그리기', () => {
             from: null,
             byKindId: 'player',
         byEntityId: 'player',
+        bySelf: true,
             isStrike: false,
           },
           {
@@ -259,6 +261,7 @@ describe('연결선 그리기', () => {
             from: { x: 1, y: 1 },
             byKindId: 'player',
         byEntityId: 'player',
+        bySelf: true,
             isStrike: false,
           },
         ],
@@ -297,6 +300,7 @@ describe('연결선 그리기', () => {
               from: { x: 1, y: 1 },
               byKindId: 'player',
         byEntityId: 'player',
+        bySelf: true,
               isStrike,
             },
           ],
@@ -337,6 +341,7 @@ describe('연결선 그리기', () => {
               from: { x: 1, y: 1 },
               byKindId: 'player',
         byEntityId: 'player',
+        bySelf: true,
               isStrike: true,
             },
           ],
@@ -381,6 +386,7 @@ describe('연결선 그리기', () => {
             from: null,
             byKindId: 'player',
         byEntityId: 'player',
+        bySelf: true,
             isStrike: true,
           },
         ],
@@ -432,6 +438,7 @@ describe('연결선 그리기', () => {
         from: { x: 1, y: 1 },
         byKindId: 'player',
         byEntityId: 'player',
+        bySelf: true,
         isStrike: true,
       },
     ])
@@ -440,6 +447,55 @@ describe('연결선 그리기', () => {
   it('★ 이을 것이 없으면 아무 선도 안 긋는다', async () => {
     expect(await render([])).not.toContain('stroke=--plan-link-self')
   })
+
+    // **내 칼자국과 적의 칼자국이 둘 다 붉은색이었다** (실제 신고). 붙어 선 두 말 사이에서
+    // 누가 누구를 쳤는지 구분되지 않았다 — 지시선은 이미 색으로 가르고 있었는데
+    // (`--plan-link-self` 황동 / `--plan-link-enemy` 붉은색) 자국만 그 규율 밖이었다.
+    const drawStrike = async (bySelf: boolean): Promise<readonly string[]> => {
+      const { renderPlan } = await import('./planRenderer')
+      const { readPlanTheme } = await import('./planTheme')
+      const fake = buildFakeContext()
+      renderPlan(
+        fake.ctx as never,
+        {
+          tick: 1,
+          cols: 6,
+          rows: 6,
+          tiles: [],
+          actors: [PLAYER, FOE],
+          hazards: [],
+          links: [],
+          pulses: [
+            {
+              x: 4,
+              y: 3,
+              isGain: false,
+              delta: -7,
+              label: '',
+              from: { x: 1, y: 1 },
+              byKindId: bySelf ? 'player' : 'goblin_rusher',
+              byEntityId: bySelf ? 'player' : 'goblin_0',
+              bySelf,
+              isStrike: true,
+            },
+          ],
+        },
+        readPlanTheme(readFake),
+        0.5,
+      )
+      return fake.calls
+    }
+
+    it('내 것은 황동, 적의 것은 붉은색이다', async () => {
+      expect((await drawStrike(true)).join(' ')).toContain('stroke=--plan-link-self')
+      expect((await drawStrike(false)).join(' ')).toContain('stroke=--plan-link-enemy')
+    })
+
+    it('★ 색 하나에 안 기댄다 — 내 자국이 한 단 굵다', async () => {
+      const widths = (calls: readonly string[]): readonly string[] =>
+        calls.filter((one) => one.startsWith('lineWidth='))
+      expect(widths(await drawStrike(true))).not.toEqual(widths(await drawStrike(false)))
+    })
 })
 
 describe('수치 이펙트 (간단한 표시)', () => {
@@ -468,6 +524,7 @@ describe('수치 이펙트 (간단한 표시)', () => {
         from: { x: 1, y: 1 },
         byKindId: 'player',
         byEntityId: 'player',
+        bySelf: true,
         isStrike: false,
       },
     ])
@@ -552,6 +609,7 @@ describe('수치 이펙트 (간단한 표시)', () => {
         from: { x: 1, y: 1 },
         byKindId: 'player',
         byEntityId: 'player',
+        bySelf: true,
         isStrike: true,
       },
       // **회복은 무기를 안 든다.** 칼을 휘두르면 무슨 일이 있었는지가 뒤집혀 읽힌다.
@@ -565,6 +623,7 @@ describe('수치 이펙트 (간단한 표시)', () => {
         from: { x: 4, y: 3 },
         byKindId: 'goblin_rusher',
         byEntityId: 'goblin_0',
+        bySelf: false,
         isStrike: false,
       },
     ])
@@ -620,6 +679,7 @@ describe('장비줄 자리', () => {
         from: { x: 1, y: 1 },
         byKindId: 'player',
         byEntityId: 'player',
+        bySelf: true,
         isStrike: false,
       },
     ])
@@ -646,3 +706,4 @@ describe('장비줄 자리', () => {
     expect(html.indexOf('battle__cooldowns')).toBeLessThan(html.indexOf('battle__tabs'))
   })
 })
+
