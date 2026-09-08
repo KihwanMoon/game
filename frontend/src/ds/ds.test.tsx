@@ -593,3 +593,22 @@ describe('도면 말의 등급', () => {
     expect(html).not.toContain('--boss')
   })
 })
+
+describe('★ 로그가 지금 틱을 짚는다', () => {
+  // **되감기가 이것 없이는 성립하지 않는다.** 로그는 지나온 틱을 전부 이어 그리므로,
+  // 틱 12 로 감았을 때 어느 줄이 12 인지가 안 보이면 무엇을 짚은 것인지 알 수 없다.
+  // 시트가 로그를 그리게 되면서 한 번 잃었다가 여기로 옮겨 왔다 — 이제 관전도 갖는다.
+  const ENTRIES = [
+    { tick: 11, rule: 1, expr: '내 HP% < 25', outcome: 'false', delta: null, fired: false },
+    { tick: 12, rule: 3, expr: '대상 거리 <= 1', outcome: 'true', delta: -7, fired: true },
+  ]
+
+  it('그 틱의 줄에만 표시가 붙는다', () => {
+    const html = renderToStaticMarkup(<LogPanel entries={ENTRIES} currentTick={12} />)
+    expect(html.match(/ds-log-row--now/g)).toHaveLength(1)
+  })
+
+  it('틱을 안 주면 아무 줄도 안 짚는다 — 시간축이 없는 자리가 있다', () => {
+    expect(renderToStaticMarkup(<LogPanel entries={ENTRIES} />)).not.toContain('ds-log-row--now')
+  })
+})

@@ -489,6 +489,9 @@
   gap: var(--sp-2);
   min-height: var(--log-row-h);
   padding: var(--sp-0) var(--sp-3);
+  /* 자리를 미리 비워 둔다. `--now` 에서만 색을 넣으므로, 안 그러면 그 줄만 옆으로 밀려
+     로그 전체가 흔들린다. */
+  border-left: var(--bw-accent) solid transparent;
   font-family: var(--font-mono);
   font-size: var(--type-log);
   line-height: var(--lh-data);
@@ -498,6 +501,14 @@
 }
 
 /* 미발동 행은 명도를 한 단 낮춘다. 글리프(·)와 함께 두 채널이다. */
+/* **지금 보고 있는 틱.** 되감기에서 어느 줄이 그 틱인지가 안 보이면 짚은 것이
+   무엇인지 알 수 없다. 왼쪽 세로바 하나와 명도 한 단 — 황동 예산 한 자리를 쓰지만,
+   시트는 규칙표와 로그를 탭으로 가르므로 규칙 줄의 황동과 한 화면에 같이 서지 않는다. */
+.ds-log-row--now {
+  border-left: var(--bw-accent) solid var(--line-accent);
+  background: var(--surface-raised);
+}
+
 .ds-log-row--idle {
   color: var(--text-dim);
 }

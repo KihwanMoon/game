@@ -157,6 +157,8 @@ export interface BattleSheetProps {
   readonly rules: readonly RuleRowView[]
   readonly onToggleRule: (priority: number) => void
   readonly entries: readonly LogRowProps[]
+  /** 지금 보고 있는 틱. 로그에서 그 틱의 줄에 표시가 붙는다. */
+  readonly currentTick?: number
   /** 층별 정산. 로그와 같은 급의 탭으로 선다. */
   readonly settlements?: readonly FloorSettlement[]
   /** 스킬 쿨타임 한 줄. 비어 있으면 안 그린다 — 도는 쿨이 없을 때 빈 줄은 자리 낭비다. */
@@ -221,7 +223,10 @@ export function BattleSheet(props: BattleSheetProps): React.JSX.Element {
       <SheetTabs active={props.tab} counts={props.counts} onChange={props.onTabChange} />
       <div className="battle__sheet-body" ref={props.bodyRef}>
         {props.tab === 'log' ? (
-          <LogPanel entries={props.entries} />
+          <LogPanel
+            entries={props.entries}
+            {...(props.currentTick === undefined ? {} : { currentTick: props.currentTick })}
+          />
         ) : props.tab === 'reward' ? (
           <SettlementPanel settlements={props.settlements ?? []} />
         ) : (

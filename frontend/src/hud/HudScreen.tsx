@@ -15,7 +15,7 @@
  * 황동 예산 셋: armed 규칙 한 줄 · 도면의 플레이어 말 · 현재 틱의 발동 로그 세로바.
  * 그래서 이 화면의 버튼은 전부 ghost·secondary 다.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { BattleFrame, PlanCanvas, buildLookOf } from '../battle'
@@ -25,6 +25,7 @@ import { OUTCOME_PLAYER_LOSS } from '../core/sim/phases'
 import { Button, StatusBar, TopBar } from '../ds'
 
 import type { BattleRecording } from './battleRecorder'
+import { useLogAnchor } from './logWindow'
 import { PostMortem } from './PostMortem'
 import { buildReplayTrace, buildSheetRows, findDecision } from './replayTrace'
 import { TickScrubber } from './TickScrubber'
@@ -64,6 +65,7 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
   const [speed, setSpeed] = useState(INITIAL_SPEED)
   // 시트가 처음 여는 탭. 규칙표가 이 화면의 주어다 — 관전과 같다.
   const [tab, setTab] = useState<SheetTab>('rules')
+  const sheetRef = useRef<HTMLDivElement>(null)
   const [postState, setPostState] = useState<PostState>('auto')
   const { theme, intervalMs } = usePlanTheme()
   const lookOf = useMemo(() => buildLookOf(props.weaponCatalogId ?? ''), [props.weaponCatalogId])
@@ -95,6 +97,9 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
   const decision = findDecision(recording.entries, frame.tick, recording.playerId)
   const trace = buildReplayTrace(recording.ruleset, BLOCK_CATALOG, decision)
   const cpuTotal = trace.at(-1)?.cpuUsed ?? 0
+
+  // 강조만 있고 그 줄이 화면 밖이면 강조가 아무것도 못 한다.
+  useLogAnchor(sheetRef, frame.tick, tab)
 
   const atEnd = frameIndex >= lastIndex
   const isDefeat = recording.outcome === OUTCOME_PLAYER_LOSS
@@ -152,6 +157,7 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
         scrollsMax={recording.potionsMax}
         tab={tab}
         onTabChange={setTab}
+        bodyRef={sheetRef}
         foot={
           <div className="hud__rewind-foot">
             <span className="ds-label">{`cpu ${String(cpuTotal)} / ${String(recording.cpuBudget)}`}</span>

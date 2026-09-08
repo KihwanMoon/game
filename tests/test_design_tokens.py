@@ -48,13 +48,15 @@ def test_the_lock_is_not_empty():
 
 
 def test_the_lock_keeps_modes_apart():
-    """★ 반응형 토큰의 세 값이 서로를 덮으면 안 된다.
+    """★ 반응형 토큰의 두 값이 서로를 덮으면 안 된다.
 
     이름만 키로 쓰면 세로·가로 배치가 통째로 바뀌어도 잠금이 그대로다 — 모바일 배치가
     조용히 어긋나는 정확한 경로다.
+
+    **둘이다** (2026-09-07). 데스크톱 배치를 지웠고 세로가 기본이 됐다.
     """
     modes = {key.split(":")[1] for key in read_lock()["tokens"]}
-    assert modes == {"desktop", "portrait", "landscape"}
+    assert modes == {"portrait", "landscape"}
 
 
 def test_the_lock_says_where_it_came_from():

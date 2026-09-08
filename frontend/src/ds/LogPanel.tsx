@@ -11,6 +11,13 @@ import { LogRow } from './LogRow'
 /** LogPanel 이 받는 props. */
 export interface LogPanelProps {
   readonly entries: readonly LogRowProps[]
+  /**
+   * 지금 보고 있는 틱. 그 틱의 줄에 표시가 붙는다.
+   *
+   * 없으면 아무 줄도 표시하지 않는다 — 시간축이 없는 자리(카탈로그 미리보기 등)가
+   * 그 경우다.
+   */
+  readonly currentTick?: number
 }
 
 /**
@@ -39,6 +46,7 @@ export function LogPanel(props: LogPanelProps): React.JSX.Element {
           outcome={entry.outcome}
           delta={entry.delta ?? null}
           fired={entry.fired === true}
+          isNow={props.currentTick !== undefined && entry.tick === props.currentTick}
         />
       ))}
     </div>

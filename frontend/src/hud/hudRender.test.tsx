@@ -284,6 +284,7 @@ describe('HudScreen', () => {
     expect(html).toContain('hud-scrub')
   })
 
+
   it('황동 예산 때문에 primary 버튼을 쓰지 않는다', () => {
     expect(html).not.toContain('ds-button--primary')
   })

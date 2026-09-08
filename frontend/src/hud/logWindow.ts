@@ -12,6 +12,9 @@
  * 순수 함수다. 화면 상태를 건드리지 않으므로 테스트가 쉽고, 스크롤 위치와 무관하다.
  */
 
+import { useEffect } from 'react'
+import type { RefObject } from 'react'
+
 import type { LogEntry } from '../core/eventLog'
 
 /** 한 번에 그릴 로그 줄의 상한. */
@@ -180,4 +183,29 @@ export function filterRecentEntries(
   const lastTick = entries.reduce((peak, entry) => Math.max(peak, entry.tick), 0)
   const firstTick = lastTick - ticks + 1
   return entries.filter((entry) => entry.tick >= firstTick)
+}
+
+/**
+ * 되감기의 시트 본문을 지금 틱의 줄로 데려간다.
+ *
+ * **로그는 지나온 틱까지만 그린다.** 그래서 지금 틱의 줄은 늘 목록의 끝에 있고, 끝으로
+ * 내리는 것이 곧 「짚은 자리를 보여 주는 것」이다 — 강조(`ds-log-row--now`)만 있고 그
+ * 줄이 화면 밖이면 강조가 아무것도 못 한다.
+ *
+ * @param bodyRef 시트 본문. 스크롤을 이 상자가 든다.
+ * @param tick 지금 보고 있는 틱. 이 값이 바뀔 때마다 다시 내린다.
+ * @param tab 지금 열린 탭. 로그 탭일 때만 내린다 — 규칙표 탭에서 내리면 방금 누른 줄이
+ *     화면 밖으로 밀려난다.
+ */
+export function useLogAnchor(
+  bodyRef: RefObject<HTMLDivElement | null>,
+  tick: number,
+  tab: string,
+): void {
+  useEffect(() => {
+    const body = bodyRef.current
+    if (body !== null && tab === 'log') {
+      body.scrollTop = body.scrollHeight
+    }
+  }, [bodyRef, tick, tab])
 }

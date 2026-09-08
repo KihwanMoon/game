@@ -12,7 +12,7 @@
  * 황동 예산: 이 화면은 전투 화면을 덮으므로 예산을 새로 센다. 도면의 플레이어 말 하나와
  * 로그의 현재 틱 세로바, 슬라이더 손잡이까지 셋이다. primary 버튼을 쓰지 않는 이유다.
  */
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
 import { BattleFrame, PlanCanvas, buildLookOf } from '../battle'
 import type { SheetTab } from '../battle'
@@ -24,7 +24,7 @@ import { buildDamageHeatmap, buildRuleStats } from './analysis'
 import { formatOutcome, formatTickLabel } from './analysisText'
 import type { BattleRecording, RecordedFrame } from './battleRecorder'
 import { DamageHeatmap } from './DamageHeatmap'
-import { DEATH_REPLAY_TICKS } from './logWindow'
+import { DEATH_REPLAY_TICKS, useLogAnchor } from './logWindow'
 import { buildReplayTrace, buildSheetRows, findDecision } from './replayTrace'
 import { RuleStatsTable } from './RuleStatsTable'
 import { TickScrubber } from './TickScrubber'
@@ -66,6 +66,7 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
   const [tick, setTick] = useState(recording.ticks)
   // 시트가 처음 여는 탭. 관전·되감기와 같다 — 규칙표가 이 게임의 주어다.
   const [tab, setTab] = useState<SheetTab>('rules')
+  const sheetRef = useRef<HTMLDivElement>(null)
 
   const stats = useMemo(
     () => buildRuleStats(recording.entries, recording.playerId),
@@ -83,6 +84,9 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
   )
 
   const lookOf = useMemo(() => buildLookOf(props.weaponCatalogId ?? ''), [props.weaponCatalogId])
+
+  // 강조만 있고 그 줄이 화면 밖이면 강조가 아무것도 못 한다.
+  useLogAnchor(sheetRef, tick, tab)
 
   const frame: RecordedFrame | undefined = recording.frames[tick]
 
@@ -158,6 +162,7 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
                 scrollsMax={recording.potionsMax}
                 tab={tab}
                 onTabChange={setTab}
+                bodyRef={sheetRef}
               />
             )}
           </Panel>

@@ -33,6 +33,14 @@ export interface LogRowProps {
   readonly outcome: string
   readonly delta?: number | null
   readonly fired?: boolean
+  /**
+   * 지금 보고 있는 틱의 줄인가.
+   *
+   * **되감기가 이것 없이는 성립하지 않는다.** 로그는 지나온 틱을 전부 이어 그리므로,
+   * 틱 12 로 감았을 때 어느 줄이 12 인지가 안 보이면 무엇을 짚은 것인지 알 수 없다.
+   * 관전에서도 이번 틱과 잔상을 가른다.
+   */
+  readonly isNow?: boolean
 }
 
 /**
@@ -58,7 +66,11 @@ export function LogRow(props: LogRowProps): React.JSX.Element {
   const deltaTone = delta !== null && delta < 0 ? 'down' : 'up'
 
   return (
-    <div className={`ds-log-row${fired ? '' : ' ds-log-row--idle'}`}>
+    <div
+      className={`ds-log-row${fired ? '' : ' ds-log-row--idle'}${
+        props.isNow === true ? ' ds-log-row--now' : ''
+      }`}
+    >
       <span className="ds-log-row__tick">T{String(props.tick).padStart(TICK_PAD_WIDTH, '0')}</span>
       <span className="ds-log-row__fired" aria-hidden="true">
         {fired ? FIRED_GLYPH : IDLE_GLYPH}

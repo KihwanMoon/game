@@ -22,16 +22,10 @@ SAMPLE = """
 :root{
   --brass:#C89A4E;
   --text-accent:var(--brass);
-  --plan-cell:64px;
+  --plan-cell:30px;
   --plan-cols:12;        /* @kind other */
   --bw:1px;              /* @kind spacing */
   --border:var(--bw) solid var(--brass); /* @kind other */
-}
-
-@media (max-width:840px){
-  :root{
-    --plan-cell:30px;
-}
 }
 
 @media (max-width:1023px) and (max-height:559px) and (orientation:landscape){
@@ -58,9 +52,11 @@ def test_a_media_value_becomes_a_mode():
     피그마 변수에는 미디어쿼리가 없고 모드가 있다.
     """
     sets = build_sample()
-    assert sets["layout/desktop"]["plan-cell"]["$value"] == "64px"
+    # 기본 배치가 세로다. 남은 미디어쿼리는 가로 폰 하나이고, 그것은 폭이 아니라 높이로
+    # 가른다 — 세로 골격의 고정 높이 합이 가로 폰의 390px 에 안 들어가기 때문이다.
     assert sets["layout/portrait"]["plan-cell"]["$value"] == "30px"
     assert sets["layout/landscape"]["plan-cell"]["$value"] == "32px"
+    assert "layout/desktop" not in sets
 
 
 def test_every_mode_carries_every_layout_token():

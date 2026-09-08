@@ -109,6 +109,7 @@ export function BattleFrame(props: BattleFrameProps): React.JSX.Element {
         rules={props.rows}
         onToggleRule={props.onToggleRule}
         entries={props.entries}
+        currentTick={props.tick}
         settlements={props.settlements ?? []}
         cooldowns={props.cooldowns ?? ''}
         potions={props.potions}

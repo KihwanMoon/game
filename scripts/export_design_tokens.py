@@ -46,13 +46,13 @@ ALIAS_PATTERN = re.compile(r"^var\(--([a-z0-9-]+)\)$")
 KIND_PATTERN = re.compile(r"@kind\s+([a-z]+)")
 
 # 미디어쿼리 조건에서 모드 이름으로. 순서가 곧 판정 순서다.
-MODE_BY_MARK: tuple[tuple[str, str], ...] = (
-    ("orientation:landscape", "landscape"),
-    ("max-width:840px", "portrait"),
-)
+#
+# **하나뿐이다** (2026-09-07). 데스크톱 배치를 지우면서 세로가 기본이 됐고, 남은
+# 미디어쿼리는 가로 폰 하나다 — 폭이 아니라 높이로 가른다.
+MODE_BY_MARK: tuple[tuple[str, str], ...] = (("orientation:landscape", "landscape"),)
 
-# 어느 미디어쿼리에도 안 걸리는 기본 배치.
-BASE_MODE = "desktop"
+# 어느 미디어쿼리에도 안 걸리는 기본 배치. **세로다.**
+BASE_MODE = "portrait"
 
 # 값 모양에서 타입으로. 위에서부터 먼저 맞는 것을 쓴다.
 TYPE_BY_PATTERN: tuple[tuple[re.Pattern[str], str], ...] = (
@@ -247,10 +247,10 @@ def build_layout_fallback(sets: dict[str, dict]) -> dict:
     Returns:
         모드가 채워진 셋 대응표.
     """
-    desktop = sets.get(f"layout/{BASE_MODE}", {})
+    base = sets.get(f"layout/{BASE_MODE}", {})
     for _mark, mode in MODE_BY_MARK:
         target = sets.setdefault(f"layout/{mode}", {})
-        for name, token in desktop.items():
+        for name, token in base.items():
             target.setdefault(name, dict(token))
     return sets
 
