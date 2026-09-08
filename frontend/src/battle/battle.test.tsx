@@ -265,7 +265,7 @@ describe('토큰 규율', () => {
     }
   })
 
-  it('캔버스의 CSS 크기는 셀 토큰의 배수로 준다 — 자바스크립트에도 생 px 를 두지 않는다', () => {
+  it('★ 표시 크기는 CSS 가, 백버퍼만 자바스크립트가 정한다', () => {
     const canvas = {
       style: { width: '', height: '' },
       width: 0,
@@ -283,9 +283,11 @@ describe('토큰 규율', () => {
       pulses: [],
     }
     resizePlanCanvas(canvas as unknown as HTMLCanvasElement, scene, FAKE_THEME, 2)
-    expect(canvas.style.width).toBe('calc(var(--plan-cell) * 12)')
-    expect(canvas.style.height).toBe('calc(var(--plan-cell) * 9)')
-    // 백버퍼만 배율을 곱한다. 여기서 배율을 빼면 1px 괘선이 흐려진다.
+    // **표시 크기를 인라인으로 박지 않는다.** 인라인은 스타일시트를 이기므로, 박아
+    // 두면 도면이 열 폭에 못 맞추고 화면이 작은 기기에서는 시트를 밀어냈다.
+    expect(canvas.style.width).toBe('')
+    expect(canvas.style.height).toBe('')
+    // 백버퍼는 토큰을 따른다. 배율을 빼면 1px 괘선이 흐려진다.
     expect(canvas.width).toBe(12 * FAKE_THEME.cell * 2)
     expect(canvas.height).toBe(9 * FAKE_THEME.cell * 2)
   })

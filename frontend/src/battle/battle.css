@@ -225,10 +225,18 @@
   justify-content: center;
 }
 
+.battle-frame .battle__frame {
+  inline-size: 100%;
+}
+
+/* **열 폭을 다 쓰되 제 크기를 넘지 않는다.** 표시 크기를 인라인으로 박아 두던 때는
+   도면이 열보다 좁아도 그대로 있었고, 화면이 작은 기기에서는 반대로 시트를 밀어냈다.
+   백버퍼 해상도는 토큰이 정하므로 줄여도 흐려지지 않는다. */
 .battle-frame .battle__frame canvas {
-  /* 가로만 화면에 맞춘다 — 세로는 자연 높이다. 상한이 아니라 「화면보다 넓을 수 없다」다. */
-  max-width: 100%;
-  height: auto;
+  inline-size: 100%;
+  block-size: auto;
+  max-inline-size: calc(var(--plan-cell) * var(--plan-cols));
+  max-block-size: var(--plan-max-h);
   object-fit: contain;
 }
 
@@ -311,8 +319,17 @@
   overflow-x: auto;
 }
 
-/* 조작부 안에서도 줄바꿈하지 않는다. 버튼 글자가 접히면 44px 바가 두 줄이 된다. */
+/* **조작부는 접지 않고 옆으로 흐른다.** `.launch` 는 원래 넘치면 접게 돼 있는데(폰에서
+   오른쪽이 잘리지 않게), 그것이 고정 높이 바 안으로 들어오면 뜻이 뒤집힌다 — 전투가
+   끝나 「사후 분석」·「다음 방」·「자동 진행」 셋이 나타나는 순간 바가 한 줄에서 **네
+   줄로** 자라고, 도면과 시트가 그만큼 통째로 내려갔다 (실제 스크린샷).
+
+   접지 않으면 넘치는 만큼 가로로 흐른다. 잘리는 것이 아니라 밀어서 닿는다. */
 .battle__controls > * {
+  flex-wrap: nowrap;
+}
+
+.battle__controls .launch {
   flex-wrap: nowrap;
 }
 
@@ -706,9 +723,23 @@
 }
 
 /* 조작은 통째로 둘째 줄. DOM 순서는 안 바꾼다 — 그것이 탭 순서다. */
+/* 조작부는 제 줄을 쓴다. **높이가 박혀 있다** — 안에 무엇이 몇 개 나타나든 이 줄의
+   높이는 그대로이고, 그래야 아래가 안 움직인다. */
 .battle--portrait .battle__controls {
   order: 1;
   flex-basis: 100%;
+  height: var(--bar-controls);
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* 손가락으로 밀 때 브라우저가 세로 스크롤로 채 가지 않게. */
+  overscroll-behavior-x: contain;
+}
+
+/* **세로에서는 시드를 감춘다.** 좁아지면 먼저 버릴 것을 정해 두는 규율 그대로다
+   (`--bar-hint`). 시드는 열여섯 자리라 조작부 폭의 삼분의 일을 먹는데, 전투 중에
+   읽을 일이 없다 — 사후 분석과 재생이 그 값을 따로 적는다. */
+.battle--portrait .battle__controls .launch > .ds-expr {
+  display: none;
 }
 
 

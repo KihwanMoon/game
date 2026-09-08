@@ -996,8 +996,10 @@ export function resizePlanCanvas(
   theme: PlanTheme,
   pixelRatio: number,
 ): CanvasRenderingContext2D | undefined {
-  canvas.style.width = `calc(var(--plan-cell) * ${String(scene.cols)})`
-  canvas.style.height = `calc(var(--plan-cell) * ${String(scene.rows)})`
+  // **표시 크기는 CSS 가 정한다.** 예전에는 여기서 인라인으로 `cols x cell` 을 박았는데,
+  // 인라인은 스타일시트를 이기므로 도면이 열 폭에 못 맞추고 화면이 작은 기기에서
+  // 시트를 밀어냈다. 여기서 정하는 것은 **백버퍼 해상도**뿐이다 — 그것이 토큰을 따라야
+  // 1px 괘선이 흐려지지 않는다.
   canvas.width = Math.round(scene.cols * theme.cell * pixelRatio)
   canvas.height = Math.round(scene.rows * theme.cell * pixelRatio)
   const ctx = canvas.getContext('2d')

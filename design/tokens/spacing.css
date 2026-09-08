@@ -70,16 +70,33 @@
   --bar-vitals:44px;
   /* 시간 조작 한 줄 — 배속과 `한 틱`·`처음부터`. 시트 하단에 붙는다. */
   --bar-time:48px;
+  /* 앱 조작부 줄 — 출격·사후 분석·다음 방·자동 진행. 상단 바 아래 제 줄을 쓴다.
+     **높이가 박혀 있다.** 전투가 끝나면 버튼 셋이 더 나타나는데, 접히게 두면 이 줄이
+     한 줄에서 네 줄로 자라 도면과 시트를 통째로 밀어낸다 (실제 스크린샷). */
+  --bar-controls:44px;
 
-  /* **시트 몸통에 남는 높이.** 고정 줄의 합을 화면 높이에서 뺀 것이며, 이 값이 곧
-     「무엇을 고정으로 둘 것인가」의 회계다. 줄 하나를 늘리려면 여기서 빼야 한다.
-
-     세로 기준 844 에서 상단 44 + 상태 44 + 도면 298(30x9 + 여백 14x2) + 탭 44 +
-     시간줄 48 = 478 을 빼고 366 이 남는다. */
-  --sheet-body-h:calc(
-    100dvh - var(--bar-top) - var(--bar-vitals) - var(--plan-cell) * var(--plan-rows) -
-      var(--plan-pad) * 2 - var(--sheet-tab-h) - var(--bar-time)
+  /* **고정 줄의 합.** 상단 44 + 조작부 44 + 상태 44 + 시트 탭 44 + 시간줄 48.
+     이 값이 「무엇을 늘 보이게 둘 것인가」의 회계이며, 줄 하나를 늘리려면 여기서 뺀다. */
+  --bars-h:calc(
+    var(--bar-top) + var(--bar-controls) + var(--bar-vitals) + var(--sheet-tab-h) +
+      var(--bar-time)
   );
+
+  /* **로그 여덟 줄은 지킨다.** 그 아래로 내려가면 「무슨 일이 있었는지」가 안 읽히고,
+     시트가 있으나 마나가 된다. 남는 것이 더 있으면 시트가 그만큼 더 가져간다. */
+  --sheet-min-h:calc(var(--log-row-h) * 8);
+
+  /* **시트 몸통의 높이.** 하한과 상한이 같아야 안 흔들린다 — 예전에는 10줄~14줄이라
+     로그가 차는 동안 88px 이 한 번 밀렸다. */
+  --sheet-body-h:max(
+    var(--sheet-min-h),
+    calc(100dvh - var(--bars-h) - var(--plan-cell) * var(--plan-rows) - var(--plan-pad) * 2)
+  );
+
+  /* **작은 화면에서는 도면이 줄어든다.** 시트 여덟 줄을 먼저 떼고 남는 만큼이 도면의
+     상한이다 — 도면은 12x9 를 유지한 채 통째로 작아지므로(`object-fit: contain`) 잘리지
+     않는다. 844 에서는 상한이 자연 크기(270)보다 커서 아무 일도 안 일어난다. */
+  --plan-max-h:calc(100dvh - var(--bars-h) - var(--sheet-min-h) - var(--plan-pad) * 2);
   --col-sheet:100%;       /* 규칙표+로그가 합쳐진 시트 폭 */
   --sheet-tab-h:44px;     /* 시트 탭 줄 */
   --tap-min:44px;
@@ -148,6 +165,7 @@
     --plan-pad:8px;
     --bar-top:40px;
     --bar-vitals:0px;    /* 가로는 상태를 하단 바가 겸한다 */
+    --bar-controls:0px;  /* 가로는 조작부가 상단 바 안에 있다 */
     --bar-bottom:40px;
     --col-rules:340px;   /* 규칙표와 로그가 한 시트로 합쳐진다 */
     --col-log:340px;

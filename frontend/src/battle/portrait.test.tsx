@@ -211,10 +211,12 @@ describe('상한이 아니라 흐름이다 (실제 피드백)', () => {
     expect(cutRule('.battle--portrait .battle__frame canvas')).not.toContain('max-height')
   })
 
-  it('★ 캔버스는 가로만 화면에 맞춘다 — 세로는 자연 높이다', () => {
+  it('★ 캔버스는 열 폭에 맞추되 제 크기를 안 넘는다', () => {
+    // 예전에는 표시 크기가 인라인으로 박혀 있어 열보다 좁아도 그대로였다.
     const block = cutRule('.battle-frame .battle__frame canvas')
-    expect(block).toContain('max-width: 100%')
-    expect(block).toContain('height: auto')
+    expect(block).toContain('inline-size: 100%')
+    expect(block).toContain('block-size: auto')
+    expect(block).toContain('object-fit: contain')
   })
 
   it('★ 껍데기도 함께 흐른다 — 가두면 흐름의 아래가 없는 화면이 된다', () => {
@@ -480,27 +482,55 @@ describe('★ 한정된 화면의 공간 예산', () => {
     { name: '기준 390x844', height: 844 },
   ] as const
 
-  /** 화면 하나를 채우고 남는 시트 높이. 토큰 합이 곧 이 회계다. */
-  const buildBudget = (height: number): number =>
-    height -
-    readToken('--bar-top') -
-    readToken('--bar-vitals') -
-    readToken('--plan-cell') * PLAN_ROWS -
-    readToken('--plan-pad') * 2 -
-    readToken('--sheet-tab-h') -
+  /** 늘 보이는 줄의 합. 상단·조작부·상태·시트 탭·시간줄. */
+  const buildBars = (): number =>
+    readToken('--bar-top') +
+    readToken('--bar-controls') +
+    readToken('--bar-vitals') +
+    readToken('--sheet-tab-h') +
     readToken('--bar-time')
 
+  /** 화면 하나에서 시트가 받는 높이. 도면이 줄어드는 만큼 시트가 지켜진다. */
+  const buildBudget = (height: number): number =>
+    Math.max(
+      readToken('--log-row-h') * 8,
+      height - buildBars() - readToken('--plan-cell') * PLAN_ROWS - readToken('--plan-pad') * 2,
+    )
+
   it('★ 가장 작은 화면에서도 시트가 여덟 줄을 낸다', () => {
-    // 실측: SE(667) 189px = 여덟 줄, 기준(844) 366px = 열여섯 줄. 고치기 전에는 각각
-    // 27px·204px 이었고 둘 다 열 줄(220)에 못 미쳐 체력이 화면 밖으로 밀렸다.
-    //
-    // 여덟 줄로 잡은 것은 그것이 「무슨 일이 있었는지」가 읽히는 하한이기 때문이다.
-    // 더 받으려면 도면 셀을 줄여야 하는데, 도면이 작아지면 이 화면의 주어가 흐려진다.
+    // 여덟 줄이 「무슨 일이 있었는지」가 읽히는 하한이다.
     const rows = readToken('--log-row-h') * 8
     for (const screen of SCREENS) {
       expect(buildBudget(screen.height), `${screen.name} 에서 시트가 모자란다`)
         .toBeGreaterThanOrEqual(rows)
     }
+  })
+
+  it('★ 작은 화면에서는 도면이 대신 줄어든다 — 시트를 밀어내지 않는다', () => {
+    const natural = readToken('--plan-cell') * PLAN_ROWS
+    const buildPlanMax = (height: number): number =>
+      height - buildBars() - readToken('--log-row-h') * 8 - readToken('--plan-pad') * 2
+    expect(buildPlanMax(844)).toBeGreaterThanOrEqual(natural)
+    expect(buildPlanMax(667)).toBeLessThan(natural)
+    // 줄어들더라도 도면이 화면의 4분의 1보다는 커야 판을 읽을 수 있다.
+    expect(buildPlanMax(667)).toBeGreaterThan(667 / 4)
+  })
+
+  it('★ 도면이 열 폭을 다 쓴다 — 표시 크기를 인라인으로 박지 않는다', () => {
+    // 인라인 style 은 스타일시트를 이긴다. 박아 두면 도면이 열보다 좁아도 그대로였고,
+    // 화면이 작은 기기에서는 반대로 시트를 밀어냈다.
+    const source = readFileSync(`${BATTLE_DIR}planRenderer.ts`, 'utf8')
+    expect(source).not.toContain('canvas.style.width')
+    expect(source).not.toContain('canvas.style.height')
+    const block = cutRule('.battle-frame .battle__frame canvas')
+    expect(block).toContain('inline-size: 100%')
+    expect(block).toContain('max-inline-size: calc(var(--plan-cell) * var(--plan-cols))')
+  })
+
+  it('★ 조작부 줄의 높이가 박혀 있다 — 전투가 끝나면 버튼 셋이 더 나타난다', () => {
+    // 접히게 두면 한 줄이 네 줄이 되고 도면과 시트가 통째로 내려갔다 (실제 스크린샷).
+    expect(cutRule('.battle--portrait .battle__controls')).toContain('height: var(--bar-controls)')
+    expect(cutRule('.battle__controls .launch')).toContain('flex-wrap: nowrap')
   })
 
   it('★ 시트 높이가 하한과 상한이 같다 — 자라면 아래 전부가 밀린다', () => {
