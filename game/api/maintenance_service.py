@@ -18,6 +18,7 @@ from game.api.maintenance_upgrade import (
     apply_upgrade_consumable_rule,
     apply_upgrade_gear_rule,
 )
+from game.api.routes.items import build_base_stats
 from game.app.store.accounts import find_player_entity
 from game.app.store.consumables import apply_slot_fill, list_consumable_slots
 from game.app.store.equipment import add_currency, apply_repair, read_balance, remove_item
@@ -35,6 +36,7 @@ from game.app.store.maintenance import (
     MaintenanceRow,
     read_maintenance,
 )
+from game.app.store.progress import read_progress
 from game.schemas.consumable import resolve_refill_cost, resolve_sell_price
 from game.schemas.item import ItemKind
 
@@ -301,7 +303,15 @@ def run_upgrade_gear(
     """
     # 퍼센트를 값으로 바꾸는 기준은 플레이어 기본 스탯이다 — 환산 상수를 지어내면
     # 그것이 곧 아무도 안 정한 밸런스 결정 하나가 된다 (`bots/upgrade`).
-    swapped = apply_upgrade_gear_rule(pool, entity_id, row.grade, read_base_stats())
+    # 요구조건은 배분을 본 값으로 본다 — 손으로 끼울 때와 같은 기준이라야 자동이 벗긴
+    # 것을 자동이 다시 낄 수 있다.
+    swapped = apply_upgrade_gear_rule(
+        pool,
+        entity_id,
+        row.grade,
+        read_base_stats(),
+        build_base_stats(get_context().balance, read_progress(pool, entity_id).stats),
+    )
     return f"장비 {swapped}개 교체" if swapped else ""
 
 

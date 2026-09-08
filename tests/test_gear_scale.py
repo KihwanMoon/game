@@ -155,3 +155,68 @@ def test_the_sealed_pool_axes_are_all_weighed():
     for name, weights in GEAR_PRIORITY_WEIGHTS.items():
         missing = sorted(sold - set(weights))
         assert not missing, f"{name} 저울이 모르는데 봉인 풀이 파는 축: {missing}"
+
+
+# ── CPU 예산 (규칙표가 반려된다) ─────────────────────────────────────────
+
+
+def test_a_swap_that_cuts_the_budget_is_refused(base_stats):
+    """★ **스킬 상실보다 무겁다.**
+
+    스킬을 잃으면 그 규칙 하나가 런타임에 「불가」로 떨어질 뿐인데, CPU 를 잃으면
+    규칙표 전체가 제출에서 반려된다 — 그것도 브라우저에서 판을 다 돈 뒤에.
+    """
+    from game.app.bots.upgrade import check_keeps_budget
+
+    lantern = GearItem(
+        item_id=1,
+        slot="WEAPON_OFF",
+        can_equip=True,
+        is_broken=False,
+        hands="OFFHAND",
+        affixes=(("cpu_budget", 5, 0),),
+        attack_range=0,
+    )
+    shield = GearItem(
+        item_id=2,
+        slot="WEAPON_OFF",
+        can_equip=True,
+        is_broken=False,
+        hands="OFFHAND",
+        affixes=(("defense", 5, 0),),
+        attack_range=0,
+    )
+    assert not check_keeps_budget(lantern, shield, base_stats)
+    assert check_keeps_budget(shield, lantern, base_stats)
+
+
+def test_a_curse_percent_counts_as_a_cut(base_stats):
+    """★ 저주 퍼센트도 예산을 깎는다. 내림이라 파이썬 `//` 와 같아야 한다."""
+    from game.app.bots.upgrade import count_budget_gift
+
+    cursed = GearItem(
+        item_id=1,
+        slot="WEAPON_MAIN",
+        can_equip=True,
+        is_broken=False,
+        hands="TWO",
+        affixes=(("cpu_budget", 0, -25),),
+        attack_range=1,
+    )
+    assert count_budget_gift(cursed, {"cpu_budget": 10}) == -3
+
+
+def test_the_picker_never_cuts_the_budget(catalog, base_stats):
+    """★ 선택 함수를 직접 돌린다. 전량 대조로 예산을 깎는 교체가 없어야 한다."""
+    from game.app.bots.upgrade import check_keeps_budget, find_upgrades_by_weights
+
+    entries = [e for e in catalog.values() if e.kind.name == "EQUIPMENT"]
+    bag = tuple(build_gear(entry) for entry in entries)
+    cuts = []
+    for weights in GEAR_PRIORITY_WEIGHTS.values():
+        for entry in entries:
+            worn = (build_gear(entry),)
+            for current, candidate in find_upgrades_by_weights(bag, worn, weights, base_stats):
+                if not check_keeps_budget(current, candidate, base_stats):
+                    cuts.append((current.item_id, candidate.item_id))
+    assert cuts == [], f"정비가 CPU 예산을 깎는 교체를 골랐다: {cuts}"

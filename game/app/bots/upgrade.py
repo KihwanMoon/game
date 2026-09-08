@@ -30,6 +30,9 @@ from game.app.bots.personas import resolve_persona
 
 PERCENT_BASE = 100
 
+# 규칙표 예산 축. 다른 스탯과 달리 「잃으면 규칙표가 반려된다」 (`check_keeps_budget`).
+CPU_STAT = "cpu_budget"
+
 # 성격이 장비에서 무엇을 보는가. 능력치 배분(str/dex/int)과 축이 다른 이유는 접사가
 # 전투 수치에 붙기 때문이다 — 같은 성격을 두 축으로 옮긴 표이지 새 성격이 아니다.
 #
@@ -165,6 +168,46 @@ def check_keeps_skill(current: GearItem, candidate: GearItem) -> bool:
     return not current.grants_skill or current.grants_skill == candidate.grants_skill
 
 
+def check_keeps_budget(current: GearItem, candidate: GearItem, base_stats: dict[str, int]) -> bool:
+    """갈아 껴도 CPU 예산이 안 줄어드는가.
+
+    **스킬 상실보다 무겁다.** 스킬을 잃으면 그 규칙 하나가 런타임에 「불가」로 떨어질
+    뿐인데(`rule_vm.BlockedRule`), CPU 를 잃으면 **규칙표 전체가 제출에서 반려된다**
+    (`validator` 의 `total_cpu > cpu_budget`). 그것도 브라우저에서 판을 다 돈 뒤에.
+
+    CPU 는 전투 수치가 아니라 **규칙표 예산 그 자체**다. 저울이 그것을 다른 스탯과 같은
+    무게로 재는 것은 옳지만(`cpu_budget: 2`), 「점수가 더 높으니 예산을 깎아도 된다」는
+    성립하지 않는다 — 사람이 안 고른 상실이라는 점에서 스킬과 같은 자리다.
+
+    Args:
+        current: 지금 낀 것.
+        candidate: 갈아 낄 후보.
+        base_stats: 퍼센트를 값으로 바꾸는 기준.
+
+    Returns:
+        후보의 CPU 기여가 지금 것 이상이면 True.
+    """
+    return count_budget_gift(candidate, base_stats) >= count_budget_gift(current, base_stats)
+
+
+def count_budget_gift(item: GearItem, base_stats: dict[str, int]) -> int:
+    """이 장비가 CPU 예산에 더하는 몫.
+
+    Args:
+        item: 볼 장비.
+        base_stats: 퍼센트를 값으로 바꾸는 기준.
+
+    Returns:
+        더하는 값. 저주면 음수다.
+    """
+    total = 0
+    for stat, flat, percent in item.affixes:
+        if stat != CPU_STAT:
+            continue
+        total += flat + base_stats.get(CPU_STAT, 0) * percent // PERCENT_BASE
+    return total
+
+
 def find_upgrades(
     bag: tuple[GearItem, ...],
     worn: tuple[GearItem, ...],
@@ -247,6 +290,8 @@ def find_upgrades_by_weights(
         if current is None or current.is_broken:
             continue
         if not check_keeps_skill(current, candidate):
+            continue
+        if not check_keeps_budget(current, candidate, base_stats):
             continue
         score = compute_weighted_score(candidate, weights, base_stats)
         if score - compute_weighted_score(current, weights, base_stats) < UPGRADE_MARGIN:

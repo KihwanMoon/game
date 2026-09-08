@@ -95,6 +95,21 @@ function readWeights(priority: string): Readonly<Record<string, number>> {
  * @param baseStats 퍼센트를 값으로 바꾸는 기준.
  * @returns 점수. 저주 접사가 있으면 음수일 수 있다.
  */
+/** 이 장비가 CPU 예산에 더하는 몫. 파이썬 `count_budget_gift` 와 같은 셈이다. */
+export function countBudgetGift(
+  affixes: readonly AffixView[],
+  baseStats: Readonly<Record<string, number>>,
+): number {
+  let total = 0
+  for (const affix of affixes) {
+    if (affix.stat !== 'cpu_budget') {
+      continue
+    }
+    total += affix.flat + Math.floor(((baseStats.cpu_budget ?? 0) * affix.percent) / PERCENT_BASE)
+  }
+  return total
+}
+
 export function computeGearScore(
   affixes: readonly AffixView[],
   attackRange: number,
@@ -107,7 +122,12 @@ export function computeGearScore(
     if (weight === 0) {
       continue
     }
-    total += weight * (affix.flat + Math.trunc(((baseStats[affix.stat] ?? 0) * affix.percent) / PERCENT_BASE))
+    // **`Math.floor` 다.** 파이썬은 `//` 로 내림하는데 `Math.trunc` 는 0 쪽으로 자른다 —
+    // 음수에서만 갈리고, 저주 접사가 정확히 음수 퍼센트다. cpu 10 에 −25% 면 파이썬 −3,
+    // trunc −2 다. `cpu_budget` 에 무게가 붙기 전에는 `weight === 0` 이 이 항을 통째로
+    // 건너뛰어 안 드러났다. `items.json` 의 `sword_great._note` 가 미리 적어 둔 자리이고,
+    // 여기가 갈리면 미리보기와 서버가 다른 개수를 낸다 (R5 와 같은 이유).
+    total += weight * (affix.flat + Math.floor(((baseStats[affix.stat] ?? 0) * affix.percent) / PERCENT_BASE))
   }
   return total + (weights.attack_range ?? 0) * attackRange
 }
@@ -238,6 +258,11 @@ export function runUpgradeGear(
     // **스킬을 잃는 교체는 안 센다** (2026-09-08). 파이썬 `check_keeps_skill` 과 같은
     // 규칙이다 — 여기만 빠지면 미리보기가 「2개 교체」라 적고 서버는 하나만 바꾼다.
     if (current.grantsSkill !== '' && current.grantsSkill !== item.grantsSkill) {
+      continue
+    }
+    // **CPU 를 깎는 교체도 안 센다.** 스킬 상실보다 무겁다 — 스킬은 그 규칙 하나가
+    // 「불가」로 떨어질 뿐인데 CPU 는 규칙표 전체가 제출에서 반려된다.
+    if (countBudgetGift(item.affixes, baseStats) < countBudgetGift(current.affixes, baseStats)) {
       continue
     }
     const gain =

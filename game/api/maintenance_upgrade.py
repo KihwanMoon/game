@@ -78,7 +78,11 @@ def build_gear_item(
 
 
 def apply_upgrade_gear_rule(
-    pool: ConnectionPool, entity_id: int, priority: str, base_stats: dict[str, int]
+    pool: ConnectionPool,
+    entity_id: int,
+    priority: str,
+    base_stats: dict[str, int],
+    equip_stats: dict[str, int] | None = None,
 ) -> int:
     """가방에 더 나은 것이 있으면 갈아 낀다.
 
@@ -94,10 +98,16 @@ def apply_upgrade_gear_rule(
         entity_id: 대상 개체.
         priority: 우선순위. 어휘 밖이면 아무것도 안 한다.
         base_stats: 퍼센트를 값으로 바꾸는 기준.
+        equip_stats: 요구조건 판정의 기준. 없으면 `base_stats` 를 쓴다.
 
     Returns:
         갈아 낀 개수.
     """
+    # **요구조건은 배분을 본 값으로 판정한다.** 둘을 한 값으로 두면 한 방향 래칫이
+    # 생긴다 — 착용 중인 것은 요구조건을 안 보므로 벗기는 것은 되는데, 후보는 배분 없는
+    # 시작값으로 판정돼 **다시 못 낀다.** 실측으로 각인 등불을 벗긴 뒤 자동으로는 영영
+    # 안 돌아왔다(손으로는 끼워진다 — `/api/equip` 은 배분을 본다).
+    equip_stats = base_stats if equip_stats is None else equip_stats
     weights = GEAR_PRIORITY_WEIGHTS.get(priority)
     if weights is None:
         return 0
@@ -108,7 +118,7 @@ def apply_upgrade_gear_rule(
         entry = catalog.get(stored.catalog_id)
         if entry is None or entry.slot is None:
             return None
-        return build_gear_item(stored, entry, base_stats)
+        return build_gear_item(stored, entry, equip_stats)
 
     bag = tuple(
         item
