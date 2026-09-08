@@ -11,7 +11,7 @@ from game.app.items.catalog import find_item, load_item_catalog
 from game.app.items.loadout import build_player_loadout
 from game.config import ITEMS_PATH
 from game.schemas.item import EquipSlot
-from game.schemas.loadout import BASE_SKILLS
+from game.schemas.loadout import BASE_SKILLS, build_loadout_payload, parse_loadout
 
 BASE = {
     "hp_max": 100,
@@ -137,3 +137,37 @@ def test_consumables_are_sorted(catalog):
     )
     kinds = [kind for kind, _ in loadout.consumables]
     assert kinds == sorted(kinds)
+
+
+def test_the_ticket_remembers_the_weapon(catalog):
+    """★ 재생이 그 판의 무기를 그리려면 무엇을 들고 있었는지가 남아야 한다.
+
+    스탯만 얼려 두던 때는 지나간 판의 무기를 서버도 복원할 수 없었고, 그래서 재생의
+    칼자국이 사거리로만 갈렸다 — 도신검과 도끼가 같은 그림이었다.
+    """
+    equipped = {EquipSlot.WEAPON_MAIN: find_item(catalog, "bow_long")}
+    loadout = build_player_loadout(BASE, equipped, level=1, base_rule_slots=BASE_SLOTS)
+    assert loadout.main_weapon == "bow_long"
+
+
+def test_bare_hands_name_no_weapon(catalog):
+    """맨몸은 빈 문자열이다. 화면이 그때 실측 거리로 근사한다."""
+    loadout = build_player_loadout(BASE, {}, level=1, base_rule_slots=BASE_SLOTS)
+    assert loadout.main_weapon == ""
+
+
+def test_an_old_ticket_reads_as_bare_hands(catalog):
+    """구버전 티켓에는 이 값이 없다. 없다고 터지면 옛 재생이 통째로 막힌다."""
+    loadout = build_player_loadout(BASE, {}, level=1, base_rule_slots=BASE_SLOTS)
+    payload = build_loadout_payload(loadout)
+    del payload["main_weapon"]
+    assert parse_loadout(payload).main_weapon == ""
+
+
+def test_the_payload_carries_the_weapon(catalog):
+    """서버가 쓰고 클라이언트가 읽는다. 절에 없으면 화면까지 못 간다."""
+    equipped = {EquipSlot.WEAPON_MAIN: find_item(catalog, "bow_long")}
+    loadout = build_player_loadout(BASE, equipped, level=1, base_rule_slots=BASE_SLOTS)
+    payload = build_loadout_payload(loadout)
+    assert payload["main_weapon"] == "bow_long"
+    assert parse_loadout(payload).main_weapon == "bow_long"

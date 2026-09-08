@@ -39,6 +39,17 @@ export interface PlayerLoadout {
    * 도므로, 얼려 두지 않으면 화면은 빈손으로 싸우고 서버는 주머니를 채운 채 재시뮬한다.
    */
   readonly consumables: readonly (readonly [string, number])[]
+  /**
+   * 낀 주무기의 카탈로그 id. **코어는 이것을 읽지 않는다.**
+   *
+   * 스탯은 이미 위에 녹아 있으므로(결정 #13) 판정에 쓸 자리가 없다. 싣는 이유는
+   * **재생이 그 판을 그대로 보여 주려면 무엇을 들고 있었는지 알아야** 하기 때문이다 —
+   * 스탯만 얼려 두던 때는 지나간 판의 무기를 서버도 복원할 수 없었고, 그래서 재생의
+   * 칼자국이 사거리로만 갈렸다(도신검과 도끼가 같은 그림이었다).
+   *
+   * 빈 문자열이면 맨몸이거나, 싣기 전에 발급된 티켓이다.
+   */
+  readonly mainWeapon: string
 }
 
 /** 서버가 주는 절. 파이썬 `build_loadout_payload` 와 같은 열쇠다. */
@@ -53,6 +64,8 @@ export interface RawPlayerLoadout {
   readonly skill_power_pct?: number
   readonly skills: readonly string[]
   readonly consumables?: Record<string, number>
+  /** 구버전 서버는 안 보낸다. 그때는 빈 문자열 — 화면이 실측 거리로 근사한다. */
+  readonly main_weapon?: string
 }
 
 /**
@@ -79,5 +92,8 @@ export function parseLoadout(raw: RawPlayerLoadout): PlayerLoadout {
     consumables: Object.entries(raw.consumables ?? {})
       .map(([kind, count]) => [kind, Number(count)] as const)
       .sort((left, right) => (left[0] < right[0] ? -1 : 1)),
+    // 없으면 빈 문자열이다 — 싣기 전에 발급된 티켓이 그 경우이고, 그때 화면은 실측
+    // 거리로 근사한다. 코어는 이 값을 안 읽으므로 골든에는 영향이 없다.
+    mainWeapon: raw.main_weapon ?? '',
   }
 }

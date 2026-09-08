@@ -873,6 +873,7 @@ describe('로드아웃 배선 (결정 #13)', () => {
     cpuBudget: 11,
     ruleSlots: 6,
     skillPowerPct: 100,
+    mainWeapon: '',
     consumables: [],
     skills: ['ATTACK', 'SKILL_2'],
   }

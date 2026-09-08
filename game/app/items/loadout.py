@@ -89,7 +89,23 @@ def build_player_loadout(
         consumables=tuple(sorted(merge_consumables(consumables or {}).items())),
         # 정렬해서 담는다. 집합 순회 순서가 티켓에 새어 나가면 안 된다 (R5).
         skills=tuple(sorted(skills - set(disabled_skills))),
+        # **판정에 안 쓴다.** 재생 화면이 그 판의 무기를 그리려고 읽는다 — 스탯만 얼려
+        # 두면 지나간 판에 무엇을 들고 있었는지 아무도 모른다.
+        main_weapon=find_main_weapon(equipped),
     )
+
+
+def find_main_weapon(equipped: dict[EquipSlot, ItemCatalogEntry]) -> str:
+    """낀 주무기의 카탈로그 id.
+
+    Args:
+        equipped: 낀 장비. 파손된 것은 부르는 쪽이 이미 뺐다.
+
+    Returns:
+        카탈로그 id. 맨몸이면 빈 문자열이다.
+    """
+    main = equipped.get(EquipSlot.WEAPON_MAIN)
+    return "" if main is None else main.catalog_id
 
 
 def merge_weapon_range(

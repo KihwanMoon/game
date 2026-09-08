@@ -47,6 +47,18 @@ class PlayerLoadout:
     # 도므로, 얼려 두지 않으면 화면은 빈손으로 싸우고 서버는 주머니를 채운 채 재시뮬한다.
     # 정렬된 쌍으로 담는 이유는 딕셔너리 순회 순서가 티켓에 새어 나가면 안 되기 때문이다 (R5).
     consumables: tuple[tuple[str, int], ...] = ()
+    # 낀 주무기의 카탈로그 id. **코어는 이것을 읽지 않는다.**
+    #
+    # 스탯은 이미 위에 녹아 있으므로(결정 #13) 판정에 쓸 자리가 없다. 싣는 이유는
+    # **재생이 그 판을 그대로 보여 주려면 무엇을 들고 있었는지 알아야** 하기 때문이다 —
+    # 로드아웃이 스탯뿐이라 지나간 판의 무기를 서버도 복원할 수 없었고, 그래서 재생의
+    # 칼자국이 사거리로만 갈렸다(도신검과 도끼가 같은 그림이었다).
+    #
+    # 겉모습이 아니라 **그 판의 사실**이다. 겉모습 표(`item_looks`)는 이 id 를 열쇠로
+    # 쓰지만 여전히 화면 쪽에 있고 `core_version` 에 안 낀다 (계약 C1·C2).
+    #
+    # **서버가 쓰고 클라이언트는 읽기만 한다.** 제출에는 받을 자리가 없다 (설계/7 §4).
+    main_weapon: str = ""
 
 
 def parse_loadout(raw: dict) -> PlayerLoadout:
@@ -73,6 +85,9 @@ def parse_loadout(raw: dict) -> PlayerLoadout:
         consumables=tuple(sorted((str(k), int(v)) for k, v in raw.get("consumables", {}).items())),
         # 정렬해서 담는다. 순서가 실행마다 다르면 같은 티켓이 다른 글자로 저장된다 (R5).
         skills=tuple(sorted(raw.get("skills", []))),
+        # 없으면 빈 문자열이다 — 싣기 전에 발급된 티켓이 그 경우이고, 그때 화면은
+        # 실측 거리로 근사한다.
+        main_weapon=str(raw.get("main_weapon", "")),
     )
 
 
@@ -96,4 +111,5 @@ def build_loadout_payload(loadout: PlayerLoadout) -> dict:
         "skill_power_pct": loadout.skill_power_pct,
         "consumables": dict(loadout.consumables),
         "skills": list(loadout.skills),
+        "main_weapon": loadout.main_weapon,
     }

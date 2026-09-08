@@ -174,7 +174,11 @@ export function ReplayView(props: ReplayViewProps): React.JSX.Element | null {
         </Button>
       </div>
       <div className="replay__body">
+        {/* **그 판의 무기로 휘두른다.** 로드아웃이 스탯뿐이던 때는 지나간 판의 무기를
+            아무도 몰라서 재생의 칼자국이 사거리로만 갈렸다 — 도신검과 도끼가 같은
+            그림이었다. 티켓이 주무기 id 를 함께 얼려 두므로 이제 그대로 그린다. */}
         <BattleView
+          weaponCatalogId={replay.loadout?.mainWeapon ?? ''}
           setup={setup}
           rulesets={rulesets}
           location={`${roomId} · ${String(floor)}층`}
