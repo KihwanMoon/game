@@ -41,7 +41,19 @@ STAT_WEIGHTS: dict[str, dict[str, int]] = {
     # 사거리 한 칸이 무겁다. 기본 사거리가 1 이라 +1 은 **닿는 거리를 두 배로**
     # 만들고, 그것이 곧 「맞지 않고 때린다」의 성립 여부다 — 공격 +4 와 맞바꿀 값이다.
     "ranged": {"attack_range": 8, "attack": 2, "initiative": 2, "hp_max": 1, "defense": 1},
-    "caster": {"cpu_budget": 4, "initiative": 2, "hp_max": 2, "attack": 1, "defense": 1},
+    # 시전 축은 **캐스터에게만** 준다. 근접·원거리 성격표에 넣으면 마법을 안 쓰는 봇이
+    # 예지의 홀을 집어 보조 칸을 낭비한다 — 720런 실측으로 이 축들의 값은 마법을 쓰는
+    # 표에서만 0 이 아니었다 (`gear_priority.json` 의 같은 주석).
+    "caster": {
+        "cpu_budget": 4,
+        "initiative": 2,
+        "hp_max": 2,
+        "attack": 1,
+        "defense": 1,
+        "cast_lead_cut": 1,
+        "steady_cast": 1,
+        "blast_radius": 1,
+    },
     "melee": {"attack": 3, "hp_max": 2, "defense": 2, "initiative": 1},
 }
 

@@ -364,3 +364,21 @@ def test_the_picker_never_loses_a_cast_axis(catalog, base_stats):
         if not check_keeps_cast(current, candidate)
     ]
     assert lost == [], f"정비가 시전 축을 잃는 교체를 골랐다: {lost}"
+
+
+def test_the_cast_axes_have_a_weight():
+    """★ **0 은 「공짜로 버려도 되는 축」이라는 뜻이다.**
+
+    cpu_budget·소모품 칸이 정확히 그렇게 샜다 — 봉인 옵션 풀이 팔고 있는 축을 다음 판
+    정비가 0 점으로 보고 아무 +6 짜리와 맞바꿨다. 720런으로 재서 1 을 줬으므로(무게
+    0.69·0.46), 그 값이 조용히 사라지면 여기서 걸린다.
+
+    대가 축(`cast_cooldown_add`)만 0 이다. 축당으로 쪼개면 저울 해상도 아래이고, 잃는
+    쪽은 관문이 막는다.
+    """
+    from game.app.bots.gear_guards import CAST_STATS
+
+    for table in GEAR_PRIORITY_WEIGHTS.values():
+        for stat in CAST_STATS:
+            assert table.get(stat, 0) > 0, f"{stat} 이 저울에서 0 이다"
+        assert table.get("cast_cooldown_add", 0) == 0
