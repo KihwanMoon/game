@@ -33,7 +33,13 @@ import {
   PHASE_TELEGRAPH,
   PHASE_UPKEEP,
 } from './phases'
-import { ATTACK_ACTIONS, USE_ITEM_ACTION, OUTCOME_BLOCKED, resolveSkillPlan } from './plan'
+import {
+  ATTACK_ACTIONS,
+  GUARD_SKILL_ID,
+  OUTCOME_BLOCKED,
+  USE_ITEM_ACTION,
+  resolveSkillPlan,
+} from './plan'
 import type { DecisionPolicy, EngineConfig, PlannedAction, PolicyFactory } from './plan'
 import { PressureTracker, applySpringDrain, removeDrainedSprings } from './pressure'
 import { FACTION_PLAYER, type Entity, type WorldState, isAlive } from './state'
@@ -400,9 +406,15 @@ export class TickEngine {
       executor.applyHeal(entity, plan)
     } else if (plan.actionId === 'HOLD' || plan.actionId === 'SET_FLAG') {
       executor.applyHold(entity, plan)
+    } else if (plan.actionId === GUARD_SKILL_ID) {
+      executor.applyGuard(entity, plan)
     } else if (plan.actionId === 'SUMMON') {
       // 이동 루프보다 뒤여야 소환 위치가 이번 틱의 이동 결과를 반영한다.
       executor.applySummon(entity, plan)
+    } else if (plan.skillId !== null && plan.skillId !== undefined) {
+      // 여기까지 왔으면 부를 줄 모르는 스킬이다. `skillId` 로 가리는 이유는 이 함수가
+      // 이동 계획에도 불리기 때문이다 (파이썬 `_apply_settled` 와 같다).
+      executor.recordMissingExecutor(entity, plan)
     }
   }
 

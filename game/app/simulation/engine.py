@@ -278,6 +278,12 @@ class TickEngine:
         elif plan.action_id == "SUMMON":
             # 이동 루프보다 뒤여야 소환 위치가 이번 틱의 이동 결과를 반영한다.
             executor.apply_summon(entity, plan)
+        elif plan.skill_id is not None:
+            # **여기까지 왔으면 부를 줄 모르는 스킬이다.** 예전에는 그냥 끝났고, 오류도
+            # 로그도 안 남았다 — 스킬을 데이터로 더해도 아무 일이 안 일어나는데 아무도
+            # 몰랐다. `skill_id` 로 가리는 이유는 이 함수가 이동 계획에도 불리기
+            # 때문이다 (설계/5_스킬 §10.8).
+            executor.record_missing_executor(entity, plan)
 
     def resolve_effects(self) -> None:
         """사망 정리와 타일 상태 갱신 (페이즈 6).

@@ -276,6 +276,46 @@ export class ActionExecutor {
   }
 
   /**
+   * 방어 태세를 세운다 (블록 v5, 결정 #16). 파이썬 `apply_guard` 의 이식이다.
+   *
+   * **이 갈래가 통째로 없었다 (2026-09-09).** `USE_SKILL[GUARD_BRACE]` 가 파이썬에서는
+   * 태세를 세우는데 브라우저에서는 `applySettled` 의 어느 갈래에도 안 걸려 그냥 끝났다 —
+   * 방패를 든 규칙표가 두 코어에서 다르게 돌았고, 골든이 이 스킬을 하나도 안 덮어
+   * 게이트 G3 가 침묵했다. 주문서 경로(`resolveScroll`)만 같은 상태를 세우고 있었다.
+   *
+   * 상태에 남은 틱으로 들어가고 UPKEEP 이 줄인다. 피해 감소는 `applyDamage` 가 본다.
+   *
+   * @param entity 시전자.
+   * @param plan 실행할 계획.
+   */
+  applyGuard(entity: Entity, plan: PlannedAction): void {
+    const ticks = this.config.skillGuardTicks.get(plan.actionId) ?? 0
+    entity.statuses.set(GUARD_STATUS, ticks)
+    const percent = this.config.skillGuardPct.get(plan.actionId) ?? 0
+    this.recordResult(
+      entity.entityId,
+      plan,
+      `${plan.actionId} 방어 ${String(percent)}% / ${String(ticks)}틱`,
+      null,
+    )
+    this.applyCooldown(entity, plan.actionId)
+  }
+
+  /**
+   * 부를 줄 모르는 스킬을 로그에 남긴다. 파이썬 `record_missing_executor` 와 같다.
+   *
+   * **조용히 사라지는 것이 제일 나쁜 실패다.** `USE_SKILL[X]` 가 어느 갈래에도 안 걸리면
+   * 오류도 로그도 안 남는다 — 스킬을 데이터로 더해도 아무 일이 안 일어나는데 아무도
+   * 모른다. `skillId` 로 가리는 이유는 이 경로가 이동 계획에도 불리기 때문이다.
+   *
+   * @param entity 행위자.
+   * @param plan 실행할 수 없던 계획.
+   */
+  recordMissingExecutor(entity: Entity, plan: PlannedAction): void {
+    this.recordResult(entity.entityId, plan, '쓸 줄 모른다 — 실행기가 없다', null)
+  }
+
+  /**
    * 규칙이 지정한 플래그를 세우거나 내린다 (GDD §3.5).
    *
    * @param entity 대상 엔티티.

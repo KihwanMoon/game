@@ -59,6 +59,23 @@ class ActionExecutor(SupportActionMixin):
     # 예고를 등록할 판. 없으면 예고형 광역기가 즉발로 떨어진다 (단독 테스트용).
     telegraphs: TelegraphBoard = field(default_factory=TelegraphBoard)
 
+    def record_missing_executor(self, entity: Entity, plan: PlannedAction) -> None:
+        """부를 줄 모르는 스킬을 로그에 남긴다.
+
+        **조용히 사라지는 것이 제일 나쁜 실패다.** `USE_SKILL[X]` 는 `resolve_skill_plan`
+        이 `action_id = X` 로 풀어 주는데, X 가 실행기의 어느 갈래에도 안 걸리면 그냥
+        끝난다 — 문법 검증도 통과하고(`validator` 는 대상 진영만 본다) 「불가」로도 안
+        잡힌다(`check_has_skill` 은 장착만 본다). 오류도 로그도 안 남는다.
+
+        **`USE_SKILL` 로 온 것만 여기 온다.** `_apply_settled` 는 이동 계획에도 불리므로
+        (엔진이 루프를 두 번 돈다), 안 가리면 이동마다 이 줄이 붙는다.
+
+        Args:
+            entity: 행위자.
+            plan: 실행할 수 없던 계획.
+        """
+        self._record(entity.entity_id, plan, "쓸 줄 모른다 — 실행기가 없다", None)
+
     def _record(self, actor_id: str, plan: PlannedAction, outcome: str, delta: int | None) -> None:
         """실행 결과를 남긴다.
 
