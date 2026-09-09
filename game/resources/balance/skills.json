@@ -1,6 +1,6 @@
 {
   "_comment": "스킬 정의. balance.json 에서 갈라 나왔다 — 스킬은 종류가 늘어나는 것이고 밸런스 수치는 조정되는 것이라 수명이 다르다 (docs/설계/5_스킬 §9). family·shape·target_faction·telegraph·tags 는 아직 아무도 읽지 않는 서술 필드이며, 블록 v5 의 USE_SKILL[skill_id] 와 계열별 실행기가 이것을 읽는다. coef_pct·cooldown·range·heal_pct 는 값이 그대로이므로 골든 리플레이가 바뀌지 않는다. v2: GUARD 계열을 더했다(결정 #16) — 방패를 들었는데 막는 행동이 없으면 방패는 그냥 방어력 숫자이고 '양손무기 vs 한손+방패' 선택이 성립하지 않는다 (P3).",
-  "skill_list_version": 3,
+  "skill_list_version": 4,
   "skills": [
     {
       "id": "ATTACK",
@@ -103,6 +103,96 @@
         "SHIELD"
       ],
       "_note": "다음 guard_ticks 동안 받는 피해를 guard_pct 만큼 줄인다. 정수 퍼센트다 (R5). 쿨타임 4 는 '상시 유지'가 안 되게 잡은 값이다 — 유지되면 방어가 선택이 아니라 기본값이 되고, 규칙표에 쓸 이유가 사라진다."
+    },
+    {
+      "id": "METEOR",
+      "label_ko": "메테오",
+      "family": "ATTACK",
+      "shape": {
+        "kind": "AREA",
+        "radius": 3
+      },
+      "target_faction": "enemy",
+      "coef_pct": 220,
+      "cooldown": 16,
+      "range": 6,
+      "telegraph": 3,
+      "cancel_on_act": true,
+      "cancel_on_hit": true,
+      "requirements": [
+        {
+          "stat": "int",
+          "min": 12
+        }
+      ],
+      "tags": [
+        "MAGIC",
+        "CAST",
+        "AOE"
+      ],
+      "_note": "**강함의 대가가 희귀도가 아니라 예고다** (설계/5_스킬 §10). 3틱 붉게 서 있고 적은 그동안 비켜설 수 있다 — 규칙표가 답할 질문은 「뭉칠 때까지 기다릴 것인가」다. 피해는 시전 시점에 얼고 방어를 안 거친다: 예고의 유일한 정답이 회피여야 `위험 예고 타일 위에 있는가` 가 전술이 된다. 자기 오사가 있으므로 「쏘고 비켜설 수 있는가」도 함께 묻는다 — `_apply_blast` 가 진영을 안 가린다."
+    },
+    {
+      "id": "CHAIN_BOLT",
+      "label_ko": "연쇄 번개",
+      "family": "ATTACK",
+      "shape": {
+        "kind": "LINE",
+        "length": 4
+      },
+      "target_faction": "enemy",
+      "coef_pct": 140,
+      "cooldown": 8,
+      "range": 5,
+      "telegraph": 1,
+      "cancel_on_act": true,
+      "cancel_on_hit": false,
+      "requirements": [
+        {
+          "stat": "int",
+          "min": 8
+        }
+      ],
+      "tags": [
+        "MAGIC",
+        "CAST"
+      ],
+      "_note": "**`LINE` 이 P2 를 증명하는 자리다** (§2: 「거리 스칼라로 대체 가능한 형태만 있으면 그리드가 필요 없다」). 적을 일렬로 세우게 만들고 그것은 1차원에서 성립하지 않는다. 예고가 1틱뿐이라 비켜서기 어렵지만 방향이 대상 쪽으로만 뻗으므로 「누구를 겨눌 것인가」가 곧 「누가 뒤에 서 있는가」다. 맞아도 안 끊긴다 — 1틱짜리를 피격으로 끊으면 사실상 못 쓴다."
+    },
+    {
+      "id": "FROST_FIELD",
+      "label_ko": "서리 장판",
+      "family": "STATUS",
+      "shape": {
+        "kind": "AREA",
+        "radius": 2
+      },
+      "target_faction": "enemy",
+      "coef_pct": 0,
+      "cooldown": 10,
+      "range": 4,
+      "telegraph": 2,
+      "cancel_on_act": true,
+      "cancel_on_hit": true,
+      "effects": [
+        {
+          "kind": "STATUS",
+          "status": "SLOW",
+          "duration": 3
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "int",
+          "min": 6
+        }
+      ],
+      "tags": [
+        "MAGIC",
+        "CAST",
+        "CONTROL"
+      ],
+      "_note": "**피해 0 이다.** 평면 필드로는 못 적던 것이 이것이고, `effects` 가 생긴 이유다. 규칙표가 답할 질문은 「도망칠 길을 막을 것인가」다 — 둔화는 두 틱에 한 칸이므로(GDD §211) 장판을 문 앞에 깔면 빠져나가는 데 두 배가 든다. 자기 오사가 있어 내가 밟으면 나도 느려진다."
     }
   ]
 }

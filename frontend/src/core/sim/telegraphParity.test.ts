@@ -103,3 +103,85 @@ describe('스킬 예고 이식', () => {
     expect(engine.telegraphs.isCasting(player.entityId)).toBe(true)
   })
 })
+
+describe('마법 셋 이식', () => {
+  function buildReal() {
+    const balance = parseBalance(BALANCE)
+    const template = ROOM_TEMPLATES.find((one) => one.templateId === 'open_field')
+    if (template === undefined) {
+      throw new Error('open_field 템플릿이 없다')
+    }
+    const engine = buildEngine({ template, balance, seed: 3 })
+    const player = engine.state.entities.get(PLAYER_ENTITY_ID)
+    if (player === undefined) {
+      throw new Error('플레이어가 없다')
+    }
+    const target = engine.state.listHostiles(player)[0]
+    if (target === undefined) {
+      throw new Error('적이 없다')
+    }
+    return { engine, player, target }
+  }
+
+  function cast(skillId: string, targetId: string) {
+    return createPlannedAction({
+      entityId: PLAYER_ENTITY_ID,
+      actionId: 'USE_SKILL',
+      skillId,
+      targetId,
+    })
+  }
+
+  it('메테오는 반경 3 · 3틱 예고로 선다 — 파이썬 실측과 같다', () => {
+    const { engine, target } = buildReal()
+    engine.applyActions([cast('METEOR', target.entityId)])
+    const one = engine.telegraphs.listActive()[0]
+    expect(one?.tiles.length).toBe(17)
+    expect(one?.remainingTicks).toBe(3)
+  })
+
+  it('연쇄 번개는 대상 쪽으로 뻗는 직선이다', () => {
+    const { engine, target } = buildReal()
+    engine.applyActions([cast('CHAIN_BOLT', target.entityId)])
+    const one = engine.telegraphs.listActive()[0]
+    expect(one?.tiles.length).toBeGreaterThan(0)
+    expect(one?.tiles.length).toBeLessThanOrEqual(4)
+    expect(one?.remainingTicks).toBe(1)
+  })
+
+  it('서리 장판은 피해 0 이고 SLOW 를 건다 — 자기 오사 포함', () => {
+    const { engine, player, target } = buildReal()
+    target.position = { x: player.position.x + 1, y: player.position.y }
+    engine.applyActions([cast('FROST_FIELD', target.entityId)])
+    expect(engine.telegraphs.listActive()[0]?.damage).toBe(0)
+    const beforeHp = target.hp
+    for (const tick of [1, 2, 3]) {
+      engine.state.tick = tick
+      engine.runTelegraph()
+    }
+    expect(target.hp).toBe(beforeHp)
+    expect(target.statuses.get('SLOW')).toBe(3)
+    expect(player.statuses.get('SLOW')).toBe(3)
+  })
+
+  it('둔화는 두 틱에 한 칸이다 (GDD §211)', () => {
+    const { engine, player, target } = buildReal()
+    player.statuses.set('SLOW', 9)
+    let moved = 0
+    for (let tick = 0; tick < 6; tick += 1) {
+      engine.state.tick = tick
+      const before = { ...player.position }
+      engine.applyActions([
+        createPlannedAction({
+          entityId: PLAYER_ENTITY_ID,
+          actionId: 'APPROACH',
+          targetId: target.entityId,
+        }),
+      ])
+      if (player.position.x !== before.x || player.position.y !== before.y) {
+        moved += 1
+      }
+    }
+    expect(moved).toBe(3)
+  })
+})

@@ -140,6 +140,11 @@ SKILL_IDS: tuple[str, ...] = (
     "HEAL",
     "ATTACK",
     "GUARD_BRACE",
+    # 마법 셋 (설계/5_스킬 §10). 예고를 쓰는 스킬도 쿨타임·장착 인지는 같다 —
+    # 「쏠 수 있는가」를 못 물으면 「언제 쏠 것인가」를 지을 수 없다.
+    "METEOR",
+    "CHAIN_BOLT",
+    "FROST_FIELD",
 )
 
 

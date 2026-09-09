@@ -117,9 +117,16 @@ class BlastActionMixin:
         skill = find_skill(self.config.skills, plan.action_id)
         if skill.telegraph <= 0:
             return None
+        target = self.state.entities.get(plan.target_id or "")
         return {
             "skill": plan.action_id,
+            "shape": skill.shape.kind,
             "radius": skill.shape.radius,
+            "length": skill.shape.length,
+            # `LINE` 은 방향이 필요하다. 이 게임에 바라보는 방향이 없으므로 대상 쪽으로
+            # 잡는다 — 대상이 없으면 방향도 없어 칸이 0 개가 되고, 그때는 예고가
+            # 「빈 칸」으로 서서 아무도 안 맞는다. 그 사실은 로그에 남는다.
+            "toward": target.position if target is not None else entity.position,
             "damage": entity.attack * skill.coef_pct // PERCENT_BASE,
             "lead_ticks": skill.telegraph,
             # 전 구간을 붉힌다. 좁게 잡는 것은 예측 회로에 값을 주려는 예고이고,
@@ -128,6 +135,8 @@ class BlastActionMixin:
             "cancel_on_death": True,
             "cancel_on_act": skill.cancel_on_act,
             "cancel_on_hit": skill.cancel_on_hit,
+            # **얹을 것들.** 피해와 별개다 — 피해 0 인 장판이 상태만 거는 자리다.
+            "effects": skill.effects,
         }
 
     def _register_telegraph(self, entity: Entity, plan: PlannedAction, telegraph: dict) -> None:

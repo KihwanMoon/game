@@ -5,7 +5,7 @@
  * 순환 참조가 생긴다.
  */
 
-import type { SkillDef } from '../skills/catalog'
+import type { SkillDef, SkillEffect } from '../skills/catalog'
 import type { DamageRules } from '../combat/damage'
 import type { PerceptionSnapshot } from './perception'
 import type { FloorScale } from './scaling'
@@ -57,7 +57,13 @@ export const ATTACK_ACTIONS: ReadonlySet<string> = new Set(['ATTACK', 'SKILL_1',
 export const MELEE_REACH = 1
 
 /** 방어 감소율과 유지 틱을 읽을 스킬 id. GUARD 계열이 하나뿐이라 상수로 둔다. */
-export const GUARD_SKILL_ID = 'GUARD_BRACE' 
+export const GUARD_SKILL_ID = 'GUARD_BRACE'
+
+/** 둔화. **이동이 두 틱에 한 칸이 된다** (GDD §211). */
+export const STATUS_SLOW = 'SLOW'
+
+/** 둔화 중 몇 틱마다 한 칸 움직이는가. 2 면 절반 속도다. */
+export const SLOW_EVERY = 2 
 
 /** 조건은 참이었으나 실행할 수단이 없어 건너뛴 규칙 하나. */
 export interface BlockedRule {
@@ -167,6 +173,11 @@ export interface RawTelegraphSetting {
   /** 스킬이 켜는 취소 스위치. 몬스터 절에는 없다 (설계/5_스킬 §10.3). */
   readonly cancel_on_act?: boolean
   readonly cancel_on_hit?: boolean
+  /** 형태. 없으면 반경으로 읽는다 (몬스터 절에는 없다). */
+  readonly shape?: string
+  readonly length?: number
+  readonly toward?: { readonly x: number; readonly y: number }
+  readonly effects?: readonly SkillEffect[]
   readonly self_destruct?: boolean
 }
 

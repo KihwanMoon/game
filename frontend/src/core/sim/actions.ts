@@ -33,7 +33,12 @@ import {
   resolveSummon,
 } from './abilities'
 import { PHASE_ACT } from './phases'
-import { GUARD_SKILL_ID, MELEE_REACH } from './plan'
+import {
+  GUARD_SKILL_ID,
+  MELEE_REACH,
+  SLOW_EVERY,
+  STATUS_SLOW,
+} from './plan'
 import type { EngineConfig, PlannedAction, RawTelegraphSetting } from './plan'
 import { divideFloor } from '../combat/damage'
 import { PERCENT_BASE, type Entity, type WorldState, isAlive } from './state'
@@ -69,6 +74,21 @@ const ADJACENT_DISTANCE = 1
 export const DEFERRED_ACTIONS: ReadonlyMap<string, string> = new Map()
 
 /** 계획을 실행하고 결과를 로그에 남긴다. */
+/**
+ * 둔화 때문에 이번 틱에 못 움직이는가 — 파이썬 `check_slowed_this_tick` 과 같다.
+ *
+ * **둔화는 두 틱에 한 칸이다** (GDD §211 의 「이동 2틱 소모」). 없으면 `SLOW` 는 인지
+ * 변수에만 있고 걸어도 아무 일이 없다. 틱의 홀짝으로 가르는 이유는 걸린 시점을 따로
+ * 들면 그것이 세계 상태가 되어 두 코어가 함께 얼려야 하기 때문이다 (R5).
+ *
+ * @param entity 움직이려는 엔티티.
+ * @param tick 지금 틱.
+ * @returns 못 움직이면 true.
+ */
+export function checkSlowedThisTick(entity: Entity, tick: number): boolean {
+  return (entity.statuses.get(STATUS_SLOW) ?? 0) > 0 && tick % SLOW_EVERY !== 0
+}
+
 export class ActionExecutor {
   /**
    * 실행기를 만든다.
@@ -104,6 +124,10 @@ export class ActionExecutor {
    * @param plan 실행할 계획.
    */
   applyMove(entity: Entity, plan: PlannedAction): void {
+    if (checkSlowedThisTick(entity, this.state.tick)) {
+      this.recordResult(entity.entityId, plan, '둔화 — 이번 틱은 못 움직인다', null)
+      return
+    }
     if (DEFERRED_ACTIONS.has(plan.actionId)) {
       this.recordDeferred(entity, plan)
       return
@@ -201,9 +225,16 @@ export class ActionExecutor {
     if (skill.telegraph <= 0) {
       return false
     }
+    const target = this.state.entities.get(plan.targetId ?? '')
     this.registerTelegraph(entity, plan, {
       skill: plan.actionId,
+      shape: skill.shape.kind,
       radius: skill.shape.radius,
+      length: skill.shape.length,
+      // `LINE` 은 방향이 필요하다. 대상이 없으면 같은 칸을 가리켜 칸이 0 개가 되고,
+      // 그때는 예고가 빈 칸으로 서서 아무도 안 맞는다 — 그 사실은 로그에 남는다.
+      toward: target?.position ?? entity.position,
+      effects: skill.effects,
       damage: divideFloor(entity.attack * skill.coefPct, PERCENT_BASE),
       lead_ticks: skill.telegraph,
       visible_ticks: skill.telegraph,

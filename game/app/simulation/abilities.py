@@ -30,8 +30,8 @@ from game.app.simulation.plan import STATUS_GUARD, EngineConfig, PlannedAction
 from game.app.simulation.scaling import get_scaled_enemy_stats
 from game.app.simulation.state import Entity, WorldState
 from game.app.simulation.telegraph import TelegraphBoard
-from game.app.simulation.telegraph_shape import build_blast_tiles
-from game.app.skills.catalog import find_skill
+from game.app.simulation.telegraph_shape import build_blast_tiles, build_line_tiles
+from game.app.skills.catalog import SHAPE_LINE, find_skill
 from game.schemas.room import WALKABLE_TILES
 
 # 소환 쿨타임을 다는 키. 인지 변수 self_cooldown_ready[SUMMON] 가 이것을 읽는다.
@@ -159,6 +159,28 @@ def resolve_summon(
     return minion, f"{minion.entity_id} 등장 {position}"
 
 
+def build_cast_tiles(caster: Entity, telegraph: dict) -> tuple[tuple[int, int], ...]:
+    """이 예고가 덮는 칸들. 형태가 고른다 (설계/5_스킬 §2).
+
+    **몬스터 절에는 형태가 없다.** 없으면 반경으로 읽는다 — 지금 콘텐츠가 전부 그쪽이고,
+    형태를 필수로 만들면 옛 절이 통째로 안 읽힌다.
+
+    Args:
+        caster: 시전자.
+        telegraph: 예고 절.
+
+    Returns:
+        벽 거르기 전의 좌표들.
+    """
+    if telegraph.get("shape") == SHAPE_LINE:
+        return build_line_tiles(
+            caster.position,
+            tuple(telegraph.get("toward") or caster.position),
+            int(telegraph.get("length", 0)),
+        )
+    return build_blast_tiles(caster.position, telegraph["radius"])
+
+
 def register_blast(
     state: WorldState, board: TelegraphBoard, caster: Entity, telegraph: dict
 ) -> str:
@@ -181,7 +203,7 @@ def register_blast(
     """
     tiles = tuple(
         position
-        for position in build_blast_tiles(caster.position, telegraph["radius"])
+        for position in build_cast_tiles(caster, telegraph)
         if state.get_tile(*position) in WALKABLE_TILES
     )
     board.register(
@@ -195,6 +217,8 @@ def register_blast(
         # 몬스터 절에는 없다 — 없으면 안 켠다. 켜는 것은 스킬 데이터다 (§10.3).
         cancel_on_act=bool(telegraph.get("cancel_on_act", False)),
         cancel_on_hit=bool(telegraph.get("cancel_on_hit", False)),
+        # 몬스터 절에는 없다. 스킬이 정한 것만 실린다.
+        effects=tuple(telegraph.get("effects", ())),
     )
     return f"예고 {len(tiles)}칸 — {telegraph['lead_ticks']}틱 뒤 발동"
 

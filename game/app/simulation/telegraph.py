@@ -24,7 +24,10 @@ from dataclasses import dataclass, field
 
 from game.app.core.event_log import EventLog, LogEntry
 from game.app.simulation.phases import PHASE_TELEGRAPH
-from game.app.simulation.state import WorldState
+from game.app.simulation.state import Entity, WorldState
+from game.app.simulation.telegraph_effects import apply_blast_effects
+from game.app.simulation.telegraph_record import Telegraph
+from game.app.skills.catalog import SkillEffect
 
 # GDD §5 자폭형 — 접근 후 2틱 예고 뒤 폭발.
 DEFAULT_LEAD_TICKS = 2
@@ -39,55 +42,6 @@ VISIBLE_TICKS = 1
 # 취소 사유. 어느 스위치를 볼지 이것이 가른다.
 CANCEL_BY_HIT = "피격"
 CANCEL_BY_ACT = "다른 행동"
-
-
-@dataclass
-class Telegraph:
-    """예고 한 건. 남은 틱이 0 이 되는 틱에 발동한다."""
-
-    telegraph_id: str
-    caster_id: str
-    skill_id: str
-    # 정렬된 좌표다. 집합으로 들고 있으면 발동 로그의 순서가 흔들린다 (R5).
-    tiles: tuple[tuple[int, int], ...]
-    remaining_ticks: int
-    damage: int
-    # 남은 틱이 이 값 이하일 때부터 인지 변수에 잡힌다. lead_ticks 와 같게 두면
-    # 등록 순간부터 전 구간이 보인다 (GDD §4.2 의 "N틱 전에 표시").
-    visible_ticks: int = VISIBLE_TICKS
-    # 시전자를 먼저 죽이는 것이 예고에 대한 또 하나의 답이다. 보스의 확정
-    # 광역기처럼 그 답을 막아야 하는 예고만 False 로 등록한다.
-    cancel_on_death: bool = True
-    # 시전자가 **다른 행동을 하면** 취소되는가 (설계/5_스킬 §10.3).
-    #
-    # **기본이 False 인 것이 중요하다.** 전부에 걸면 자폭형 몬스터가 다음 틱에 움직이면서
-    # 스스로 취소해 영영 안 터진다 — 지금 콘텐츠의 뜻이 통째로 바뀐다. 켜는 것은 스킬
-    # 데이터이고, 그것이 「잠그지 않고 취소되게 한다」를 **고른 스킬에만** 적용하는 길이다.
-    cancel_on_act: bool = False
-    # 시전자가 **맞으면** 취소되는가. 위와 같은 이유로 기본이 False 다.
-    cancel_on_hit: bool = False
-
-    def has_tile(self, position: tuple[int, int]) -> bool:
-        """그 좌표가 피격 예정 타일인가.
-
-        Args:
-            position: 확인할 좌표.
-
-        Returns:
-            피격 예정이면 True.
-        """
-        return position in self.tiles
-
-    def is_visible_within(self, foresight_ticks: int) -> bool:
-        """지금 인지 가능한가.
-
-        Args:
-            foresight_ticks: 예측 회로가 넓혀 주는 인지 폭.
-
-        Returns:
-            남은 틱이 인지 폭 안이면 True.
-        """
-        return self.remaining_ticks <= self.visible_ticks + foresight_ticks
 
 
 @dataclass
@@ -115,6 +69,7 @@ class TelegraphBoard:
         cancel_on_death: bool = True,
         cancel_on_act: bool = False,
         cancel_on_hit: bool = False,
+        effects: tuple[SkillEffect, ...] = (),
     ) -> Telegraph:
         """예고를 등록한다. 이 틱에는 터지지 않는다.
 
@@ -128,6 +83,7 @@ class TelegraphBoard:
             cancel_on_death: 시전자가 죽으면 취소할 것인가.
             cancel_on_act: 시전자가 다른 행동을 하면 취소할 것인가.
             cancel_on_hit: 시전자가 맞으면 취소할 것인가.
+            effects: 맞은 대상에게 얹을 것들.
 
         Returns:
             등록된 예고.
@@ -144,6 +100,7 @@ class TelegraphBoard:
             cancel_on_death=cancel_on_death,
             cancel_on_act=cancel_on_act,
             cancel_on_hit=cancel_on_hit,
+            effects=effects,
         )
         self.pending.append(telegraph)
         return telegraph
@@ -330,6 +287,46 @@ class TelegraphBoard:
                 "" if victim.is_alive else " 사망"
             )
             self._record(state, log, telegraph, expr, outcome, -telegraph.damage, victim.entity_id)
+            self._apply_effects(state, log, telegraph, victim)
+
+    def record_blast(
+        self,
+        state: WorldState,
+        log: EventLog,
+        telegraph: Telegraph,
+        expr: str,
+        outcome: str,
+        delta: int | None,
+        target_id: str | None = None,
+    ) -> None:
+        """효과 모듈이 쓰는 공개 기록기 — 내부 것과 같은 모양이다.
+
+        판이 쓰는 기록기를 그대로 내주는 이유는, 사본을 두면 같은 발동이 두 모양으로
+        적히기 때문이다.
+
+        Args:
+            state: 세계 상태.
+            log: 이벤트 로그.
+            telegraph: 발동한 예고.
+            expr: 로그의 식.
+            outcome: 결과 설명.
+            delta: 수치 변화.
+            target_id: 대상 id.
+        """
+        self._record(state, log, telegraph, expr, outcome, delta, target_id)
+
+    def _apply_effects(
+        self, state: WorldState, log: EventLog, telegraph: Telegraph, victim: Entity
+    ) -> None:
+        """효과 모듈로 넘긴다.
+
+        Args:
+            state: 세계 상태.
+            log: 이벤트 로그.
+            telegraph: 발동한 예고.
+            victim: 맞은 대상.
+        """
+        apply_blast_effects(self, state, log, telegraph, victim)
 
     def _record(
         self,

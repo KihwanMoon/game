@@ -13,6 +13,8 @@
  * 전술이 된다 — 맞고 버티는 선택지가 성립하면 텔레그래프는 연출로 전락한다.
  */
 
+import { EFFECT_STATUS } from '../skills/catalog'
+import type { SkillEffect } from '../skills/catalog'
 import { EventLog, createLogEntry } from '../eventLog'
 import {
   type Position,
@@ -91,6 +93,8 @@ export interface Telegraph {
   readonly cancelOnAct: boolean
   /** 시전자가 맞으면 취소되는가. */
   readonly cancelOnHit: boolean
+  /** 맞은 대상에게 얹을 것들. 피해와 별개다. */
+  readonly effects: readonly SkillEffect[]
 }
 
 /** `TelegraphBoard.register` 가 받는 값들. */
@@ -109,6 +113,7 @@ export interface TelegraphInput {
   readonly cancelOnDeath?: boolean
   readonly cancelOnAct?: boolean
   readonly cancelOnHit?: boolean
+  readonly effects?: readonly SkillEffect[]
 }
 
 /**
@@ -206,6 +211,7 @@ export class TelegraphBoard {
       // 영영 안 터진다 — 켜는 것은 스킬 데이터다 (설계/5_스킬 §10.3).
       cancelOnAct: input.cancelOnAct ?? false,
       cancelOnHit: input.cancelOnHit ?? false,
+      effects: input.effects ?? [],
     }
     this.pending.push(telegraph)
     return telegraph
@@ -382,6 +388,45 @@ export class TelegraphBoard {
       const suffix = isAlive(victim) ? '' : ' 사망'
       const outcome = `${victim.entityId} HP ${victim.hp}/${victim.hpMax}${suffix}`
       this.recordEvent(state, log, telegraph, expr, outcome, -telegraph.damage, victim.entityId)
+      this.applyEffects(state, log, telegraph, victim)
+    }
+  }
+
+  /**
+   * 맞은 대상에게 스킬의 효과를 얹는다 — 파이썬 `apply_blast_effects` 와 같다.
+   *
+   * **피해와 별개다.** 피해 0 인 장판이 상태만 거는 것이 이 자리이고, 그것이 평면
+   * 필드로는 못 적는 것이었다.
+   *
+   * **진영을 안 가린다.** 피해와 같은 규칙이다 — 예고는 좌표에 떨어진다.
+   *
+   * @param state 세계 상태.
+   * @param log 이벤트 로그.
+   * @param telegraph 발동한 예고.
+   * @param victim 맞은 대상.
+   */
+  private applyEffects(
+    state: WorldState,
+    log: EventLog,
+    telegraph: Telegraph,
+    victim: Entity,
+  ): void {
+    for (const effect of telegraph.effects) {
+      if (effect.kind !== EFFECT_STATUS || effect.status === '') {
+        continue
+      }
+      // 더 긴 쪽을 남긴다. 짧은 것으로 덮으면 뒤에 온 약한 장판이 앞의 강한 것을 지운다.
+      const before = victim.statuses.get(effect.status) ?? 0
+      victim.statuses.set(effect.status, Math.max(before, effect.duration))
+      this.recordEvent(
+        state,
+        log,
+        telegraph,
+        `${telegraph.skillId} ${effect.status}`,
+        `${victim.entityId} ${effect.status} ${String(effect.duration)}틱`,
+        null,
+        victim.entityId,
+      )
     }
   }
 
@@ -444,4 +489,33 @@ export function buildThreatNotice(
     glyph: isImminent ? GLYPH_IMMINENT : GLYPH_PENDING,
     tone: isImminent ? TONE_DANGER : TONE_NEUTRAL,
   }
+}
+
+/**
+ * 시전자에서 대상 쪽으로 뻗는 직선 칸들 — 파이썬 `build_line_tiles` 와 같다.
+ *
+ * **`LINE` 이 P2 를 증명하는 자리다.** 적을 일렬로 세우게 만들고, 그것은 1차원에서
+ * 성립하지 않는다. 방향은 축마다 부호만 남겨 여덟 갈래로 자른다 — 이 게임에 바라보는
+ * 방향이 없어 대상 쪽으로 잡기 때문이다. 시전자 칸은 안 넣는다.
+ *
+ * @param origin 시전자 좌표.
+ * @param toward 대상 좌표.
+ * @param length 몇 칸까지 뻗는가.
+ * @returns 정렬된 좌표들. 방향이 없거나 길이가 0 이면 빈 값이다 (R5).
+ */
+export function buildLineTiles(
+  origin: Position,
+  toward: Position,
+  length: number,
+): readonly Position[] {
+  const stepX = Math.sign(toward.x - origin.x)
+  const stepY = Math.sign(toward.y - origin.y)
+  if ((stepX === 0 && stepY === 0) || length <= 0) {
+    return []
+  }
+  const tiles: Position[] = []
+  for (let one = 1; one <= length; one += 1) {
+    tiles.push({ x: origin.x + stepX * one, y: origin.y + stepY * one })
+  }
+  return sortUniquePositions(tiles)
 }

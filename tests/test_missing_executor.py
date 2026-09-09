@@ -35,11 +35,13 @@ def test_an_unknown_skill_says_so(templates, balance):
     """★ 실행기가 없으면 **로그가 그렇게 말해야** 한다."""
     engine = build_engine(templates["open_field"], balance, seed=3)
     player = engine.state.entities["player"]
-    plan = PlannedAction(entity_id=player.entity_id, action_id="USE_SKILL", skill_id="METEOR")
+    plan = PlannedAction(
+        entity_id=player.entity_id, action_id="USE_SKILL", skill_id="NO_SUCH_SPELL"
+    )
     engine.apply_actions((plan,))
     lines = [entry for entry in list_act_lines(engine) if "쓸 줄 모른다" in entry.outcome]
     assert lines, "부를 줄 모르는 스킬이 조용히 사라졌다"
-    assert lines[0].expr.startswith("METEOR")
+    assert lines[0].expr.startswith("NO_SUCH_SPELL")
 
 
 def test_a_known_skill_says_nothing_of_the_sort(templates, balance):

@@ -23,6 +23,16 @@ export const DEFAULT_SHAPE_KIND = SHAPE_SINGLE
 /** 계수를 안 적은 스킬의 기본. 100 이 「계수 그대로」다. */
 export const DEFAULT_COEF_PCT = 100
 
+/** 효과의 갈래. 지금은 상태 부여 하나다 — 피해·회복은 평면 필드가 이미 든다. */
+export const EFFECT_STATUS = 'STATUS'
+
+/** 스킬이 맞은 대상에게 얹는 것 하나. **평면 필드를 대신하지 않는다.** */
+export interface SkillEffect {
+  readonly kind: string
+  readonly status: string
+  readonly duration: number
+}
+
 /** 이 스킬이 무엇을 덮는가. */
 export interface SkillShape {
   readonly kind: string
@@ -52,6 +62,8 @@ export interface SkillDef {
   readonly guardPct: number
   readonly guardTicks: number
   readonly tags: readonly string[]
+  /** 맞은 대상에게 얹는 것들. 붙는 시점은 **예고 발동**이다. */
+  readonly effects: readonly SkillEffect[]
 }
 
 /** `skills.json` 의 한 줄. 없는 필드는 기본값으로 읽는다. */
@@ -70,6 +82,7 @@ export interface RawSkill {
   readonly guard_pct?: number
   readonly guard_ticks?: number
   readonly tags?: readonly string[]
+  readonly effects?: readonly { kind?: string; status?: string; duration?: number }[]
 }
 
 /**
@@ -111,6 +124,11 @@ export function buildSkillDef(raw: RawSkill): SkillDef {
     guardPct: raw.guard_pct ?? 0,
     guardTicks: raw.guard_ticks ?? 0,
     tags: raw.tags ?? [],
+    effects: (raw.effects ?? []).map((one) => ({
+      kind: one.kind ?? '',
+      status: one.status ?? '',
+      duration: one.duration ?? 0,
+    })),
   }
 }
 

@@ -22,6 +22,9 @@ SHAPE_AREA = "AREA"
 SHAPE_LINE = "LINE"
 SHAPE_SELF = "SELF"
 
+# 효과의 갈래. 지금은 상태 부여 하나다 — 피해·회복은 평면 필드가 이미 든다.
+EFFECT_STATUS = "STATUS"
+
 # 형태를 안 적은 스킬의 기본. 예전 스킬 절에는 `shape` 가 없을 수 있고, 그때 한 명을
 # 때리는 것이 가장 덜 놀라운 해석이다.
 DEFAULT_SHAPE_KIND = SHAPE_SINGLE
@@ -44,6 +47,27 @@ class SkillShape:
     radius: int = 0
     # 직선 길이. `LINE` 만 쓴다.
     length: int = 0
+
+
+@dataclass(frozen=True)
+class SkillEffect:
+    """스킬이 맞은 대상에게 얹는 것 하나 (설계/5_스킬 §1).
+
+    **평면 필드를 대신하지 않는다.** `coef_pct`·`heal_pct`·`guard_pct` 는 뜻이 그대로다 —
+    거기서 파생시키려던 설계가 반증에서 세 번 깨졌다: `coef_pct: 0` 의 뜻이 단계마다
+    바뀌고(피해 0 / 효과 없음 / 기본 100), `find_skill` 의 「모르는 id 에도 레코드」
+    폴백이 뒤집히고, 전제 검사가 early return 이라 `[GUARD, DAMAGE]` 가 적이 없을 때
+    보호막까지 안 걸렸다. **덧붙이기만 하면 셋 다 성립하지 않는다.**
+
+    **붙는 시점은 예고 발동이다.** 그때는 누가 그 칸에 섰는지 이미 정해져 있어
+    「대상이 없어서 못 걸었다」가 생기지 않는다 — early return 문제가 사라지는 자리다.
+    """
+
+    kind: str
+    # `STATUS` 가 거는 상태 이름 (POISON·SLOW·STUN).
+    status: str = ""
+    # 몇 틱 유지되는가. UPKEEP 이 매 틱 1씩 깎는다.
+    duration: int = 0
 
 
 @dataclass(frozen=True)
@@ -72,6 +96,8 @@ class SkillDef:
     guard_pct: int = 0
     guard_ticks: int = 0
     tags: tuple[str, ...] = ()
+    # 맞은 대상에게 얹는 것들. **평면 필드에 더해진다** — 대신하지 않는다.
+    effects: tuple[SkillEffect, ...] = ()
 
 
 def build_shape(raw: dict | None) -> SkillShape:
@@ -89,6 +115,22 @@ def build_shape(raw: dict | None) -> SkillShape:
         kind=str(raw.get("kind") or DEFAULT_SHAPE_KIND),
         radius=int(raw.get("radius", 0)),
         length=int(raw.get("length", 0)),
+    )
+
+
+def build_effect(raw: dict) -> SkillEffect:
+    """효과 절 하나를 레코드로 바꾼다.
+
+    Args:
+        raw: `effects` 배열의 한 항목.
+
+    Returns:
+        읽어 낸 효과.
+    """
+    return SkillEffect(
+        kind=str(raw.get("kind") or ""),
+        status=str(raw.get("status") or ""),
+        duration=int(raw.get("duration", 0)),
     )
 
 
@@ -119,6 +161,7 @@ def build_skill_def(raw: dict) -> SkillDef:
         guard_pct=int(raw.get("guard_pct", 0)),
         guard_ticks=int(raw.get("guard_ticks", 0)),
         tags=tuple(str(tag) for tag in raw.get("tags", ())),
+        effects=tuple(build_effect(one) for one in raw.get("effects", ())),
     )
 
 

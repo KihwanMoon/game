@@ -164,3 +164,104 @@ def test_the_cancel_is_written_down(balance, templates):
         one for one in engine.log.entries if "예고 취소" in one.expr or "예고 취소" in one.outcome
     ]
     assert lines, "취소가 로그에 안 남았다"
+
+
+# ── 마법 셋 (H5) ────────────────────────────────────────────────────────
+
+
+def build_real(balance, templates):
+    """실제 카탈로그로 엔진을 세운다. 시험용 스킬을 안 꽂는다."""
+    engine = build_engine(templates["open_field"], balance, seed=3)
+    player = engine.state.entities["player"]
+    target = next(iter(engine.state.list_hostiles(player)))
+    return engine, player, target
+
+
+def cast_plan(skill_id, target_id):
+    return PlannedAction(
+        entity_id="player", action_id="USE_SKILL", skill_id=skill_id, target_id=target_id
+    )
+
+
+def test_meteor_stands_for_three_ticks(balance, templates):
+    """★ **강함의 대가가 희귀도가 아니라 예고다** (§10).
+
+    반경 3 · 17칸이 3틱 붉게 서 있고, 그동안 적은 비켜설 수 있다.
+    """
+    engine, _player, target = build_real(balance, templates)
+    engine.apply_actions((cast_plan("METEOR", target.entity_id),))
+    one = engine.telegraphs.list_active()[0]
+    assert len(one.tiles) == 17
+    assert one.remaining_ticks == 3
+
+
+def test_chain_bolt_reaches_toward_the_target(balance, templates):
+    """★ **`LINE` 이 P2 를 증명하는 자리다** — 적을 일렬로 세우게 만든다."""
+    engine, _player, target = build_real(balance, templates)
+    engine.apply_actions((cast_plan("CHAIN_BOLT", target.entity_id),))
+    one = engine.telegraphs.list_active()[0]
+    assert 0 < len(one.tiles) <= 4
+    assert one.remaining_ticks == 1
+
+
+def test_chain_bolt_without_a_target_hits_nobody(balance, templates):
+    """★ 방향이 없으면 안 뻗는다. 자기 발밑을 지지지 않는다."""
+    engine, _player, _target = build_real(balance, templates)
+    engine.apply_actions((cast_plan("CHAIN_BOLT", ""),))
+    assert engine.telegraphs.list_active()[0].tiles == ()
+
+
+def test_frost_field_deals_no_damage_but_slows(balance, templates):
+    """★ **피해 0 이다.** 평면 필드로는 못 적던 것이 이것이고 `effects` 가 생긴 이유다.
+
+    자기 오사가 있으므로 내가 밟으면 나도 느려진다 — 「도망칠 길을 막을 것인가」와
+    「내가 그 위에 서 있는가」를 함께 묻는다.
+    """
+    engine, player, target = build_real(balance, templates)
+    target.position = (player.position[0] + 1, player.position[1])
+    engine.apply_actions((cast_plan("FROST_FIELD", target.entity_id),))
+    assert engine.telegraphs.list_active()[0].damage == 0
+    before = target.hp
+    for tick in (1, 2, 3):
+        engine.state.tick = tick
+        engine.run_telegraph()
+    assert target.hp == before
+    assert target.statuses["SLOW"] == 3
+    assert player.statuses["SLOW"] == 3
+
+
+def test_slow_halves_movement(balance, templates):
+    """★ **둔화가 일을 한다** (GDD §211 의 「이동 2틱 소모」).
+
+    없으면 `SLOW` 는 인지 변수에만 있고 걸어도 아무 일이 없다 — 서리 장판이 빈
+    껍데기가 되는 자리다.
+    """
+    engine, player, target = build_real(balance, templates)
+    player.statuses["SLOW"] = 9
+    moved = 0
+    for tick in range(6):
+        engine.state.tick = tick
+        before = player.position
+        engine.apply_actions(
+            (PlannedAction(entity_id="player", action_id="APPROACH", target_id=target.entity_id),)
+        )
+        moved += player.position != before
+    assert moved == 3
+
+
+def test_a_longer_slow_is_not_overwritten(balance, templates):
+    """★ 짧은 것으로 덮으면 뒤에 온 약한 장판이 앞의 강한 것을 지운다."""
+    from game.app.simulation.telegraph_effects import apply_blast_effects
+    from game.app.skills.catalog import SkillEffect
+
+    engine, player, _target = build_real(balance, templates)
+    player.statuses["SLOW"] = 5
+    telegraph = engine.telegraphs.register(
+        caster_id="player",
+        skill_id="FROST_FIELD",
+        tiles=(player.position,),
+        damage=0,
+        effects=(SkillEffect(kind="STATUS", status="SLOW", duration=2),),
+    )
+    apply_blast_effects(engine.telegraphs, engine.state, engine.log, telegraph, player)
+    assert player.statuses["SLOW"] == 5

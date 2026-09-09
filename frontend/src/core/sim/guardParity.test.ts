@@ -55,11 +55,11 @@ describe('방어 태세 이식', () => {
       createPlannedAction({
         entityId: player.entityId,
         actionId: 'USE_SKILL',
-        skillId: 'METEOR',
+        skillId: 'NO_SUCH_SPELL',
       }),
     ])
     const line = engine.log.entries.find((entry) => entry.outcome.includes('쓸 줄 모른다'))
-    expect(line?.expr.startsWith('METEOR')).toBe(true)
+    expect(line?.expr.startsWith('NO_SUCH_SPELL')).toBe(true)
   })
 
   it('이동에는 안 붙는다 — 붙으면 로그가 두 배가 된다', () => {

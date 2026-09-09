@@ -19,7 +19,9 @@ from game.app.simulation.plan import (
     GUARD_SKILL_ID,
     MELEE_REACH,
     PHASE_ACT,
+    SLOW_EVERY,
     STATUS_GUARD,
+    STATUS_SLOW,
     EngineConfig,
     PlannedAction,
 )
@@ -47,6 +49,32 @@ MOVE_ACTIONS = frozenset({"APPROACH", "RETREAT", "MOVE_TO_EXIT", "MOVE_TO_HEAL",
 # **W6 통합으로 비었다.** 목록과 record_deferred 를 남겨 두는 것은 규칙표가 부를 수는
 # 있으나 실행할 수 없는 행동이 다시 생길 때를 위해서다. 도감도 이 표를 읽어 경고한다.
 DEFERRED_ACTIONS: dict[str, str] = {}
+
+
+# 타일을 목표로 하는 이동. 행동 id 에서 찾을 타일 갈래로.
+TILE_MOVE_TARGETS: dict[str, set[int]] = {
+    "MOVE_TO_EXIT": {TILE_DOOR, TILE_STAIRS},
+    "MOVE_TO_HEAL": {TILE_SPRING},
+}
+
+
+def check_slowed_this_tick(entity: Entity, tick: int) -> bool:
+    """둔화 때문에 이번 틱에 못 움직이는가.
+
+    **둔화는 두 틱에 한 칸이다** (GDD §211 의 「이동 2틱 소모」). 없으면 `SLOW` 는 인지
+    변수에만 있고 걸어도 아무 일이 없다 — 상태를 거는 스킬이 빈 껍데기가 되는 자리다.
+
+    **틱의 홀짝으로 가른다.** 걸린 시점을 따로 들고 있으면 그것이 세계 상태가 되고 두
+    코어가 그 값을 함께 얼려야 한다. 홀짝은 이미 있는 값이라 그럴 필요가 없다 (R5).
+
+    Args:
+        entity: 움직이려는 엔티티.
+        tick: 지금 틱.
+
+    Returns:
+        못 움직이면 True.
+    """
+    return entity.statuses.get(STATUS_SLOW, 0) > 0 and tick % SLOW_EVERY != 0
 
 
 @dataclass
@@ -201,11 +229,14 @@ class ActionExecutor(SupportActionMixin, BlastActionMixin):
         if plan.action_id in DEFERRED_ACTIONS:
             self.record_deferred(entity, plan)
             return
-        if plan.action_id == "MOVE_TO_EXIT":
-            self._apply_step(entity, self._find_tiles({TILE_DOOR, TILE_STAIRS}), plan)
+        if check_slowed_this_tick(entity, self.state.tick):
+            self._record(entity.entity_id, plan, "둔화 — 이번 틱은 못 움직인다", None)
             return
-        if plan.action_id == "MOVE_TO_HEAL":
-            self._apply_step(entity, self._find_tiles({TILE_SPRING}), plan)
+        # 타일을 목표로 하는 이동들. 표로 두는 이유는 가지가 늘 때마다 return 이 하나씩
+        # 늘어 함수가 상한에 닿기 때문이고, 무엇보다 **셋이 같은 모양**이라 그렇다.
+        wanted = TILE_MOVE_TARGETS.get(plan.action_id)
+        if wanted is not None:
+            self._apply_step(entity, self._find_tiles(wanted), plan)
             return
         if plan.action_id == "MOVE_TO_COVER":
             self._apply_cover_move(entity, plan)

@@ -26,7 +26,8 @@ import { divideFloor } from '../combat/damage'
 import type { EngineConfig, PlannedAction, RawEnemyKind, RawTelegraphSetting } from './plan'
 import { getScaledEnemyStats } from './scaling'
 import { type Entity, type WorldState, countItem, createEntity, isAlive } from './state'
-import { type TelegraphBoard, buildBlastTiles } from './telegraph'
+import { type TelegraphBoard, buildBlastTiles, buildLineTiles } from './telegraph'
+import { SHAPE_LINE } from '../skills/catalog'
 
 /** 소환 쿨타임을 다는 키. 인지 변수 self_cooldown_ready[SUMMON] 가 이것을 읽는다. */
 export const SUMMON_ACTION = 'SUMMON'
@@ -186,7 +187,13 @@ export function registerBlast(
   caster: Entity,
   telegraph: RawTelegraphSetting,
 ): string {
-  const tiles = buildBlastTiles(caster.position, telegraph.radius).filter((position) =>
+  // 형태가 칸을 고른다 (설계/5_스킬 §2). 몬스터 절에는 형태가 없어 반경으로 읽는다 —
+  // 필수로 만들면 옛 절이 통째로 안 읽힌다.
+  const shaped =
+    telegraph.shape === SHAPE_LINE
+      ? buildLineTiles(caster.position, telegraph.toward ?? caster.position, telegraph.length ?? 0)
+      : buildBlastTiles(caster.position, telegraph.radius)
+  const tiles = shaped.filter((position) =>
     WALKABLE_TILES.has(state.getTile(position.x, position.y)),
   )
   board.register({
@@ -200,6 +207,7 @@ export function registerBlast(
     // 몬스터 절에는 없다 — 없으면 안 켠다. 켜는 것은 스킬 데이터다 (§10.3).
     cancelOnAct: telegraph.cancel_on_act ?? false,
     cancelOnHit: telegraph.cancel_on_hit ?? false,
+    effects: telegraph.effects ?? [],
   })
   return `예고 ${tiles.length}칸 — ${telegraph.lead_ticks}틱 뒤 발동`
 }

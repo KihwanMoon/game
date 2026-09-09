@@ -51,3 +51,47 @@ def build_blast_tiles(center: tuple[int, int], radius: int) -> tuple[tuple[int, 
             if get_manhattan_distance(center, (x, y)) <= radius
         )
     )
+
+
+def build_line_tiles(
+    origin: tuple[int, int], toward: tuple[int, int], length: int
+) -> tuple[tuple[int, int], ...]:
+    """시전자에서 대상 쪽으로 뻗는 직선 칸들.
+
+    **`LINE` 이 P2 를 증명하는 자리다** (설계/5_스킬 §2). 「거리 스칼라로 대체 가능한
+    형태만 있으면 그리드가 필요 없다」— `LINE` 은 적을 일렬로 세우게 만들고, 그것은
+    1차원에서 성립하지 않는다.
+
+    **방향은 여덟 갈래로 잘라 낸다.** 이 게임에 바라보는 방향이 없으므로 대상 쪽으로
+    잡는데, 대각선을 그대로 쓰면 칸이 어긋난다 — 축마다 부호만 남기면 격자 위의 직선이
+    된다. 시전자 칸은 안 넣는다: 자기 발밑을 지지는 것은 이 형태의 뜻이 아니다.
+
+    Args:
+        origin: 시전자 좌표.
+        toward: 대상 좌표. 같은 칸이면 방향이 없다.
+        length: 몇 칸까지 뻗는가.
+
+    Returns:
+        정렬된 좌표들. 방향이 없거나 길이가 0 이면 빈 값이다 (R5).
+    """
+    step_x = _resolve_sign(toward[0] - origin[0])
+    step_y = _resolve_sign(toward[1] - origin[1])
+    if (step_x, step_y) == (0, 0) or length <= 0:
+        return ()
+    return tuple(
+        sorted((origin[0] + step_x * one, origin[1] + step_y * one) for one in range(1, length + 1))
+    )
+
+
+def _resolve_sign(delta: int) -> int:
+    """부호만 남긴다.
+
+    Args:
+        delta: 차이.
+
+    Returns:
+        -1 · 0 · 1.
+    """
+    if delta > 0:
+        return 1
+    return -1 if delta < 0 else 0
