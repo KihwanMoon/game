@@ -19,7 +19,7 @@
 
 /** 동결된 개수. 로드 때마다 실제 개수와 대조한다. */
 // v7 에서 self_scroll_count 가 들어왔다 (§5 소모품 칸).
-export const PERCEPTION_COUNT = 21
+export const PERCEPTION_COUNT = 22
 export const ACTION_COUNT = 16 // v6 에서 USE_ITEM 이 들어왔다 (#54)
 // v8 에서 SELF(자기 자신)가 들어왔다.
 export const SELECTOR_COUNT = 10

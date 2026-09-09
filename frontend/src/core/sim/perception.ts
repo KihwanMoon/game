@@ -231,6 +231,10 @@ export function buildSnapshot(input: SnapshotInput): PerceptionSnapshot {
       'self_on_hazard_telegraph',
       board.isMarked(entity.position, getForesightTicks(entity)),
     )
+    // **시전을 잠그지 않고 취소되게 했으므로 이것이 필요하다** (설계/5_스킬 §10.3).
+    // 못 물으면 「적이 붙었으니 마법을 버리고 후퇴」를 지을 수 없고, 그러면 잠그는
+    // 것과 같아진다. `target_is_casting` 의 자기 자신 판이다 (v9).
+    values.set('self_is_casting', board.isCasting(entity.entityId))
   }
 
   // 셀렉터별 대상 거리 (블록 목록 v2, F-1 잔여 해결). 규칙이 자기 TARGET 과 무관하게

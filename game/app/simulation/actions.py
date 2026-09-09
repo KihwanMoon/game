@@ -13,7 +13,7 @@ from game.app.core.event_log import EventLog, LogEntry
 from game.app.grid.geometry import get_manhattan_distance, iter_neighbors
 from game.app.grid.vision import VisionGrid, check_line_of_sight, find_cover_positions
 from game.app.pathfinding.distance_field import build_distance_field, find_next_step
-from game.app.simulation import abilities
+from game.app.simulation.blast_actions import BlastActionMixin
 from game.app.simulation.plan import (
     ATTACK_ACTIONS,
     GUARD_SKILL_ID,
@@ -50,7 +50,7 @@ DEFERRED_ACTIONS: dict[str, str] = {}
 
 
 @dataclass
-class ActionExecutor(SupportActionMixin):
+class ActionExecutor(SupportActionMixin, BlastActionMixin):
     """계획을 실행하고 결과를 로그에 남긴다."""
 
     state: WorldState
@@ -274,44 +274,6 @@ class ActionExecutor(SupportActionMixin):
             return
         self._apply_strike(entity, target, plan)
         self._apply_cooldown(entity, plan.action_id)
-
-    def apply_area_attack(self, entity: Entity, plan: PlannedAction) -> None:
-        """반경 안의 적 전체를 친다.
-
-        Args:
-            entity: 공격자.
-            plan: 실행할 계획.
-        """
-        telegraph = self.config.enemy_stats.get(entity.kind_id, {}).get("telegraph")
-        if telegraph is not None:
-            self._register_telegraph(entity, plan, telegraph)
-            return
-        # **반경의 정본은 데이터다** (설계/5_스킬 §9). 예전에는 여기 상수가 있었고
-        # `skills.json` 의 `shape` 는 아무도 안 읽어 거짓이었다.
-        radius = find_skill(self.config.skills, plan.action_id).shape.radius
-        victims = [
-            other
-            for other in self.state.list_hostiles(entity)
-            if get_manhattan_distance(entity.position, other.position) <= radius
-        ]
-        if not victims:
-            self._record(entity.entity_id, plan, "반경 안에 적 없음 — 틱 낭비", None)
-            return
-        for victim in victims:
-            self._apply_strike(entity, victim, plan)
-        self._apply_cooldown(entity, plan.action_id)
-
-    def _register_telegraph(self, entity: Entity, plan: PlannedAction, telegraph: dict) -> None:
-        """즉발 대신 예고를 건다 (GDD §4.2).
-
-        Args:
-            entity: 시전자.
-            plan: 실행 중인 계획.
-            telegraph: balance.json 의 그 종류 telegraph 절.
-        """
-        outcome = abilities.register_blast(self.state, self.telegraphs, entity, telegraph)
-        self._apply_cooldown(entity, plan.action_id)
-        self._record(entity.entity_id, plan, outcome, None)
 
     def apply_damage(
         self,

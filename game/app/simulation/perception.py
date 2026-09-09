@@ -185,6 +185,11 @@ def build_snapshot(
         values["self_on_hazard_telegraph"] = board.is_marked(
             entity.position, foresight_ticks=get_foresight_ticks(entity)
         )
+        # **시전을 잠그지 않고 취소되게 했으므로 이것이 필요하다** (설계/5_스킬 §10.3).
+        # 취소가 벌이 아니라 선택이 되려면 규칙표가 「지금 시전 중인가」를 물을 수 있어야
+        # 한다 — 못 물으면 「적이 붙었으니 마법을 버리고 후퇴」를 지을 수 없고, 그러면
+        # 잠그는 것과 같아진다. `target_is_casting` 의 자기 자신 판이다 (v9).
+        values["self_is_casting"] = board.is_casting(entity.entity_id)
 
     # 셀렉터별 대상 거리 (블록 목록 v2, F-1 잔여 해결). 규칙이 자기 TARGET 과 무관하게
     # 물을 수 있어야 하므로 스냅샷에서 전부 미리 푼다 — 틱당 1회 원칙은 지켜진다.

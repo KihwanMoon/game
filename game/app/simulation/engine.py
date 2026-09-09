@@ -263,6 +263,10 @@ class TickEngine:
             plan: 실행할 계획.
         """
         plan = resolve_skill_plan(plan)
+        # **예고를 먼저 묻는다.** 아래는 전부 `action_id` 로 갈리므로 새 스킬 id 가 안
+        # 닿는데, 예고는 그 행동의 성질이지 이름의 성질이 아니다 (설계/5_스킬 §10).
+        if executor.apply_cast(entity, plan):
+            return
         if plan.action_id in ATTACK_ACTIONS:
             executor.apply_attack(entity, plan)
         elif plan.action_id == "AREA_ATTACK":
