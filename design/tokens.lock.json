@@ -103,7 +103,7 @@
     "spacing.css:landscape:--thumb-md": "40px",
     "spacing.css:portrait:--app-max": "390px",
     "spacing.css:portrait:--bar-bottom": "48px",
-    "spacing.css:portrait:--bar-controls": "84px",
+    "spacing.css:portrait:--bar-controls": "152px",
     "spacing.css:portrait:--bar-edit": "60px",
     "spacing.css:portrait:--bar-hint": "none",
     "spacing.css:portrait:--bar-speed": "0px",

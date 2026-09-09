@@ -713,7 +713,9 @@ describe('반응형 토큰 (design/tokens/spacing.css)', () => {
     expect(root).toContain('--bar-status:0px')
     // 상태는 시트의 첫 탭이 됐다 — 전용 줄이 없다 (2026-09-08).
     expect(root).toContain('--bar-vitals:0px')
-    expect(root).toContain('--bar-controls:84px')
+    // 84 이던 것이 152 다 (2026-09-09). 84 는 두 줄 몫이었는데 조작부가 세 줄이라
+    // 셋째 줄이 통째로 잘렸고, 거기 있던 것이 「규칙표」였다 — 이 게임의 유일한 동사.
+    expect(root).toContain('--bar-controls:152px')
     expect(root).toContain('--row-h:54px')
     // 12x30 = 360 에 좌우 여백을 더해도 390 을 넘지 않아야 한다.
     const cell = 30

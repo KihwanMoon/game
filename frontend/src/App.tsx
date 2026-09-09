@@ -2118,7 +2118,7 @@ export function App(): React.JSX.Element {
           setPostState('open')
         }}
       >
-        사후 분석
+        분석
       </Button>
       <Button
         size="sm"
@@ -2141,7 +2141,7 @@ export function App(): React.JSX.Element {
         }
         onClick={goToNextRoom}
       >
-        다음 방 {String((run.setup.chain?.index ?? 0) + 2)}/
+        다음 {String((run.setup.chain?.index ?? 0) + 2)}/
         {String(run.setup.chain?.roomIds.length ?? 1)}
       </Button>
       <AutoAdvanceNotice
@@ -2169,10 +2169,13 @@ export function App(): React.JSX.Element {
           writeAutoAdvance(getLocalStorage(), next)
         }}
       >
-        자동 진행 {isAutoOn ? '켬' : '끔'}
+        자동 {isAutoOn ? '켬' : '끔'}
       </Button>
-      <Button size="sm" variant="ghost" glyph="↰" onClick={goToEditor}>
-        규칙 고치기
+      {/* **늘 보여야 한다** (2026-09-09, 실제 신고). 조작부가 고정 높이라 라벨이 길면
+          이것이 세 번째 줄로 밀려 통째로 잘렸다 — 「고쳐서 다시 도전한다」가 이 게임의
+          유일한 동사인데(GDD §2.1) 그 입구가 안 보였다. 라벨을 줄여 두 줄에 넣는다. */}
+      <Button size="sm" variant="ghost" glyph="↰" title="규칙표를 고치러 간다" onClick={goToEditor}>
+        규칙표
       </Button>
     </div>
   )

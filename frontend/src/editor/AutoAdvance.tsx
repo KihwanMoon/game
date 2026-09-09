@@ -95,10 +95,12 @@ export function formatAutoAdvanceNote(
 ): string {
   // **음수는 「아직 아니다」다.** 도는 중이 아닐 때 줄을 지우면 그만큼 화면이 움직이고,
   // 여러 줄로 접히는 자리에서는 줄 수까지 바뀐다 — 자리를 지키고 말만 바꾼다.
+  // **짧게 적는다** (2026-09-09). 이 줄이 길면 조작부의 한 줄을 통째로 먹고, 고정 높이
+  // 안에서 뒤의 버튼이 밀려 잘린다 — 「규칙표」가 그렇게 안 보였다.
   if (secondsLeft < 0) {
-    return `이기면 다음 방(${String(roomNumber)}/${String(roomTotal)})으로 간다`
+    return `이기면 자동으로 ${String(roomNumber)}/${String(roomTotal)}`
   }
-  return `${String(secondsLeft)}초 뒤 다음 방(${String(roomNumber)}/${String(roomTotal)})으로 간다`
+  return `${String(secondsLeft)}초 뒤 ${String(roomNumber)}/${String(roomTotal)}`
 }
 
 /** 자동 진행 안내가 받는 props. */
