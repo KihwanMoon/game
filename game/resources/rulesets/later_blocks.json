@@ -15,7 +15,27 @@
     "같은 일을 한다」는 증명이다.",
     "",
     "제약은 다른 파일과 같다: rule_slots 5, cpu_budget 8, cpu 비용 1항=1 / 2항=2 / 3항=4.",
-    "1층 60런 실측 — skill_identity 46% · cut_the_healer 46% · read_the_ground 20%."
+    "1층 60런 실측 — skill_identity 46% · cut_the_healer 46% · read_the_ground 20%.",
+    "",
+    "**마법 둘을 더했다 (2026-09-09, 블록 v9~v10).** 위와 똑같은 상황이 반복됐다 —",
+    "METEOR·CHAIN_BOLT·FROST_FIELD 가 카탈로그에 있는데 아무 규칙표도 안 썼고, 그래서",
+    "예고를 쓰는 스킬이 **어느 표에서도 한 번도 안 터지고 있었다.** 표를 쓰자마자 코어",
+    "결함 둘이 드러났다(둘 다 고쳤다):",
+    "",
+    "  1. 버티기가 제 시전을 끊었다. 규칙이 전부 거짓이면 엔진이 DEFAULT 로 접근을",
+    "     채우므로 「가만히 있는다」가 아예 불가능했다 — §10.3 이 「마법을 포기할",
+    "     것인가」를 규칙표에 묻겠다고 했는데 답이 언제나 「포기한다」 하나뿐이었다.",
+    "  2. AREA 예고가 시전자 발밑에 고정돼 있었다. 자폭형에서 물려받은 자리이고,",
+    "     10칸 밖 적에게 던진 메테오가 제 발밑에서 터졌다 (`player HP 74/100 (-26)`).",
+    "",
+    "고친 뒤 1층 60런 — **meteor_patience 76% · bolt_line 23%** (뼈대 46% · 폴백 6%).",
+    "메테오가 표 전체에서 가장 높다. 이것은 밸런스 신호이지 결함이 아니다 — 설계/5_스킬",
+    "§10.6 이 「여기 수치는 자리이지 밸런스가 아니다(S7)」라고 미뤄 둔 값들이다.",
+    "",
+    "**서리 장판 표는 안 싣는다.** `cancel_on_hit` 이 켜져 있는데 사거리가 4 라, 사격형이",
+    "있는 방에서는 시전 2틱을 버티지 못하고 매번 끊긴다 — 실측 1% 로 폴백(6%)보다 낮았다.",
+    "조건이 거의 안 걸리는 표는 블록을 시연하는 것이 아니라 시연하지 않는 것이라는 위의",
+    "기준을 그대로 적용했다. 스킬 값이 정해지면(S7) 그때 싣는다."
   ],
   "rulesets": [
     {
@@ -350,6 +370,222 @@
                 "cmp": ">",
                 "rhs": 1,
                 "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ruleset_id": "v10_meteor_patience",
+      "version": 1,
+      "strategy_ko": "메테오. **2번 「시전 중이면 버틴다」가 이 표의 심장이다.** 어느 행동이든 예고를 끊고(§10.3), 규칙이 전부 거짓이면 엔진이 DEFAULT 로 접근을 채운다 — 그래서 「가만히 있겠다」를 **명시하지 않으면** 마법은 한 번도 안 터진다. 즉발 스킬을 부르던 표에 마법을 넣기만 하면 되는 것이 아니라는 것이 이 한 줄이고, **장비 교체가 규칙 재설계를 부르는 지점이 여기다** (P3). 3번의 `적거리 >= 4` 는 밸런스 숫자가 아니라 **자기 오사를 사거리로 푸는 답**이다 — 반경 3 을 4칸 밖에 떨구고 시전 중에는 안 움직이므로 그 거리가 유지된다.",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_ITEM",
+          "action_param": "POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 1,
+          "action": "HOLD",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "self_is_casting",
+                "cmp": "==",
+                "rhs": true
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "USE_SKILL",
+          "action_param": "METEOR",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">=",
+                "rhs": 4,
+                "lhs_param": "LOWEST_HP"
+              },
+              {
+                "lhs": "self_skill_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "METEOR"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 5,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "LOWEST_HP"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ruleset_id": "v10_bolt_line",
+      "version": 1,
+      "strategy_ko": "연쇄 번개. 겨눈 대상 **뒤로** 뻗으므로 「누구를 겨눌 것인가」가 곧 「누가 뒤에 서 있는가」다 (§10.6) — `LINE` 이 P2 를 증명하는 자리다. 예고가 1틱뿐이라 버티는 값이 메테오의 3분의 1 이고, 같은 뼈대에서 그 차이만으로 다른 표가 된다.",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_ITEM",
+          "action_param": "POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 1,
+          "action": "HOLD",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "self_is_casting",
+                "cmp": "==",
+                "rhs": true
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "USE_SKILL",
+          "action_param": "CHAIN_BOLT",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 2,
+                "lhs_param": "LOWEST_HP"
+              },
+              {
+                "lhs": "self_skill_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "CHAIN_BOLT"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 5,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "LOWEST_HP"
               }
             ]
           }

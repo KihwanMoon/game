@@ -1,6 +1,6 @@
 {
   "_comment": "아이템 카탈로그 (docs/설계/4_아이템). 접사 굴림은 아직 없다 — 시드 파생식이 결정 대기(#02)이고, 정하기 전에 굴린 아이템은 나중에 검증할 수 없다. 여기 있는 것은 굴림 없이 값이 고정된 정의뿐이다. 요구조건이 참조하는 능력치는 지금 코어에 실제로 있는 것만 쓴다 — level·str 같은 축은 #10·#11 이 정해진 뒤에 들어온다. grants_skill 은 그 장비가 여는 스킬이다.",
-  "item_list_version": 6,
+  "item_list_version": 7,
   "items": [
     {
       "id": "sword_short",
@@ -1030,6 +1030,107 @@
         "CURSED"
       ],
       "_note": "반경 3 → 5 · 쿨 16 → 24 (§10.7 의 값 그대로). **대가가 같은 아이템에 실려 있어야 한다** — 반경만 넓히면 끼기만 하면 되는 유물이 되고, 그것이 §10.7 이 금지한 상위 호환이다. 방어·체력은 보루 갑옷(9 · 25%)보다 낮게 둔다: 몸 자리를 마법으로 쓰는 대가가 맷집이다. 쿨 24 는 한 방에 한 번이라 「보스전에만」 쪽으로 규칙표가 기운다."
+    },
+    {
+      "id": "rod_frost",
+      "kind": "EQUIPMENT",
+      "label_ko": "서릿대",
+      "slot": "WEAPON_MAIN",
+      "hands": "ONE",
+      "attack_range": 2,
+      "affixes": [
+        {
+          "stat": "attack",
+          "flat": -2,
+          "label_ko": "가벼운 대"
+        },
+        {
+          "stat": "cpu_budget",
+          "flat": 1,
+          "label_ko": "성에 회로"
+        }
+      ],
+      "grants_skill": "FROST_FIELD",
+      "tags": [
+        "MAGIC"
+      ],
+      "_note": "**마법을 여는 첫 자리다.** 보통 등급인 것이 핵심 — 유물에 두면 전략 축 하나가 만분의 5 뒤에 갇힌다 (설계/5_스킬 §10.7). 셋 중 가장 싼 값이라 서리 장판(피해 0 · 둔화 3틱)을 연다: 「도망칠 길을 막을 것인가」가 마법의 입문 질문이다. 평타가 −2 인 것이 대가이고, 그래서 이 무기를 든 사람은 규칙표로 벌어야 한다."
+    },
+    {
+      "id": "wand_conduit",
+      "kind": "EQUIPMENT",
+      "label_ko": "전도 막대",
+      "slot": "WEAPON_MAIN",
+      "hands": "ONE",
+      "attack_range": 3,
+      "affixes": [
+        {
+          "stat": "attack",
+          "flat": -1,
+          "label_ko": "얇은 심"
+        },
+        {
+          "stat": "cpu_budget",
+          "flat": 2,
+          "label_ko": "전도 회로"
+        },
+        {
+          "stat": "initiative",
+          "flat": -3,
+          "label_ko": "[둔중함] 겨누는 시간"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "cpu_budget",
+          "min": 8
+        }
+      ],
+      "grants_skill": "CHAIN_BOLT",
+      "tags": [
+        "MAGIC",
+        "CURSED"
+      ],
+      "_note": "연쇄 번개를 연다 — **`LINE` 이 P2 를 증명하는 자리다** (§10.6). 사거리 3 이라 활보다 짧은데, 겨눈 대상 **뒤로** 뻗으므로 「누구를 겨눌 것인가」가 곧 「누가 뒤에 서 있는가」다. 선공 −3 이 대가인 것은 의도다: 먼저 서서 줄을 세우는 무기가 아니라 상대가 줄을 선 뒤에 쏘는 무기다."
+    },
+    {
+      "id": "staff_fallstar",
+      "kind": "EQUIPMENT",
+      "label_ko": "낙성 지팡이",
+      "slot": "WEAPON_MAIN",
+      "hands": "TWO",
+      "grade": "FINE",
+      "min_floor": 3,
+      "attack_range": 2,
+      "affixes": [
+        {
+          "stat": "attack",
+          "flat": 1,
+          "label_ko": "묵직한 자루"
+        },
+        {
+          "stat": "cpu_budget",
+          "flat": 4,
+          "label_ko": "성좌 회로"
+        },
+        {
+          "stat": "initiative",
+          "flat": -6,
+          "label_ko": "[둔중함] 긴 자루"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "cpu_budget",
+          "min": 10
+        }
+      ],
+      "grants_skill": "METEOR",
+      "tags": [
+        "MAGIC",
+        "CURSED"
+      ],
+      "_note": "메테오를 연다. **양손이라 예지의 홀과 배타적이다** — 예고 3틱을 그대로 받고 화력을 얻을 것인가, 홀을 들어 1틱으로 줄이고 지팡이를 놓을 것인가가 이 무기가 파는 선택이다. 상급인 것은 희귀도로 막으려는 것이 아니라(§10.2) 3층부터 나오는 줄에 세워 두려는 것이고, 서릿대·전도 막대가 보통이라 마법 자체는 1층부터 열린다."
     }
   ]
 }

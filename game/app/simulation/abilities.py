@@ -172,13 +172,15 @@ def build_cast_tiles(caster: Entity, telegraph: dict) -> tuple[tuple[int, int], 
     Returns:
         벽 거르기 전의 좌표들.
     """
+    toward = tuple(telegraph.get("toward") or caster.position)
     if telegraph.get("shape") == SHAPE_LINE:
-        return build_line_tiles(
-            caster.position,
-            tuple(telegraph.get("toward") or caster.position),
-            int(telegraph.get("length", 0)),
-        )
-    return build_blast_tiles(caster.position, telegraph["radius"])
+        return build_line_tiles(caster.position, toward, int(telegraph.get("length", 0)))
+    # **중심은 겨눈 곳이다.** 자폭형에서 물려받은 자리라 발밑에 고정돼 있었고, 그래서
+    # 플레이어가 10칸 밖의 적에게 던진 메테오가 제 발밑에서 터졌다 — 1층 60런 실측
+    # 승률 1% 의 진짜 이유이며, 로그에 `예고 발동 → player HP 74/100 (-26)` 로
+    # 찍혀 있었다. 겨눌 곳이 없으면 발밑이고, 몬스터 절에는 `toward` 가 없어 그쪽은
+    # 예전 그대로 자기 자리에서 터진다.
+    return build_blast_tiles(toward, telegraph["radius"])
 
 
 def register_blast(

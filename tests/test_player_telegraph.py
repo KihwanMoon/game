@@ -128,7 +128,7 @@ def test_another_action_cancels_a_cast(balance, templates):
     그 자체로 손해다. 잠그는 대신 다른 행동이 끊게 하면 무엇을 할지는 규칙표가 정한다.
     """
     engine, player = build_casting(balance, templates, cancel_on_act=True)
-    engine.apply_actions((PlannedAction(entity_id=player.entity_id, action_id="HOLD"),))
+    engine.apply_actions((PlannedAction(entity_id=player.entity_id, action_id="APPROACH"),))
     assert engine.telegraphs.list_active() == ()
 
 
@@ -138,7 +138,30 @@ def test_a_cast_that_is_not_interruptible_survives_an_action(balance, templates)
     영영 안 터진다 — 지금 콘텐츠의 뜻이 통째로 바뀐다. 켜는 것은 스킬 데이터다.
     """
     engine, player = build_casting(balance, templates)
+    engine.apply_actions((PlannedAction(entity_id=player.entity_id, action_id="APPROACH"),))
+    assert len(engine.telegraphs.list_active()) == 1
+
+
+def test_holding_keeps_the_cast(balance, templates):
+    """★ **「포기하지 않는다」를 적을 칸이 규칙표에 있어야 한다** (§10.3).
+
+    §10.3 은 취소를 벌이 아니라 선택으로 두겠다고 했는데, 버티기까지 취소 사유면 답의
+    한쪽이 아예 표현되지 않는다 — 규칙표가 무엇을 적든 마법은 언제나 포기된다.
+
+    실측이 그것을 그대로 보여 줬다: focus_lowest_guard 뼈대(1층 60런 46%)에서 2번 한
+    줄만 마법으로 바꾸니 1% 였고, 로그에는 `T001 예고 16칸 · T002 예고 취소 → 다른
+    행동` 이 매 판 찍혀 있었다. 예고를 쓰는 스킬이 **어느 규칙표에서도 한 번도 안
+    터지고 있었다.**
+    """
+    engine, player = build_casting(balance, templates, cancel_on_act=True)
     engine.apply_actions((PlannedAction(entity_id=player.entity_id, action_id="HOLD"),))
+    assert len(engine.telegraphs.list_active()) == 1
+
+
+def test_setting_a_flag_keeps_the_cast(balance, templates):
+    """★ 깃발은 세계를 안 건드린다. 끊으면 「시전 중에는 기록도 못 한다」가 된다."""
+    engine, player = build_casting(balance, templates, cancel_on_act=True)
+    engine.apply_actions((PlannedAction(entity_id=player.entity_id, action_id="SET_FLAG"),))
     assert len(engine.telegraphs.list_active()) == 1
 
 
@@ -159,7 +182,7 @@ def test_a_fully_blocked_hit_does_not_cancel(balance, templates):
 def test_the_cancel_is_written_down(balance, templates):
     """★ 조용히 사라지면 「내 마법이 어디 갔지」가 된다 (P1)."""
     engine, player = build_casting(balance, templates, cancel_on_act=True)
-    engine.apply_actions((PlannedAction(entity_id=player.entity_id, action_id="HOLD"),))
+    engine.apply_actions((PlannedAction(entity_id=player.entity_id, action_id="APPROACH"),))
     lines = [
         one for one in engine.log.entries if "예고 취소" in one.expr or "예고 취소" in one.outcome
     ]
@@ -186,13 +209,16 @@ def cast_plan(skill_id, target_id):
 def test_meteor_stands_for_three_ticks(balance, templates):
     """★ **강함의 대가가 희귀도가 아니라 예고다** (§10).
 
-    반경 3 · 17칸이 3틱 붉게 서 있고, 그동안 적은 비켜설 수 있다.
+    반경 3 이 3틱 붉게 서 있고, 그동안 적은 비켜설 수 있다. 칸 수가 17 에서 21 로
+    는 것은 **중심이 시전자 발밑에서 겨눈 곳으로 옮겨 갔기 때문이다** — 예전에는
+    자폭형에서 물려받은 자리라 10칸 밖 적에게 던진 메테오가 제 발밑에서 터졌다.
     """
-    engine, _player, target = build_real(balance, templates)
+    engine, player, target = build_real(balance, templates)
     engine.apply_actions((cast_plan("METEOR", target.entity_id),))
     one = engine.telegraphs.list_active()[0]
-    assert len(one.tiles) == 17
+    assert len(one.tiles) == 21
     assert one.remaining_ticks == 3
+    assert player.position not in one.tiles, "제 발밑에서 터지면 마법이 자해가 된다"
 
 
 def test_chain_bolt_reaches_toward_the_target(balance, templates):

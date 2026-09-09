@@ -189,10 +189,15 @@ export function registerBlast(
 ): string {
   // 형태가 칸을 고른다 (설계/5_스킬 §2). 몬스터 절에는 형태가 없어 반경으로 읽는다 —
   // 필수로 만들면 옛 절이 통째로 안 읽힌다.
+  //
+  // **중심은 겨눈 곳이다.** 자폭형에서 물려받은 자리라 발밑에 고정돼 있었고, 그래서
+  // 10칸 밖의 적에게 던진 메테오가 제 발밑에서 터졌다. 몬스터 절에는 `toward` 가
+  // 없어 그쪽은 예전 그대로다 (파이썬 `build_cast_tiles` 와 같다).
+  const toward = telegraph.toward ?? caster.position
   const shaped =
     telegraph.shape === SHAPE_LINE
-      ? buildLineTiles(caster.position, telegraph.toward ?? caster.position, telegraph.length ?? 0)
-      : buildBlastTiles(caster.position, telegraph.radius)
+      ? buildLineTiles(caster.position, toward, telegraph.length ?? 0)
+      : buildBlastTiles(toward, telegraph.radius)
   const tiles = shaped.filter((position) =>
     WALKABLE_TILES.has(state.getTile(position.x, position.y)),
   )

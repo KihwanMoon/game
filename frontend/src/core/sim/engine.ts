@@ -51,6 +51,14 @@ export const LAVA_DAMAGE = 3
 /** 생명의 샘이 매 틱 내주는 회복량. 잔여량이 모자라면 남은 만큼만 나온다. */
 export const SPRING_REGEN_PER_TICK = 2
 
+/**
+ * **시전을 안 끊는 행동들** (설계/5_스킬 §10.3). 파이썬 `KEEP_CAST_ACTIONS` 와 같다.
+ *
+ * 버티기까지 취소 사유면 「마법을 포기하지 않는다」를 적을 칸이 규칙표에 없어, 무엇을
+ * 적든 답이 언제나 「포기한다」 하나뿐이 된다. 세계를 안 건드리는 둘만 뺀다.
+ */
+export const KEEP_CAST_ACTIONS: ReadonlySet<string> = new Set(['HOLD', 'SET_FLAG'])
+
 /** 전투 중이 아닐 때의 회복 비율. 감쇠가 없다는 뜻이다. */
 const FULL_REGEN_PCT = 100
 
@@ -402,8 +410,10 @@ export class TickEngine {
       return
     }
     // **다른 행동은 시전을 끊는다** — 켜 둔 예고만. 위에서 걸러진 뒤라 「같은 마법을
-    // 이어 건다」는 여기 안 온다.
-    this.telegraphs.applyCancel(this.state, this.log, entity.entityId, CANCEL_BY_ACT)
+    // 이어 건다」는 여기 안 온다. 버티기는 그 「다른 행동」이 아니다.
+    if (!KEEP_CAST_ACTIONS.has(plan.actionId)) {
+      this.telegraphs.applyCancel(this.state, this.log, entity.entityId, CANCEL_BY_ACT)
+    }
     if (ATTACK_ACTIONS.has(plan.actionId)) {
       executor.applyAttack(entity, plan)
     } else if (plan.actionId === 'AREA_ATTACK') {

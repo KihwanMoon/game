@@ -43,7 +43,7 @@ from game.app.simulation.plan import (
 from game.app.simulation.pressure import PressureTracker
 from game.app.simulation.springs import apply_spring_drain, remove_drained_springs
 from game.app.simulation.state import FACTION_PLAYER, Entity, WorldState
-from game.app.simulation.telegraph import CANCEL_BY_ACT, Telegraph, TelegraphBoard
+from game.app.simulation.telegraph import Telegraph, TelegraphBoard, apply_act_cancel
 from game.schemas.room import TILE_LAVA, TILE_SPRING
 
 LAVA_DAMAGE = 3
@@ -252,10 +252,9 @@ class TickEngine:
     def _apply_settled(self, executor: ActionExecutor, entity: Entity, plan: PlannedAction) -> None:
         """이동이 끝난 뒤 하는 행동을 실행기에 넘긴다.
 
-        `USE_SKILL` 은 **한 겹의 지시**다 — 어느 스킬인지는 plan.skill_id 에 있다.
-        여기서 그 스킬로 풀어 주면 실행기는 v5 를 몰라도 된다. 실행기마다 USE_SKILL 을
-        알게 하면 스킬을 더할 때마다 실행기가 늘어나고, 그것이 블록을 파라미터화한 이유와
-        정면으로 어긋난다 (docs/설계/5_스킬 §4).
+        `USE_SKILL` 은 **한 겹의 지시**다 — 여기서 풀어 주면 실행기는 v5 를 몰라도 된다.
+        실행기마다 알게 하면 스킬을 더할 때마다 실행기가 늘고, 그것이 블록을 파라미터화한
+        이유와 정면으로 어긋난다 (docs/설계/5_스킬 §4).
 
         Args:
             executor: 행동 실행기.
@@ -267,10 +266,7 @@ class TickEngine:
         # 닿는데, 예고는 그 행동의 성질이지 이름의 성질이 아니다 (설계/5_스킬 §10).
         if executor.apply_cast(entity, plan):
             return
-        # **다른 행동은 시전을 끊는다** — 켜 둔 예고만 (§10.3). 잠그는 대신 이렇게 두면
-        # 취소가 벌이 아니라 **선택**이 되고, 무엇을 할지는 규칙표가 정한다. 위에서
-        # 걸러진 뒤라 「같은 마법을 이어 건다」는 여기 안 온다.
-        self.telegraphs.apply_cancel(self.state, self.log, entity.entity_id, CANCEL_BY_ACT)
+        apply_act_cancel(self.telegraphs, self.state, self.log, entity.entity_id, plan.action_id)
         if plan.action_id in ATTACK_ACTIONS:
             executor.apply_attack(entity, plan)
         elif plan.action_id == "AREA_ATTACK":

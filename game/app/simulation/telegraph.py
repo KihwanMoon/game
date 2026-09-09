@@ -43,6 +43,20 @@ VISIBLE_TICKS = 1
 CANCEL_BY_HIT = "피격"
 CANCEL_BY_ACT = "다른 행동"
 
+# **시전을 안 끊는 행동들** (설계/5_스킬 §10.3).
+#
+# §10.3 은 「다른 행동을 하면 시전이 취소된다」고 적고, 그래야 취소가 벌이 아니라
+# **선택**이 되며 규칙표가 「마법을 포기할 것인가」를 답한다고 했다. 그런데 답의 한쪽인
+# **「포기하지 않는다」를 적을 수단이 없었다** — 버티는 것도 행동이라 HOLD 가 제 예고를
+# 끊었고, 규칙이 전부 거짓이면 엔진이 DEFAULT 로 접근을 채워 그것이 또 끊었다.
+#
+# 실측(1층 60런): focus_lowest_guard 뼈대(46%)의 한 줄만 마법으로 바꾸면 1% 였다.
+# 로그가 이유를 그대로 적고 있었다 — `T001 예고 16칸 · T002 예고 취소 → 다른 행동`.
+# 예고를 쓰는 스킬은 **어느 규칙표에서도 한 번도 안 터지는** 상태였다.
+#
+# 세계를 안 건드리는 둘만 뺀다. 이동·타격·소모품은 그대로 끊는다.
+KEEP_CAST_ACTIONS = frozenset({"HOLD", "SET_FLAG"})
+
 
 @dataclass
 class TelegraphBoard:
@@ -361,3 +375,23 @@ class TelegraphBoard:
                 target_id=target_id,
             )
         )
+
+
+def apply_act_cancel(
+    board: TelegraphBoard, state: WorldState, log: EventLog, entity_id: str, action_id: str
+) -> None:
+    """이번 행동이 그 엔티티의 예고를 끊는가 (§10.3).
+
+    **판단이 여기 사는 이유.** 「무엇이 끊는 행동인가」는 엔진의 갈래가 아니라 예고의
+    성질이다. 엔진에 두면 취소 규칙이 디스패치 표 한가운데 끼어, 다음 사람이 행동을
+    더할 때 이 줄을 함께 봐야 하는지 알 수 없다.
+
+    Args:
+        board: 예고판.
+        state: 세계 상태.
+        log: 이벤트 로그.
+        entity_id: 행위자 id.
+        action_id: 이번 틱에 실행할 행동 id.
+    """
+    if action_id not in KEEP_CAST_ACTIONS:
+        board.apply_cancel(state, log, entity_id, CANCEL_BY_ACT)

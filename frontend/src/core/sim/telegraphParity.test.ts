@@ -79,13 +79,28 @@ describe('스킬 예고 이식', () => {
   it('켜 둔 예고만 다른 행동에 끊긴다', () => {
     const on = buildProbe(3, { act: true })
     on.engine.applyActions([castPlan()])
-    on.engine.applyActions([createPlannedAction({ entityId: PLAYER_ENTITY_ID, actionId: 'HOLD' })])
+    on.engine.applyActions([
+      createPlannedAction({ entityId: PLAYER_ENTITY_ID, actionId: 'APPROACH' }),
+    ])
     expect(on.engine.telegraphs.listActive().length).toBe(0)
 
     const off = buildProbe(3)
     off.engine.applyActions([castPlan()])
-    off.engine.applyActions([createPlannedAction({ entityId: PLAYER_ENTITY_ID, actionId: 'HOLD' })])
+    off.engine.applyActions([
+      createPlannedAction({ entityId: PLAYER_ENTITY_ID, actionId: 'APPROACH' }),
+    ])
     expect(off.engine.telegraphs.listActive().length).toBe(1)
+  })
+
+  it('버티기는 시전을 안 끊는다 — 파이썬 `KEEP_CAST_ACTIONS` 와 같다', () => {
+    // 「포기하지 않는다」를 적을 칸이 규칙표에 있어야 §10.3 의 선택이 성립한다.
+    // 이것이 갈리면 브라우저에서 터진 마법이 서버 재시뮬에서는 취소된다 (G3).
+    for (const actionId of ['HOLD', 'SET_FLAG']) {
+      const { engine } = buildProbe(3, { act: true })
+      engine.applyActions([castPlan()])
+      engine.applyActions([createPlannedAction({ entityId: PLAYER_ENTITY_ID, actionId })])
+      expect(engine.telegraphs.listActive().length, actionId).toBe(1)
+    }
   })
 
   it('막아 낸 피해로는 안 끊긴다 — 그러면 방어가 벌이 된다', () => {
@@ -133,11 +148,17 @@ describe('마법 셋 이식', () => {
   }
 
   it('메테오는 반경 3 · 3틱 예고로 선다 — 파이썬 실측과 같다', () => {
-    const { engine, target } = buildReal()
+    // 17 → 21 은 **중심이 시전자 발밑에서 겨눈 곳으로 옮겨 갔기 때문이다**. 예전에는
+    // 자폭형에서 물려받은 자리라 10칸 밖 적에게 던진 메테오가 제 발밑에서 터졌다.
+    const { engine, player, target } = buildReal()
     engine.applyActions([cast('METEOR', target.entityId)])
     const one = engine.telegraphs.listActive()[0]
-    expect(one?.tiles.length).toBe(17)
+    expect(one?.tiles.length).toBe(21)
     expect(one?.remainingTicks).toBe(3)
+    const onSelf = (one?.tiles ?? []).some(
+      (tile) => tile.x === player.position.x && tile.y === player.position.y,
+    )
+    expect(onSelf, '제 발밑에서 터지면 마법이 자해가 된다').toBe(false)
   })
 
   it('연쇄 번개는 대상 쪽으로 뻗는 직선이다', () => {
