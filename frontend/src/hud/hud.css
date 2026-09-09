@@ -212,8 +212,13 @@
 /* ── 규칙 성적표 ────────────────────────────────────────────────────── */
 
 /* 컬럼 정렬은 미관이 아니라 디버깅 기능이다 — 자리가 맞아야 눈이 세로로 훑는다. */
+/* **열 폭을 표가 정하게 두지 않는다** (2026-09-09, 실제 신고: 「잘리는 정보 없게」).
+   `auto` 레이아웃에서는 진단 문구의 최소폭이 표 전체를 밀어 380px 상자 안에서 422px 이
+   됐고, 오른쪽 끝의 진단 열이 옆으로 잘렸다. 숫자 열 넷을 박아 두면 남는 폭이 곧 진단
+   열이고, 문구는 그 안에서 접힌다 — 접히는 것과 잘리는 것은 다른 말이다. */
 .hud-stats {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-family: var(--font-mono);
   font-size: var(--fs-mono-s);
@@ -222,11 +227,32 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* **숫자 열은 안 접힌다** (2026-09-09, 실제 신고). 진단 열이 `width: 100%` 로 남는
+   폭을 다 가져가므로 앞의 넷이 최소폭까지 눌리는데, 그때 두 글자짜리 머리가 「규/칙」
+   처럼 글자마다 접혔다 — 표 머리가 세로로 서면 무슨 열인지 읽는 데 시간이 걸린다.
+   접히는 것은 진단 문구 하나뿐이면 된다. */
 .hud-stats th,
 .hud-stats td {
   padding: var(--sp-1) var(--sp-2);
   text-align: right;
   border-bottom: var(--border);
+}
+
+/* 숫자 열 셋. **한 자리든 세 자리든 같은 폭**이라 눈이 세로로 훑는다. */
+.hud-stats th:nth-child(2),
+.hud-stats th:nth-child(3),
+.hud-stats th:nth-child(4),
+.hud-stats td:nth-child(2),
+.hud-stats td:nth-child(3),
+.hud-stats td:nth-child(4) {
+  width: 3rem;
+  white-space: nowrap;
+}
+
+/* 규칙 이름 열. 자리 번호(`[2]`)가 보통이지만 이름이 길어지면 접힌다. */
+.hud-stats th:nth-child(1),
+.hud-stats td:nth-child(1) {
+  width: 4rem;
 }
 
 .hud-stats thead th {
@@ -243,8 +269,12 @@
   text-align: left;
 }
 
+/* **`width: 100%` 를 뺐다** (2026-09-09). 셀에 100% 를 주면 그 폭이 표 폭 기준이라
+   앞의 네 열(182px)과 더해져 표가 422px 로 부풀었고, 380px 상자에서 「진단」이 옆으로
+   잘렸다 — 남는 폭을 가져가려던 값이 오히려 상자를 넘겼다. 표가 이미 `width: 100%`
+   이고 다른 열이 안 접히므로, 남는 폭은 이 열이 그냥 가져간다. */
 .hud-stats__note {
-  width: 100%;
+  white-space: normal;
 }
 
 .hud-stats__row--warn th[scope='row'] {
@@ -342,22 +372,34 @@
   overflow: hidden;
 }
 
+/* **제목·닫기가 한 줄, 값이 그 아래 한 줄** (2026-09-09, 실제 신고: 「잘리는 정보
+   없게」). 셋을 한 줄에 이었더니 가운데 값이 좁아져 `cover_row · T013 · HP 0` 이 석
+   줄로 접혔다 — 방 이름 길이에 따라 접히는 줄 수가 달라지고, 접힌 값은 읽히지도
+   않는다. 자리를 나눠 두면 무엇이 몇 자든 한 줄에 선다. */
 .hud-post__head {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--sp-4);
+  gap: var(--sp-1) var(--sp-4);
   min-height: var(--bar-top);
-  padding: var(--sp-0) var(--sp-4);
+  padding: var(--sp-1) var(--sp-4);
   border-bottom: var(--border);
 }
 
 .hud-post__title {
+  grid-area: 1 / 1;
   font-size: var(--fs-display-m);
   color: var(--text-display);
 }
 
+/* 닫기는 제목과 같은 줄 오른쪽이다. 자리를 안 박아 두면 자동 배치가 값 줄 다음(셋째
+   줄)으로 밀어내, 머리가 세 줄이 되고 닫기가 폭을 통째로 먹는다. */
+.hud-post__head > .ds-button {
+  grid-area: 1 / 2;
+}
+
 .hud-post__meta {
-  flex: 1;
+  grid-area: 2 / 1 / auto / -1;
   font-family: var(--font-mono);
   font-size: var(--fs-mono-s);
   color: var(--text-dim);
@@ -369,6 +411,13 @@
 .hud-post__body {
   display: grid;
   grid-template-columns: var(--post-cols);
+  /* **높이를 나눠 갖지 않는다** (2026-09-09, 실제 신고). 한 열이 된 뒤로 두 묶음이
+     남은 높이를 정확히 반씩 가져갔고(각 412px), 그래서 히트맵은 15px 이 잘리고
+     되감기는 249px 이 잘렸다 — **되감기 슬라이더가 화면 밖에 있어 손이 닿지 않았다.**
+     내용만큼 주고 넘치면 이 상자가 흐른다. 전투 화면이 「상한이 아니라 흐름」으로 간
+     것과 같은 판단이다. */
+  grid-auto-rows: max-content;
+  align-content: start;
   gap: var(--sp-4);
   min-height: 0;
   padding: var(--sp-4);

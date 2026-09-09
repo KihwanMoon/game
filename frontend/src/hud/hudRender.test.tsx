@@ -303,3 +303,44 @@ describe('HudScreen', () => {
     expect(dead).toContain('사후 분석 — 쓰러짐')
   })
 })
+
+describe('사후 분석에서 잘리는 정보가 없다 (2026-09-09, 실제 신고)', () => {
+  /**
+   * 선택자 하나의 선언 블록을 잘라 낸다.
+   *
+   * @param selector 찾을 선택자.
+   * @returns 중괄호 안의 선언들.
+   */
+  function cutRule(selector: string): string {
+    const css = readStrippedCss('hud.css')
+    const at = css.indexOf(`${selector} {`)
+    expect(at, `${selector} 규칙이 없다`).toBeGreaterThan(-1)
+    return css.slice(at, css.indexOf('}', at))
+  }
+
+  it('★ **높이를 나눠 갖지 않는다** — 되감기 슬라이더가 화면 밖에 있었다', () => {
+    // 한 열이 된 뒤로 두 묶음이 남은 높이를 정확히 반씩 가져갔다(각 412px). 그래서
+    // 히트맵은 15px 이, 되감기는 249px 이 잘렸고 — 잘린 쪽 끝에 되감기 슬라이더가
+    // 있어서 지나간 판을 짚어 볼 수가 없었다. 내용만큼 주고 상자가 흐르게 한다.
+    const block = cutRule('.hud-post__body')
+    expect(block).toContain('grid-auto-rows: max-content')
+    expect(block).toContain('align-content: start')
+    expect(block).toContain('overflow: auto')
+  })
+
+  it('★ 머리의 값이 제 줄을 갖는다 — 셋을 한 줄에 이으면 가운데가 접힌다', () => {
+    // `cover_row · T013 · HP 0` 이 석 줄로 접혔다. 방 이름 길이에 따라 접히는 줄 수가
+    // 달라지고, 접힌 값은 읽히지도 않는다.
+    expect(cutRule('.hud-post__title')).toContain('grid-area: 1 / 1')
+    expect(cutRule('.hud-post__head > .ds-button')).toContain('grid-area: 1 / 2')
+    expect(cutRule('.hud-post__meta')).toContain('grid-area: 2 / 1 / auto / -1')
+  })
+
+  it('★ 성적표의 열 폭을 표가 정하지 않는다 — 진단 열이 옆으로 잘렸다', () => {
+    // `auto` 레이아웃에서는 진단 문구의 최소폭이 표를 밀어 380px 상자 안에서 422px 이
+    // 됐다. 숫자 열을 박아 두면 남는 폭이 곧 진단 열이고 문구는 그 안에서 접힌다 —
+    // **접히는 것과 잘리는 것은 다른 말이다.**
+    expect(cutRule('.hud-stats')).toContain('table-layout: fixed')
+    expect(cutRule('.hud-stats__note')).not.toContain('width: 100%')
+  })
+})
