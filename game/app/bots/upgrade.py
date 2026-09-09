@@ -33,6 +33,10 @@ PERCENT_BASE = 100
 # 규칙표 예산 축. 다른 스탯과 달리 「잃으면 규칙표가 반려된다」 (`check_keeps_budget`).
 CPU_STAT = "cpu_budget"
 
+# 소모품 칸 축. 잃으면 **끼워 둔 것이 잠긴다** (`store/consumables` 의 「칸이 줄면 넘치는
+# 줄은 안 읽힌다」). 스킬·CPU 와 같은 자리라 같은 관문을 세운다.
+SLOT_STATS: tuple[str, ...] = ("potion_slots", "scroll_slots")
+
 # 성격이 장비에서 무엇을 보는가. 능력치 배분(str/dex/int)과 축이 다른 이유는 접사가
 # 전투 수치에 붙기 때문이다 — 같은 성격을 두 축으로 옮긴 표이지 새 성격이 아니다.
 #
@@ -208,6 +212,46 @@ def count_budget_gift(item: GearItem, base_stats: dict[str, int]) -> int:
     return total
 
 
+def check_keeps_slots(current: GearItem, candidate: GearItem) -> bool:
+    """갈아 껴도 소모품 칸이 안 줄어드는가.
+
+    **스킬·CPU 와 같은 자리의 세 번째 상실이다.** 칸이 줄면 넘치는 줄은 안 읽히고
+    (`store/consumables.list_consumable_slots`), 그 칸에 있던 물약·주문서가 **잠긴다** —
+    지워지지는 않지만 그 판에는 없는 것과 같다.
+
+    저울이 그것을 못 본다. 실측으로 `약사 갑옷 → 보루 갑옷` 은 DEFENSE 저울에서 +41 인데,
+    잃은 칸에 영약과 인장 주문서가 들어 있으면 실제 로드아웃은 방어 16→14 · 체력
+    141→125 · 충전 POTION 9→2 · SCROLL 7→1 이 된다. **저울이 이득이라 세는 바로 그
+    순간 캐릭터가 나빠진다.**
+
+    칸 자체에는 무게를 준다(`gear_priority.json`) — 그것은 「자리 하나가 얼마짜리인가」다.
+    여기서 막는 것은 다른 것이다: **사람이 안 고른 상실.** 손으로 바꾸는 길은 안 막는다.
+
+    Args:
+        current: 지금 낀 것.
+        candidate: 갈아 낄 후보.
+
+    Returns:
+        쓰임새마다 후보의 칸 기여가 지금 것 이상이면 True.
+    """
+    return all(
+        count_slot_gift(candidate, stat) >= count_slot_gift(current, stat) for stat in SLOT_STATS
+    )
+
+
+def count_slot_gift(item: GearItem, stat: str) -> int:
+    """이 장비가 그 쓰임새의 칸을 몇 개 더하는가.
+
+    Args:
+        item: 볼 장비.
+        stat: 칸 축 이름.
+
+    Returns:
+        더하는 칸 수. 퍼센트는 안 본다 — 칸은 정수로만 는다.
+    """
+    return sum(flat for name, flat, _percent in item.affixes if name == stat)
+
+
 def find_upgrades(
     bag: tuple[GearItem, ...],
     worn: tuple[GearItem, ...],
@@ -292,6 +336,8 @@ def find_upgrades_by_weights(
         if not check_keeps_skill(current, candidate):
             continue
         if not check_keeps_budget(current, candidate, base_stats):
+            continue
+        if not check_keeps_slots(current, candidate):
             continue
         score = compute_weighted_score(candidate, weights, base_stats)
         if score - compute_weighted_score(current, weights, base_stats) < UPGRADE_MARGIN:

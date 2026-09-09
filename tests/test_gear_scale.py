@@ -220,3 +220,70 @@ def test_the_picker_never_cuts_the_budget(catalog, base_stats):
                 if not check_keeps_budget(current, candidate, base_stats):
                     cuts.append((current.item_id, candidate.item_id))
     assert cuts == [], f"정비가 CPU 예산을 깎는 교체를 골랐다: {cuts}"
+
+
+# ── 소모품 칸 (잃으면 끼워 둔 것이 잠긴다) ──────────────────────────────
+
+
+def build_slot_gear(item_id, potion=0, scroll=0, defense=0):
+    affixes = []
+    if potion:
+        affixes.append(("potion_slots", potion, 0))
+    if scroll:
+        affixes.append(("scroll_slots", scroll, 0))
+    if defense:
+        affixes.append(("defense", defense, 0))
+    return GearItem(
+        item_id=item_id,
+        slot="BODY",
+        can_equip=True,
+        is_broken=False,
+        hands="",
+        affixes=tuple(affixes),
+        attack_range=0,
+    )
+
+
+def test_a_swap_that_loses_a_slot_is_refused():
+    """★ **저울이 이득이라 세는 바로 그 순간 캐릭터가 나빠지는 자리다.**
+
+    칸이 줄면 넘치는 줄은 안 읽히고, 그 칸에 있던 물약·주문서가 잠긴다. 실측으로
+    `약사 갑옷 → 보루 갑옷` 은 DEFENSE 저울에서 +41 인데 실제로는 방어 16→14 ·
+    체력 141→125 · 충전 POTION 9→2 · SCROLL 7→1 이다.
+    """
+    from game.app.bots.upgrade import check_keeps_slots
+
+    pouch = build_slot_gear(1, potion=1, scroll=1, defense=5)
+    plain = build_slot_gear(2, defense=9)
+    assert not check_keeps_slots(pouch, plain)
+    assert check_keeps_slots(plain, pouch)
+
+
+def test_the_same_slots_still_upgrade():
+    """★ 막기만 하면 그 줄이 영영 못 오른다. 칸이 같으면 통과해야 한다."""
+    from game.app.bots.upgrade import check_keeps_slots
+
+    assert check_keeps_slots(build_slot_gear(1, potion=1), build_slot_gear(2, potion=1, defense=9))
+
+
+def test_each_use_tag_is_checked_on_its_own():
+    """★ 물약 칸을 얻고 주문서 칸을 잃는 교체도 상실이다. 합으로 세면 상쇄된다."""
+    from game.app.bots.upgrade import check_keeps_slots
+
+    traded = build_slot_gear(2, potion=2)
+    assert not check_keeps_slots(build_slot_gear(1, potion=1, scroll=1), traded)
+
+
+def test_the_picker_never_loses_a_slot(catalog, base_stats):
+    """★ 선택 함수를 직접 돌린다. 칸 접사를 가진 아이템을 끼고 전량과 견준다."""
+    from game.app.bots.upgrade import check_keeps_slots, find_upgrades_by_weights
+
+    worn = (build_slot_gear(999, potion=1, scroll=1, defense=5),)
+    bag = tuple(build_gear(e) for e in catalog.values() if e.kind.name == "EQUIPMENT")
+    lost = [
+        (current.item_id, candidate.item_id)
+        for weights in GEAR_PRIORITY_WEIGHTS.values()
+        for current, candidate in find_upgrades_by_weights(bag, worn, weights, base_stats)
+        if not check_keeps_slots(current, candidate)
+    ]
+    assert lost == [], f"정비가 칸을 잃는 교체를 골랐다: {lost}"

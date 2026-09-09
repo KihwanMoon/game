@@ -75,10 +75,16 @@ def test_a_loaded_slot_replaces_its_free_charge():
 
 
 def test_an_empty_kind_is_not_carried():
-    """★ 0개인 종류를 담으면 티켓이 쓸데없이 길어진다."""
+    """★ 0개인 종류를 담으면 티켓이 쓸데없이 길어진다.
+
+    **접사가 연 칸으로 본다.** 기본 칸은 다 마셔도 공짜 충전이 남으므로(2026-09-09,
+    「담아 두면 손해」를 없앤 자리) 0 이 되지 않는다 — 실제로 0 이 되는 것은 접사 칸이다.
+    """
     from game.app.store.consumables import count_slot_charges
 
-    assert "SCROLL" not in count_slot_charges((build_slot("SCROLL", 0, "scroll_shield", 0),))
+    drained_affix = build_slot("SCROLL", 1, "scroll_shield", 0)
+    assert not drained_affix.is_base
+    assert "SCROLL" not in count_slot_charges((drained_affix,))
 
 
 def test_a_scroll_never_fits_a_potion_slot():

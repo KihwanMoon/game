@@ -95,3 +95,39 @@ def test_the_base_free_charge_is_untouched():
 
     counted = count_slot_charges((build_slot("POTION", 0), build_slot("POTION", 1)))
     assert counted["POTION"] == 2
+
+
+def test_a_drained_base_slot_is_never_worse_than_an_empty_one():
+    """★ **담아 두면 손해**가 되면 안 된다.
+
+    예전에는 「비었으면 1」이라, 좋은 물약을 기본 칸에 끼우고 다 마시면 그 칸이 0 이
+    됐다 — 새 계정보다 못한 손이다. 한 모금이라도 쓴 아이템은 빼도 안 돌아오므로
+    (`create_consumable_clear`) 되돌릴 수도 없었다.
+    """
+    from game.app.store.consumables import count_slot_charges
+
+    empty = (build_slot("POTION", 0), build_slot("POTION", 1))
+    drained = (
+        build_slot("POTION", 0, "potion_elixir", 0),
+        build_slot("POTION", 1, "potion_elixir", 0),
+    )
+    assert count_slot_charges(drained)["POTION"] == count_slot_charges(empty)["POTION"] == 2
+
+
+def test_a_loaded_base_slot_still_replaces_its_free_charge():
+    """★ 얹는 것이 아니라 **더 큰 쪽**이다. 얹으면 채울수록 공짜가 따라 늘어난다."""
+    from game.app.store.consumables import count_slot_charges
+
+    slots = (build_slot("POTION", 0, "potion_heal", 2), build_slot("POTION", 1))
+    assert count_slot_charges(slots)["POTION"] == 3
+
+
+def test_the_settlement_forgives_only_what_was_given():
+    """★ 두 셈이 갈리면 산 충전이 안 깎이거나 안 쓴 것이 깎인다.
+
+    기본 칸에 두 충전을 실었으면 공짜로 얹힌 것은 없다.
+    """
+    from game.app.store.consumables import count_free_charges
+
+    loaded = (build_slot("POTION", 0, "potion_heal", 2), build_slot("POTION", 1))
+    assert count_free_charges(loaded, "POTION") == 1

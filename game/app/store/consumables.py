@@ -96,7 +96,11 @@ def count_slot_charges(slots: tuple[ConsumableSlot, ...]) -> dict[str, int]:
     """
     counts: dict[str, int] = {}
     for slot in slots:
-        amount = FREE_CHARGES if slot.catalog_id is None and slot.is_base else slot.charges
+        # **기본 칸은 빈 칸보다 나빠지지 않는다.** 예전에는 「비었으면 1」이라, 좋은
+        # 물약을 끼우고 다 마시면 그 칸이 0 이 됐다 — 새 계정보다 못한 손이 되고,
+        # 한 모금이라도 쓴 아이템은 빼도 안 돌아온다(`create_consumable_clear`).
+        # 「담아 두면 손해」는 이 시스템이 팔려는 것의 정반대다.
+        amount = max(FREE_CHARGES, slot.charges) if slot.is_base else slot.charges
         if amount > 0:
             counts[slot.use_tag] = counts.get(slot.use_tag, 0) + amount
     return counts
@@ -239,8 +243,11 @@ def count_free_charges(slots: tuple[ConsumableSlot, ...], use_tag: str) -> int:
     Returns:
         공짜 충전 수.
     """
+    # 실제로 **공짜로 얹힌 몫**만 센다 — `count_slot_charges` 가 기본 칸에 주는
+    # `max(FREE_CHARGES, charges)` 중 산 것을 뺀 나머지다. 두 셈이 갈리면 산 충전이
+    # 안 깎이거나 안 쓴 것이 깎인다.
     return sum(
-        FREE_CHARGES
+        max(0, FREE_CHARGES - slot.charges)
         for slot in slots
-        if slot.use_tag == use_tag and slot.catalog_id is None and slot.is_base
+        if slot.use_tag == use_tag and slot.is_base
     )
