@@ -2118,7 +2118,11 @@ export function App(): React.JSX.Element {
           setPostState('open')
         }}
       >
-        분석
+        {/* **글리프만 보인다** (2026-09-09, 실제 신고 셋째: 「버튼 높이와 간격이 크다」).
+            여섯 버튼이 두 줄이면 44px 이 한 줄 더 붙고, 세로에서 그 44px 은 도면에서
+            빼 오는 것이다. 이름은 지우는 게 아니라 `ds-sr` 로 옮긴다 — 화면에서만
+            빠지고 보조 기술과 `title` 에는 그대로 있다. */}
+        <span className="ds-sr">사후 분석</span>
       </Button>
       <Button
         size="sm"
@@ -2127,7 +2131,7 @@ export function App(): React.JSX.Element {
         title="같은 방·같은 시드로 처음부터 다시 돌린다"
         onClick={startRun}
       >
-        다시
+        <span className="ds-sr">다시</span>
       </Button>
       <Button
         size="sm"
@@ -2141,7 +2145,9 @@ export function App(): React.JSX.Element {
         }
         onClick={goToNextRoom}
       >
-        다음 {String((run.setup.chain?.index ?? 0) + 2)}/
+        {/* **숫자는 남긴다.** 「어디로 가는가」는 글리프가 못 말하고, 이 줄이 사라지자
+            자동 진행 안내가 그것을 대신 적으려다 한 줄을 통째로 먹었다. */}
+        {String((run.setup.chain?.index ?? 0) + 2)}/
         {String(run.setup.chain?.roomIds.length ?? 1)}
       </Button>
       <AutoAdvanceNotice
@@ -2167,11 +2173,12 @@ export function App(): React.JSX.Element {
           writeAutoAdvance(getLocalStorage(), next)
         }}
       >
-        자동 {isAutoOn ? '켬' : '끔'}
+        <span className="ds-sr">자동 진행 {isAutoOn ? '켬' : '끔'}</span>
       </Button>
-      {/* **늘 보여야 한다** (2026-09-09, 실제 신고). 조작부가 고정 높이라 라벨이 길면
-          이것이 세 번째 줄로 밀려 통째로 잘렸다 — 「고쳐서 다시 도전한다」가 이 게임의
-          유일한 동사인데(GDD §2.1) 그 입구가 안 보였다. 라벨을 줄여 두 줄에 넣는다. */}
+      {/* **늘 보여야 하고, 이름도 보여야 한다** (2026-09-09, 실제 신고). 조작부가 고정
+          높이라 라벨이 길면 이것이 세 번째 줄로 밀려 통째로 잘렸다 — 「고쳐서 다시
+          도전한다」가 이 게임의 유일한 동사인데(GDD §2.1) 그 입구가 안 보였다.
+          그래서 다른 넷은 글리프만 남기고 **이것과 「다음 n/m」만 글자를 지킨다.** */}
       <Button size="sm" variant="ghost" glyph="↰" title="규칙표를 고치러 간다" onClick={goToEditor}>
         규칙표
       </Button>

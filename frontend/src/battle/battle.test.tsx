@@ -706,26 +706,27 @@ describe('반응형 토큰 (design/tokens/spacing.css)', () => {
     // 미디어쿼리가 아니라 :root 가 세로여야 한다. 여기가 뒤집힌 자리다.
     const root = readDesignTokens().split('@media')[0] ?? ''
     expect(root).toContain('--layout-mode:portrait')
-    expect(root).toContain('--plan-cell:32px')
+    expect(root).toContain('--plan-cell:34px')
     expect(root).toContain('--bar-top:44px')
     // 전용 줄 둘이 사라졌다 (2026-09-08). 배속은 시트 하단의 시간 조작 줄로 내려갔고
     // 판정·예고는 도면 위에 겹친다 — 고정 줄 하나가 곧 체력을 화면 밖으로 미는 44px 였다.
     expect(root).toContain('--bar-status:0px')
     // 상태는 시트의 첫 탭이 됐다 — 전용 줄이 없다 (2026-09-08).
     expect(root).toContain('--bar-vitals:0px')
-    // 84 → 152 → 100 (2026-09-09). 84 는 두 줄 몫인데 내용이 세 줄이라 「규칙표」가
-    // 잘렸고, 152 는 그 세 줄을 다 담았지만 세로 화면의 16% 를 먹었다. 안내 문구에서
-    // 옆 버튼과 겹치는 방 번호를 빼자 두 줄에 들어간다 — 이 값이 그 두 줄이다.
-    expect(root).toContain('--bar-controls:100px')
+    // 84 → 152 → 100 → 52 (2026-09-09, 실제 신고 셋). 답은 매번 높이가 아니라
+    // 내용이었고, 마지막에 남은 것은 글자 폭이다 — 여섯 버튼에 이름을 다 적으면 어떤
+    // 높이로도 한 줄에 안 들어간다. 넷은 이름을 `ds-sr` 로 옮기고 남은 초는 「멈춤」
+    // 버튼 위로 올렸다. 이 값이 그 한 줄(44 + 위아래 4)이다.
+    expect(root).toContain('--bar-controls:52px')
     expect(root).toContain('--row-h:54px')
-    // **도면이 커졌다 (2026-09-09, 실제 신고).** 30x12 = 360 에 여백 14x2 를 더해
-    // 390 에 맞추던 것이었는데, 그 390 이 요즘 폰(412~430)보다 좁았다. 셀을 32 로
-    // 올리고 여백을 8 로 줄여 기준폭 430 안에서 384x288 을 만든다 — 넓힌 만큼이
-    // 그대로 도면이 된다. 좁은 폰에서는 캔버스가 `max-inline-size` 로 줄어든다.
-    const cell = 32
-    const pad = 8
-    expect(cell * 12 + pad * 2).toBeLessThanOrEqual(430)
-    expect(cell * 9).toBe(288)
+    // **도면이 폭을 다 쓴다 (2026-09-09, 실제 신고 셋째: 「width 에 맞춰 줘」).**
+    // 30 → 32 → 34 로 올라왔고, 세로에서는 이제 이 값이 **표시 상한이 아니라 높이
+    // 예산을 세는 값**이다 — `battle.css` 가 `max-inline-size: 100%` 로 상한을 풀어
+    // 캔버스가 화면 폭 그대로 선다. 34 는 412 폰(408 + 좌우 0)에 맞춘 값이라, 예산
+    // 계산이 실제 표시와 몇 px 안에서 맞는다.
+    const cell = 34
+    expect(cell * 12).toBeLessThanOrEqual(430)
+    expect(cell * 9).toBe(306)
   })
 
   it('★ 미디어쿼리가 하나뿐이다 — 데스크톱을 가르던 경계는 사라졌다', () => {

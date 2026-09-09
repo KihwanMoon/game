@@ -93,13 +93,13 @@ describe('설정을 기기에 남긴다', () => {
 })
 
 describe('안내', () => {
-  it('★ 남은 초만 적는다 — 갈 방은 옆 버튼이 이미 말한다', () => {
-    // **두 번 줄였다 (2026-09-09).** 「2초 뒤 다음 방(3/5)으로 간다」가 먼저 「2초 뒤
-    // 3/5」가 됐고, 그래도 209px 라 조작부가 세 줄이었다. 바로 옆에 `→다음 3/5` 버튼이
-    // 같은 것을 적고 있으므로 **여기만 남는 정보는 남은 초뿐이다** — 방 번호를 빼자
-    // 여섯 버튼이 두 줄에 들어가고 도면이 그만큼 커졌다.
-    expect(formatAutoAdvanceNote(2)).toBe('2초 뒤')
-    expect(formatAutoAdvanceNote(-1)).toBe('이기면 자동')
+  it('★ 남은 초가 곧 버튼의 이름이다 — 세는 값과 멈추는 손잡이는 한 물건이다', () => {
+    // **세 번 줄였다 (2026-09-09).** 「2초 뒤 다음 방(3/5)으로 간다」 → 「2초 뒤 3/5」 →
+    // 「2초 뒤」 → 「2초」. 안내를 버튼 옆에 따로 두는 한 그 줄이 조작부의 한 줄을
+    // 통째로 먹었고, 세로에서 그 44px 은 도면에서 빼 오는 것이었다. 버튼 위에 올리면
+    // 줄이 사라지고 뜻은 그대로다 — 「⏸ 2초」는 「2초 뒤에 넘어간다, 누르면 멈춘다」다.
+    expect(formatAutoAdvanceNote(2)).toBe('2초')
+    expect(formatAutoAdvanceNote(-1)).toBe('멈춤')
   })
 
   it('★ 남은 초와 갈 방을 적는다 — 몇 초인지 모르면 멈출 겨를을 가늠할 수 없다', () => {
@@ -114,11 +114,14 @@ describe('안내', () => {
     expect(stripTags(html)).toContain(formatAutoAdvanceNote(AUTO_ADVANCE_SECONDS))
   })
 
-  it('★ 멈춤이 안내 옆에 붙어 있다 — 설정 화면에 있으면 지금 멈출 수 없다', () => {
-    const html = renderToStaticMarkup(
-      <AutoAdvanceNotice secondsLeft={3} onStop={() => undefined} />,
-    )
-    expect(html).toContain('멈춤')
+  it('★ 멈추는 손잡이가 그 자리에 있다 — 설정 화면에 있으면 지금 멈출 수 없다', () => {
+    // 도는 중에는 남은 초가, 안 도는 중에는 「멈춤」이 그 버튼의 이름이다. 안 도는 중에도
+    // 꺼진 채로 그려 둔다 — 없애면 그만큼 줄이 움직인다.
+    expect(renderToStaticMarkup(<AutoAdvanceNotice secondsLeft={3} onStop={() => undefined} />))
+      .toContain('3초')
+    const idle = renderToStaticMarkup(<AutoAdvanceNotice secondsLeft={-1} onStop={() => undefined} />)
+    expect(idle).toContain('멈춤')
+    expect(idle).toContain('disabled')
   })
 
   it('★ 안 도는 중에는 아무것도 안 그린다 — 늘 떠 있으면 무엇이 도는지 알 수 없다', () => {

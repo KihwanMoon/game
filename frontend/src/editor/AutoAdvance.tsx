@@ -12,7 +12,6 @@
  * 도는 렌더 검사이고, 같은 이유로 이번 세션에서 여러 번 갈랐다.
  */
 import { Button } from '../ds/Button'
-import { ValueExpr } from '../ds/ValueExpr'
 import type { StorageLike } from '../storage'
 
 /** 넘어가기까지 두는 시간. 규칙 한 줄을 고칠 결심을 하기에 충분한 만큼이다. */
@@ -95,9 +94,9 @@ export function formatAutoAdvanceNote(secondsLeft: number): string {
   // 세 줄로 자랐다 — 그 한 줄이 세로 화면의 16%였고 도면이 그만큼 작아졌다.
   // 여기만 남는 정보는 **남은 초**다.
   if (secondsLeft < 0) {
-    return "이기면 자동"
+    return "멈춤"
   }
-  return `${String(secondsLeft)}초 뒤`
+  return `${String(secondsLeft)}초`
 }
 
 /** 자동 진행 안내가 받는 props. */
@@ -125,12 +124,11 @@ export function AutoAdvanceNotice(props: AutoAdvanceNoticeProps): React.JSX.Elem
   }
   return (
     <div className="launch__auto">
-      <ValueExpr
-        text={formatAutoAdvanceNote(props.secondsLeft)}
-        size="sm"
-      />
-      {/* **멈추기가 안내 옆에 붙어 있어야 한다.** 설정 화면에 있으면 지금 멈출 수 없다.
-          도는 중이 아니면 꺼 둔다 — 없애면 그만큼 줄이 움직인다. */}
+      {/* **남은 초가 버튼 위에 올라탔다** (2026-09-09, 실제 신고 셋째). 안내를 따로 두면
+          그 줄이 조작부의 한 줄을 통째로 먹고, 세로에서 그 44px 은 도면에서 빼 오는
+          것이다. 세는 값과 그것을 멈추는 손잡이는 원래 한 물건이다.
+
+          도는 중이 아니면 꺼 둔 채 「멈춤」이라 적는다 — 없애면 그만큼 줄이 움직인다. */}
       <Button
         size="sm"
         variant="ghost"
@@ -139,7 +137,7 @@ export function AutoAdvanceNotice(props: AutoAdvanceNoticeProps): React.JSX.Elem
         title="여기서 멈춘다 — 규칙을 고칠 수 있다"
         onClick={props.onStop}
       >
-        멈춤
+        {formatAutoAdvanceNote(props.secondsLeft)}
       </Button>
     </div>
   )

@@ -743,6 +743,21 @@
   overflow: visible;
 }
 
+/* **도면은 폭을 다 쓴다** (2026-09-09, 실제 신고: 「width 에 맞춰 줘」).
+   기본 규칙은 `max-inline-size: calc(--plan-cell * --plan-cols)` 라 셀 값이 상한이
+   된다 — 412 폰에서 캔버스가 384 에 멈춰 28px 이 남았다. 세로에서는 그 상한을 푼다.
+   `--plan-cell` 은 여기서 **높이 예산을 세는 값**으로만 남는다(시트가 여덟 줄을
+   지키는지 보는 계산). 실제 표시는 폭이 정하고, 12x9 비율은 백버퍼가 지킨다. */
+.battle--portrait .battle__frame canvas {
+  max-inline-size: 100%;
+}
+
+/* 좌우 여백을 0 으로 둔다. 도면이 화면 폭 그대로여야 셀이 가장 커진다 — 위아래
+   여백은 남긴다(조작부·시트와 붙으면 어디까지가 판인지 안 읽힌다). */
+.battle--portrait .battle__col--plan {
+  padding-inline: var(--sp-0);
+}
+
 /* 버튼이 줄을 채우고 남으면 다음 줄로 내려간다. 줄 사이가 좁아야 두 줄이 한 덩이로
    읽힌다 — 버튼 사이 간격과 같은 값을 쓴다. */
 .battle--portrait .battle__controls .launch {
