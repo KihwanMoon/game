@@ -59,6 +59,12 @@ class PlayerLoadout:
     #
     # **서버가 쓰고 클라이언트는 읽기만 한다.** 제출에는 받을 자리가 없다 (설계/7 §4).
     main_weapon: str = ""
+    # 시전 축 셋 (설계/5_스킬 §10.7). 유물이 마법의 **제약을 바꾸는** 자리다 —
+    # 예고를 줄이고, 이동해도 안 끊기게 하고, 반경을 넓힌다.
+    cast_lead_cut: int = 0
+    steady_cast: int = 0
+    blast_radius: int = 0
+    cast_cooldown_add: int = 0
 
 
 def parse_loadout(raw: dict) -> PlayerLoadout:
@@ -81,6 +87,10 @@ def parse_loadout(raw: dict) -> PlayerLoadout:
         # 없으면 기준값이다. 구버전 티켓이 남아 있어도 그것이 "위력 0" 이 되면
         # 그 티켓으로 돌린 판이 전부 최소피해로 끝난다.
         skill_power_pct=int(raw.get("skill_power_pct", BASE_SKILL_POWER_PCT)),
+        cast_lead_cut=int(raw.get("cast_lead_cut", 0)),
+        steady_cast=int(raw.get("steady_cast", 0)),
+        blast_radius=int(raw.get("blast_radius", 0)),
+        cast_cooldown_add=int(raw.get("cast_cooldown_add", 0)),
         # 정렬해서 담는다 (R5). 없으면 빈손이다 — 구버전 티켓이 그 경우다.
         consumables=tuple(sorted((str(k), int(v)) for k, v in raw.get("consumables", {}).items())),
         # 정렬해서 담는다. 순서가 실행마다 다르면 같은 티켓이 다른 글자로 저장된다 (R5).
@@ -109,6 +119,10 @@ def build_loadout_payload(loadout: PlayerLoadout) -> dict:
         "cpu_budget": loadout.cpu_budget,
         "rule_slots": loadout.rule_slots,
         "skill_power_pct": loadout.skill_power_pct,
+        "cast_lead_cut": loadout.cast_lead_cut,
+        "steady_cast": loadout.steady_cast,
+        "blast_radius": loadout.blast_radius,
+        "cast_cooldown_add": loadout.cast_cooldown_add,
         "consumables": dict(loadout.consumables),
         "skills": list(loadout.skills),
         "main_weapon": loadout.main_weapon,

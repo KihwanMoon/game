@@ -31,6 +31,14 @@ export interface PlayerLoadout {
    * 지능이 여기를 올린다.
    */
   readonly skillPowerPct: number
+  /**
+   * 시전 축 셋 (설계/5_스킬 §10.7). 유물이 마법의 **제약을 바꾸는** 자리다 —
+   * 예고를 줄이고, 이동해도 안 끊기게 하고, 반경을 넓힌다.
+   */
+  readonly castLeadCut: number
+  readonly steadyCast: number
+  readonly blastRadius: number
+  readonly castCooldownAdd: number
   readonly skills: readonly string[]
   /**
    * 이 런에 들고 들어가는 소모품. 태그에서 개수로 (#54).
@@ -62,6 +70,11 @@ export interface RawPlayerLoadout {
   readonly cpu_budget: number
   readonly rule_slots: number
   readonly skill_power_pct?: number
+  /** 시전 축 셋. 구버전 서버는 안 보낸다 — 그때는 0 이라 예전 판이 그대로다. */
+  readonly cast_lead_cut?: number
+  readonly steady_cast?: number
+  readonly blast_radius?: number
+  readonly cast_cooldown_add?: number
   readonly skills: readonly string[]
   readonly consumables?: Record<string, number>
   /** 구버전 서버는 안 보낸다. 그때는 빈 문자열 — 화면이 실측 거리로 근사한다. */
@@ -86,6 +99,12 @@ export function parseLoadout(raw: RawPlayerLoadout): PlayerLoadout {
     // 없으면 기준값이다. 구버전 티켓이 "위력 0" 으로 읽히면 그 티켓으로 돌린 판이
     // 전부 최소피해로 끝난다.
     skillPowerPct: raw.skill_power_pct ?? BASE_SKILL_POWER_PCT,
+    // 없으면 0 이다. 위력과 달리 **없는 것이 기본값**이라 구버전 티켓이 그대로 돈다 —
+    // 유물을 안 낀 판이 원래 이 값이다.
+    castLeadCut: raw.cast_lead_cut ?? 0,
+    steadyCast: raw.steady_cast ?? 0,
+    blastRadius: raw.blast_radius ?? 0,
+    castCooldownAdd: raw.cast_cooldown_add ?? 0,
     // 정렬해서 담는다. 순서가 실행마다 다르면 같은 티켓이 다른 글자로 저장된다 (R5).
     skills: [...raw.skills].sort(),
     // 정렬해서 담는다 (R5). 없으면 빈손이다 — 구버전 티켓이 그 경우다.

@@ -21,6 +21,13 @@ CPU_STAT = "cpu_budget"
 SLOT_STATS: tuple[str, ...] = ("potion_slots", "scroll_slots")
 # 사거리 축. **규칙표가 직접 읽는다** — `적거리 <= 사거리` 가 그 값을 본다.
 REACH_STAT = "attack_range"
+# 시전 축 셋 (설계/5_스킬 §10.7). 유물이 마법의 **제약**을 바꾸는 자리라, 잃으면 규칙표가
+# 겨눈 타이밍이 사람이 안 고친 채로 달라진다 — 예고 1틱에 맞춰 짠 표가 3틱으로 돌아간다.
+#
+# **저울에 무게가 없다.** 이 축들의 값은 마법을 쓰는 규칙표가 있어야 잴 수 있는데 아직
+# 실린 것이 없다(`gear_priority.json` 의 같은 주석). 무게 없이 관문만 두면 자동 정비가
+# 이 유물을 **버리지는 않고 줍지도 않는다** — 재 보지 않은 숫자를 지어내는 것보다 낫다.
+CAST_STATS: tuple[str, ...] = ("cast_lead_cut", "steady_cast", "blast_radius")
 
 
 def check_keeps_skill(current: GearItem, candidate: GearItem) -> bool:
@@ -153,12 +160,35 @@ def count_affix_gift(item: GearItem, stat: str) -> int:
     return sum(flat for name, flat, _percent in item.affixes if name == stat)
 
 
+def check_keeps_cast(current: GearItem, candidate: GearItem) -> bool:
+    """갈아 껴도 **시전 축 셋**이 안 줄어드는가.
+
+    **사거리 관문의 마법판이다.** 유물은 더 센 마법을 열지 않고 제약을 바꾸므로
+    (설계/5_스킬 §10.7), 잃으면 규칙표가 겨눈 타이밍이 조용히 달라진다 — 예고 1틱을
+    전제로 「다가올 때 쏜다」를 짠 표가 3틱짜리로 돌아가면 그 규칙은 여전히 참인데
+    맞히지를 못한다. 스킬 상실처럼 「불가」로도 안 잡히고 로그에도 안 남는다.
+
+    **대가 축(`cast_cooldown_add`)은 안 본다.** 그것은 얻는 축과 한 몸으로 붙어 있어
+    (확산의 핵: 반경 +2 · 쿨 +8) 함께 막으면 그 유물을 끼우는 길 자체가 닫힌다.
+
+    Args:
+        current: 지금 낀 것.
+        candidate: 갈아 낄 후보.
+
+    Returns:
+        셋 다 후보의 기여가 지금 것 이상이면 True.
+    """
+    return all(
+        count_affix_gift(candidate, stat) >= count_affix_gift(current, stat) for stat in CAST_STATS
+    )
+
+
 def check_keeps_everything(
     current: GearItem, candidate: GearItem, base_stats: dict[str, int]
 ) -> bool:
-    """사람이 안 고른 상실이 하나도 없는가 — 관문 넷을 한자리에.
+    """사람이 안 고른 상실이 하나도 없는가 — 관문 다섯을 한자리에.
 
-    **저울이 못 보는 축들이다.** 점수는 「무엇이 더 센가」를 재는데, 이 넷은 잃는 순간
+    **저울이 못 보는 축들이다.** 점수는 「무엇이 더 센가」를 재는데, 이 다섯은 잃는 순간
     **규칙표의 뜻이 달라지거나 실행이 막힌다** — 점수로 견줄 값이 아니라 조건이다.
 
     | 축 | 잃으면 |
@@ -167,10 +197,10 @@ def check_keeps_everything(
     | CPU 예산 | 규칙표 **전체**가 제출에서 반려된다 |
     | 소모품 칸 | 그 칸의 물약·주문서가 잠긴다 |
     | 사거리 접사 | `적거리 <= 사거리` 의 뜻이 달라진다 |
+    | 시전 축 셋 | 규칙표가 겨눈 예고 타이밍이 달라진다 (§10.7) |
 
-    넷을 한 함수로 모은 것은 순환 복잡도 때문만이 아니다. **다섯 번째가 생길 때 여기
-    하나만 보면 된다** — 실제로 오늘 하루에 넷이 차례로 드러났고, 그때마다 부르는 쪽을
-    고쳐야 했다.
+    한 함수로 모은 것은 순환 복잡도 때문만이 아니다. **다음 것이 생길 때 여기 하나만
+    보면 된다** — 넷이 2026-09-08~09 하루에 차례로 드러났고 다섯째가 그 다음 날 왔다.
 
     **손으로 바꾸는 길은 안 막는다.** 장비 교체가 규칙 재설계를 부르는 것은 이 게임이
     파는 것이고(P3), 파는 것과 몰래 뺏는 것은 다르다.
@@ -181,11 +211,12 @@ def check_keeps_everything(
         base_stats: 퍼센트를 값으로 바꾸는 기준.
 
     Returns:
-        넷을 다 지키면 True.
+        다섯을 다 지키면 True.
     """
     return (
         check_keeps_skill(current, candidate)
         and check_keeps_budget(current, candidate, base_stats)
         and check_keeps_slots(current, candidate)
         and check_keeps_reach(current, candidate)
+        and check_keeps_cast(current, candidate)
     )

@@ -13,7 +13,7 @@ from game.app.grid.geometry import get_manhattan_distance
 from game.app.simulation import abilities
 from game.app.simulation.plan import EngineConfig, PlannedAction
 from game.app.simulation.state import Entity, WorldState
-from game.app.simulation.telegraph import TelegraphBoard
+from game.app.simulation.telegraph import MIN_LEAD_TICKS, TelegraphBoard
 from game.app.skills.catalog import find_skill
 
 # 퍼센트 기준. 100 이 1.0배다.
@@ -118,22 +118,28 @@ class BlastActionMixin:
         if skill.telegraph <= 0:
             return None
         target = self.state.entities.get(plan.target_id or "")
+        # **유물이 제약을 바꾼다** (설계/5_스킬 §10.7). 스킬을 열어 주지 않는 이유는
+        # 그러면 그 스킬이 유물 드롭률(만분의 5) 뒤에 갇히기 때문이고, 더 센 것을 주지
+        # 않는 이유는 그러면 규칙표가 안 바뀌기 때문이다 — 바뀌는 것은 **대가**다.
+        lead = max(MIN_LEAD_TICKS, skill.telegraph - entity.cast_lead_cut)
         return {
             "skill": plan.action_id,
             "shape": skill.shape.kind,
-            "radius": skill.shape.radius,
+            "radius": skill.shape.radius + entity.blast_radius,
             "length": skill.shape.length,
             # `LINE` 은 방향이 필요하다. 이 게임에 바라보는 방향이 없으므로 대상 쪽으로
             # 잡는다 — 대상이 없으면 방향도 없어 칸이 0 개가 되고, 그때는 예고가
             # 「빈 칸」으로 서서 아무도 안 맞는다. 그 사실은 로그에 남는다.
             "toward": target.position if target is not None else entity.position,
             "damage": entity.attack * skill.coef_pct // PERCENT_BASE,
-            "lead_ticks": skill.telegraph,
+            "lead_ticks": lead,
             # 전 구간을 붉힌다. 좁게 잡는 것은 예측 회로에 값을 주려는 예고이고,
             # 플레이어가 거는 것은 적이 확실히 볼 수 있어야 「비켜선다」가 성립한다.
-            "visible_ticks": skill.telegraph,
+            "visible_ticks": lead,
             "cancel_on_death": True,
-            "cancel_on_act": skill.cancel_on_act,
+            # 흔들림 없는 시전은 **행동 취소만** 끈다. 피격 취소는 그대로다 —
+            # 둘 다 끄면 「안전한 자리에서 쏘는가」가 사라져 상위 호환이 된다.
+            "cancel_on_act": skill.cancel_on_act and entity.steady_cast <= 0,
             "cancel_on_hit": skill.cancel_on_hit,
             # **얹을 것들.** 피해와 별개다 — 피해 0 인 장판이 상태만 거는 자리다.
             "effects": skill.effects,

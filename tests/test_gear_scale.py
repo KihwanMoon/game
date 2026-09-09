@@ -317,3 +317,50 @@ def test_a_weapon_reach_is_not_guarded(catalog):
     dagger = build_gear(find_item(catalog, "sword_short"))
     assert bow.attack_range > dagger.attack_range
     assert check_keeps_reach(bow, dagger), "무기 사거리까지 막으면 결정 #13 이 깨진다"
+
+
+def test_a_swap_that_loses_a_cast_axis_is_refused(catalog):
+    """★ **사거리 관문의 마법판이다** (설계/5_스킬 §10.7).
+
+    유물은 더 센 마법을 열지 않고 제약을 바꾸므로, 잃으면 규칙표가 겨눈 타이밍이 조용히
+    달라진다 — 예고 1틱을 전제로 「다가올 때 쏜다」를 짠 표가 3틱으로 돌아가면 그 규칙은
+    여전히 참인데 맞히지를 못한다. 스킬 상실과 달리 「불가」로도 안 잡힌다.
+    """
+    from game.app.bots.gear_guards import check_keeps_cast
+
+    scepter = build_gear(find_item(catalog, "scepter_foresight"))
+    aegis = build_gear(find_item(catalog, "shield_aegis"))
+    assert not check_keeps_cast(scepter, aegis)
+    assert check_keeps_cast(aegis, scepter)
+
+
+def test_the_cooldown_cost_is_not_guarded(catalog):
+    """★ **대가 축까지 막으면 그 유물을 끼우는 길이 닫힌다.**
+
+    확산의 핵은 반경 +2 와 쿨 +8 을 한 몸으로 싣는다. `cast_cooldown_add` 를 「잃으면
+    안 되는 축」으로 세면 그것을 끼는 교체가 언제나 상실로 잡힌다.
+    """
+    from game.app.bots.gear_guards import check_keeps_cast
+
+    bloom = build_gear(find_item(catalog, "core_bloom"))
+    bulwark = build_gear(find_item(catalog, "armor_bulwark"))
+    assert check_keeps_cast(bulwark, bloom), "대가를 막으면 확산의 핵을 못 낀다"
+
+
+def test_the_picker_never_loses_a_cast_axis(catalog, base_stats):
+    """★ 선택 함수를 직접 돌린다. 카탈로그 전량에 대해 상실이 하나도 없어야 한다."""
+    from game.app.bots.gear_guards import check_keeps_cast
+    from game.app.bots.upgrade import find_upgrades_by_weights
+
+    worn = tuple(
+        build_gear(find_item(catalog, item_id))
+        for item_id in ("scepter_foresight", "signet_anchor", "core_bloom")
+    )
+    bag = tuple(build_gear(e) for e in catalog.values() if e.kind.name == "EQUIPMENT")
+    lost = [
+        (current.item_id, candidate.item_id)
+        for weights in GEAR_PRIORITY_WEIGHTS.values()
+        for current, candidate in find_upgrades_by_weights(bag, worn, weights, base_stats)
+        if not check_keeps_cast(current, candidate)
+    ]
+    assert lost == [], f"정비가 시전 축을 잃는 교체를 골랐다: {lost}"

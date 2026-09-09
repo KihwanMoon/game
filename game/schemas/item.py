@@ -100,6 +100,10 @@ COMBAT_STATS: tuple[str, ...] = (
     # 합산은 안 되어 **조용히 무효**가 된다. 그 침묵이 이 저장소에서 이미 사고를 냈다.
     "potion_slots",
     "scroll_slots",
+    "cast_lead_cut",
+    "steady_cast",
+    "blast_radius",
+    "cast_cooldown_add",
 )
 
 
@@ -117,6 +121,12 @@ STAT_LABELS: dict[str, str] = {
     "cpu_budget": "CPU",
     "potion_slots": "물약 칸",
     "scroll_slots": "주문서 칸",
+    # 시전 축 셋 (설계/5_스킬 §10.7). **유물이 스킬을 열지 않고 제약을 바꾸는 자리다** —
+    # 열어 주면 그 스킬이 만분의 5 뒤에 갇히고, 더 센 것을 주면 규칙표가 안 바뀐다.
+    "cast_lead_cut": "예고 단축",
+    "steady_cast": "흔들림 없는 시전",
+    "blast_radius": "예고 반경",
+    "cast_cooldown_add": "마법 쿨타임",
 }
 
 

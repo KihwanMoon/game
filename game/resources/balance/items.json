@@ -1,6 +1,6 @@
 {
   "_comment": "아이템 카탈로그 (docs/설계/4_아이템). 접사 굴림은 아직 없다 — 시드 파생식이 결정 대기(#02)이고, 정하기 전에 굴린 아이템은 나중에 검증할 수 없다. 여기 있는 것은 굴림 없이 값이 고정된 정의뿐이다. 요구조건이 참조하는 능력치는 지금 코어에 실제로 있는 것만 쓴다 — level·str 같은 축은 #10·#11 이 정해진 뒤에 들어온다. grants_skill 은 그 장비가 여는 스킬이다.",
-  "item_list_version": 5,
+  "item_list_version": 6,
   "items": [
     {
       "id": "sword_short",
@@ -921,6 +921,115 @@
         }
       ],
       "_note": "물약은 세 등급이 다 있는데(회복·큰 회복·영약) 주문서는 보통·상급뿐이라 소모품 축만 등급이 덜 자라 있었다. 충전은 1 → 3 → 6, 쌓임은 5 → 3 → 2 로 물약과 같은 방향이다 — 한 번에 많이 들지 못하는 대신 한 장이 오래 간다."
+    },
+    {
+      "id": "scepter_foresight",
+      "kind": "EQUIPMENT",
+      "label_ko": "예지의 홀",
+      "slot": "WEAPON_OFF",
+      "hands": "OFFHAND",
+      "grade": "RELIC",
+      "min_floor": 6,
+      "affixes": [
+        {
+          "stat": "cast_lead_cut",
+          "flat": 2,
+          "label_ko": "앞을 봄"
+        },
+        {
+          "stat": "hp_max",
+          "flat": -14,
+          "label_ko": "[희박함] 얇아진 집중"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "cpu_budget",
+          "min": 8
+        }
+      ],
+      "tags": [
+        "MODULE",
+        "CURSED"
+      ],
+      "_note": "예고 3 → 1 틱 (설계/5_스킬 §10.7). **규칙표가 달라지는 자리다** — 3틱짜리 메테오는 「적이 뭉쳤을 때」 쏘는 것이고, 1틱이면 「다가올 때」 쏜다. 보조 칸이라 이지스·탑 방패와 배타적이고, 그래서 GUARD_BRACE 를 내주는 선택이 된다. 상위 호환이 아닌 이유가 그것이다."
+    },
+    {
+      "id": "signet_anchor",
+      "kind": "EQUIPMENT",
+      "label_ko": "정착의 인장",
+      "slot": "HANDS",
+      "grade": "RELIC",
+      "min_floor": 6,
+      "affixes": [
+        {
+          "stat": "steady_cast",
+          "flat": 1,
+          "label_ko": "흔들리지 않음"
+        },
+        {
+          "stat": "cpu_budget",
+          "flat": 2,
+          "label_ko": "고정 회로"
+        },
+        {
+          "stat": "initiative",
+          "flat": -5,
+          "label_ko": "[둔중함] 무거운 인장"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "cpu_budget",
+          "min": 8
+        }
+      ],
+      "tags": [
+        "MODULE",
+        "CURSED"
+      ],
+      "_note": "시전 중 움직여도 안 끊긴다 (§10.7). **카이팅과 결합하는 자리다** — 쏘고 바로 물러서는 규칙표가 성립한다. 피격 취소는 그대로 남는다: 둘 다 끄면 「안전한 자리에서 쏘는가」가 사라져 상위 호환이 된다. 손 자리에서 연산 기관(CPU +6)과 다투므로, 표현력과 시전 안정 중 하나를 고르게 된다."
+    },
+    {
+      "id": "core_bloom",
+      "kind": "EQUIPMENT",
+      "label_ko": "확산의 핵",
+      "slot": "BODY",
+      "grade": "RELIC",
+      "min_floor": 6,
+      "affixes": [
+        {
+          "stat": "blast_radius",
+          "flat": 2,
+          "label_ko": "번져 나감"
+        },
+        {
+          "stat": "cast_cooldown_add",
+          "flat": 8,
+          "label_ko": "[식지 않음] 긴 재점화"
+        },
+        {
+          "stat": "defense",
+          "flat": 5,
+          "label_ko": "덧댐"
+        },
+        {
+          "stat": "hp_max",
+          "percent": 10,
+          "label_ko": "두툼함"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "cpu_budget",
+          "min": 10
+        }
+      ],
+      "tags": [
+        "MODULE",
+        "CURSED"
+      ],
+      "_note": "반경 3 → 5 · 쿨 16 → 24 (§10.7 의 값 그대로). **대가가 같은 아이템에 실려 있어야 한다** — 반경만 넓히면 끼기만 하면 되는 유물이 되고, 그것이 §10.7 이 금지한 상위 호환이다. 방어·체력은 보루 갑옷(9 · 25%)보다 낮게 둔다: 몸 자리를 마법으로 쓰는 대가가 맷집이다. 쿨 24 는 한 방에 한 번이라 「보스전에만」 쪽으로 규칙표가 기운다."
     }
   ]
 }

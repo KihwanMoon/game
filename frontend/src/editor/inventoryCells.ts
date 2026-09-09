@@ -76,6 +76,13 @@ export const SHORT_STAT_LABELS: ReadonlyMap<string, string> = new Map([
   ['cpu_budget', 'cpu'],
   ['potion_slots', '물'],
   ['scroll_slots', '주'],
+  // 시전 축 넷 (설계/5_스킬 §10.7). **표에 없으면 칸이 저주만 보여 준다** — 예지의 홀은
+  // 값이 전부 `cast_lead_cut` 에 있어서, 빠뜨리면 「체−14」 한 줄만 뜨고 유물이 쓰레기로
+  // 보인다. 이 저장소가 여러 번 맞은 「안 보이면 없는 것」의 그 모양이다.
+  ['cast_lead_cut', '예'],
+  ['steady_cast', '정'],
+  ['blast_radius', '경'],
+  ['cast_cooldown_add', '쿨'],
 ])
 
 /**

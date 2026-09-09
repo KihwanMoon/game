@@ -98,6 +98,15 @@ function readWeights(priority: string): Readonly<Record<string, number>> {
 /** 소모품 칸 축. 파이썬 `SLOT_STATS` 와 같아야 한다. */
 export const SLOT_STATS: readonly string[] = ['potion_slots', 'scroll_slots']
 
+/**
+ * 시전 축 셋. 파이썬 `CAST_STATS` 와 같아야 한다 (설계/5_스킬 §10.7).
+ *
+ * 잃으면 규칙표가 겨눈 예고 타이밍이 사람이 안 고친 채로 달라진다. 대가 축
+ * (`cast_cooldown_add`)은 안 본다 — 얻는 축과 한 몸이라 함께 막으면 그 유물을 끼우는
+ * 길 자체가 닫힌다.
+ */
+export const CAST_STATS: readonly string[] = ['cast_lead_cut', 'steady_cast', 'blast_radius']
+
 /** 이 장비가 그 쓰임새의 칸을 몇 개 더하는가. 파이썬 `count_slot_gift` 와 같다. */
 export function countSlotGift(affixes: readonly AffixView[], stat: string): number {
   let total = 0
@@ -287,6 +296,11 @@ export function runUpgradeGear(
     // **접사가 준 사거리를 잃는 교체도 안 센다.** 규칙표가 `적거리 <= 사거리` 로 그 값을
     // 직접 읽는다 — 무기의 사거리(필드)는 안 본다 (파이썬 `check_keeps_reach`).
     if (countSlotGift(item.affixes, 'attack_range') < countSlotGift(current.affixes, 'attack_range')) {
+      continue
+    }
+    // **시전 축을 잃는 교체도 안 센다.** 유물은 더 센 마법이 아니라 제약을 바꾸므로,
+    // 잃으면 규칙표가 겨눈 타이밍이 조용히 달라진다 (파이썬 `check_keeps_cast`).
+    if (CAST_STATS.some((stat) => countSlotGift(item.affixes, stat) < countSlotGift(current.affixes, stat))) {
       continue
     }
     const gain =

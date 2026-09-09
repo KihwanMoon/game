@@ -157,11 +157,18 @@ class ActionExecutor(SupportActionMixin, BlastActionMixin):
         실패한 틱(사거리 밖·대상 없음)에는 걸지 않는다. 헛친 것까지 세면 규칙표를
         고쳐도 발동 간격이 그대로여서 원인을 특정할 수 없다 (P1).
 
+        **예고를 쓰는 스킬에만 유물의 대가가 붙는다** (설계/5_스킬 §10.7). 반경을 넓히는
+        유물이 평타 간격까지 늘리면 그것은 마법의 대가가 아니라 캐릭터의 벌이 되고,
+        쿨타임 0 인 행동에 8 이 붙으면 평타가 8틱에 한 번이 된다.
+
         Args:
             entity: 행위자.
             action_id: 사용한 행동 id.
         """
-        ticks = find_skill(self.config.skills, action_id).cooldown
+        skill = find_skill(self.config.skills, action_id)
+        ticks = skill.cooldown
+        if skill.telegraph > 0:
+            ticks += entity.cast_cooldown_add
         if ticks > 0:
             entity.cooldowns[action_id] = ticks
 

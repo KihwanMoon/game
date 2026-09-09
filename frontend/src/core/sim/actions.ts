@@ -8,7 +8,7 @@
  * 남긴다.
  */
 
-import { CANCEL_BY_HIT } from './telegraph'
+import { CANCEL_BY_HIT, MIN_LEAD_TICKS } from './telegraph'
 import { findSkill } from '../skills/catalog'
 import { EventLog, createLogEntry } from '../eventLog'
 import { calculateDamage } from '../combat/damage'
@@ -226,20 +226,26 @@ export class ActionExecutor {
       return false
     }
     const target = this.state.entities.get(plan.targetId ?? '')
+    // **유물이 제약을 바꾼다** (설계/5_스킬 §10.7). 스킬을 열어 주지 않는 이유는 그러면
+    // 그 스킬이 유물 드롭률 뒤에 갇히기 때문이고, 더 센 것을 주지 않는 이유는 그러면
+    // 규칙표가 안 바뀌기 때문이다 — 바뀌는 것은 **대가**다.
+    const lead = Math.max(MIN_LEAD_TICKS, skill.telegraph - entity.castLeadCut)
     this.registerTelegraph(entity, plan, {
       skill: plan.actionId,
       shape: skill.shape.kind,
-      radius: skill.shape.radius,
+      radius: skill.shape.radius + entity.blastRadius,
       length: skill.shape.length,
       // `LINE` 은 방향이 필요하다. 대상이 없으면 같은 칸을 가리켜 칸이 0 개가 되고,
       // 그때는 예고가 빈 칸으로 서서 아무도 안 맞는다 — 그 사실은 로그에 남는다.
       toward: target?.position ?? entity.position,
       effects: skill.effects,
       damage: divideFloor(entity.attack * skill.coefPct, PERCENT_BASE),
-      lead_ticks: skill.telegraph,
-      visible_ticks: skill.telegraph,
+      lead_ticks: lead,
+      visible_ticks: lead,
       cancel_on_death: true,
-      cancel_on_act: skill.cancelOnAct,
+      // 흔들림 없는 시전은 **행동 취소만** 끈다. 피격 취소는 그대로다 — 둘 다 끄면
+      // 「안전한 자리에서 쏘는가」가 사라져 상위 호환이 된다 (§10.7).
+      cancel_on_act: skill.cancelOnAct && entity.steadyCast <= 0,
       cancel_on_hit: skill.cancelOnHit,
     })
     return true
@@ -505,7 +511,11 @@ export class ActionExecutor {
    * @param actionId 사용한 행동 id.
    */
   private applyCooldown(entity: Entity, actionId: string): void {
-    const ticks = findSkill(this.config.skills, actionId).cooldown
+    const skill = findSkill(this.config.skills, actionId)
+    // **예고를 쓰는 스킬에만 유물의 대가가 붙는다** (설계/5_스킬 §10.7). 반경을 넓히는
+    // 유물이 평타 간격까지 늘리면 마법의 대가가 아니라 캐릭터의 벌이 되고, 쿨타임 0 인
+    // 행동에 8 이 붙으면 평타가 8틱에 한 번이 된다.
+    const ticks = skill.cooldown + (skill.telegraph > 0 ? entity.castCooldownAdd : 0)
     if (ticks > 0) {
       entity.cooldowns.set(actionId, ticks)
     }

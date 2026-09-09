@@ -82,6 +82,10 @@ def build_player_loadout(
         cpu_budget=final["cpu_budget"] + growth.bonus_cpu + bonus.cpu_budget,
         rule_slots=base_rule_slots + growth.bonus_rule_slots,
         skill_power_pct=bonus.skill_power_pct,
+        cast_lead_cut=final["cast_lead_cut"],
+        steady_cast=final["steady_cast"],
+        blast_radius=final["blast_radius"],
+        cast_cooldown_add=final["cast_cooldown_add"],
         # **칸이 실어 보낸 것을 그대로 싣는다.** 여기서 더하거나 빼면 「한도 안에서
         # 쓴다」가 성립하지 않는다 — 옛 기본 지급 두 개는 빈 칸의 공짜 충전으로 옮겨 갔다.
         #

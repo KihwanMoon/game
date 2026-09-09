@@ -59,6 +59,19 @@ export interface Entity {
    * 지능이 여기를 올린다. 개체마다 다르므로 스킬 카탈로그가 아니라 개체가 갖는다.
    */
   skillPowerPct: number
+  /**
+   * 시전 축 셋 (설계/5_스킬 §10.7). 파이썬 `Entity` 와 같은 자리다.
+   *
+   * 개체마다 다르므로 스킬 카탈로그가 아니라 개체가 갖는다 — `skillPowerPct` 와 같다.
+   */
+  castLeadCut: number
+  steadyCast: number
+  blastRadius: number
+  /**
+   * 반경을 넓히는 유물이 무는 대가 (§10.7 의 「쿨 16 → 24」). 대가가 없으면 확산의
+   * 핵이 상위 호환이 되고, 그것이 §10.7 이 금지한 바로 그 모양이다.
+   */
+  castCooldownAdd: number
   /** 누가 불러냈는가. 소환 상한을 소환사별로 세기 위해 필요하다. */
   summonerId: string | null
   /**
@@ -91,6 +104,10 @@ export interface EntityInput {
   readonly cpuBudget?: number
   readonly consumables?: ReadonlyMap<string, number>
   readonly skillPowerPct?: number
+  readonly castLeadCut?: number
+  readonly steadyCast?: number
+  readonly blastRadius?: number
+  readonly castCooldownAdd?: number
   readonly summonerId?: string | null
   readonly skills?: readonly string[] | null
   readonly cooldowns?: ReadonlyMap<string, number>
@@ -121,6 +138,10 @@ export function createEntity(input: EntityInput): Entity {
     cpuBudget: input.cpuBudget ?? 0,
     consumables: new Map(input.consumables ?? []),
     skillPowerPct: input.skillPowerPct ?? PERCENT_BASE,
+    castLeadCut: input.castLeadCut ?? 0,
+    steadyCast: input.steadyCast ?? 0,
+    blastRadius: input.blastRadius ?? 0,
+    castCooldownAdd: input.castCooldownAdd ?? 0,
     summonerId: input.summonerId ?? null,
     skills: input.skills ?? null,
     cooldowns: new Map(input.cooldowns ?? []),

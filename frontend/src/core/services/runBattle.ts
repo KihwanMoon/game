@@ -260,6 +260,10 @@ export function buildEngine(setup: EngineSetup): TickEngine {
       cpuBudget: loadout?.cpuBudget ?? playerStats.cpu_budget,
       // 지능이 올린 스킬위력. 로드아웃이 없으면 기준값이라 기존 판이 그대로다.
       skillPowerPct: loadout?.skillPowerPct ?? BASE_SKILL_POWER_PCT,
+      castLeadCut: loadout?.castLeadCut ?? 0,
+      steadyCast: loadout?.steadyCast ?? 0,
+      blastRadius: loadout?.blastRadius ?? 0,
+      castCooldownAdd: loadout?.castCooldownAdd ?? 0,
       // 로드아웃이 있으면 인벤토리가 정한 것을 쓴다 (#54). 없으면 기본값이다.
       consumables:
         loadout === undefined
