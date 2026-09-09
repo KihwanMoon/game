@@ -706,22 +706,26 @@ describe('반응형 토큰 (design/tokens/spacing.css)', () => {
     // 미디어쿼리가 아니라 :root 가 세로여야 한다. 여기가 뒤집힌 자리다.
     const root = readDesignTokens().split('@media')[0] ?? ''
     expect(root).toContain('--layout-mode:portrait')
-    expect(root).toContain('--plan-cell:30px')
+    expect(root).toContain('--plan-cell:32px')
     expect(root).toContain('--bar-top:44px')
     // 전용 줄 둘이 사라졌다 (2026-09-08). 배속은 시트 하단의 시간 조작 줄로 내려갔고
     // 판정·예고는 도면 위에 겹친다 — 고정 줄 하나가 곧 체력을 화면 밖으로 미는 44px 였다.
     expect(root).toContain('--bar-status:0px')
     // 상태는 시트의 첫 탭이 됐다 — 전용 줄이 없다 (2026-09-08).
     expect(root).toContain('--bar-vitals:0px')
-    // 84 이던 것이 152 다 (2026-09-09). 84 는 두 줄 몫이었는데 조작부가 세 줄이라
-    // 셋째 줄이 통째로 잘렸고, 거기 있던 것이 「규칙표」였다 — 이 게임의 유일한 동사.
-    expect(root).toContain('--bar-controls:152px')
+    // 84 → 152 → 100 (2026-09-09). 84 는 두 줄 몫인데 내용이 세 줄이라 「규칙표」가
+    // 잘렸고, 152 는 그 세 줄을 다 담았지만 세로 화면의 16% 를 먹었다. 안내 문구에서
+    // 옆 버튼과 겹치는 방 번호를 빼자 두 줄에 들어간다 — 이 값이 그 두 줄이다.
+    expect(root).toContain('--bar-controls:100px')
     expect(root).toContain('--row-h:54px')
-    // 12x30 = 360 에 좌우 여백을 더해도 390 을 넘지 않아야 한다.
-    const cell = 30
-    const pad = 14
-    expect(cell * 12 + pad * 2).toBeLessThanOrEqual(390)
-    expect(cell * 9).toBe(270)
+    // **도면이 커졌다 (2026-09-09, 실제 신고).** 30x12 = 360 에 여백 14x2 를 더해
+    // 390 에 맞추던 것이었는데, 그 390 이 요즘 폰(412~430)보다 좁았다. 셀을 32 로
+    // 올리고 여백을 8 로 줄여 기준폭 430 안에서 384x288 을 만든다 — 넓힌 만큼이
+    // 그대로 도면이 된다. 좁은 폰에서는 캔버스가 `max-inline-size` 로 줄어든다.
+    const cell = 32
+    const pad = 8
+    expect(cell * 12 + pad * 2).toBeLessThanOrEqual(430)
+    expect(cell * 9).toBe(288)
   })
 
   it('★ 미디어쿼리가 하나뿐이다 — 데스크톱을 가르던 경계는 사라졌다', () => {
@@ -732,9 +736,15 @@ describe('반응형 토큰 (design/tokens/spacing.css)', () => {
     expect(tokens).not.toContain('--layout-mode:desktop')
   })
 
-  it('앱 한 열의 폭 상한이 세로 기준이다 — 넓히면 옆이 빌 뿐이다', () => {
+  it('★ 앱 한 열의 폭 상한이 도면을 담는다 — 넓힌 만큼이 도면이 된다', () => {
+    // 390 이었다. 그때는 셀이 30px 로 박혀 있어서 「넓혀도 캔버스가 안 커지고 옆이 빌
+    // 뿐」이 맞는 말이었는데, 그 전제가 곧 도면이 작은 이유였다 (2026-09-09 실제 신고).
+    // 셀을 32 로 올린 지금은 넓힌 만큼이 그대로 도면이다 — 384 + 여백 8x2 = 400.
+    //
+    // **상한은 남긴다.** 100% 로 열면 데스크톱에서 한 열이 화면 폭만큼 늘어난다.
     const root = readDesignTokens().split('@media')[0] ?? ''
-    expect(root).toContain('--app-max:390px')
+    expect(root).toContain('--app-max:430px')
+    expect(32 * 12 + 8 * 2).toBeLessThanOrEqual(430)
   })
 
   it('가로 모바일은 셀 32px 로 12x9 를 도면 열 안에 넣는다', () => {

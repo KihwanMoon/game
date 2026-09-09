@@ -538,10 +538,16 @@ describe('★ 한정된 화면의 공간 예산', () => {
     expect(block).toContain('max-inline-size: calc(var(--plan-cell) * var(--plan-cols))')
   })
 
-  it('★ 조작부 줄의 높이가 박혀 있다 — 접혀도 줄 수가 안 변한다', () => {
-    // 예전에는 끝나야 쓸 수 있는 버튼들이 그때 나타나서 한 줄이 네 줄이 됐다(실제
-    // 스크린샷). 이제 전부 늘 그려 두고 못 쓸 때는 꺼 두므로 줄 수가 판과 무관하다.
-    expect(cutRule('.battle--portrait .battle__controls')).toContain('height: var(--bar-controls)')
+  it('★ 조작부는 하한만 두고 **자르지 않는다**', () => {
+    // 예전에는 끝나야 쓸 수 있는 버튼들이 그때 나타나서 한 줄이 네 줄이 됐고, 그래서
+    // 높이를 박고 넘치는 것을 잘랐다. 그 자르기가 「규칙표」 버튼을 통째로 없앴다
+    // (2026-09-09 실제 신고) — 이 게임의 유일한 동사로 가는 문이다(GDD §2.1).
+    //
+    // 지금은 버튼을 전부 늘 그려 두고 못 쓸 때 꺼 두므로 줄 수가 판과 무관하고,
+    // 그러면 자를 이유가 없다. 하한만 두고 넘치면 자란다.
+    const block = cutRule('.battle--portrait .battle__controls')
+    expect(block).toContain('min-height: var(--bar-controls)')
+    expect(block).not.toContain('overflow: hidden')
   })
 
   it('★ 상태 값은 한 줄에 하나씩 쌓인다 — 가로로 이으면 잘린다', () => {

@@ -730,12 +730,17 @@
 
    **높이가 박혀 있다.** 버튼 수가 안 변하므로 접히는 줄 수도 안 변하고, 그래서 이 값이
    실측과 같다. 안 박아 두면 글 한 줄이 길어질 때마다 아래가 움직인다. */
+/* **자르지 않는다** (2026-09-09). 예전에는 `height` + `overflow: hidden` 이라, 줄 수가
+   늘면 마지막 줄이 통째로 사라졌다 — 실제로 「규칙표」 버튼이 그렇게 안 보였고, 그것이
+   이 게임의 유일한 동사로 가는 문이었다(GDD §2.1). 고정 높이가 지키려던 것은 「버튼이
+   나타났다 사라지며 줄 수가 변하는 것」인데, 그것은 이제 전부 늘 그려 두고 못 쓸 때
+   꺼 두는 것으로 해결돼 있다. 그래서 하한만 두고 넘치면 자라게 한다. */
 .battle--portrait .battle__controls {
   display: block;
-  height: var(--bar-controls);
+  min-height: var(--bar-controls);
   padding: var(--sp-1) var(--plan-pad);
   border-block-end: var(--border);
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* 버튼이 줄을 채우고 남으면 다음 줄로 내려간다. 줄 사이가 좁아야 두 줄이 한 덩이로

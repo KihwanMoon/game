@@ -93,29 +93,30 @@ describe('설정을 기기에 남긴다', () => {
 })
 
 describe('안내', () => {
-  it('★ 어디로 가는지 적는다 — 「곧 넘어감」만으로는 멈출지를 정할 수 없다', () => {
-    // **짧아졌다 (2026-09-09).** 「2초 뒤 다음 방(3/5)으로 간다」는 조작부의 한 줄을
-    // 통째로 먹어, 고정 높이 안에서 뒤의 「규칙표」 버튼이 밀려 잘렸다. 남·수는 그대로다.
-    expect(formatAutoAdvanceNote(2, 3, 5)).toBe('2초 뒤 3/5')
+  it('★ 남은 초만 적는다 — 갈 방은 옆 버튼이 이미 말한다', () => {
+    // **두 번 줄였다 (2026-09-09).** 「2초 뒤 다음 방(3/5)으로 간다」가 먼저 「2초 뒤
+    // 3/5」가 됐고, 그래도 209px 라 조작부가 세 줄이었다. 바로 옆에 `→다음 3/5` 버튼이
+    // 같은 것을 적고 있으므로 **여기만 남는 정보는 남은 초뿐이다** — 방 번호를 빼자
+    // 여섯 버튼이 두 줄에 들어가고 도면이 그만큼 커졌다.
+    expect(formatAutoAdvanceNote(2)).toBe('2초 뒤')
+    expect(formatAutoAdvanceNote(-1)).toBe('이기면 자동')
   })
 
   it('★ 남은 초와 갈 방을 적는다 — 몇 초인지 모르면 멈출 겨를을 가늠할 수 없다', () => {
     const html = renderToStaticMarkup(
       <AutoAdvanceNotice
         secondsLeft={AUTO_ADVANCE_SECONDS}
-        roomNumber={2}
-        roomTotal={5}
         onStop={() => undefined}
       />,
     )
     // `ValueExpr` 가 값을 span 으로 쪼개므로 태그를 걷어내고 본다. 조각을 따로 찾으면
     // 문구가 흩어져도 통과한다.
-    expect(stripTags(html)).toContain(formatAutoAdvanceNote(AUTO_ADVANCE_SECONDS, 2, 5))
+    expect(stripTags(html)).toContain(formatAutoAdvanceNote(AUTO_ADVANCE_SECONDS))
   })
 
   it('★ 멈춤이 안내 옆에 붙어 있다 — 설정 화면에 있으면 지금 멈출 수 없다', () => {
     const html = renderToStaticMarkup(
-      <AutoAdvanceNotice secondsLeft={3} roomNumber={2} roomTotal={5} onStop={() => undefined} />,
+      <AutoAdvanceNotice secondsLeft={3} onStop={() => undefined} />,
     )
     expect(html).toContain('멈춤')
   })
@@ -124,8 +125,6 @@ describe('안내', () => {
     const html = renderToStaticMarkup(
       <AutoAdvanceNotice
         secondsLeft={undefined}
-        roomNumber={2}
-        roomTotal={5}
         onStop={() => undefined}
       />,
     )

@@ -2146,8 +2146,6 @@ export function App(): React.JSX.Element {
       </Button>
       <AutoAdvanceNotice
         secondsLeft={nextRoom === undefined ? -1 : autoLeft}
-        roomNumber={(run.setup.chain?.index ?? 0) + 2}
-        roomTotal={run.setup.chain?.roomIds.length ?? 1}
         onStop={() => {
           setAutoStopped(true)
         }}

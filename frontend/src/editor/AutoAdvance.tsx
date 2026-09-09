@@ -80,27 +80,24 @@ export function writeAutoAdvance(storage: StorageLike | undefined, isEnabled: bo
 /**
  * 남은 시간을 한 줄로 적는다.
  *
- * **몇 번째 방으로 가는지 함께 적는다.** 「곧 넘어감」만 적으면 어디로 가는지 모른 채
- * 멈출지를 정해야 한다.
+ * **갈 방은 안 적는다.** 바로 옆에 `→다음 2/50` 버튼이 같은 것을 적고 있고, 이 줄이
+ * 길면 조작부가 한 줄 더 자란다 — 세로 화면에서 그 한 줄이 도면을 깎는다.
  *
- * @param secondsLeft 남은 초.
- * @param roomNumber 갈 방의 번호(1부터).
- * @param roomTotal 방 총수.
+ * @param secondsLeft 남은 초. 음수면 아직 도는 중이 아니다.
  * @returns 화면에 적을 한 줄.
  */
-export function formatAutoAdvanceNote(
-  secondsLeft: number,
-  roomNumber: number,
-  roomTotal: number,
-): string {
+export function formatAutoAdvanceNote(secondsLeft: number): string {
   // **음수는 「아직 아니다」다.** 도는 중이 아닐 때 줄을 지우면 그만큼 화면이 움직이고,
   // 여러 줄로 접히는 자리에서는 줄 수까지 바뀐다 — 자리를 지키고 말만 바꾼다.
-  // **짧게 적는다** (2026-09-09). 이 줄이 길면 조작부의 한 줄을 통째로 먹고, 고정 높이
-  // 안에서 뒤의 버튼이 밀려 잘린다 — 「규칙표」가 그렇게 안 보였다.
+  //
+  // **방 번호를 뺐다** (2026-09-09, 실제 신고: 「버튼과 정보 사이가 너무 넓다」). 바로
+  // 옆에 `→다음 2/50` 버튼이 같은 것을 적고 있어서, 이 줄이 209px 를 먹고 조작부가
+  // 세 줄로 자랐다 — 그 한 줄이 세로 화면의 16%였고 도면이 그만큼 작아졌다.
+  // 여기만 남는 정보는 **남은 초**다.
   if (secondsLeft < 0) {
-    return `이기면 자동으로 ${String(roomNumber)}/${String(roomTotal)}`
+    return "이기면 자동"
   }
-  return `${String(secondsLeft)}초 뒤 ${String(roomNumber)}/${String(roomTotal)}`
+  return `${String(secondsLeft)}초 뒤`
 }
 
 /** 자동 진행 안내가 받는 props. */
@@ -112,8 +109,6 @@ export interface AutoAdvanceNoticeProps {
    * 하지 않는 규율과 같다 (실제 요청).
    */
   readonly secondsLeft: number | undefined
-  readonly roomNumber: number
-  readonly roomTotal: number
   /** 멈춘다. 이번 방에서만 멈추고 설정은 안 건드린다. */
   readonly onStop: () => void
 }
@@ -121,7 +116,7 @@ export interface AutoAdvanceNoticeProps {
 /**
  * 자동 진행이 도는 동안의 안내를 그린다.
  *
- * @param props 남은 초와 갈 방, 멈추기 콜백.
+ * @param props 남은 초와 멈추기 콜백.
  * @returns 렌더 트리. 도는 중이 아니면 아무것도 안 그린다.
  */
 export function AutoAdvanceNotice(props: AutoAdvanceNoticeProps): React.JSX.Element | null {
@@ -131,7 +126,7 @@ export function AutoAdvanceNotice(props: AutoAdvanceNoticeProps): React.JSX.Elem
   return (
     <div className="launch__auto">
       <ValueExpr
-        text={formatAutoAdvanceNote(props.secondsLeft, props.roomNumber, props.roomTotal)}
+        text={formatAutoAdvanceNote(props.secondsLeft)}
         size="sm"
       />
       {/* **멈추기가 안내 옆에 붙어 있어야 한다.** 설정 화면에 있으면 지금 멈출 수 없다.
