@@ -40,9 +40,15 @@ def build_slot(use_tag="POTION", slot_index=0, catalog_id=None, charges=0):
         칸 하나.
     """
     from game.app.store.consumables import ConsumableSlot
+    from game.schemas.consumable import check_is_base_slot
 
     return ConsumableSlot(
-        use_tag=use_tag, slot_index=slot_index, catalog_id=catalog_id, charges=charges
+        use_tag=use_tag,
+        slot_index=slot_index,
+        catalog_id=catalog_id,
+        charges=charges,
+        # 실제 배선과 같은 판정을 쓴다 — 여기서 늘 True 로 두면 접사 칸을 시험할 수 없다.
+        is_base=check_is_base_slot(use_tag, slot_index),
     )
 
 

@@ -46,6 +46,7 @@ function buildSlot(over: Partial<ConsumableSlotView> = {}): ConsumableSlotView {
     refillCost: 0,
     affixes: [],
     affixRows: [],
+    isBase: true,
     ...over,
   }
 }

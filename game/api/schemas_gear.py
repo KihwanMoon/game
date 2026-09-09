@@ -29,6 +29,10 @@ class ConsumableSlotView(BaseModel):
     # 나란히 놓고 판단을 통째로 사람에게 넘기게 된다 — 가방이 이미 구조화된 절로
     # 견주고 있으므로(`CompareRow`), 같은 질문에 두 화면이 다른 방식으로 답하면 안 된다.
     affix_rows: list[dict] = []
+    # **기본 칸인가.** 빈 기본 칸만 출격 때 공짜로 찬다 (2026-09-08) — 접사가 연 칸은
+    # 담을 자리를 줄 뿐이다. 화면이 「출격 시 공짜로 찬다」를 어느 칸에 적을지 이것이
+    # 정한다. 없던 때는 빈 칸이면 전부 그렇게 적어서 접사 칸에 대해 거짓말을 했다.
+    is_base: bool = True
 
 
 class ConsumableOption(BaseModel):

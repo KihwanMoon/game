@@ -144,7 +144,9 @@ export function buildConsumableStockCells(
  */
 export function formatCharges(slot: ConsumableSlotView, freeCharges: number): string {
   if (slot.catalogId === '') {
-    return `빈 칸 — 출격 시 ${String(freeCharges)}개가 공짜로 찬다`
+    // **접사가 연 칸은 공짜로 안 찬다** (2026-09-08). 전에는 빈 칸이면 전부 「공짜로
+    // 찬다」고 적어서, 장비로 늘린 칸에 대해 화면이 거짓말을 했다.
+    return slot.isBase ? `빈 칸 — 출격 시 ${String(freeCharges)}개가 공짜로 찬다` : '빈 칸'
   }
   return `${String(slot.charges)} / ${String(slot.chargeMax)}`
 }

@@ -228,9 +228,12 @@ def test_a_pouch_opens_a_third_potion_slot(client):
     after = client.get("/api/consumables", headers=headers).json()["slots"]
     assert len([s for s in after if s["use_tag"] == "POTION"]) == 3, "칸이 안 열렸다"
 
-    # 티켓도 같은 수를 봐야 한다 — 빈 칸 셋이면 공짜 충전도 셋이다.
+    # **열린 칸은 비어 있고, 공짜로 안 찬다** (2026-09-08). 예전에는 빈 칸이면 출처를
+    # 안 보고 한 개를 줘서 「빈 칸 셋이면 공짜도 셋」이었는데, 그러면 이 접사가 파는
+    # 것이 「담을 자리」가 아니라 공짜 소모품이 된다 — 실측으로 그 값이 유물 접사 한
+    # 줄을 넘었다(720런 배치). 기본 칸 둘의 공짜는 그대로다.
     issued = client.post("/api/ticket", json={"room_id": "open_field"}, headers=headers).json()
-    assert dict(parse_loadout(issued["loadout"]).consumables)["POTION"] == 3
+    assert dict(parse_loadout(issued["loadout"]).consumables)["POTION"] == 2
 
 
 @pytestmark_db

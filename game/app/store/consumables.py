@@ -13,7 +13,12 @@ from dataclasses import dataclass
 
 from psycopg_pool import ConnectionPool
 
-from game.schemas.consumable import FREE_CHARGES, build_slot_rows, list_slot_tags
+from game.schemas.consumable import (
+    FREE_CHARGES,
+    build_slot_rows,
+    check_is_base_slot,
+    list_slot_tags,
+)
 
 
 @dataclass(frozen=True)
@@ -22,9 +27,13 @@ class ConsumableSlot:
 
     use_tag: str
     slot_index: int
-    # 끼운 소모품. None 이면 빈 칸이고, 출격할 때 공짜로 한 개가 찬다.
+    # 끼운 소모품. None 이면 빈 칸이다.
     catalog_id: str | None
     charges: int
+    # **기본 칸인가.** 빈 기본 칸만 출격 때 공짜로 한 개가 찬다 — 접사가 연 칸까지
+    # 공짜면 그 접사가 파는 것이 「담을 자리」가 아니라 공짜 소모품이 된다
+    # (`schemas/consumable.check_is_base_slot`).
+    is_base: bool = True
 
 
 def list_consumable_slots(
@@ -64,6 +73,7 @@ def list_consumable_slots(
                     slot_index=index,
                     catalog_id=None if catalog_id is None else str(catalog_id),
                     charges=charges,
+                    is_base=check_is_base_slot(use_tag, index),
                 )
             )
     return tuple(slots)
@@ -72,8 +82,11 @@ def list_consumable_slots(
 def count_slot_charges(slots: tuple[ConsumableSlot, ...]) -> dict[str, int]:
     """칸들이 이번 런에 실어 보내는 충전 수를 쓰임새별로 센다.
 
-    **빈 칸은 공짜로 한 개다** (§5). 안 그러면 새 계정이 물약 없이 시작한다 — 이것이
-    예전의 `balance.player.potions` 두 개를 대신하는 자리다.
+    **빈 기본 칸은 공짜로 한 개다** (§5). 안 그러면 새 계정이 물약 없이 시작한다 —
+    이것이 예전의 `balance.player.potions` 두 개를 대신하는 자리다.
+
+    **접사가 연 칸은 공짜가 아니다** (2026-09-08). 주면 그 접사가 파는 것이 「담을
+    자리」가 아니라 공짜 소모품이 되고, 실측으로 그 값이 유물 접사 한 줄을 넘었다.
 
     Args:
         slots: 읽어 온 칸들.
@@ -83,7 +96,7 @@ def count_slot_charges(slots: tuple[ConsumableSlot, ...]) -> dict[str, int]:
     """
     counts: dict[str, int] = {}
     for slot in slots:
-        amount = FREE_CHARGES if slot.catalog_id is None else slot.charges
+        amount = FREE_CHARGES if slot.catalog_id is None and slot.is_base else slot.charges
         if amount > 0:
             counts[slot.use_tag] = counts.get(slot.use_tag, 0) + amount
     return counts
@@ -214,7 +227,7 @@ def apply_slot_spend(
 
 
 def count_free_charges(slots: tuple[ConsumableSlot, ...], use_tag: str) -> int:
-    """이 쓰임새의 빈 칸이 출격 때 공짜로 주는 충전 수.
+    """이 쓰임새의 빈 **기본** 칸이 출격 때 공짜로 주는 충전 수.
 
     **깎을 자리가 없는 몫이다.** 정산은 이만큼을 먼저 쓴 것으로 치고 나머지만 칸에서
     깎는다 — 그래야 한 개만 쓴 판에서 산 충전이 안 날아간다.
@@ -227,5 +240,7 @@ def count_free_charges(slots: tuple[ConsumableSlot, ...], use_tag: str) -> int:
         공짜 충전 수.
     """
     return sum(
-        FREE_CHARGES for slot in slots if slot.use_tag == use_tag and slot.catalog_id is None
+        FREE_CHARGES
+        for slot in slots
+        if slot.use_tag == use_tag and slot.catalog_id is None and slot.is_base
     )

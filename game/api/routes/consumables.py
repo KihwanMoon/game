@@ -62,11 +62,14 @@ def build_slot_view(slot: ConsumableSlot, catalog: dict) -> ConsumableSlotView:
     """
     entry = catalog.get(slot.catalog_id) if slot.catalog_id else None
     if entry is None:
-        return ConsumableSlotView(use_tag=slot.use_tag, slot_index=slot.slot_index)
+        return ConsumableSlotView(
+            use_tag=slot.use_tag, slot_index=slot.slot_index, is_base=slot.is_base
+        )
     charge_max = max(1, entry.charges)
     return ConsumableSlotView(
         use_tag=slot.use_tag,
         slot_index=slot.slot_index,
+        is_base=slot.is_base,
         catalog_id=slot.catalog_id,
         label_ko=entry.label_ko,
         grade=entry.grade,

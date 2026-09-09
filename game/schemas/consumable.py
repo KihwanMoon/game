@@ -128,6 +128,36 @@ def build_slot_rows(use_tag: str, extra: int = 0) -> tuple[int, ...]:
     return tuple(range(resolve_slot_count(use_tag, extra)))
 
 
+def check_is_base_slot(use_tag: str, slot_index: int) -> bool:
+    """이 칸이 **기본 칸**인가 — 장비 접사가 연 칸이 아닌가.
+
+    **공짜 충전이 붙는 자리를 가른다** (2026-09-08). 예전에는 빈 칸이면 출처를 안 보고
+    한 개를 줬는데, 그러면 칸을 늘리는 접사가 파는 것이 「담을 자리」가 아니라 **공짜
+    소모품**이 된다. 실측으로 공짜 충전 하나는 720런 배치에서 평균 돌파 방 수를 +0.16
+    올렸다 — 유물 투구가 가진 전부(`hp_max +20`, +0.15)보다 크고 보통 투구(+0.07)의
+    2.3배다. 접사 한 줄이 유물 한 줄을 넘는다.
+
+    저울이 그 축에 준 무게는 1 이라 스무 배에서 예순 배까지 어긋나 있었다. 무게를
+    정직하게 올리면 「물약 칸 하나로 무기를 바꾼다」가 일어나므로(`gear_priority.json`
+    주석이 막으려던 것), **값을 내리는 쪽**을 골랐다 — 접사가 여는 칸은 담을 자리를 줄
+    뿐이고 채우는 것은 보충비를 낸다.
+
+    **기본 칸의 공짜는 그대로다.** 그것은 예전 `balance.player.potions` 두 개를 대신하는
+    자리라, 없애면 새 계정이 물약 없이 시작한다.
+
+    Args:
+        use_tag: 소모품 쓰임새.
+        slot_index: 0 부터 세는 칸 번호.
+
+    Returns:
+        기본 칸이면 True.
+    """
+    for tag, count in BASE_CONSUMABLE_SLOTS:
+        if tag == use_tag:
+            return slot_index < count
+    return False
+
+
 def list_slot_tags() -> tuple[str, ...]:
     """칸을 갖는 쓰임새들을 정해진 순서로 돌려준다.
 
@@ -139,6 +169,7 @@ def list_slot_tags() -> tuple[str, ...]:
 
 __all__ = [
     "BASE_CONSUMABLE_SLOTS",
+    "check_is_base_slot",
     "FREE_CHARGES",
     "GRADE_REFILL_COST",
     "MAX_SLOTS_PER_TAG",

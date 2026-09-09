@@ -30,6 +30,8 @@ export interface ConsumableSlotView {
   readonly refillCost: number
   /** 끼우고 있는 동안 붙는 부가 옵션. 충전이 0 이면 비어 있다. */
   readonly affixes: readonly string[]
+  /** 기본 칸인가. 빈 기본 칸만 출격 때 공짜로 찬다 — 접사가 연 칸은 자리만 준다. */
+  readonly isBase: boolean
   /**
    * 같은 옵션의 구조화된 절. **견줌이 이것을 쓴다.**
    *
@@ -76,6 +78,7 @@ interface RawSlot {
   refill_cost: number
   affixes: string[]
   affix_rows?: RawAffix[]
+  is_base?: boolean
 }
 
 interface RawOption {
@@ -117,6 +120,8 @@ export function buildConsumableView(body: RawBody): ConsumableView {
       refillCost: raw.refill_cost,
       affixes: raw.affixes,
       affixRows: readAffixRows(raw.affix_rows),
+      // 구버전 서버는 안 보낸다. 그때는 기본 칸으로 본다 — 옛 배선이 그랬다.
+      isBase: raw.is_base ?? true,
     })),
     options: body.options.map((raw) => ({
       catalogId: raw.catalog_id,
