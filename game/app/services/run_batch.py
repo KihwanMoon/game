@@ -24,6 +24,7 @@ from game.app.simulation.engine import TickEngine
 from game.app.simulation.plan import OUTCOME_PLAYER_WIN
 from game.app.simulation.state import FACTION_ENEMY, WorldState
 from game.schemas.blocks import BlockCatalog
+from game.schemas.loadout import PlayerLoadout
 from game.schemas.room import FIRST_FLOOR, RoomTemplate
 from game.schemas.ruleset import RuleSet
 
@@ -149,6 +150,7 @@ def run_floor_batch(
     runs: int,
     base_seed: int = 1,
     floor_index: int = FIRST_FLOOR,
+    loadout: PlayerLoadout | None = None,
 ) -> BatchStats:
     """시드마다 층을 새로 만들어 돌고 통계를 낸다.
 
@@ -165,6 +167,8 @@ def run_floor_batch(
         runs: 반복 횟수.
         base_seed: 시작 시드. 런마다 1씩 늘린다.
         floor_index: 만들 층 번호.
+        loadout: 낀 장비. None 이면 맨몸이고, 그때는 **모든 스킬이 열려 있다** —
+            승률로 규칙표를 줄 세울 때 그 전제를 적어 두어야 한다 (설계/5_스킬 §10.10).
 
     Returns:
         승률과 평균값들. 클리어 수는 방이 아니라 노드 수다.
@@ -185,6 +189,7 @@ def run_floor_batch(
             balance=balance,
             catalog=catalog,
             enemy_rulesets=enemy_rulesets,
+            loadout=loadout,
         )
         result = run_room_loop(context, player_ruleset)
         total_ticks += result.total_ticks

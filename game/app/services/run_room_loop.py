@@ -45,6 +45,7 @@ from game.schemas.floor_map import (
     FloorNode,
     RoomPlan,
 )
+from game.schemas.loadout import PlayerLoadout
 from game.schemas.room import RoomTemplate
 from game.schemas.ruleset import RuleSet
 
@@ -84,6 +85,12 @@ class RoomLoopContext:
     catalog: BlockCatalog
     enemy_rulesets: dict[str, RuleSet] = field(default_factory=dict)
     max_ticks: int = DEFAULT_MAX_TICKS
+    # **이 층을 도는 동안 낀 장비.** None 이면 맨몸이다.
+    #
+    # 배치 러너가 이것을 못 실어서 오래 헛돌았다 — 규칙표 표의 승률이 「전부가 모든
+    # 스킬을 공짜로 쓰는」 판에서 나온 값이었고, 그래서 마법이 근접보다 30%p 앞선 것처럼
+    # 보였다. 장비 대가를 넣으면 같은 등급끼리 근접이 앞선다 (설계/5_스킬 §10.10).
+    loadout: PlayerLoadout | None = None
 
 
 @dataclass(frozen=True)
@@ -226,6 +233,7 @@ def run_node_battle(
         seed=seed,
         max_ticks=context.max_ticks,
         floor=context.floor_map.floor,
+        loadout=context.loadout,
     )
     player = engine.state.entities["player"]
     player.hp_max = state.hp_max
@@ -328,7 +336,7 @@ def run_room_loop(
     """
     floor_map = context.floor_map
     base_rng = DeterministicRng(floor_map.seed)
-    state = create_run_state(context.balance)
+    state = create_run_state(context.balance, context.loadout)
     ruleset = player_ruleset
     node = floor_map.get_node(floor_map.start_id)
     path = [node.node_id]

@@ -20,6 +20,8 @@ import sys
 import time
 from dataclasses import dataclass
 
+from game.app.items.catalog import load_item_catalog
+from game.app.items.loadout import build_player_loadout
 from game.app.progression.floors import BOSS_ROOM_ID, read_boss_floor
 from game.app.services.run_batch import BatchStats, run_batch, run_floor_batch
 from game.app.services.run_battle import load_balance
@@ -31,10 +33,12 @@ from game.config import (
     BLOCKS_PATH,
     ENEMY_RULESETS_PATH,
     G0_RULESETS_PATH,
+    ITEMS_PATH,
     LATER_BLOCKS_RULESETS_PATH,
     ROOM_TEMPLATES_PATH,
 )
 from game.schemas.blocks import BlockCatalog, load_block_catalog
+from game.schemas.loadout import PlayerLoadout
 from game.schemas.room import FIRST_FLOOR, RoomTemplate, load_room_templates
 from game.schemas.ruleset import RuleSet, load_rulesets
 
@@ -84,7 +88,45 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--rooms-per-floor", type=int, default=CHAIN_LENGTH, help="descent 모드의 층당 방 수"
     )
+    parser.add_argument(
+        "--gear",
+        default="",
+        help="낀 무기의 카탈로그 id (예: bow_recurve). 없으면 맨몸이고, 그때는 모든 스킬이 열린다",
+    )
     return parser.parse_args(argv)
+
+
+def build_gear_loadout(balance: dict, item_id: str) -> PlayerLoadout | None:
+    """무기 하나를 낀 로드아웃을 만든다.
+
+    **맨몸 배치는 빌드 비교가 아니다.** 로드아웃이 없으면 `skills=None` 이라 전부가 모든
+    스킬을 공짜로 쓰고, 그 표에서는 마법이 근접보다 30%p 앞선 것처럼 보인다 — 장비 대가를
+    넣으면 같은 등급끼리 근접이 앞선다 (설계/5_스킬 §10.10).
+
+    Args:
+        balance: 밸런스 딕셔너리.
+        item_id: 카탈로그 id. 빈 문자열이면 맨몸이다.
+
+    Returns:
+        만들어진 로드아웃. 맨몸이면 None.
+
+    Raises:
+        SystemExit: 카탈로그에 없는 id 인 경우.
+    """
+    if not item_id:
+        return None
+    catalog = load_item_catalog(ITEMS_PATH)
+    entry = catalog.get(item_id)
+    if entry is None or entry.slot is None:
+        raise SystemExit(f"장비가 아니거나 카탈로그에 없다: {item_id}")
+    stats = balance["player"]
+    return build_player_loadout(
+        base_stats={key: int(value) for key, value in stats.items() if isinstance(value, int)},
+        equipped={entry.slot: entry},
+        level=1,
+        base_rule_slots=stats["rule_slots"],
+        consumables={"POTION": stats["potions"]},
+    )
 
 
 def load_batch_resources() -> BatchResources:
@@ -133,7 +175,13 @@ def run_one_batch(
         "base_seed": arguments.seed,
     }
     if arguments.mode == MODE_FLOOR:
-        return run_floor_batch(name, resources.templates, floor_index=arguments.floor, **common)
+        return run_floor_batch(
+            name,
+            resources.templates,
+            floor_index=arguments.floor,
+            loadout=build_gear_loadout(resources.balance, arguments.gear),
+            **common,
+        )
     rooms = {template.template_id: template for template in resources.templates}
     chain = tuple(rooms[room_id] for room_id in CHAIN_ROOM_IDS)
     return run_batch(name, chain, **common)

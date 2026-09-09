@@ -32,10 +32,15 @@
     "메테오가 표 전체에서 가장 높다. 이것은 밸런스 신호이지 결함이 아니다 — 설계/5_스킬",
     "§10.6 이 「여기 수치는 자리이지 밸런스가 아니다(S7)」라고 미뤄 둔 값들이다.",
     "",
-    "**서리 장판 표는 안 싣는다.** `cancel_on_hit` 이 켜져 있는데 사거리가 4 라, 사격형이",
     "있는 방에서는 시전 2틱을 버티지 못하고 매번 끊긴다 — 실측 1% 로 폴백(6%)보다 낮았다.",
-    "조건이 거의 안 걸리는 표는 블록을 시연하는 것이 아니라 시연하지 않는 것이라는 위의",
-    "기준을 그대로 적용했다. 스킬 값이 정해지면(S7) 그때 싣는다."
+    "",
+    "**서리 장판 표를 실었다 (2026-09-09).** 피해 0 으로는 어느 표에서도 값을 못 해서",
+    "빼 뒀는데, 실측 뒤 스킬에 피해 60% 가 붙었다(설계/5_스킬 §10.10). 셋이 나란히",
+    "있어야 「어느 대가를 낼 것인가」가 되고, 그것이 §10.6 이 셋을 함께 넣은 이유다.",
+    "",
+    "**여기 승률은 맨몸 값이다.** 로드아웃이 없으면 모든 스킬이 열려 있어(skills=None)",
+    "메테오 표가 76% 로 지배적으로 보이는데, `--gear staff_fallstar` 로 무기를 실으면",
+    "85% 이고 같은 등급의 곡궁 카이팅이 81% 다 — 지배적이지 않다. 무기별 값은 §10.11."
   ],
   "rulesets": [
     {
@@ -550,6 +555,114 @@
                 "cmp": "==",
                 "rhs": true,
                 "lhs_param": "CHAIN_BOLT"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 5,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "LOWEST_HP"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ruleset_id": "v10_frost_gate",
+      "version": 1,
+      "strategy_ko": "서리 장판. 메테오 표와 **3번 한 줄만 다르다** — 예고 1틱짜리라 버티는 값이 3분의 1 이고, 대신 피해도 3분의 1 이다(60% vs 220%). 규칙표가 답할 질문은 「화력을 살 것인가 길을 막을 것인가」다 (§10.6).",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_ITEM",
+          "action_param": "POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 1,
+          "action": "HOLD",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "self_is_casting",
+                "cmp": "==",
+                "rhs": true
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "USE_SKILL",
+          "action_param": "FROST_FIELD",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 3,
+                "lhs_param": "LOWEST_HP"
+              },
+              {
+                "lhs": "self_skill_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "FROST_FIELD"
               }
             ]
           }

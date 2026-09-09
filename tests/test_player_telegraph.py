@@ -237,21 +237,29 @@ def test_chain_bolt_without_a_target_hits_nobody(balance, templates):
     assert engine.telegraphs.list_active()[0].tiles == ()
 
 
-def test_frost_field_deals_no_damage_but_slows(balance, templates):
-    """★ **피해 0 이다.** 평면 필드로는 못 적던 것이 이것이고 `effects` 가 생긴 이유다.
+def test_frost_field_slows_and_now_also_bites(balance, templates):
+    """★ **피해 0 이었다 — 실측이 그것을 접었다** (§10.10).
 
-    자기 오사가 있으므로 내가 밟으면 나도 느려진다 — 「도망칠 길을 막을 것인가」와
-    「내가 그 위에 서 있는가」를 함께 묻는다.
+    설계는 「피해 0 인 스킬이 성립하는가」를 물으려고 이 스킬을 넣었고 `effects` 가
+    그래서 생겼다. 그런데 활 카이팅 기준선 84% 위에서 한 줄만 서리 장판으로 바꾸니
+    61% 였고, 예고를 1틱으로 줄여도 76% · 둔화를 5틱으로 늘려도 74% 였다 — 기준선을
+    넘는 유일한 변형이 「피해 60%」였다. `SLOW` 가 이동만 늦춰서(사격형에게는 효과가
+    없다) 2틱을 내고 사기에는 값이 안 맞았던 것이다.
+
+    **여전히 화력 스킬이 아니다.** 메테오의 220% 에 견주면 3분의 1 이고, 이 표가 파는
+    것은 그대로 「도망칠 길을 막을 것인가」다. 자기 오사도 그대로라 내가 밟으면 나도
+    느려지고, 이제는 맞기도 한다.
     """
     engine, player, target = build_real(balance, templates)
     target.position = (player.position[0] + 1, player.position[1])
     engine.apply_actions((cast_plan("FROST_FIELD", target.entity_id),))
-    assert engine.telegraphs.list_active()[0].damage == 0
+    frozen = engine.telegraphs.list_active()[0].damage
+    assert frozen == player.attack * 60 // 100
     before = target.hp
     for tick in (1, 2, 3):
         engine.state.tick = tick
         engine.run_telegraph()
-    assert target.hp == before
+    assert target.hp == before - frozen
     assert target.statuses["SLOW"] == 3
     assert player.statuses["SLOW"] == 3
 

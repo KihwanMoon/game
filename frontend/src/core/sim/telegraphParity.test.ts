@@ -170,17 +170,22 @@ describe('마법 셋 이식', () => {
     expect(one?.remainingTicks).toBe(1)
   })
 
-  it('서리 장판은 피해 0 이고 SLOW 를 건다 — 자기 오사 포함', () => {
+  it('서리 장판은 SLOW 를 걸고 이제 물기도 한다 — 자기 오사 포함', () => {
+    // **피해 0 이었다 (§10.10).** 활 카이팅 기준선 84% 위에서 한 줄만 서리 장판으로
+    // 바꾸면 61% 였고, 기준선을 넘는 유일한 변형이 「피해 60%」였다. SLOW 가 이동만
+    // 늦춰서 사격형에게 효과가 없었기 때문이다. 화력 스킬은 여전히 아니다 —
+    // 메테오의 220% 에 견주면 3분의 1 이다.
     const { engine, player, target } = buildReal()
     target.position = { x: player.position.x + 1, y: player.position.y }
     engine.applyActions([cast('FROST_FIELD', target.entityId)])
-    expect(engine.telegraphs.listActive()[0]?.damage).toBe(0)
+    const frozen = engine.telegraphs.listActive()[0]?.damage ?? -1
+    expect(frozen).toBe(Math.floor((player.attack * 60) / 100))
     const beforeHp = target.hp
     for (const tick of [1, 2, 3]) {
       engine.state.tick = tick
       engine.runTelegraph()
     }
-    expect(target.hp).toBe(beforeHp)
+    expect(target.hp).toBe(beforeHp - frozen)
     expect(target.statuses.get('SLOW')).toBe(3)
     expect(player.statuses.get('SLOW')).toBe(3)
   })

@@ -15,6 +15,7 @@
 from dataclasses import dataclass
 
 from game.app.core.rng import DeterministicRng
+from game.schemas.loadout import PlayerLoadout
 
 REWARD_MODULE = "MODULE"
 REWARD_STAT_AFFIX = "STAT_AFFIX"
@@ -72,24 +73,39 @@ class RunState:
     modules: tuple[str, ...] = ()
 
 
-def create_run_state(balance: dict) -> RunState:
+def create_run_state(balance: dict, loadout: PlayerLoadout | None = None) -> RunState:
     """밸런스 값으로 런 시작 상태를 만든다.
+
+    **장비가 있으면 기본값을 대체한다** (결정 #13). 얹지 않는 이유는 얹으면 같은 장비가
+    밸런스 패치마다 다른 값을 내기 때문이고, 이것은 `run_battle.build_engine` 이 이미
+    쓰는 규율이다 — 두 곳이 같은 말을 해야 배치로 잰 값이 실제 판과 같다.
 
     Args:
         balance: balance.json 을 읽은 딕셔너리.
+        loadout: 이번 런의 장비. None 이면 맨몸이다.
 
     Returns:
         보상을 아직 하나도 받지 않은 시작 상태.
     """
     stats = balance["player"]
+    if loadout is None:
+        return RunState(
+            hp=stats["hp_max"],
+            hp_max=stats["hp_max"],
+            attack=stats["attack"],
+            defense=stats["defense"],
+            potions=stats["potions"],
+            rule_slots=stats["rule_slots"],
+            cpu_budget=stats["cpu_budget"],
+        )
     return RunState(
-        hp=stats["hp_max"],
-        hp_max=stats["hp_max"],
-        attack=stats["attack"],
-        defense=stats["defense"],
-        potions=stats["potions"],
-        rule_slots=stats["rule_slots"],
-        cpu_budget=stats["cpu_budget"],
+        hp=loadout.hp_max,
+        hp_max=loadout.hp_max,
+        attack=loadout.attack,
+        defense=loadout.defense,
+        potions=dict(loadout.consumables).get("POTION", stats["potions"]),
+        rule_slots=loadout.rule_slots,
+        cpu_budget=loadout.cpu_budget,
     )
 
 
