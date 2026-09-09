@@ -1,6 +1,6 @@
 {
   "_comment": "아이템 카탈로그 (docs/설계/4_아이템). 접사 굴림은 아직 없다 — 시드 파생식이 결정 대기(#02)이고, 정하기 전에 굴린 아이템은 나중에 검증할 수 없다. 여기 있는 것은 굴림 없이 값이 고정된 정의뿐이다. 요구조건이 참조하는 능력치는 지금 코어에 실제로 있는 것만 쓴다 — level·str 같은 축은 #10·#11 이 정해진 뒤에 들어온다. grants_skill 은 그 장비가 여는 스킬이다.",
-  "item_list_version": 4,
+  "item_list_version": 5,
   "items": [
     {
       "id": "sword_short",
@@ -128,6 +128,41 @@
       ]
     },
     {
+      "id": "armor_pouch",
+      "kind": "EQUIPMENT",
+      "label_ko": "주머니 조끼",
+      "slot": "BODY",
+      "grade": "COMMON",
+      "min_floor": 1,
+      "affixes": [
+        {
+          "stat": "defense",
+          "flat": 2,
+          "label_ko": "덧댐"
+        },
+        {
+          "stat": "hp_max",
+          "percent": 10,
+          "label_ko": "두툼함"
+        },
+        {
+          "stat": "potion_slots",
+          "flat": 1,
+          "label_ko": "물약 주머니"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "hp_max",
+          "min": 90
+        }
+      ],
+      "tags": [
+        "POUCH"
+      ],
+      "_note": "판금 갑옷에서 방어 1 을 덜어 내고 물약 칸 하나를 얹었다. 고친 저울(물약 칸 무게 4)에서 ATK 16 / DEF 42 로 판금(13/42)과 ATK +3 · DEF ±0 이라 둘이 서로를 못 벗긴다. **방어를 2 보다 더 깎을 수 없다** — DEFENSE 저울이 방어 한 점에 4 를 주므로 1 만 더 빼도 판금과 6 점이 벌어져 그대로 벗겨진다. 체력 10% 는 판금과 같은 값이고, 그것이 DEFENSE 쪽 30 점을 떠받치는 밑돌이다. 대신 ATTACK 에서 사슬 갑옷(20)과 4 점 차라 상급으로 자동 승급이 멈춘다 — 저울이 틀린 것이 아니라 칸의 값이 실제로 그만큼이라는 뜻이다(충전 하나가 720런에서 +0.0997방)."
+    },
+    {
       "id": "boots_swift",
       "kind": "EQUIPMENT",
       "label_ko": "경보 신발",
@@ -139,6 +174,30 @@
           "label_ko": "빠른 판단"
         }
       ]
+    },
+    {
+      "id": "boots_pack",
+      "kind": "EQUIPMENT",
+      "label_ko": "등짐 신발",
+      "slot": "FEET",
+      "grade": "COMMON",
+      "min_floor": 1,
+      "affixes": [
+        {
+          "stat": "initiative",
+          "flat": 4,
+          "label_ko": "가벼움"
+        },
+        {
+          "stat": "potion_slots",
+          "flat": 1,
+          "label_ko": "물약 주머니"
+        }
+      ],
+      "tags": [
+        "POUCH"
+      ],
+      "_note": "경보 신발(선공 +6)에서 2 를 덜고 물약 칸 하나를 얹었다. ATK 12 로 경보와 정확히 같고 DEF 는 +2 다. 선공을 5 이상 주면 ATTACK 무게가 2 라 경보와 6 점이 벌어져 경보를 벗긴다. **선공을 대가로 삼은 것은 그것이 싸서가 아니라 저울이 그렇게 세기 때문이다** — 720런 실측에서 선공 +6 의 Δ평균 돌파 방 수는 0.0000 이었고(총 돌파 방 수까지 동일), 그것은 「값이 없다」가 아니라 「이 배치가 못 잰다」일 수 있다. 선공 무게를 근거로 더 큰 것을 설계하기 전에 적 선공권 분포와 함께 따로 재야 한다."
     },
     {
       "id": "gloves_core",
@@ -346,6 +405,43 @@
       ]
     },
     {
+      "id": "helm_sight",
+      "kind": "EQUIPMENT",
+      "label_ko": "조준 투구",
+      "slot": "HEAD",
+      "grade": "FINE",
+      "min_floor": 3,
+      "affixes": [
+        {
+          "stat": "attack_range",
+          "flat": 1,
+          "label_ko": "먼 눈"
+        },
+        {
+          "stat": "hp_max",
+          "flat": 18,
+          "label_ko": "든든함"
+        },
+        {
+          "stat": "defense",
+          "flat": -2,
+          "label_ko": "트인 면갑"
+        },
+        {
+          "stat": "initiative",
+          "flat": -2,
+          "label_ko": "겨눔"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "attack",
+          "min": 14
+        }
+      ],
+      "_note": "`attack_range` 접사가 처음 나오는 자리다. 사거리 +1 은 ATTACK 저울에서 6 점(무게 6)인데 DEFENSE 에서는 1 점이라, 그냥 얹으면 두 저울이 서로 반대로 움직여 한쪽에서 반드시 벗겨진다. 그래서 방어 −2 · 선공 −2 로 ATTACK 을 도로 깎고, 체력 +18 로 DEFENSE 를 메웠다 — 투시 투구(18/44)와 ATK ±0 · DEF +1 이다. **체력이 투시보다 4 높은 것은 덤이 아니라 값이다** — DEFENSE 저울에서 방어 1 이 체력 1.33 이라, 면갑을 걷어 낸 방어 −2 를 되사는 데 정확히 그만큼이 든다. 이 수치라야 예지 투구가 두 저울 **모두**에서 한 등급 위로 밀어 올린다(ATTACK 정확히 6, DEFENSE 19). 실행 확인: 단검 + 조준 투구의 로드아웃이 사거리 2 · 체력 118 · 방어 3 · 선공 48 이다 — 무기를 안 바꾸고 `적거리 <= 사거리` 의 뜻이 한 칸 달라지는 자리다."
+    },
+    {
       "id": "armor_mesh",
       "kind": "EQUIPMENT",
       "label_ko": "사슬 갑옷",
@@ -370,6 +466,46 @@
           "min": 100
         }
       ]
+    },
+    {
+      "id": "armor_apothecary",
+      "kind": "EQUIPMENT",
+      "label_ko": "약사 갑옷",
+      "slot": "BODY",
+      "grade": "FINE",
+      "min_floor": 3,
+      "affixes": [
+        {
+          "stat": "defense",
+          "flat": 5,
+          "label_ko": "덧댐"
+        },
+        {
+          "stat": "hp_max",
+          "percent": 13,
+          "label_ko": "두툼함"
+        },
+        {
+          "stat": "potion_slots",
+          "flat": 1,
+          "label_ko": "물약 주머니"
+        },
+        {
+          "stat": "scroll_slots",
+          "flat": 1,
+          "label_ko": "주문서 통"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "hp_max",
+          "min": 100
+        }
+      ],
+      "tags": [
+        "POUCH"
+      ],
+      "_note": "칸 둘을 파는 대신 체력을 사슬 갑옷(15%)보다 2% 낮췄다. 방어는 같은 5 다 — 여기서 방어를 대가로 받으면 DEFENSE 저울에서 한 점이 4 라 두 점만 빼도 여유폭을 넘긴다. 대가는 체력에서 받되 퍼센트로 받는다(2% = 6점). ATK 23 / DEF 64 로 사슬(20/65)과 +3 / −1 이다. **한 아이템이 파는 칸의 상한이 여기다** — 물약 칸 4 + 주문서 칸 1 = 5 로 여유폭 6 을 혼자 못 넘고, 물약 칸을 +2 로 주면 그것만으로 8 점이 되어 「칸 하나로 무기를 바꾼다」가 산다."
     },
     {
       "id": "boots_gale",
@@ -608,6 +744,47 @@
       "tags": [
         "CURSED"
       ]
+    },
+    {
+      "id": "armor_channeler",
+      "kind": "EQUIPMENT",
+      "label_ko": "술사 갑옷",
+      "slot": "BODY",
+      "grade": "RELIC",
+      "min_floor": 6,
+      "affixes": [
+        {
+          "stat": "defense",
+          "flat": 8,
+          "label_ko": "덧댐"
+        },
+        {
+          "stat": "hp_max",
+          "percent": 25,
+          "label_ko": "두툼함"
+        },
+        {
+          "stat": "initiative",
+          "flat": -6,
+          "label_ko": "[둔중] 늘어진 자락"
+        },
+        {
+          "stat": "scroll_slots",
+          "flat": 2,
+          "label_ko": "주문서 통"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "cpu_budget",
+          "min": 10
+        }
+      ],
+      "tags": [
+        "POUCH",
+        "CURSED"
+      ],
+      "_note": "보루 갑옷에서 방어 1 을 덜고 주문서 칸 둘을 얹었다. 체력 25% 와 선공 −6 은 보루와 같은 값이다 — 유물의 저주 한 줄은 선공이고, 그것을 건드리면 ATTACK 에서 한 점이 2 라 금세 여유폭이 움직인다. ATK 23 / DEF 103 으로 보루(22/105)와 +1 / −2 다. **주문서 칸 둘이 2 점밖에 안 되는 것은 무게가 「가장 싼 내용물」을 세기 때문이다** — 보호 주문서 방어 +1 이 ATTACK 1 점이라 칸 무게도 1 이다. 인장 주문서(방어 +6)를 끼우면 실제 값은 그보다 크고, 저울은 그 차이를 일부러 아래로 센다. 요구조건이 CPU 10 인 것은 이 갑옷이 파는 것이 주문서이기 때문이고, 지능 6 이면 열린다."
     },
     {
       "id": "boots_phase",

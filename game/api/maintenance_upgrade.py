@@ -14,7 +14,8 @@ from psycopg_pool import ConnectionPool
 
 from game.api.deps import get_item_catalog
 from game.api.loadout_service import build_equipped_entries, count_slot_bonus
-from game.app.bots.upgrade import GEAR_PRIORITY_WEIGHTS, GearItem, find_upgrades_by_weights
+from game.app.bots.gear_item import GearItem
+from game.app.bots.upgrade import GEAR_PRIORITY_WEIGHTS, find_upgrades_by_weights
 from game.app.items.requirements import check_requirements
 from game.app.items.sealed import compute_unseal_cost, create_sealed_affix
 from game.app.store.consumables import apply_slot_clear, apply_slot_load, list_consumable_slots

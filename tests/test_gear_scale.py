@@ -17,11 +17,11 @@ import json
 
 import pytest
 
+from game.app.bots.gear_guards import check_keeps_skill
+from game.app.bots.gear_item import GearItem
 from game.app.bots.upgrade import (
     GEAR_PRIORITY_WEIGHTS,
     UPGRADE_MARGIN,
-    GearItem,
-    check_keeps_skill,
     compute_weighted_score,
 )
 from game.app.items.catalog import find_item, load_item_catalog
@@ -166,7 +166,7 @@ def test_a_swap_that_cuts_the_budget_is_refused(base_stats):
     스킬을 잃으면 그 규칙 하나가 런타임에 「불가」로 떨어질 뿐인데, CPU 를 잃으면
     규칙표 전체가 제출에서 반려된다 — 그것도 브라우저에서 판을 다 돈 뒤에.
     """
-    from game.app.bots.upgrade import check_keeps_budget
+    from game.app.bots.gear_guards import check_keeps_budget
 
     lantern = GearItem(
         item_id=1,
@@ -192,7 +192,7 @@ def test_a_swap_that_cuts_the_budget_is_refused(base_stats):
 
 def test_a_curse_percent_counts_as_a_cut(base_stats):
     """★ 저주 퍼센트도 예산을 깎는다. 내림이라 파이썬 `//` 와 같아야 한다."""
-    from game.app.bots.upgrade import count_budget_gift
+    from game.app.bots.gear_guards import count_budget_gift
 
     cursed = GearItem(
         item_id=1,
@@ -208,7 +208,8 @@ def test_a_curse_percent_counts_as_a_cut(base_stats):
 
 def test_the_picker_never_cuts_the_budget(catalog, base_stats):
     """★ 선택 함수를 직접 돌린다. 전량 대조로 예산을 깎는 교체가 없어야 한다."""
-    from game.app.bots.upgrade import check_keeps_budget, find_upgrades_by_weights
+    from game.app.bots.gear_guards import check_keeps_budget
+    from game.app.bots.upgrade import find_upgrades_by_weights
 
     entries = [e for e in catalog.values() if e.kind.name == "EQUIPMENT"]
     bag = tuple(build_gear(entry) for entry in entries)
@@ -251,7 +252,7 @@ def test_a_swap_that_loses_a_slot_is_refused():
     `약사 갑옷 → 보루 갑옷` 은 DEFENSE 저울에서 +41 인데 실제로는 방어 16→14 ·
     체력 141→125 · 충전 POTION 9→2 · SCROLL 7→1 이다.
     """
-    from game.app.bots.upgrade import check_keeps_slots
+    from game.app.bots.gear_guards import check_keeps_slots
 
     pouch = build_slot_gear(1, potion=1, scroll=1, defense=5)
     plain = build_slot_gear(2, defense=9)
@@ -261,14 +262,14 @@ def test_a_swap_that_loses_a_slot_is_refused():
 
 def test_the_same_slots_still_upgrade():
     """★ 막기만 하면 그 줄이 영영 못 오른다. 칸이 같으면 통과해야 한다."""
-    from game.app.bots.upgrade import check_keeps_slots
+    from game.app.bots.gear_guards import check_keeps_slots
 
     assert check_keeps_slots(build_slot_gear(1, potion=1), build_slot_gear(2, potion=1, defense=9))
 
 
 def test_each_use_tag_is_checked_on_its_own():
     """★ 물약 칸을 얻고 주문서 칸을 잃는 교체도 상실이다. 합으로 세면 상쇄된다."""
-    from game.app.bots.upgrade import check_keeps_slots
+    from game.app.bots.gear_guards import check_keeps_slots
 
     traded = build_slot_gear(2, potion=2)
     assert not check_keeps_slots(build_slot_gear(1, potion=1, scroll=1), traded)
@@ -276,7 +277,8 @@ def test_each_use_tag_is_checked_on_its_own():
 
 def test_the_picker_never_loses_a_slot(catalog, base_stats):
     """★ 선택 함수를 직접 돌린다. 칸 접사를 가진 아이템을 끼고 전량과 견준다."""
-    from game.app.bots.upgrade import check_keeps_slots, find_upgrades_by_weights
+    from game.app.bots.gear_guards import check_keeps_slots
+    from game.app.bots.upgrade import find_upgrades_by_weights
 
     worn = (build_slot_gear(999, potion=1, scroll=1, defense=5),)
     bag = tuple(build_gear(e) for e in catalog.values() if e.kind.name == "EQUIPMENT")
@@ -287,3 +289,31 @@ def test_the_picker_never_loses_a_slot(catalog, base_stats):
         if not check_keeps_slots(current, candidate)
     ]
     assert lost == [], f"정비가 칸을 잃는 교체를 골랐다: {lost}"
+
+
+def test_a_swap_that_loses_reach_is_refused(catalog):
+    """★ **규칙표가 직접 읽는 축이다** — `적거리 <= 사거리` 가 그 값을 본다.
+
+    실측으로 `조준 투구(사거리 +1) → 예지 투구` 가 ATTACK 저울에서 정확히 여유폭만큼
+    앞선다. 막지 않으면 방어구를 갈아 끼운 것만으로 카이팅 규칙표의 뜻이 달라진다.
+    """
+    from game.app.bots.gear_guards import check_keeps_reach
+
+    sight = build_gear(find_item(catalog, "helm_sight"))
+    oracle = build_gear(find_item(catalog, "helm_oracle"))
+    assert not check_keeps_reach(sight, oracle)
+    assert check_keeps_reach(oracle, sight)
+
+
+def test_a_weapon_reach_is_not_guarded(catalog):
+    """★ **무기의 사거리는 필드다.** 바뀌는 것은 사람이 무기를 고른 결과다 (결정 #13).
+
+    활을 들면 사거리가 바뀌고 같은 규칙표가 저절로 다르게 도는 것이 이 게임이 파는
+    것이므로, 여기까지 막으면 그 설계를 되돌리는 셈이 된다.
+    """
+    from game.app.bots.gear_guards import check_keeps_reach
+
+    bow = build_gear(find_item(catalog, "bow_long"))
+    dagger = build_gear(find_item(catalog, "sword_short"))
+    assert bow.attack_range > dagger.attack_range
+    assert check_keeps_reach(bow, dagger), "무기 사거리까지 막으면 결정 #13 이 깨진다"

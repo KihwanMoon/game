@@ -284,6 +284,11 @@ export function runUpgradeGear(
     if (SLOT_STATS.some((stat) => countSlotGift(item.affixes, stat) < countSlotGift(current.affixes, stat))) {
       continue
     }
+    // **접사가 준 사거리를 잃는 교체도 안 센다.** 규칙표가 `적거리 <= 사거리` 로 그 값을
+    // 직접 읽는다 — 무기의 사거리(필드)는 안 본다 (파이썬 `check_keeps_reach`).
+    if (countSlotGift(item.affixes, 'attack_range') < countSlotGift(current.affixes, 'attack_range')) {
+      continue
+    }
     const gain =
       computeGearScore(item.affixes, item.attackRange, weights, baseStats) -
       computeGearScore(current.affixes, current.attackRange, weights, baseStats)
