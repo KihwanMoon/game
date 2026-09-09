@@ -13,6 +13,7 @@
  * 요구하면 조건이 참인데 영영 실패하는 규칙을 플레이어가 고칠 방법이 없어진다 (P1).
  */
 
+import { findSkill } from '../skills/catalog'
 import {
   type Position,
   formatPosition,
@@ -167,7 +168,7 @@ export function resolveSummon(
 /**
  * 즉발 광역기 대신 예고를 건다 (GDD §4.2).
  *
- * 반경의 정본은 이 예고 설정이다 — actions 의 AREA_ATTACK_RADIUS 는 예고를 쓰지 않는
+ * 반경의 정본은 이 예고 설정이다 — skills.json 의 shape.radius 는 예고를 쓰지 않는
  * 즉발 광역기의 값이며 둘은 다른 능력이다.
  *
  * 벽과 방 밖은 걸러 낸다. 거르지 않으면 닿지도 않는 칸이 붉게 칠해져, 플레이어가 피할
@@ -196,6 +197,9 @@ export function registerBlast(
     leadTicks: telegraph.lead_ticks,
     visibleTicks: telegraph.visible_ticks,
     cancelOnDeath: telegraph.cancel_on_death,
+    // 몬스터 절에는 없다 — 없으면 안 켠다. 켜는 것은 스킬 데이터다 (§10.3).
+    cancelOnAct: telegraph.cancel_on_act ?? false,
+    cancelOnHit: telegraph.cancel_on_hit ?? false,
   })
   return `예고 ${tiles.length}칸 — ${telegraph.lead_ticks}틱 뒤 발동`
 }
@@ -225,14 +229,14 @@ export function resolveHeal(
   }
   // 파이썬은 `skill_range.get(id) or actor.attack_range` 다. null 뿐 아니라 0 도 엔티티
   // 사거리로 넘어가므로 `??` 로 바꾸면 사거리 0 스킬의 동작이 달라진다.
-  const declared = config.skillRange.get(plan.actionId)
+  const declared = findSkill(config.skills, plan.actionId).reach
   const reach =
     declared === undefined || declared === null || declared === 0 ? actor.attackRange : declared
   const distance = getManhattanDistance(actor.position, target.position)
   if (distance > reach) {
     return { healed: 0, outcome: `사거리 밖(${distance} > ${reach}) — 틱 낭비` }
   }
-  const percent = config.skillHealPct.get(plan.actionId) ?? 0
+  const percent = findSkill(config.skills, plan.actionId).healPct
   const amount = Math.min(
     target.hpMax - target.hp,
     divideFloor(target.hpMax * percent, PERCENT_BASE),

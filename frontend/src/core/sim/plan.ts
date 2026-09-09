@@ -5,6 +5,7 @@
  * 순환 참조가 생긴다.
  */
 
+import type { SkillDef } from '../skills/catalog'
 import type { DamageRules } from '../combat/damage'
 import type { PerceptionSnapshot } from './perception'
 import type { FloorScale } from './scaling'
@@ -163,6 +164,9 @@ export interface RawTelegraphSetting {
   readonly radius: number
   readonly damage: number
   readonly cancel_on_death: boolean
+  /** 스킬이 켜는 취소 스위치. 몬스터 절에는 없다 (설계/5_스킬 §10.3). */
+  readonly cancel_on_act?: boolean
+  readonly cancel_on_hit?: boolean
   readonly self_destruct?: boolean
 }
 
@@ -194,33 +198,13 @@ export interface RawEnemyKind {
 export interface EngineConfig {
   readonly damageRules: DamageRules
   readonly kindTypes: ReadonlyMap<string, string>
-  readonly skillCoefPct: ReadonlyMap<string, number>
   /**
-   * 스킬이 자체 사거리를 가지면 그것을 쓴다. null 이면 엔티티의 attackRange 다. 이것이
-   * 없으면 balance.json 이 선언한 사거리가 조용히 무시되어, 원거리 스킬을 전제한
-   * 규칙표(GDD §3.5 카이팅)가 매 틱 '사거리 밖' 으로 헛돈다.
+   * 스킬 id -> 정의. **예전에는 속성마다 맵이 따로였다** — 계수·사거리·쿨타임·회복률·
+   * 감쇠율·감쇠틱 여섯이다. 속성을 하나 더할 때마다 맵이 늘었고, 무엇보다 맵끼리
+   * 어긋날 수 있었다: 계수 맵에만 있고 쿨타임 맵에 없는 스킬은 「쿨타임 0」으로 조용히
+   * 돈다. 레코드 하나면 그 어긋남이 성립하지 않는다 (파이썬 `EngineConfig.skills`).
    */
-  readonly skillRange: ReadonlyMap<string, number | null>
-  /**
-   * 스킬 id -> 사용 후 걸리는 쿨타임(틱). ACT 가 성공한 행동에만 걸고 UPKEEP 이 매 틱
-   * 1씩 깎는다. 이것이 비어 있으면 `내 쿨타임[스킬] 완료` 가 영구히 참이 되어 그 항을
-   * 쓴 규칙이 사실상 한 항 짧아진다 — 조용히 틀리는 조건이 된다.
-   */
-  readonly skillCooldowns: ReadonlyMap<string, number>
-  /**
-   * 행동 id -> 회복량. 대상 최대 HP 의 정수 퍼센트다 (블록 목록 v4 의 HEAL). 고정값이
-   * 아니라 비율인 이유는 회복이 대상의 덩치에 비례해야 하기 때문이고, 퍼센트 정수인
-   * 이유는 R5 다 — 부동소수를 쓰면 플랫폼마다 결과가 갈린다.
-   */
-  readonly skillHealPct: ReadonlyMap<string, number>
-  /**
-   * 방어 태세의 피해 감소율과 유지 틱 (결정 #16).
-   *
-   * **파이썬에는 있는데 여기 없었다.** 방패를 껴도 브라우저는 아무 일도 안 하고 서버만
-   * 적용해, 같은 판이 두 코어에서 갈렸다 (게이트 G3). 보호 주문서(v6)도 같은 값을 쓴다.
-   */
-  readonly skillGuardPct: ReadonlyMap<string, number>
-  readonly skillGuardTicks: ReadonlyMap<string, number>
+  readonly skills: ReadonlyMap<string, SkillDef>
   /**
    * kindId -> 소환 규칙. '언제 소환하는가' 는 규칙표가 정하고, 여기 남는 것은 '무엇을
    * 몇 마리까지' 와 쿨타임[SUMMON] 의 초기값이 되는 주기(every_ticks)다.

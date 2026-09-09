@@ -10,6 +10,7 @@
 
 import { buildDamageRules } from '../combat/damage'
 import { DeterministicRng } from '../rng'
+import { loadSkillDefs } from '../skills/catalog'
 import { FallbackPolicy } from '../rules/fallbackPolicy'
 import { buildRuleVm } from '../rules/ruleVm'
 import type { RawBalanceFile } from '../resources'
@@ -376,22 +377,7 @@ export function buildEngine(setup: EngineSetup): TickEngine {
   const config: EngineConfig = {
     damageRules: buildDamageRules(balance.damageFormula),
     kindTypes: new Map(balance.enemies.map((kind) => [kind.id, kind.type])),
-    skillCoefPct: new Map(balance.skills.map((skill) => [skill.id, skill.coef_pct])),
-    skillRange: new Map(balance.skills.map((skill) => [skill.id, skill.range ?? null])),
-    skillCooldowns: new Map(balance.skills.map((skill) => [skill.id, skill.cooldown])),
-    skillGuardPct: new Map(
-      balance.skills.filter((s) => s.guard_pct !== undefined).map((s) => [s.id, s.guard_pct ?? 0]),
-    ),
-    skillGuardTicks: new Map(
-      balance.skills
-        .filter((s) => s.guard_ticks !== undefined)
-        .map((s) => [s.id, s.guard_ticks ?? 0]),
-    ),
-    skillHealPct: new Map(
-      balance.skills
-        .filter((skill) => skill.heal_pct !== undefined)
-        .map((skill) => [skill.id, skill.heal_pct ?? 0]),
-    ),
+    skills: loadSkillDefs(balance.skills),
     summonRules: new Map(
       balance.enemies
         .filter((kind) => kind.summon !== undefined)

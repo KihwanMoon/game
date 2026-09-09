@@ -43,7 +43,7 @@ import {
 import type { DecisionPolicy, EngineConfig, PlannedAction, PolicyFactory } from './plan'
 import { PressureTracker, applySpringDrain, removeDrainedSprings } from './pressure'
 import { FACTION_PLAYER, type Entity, type WorldState, isAlive } from './state'
-import { type Telegraph, TelegraphBoard } from './telegraph'
+import { CANCEL_BY_ACT, TelegraphBoard, type Telegraph } from './telegraph'
 
 /** 용암 위에 선 엔티티가 매 틱 받는 고정 피해. */
 export const LAVA_DAMAGE = 3
@@ -396,6 +396,14 @@ export class TickEngine {
     rawPlan: PlannedAction,
   ): void {
     const plan = resolveSkillPlan(rawPlan)
+    // **예고를 먼저 묻는다.** 아래는 전부 `actionId` 로 갈리므로 새 스킬 id 가 안 닿는다 —
+    // 예고는 그 행동의 성질이지 이름의 성질이 아니다 (파이썬 `_apply_settled` 와 같다).
+    if (executor.applyCast(entity, plan)) {
+      return
+    }
+    // **다른 행동은 시전을 끊는다** — 켜 둔 예고만. 위에서 걸러진 뒤라 「같은 마법을
+    // 이어 건다」는 여기 안 온다.
+    this.telegraphs.applyCancel(this.state, this.log, entity.entityId, CANCEL_BY_ACT)
     if (ATTACK_ACTIONS.has(plan.actionId)) {
       executor.applyAttack(entity, plan)
     } else if (plan.actionId === 'AREA_ATTACK') {

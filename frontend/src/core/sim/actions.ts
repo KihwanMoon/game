@@ -8,6 +8,8 @@
  * 남긴다.
  */
 
+import { CANCEL_BY_HIT } from './telegraph'
+import { findSkill } from '../skills/catalog'
 import { EventLog, createLogEntry } from '../eventLog'
 import { calculateDamage } from '../combat/damage'
 import {
@@ -49,15 +51,6 @@ export const MOVE_ACTIONS: ReadonlySet<string> = new Set([
 /** 단일 대상 공격 계열 행동. */
 
 /** 예고를 쓰지 않는 즉발 광역기의 반경. 예고형의 반경은 balance.json 이 정한다. */
-/**
- * 즉발 광역기의 반경.
- *
- * **파이썬은 이 값을 데이터에서 읽는다** — `skills.json` 의 `shape.radius` 이며
- * `app/skills/catalog.py` 가 읽는다 (2026-09-08). 이쪽은 아직 상수라, 지금은 둘 다 2 로
- * 같지만 **JSON 만 고치면 두 코어가 조용히 갈린다.** 이식은 `설계/1_통합시스템설계`
- * §6 의 G6 이고, 그때까지는 골든 대조가 이 어긋남을 잡는 마지막 그물이다.
- */
-export const AREA_ATTACK_RADIUS = 2
 
 /** 이 사거리까지는 시야를 묻지 않는다. 인접한 적은 벽 너머에 있을 수 없다. */
 
@@ -65,7 +58,6 @@ export const AREA_ATTACK_RADIUS = 2
 const ADJACENT_DISTANCE = 1
 
 /** 기본 스킬 계수. balance.json 에 없는 행동은 1.0배로 친다. */
-const DEFAULT_SKILL_COEF_PCT = 100
 
 /**
  * 아직 만들 수 없는 행동과 그 사유. 조용히 무시하지 않고 로그로 알린다.
@@ -163,7 +155,7 @@ export class ActionExecutor {
     }
     // 파이썬은 `skill_range.get(id) or entity.attack_range` 다. null 뿐 아니라 0 도
     // 엔티티 사거리로 넘어가므로 `??` 로 바꾸면 사거리 0 스킬의 동작이 달라진다.
-    const declared = this.config.skillRange.get(plan.actionId)
+    const declared = findSkill(this.config.skills, plan.actionId).reach
     const reach = declared === undefined || declared === null || declared === 0
       ? entity.attackRange
       : declared
@@ -191,16 +183,50 @@ export class ActionExecutor {
    * @param entity 공격자.
    * @param plan 실행할 계획.
    */
+  /**
+   * 스킬이 예고를 정하면 그것을 걸고 true 를 돌려준다 — 파이썬 `apply_cast` 와 같다.
+   *
+   * **디스패치를 데이터로 가르는 자리다.** 실행기는 `actionId` 로 갈리므로 새 스킬 id 는
+   * 어느 갈래에도 안 닿는다 — 예고는 그 행동의 성질이지 이름의 성질이 아니다.
+   *
+   * **피해를 시전 시점에 얼린다.** 예고 피해는 방어 감쇠를 안 거치는 고정값이라,
+   * 발동 때 다시 계산하면 그 사이의 버프가 회피 판정에 섞인다.
+   *
+   * @param entity 시전자.
+   * @param plan 실행할 계획.
+   * @returns 예고를 걸었으면 true. 이 스킬이 예고를 안 쓰면 false.
+   */
+  applyCast(entity: Entity, plan: PlannedAction): boolean {
+    const skill = findSkill(this.config.skills, plan.actionId)
+    if (skill.telegraph <= 0) {
+      return false
+    }
+    this.registerTelegraph(entity, plan, {
+      skill: plan.actionId,
+      radius: skill.shape.radius,
+      damage: divideFloor(entity.attack * skill.coefPct, PERCENT_BASE),
+      lead_ticks: skill.telegraph,
+      visible_ticks: skill.telegraph,
+      cancel_on_death: true,
+      cancel_on_act: skill.cancelOnAct,
+      cancel_on_hit: skill.cancelOnHit,
+    })
+    return true
+  }
+
   applyAreaAttack(entity: Entity, plan: PlannedAction): void {
     const telegraph = this.config.enemyStats.get(entity.kindId)?.telegraph
     if (telegraph !== undefined) {
       this.registerTelegraph(entity, plan, telegraph)
       return
     }
+    // **반경의 정본은 데이터다** (파이썬 `shape.radius` 와 같다). 상수였을 때는 JSON 을
+    // 고쳐도 브라우저가 안 달라져 두 코어가 조용히 갈릴 수 있었다.
+    const radius = findSkill(this.config.skills, plan.actionId).shape.radius
     const victims = this.state
       .listHostiles(entity)
       .filter(
-        (other) => getManhattanDistance(entity.position, other.position) <= AREA_ATTACK_RADIUS,
+        (other) => getManhattanDistance(entity.position, other.position) <= radius,
       )
     if (victims.length === 0) {
       this.recordResult(entity.entityId, plan, '반경 안에 적 없음 — 틱 낭비', null)
@@ -238,7 +264,7 @@ export class ActionExecutor {
   applyItem(entity: Entity, plan: PlannedAction): void {
     const kind = plan.itemKind ?? ITEM_POTION
     if (kind === ITEM_SCROLL) {
-      const ticks = this.config.skillGuardTicks.get(GUARD_SKILL_ID) ?? 0
+      const ticks = findSkill(this.config.skills, GUARD_SKILL_ID).guardTicks
       const held = resolveScroll(entity, ticks)
       this.recordResult(entity.entityId, plan, held.outcome, held.healed)
       return
@@ -289,9 +315,9 @@ export class ActionExecutor {
    * @param plan 실행할 계획.
    */
   applyGuard(entity: Entity, plan: PlannedAction): void {
-    const ticks = this.config.skillGuardTicks.get(plan.actionId) ?? 0
+    const ticks = findSkill(this.config.skills, plan.actionId).guardTicks
     entity.statuses.set(GUARD_STATUS, ticks)
-    const percent = this.config.skillGuardPct.get(plan.actionId) ?? 0
+    const percent = findSkill(this.config.skills, plan.actionId).guardPct
     this.recordResult(
       entity.entityId,
       plan,
@@ -355,10 +381,15 @@ export class ActionExecutor {
     // 두 코어가 같은 피해에서 갈린다.
     let dealt = amount
     if ((target.statuses.get(GUARD_STATUS) ?? 0) > 0) {
-      const reduction = this.config.skillGuardPct.get(GUARD_SKILL_ID) ?? 0
+      const reduction = findSkill(this.config.skills, GUARD_SKILL_ID).guardPct
       dealt = divideFloor(dealt * (PERCENT_BASE - reduction), PERCENT_BASE)
     }
     target.hp = Math.max(0, target.hp - dealt)
+    // **맞으면 시전이 끊긴다** — 켜 둔 예고만. 0 이 아니라 실제로 깎였을 때만 본다:
+    // 방어 태세가 전부 막아 낸 피해로 끊기면 방어가 벌이 된다 (파이썬과 같은 규칙).
+    if (dealt > 0) {
+      this.telegraphs.applyCancel(this.state, this.log, target.entityId, CANCEL_BY_HIT)
+    }
     const suffix = isAlive(target) ? '' : ' 사망'
     this.log.record(
       createLogEntry({
@@ -443,7 +474,7 @@ export class ActionExecutor {
    * @param actionId 사용한 행동 id.
    */
   private applyCooldown(entity: Entity, actionId: string): void {
-    const ticks = this.config.skillCooldowns.get(actionId) ?? 0
+    const ticks = findSkill(this.config.skills, actionId).cooldown
     if (ticks > 0) {
       entity.cooldowns.set(actionId, ticks)
     }
@@ -561,7 +592,7 @@ export class ActionExecutor {
       // 넘기는 이유는 수식이 계수 하나만 받기 때문이며, 정수 곱 뒤 내림 나눗셈이라
       // 기본값 100 에서는 결과가 한 톨도 바뀌지 않는다 (결정 #51).
       skillCoefPct: Math.floor(
-        ((this.config.skillCoefPct.get(plan.actionId) ?? DEFAULT_SKILL_COEF_PCT) *
+        (findSkill(this.config.skills, plan.actionId).coefPct *
           entity.skillPowerPct) /
           PERCENT_BASE,
       ),

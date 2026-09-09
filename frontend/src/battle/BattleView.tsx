@@ -79,6 +79,14 @@ const ONE_TICK = 1
 const INITIAL_TAB: SheetTab = 'rules'
 
 /** BattleView 가 받는 props. */
+
+/** 스킬 표에서 쿨타임만 뽑는다 — 화면은 그 하나만 읽는다. */
+function buildCooldownTotals(
+  skills: ReadonlyMap<string, { readonly cooldown: number }>,
+): ReadonlyMap<string, number> {
+  return new Map([...skills].map(([id, one]) => [id, one.cooldown]))
+}
+
 export interface BattleViewProps {
   readonly setup: BattleSetup
   readonly rulesets: ReadonlyMap<string, RuleSet>
@@ -384,7 +392,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         cooldowns={formatCooldowns(
           player?.cooldowns,
           listRulesetSkills(session.ruleset.rules),
-          session.engine.config.skillCooldowns,
+          buildCooldownTotals(session.engine.config.skills),
         )}
         tab={tab}
         onTabChange={setTab}
@@ -423,7 +431,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         cpuBudget,
         cooldowns: player?.cooldowns,
         skills: listRulesetSkills(session.ruleset.rules),
-        totals: session.engine.config.skillCooldowns,
+        totals: buildCooldownTotals(session.engine.config.skills),
       })}
       tab={tab}
       onTabChange={setTab}

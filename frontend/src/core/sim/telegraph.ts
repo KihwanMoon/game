@@ -41,6 +41,10 @@ export const FORESIGHT_FLAG = 'FORESIGHT'
 /** 이 이하로 남으면 경고를 danger 로 올린다 (design/README.md ThreatNotice). */
 export const IMMINENT_TICKS = 1
 
+/** 취소 사유. 어느 스위치를 볼지 이것이 가른다. */
+export const CANCEL_BY_HIT = '피격'
+export const CANCEL_BY_ACT = '다른 행동'
+
 export const TONE_DANGER = 'danger'
 export const TONE_NEUTRAL = 'neutral'
 
@@ -83,6 +87,10 @@ export interface Telegraph {
    * 그 답을 막아야 하는 예고만 false 로 등록한다.
    */
   readonly cancelOnDeath: boolean
+  /** 시전자가 다른 행동을 하면 취소되는가 (§10.3). */
+  readonly cancelOnAct: boolean
+  /** 시전자가 맞으면 취소되는가. */
+  readonly cancelOnHit: boolean
 }
 
 /** `TelegraphBoard.register` 가 받는 값들. */
@@ -99,6 +107,8 @@ export interface TelegraphInput {
   readonly visibleTicks?: number
   /** 시전자가 죽으면 취소할 것인가. */
   readonly cancelOnDeath?: boolean
+  readonly cancelOnAct?: boolean
+  readonly cancelOnHit?: boolean
 }
 
 /**
@@ -192,6 +202,10 @@ export class TelegraphBoard {
       damage: input.damage,
       visibleTicks: input.visibleTicks ?? VISIBLE_TICKS,
       cancelOnDeath: input.cancelOnDeath ?? true,
+      // **기본이 false 다.** 전부에 걸면 자폭형이 다음 틱에 움직이면서 스스로 취소해
+      // 영영 안 터진다 — 켜는 것은 스킬 데이터다 (설계/5_스킬 §10.3).
+      cancelOnAct: input.cancelOnAct ?? false,
+      cancelOnHit: input.cancelOnHit ?? false,
     }
     this.pending.push(telegraph)
     return telegraph
@@ -233,6 +247,33 @@ export class TelegraphBoard {
    *
    * @returns 등록 순서대로의 예고들.
    */
+  /**
+   * 그 시전자의 예고를 취소한다 — 파이썬 `apply_cancel` 과 같다.
+   *
+   * **켜 둔 것만 취소한다.** 꺼져 있으면 남는다 — 전부에 걸면 자폭형이 스스로 취소한다.
+   *
+   * @param state 세계 상태.
+   * @param log 이벤트 로그.
+   * @param casterId 시전자.
+   * @param reason 취소 사유. 로그에 그대로 적힌다.
+   * @returns 취소한 수.
+   */
+  applyCancel(state: WorldState, log: EventLog, casterId: string, reason: string): number {
+    const alive: Telegraph[] = []
+    let dropped = 0
+    for (const telegraph of this.pending) {
+      const cancels = reason === CANCEL_BY_HIT ? telegraph.cancelOnHit : telegraph.cancelOnAct
+      if (telegraph.casterId !== casterId || !cancels) {
+        alive.push(telegraph)
+        continue
+      }
+      this.recordEvent(state, log, telegraph, `${telegraph.skillId} 예고 취소`, reason, null)
+      dropped += 1
+    }
+    this.pending = alive
+    return dropped
+  }
+
   listActive(): readonly Telegraph[] {
     return [...this.pending]
   }
