@@ -43,7 +43,7 @@ from game.app.simulation.plan import (
 from game.app.simulation.pressure import PressureTracker
 from game.app.simulation.springs import apply_spring_drain, remove_drained_springs
 from game.app.simulation.state import FACTION_PLAYER, Entity, WorldState
-from game.app.simulation.telegraph import Telegraph, TelegraphBoard
+from game.app.simulation.telegraph import CANCEL_BY_ACT, Telegraph, TelegraphBoard
 from game.schemas.room import TILE_LAVA, TILE_SPRING
 
 LAVA_DAMAGE = 3
@@ -267,6 +267,10 @@ class TickEngine:
         # 닿는데, 예고는 그 행동의 성질이지 이름의 성질이 아니다 (설계/5_스킬 §10).
         if executor.apply_cast(entity, plan):
             return
+        # **다른 행동은 시전을 끊는다** — 켜 둔 예고만 (§10.3). 잠그는 대신 이렇게 두면
+        # 취소가 벌이 아니라 **선택**이 되고, 무엇을 할지는 규칙표가 정한다. 위에서
+        # 걸러진 뒤라 「같은 마법을 이어 건다」는 여기 안 온다.
+        self.telegraphs.apply_cancel(self.state, self.log, entity.entity_id, CANCEL_BY_ACT)
         if plan.action_id in ATTACK_ACTIONS:
             executor.apply_attack(entity, plan)
         elif plan.action_id == "AREA_ATTACK":

@@ -11,17 +11,21 @@ from game.app.core.rng import DeterministicRng
 from game.app.simulation.state import FACTION_ENEMY, FACTION_PLAYER, Entity, WorldState
 from game.app.simulation.telegraph import (
     DEFAULT_LEAD_TICKS,
-    FORESIGHT_FLAG,
-    GLYPH_IMMINENT,
-    GLYPH_PENDING,
     MIN_LEAD_TICKS,
-    PREDICTOR_BONUS_TICKS,
-    TONE_DANGER,
-    TONE_NEUTRAL,
     VISIBLE_TICKS,
     TelegraphBoard,
-    build_threat_notice,
+)
+from game.app.simulation.telegraph_shape import (
+    FORESIGHT_FLAG,
+    PREDICTOR_BONUS_TICKS,
     get_foresight_ticks,
+)
+from game.app.simulation.telegraph_view import (
+    GLYPH_IMMINENT,
+    GLYPH_PENDING,
+    TONE_DANGER,
+    TONE_NEUTRAL,
+    build_threat_notice,
 )
 from game.config import ROOM_TEMPLATES_PATH
 from game.schemas.room import load_room_templates

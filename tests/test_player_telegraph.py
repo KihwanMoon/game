@@ -101,3 +101,66 @@ def test_the_caster_sees_its_own_cast(balance, templates):
         engine.state, player, engine.config.kind_types, board=engine.telegraphs
     )
     assert snapshot.values["self_is_casting"] is True
+
+
+# ── 시전 취소 (H4) ──────────────────────────────────────────────────────
+
+
+def build_casting(balance, templates, **switches):
+    """예고를 건 상태의 엔진을 만든다."""
+    engine = build_engine(templates["open_field"], balance, seed=3)
+    engine.config.skills[METEOR] = SkillDef(
+        skill_id=METEOR,
+        shape=SkillShape(kind="AREA", radius=2),
+        coef_pct=200,
+        telegraph=3,
+        **switches,
+    )
+    engine.apply_actions((build_plan(),))
+    assert len(engine.telegraphs.list_active()) == 1
+    return engine, engine.state.entities["player"]
+
+
+def test_another_action_cancels_a_cast(balance, templates):
+    """★ **취소가 벌이 아니라 선택이다** (§10.3).
+
+    잠그면 그 틱 동안 규칙표가 안 도는데, 규칙표가 주인공인 게임에서 무결정 구간은
+    그 자체로 손해다. 잠그는 대신 다른 행동이 끊게 하면 무엇을 할지는 규칙표가 정한다.
+    """
+    engine, player = build_casting(balance, templates, cancel_on_act=True)
+    engine.apply_actions((PlannedAction(entity_id=player.entity_id, action_id="HOLD"),))
+    assert engine.telegraphs.list_active() == ()
+
+
+def test_a_cast_that_is_not_interruptible_survives_an_action(balance, templates):
+    """★ **기본은 안 끊긴다.** 전부에 걸면 자폭형이 다음 틱에 움직이며 스스로 취소해
+
+    영영 안 터진다 — 지금 콘텐츠의 뜻이 통째로 바뀐다. 켜는 것은 스킬 데이터다.
+    """
+    engine, player = build_casting(balance, templates)
+    engine.apply_actions((PlannedAction(entity_id=player.entity_id, action_id="HOLD"),))
+    assert len(engine.telegraphs.list_active()) == 1
+
+
+def test_being_hit_cancels_a_cast(balance, templates):
+    """★ 「안전한 자리에서 쏘는가」를 규칙표에 묻는 자리다 — 카이팅과 결합한다."""
+    engine, player = build_casting(balance, templates, cancel_on_hit=True)
+    engine.actions.apply_damage(player, 5, "ACT", "시험", "e1")
+    assert engine.telegraphs.list_active() == ()
+
+
+def test_a_fully_blocked_hit_does_not_cancel(balance, templates):
+    """★ **막아 낸 피해로 끊기면 방어가 벌이 된다.** 실제로 깎였을 때만 본다."""
+    engine, player = build_casting(balance, templates, cancel_on_hit=True)
+    engine.actions.apply_damage(player, 0, "ACT", "시험", "e1")
+    assert len(engine.telegraphs.list_active()) == 1
+
+
+def test_the_cancel_is_written_down(balance, templates):
+    """★ 조용히 사라지면 「내 마법이 어디 갔지」가 된다 (P1)."""
+    engine, player = build_casting(balance, templates, cancel_on_act=True)
+    engine.apply_actions((PlannedAction(entity_id=player.entity_id, action_id="HOLD"),))
+    lines = [
+        one for one in engine.log.entries if "예고 취소" in one.expr or "예고 취소" in one.outcome
+    ]
+    assert lines, "취소가 로그에 안 남았다"

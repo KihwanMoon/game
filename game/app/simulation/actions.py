@@ -25,7 +25,7 @@ from game.app.simulation.plan import (
 )
 from game.app.simulation.state import Entity, WorldState
 from game.app.simulation.support_actions import SupportActionMixin
-from game.app.simulation.telegraph import TelegraphBoard
+from game.app.simulation.telegraph import CANCEL_BY_HIT, TelegraphBoard
 
 # **여기서 다시 내보낸다.** 두 상수의 정본은 `plan.py` 로 옮겼지만(규칙 평가와 실행이
 # 같은 목록을 봐야 해서), 「행동이 사는 곳」에서 읽어 온 코드가 이미 여럿이다 — 그쪽을
@@ -302,6 +302,11 @@ class ActionExecutor(SupportActionMixin, BlastActionMixin):
             reduction = find_skill(self.config.skills, GUARD_SKILL_ID).guard_pct
             amount = amount * (PERCENT_BASE - reduction) // PERCENT_BASE
         target.hp = max(0, target.hp - amount)
+        # **맞으면 시전이 끊긴다** — 켜 둔 예고만 (설계/5_스킬 §10.2). 「안전한 자리에서
+        # 쏘는가」를 규칙표에 묻는 자리이고, 카이팅과 그대로 결합한다. 0 이 아니라 실제로
+        # 깎였을 때만 본다 — 방어 태세가 전부 막아 낸 피해로 끊기면 방어가 벌이 된다.
+        if amount > 0:
+            self.telegraphs.apply_cancel(self.state, self.log, target.entity_id, CANCEL_BY_HIT)
         self.log.record(
             LogEntry(
                 tick=self.state.tick,

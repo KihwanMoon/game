@@ -20,7 +20,8 @@ from game.app.grid.vision import (
 )
 from game.app.simulation.selectors import ALL_SELECTORS, resolve_target
 from game.app.simulation.state import Entity, WorldState
-from game.app.simulation.telegraph import TelegraphBoard, get_foresight_ticks
+from game.app.simulation.telegraph import TelegraphBoard
+from game.app.simulation.telegraph_shape import get_foresight_ticks
 from game.schemas.room import TILE_DOOR, TILE_SPRING, TILE_STAIRS, WALKABLE_TILES
 
 # 인지 변수 nearest_tile_distance 의 인자에서 타일 ID 로.

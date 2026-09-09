@@ -23,9 +23,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from game.app.core.event_log import EventLog, LogEntry
-from game.app.grid.geometry import get_manhattan_distance
 from game.app.simulation.phases import PHASE_TELEGRAPH
-from game.app.simulation.state import Entity, WorldState
+from game.app.simulation.state import WorldState
 
 # GDD §5 자폭형 — 접근 후 2틱 예고 뒤 폭발.
 DEFAULT_LEAD_TICKS = 2
@@ -36,36 +35,10 @@ MIN_LEAD_TICKS = 1
 # 기본 인지 폭. 남은 틱이 이 값 이하일 때만 인지 변수가 참이 된다.
 VISIBLE_TICKS = 1
 
-# GDD §6.2 예측 회로가 주는 보너스. 인지 폭을 이만큼 넓힌다.
-PREDICTOR_BONUS_TICKS = 1
 
-# 예측 회로 보유 여부를 담는 플래그 이름. 규칙표가 쓰는 A~D 와 겹치지 않는다.
-FORESIGHT_FLAG = "FORESIGHT"
-
-# 이 이하로 남으면 경고를 danger 로 올린다 (design/README.md ThreatNotice).
-IMMINENT_TICKS = 1
-
-TONE_DANGER = "danger"
-TONE_NEUTRAL = "neutral"
-
-# 색은 정보의 유일한 채널이 될 수 없다 — 글리프를 함께 낸다 (design/README.md).
-# 이모지를 쓰지 않는 것도 같은 문서의 규칙이다.
-GLYPH_IMMINENT = "▲"
-GLYPH_PENDING = "△"
-
-
-@dataclass(frozen=True)
-class ThreatNotice:
-    """UI 의 ThreatNotice 가 그대로 받는 값 (design/README.md 컴포넌트 계약).
-
-    LogEntry 가 LogRow 에 대응하듯 이것은 경고 배너에 대응한다. 코어가 남은 틱을
-    내지 않으면 UI 는 `3틱 후 피격` 을 그릴 수 없다.
-    """
-
-    text: str
-    ticks: int
-    glyph: str
-    tone: str
+# 취소 사유. 어느 스위치를 볼지 이것이 가른다.
+CANCEL_BY_HIT = "피격"
+CANCEL_BY_ACT = "다른 행동"
 
 
 @dataclass
@@ -85,6 +58,14 @@ class Telegraph:
     # 시전자를 먼저 죽이는 것이 예고에 대한 또 하나의 답이다. 보스의 확정
     # 광역기처럼 그 답을 막아야 하는 예고만 False 로 등록한다.
     cancel_on_death: bool = True
+    # 시전자가 **다른 행동을 하면** 취소되는가 (설계/5_스킬 §10.3).
+    #
+    # **기본이 False 인 것이 중요하다.** 전부에 걸면 자폭형 몬스터가 다음 틱에 움직이면서
+    # 스스로 취소해 영영 안 터진다 — 지금 콘텐츠의 뜻이 통째로 바뀐다. 켜는 것은 스킬
+    # 데이터이고, 그것이 「잠그지 않고 취소되게 한다」를 **고른 스킬에만** 적용하는 길이다.
+    cancel_on_act: bool = False
+    # 시전자가 **맞으면** 취소되는가. 위와 같은 이유로 기본이 False 다.
+    cancel_on_hit: bool = False
 
     def has_tile(self, position: tuple[int, int]) -> bool:
         """그 좌표가 피격 예정 타일인가.
@@ -107,45 +88,6 @@ class Telegraph:
             남은 틱이 인지 폭 안이면 True.
         """
         return self.remaining_ticks <= self.visible_ticks + foresight_ticks
-
-
-def get_foresight_ticks(entity: Entity) -> int:
-    """그 엔티티의 예고 인지 보너스 틱 (GDD §6.2 예측 회로).
-
-    아이템 모듈 접사는 아직 없다. 지금은 플래그 하나로 켜고 끄되 조회 지점을
-    여기 하나로 모아 둔다 — 흩어 놓으면 모듈 시스템이 붙을 때 전부 찾아야 한다.
-
-    Args:
-        entity: 기준 엔티티.
-
-    Returns:
-        인지 폭에 더할 틱 수. 예측 회로가 없으면 0.
-    """
-    return PREDICTOR_BONUS_TICKS if entity.flags.get(FORESIGHT_FLAG, False) else 0
-
-
-def build_blast_tiles(center: tuple[int, int], radius: int) -> tuple[tuple[int, int], ...]:
-    """중심에서 맨해튼 반경 안의 좌표를 모은다.
-
-    거리는 이동과 같은 맨해튼이다 (F-5 결정). 체비셰프로 재면 대각으로 한 칸
-    물러난 자리가 안전해 보이는데 실제로는 두 칸이라 회피 판단이 어긋난다.
-
-    Args:
-        center: 중심 좌표.
-        radius: 맨해튼 반경. 0 이면 중심 한 칸이다.
-
-    Returns:
-        정렬된 좌표들. 벽·방 밖은 거르지 않는다 — 무엇을 표시할지는 호출자가 정한다.
-    """
-    x0, y0 = center
-    return tuple(
-        sorted(
-            (x, y)
-            for y in range(y0 - radius, y0 + radius + 1)
-            for x in range(x0 - radius, x0 + radius + 1)
-            if get_manhattan_distance(center, (x, y)) <= radius
-        )
-    )
 
 
 @dataclass
@@ -171,6 +113,8 @@ class TelegraphBoard:
         *,
         visible_ticks: int = VISIBLE_TICKS,
         cancel_on_death: bool = True,
+        cancel_on_act: bool = False,
+        cancel_on_hit: bool = False,
     ) -> Telegraph:
         """예고를 등록한다. 이 틱에는 터지지 않는다.
 
@@ -182,6 +126,8 @@ class TelegraphBoard:
             lead_ticks: 발동까지 남은 틱. MIN_LEAD_TICKS 아래로는 내려가지 않는다.
             visible_ticks: 인지 폭. lead_ticks 를 넘기면 전 구간이 보인다.
             cancel_on_death: 시전자가 죽으면 취소할 것인가.
+            cancel_on_act: 시전자가 다른 행동을 하면 취소할 것인가.
+            cancel_on_hit: 시전자가 맞으면 취소할 것인가.
 
         Returns:
             등록된 예고.
@@ -196,6 +142,8 @@ class TelegraphBoard:
             damage=damage,
             visible_ticks=visible_ticks,
             cancel_on_death=cancel_on_death,
+            cancel_on_act=cancel_on_act,
+            cancel_on_hit=cancel_on_hit,
         )
         self.pending.append(telegraph)
         return telegraph
@@ -228,6 +176,49 @@ class TelegraphBoard:
             fired.append(telegraph)
         self.pending = survivors
         return tuple(fired)
+
+    def apply_cancel(self, state: WorldState, log: EventLog, caster_id: str, reason: str) -> int:
+        """그 시전자의 예고를 취소한다.
+
+        **취소가 벌이 아니라 선택이다** (설계/5_스킬 §10.3). 시전을 잠그면 그 틱 동안
+        규칙표가 안 도는데, 규칙표가 주인공인 게임에서 무결정 구간은 그 자체로 손해다 —
+        그래서 잠그는 대신 다른 행동이 취소하게 하고, 무엇을 할지는 규칙표가 정한다.
+
+        **켜 둔 것만 취소한다.** `cancel_on_act`·`cancel_on_hit` 가 꺼져 있으면 남는다 —
+        전부에 걸면 자폭형 몬스터가 다음 틱에 움직이면서 스스로 취소해 영영 안 터진다.
+
+        Args:
+            state: 세계 상태.
+            log: 이벤트 로그.
+            caster_id: 시전자.
+            reason: 취소 사유. 로그에 그대로 적힌다.
+
+        Returns:
+            취소한 수.
+        """
+        alive: list[Telegraph] = []
+        dropped = 0
+        for telegraph in self.pending:
+            if telegraph.caster_id != caster_id or not self._check_cancels(telegraph, reason):
+                alive.append(telegraph)
+                continue
+            self._record(state, log, telegraph, f"{telegraph.skill_id} 예고 취소", reason, None)
+            dropped += 1
+        self.pending = alive
+        return dropped
+
+    @staticmethod
+    def _check_cancels(telegraph: Telegraph, reason: str) -> bool:
+        """이 사유로 그 예고가 취소되는가.
+
+        Args:
+            telegraph: 볼 예고.
+            reason: 취소 사유.
+
+        Returns:
+            취소되면 True.
+        """
+        return telegraph.cancel_on_hit if reason == CANCEL_BY_HIT else telegraph.cancel_on_act
 
     def list_active(self) -> tuple[Telegraph, ...]:
         """진행 중인 예고들.
@@ -373,28 +364,3 @@ class TelegraphBoard:
                 target_id=target_id,
             )
         )
-
-
-def build_threat_notice(
-    board: TelegraphBoard, position: tuple[int, int], *, foresight_ticks: int = 0
-) -> ThreatNotice | None:
-    """그 칸에 대한 경고 배너를 만든다 (design/README.md ThreatNotice).
-
-    Args:
-        board: 예고 보드.
-        position: 기준 좌표. 보통 플레이어가 선 자리다.
-        foresight_ticks: 예측 회로가 넓혀 주는 인지 폭.
-
-    Returns:
-        표시할 경고. 인지 가능한 위험이 없으면 None.
-    """
-    ticks = board.get_remaining(position, foresight_ticks=foresight_ticks)
-    if ticks is None:
-        return None
-    is_imminent = ticks <= IMMINENT_TICKS
-    return ThreatNotice(
-        text=f"위험 예고 — {ticks}틱 후 피격",
-        ticks=ticks,
-        glyph=GLYPH_IMMINENT if is_imminent else GLYPH_PENDING,
-        tone=TONE_DANGER if is_imminent else TONE_NEUTRAL,
-    )

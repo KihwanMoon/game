@@ -126,6 +126,8 @@ class BlastActionMixin:
             # 플레이어가 거는 것은 적이 확실히 볼 수 있어야 「비켜선다」가 성립한다.
             "visible_ticks": skill.telegraph,
             "cancel_on_death": True,
+            "cancel_on_act": skill.cancel_on_act,
+            "cancel_on_hit": skill.cancel_on_hit,
         }
 
     def _register_telegraph(self, entity: Entity, plan: PlannedAction, telegraph: dict) -> None:

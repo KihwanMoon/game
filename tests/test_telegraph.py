@@ -15,6 +15,8 @@ from game.app.simulation.telegraph import (
     DEFAULT_LEAD_TICKS,
     MIN_LEAD_TICKS,
     TelegraphBoard,
+)
+from game.app.simulation.telegraph_shape import (
     build_blast_tiles,
 )
 from game.config import ROOM_TEMPLATES_PATH

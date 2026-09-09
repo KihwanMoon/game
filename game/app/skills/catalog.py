@@ -61,6 +61,11 @@ class SkillDef:
     reach: int | None = None
     # 0 이면 즉시. >0 이면 그 틱만큼 예고를 띄운다 (설계/5_스킬 §10).
     telegraph: int = 0
+    # 시전 중 **다른 행동을 하면** 취소되는가 (§10.3). 취소가 벌이 아니라 선택이 되는
+    # 자리다 — 잠그면 그 틱 동안 규칙표가 안 돈다.
+    cancel_on_act: bool = False
+    # 시전 중 **맞으면** 취소되는가. 「안전한 자리에서 쏘는가」를 규칙표에 묻는다.
+    cancel_on_hit: bool = False
     # 대상 최대 HP 의 정수 퍼센트. 고정값이 아닌 이유는 회복이 덩치에 비례해야 해서다.
     heal_pct: int = 0
     # 받는 피해를 몇 퍼센트 줄이고 몇 틱 유지하는가 (GUARD 계열).
@@ -108,6 +113,8 @@ def build_skill_def(raw: dict) -> SkillDef:
         cooldown=int(raw.get("cooldown", 0)),
         reach=None if raw.get("range") is None else int(raw["range"]),
         telegraph=int(raw.get("telegraph", 0)),
+        cancel_on_act=bool(raw.get("cancel_on_act", False)),
+        cancel_on_hit=bool(raw.get("cancel_on_hit", False)),
         heal_pct=int(raw.get("heal_pct", 0)),
         guard_pct=int(raw.get("guard_pct", 0)),
         guard_ticks=int(raw.get("guard_ticks", 0)),

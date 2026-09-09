@@ -29,7 +29,8 @@ from game.app.grid.geometry import get_manhattan_distance, iter_steps
 from game.app.simulation.plan import STATUS_GUARD, EngineConfig, PlannedAction
 from game.app.simulation.scaling import get_scaled_enemy_stats
 from game.app.simulation.state import Entity, WorldState
-from game.app.simulation.telegraph import TelegraphBoard, build_blast_tiles
+from game.app.simulation.telegraph import TelegraphBoard
+from game.app.simulation.telegraph_shape import build_blast_tiles
 from game.app.skills.catalog import find_skill
 from game.schemas.room import WALKABLE_TILES
 
@@ -191,6 +192,9 @@ def register_blast(
         lead_ticks=telegraph["lead_ticks"],
         visible_ticks=telegraph["visible_ticks"],
         cancel_on_death=telegraph["cancel_on_death"],
+        # 몬스터 절에는 없다 — 없으면 안 켠다. 켜는 것은 스킬 데이터다 (§10.3).
+        cancel_on_act=bool(telegraph.get("cancel_on_act", False)),
+        cancel_on_hit=bool(telegraph.get("cancel_on_hit", False)),
     )
     return f"예고 {len(tiles)}칸 — {telegraph['lead_ticks']}틱 뒤 발동"
 
