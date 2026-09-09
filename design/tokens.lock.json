@@ -1,7 +1,7 @@
 {
   "_note": "design/tokens/*.css 가 정본(Claude Design 7a323244)에서 받아온 순간의 값이다. 게이트가 이것과 대조해 **사본이 손대졌는지**를 본다 — 정본이 바뀐 것은 여기서 못 잡고, 받아올 때 알게 된다. 값을 고쳐야 하면 이 파일이 아니라 정본을 고치고 `uv run python -m scripts.lock_design_tokens` 로 다시 잠근다.",
   "source_project": "7a323244-94a4-426b-a3b5-1bb1c949c195",
-  "token_count": 185,
+  "token_count": 186,
   "tokens": {
     "borders.css:portrait:--border": "var(--bw) solid var(--line)",
     "borders.css:portrait:--border-accent": "var(--bw) solid var(--line-accent)",
@@ -161,6 +161,7 @@
     "spacing.css:portrait:--tap-min": "44px",
     "spacing.css:portrait:--thumb-md": "56px",
     "spacing.css:portrait:--thumb-sm": "32px",
+    "spacing.css:portrait:--vital-h": "32px",
     "typography.css:portrait:--font-body": "\"IBM Plex Sans KR\",\"Zilla Slab\",system-ui,sans-serif",
     "typography.css:portrait:--font-display": "\"Zilla Slab\",\"IBM Plex Sans KR\",Georgia,serif",
     "typography.css:portrait:--font-mono": "\"IBM Plex Mono\",\"IBM Plex Sans KR\",ui-monospace,monospace",

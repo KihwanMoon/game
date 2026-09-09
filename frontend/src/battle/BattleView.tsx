@@ -429,7 +429,13 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         scrollsMax: readCarried(props.setup, 'SCROLL'),
         cpuUsed,
         cpuBudget,
+        attack: player?.attack ?? 0,
+        defense: player?.defense ?? 0,
+        attackRange: player?.attackRange ?? 0,
+        initiative: player?.initiative ?? 0,
         cooldowns: player?.cooldowns,
+        statuses: player?.statuses,
+        flags: player?.flags,
         skills: listRulesetSkills(session.ruleset.rules),
         totals: buildCooldownTotals(session.engine.config.skills),
       })}

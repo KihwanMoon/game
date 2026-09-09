@@ -162,13 +162,16 @@
 /* 이름은 왼쪽, 값은 오른쪽. 값이 세로로 줄맞춤돼야 훑을 때 눈이 한 줄로 내려간다.
 
    **규칙 줄보다 낮다.** 규칙 줄은 두 줄(조건+행동)이라 54px 인데, 여기는 한 줄이라
-   그 높이를 쓰면 다섯 줄이 화면 절반을 먹는다. */
+   그 높이를 쓰면 다섯 줄이 화면 절반을 먹는다.
+
+   **그래서 `--tap-min` 도 안 쓴다** (2026-09-09). 이 줄들은 `<li>` 이고 누르는 것이
+   아니라 읽는 것인데 44px 을 쓰고 있었다 — 손가락 몫이 빈 자리로 나가고 있었다. */
 .battle__vital {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-3);
-  min-height: var(--tap-min);
+  min-height: var(--vital-h);
   padding: var(--sp-0) var(--plan-pad);
   border-bottom: var(--border);
   font-family: var(--font-mono);
@@ -717,11 +720,10 @@
 
 /* 상태 줄도 붙는다 — 바로 아래에. 전투에서 가장 자주 보는 수치가 체력이라, 이것이
    스크롤과 함께 올라가면 이 배치의 뜻이 사라진다. */
-.battle--portrait .battle__vitals {
-  position: sticky;
-  inset-block-start: var(--bar-top);
-  z-index: 2;
-}
+/* **여기 `position: sticky` 가 남아 있었다** (2026-09-09). 상태가 상단의 전용 줄이던
+   때의 규칙인데, 2026-09-08 에 시트의 첫 탭으로 옮겨 간 뒤로는 하는 일이 하나뿐이었다 —
+   `top: 44px` 이 스크롤 상자 안에서 목록을 **44px 아래로 밀어** 탭 바와 첫 줄 사이에
+   설명되지 않는 빈 칸을 만들었다. 붙일 위쪽 바가 이제 없다. */
 
 /* 조작은 통째로 둘째 줄. DOM 순서는 안 바꾼다 — 그것이 탭 순서다. */
 /* **도면 밑에 제 자리를 갖는다** (2026-09-08, 실제 요청). 머리에 있던 때는 화면을 여는

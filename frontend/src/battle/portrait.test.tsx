@@ -563,9 +563,62 @@ describe('★ 한정된 화면의 공간 예산', () => {
 
 
 
-  it('★ 머리 두 줄이 스크롤에 안 딸려 간다', () => {
-    for (const selector of ['.battle--portrait .battle__bar--top', '.battle--portrait .battle__vitals']) {
-      expect(cutRule(selector), selector).toContain('position: sticky')
-    }
+  it('★ 상단 바가 스크롤에 안 딸려 간다 — 지금 어디의 몇 틱인지가 나가면 안 된다', () => {
+    expect(cutRule('.battle--portrait .battle__bar--top')).toContain('position: sticky')
+  })
+
+  it('★ 상태 목록은 **안 붙는다** — 붙을 위쪽 바가 없다', () => {
+    // 상태가 상단 전용 줄이던 때의 규칙이 남아 있었다. 시트의 첫 탭으로 옮겨 간 뒤로는
+    // `top: 44px` 이 스크롤 상자 안에서 목록을 44px 아래로 밀기만 했고, 탭 바와 첫 줄
+    // 사이의 그 빈 칸을 아무도 설명하지 못했다 (2026-09-09 실제 신고).
+    expect(cutRule('.battle--portrait .battle__vitals')).not.toContain('position: sticky')
+  })
+})
+
+describe('상태 탭이 규칙표가 읽는 값을 보여 준다 (2026-09-09)', () => {
+  // **빈 자리를 값으로 채운 것이다.** 다섯 줄만 서 있어서 시트의 185px 이 비어 있었는데,
+  // 그 사이 규칙표가 읽는 축 여섯은 화면 어디에도 없었다 — 사거리가 달라진 것도, 둔화에
+  // 걸린 것도, 깃발을 세운 것도 로그에서 거꾸로 짚어야 했다.
+  const base = {
+    hp: 40, hpMax: 100, potions: 2, potionsMax: 3, scrolls: 1, scrollsMax: 1,
+    cpuUsed: 5, cpuBudget: 8,
+  }
+
+  it('★ 싸우는 값 넷을 적는다 — `적거리 <= 사거리` 를 눈으로 확인할 수 있어야 한다', () => {
+    const rows = buildVitalRows({ ...base, attack: 12, defense: 7, attackRange: 4, initiative: 55 })
+    const find = (label: string) => rows.find((row) => row.label === label)?.value
+    expect(find('공격')).toBe('12')
+    expect(find('방어')).toBe('7')
+    expect(find('사거리')).toBe('4')
+    expect(find('선공')).toBe('55')
+  })
+
+  it('★ **모르는 것을 0 으로 적지 않는다** — 재생 프레임은 이 값을 안 들고 있다', () => {
+    const rows = buildVitalRows(base)
+    expect(rows.some((row) => row.label === '공격')).toBe(false)
+    expect(rows.some((row) => row.label === '사거리')).toBe(false)
+  })
+
+  it('★ 상태이상과 깃발은 **한 줄씩**이다 — 자리는 고정이고 값만 바뀐다', () => {
+    // 셋을 각각 줄로 두면 안 걸린 동안 「중독 0틱」이 셋 서 있고, 걸릴 때만 그리면
+    // 줄 수가 흔들린다. 둘 다 나쁘다.
+    const quiet = buildVitalRows(base)
+    expect(quiet.find((row) => row.label === '상태이상')?.value).toBe('없음')
+    expect(quiet.find((row) => row.label === '깃발')?.value).toBe('없음')
+
+    const busy = buildVitalRows({
+      ...base,
+      statuses: new Map([['SLOW', 3], ['POISON', 0], ['STUN', 2]]),
+      flags: new Map([['A', true], ['B', false], ['C', true]]),
+    })
+    expect(busy.find((row) => row.label === '상태이상')?.value).toBe('둔화 3틱 · 기절 2틱')
+    expect(busy.find((row) => row.label === '깃발')?.value).toBe('A · C')
+    expect(busy.filter((row) => row.label === '상태이상')).toHaveLength(1)
+  })
+
+  it('★ 읽는 줄은 손가락 몫을 안 쓴다 — `<li>` 는 누르는 것이 아니다', () => {
+    // 44px 을 쓰던 동안 다섯 줄이 220px 을 먹었고, 그 44 는 빈 자리로 나가고 있었다.
+    expect(cutRule('.battle__vital')).toContain('min-height: var(--vital-h)')
+    expect(readToken('--vital-h')).toBeLessThan(readToken('--tap-min'))
   })
 })
