@@ -238,13 +238,23 @@ class TickEngine:
         """
         executor = self.actions
         order = self._sort_by_initiative(plans)
+        # **둔화는 행동 전체를 늦춘다** (2026-09-10 결정). 쉬는 개체는 두 고리 모두에서
+        # 빠진다 — 이동만 막던 때는 안 움직여도 때리는 사격형에게 효과가 없었다.
+        resting = {
+            plan.entity_id
+            for plan in order
+            if (entity := self._get_live_entity(plan)) is not None
+            and executor.record_rest(entity, plan)
+        }
         for plan in order:
             entity = self._get_live_entity(plan)
-            if entity is not None and plan.action_id in MOVE_ACTIONS:
+            if entity is None or plan.entity_id in resting:
+                continue
+            if plan.action_id in MOVE_ACTIONS:
                 executor.apply_move(entity, plan)
         for plan in order:
             entity = self._get_live_entity(plan)
-            if entity is None:
+            if entity is None or plan.entity_id in resting:
                 continue
             self._apply_settled(executor, entity, plan)
             executor.apply_flag(entity, plan)

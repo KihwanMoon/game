@@ -123,11 +123,29 @@ export class ActionExecutor {
    * @param entity 이동할 엔티티.
    * @param plan 실행할 계획.
    */
-  applyMove(entity: Entity, plan: PlannedAction): void {
-    if (checkSlowedThisTick(entity, this.state.tick)) {
-      this.recordResult(entity.entityId, plan, '둔화 — 이번 틱은 못 움직인다', null)
-      return
+  /**
+   * 둔화로 이번 틱을 쉬는가 — 쉬면 적고 true 를 돌려준다.
+   *
+   * **이동만이 아니라 행동 전체다** (2026-09-10 결정). 예전에는 이동 경로에서만 봤고,
+   * 그래서 `SLOW` 는 **안 움직여도 때리는 사격형에게 아무 효과가 없었다** — 이미 붙은
+   * 돌진형에게도 없었다.
+   *
+   * **시전은 안 끊긴다.** 쉬는 틱은 아무 행동도 안 한 틱이고, 예고를 끊는 것은
+   * 「다른 행동을 했다」는 사실이다.
+   *
+   * @param entity 행위자.
+   * @param plan 이번 틱의 계획. 로그에 무엇을 하려 했는지 남긴다.
+   * @returns 쉬면 true. 그때 부르는 쪽은 그 계획을 실행하지 않는다.
+   */
+  recordRest(entity: Entity, plan: PlannedAction): boolean {
+    if (!checkSlowedThisTick(entity, this.state.tick)) {
+      return false
     }
+    this.recordResult(entity.entityId, plan, '둔화 — 이번 틱은 쉰다', null)
+    return true
+  }
+
+  applyMove(entity: Entity, plan: PlannedAction): void {
     if (DEFERRED_ACTIONS.has(plan.actionId)) {
       this.recordDeferred(entity, plan)
       return

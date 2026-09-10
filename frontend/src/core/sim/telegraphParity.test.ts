@@ -211,3 +211,47 @@ describe('마법 셋 이식', () => {
     expect(moved).toBe(3)
   })
 })
+
+describe('둔화가 행동을 늦춘다 (2026-09-10 결정)', () => {
+  it('★ 쉬는 틱에는 때리지도 못한다 — 이동만 막던 때는 사격형에 효과가 없었다', () => {
+    const { engine, player } = buildProbe(0)
+    const target = engine.state.listHostiles(player)[0]
+    if (target === undefined) {
+      throw new Error('적이 없다')
+    }
+    target.position = { x: player.position.x + 1, y: player.position.y }
+    player.statuses.set('SLOW', 4)
+    const before = target.hp
+
+    engine.state.tick = 1 // 홀수 틱이 쉬는 틱이다
+    engine.applyActions([
+      createPlannedAction({
+        entityId: PLAYER_ENTITY_ID,
+        actionId: 'ATTACK',
+        targetId: target.entityId,
+      }),
+    ])
+    expect(target.hp, '쉬는 틱에 때렸다').toBe(before)
+
+    engine.state.tick = 2
+    engine.applyActions([
+      createPlannedAction({
+        entityId: PLAYER_ENTITY_ID,
+        actionId: 'ATTACK',
+        targetId: target.entityId,
+      }),
+    ])
+    expect(target.hp, '쉬지 않는 틱에도 못 때렸다').toBeLessThan(before)
+  })
+
+  it('★ 쉬는 틱은 「다른 행동」이 아니다 — 둔화 한 번이 마법을 지우면 안 된다', () => {
+    const { engine, player } = buildProbe(3, { act: true })
+    engine.applyActions([castPlan()])
+    player.statuses.set('SLOW', 4)
+    engine.state.tick = 1
+    engine.applyActions([
+      createPlannedAction({ entityId: PLAYER_ENTITY_ID, actionId: 'APPROACH' }),
+    ])
+    expect(engine.telegraphs.listActive().length).toBe(1)
+  })
+})

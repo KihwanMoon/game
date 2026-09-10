@@ -19,12 +19,11 @@ from game.app.simulation.plan import (
     GUARD_SKILL_ID,
     MELEE_REACH,
     PHASE_ACT,
-    SLOW_EVERY,
     STATUS_GUARD,
-    STATUS_SLOW,
     EngineConfig,
     PlannedAction,
 )
+from game.app.simulation.slow import check_slowed_this_tick
 from game.app.simulation.state import Entity, WorldState
 from game.app.simulation.support_actions import SupportActionMixin
 from game.app.simulation.telegraph import CANCEL_BY_HIT, TelegraphBoard
@@ -56,25 +55,6 @@ TILE_MOVE_TARGETS: dict[str, set[int]] = {
     "MOVE_TO_EXIT": {TILE_DOOR, TILE_STAIRS},
     "MOVE_TO_HEAL": {TILE_SPRING},
 }
-
-
-def check_slowed_this_tick(entity: Entity, tick: int) -> bool:
-    """둔화 때문에 이번 틱에 못 움직이는가.
-
-    **둔화는 두 틱에 한 칸이다** (GDD §211 의 「이동 2틱 소모」). 없으면 `SLOW` 는 인지
-    변수에만 있고 걸어도 아무 일이 없다 — 상태를 거는 스킬이 빈 껍데기가 되는 자리다.
-
-    **틱의 홀짝으로 가른다.** 걸린 시점을 따로 들고 있으면 그것이 세계 상태가 되고 두
-    코어가 그 값을 함께 얼려야 한다. 홀짝은 이미 있는 값이라 그럴 필요가 없다 (R5).
-
-    Args:
-        entity: 움직이려는 엔티티.
-        tick: 지금 틱.
-
-    Returns:
-        못 움직이면 True.
-    """
-    return entity.statuses.get(STATUS_SLOW, 0) > 0 and tick % SLOW_EVERY != 0
 
 
 @dataclass
@@ -172,6 +152,29 @@ class ActionExecutor(SupportActionMixin, BlastActionMixin):
         if ticks > 0:
             entity.cooldowns[action_id] = ticks
 
+    def record_rest(self, entity: Entity, plan: PlannedAction) -> bool:
+        """둔화로 이번 틱을 쉬는가 — 쉬면 적고 True 를 돌려준다.
+
+        **이동만이 아니라 행동 전체다** (2026-09-10 결정). 예전에는 이동 경로에서만
+        봤고, 그래서 `SLOW` 는 **안 움직여도 때리는 사격형에게 아무 효과가 없었다** —
+        이미 붙은 돌진형에게도 없었다. 서리 장판이 피해 0 으로는 어느 표에서도 값을
+        못 한 원인이 그것이었다 (설계/5_스킬 §10.10).
+
+        **시전은 안 끊긴다.** 쉬는 틱은 아무 행동도 안 한 틱이고, 예고를 끊는 것은
+        「다른 행동을 했다」는 사실이다 (§10.3).
+
+        Args:
+            entity: 행위자.
+            plan: 이번 틱의 계획. 로그에 무엇을 하려 했는지 남긴다.
+
+        Returns:
+            쉬면 True. 그때 부르는 쪽은 그 계획을 실행하지 않는다.
+        """
+        if not check_slowed_this_tick(entity, self.state.tick):
+            return False
+        self._record(entity.entity_id, plan, "둔화 — 이번 틱은 쉰다", None)
+        return True
+
     def _find_tiles(self, kinds: set[int]) -> tuple[tuple[int, int], ...]:
         """방에서 해당 종류의 타일 좌표를 모은다.
 
@@ -235,9 +238,6 @@ class ActionExecutor(SupportActionMixin, BlastActionMixin):
         """
         if plan.action_id in DEFERRED_ACTIONS:
             self.record_deferred(entity, plan)
-            return
-        if check_slowed_this_tick(entity, self.state.tick):
-            self._record(entity.entity_id, plan, "둔화 — 이번 틱은 못 움직인다", None)
             return
         # 타일을 목표로 하는 이동들. 표로 두는 이유는 가지가 늘 때마다 return 이 하나씩
         # 늘어 함수가 상한에 닿기 때문이고, 무엇보다 **셋이 같은 모양**이라 그렇다.

@@ -291,15 +291,27 @@ export class TickEngine {
   applyActions(plans: readonly PlannedAction[]): void {
     const executor = this.actions
     const order = this.sortByInitiative(plans)
+    // **둔화는 행동 전체를 늦춘다** (2026-09-10 결정). 쉬는 개체는 두 고리 모두에서
+    // 빠진다 — 이동만 막던 때는 안 움직여도 때리는 사격형에게 효과가 없었다.
+    const resting = new Set<string>()
     for (const plan of order) {
       const entity = this.getLiveEntity(plan)
-      if (entity !== undefined && MOVE_ACTIONS.has(plan.actionId)) {
+      if (entity !== undefined && executor.recordRest(entity, plan)) {
+        resting.add(plan.entityId)
+      }
+    }
+    for (const plan of order) {
+      const entity = this.getLiveEntity(plan)
+      if (entity === undefined || resting.has(plan.entityId)) {
+        continue
+      }
+      if (MOVE_ACTIONS.has(plan.actionId)) {
         executor.applyMove(entity, plan)
       }
     }
     for (const plan of order) {
       const entity = this.getLiveEntity(plan)
-      if (entity === undefined) {
+      if (entity === undefined || resting.has(plan.entityId)) {
         continue
       }
       this.applySettled(executor, entity, plan)
