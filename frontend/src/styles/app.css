@@ -316,6 +316,19 @@ body {
   text-overflow: ellipsis;
 }
 
+/* 줄에 붙는 작은 표. **이름 옆에 있어야 한다** — 봇을 테스터로 표시해 두고 사람 수가
+   안 오르는 것을 보면 「표시가 안 먹었나」를 의심하게 되는데, 여기 적혀 있으면 그
+   자리에서 답이 된다 (2026-09-10). */
+.adminrow__tag {
+  margin-inline-start: var(--sp-2);
+  padding: var(--sp-0) var(--sp-2);
+  border: var(--border);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+}
+
 .bots__edit {
   display: flex;
   flex-wrap: wrap;

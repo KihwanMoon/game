@@ -143,31 +143,61 @@ def test_a_normal_account_cannot_mark_anyone(client):
     assert response.status_code == 404
 
 
-def test_a_bot_cannot_be_marked(client):
-    """★ 봇에 붙으면 G1 이 재는 것이 다시 러너가 된다.
+def test_a_marked_bot_is_not_counted(client):
+    """★ **봇은 표시되지만 G1 에는 안 센다** (2026-09-10).
 
-    실측으로 봇을 안 거를 때와 거를 때의 판정이 뒤집혔다 — 「첫 패배 후 재도전」이
-    7명(통과)에서 1명(미달)이 됐고, 여섯이 봇이었다.
+    봇에 붙으면 G1 이 재는 것이 다시 러너가 된다 — 실측으로 봇을 안 거를 때와 거를 때의
+    판정이 뒤집혔다: 「첫 패배 후 재도전」이 7명(통과)에서 1명(미달)이 됐고 여섯이
+    봇이었다.
+
+    **그래서 막는 자리를 「표시」에서 「세기」로 옮겼다.** 예전에는 표시 자체를 막았는데,
+    그러면 층 깊이 간 봇을 화면 위에 고정해 두고 지켜보는 운영이 아예 안 된다. 표시는
+    붙되 `count_testers` 가 사람만 센다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.testers import count_bot_testers, count_testers
+
+    pool = get_pool()
+    admin = build_admin(client)
+    _, target = build_account(client)
+    with pool.connection() as connection:
+        connection.execute("UPDATE account SET is_bot = TRUE WHERE id = %s", (target,))
+
+    before = count_testers(pool)
+    body = client.post(
+        "/api/admin/testers/mark",
+        json={"account_id": target, "is_tester": True},
+        headers=build_headers(admin),
+    ).json()
+
+    # 표시는 붙고 줄도 목록에 뜬다 — 봇이라는 사실을 함께 싣는다.
+    row = find_row(body, target)
+    assert row is not None
+    assert row["is_tester"] is True
+    assert row["is_bot"] is True
+    assert count_bot_testers(pool) >= 1
+    # 그런데 G1 의 분모는 안 움직인다. **두 수를 더하지 않는다.**
+    assert count_testers(pool) == before
+    assert body["marked"] == before
+    assert body["marked_bots"] >= 1
+
+
+def test_a_marked_row_comes_first(client):
+    """★ 표시된 줄이 맨 위다 — 봇이 사람보다 자주 접속해도 순서가 안 뒤집힌다.
+
+    표시를 끄려면 그것을 찾을 수 있어야 하는데, 순서를 접속에 맡기면 사람 테스터가
+    쉬지 않고 도는 봇 아래로 밀린다.
     """
     from game.api.deps import get_pool
 
     admin = build_admin(client)
     _, target = build_account(client)
     with get_pool().connection() as connection:
-        connection.execute("UPDATE account SET is_bot = TRUE WHERE id = %s", (target,))
-
-    body = client.post(
-        "/api/admin/testers/mark",
-        json={"account_id": target, "is_tester": True},
-        headers=build_headers(admin),
-    ).json()
-    # 봇은 목록에도 안 나오고, 표시도 안 붙는다.
-    assert find_row(body, target) is None
-    with get_pool().connection() as connection:
-        row = connection.execute(
-            "SELECT is_tester FROM account WHERE id = %s", (target,)
-        ).fetchone()
-    assert row[0] is False
+        connection.execute(
+            "UPDATE account SET is_bot = TRUE, is_tester = TRUE WHERE id = %s", (target,)
+        )
+    body = client.get("/api/admin/testers", headers=build_headers(admin)).json()
+    assert body["rows"][0]["is_tester"] is True
 
 
 def test_the_list_carries_what_identifies_a_row(client):
@@ -182,6 +212,8 @@ def test_the_list_carries_what_identifies_a_row(client):
         "is_tester",
         "attempts",
         "last_seen",
+        # 봇인가. 표시는 되지만 G1 에는 안 세는 줄이라 화면이 갈라 적어야 한다.
+        "is_bot",
     }
 
 

@@ -10,6 +10,11 @@
  * 3회」를 재면 기준이 저절로 통과된다 — 순환이다. 제출 수는 누구인지 짚는 단서로만 쓴다.
  *
  * **표시는 권한이 아니다.** 켜도 그 계정에 생기는 것은 통계에 세어진다는 것뿐이다.
+ *
+ * **봇도 표시할 수 있다 (2026-09-10) — 다만 G1 에는 안 센다.** 층 깊이 간 봇을 화면 위에
+ * 고정해 두고 지켜보는 운영이 있는데, 목록에서 아예 빼 두면 그것이 안 된다. 대신 두 수를
+ * 갈라 적는다 — 하나로 합치면 화면은 5명을 채웠다고 하는데 게이트는 안 채워진 상태가
+ * 되고, 그 어긋남은 판정할 때에야 드러난다.
  */
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import type { TesterList, TesterView } from '../storage/testerAdmin'
@@ -36,6 +41,28 @@ export function formatWho(row: TesterView): string {
   return row.loginId === '' ? row.handle : `${row.loginId} (${row.handle})`
 }
 
+/**
+ * 패널 머리에 적을 한 줄.
+ *
+ * **두 수를 더하지 않는다.** 더하면 화면은 기준을 채웠다고 적는데 게이트는 안 채워진
+ * 상태가 되고, 그 어긋남은 G1 을 판정할 때에야 드러난다.
+ *
+ * @param marked 표시된 사람 수.
+ * @param markedBots 표시된 봇 수.
+ * @param minTesters 로드맵이 전제하는 수.
+ * @param total 목록에 뜬 계정 수.
+ * @returns 화면에 적을 말.
+ */
+export function formatTesterMeta(
+  marked: number,
+  markedBots: number,
+  minTesters: number,
+  total: number,
+): string {
+  const bots = markedBots === 0 ? '' : ` · 봇 ${String(markedBots)}개(안 셈)`
+  return `사람 ${String(marked)}명 / 기준 ${String(minTesters)}명${bots} · 계정 ${String(total)}개`
+}
+
 /** TesterPanel 이 받는 props. */
 export interface TesterPanelProps {
   readonly list: TesterList | undefined
@@ -56,12 +83,19 @@ function renderRow(
 ): React.JSX.Element {
   return (
     <div className={`adminrow${row.isTester ? ' adminrow--picked' : ''}`} key={row.accountId}>
-      <span className="adminrow__name">{formatWho(row)}</span>
-      {/* 참/거짓을 색으로만 적지 않는다 — 글리프와 글자를 함께 쓴다. */}
+      <span className="adminrow__name">
+        {formatWho(row)}
+        {/* **봇이라는 사실이 줄에 붙어 있어야 한다.** 표시해 두고 사람 수가 안 오르는
+            것을 보면 「표시가 안 먹었나」를 의심하게 되는데, 여기 적혀 있으면 그 자리에서
+            답이 된다. */}
+        {row.isBot ? <span className="adminrow__tag">봇</span> : null}
+      </span>
+      {/* 참/거짓을 색으로만 적지 않는다 — 글리프와 글자를 함께 쓴다. 봇은 표시돼도
+          G1 에 안 세므로 다른 말을 적는다 — 「테스터」라 적으면 분모로 읽힌다. */}
       <GlyphState
-        state={row.isTester ? 'true' : 'false'}
+        state={row.isTester ? (row.isBot ? 'armed' : 'true') : 'false'}
         size="sm"
-        label={row.isTester ? '테스터' : '안 셈'}
+        label={row.isTester ? (row.isBot ? '표시(안 셈)' : '테스터') : '안 셈'}
       />
       <span className="adminrow__cell">{`제출 ${String(row.attempts)}건`}</span>
       <span className="adminrow__cell">{row.lastSeen === '' ? '접속 기록 없음' : row.lastSeen}</span>
@@ -86,21 +120,31 @@ function renderRow(
 export function TesterPanel(props: TesterPanelProps): React.JSX.Element {
   const rows = props.list?.rows ?? []
   const marked = props.list?.marked ?? 0
+  const markedBots = props.list?.markedBots ?? 0
   const minTesters = props.list?.minTesters ?? FALLBACK_MIN_TESTERS
 
   return (
     <div className="bots">
       <Panel
         title="테스터"
-        meta={`표시 ${String(marked)}명 / 기준 ${String(minTesters)}명 · 계정 ${String(rows.length)}개`}
+        meta={formatTesterMeta(marked, markedBots, minTesters, rows.length)}
         tone="panel"
         padded
       >
         <ValueExpr
-          text="여기서 표시한 계정만 G1 통계에 들어간다. 표시는 권한이 아니다 — 세어진다는 것뿐이다."
+          text="여기서 표시한 **사람** 계정만 G1 통계에 들어간다. 표시는 권한이 아니다 — 세어진다는 것뿐이다."
           size="sm"
           dim
         />
+        {/* 봇을 표시해 두었으면 그 사실을 위쪽에 적는다. 줄마다 적힌 것만으로는 목록을
+            훑기 전까지 안 보이고, 그 사이에 사람 수가 왜 안 오르는지를 다시 묻게 된다. */}
+        {markedBots > 0 ? (
+          <GlyphState
+            state="armed"
+            size="sm"
+            label={`봇 ${String(markedBots)}개가 표시돼 있다 — 목록 위에 고정될 뿐 G1 에는 안 센다`}
+          />
+        ) : null}
         {/* 분모가 모자라면 먼저 말한다. 미달로 읽히면 「분모를 안 정했다」가 판정 뒤에 숨는다. */}
         {marked < minTesters ? (
           <GlyphState

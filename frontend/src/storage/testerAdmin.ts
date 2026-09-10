@@ -20,13 +20,20 @@ export interface TesterView {
   readonly attempts: number
   /** 마지막 접속. 기록이 없으면 빈 문자열이다. */
   readonly lastSeen: string
+  /**
+   * 봇인가. **표시는 되지만 G1 에는 안 센다** — 화면이 갈라 적어야 「5명 중 3명」의
+   * 분모가 틀리게 읽히지 않는다.
+   */
+  readonly isBot: boolean
 }
 
 /** 표시 화면 한 벌. */
 export interface TesterList {
   readonly rows: readonly TesterView[]
-  /** 표시된 계정 수 — 이것이 G1 의 분모다. */
+  /** 표시된 **사람** 계정 수 — 이것이 G1 의 분모다. */
   readonly marked: number
+  /** 표시된 봇 수. **`marked` 와 더하지 않는다** — 더하면 화면과 게이트가 갈린다. */
+  readonly markedBots: number
   /** 로드맵이 전제하는 테스터 수. **서버가 준다** — 화면에 박으면 정본이 둘이 된다. */
   readonly minTesters: number
 }
@@ -39,12 +46,14 @@ interface RawTester {
   is_tester: boolean
   attempts: number
   last_seen: string
+  is_bot?: boolean
 }
 
 /** 서버가 주는 화면 한 벌. */
 interface RawTesterList {
   rows: RawTester[]
   marked: number
+  marked_bots?: number
   min_testers: number
 }
 
@@ -63,8 +72,10 @@ function parseTesterList(raw: RawTesterList): TesterList {
       isTester: row.is_tester,
       attempts: row.attempts,
       lastSeen: row.last_seen,
+      isBot: row.is_bot ?? false,
     })),
     marked: raw.marked,
+    markedBots: raw.marked_bots ?? 0,
     minTesters: raw.min_testers,
   }
 }

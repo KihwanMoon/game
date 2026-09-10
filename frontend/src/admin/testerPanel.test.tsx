@@ -8,7 +8,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { TesterPanel, formatWho } from './TesterPanel'
+import { TesterPanel, formatTesterMeta, formatWho } from './TesterPanel'
 import type { TesterList, TesterView } from '../storage/testerAdmin'
 
 const JOINED: TesterView = {
@@ -18,6 +18,7 @@ const JOINED: TesterView = {
   isTester: true,
   attempts: 791,
   lastSeen: '2026-09-05 10:00',
+  isBot: false,
 }
 
 const ANONYMOUS: TesterView = {
@@ -27,9 +28,26 @@ const ANONYMOUS: TesterView = {
   isTester: false,
   attempts: 1,
   lastSeen: '2026-09-04 21:13',
+  isBot: false,
 }
 
-const LIST: TesterList = { rows: [JOINED, ANONYMOUS], marked: 1, minTesters: 5 }
+/** 봇도 표시할 수 있다 (2026-09-10) — 다만 사람 수와 갈라 센다. */
+const BOT: TesterView = {
+  accountId: 114,
+  handle: 'bot3',
+  loginId: '',
+  isTester: true,
+  attempts: 412,
+  lastSeen: '2026-09-10 09:20',
+  isBot: true,
+}
+
+const LIST: TesterList = {
+  rows: [JOINED, ANONYMOUS],
+  marked: 1,
+  markedBots: 0,
+  minTesters: 5,
+}
 
 describe('formatWho', () => {
   it('가입한 계정은 아이디를 앞에 둔다', () => {
@@ -47,7 +65,7 @@ describe('TesterPanel', () => {
     const html = renderToStaticMarkup(
       <TesterPanel list={LIST} onMark={() => undefined} />,
     )
-    expect(html).toContain('표시 1명')
+    expect(html).toContain('사람 1명')
     expect(html).toContain('기준 5명')
   })
 
@@ -86,7 +104,7 @@ describe('TesterPanel', () => {
 
   it('아무것도 없으면 왜 없는지 적는다 — 빈 화면은 고장으로 읽힌다', () => {
     const html = renderToStaticMarkup(
-      <TesterPanel list={{ rows: [], marked: 0, minTesters: 5 }} onMark={() => undefined} />,
+      <TesterPanel list={{ rows: [], marked: 0, markedBots: 0, minTesters: 5 }} onMark={() => undefined} />,
     )
     expect(html).toContain('아무도 아직 접속하지 않았다')
   })
@@ -95,6 +113,34 @@ describe('TesterPanel', () => {
     const html = renderToStaticMarkup(
       <TesterPanel list={undefined} onMark={() => undefined} />,
     )
-    expect(html).toContain('표시 0명')
+    expect(html).toContain('사람 0명')
+  })
+})
+
+describe('봇을 테스터로 표시했을 때 (2026-09-10)', () => {
+  const WITH_BOT: TesterList = {
+    rows: [BOT, JOINED, ANONYMOUS],
+    marked: 1,
+    markedBots: 1,
+    minTesters: 5,
+  }
+
+  it('★ **두 수를 더하지 않는다** — 더하면 화면과 게이트가 갈린다', () => {
+    // 봇은 표시돼도 G1 에 안 센다. 합쳐 적으면 화면은 기준을 채웠다고 하는데 게이트는
+    // 안 채워진 상태가 되고, 그 어긋남은 판정할 때에야 드러난다.
+    expect(formatTesterMeta(1, 3, 5, 12)).toBe('사람 1명 / 기준 5명 · 봇 3개(안 셈) · 계정 12개')
+    expect(formatTesterMeta(4, 0, 5, 12)).toBe('사람 4명 / 기준 5명 · 계정 12개')
+  })
+
+  it('★ 봇 줄에 봇이라고 적는다 — 「표시가 안 먹었나」를 그 자리에서 끊는다', () => {
+    const html = renderToStaticMarkup(<TesterPanel list={WITH_BOT} onMark={() => undefined} />)
+    expect(html).toContain('adminrow__tag')
+    // 「테스터」라 적으면 분모로 읽힌다.
+    expect(html).toContain('표시(안 셈)')
+  })
+
+  it('★ 봇이 표시돼 있으면 위쪽에도 적는다 — 줄마다 적힌 것은 훑기 전엔 안 보인다', () => {
+    const html = renderToStaticMarkup(<TesterPanel list={WITH_BOT} onMark={() => undefined} />)
+    expect(html).toContain('G1 에는 안 센다')
   })
 })

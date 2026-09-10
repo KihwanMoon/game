@@ -24,6 +24,7 @@ from game.app.store.testers import (
     MIN_TESTERS,
     TesterRow,
     apply_tester_mark,
+    count_bot_testers,
     count_testers,
     list_candidates,
 )
@@ -55,6 +56,8 @@ class TesterView(BaseModel):
     is_tester: bool
     attempts: int
     last_seen: str
+    # 봇인가. 표시는 되지만 G1 에는 안 세는 줄이라 화면이 갈라 적어야 한다.
+    is_bot: bool = False
 
 
 class TesterListResponse(BaseModel):
@@ -66,6 +69,9 @@ class TesterListResponse(BaseModel):
 
     rows: list[TesterView]
     marked: int
+    # 표시된 봇 수. **`marked` 와 더하지 않는다** — 더하면 화면이 5명을 채웠다고 적는데
+    # G1 은 안 채워진 상태가 되고, 그 어긋남은 게이트를 판정할 때에야 드러난다.
+    marked_bots: int = 0
     # 로드맵이 전제하는 수. **화면에 박지 않고 보낸다** — 두 곳에 적으면 로드맵을 고쳤을
     # 때 한쪽만 따라가고, 그러면 같은 게이트가 두 기준으로 판정된다.
     min_testers: int
@@ -87,6 +93,7 @@ def build_tester_view(row: TesterRow) -> TesterView:
         is_tester=row.is_tester,
         attempts=row.attempts,
         last_seen=row.last_seen,
+        is_bot=row.is_bot,
     )
 
 
@@ -102,6 +109,7 @@ def build_tester_list() -> TesterListResponse:
     return TesterListResponse(
         rows=[build_tester_view(row) for row in list_candidates(pool, MAX_ROWS)],
         marked=count_testers(pool),
+        marked_bots=count_bot_testers(pool),
         min_testers=MIN_TESTERS,
     )
 

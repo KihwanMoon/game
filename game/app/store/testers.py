@@ -10,6 +10,15 @@
 사람이 표시한다.
 
 여기서 하는 것은 **표시와 조회뿐**이다. 세는 것은 `scripts/report_g1.py` 가 한다.
+
+**봇도 표시할 수 있다 (2026-09-10) — 다만 G1 에는 안 센다.** 예전에는 목록에서도 빼고
+표시도 막았는데, 그러면 「층 깊이 간 봇을 화면 위에 고정해 두고 지켜본다」 같은 운영이
+아예 안 된다. 대신 세는 자리(`count_testers`·`report_g1`)는 사람만 본다 — G1 이 묻는
+「첫 패배 후 규칙을 고쳐 재도전했는가」는 사람에게만 뜻이 있는 질문이고, 봇은 정의상
+늘 재도전하므로 섞이는 순간 그 수가 「러너가 몇 번 돌았는가」가 된다.
+
+그래서 화면은 두 수를 함께 보여 준다 — 사람 n/5 와 봇 m(안 셈). 하나만 보여 주면
+표시해 놓고 왜 안 오르는지를 다시 묻게 된다.
 """
 
 from dataclasses import dataclass
@@ -36,13 +45,19 @@ class TesterRow:
     is_tester: bool
     attempts: int
     last_seen: str
+    # 봇인가. **화면이 갈라 적어야 한다** — 표시는 되지만 G1 에는 안 세는 줄이라,
+    # 구분 없이 늘어놓으면 「5명 중 3명」의 분모가 화면에서 틀리게 읽힌다.
+    is_bot: bool = False
 
 
 def list_candidates(pool: ConnectionPool, limit: int) -> tuple[TesterRow, ...]:
     """표시할 수 있는 계정을 최근 접속 순으로 읽는다.
 
-    **봇과 비활성 계정은 뺀다.** 봇은 정의상 테스터가 아니고, 비활성 계정은 토큰이 이미
-    안 통하므로 표시해도 셀 것이 늘지 않는다.
+    **비활성 계정은 뺀다.** 토큰이 이미 안 통하므로 표시해도 셀 것이 늘지 않는다.
+
+    **봇은 뺐다가 다시 넣었다** (2026-09-10). 빼 두면 층 깊이 간 봇을 화면 위에 고정해
+    두는 운영이 안 된다 — 대신 `is_bot` 을 함께 실어 화면이 갈라 적게 하고, 세는 자리는
+    사람만 본다 (`count_testers`).
 
     Args:
         pool: 연결 풀.
@@ -65,12 +80,15 @@ def list_candidates(pool: ConnectionPool, limit: int) -> tuple[TesterRow, ...]:
             ")"
             " SELECT a.id, a.handle, COALESCE(a.login_id, ''), a.is_tester,"
             " COALESCE(tried.n, 0),"
-            " COALESCE(to_char(seen.at, 'YYYY-MM-DD HH24:MI'), '')"
+            " COALESCE(to_char(seen.at, 'YYYY-MM-DD HH24:MI'), ''), a.is_bot"
             " FROM account a"
             " LEFT JOIN seen ON seen.account_id = a.id"
             " LEFT JOIN tried ON tried.account_id = a.id"
-            " WHERE NOT a.is_bot AND a.deactivated_at IS NULL"
-            " ORDER BY a.is_tester DESC, seen.at DESC NULLS LAST, a.id DESC"
+            " WHERE a.deactivated_at IS NULL"
+            # 표시된 줄이 언제나 맨 위다. 표시를 끄려면 그것을 찾을 수 있어야 하고,
+            # 봇은 사람보다 훨씬 자주 접속하므로 순서를 접속에 맡기면 사람 테스터가
+            # 봇 열 줄 아래로 밀린다.
+            " ORDER BY a.is_tester DESC, a.is_bot, seen.at DESC NULLS LAST, a.id DESC"
             " LIMIT %s",
             (limit,),
         ).fetchall()
@@ -82,6 +100,7 @@ def list_candidates(pool: ConnectionPool, limit: int) -> tuple[TesterRow, ...]:
             is_tester=bool(row[3]),
             attempts=int(row[4]),
             last_seen=str(row[5]),
+            is_bot=bool(row[6]),
         )
         for row in rows
     )
@@ -90,7 +109,9 @@ def list_candidates(pool: ConnectionPool, limit: int) -> tuple[TesterRow, ...]:
 def apply_tester_mark(pool: ConnectionPool, account_ids: tuple[int, ...], is_tester: bool) -> int:
     """계정을 테스터로 표시하거나 표시를 지운다.
 
-    **봇에는 안 붙는다.** 붙으면 G1 이 재는 것이 다시 러너가 된다.
+    **봇에도 붙는다 (2026-09-10) — 세는 자리가 막는다.** 예전에는 여기서 막았는데,
+    그러면 봇을 화면 위에 고정해 두는 운영이 안 된다. G1 이 재는 것이 러너가 되지
+    않게 하는 것은 `count_testers` 와 `report_g1` 의 일이다.
 
     Args:
         pool: 연결 풀.
@@ -104,23 +125,47 @@ def apply_tester_mark(pool: ConnectionPool, account_ids: tuple[int, ...], is_tes
         return 0
     with pool.connection() as connection:
         cursor = connection.execute(
-            "UPDATE account SET is_tester = %s WHERE id = ANY(%s) AND NOT is_bot",
+            "UPDATE account SET is_tester = %s WHERE id = ANY(%s)",
             (is_tester, list(account_ids)),
         )
     return cursor.rowcount
 
 
 def count_testers(pool: ConnectionPool) -> int:
-    """표시된 테스터 수.
+    """표시된 **사람** 테스터 수 — G1 의 분모다.
+
+    **봇을 세지 않는다.** 표시 자체는 봇에도 붙지만(`apply_tester_mark`), G1 이 묻는
+    「첫 패배 후 규칙을 고쳐 재도전했는가」는 사람에게만 뜻이 있는 질문이다 — 봇은
+    정의상 늘 재도전하므로, 섞이면 이 수가 「러너가 몇 번 돌았는가」가 된다.
 
     Args:
         pool: 연결 풀.
 
     Returns:
-        표시된 계정 수. 아무도 표시하지 않았으면 0.
+        표시된 사람 계정 수. 아무도 표시하지 않았으면 0.
     """
     with pool.connection() as connection:
         row = connection.execute(
             "SELECT count(*) FROM account WHERE is_tester AND NOT is_bot"
+        ).fetchone()
+    return int(row[0]) if row else 0
+
+
+def count_bot_testers(pool: ConnectionPool) -> int:
+    """표시된 **봇** 수 — 화면에만 쓴다.
+
+    이 수를 따로 내는 이유는 하나다. 봇을 표시해 두고 사람 수가 안 오르는 것을 보면
+    「표시가 안 먹었나」를 의심하게 되는데, 옆에 이 수가 함께 있으면 「표시는 됐고 다만
+    G1 에 안 센다」가 화면에서 바로 읽힌다.
+
+    Args:
+        pool: 연결 풀.
+
+    Returns:
+        표시된 봇 계정 수.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT count(*) FROM account WHERE is_tester AND is_bot"
         ).fetchone()
     return int(row[0]) if row else 0
