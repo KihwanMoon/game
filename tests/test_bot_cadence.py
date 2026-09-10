@@ -1,4 +1,4 @@
-"""봇의 리듬 — 시간당 다섯 판이 상한이다.
+"""봇의 리듬 — 시간당 두 판이 상한이다.
 
 **상한을 세우는 이유가 둘이다.** 하나는 부하다: 런 단위 레이트 리밋이 없어(로그인만
 `throttle` 이 센다) 봇이 이 API 의 첫 대량 클라이언트가 된다. 다른 하나는 경제다 —
@@ -27,10 +27,13 @@ def test_the_names_are_bot1_through_bot10():
     assert names == [f"bot{number}" for number in range(1, 11)]
 
 
-def test_the_cap_is_five_runs_an_hour():
-    """★ 상한이 실제로 시간당 다섯이다 — 간격을 바꿔도 이 등식이 남는다."""
+def test_the_cap_is_two_runs_an_hour():
+    """★ 상한이 실제로 시간당 둘이다 — 간격을 바꿔도 이 등식이 남는다.
+
+    다섯이던 것을 2026-09-10 에 둘로 낮췄다. 열 명이 합쳐 50판이던 것이 20판이다.
+    """
     assert HOUR // MIN_CADENCE_SEC == MAX_RUNS_PER_HOUR
-    assert MIN_CADENCE_SEC == 720
+    assert MIN_CADENCE_SEC == 1800
 
 
 def test_a_faster_cadence_is_pushed_back():
@@ -56,7 +59,7 @@ def test_every_persona_respects_the_cap():
 
 
 def test_every_bot_runs_at_the_cap():
-    """★ 봇마다 시간당 다섯 판이다.
+    """★ 봇마다 시간당 두 판이다.
 
     리듬을 갈라 두면 세계가 고르게 움직이지만, 지금은 **세계가 너무 조용한 것**이 더 큰
     문제다 — 경매 등록이 4건이다. 다양성보다 활동량을 택한 자리이며, 조용함이 해결되면
@@ -66,17 +69,21 @@ def test_every_bot_runs_at_the_cap():
         assert HOUR // persona.cadence_sec == MAX_RUNS_PER_HOUR, persona.label
 
 
-def test_ten_bots_cannot_exceed_fifty_runs_an_hour():
-    """★ 열 명을 합쳐도 시간당 50판이 천장이다 — 부하 상한이 이 수다."""
+def test_ten_bots_cannot_exceed_twenty_runs_an_hour():
+    """★ 열 명을 합쳐도 시간당 20판이 천장이다 — 부하 상한이 이 수다.
+
+    50 이던 것을 2026-09-10 에 20 으로 낮췄다. 봇은 세계를 혼자 두지 않으려고 있는
+    것이지 세계를 채우려고 있는 것이 아니다.
+    """
     ceiling = sum(HOUR // persona.cadence_sec for persona in BOT_PERSONAS)
-    assert ceiling == MAX_RUNS_PER_HOUR * len(BOT_PERSONAS) == 50
+    assert ceiling == MAX_RUNS_PER_HOUR * len(BOT_PERSONAS) == 20
 
 
 def test_the_store_pushes_back_a_too_fast_bot(monkeypatch):
     """★ 쓰는 자리에서 물린다 — 순수 함수만 맞고 호출부가 안 부르면 상한은 없는 것이다.
 
     `create_bot` 과 `apply_bot_rest` 가 `next_run_at` 을 정하는 두 자리다. 둘 중 하나라도
-    날것의 값을 쓰면 그 길로 시간당 다섯을 넘긴다.
+    날것의 값을 쓰면 그 길로 상한을 넘긴다.
     """
     from game.app.store import bots as bot_store
 

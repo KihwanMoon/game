@@ -40,7 +40,7 @@ from game.app.store.runs import list_recent_runs
 
 router = APIRouter()
 
-# 리플레이가 보여 주는 판 수. **최근 것만 본다** — 봇은 시간당 다섯 판을 돌므로 전부
+# 리플레이가 보여 주는 판 수. **최근 것만 본다** — 봇이 쉬지 않고 도므로 전부
 # 내면 목록이 곧 로그가 되고, 로그는 화면이 아니라 파일이 읽을 것이다.
 RECENT_RUN_LIMIT = 10
 

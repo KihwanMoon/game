@@ -8,6 +8,7 @@ import os
 
 import pytest
 
+from game.app.bots.personas import MIN_CADENCE_SEC
 from game.app.store.connection import DATABASE_URL_ENV
 
 fastapi_testclient = pytest.importorskip("fastapi.testclient")
@@ -62,7 +63,7 @@ def build_bot(client):
 
     token = client.post("/api/account").json()["token"]
     account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
-    create_bot(get_pool(), account_id, "검사봇", "g0_kite", 720, 60)
+    create_bot(get_pool(), account_id, "검사봇", "g0_kite", MIN_CADENCE_SEC, 60)
     return account_id
 
 
@@ -75,8 +76,10 @@ def test_a_plain_account_cannot_see_the_bots(client):
 def test_the_overview_carries_the_cap(client):
     """★ 상한을 서버가 싣는다 — 화면이 제 값으로 적으면 서버가 물리는 값과 갈린다."""
     body = client.get("/api/admin/bots", headers=build_headers(build_admin(client))).json()
-    assert body["max_runs_per_hour"] == 5
-    assert body["min_cadence_sec"] == 720
+    # 5 · 720 이던 것을 2 · 1800 으로 낮췄다 (2026-09-10). 봇 열이 합쳐 시간당 50판에서
+    # 20판이 된다 — 부하와 경제 양쪽이 봇 쪽으로 기울고 있었다.
+    assert body["max_runs_per_hour"] == 2
+    assert body["min_cadence_sec"] == 1800
 
 
 def test_a_bot_row_carries_its_results(client):
@@ -107,7 +110,7 @@ def test_stopping_a_bot_takes_it_out_of_the_queue(client):
             "account_id": account_id,
             "ruleset_id": "g0_kite",
             "skill_pct": 60,
-            "cadence_sec": 720,
+            "cadence_sec": MIN_CADENCE_SEC,
             "is_active": False,
         },
         headers=build_headers(admin),
@@ -144,7 +147,7 @@ def test_changing_a_bot_is_recorded(client):
             "account_id": account_id,
             "ruleset_id": "sniper",
             "skill_pct": 90,
-            "cadence_sec": 900,
+            "cadence_sec": MIN_CADENCE_SEC + 180,
             "is_active": True,
         },
         headers=build_headers(admin),
@@ -161,7 +164,7 @@ def test_a_missing_bot_is_a_404(client):
             "account_id": 999999999,
             "ruleset_id": "g0_kite",
             "skill_pct": 60,
-            "cadence_sec": 720,
+            "cadence_sec": MIN_CADENCE_SEC,
             "is_active": True,
         },
         headers=build_headers(build_admin(client)),

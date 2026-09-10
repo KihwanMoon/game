@@ -10,7 +10,7 @@
 
     GAME_DATABASE_URL=... GAME_API_URL=http://backend:8000 uv run python -m scripts.run_bots
 
-봇마다 시간당 다섯 판이 상한이고 그것을 `bot_profile.next_run_at` 이 물린다. 루프는
+봇마다 시간당 두 판이 상한이고 그것을 `bot_profile.next_run_at` 이 물린다. 루프는
 자주 깨어나되 차례가 된 봇만 내보낸다.
 """
 
@@ -57,7 +57,11 @@ from scripts.bot_chores import (
 )
 from scripts.bot_client import API_URL_ENV, DEFAULT_API_URL, send_request
 
-# 루프가 깨어나는 간격(초). 상한(720초)보다 촘촘해야 차례를 놓치지 않는다.
+# 루프가 깨어나는 간격(초). 상한(1800초)보다 촘촘해야 차례를 놓치지 않는다.
+#
+# **상한을 늦춰도 이 값은 그대로다.** 깨어나는 것과 내보내는 것은 다른 일이고, 여기서
+# 하는 일은 「차례가 된 봇이 있나」를 묻는 질의 하나다 — 촘촘히 물어야 열 명의 차례가
+# 고르게 흩어진다. 이 값을 리듬에 맞춰 늘리면 한 번 깨어날 때 여럿이 몰려 나간다.
 TICK_SEC = 30
 
 # 봇이 출발하는 방. 서버가 여기서부터 하강을 짠다.

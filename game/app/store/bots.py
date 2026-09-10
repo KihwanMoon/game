@@ -79,7 +79,7 @@ def create_bot(
         account_id: 봇으로 삼을 계정.
         label: 화면에 적을 이름.
         ruleset_id: 이 봇이 쓸 규칙표.
-        cadence_sec: 판 사이에 쉬는 시간(초). 상한(시간당 5판) 안으로 물려서 쓴다.
+        cadence_sec: 판 사이에 쉬는 시간(초). 상한(`MAX_RUNS_PER_HOUR`) 안으로 물려서 쓴다.
         skill_pct: 실력. 낮으면 규칙 몇 줄을 끄고 나간다.
     """
     with pool.connection() as connection:
@@ -160,7 +160,7 @@ def apply_bot_rest(pool: ConnectionPool, account_id: int, cadence_sec: int) -> N
     Args:
         pool: 연결 풀.
         account_id: 대상 봇.
-        cadence_sec: 쉴 시간(초). 상한(시간당 5판) 안으로 물려서 쓴다.
+        cadence_sec: 쉴 시간(초). 상한(`MAX_RUNS_PER_HOUR`) 안으로 물려서 쓴다.
     """
     with pool.connection() as connection:
         connection.execute(

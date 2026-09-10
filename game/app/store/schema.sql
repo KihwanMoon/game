@@ -684,7 +684,12 @@ CREATE TABLE IF NOT EXISTS bot_profile (
     ruleset_id    TEXT        NOT NULL,
     -- 판 사이에 쉬는 시간(초). 리듬이 다르면 세계가 고르게 움직이지 않는다 — 그것이
     -- 사람이 여럿인 세계의 모습이다.
-    cadence_sec   INT         NOT NULL DEFAULT 900,
+    --
+    -- **기본값이 하한 아래면 안 된다.** 900 이던 것을 1800 으로 올린다 (2026-09-10) —
+    -- 상한을 시간당 5판에서 2판으로 낮추면서 `MIN_CADENCE_SEC` 이 1800 이 됐고, 그러면
+    -- 이 기본값으로 들어온 줄은 만들어지자마자 규율을 어긴 값이 된다. 코드가 쓰는 길
+    -- (`resolve_cadence`)은 밀어 주지만, 여기 적힌 수가 그 사실을 가리면 안 된다.
+    cadence_sec   INT         NOT NULL DEFAULT 1800,
     -- 실력(%). 100 이면 규칙표를 그대로 쓰고, 낮으면 규칙 몇 줄을 끄고 나간다.
     -- **못하는 봇이 있어야 한다** — 1층에서 죽는 쪽이 지속 몬스터를 먹인다.
     skill_pct     INT         NOT NULL DEFAULT 100,
@@ -698,6 +703,13 @@ CREATE TABLE IF NOT EXISTS bot_profile (
 -- 돌고 있는가. **지우지 않고 멈춘다** — 지우면 그 봇이 벌어 둔 장비·도감·순위가 함께
 -- 사라지고, 다시 세우면 다른 계정이 된다. 멈춤은 되돌릴 수 있어야 한다.
 ALTER TABLE bot_profile ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+
+-- 리듬 상한을 낮추면 **이미 있는 표**도 따라와야 한다 (2026-09-10, 5판/시 → 2판/시).
+-- 위의 CREATE 는 `IF NOT EXISTS` 라 돌고 있는 DB 에는 새 기본값이 안 붙고, 남아 있던
+-- 720 짜리 줄은 관리자 화면에서 수정하려는 순간 스키마가 반려한다(`ge=MIN_CADENCE_SEC`).
+-- 코드가 쓰는 길은 `resolve_cadence` 가 밀어 주지만, 저장된 수가 거짓말을 하면 안 된다.
+ALTER TABLE bot_profile ALTER COLUMN cadence_sec SET DEFAULT 1800;
+UPDATE bot_profile SET cadence_sec = 1800 WHERE cadence_sec < 1800;
 
 -- 도플갱어는 지속 몬스터의 한 갈래다. **별도 테이블을 만들지 않는다** — 스냅샷·도감·
 -- 되찾기·성장 상한이 전부 entity_record 위에 서 있고, 옆에 새 테이블을 두면 그 전부를
