@@ -168,7 +168,7 @@ import {
   readSkillPrefs,
   saveMaintenance,
   saveSkillPrefs,
-  readItemContext,
+  readGearState,
   registerAccount,
   requestTicket,
   submitRun,
@@ -836,12 +836,18 @@ export function App(): React.JSX.Element {
           setConsumables(bag.consumables)
         }
       })
-      void readItemContext(account).then((context) => {
+      void readGearState(account).then((context) => {
         if (context.inventory !== undefined) {
           setInventory(context.inventory)
         }
         if (context.progress !== undefined) {
           setProgress(context.progress)
+        }
+        // **스킬도 함께 읽는다** (2026-09-10, 실제 신고: 「전도막대 꼈는데 스킬탭에
+        // 마법 안 생기던데」). 장비가 스킬을 여는데 그 목록을 다시 안 읽으면, 서버는
+        // 맞게 답하고 있어도 화면만 옛 목록에 머문다.
+        if (context.skills !== undefined) {
+          setSkillPrefs(context.skills)
         }
       })
       if (outcome.detail !== '') {
@@ -1356,12 +1362,18 @@ export function App(): React.JSX.Element {
           setConsumables(bag.consumables)
         }
       })
-      void readItemContext(account).then((context) => {
+      void readGearState(account).then((context) => {
         if (context.inventory !== undefined) {
           setInventory(context.inventory)
         }
         if (context.progress !== undefined) {
           setProgress(context.progress)
+        }
+        // **스킬도 함께 읽는다** (2026-09-10, 실제 신고: 「전도막대 꼈는데 스킬탭에
+        // 마법 안 생기던데」). 장비가 스킬을 여는데 그 목록을 다시 안 읽으면, 서버는
+        // 맞게 답하고 있어도 화면만 옛 목록에 머문다.
+        if (context.skills !== undefined) {
+          setSkillPrefs(context.skills)
         }
       })
       void readDiscovery(account).then(setDiscovery)

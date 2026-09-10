@@ -23,6 +23,7 @@ import { readBestiary,
   readToken,
   requestTicket,
 } from './serverSync'
+import { readGearState } from './skillSync'
 import type { StorageLike } from './saveStore'
 
 /**
@@ -576,5 +577,29 @@ describe('아이템을 조작한 뒤 (장착·해제·복구·봉인 해제)', (
     const context = await readItemContext('probe-token')
     expect(context.inventory).toBeDefined()
     expect(context.progress).toBeUndefined()
+  })
+})
+
+describe('장비를 만지면 스킬도 다시 읽는다 (2026-09-10, 실제 신고)', () => {
+  it('★ 가방·성장·스킬을 **한 번에** 읽는다 — 따로 읽으면 하나만 읽는 날이 온다', async () => {
+    // 「전도막대 꼈는데 스킬탭에 마법 안 생기던데」. 서버는 맞게 답하고 있었고
+    // (`/api/skills` 가 CHAIN_BOLT 를 실어 준다) 화면이 그것을 다시 안 읽었다.
+    // 마법만의 문제가 아니었다 — 대검·방패·연산 장갑도 같았다.
+    const seen: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        seen.push(url)
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ slots: [], equipment: [], balance: 0, repair_cost: 0 }),
+        })
+      }),
+    )
+    await readGearState('probe-token')
+    expect(seen.some((url) => url.includes('/inventory'))).toBe(true)
+    expect(seen.some((url) => url.includes('/progress'))).toBe(true)
+    expect(seen.some((url) => url.includes('/skills'))).toBe(true)
   })
 })
