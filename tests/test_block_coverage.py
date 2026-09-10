@@ -128,3 +128,23 @@ def test_the_newer_action_forms_are_used():
     assert "USE_SKILL" in used
     assert "USE_ITEM" in used
     assert "self_skill_ready" in used
+
+
+def test_the_skill_perception_list_matches_the_catalog():
+    """★ **인지 목록이 `USE_SKILL` 파라미터와 같다** (2026-09-10, 실제 신고).
+
+    갈리면 그 스킬의 인지값이 **키째로 안 만들어진다.** 없는 값은 참도 거짓도 아니라
+    화면에 「없음」으로 뜨고, 그 규칙은 영영 발동하지 않는다 — 사람이 본 것은
+    `내 스킬 준비됨[CHAIN_BOLT](없음) == 참` 이었다.
+
+    TS 쪽이 그렇게 갈려 있었다. 전투는 브라우저에서 돌고 재시뮬은 파이썬이 하므로,
+    **같은 판이 두 코어에서 다르게 돌고 있었다** (G3). 골든은 이 경로를 안 덮는다 —
+    골든 규칙표 중 마법 인지를 쓰는 것이 없다.
+    """
+    from game.app.simulation.perception import SKILL_IDS
+
+    catalog = json.loads(BLOCKS_PATH.read_text(encoding="utf-8"))
+    params = [block for block in catalog["actions"] if block["id"] == "USE_SKILL"][0]["param"][
+        "values"
+    ]
+    assert set(SKILL_IDS) == set(params), "인지 목록과 USE_SKILL 파라미터가 갈렸다"

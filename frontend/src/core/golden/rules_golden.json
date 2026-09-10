@@ -653,6 +653,42 @@
           true
         ],
         [
+          "self_cooldown_ready[METEOR]",
+          true
+        ],
+        [
+          "self_has_skill[METEOR]",
+          true
+        ],
+        [
+          "self_skill_ready[METEOR]",
+          true
+        ],
+        [
+          "self_cooldown_ready[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_has_skill[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_skill_ready[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_cooldown_ready[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_has_skill[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_skill_ready[FROST_FIELD]",
+          true
+        ],
+        [
           "self_has_status[POISON]",
           false
         ],
@@ -864,6 +900,42 @@
         ],
         [
           "self_skill_ready[GUARD_BRACE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[METEOR]",
+          true
+        ],
+        [
+          "self_has_skill[METEOR]",
+          true
+        ],
+        [
+          "self_skill_ready[METEOR]",
+          true
+        ],
+        [
+          "self_cooldown_ready[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_has_skill[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_skill_ready[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_cooldown_ready[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_has_skill[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_skill_ready[FROST_FIELD]",
           true
         ],
         [
@@ -1081,6 +1153,42 @@
           true
         ],
         [
+          "self_cooldown_ready[METEOR]",
+          true
+        ],
+        [
+          "self_has_skill[METEOR]",
+          true
+        ],
+        [
+          "self_skill_ready[METEOR]",
+          true
+        ],
+        [
+          "self_cooldown_ready[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_has_skill[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_skill_ready[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_cooldown_ready[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_has_skill[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_skill_ready[FROST_FIELD]",
+          true
+        ],
+        [
           "self_has_status[POISON]",
           false
         ],
@@ -1292,6 +1400,42 @@
         ],
         [
           "self_skill_ready[GUARD_BRACE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[METEOR]",
+          true
+        ],
+        [
+          "self_has_skill[METEOR]",
+          true
+        ],
+        [
+          "self_skill_ready[METEOR]",
+          true
+        ],
+        [
+          "self_cooldown_ready[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_has_skill[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_skill_ready[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_cooldown_ready[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_has_skill[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_skill_ready[FROST_FIELD]",
           true
         ],
         [
@@ -1509,6 +1653,42 @@
           true
         ],
         [
+          "self_cooldown_ready[METEOR]",
+          true
+        ],
+        [
+          "self_has_skill[METEOR]",
+          true
+        ],
+        [
+          "self_skill_ready[METEOR]",
+          true
+        ],
+        [
+          "self_cooldown_ready[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_has_skill[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_skill_ready[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_cooldown_ready[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_has_skill[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_skill_ready[FROST_FIELD]",
+          true
+        ],
+        [
           "self_has_status[POISON]",
           false
         ],
@@ -1720,6 +1900,42 @@
         ],
         [
           "self_skill_ready[GUARD_BRACE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[METEOR]",
+          true
+        ],
+        [
+          "self_has_skill[METEOR]",
+          true
+        ],
+        [
+          "self_skill_ready[METEOR]",
+          true
+        ],
+        [
+          "self_cooldown_ready[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_has_skill[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_skill_ready[CHAIN_BOLT]",
+          true
+        ],
+        [
+          "self_cooldown_ready[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_has_skill[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_skill_ready[FROST_FIELD]",
           true
         ],
         [

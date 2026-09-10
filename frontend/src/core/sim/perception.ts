@@ -38,9 +38,19 @@ const TILE_BY_NAME: readonly (readonly [string, number])[] = [
 const ENEMY_TYPES: readonly string[] = ['MELEE', 'RANGED', 'SUMMONER', 'BOMBER', 'HEALER']
 
 /**
- * 인지 변수 self_cooldown_ready 가 묻는 스킬들. SUMMON 이 끼는 것은 v3, HEAL 은 v4
- * 부터다 — 주기를 규칙표가 물을 수 있어야 `쿨타임[SUMMON] 완료 → 소환` 과
- * `쿨타임[HEAL] 완료 → 회복` 이 성립한다 (GDD §5).
+ * 인지 변수 self_cooldown_ready·self_skill_ready 가 묻는 스킬들.
+ *
+ * **`blocks.json` 의 `USE_SKILL` 파라미터와 같아야 한다.** 갈리면 규칙표가 쓰는 스킬의
+ * 인지값이 **키째로 안 만들어지고**, 없는 값은 화면에 「없음」으로 뜬다 — 참도 거짓도
+ * 아니라 그 규칙이 영영 발동하지 않는다.
+ *
+ * **실제로 갈려 있었다 (2026-09-10, 실제 신고: 「마법 쿨타임이 다 찼는데 왜 없음이냐」).**
+ * 파이썬 쪽에는 마법 셋이 들어왔는데 여기가 안 따라왔다. 전투는 브라우저에서 도므로
+ * 사람이 본 것은 이 목록이었고, 서버가 재시뮬할 때는 파이썬 목록이라 **같은 판이 두
+ * 코어에서 다르게 돌고 있었다** (G3). 골든이 이 경로를 안 덮는다 — 골든 규칙표 중
+ * 마법 인지를 쓰는 것이 없다.
+ *
+ * 두 목록이 같은지는 양쪽 시험이 `blocks.json` 을 읽어 대조한다.
  */
 const COOLDOWN_SKILLS: readonly string[] = [
   'SKILL_1',
@@ -50,6 +60,9 @@ const COOLDOWN_SKILLS: readonly string[] = [
   'HEAL',
   'ATTACK',
   'GUARD_BRACE',
+  'METEOR',
+  'CHAIN_BOLT',
+  'FROST_FIELD',
 ]
 
 /** 인지 변수 self_has_status 가 묻는 상태이상들. */
