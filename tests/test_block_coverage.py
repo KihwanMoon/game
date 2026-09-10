@@ -28,7 +28,6 @@ from game.config import (
 UNCOVERED: dict[str, str] = {
     "SET_FLAG": ("플래그는 규칙의 set_flag 필드로 세운다 — 행동으로서의 SET_FLAG 는 자리가 겹친다"),
     "BOSS": "보스 방이 하나뿐이라 예시 규칙표가 그 방 전용이 된다",
-    "SELF": "자기 대상 스킬이 아직 없다. 스킬이 생기면 그때 예시가 성립한다",
     "self_has_skill": ("self_skill_ready 가 장착과 쿨타임을 함께 보므로 이쪽은 더 좁은 질문이다"),
     "self_has_status": "상태이상을 거는 적이 아직 적고, 걸린 판을 예시로 재현하기 어렵다",
     "self_cpu_headroom": (

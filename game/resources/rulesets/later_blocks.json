@@ -39,7 +39,21 @@
     "",
     "**여기 승률은 맨몸 값이다.** 로드아웃이 없으면 모든 스킬이 열려 있어(skills=None)",
     "메테오 표가 76% 로 지배적으로 보이는데, `--gear staff_fallstar` 로 무기를 실으면",
-    "85% 이고 같은 등급의 곡궁 카이팅이 81% 다 — 지배적이지 않다. 무기별 값은 §10.11."
+    "85% 이고 같은 등급의 곡궁 카이팅이 81% 다 — 지배적이지 않다. 무기별 값은 §10.11.",
+    "",
+    "**방벽 표를 실었다 (2026-09-10) — 값을 해서가 아니라 계열 하나가 통째로 비어 있어서다.**",
+    "`GUARD` 는 설계/5_스킬 §2 가 「없음」이라 적어 둔 계열인데, 스킬도 아이템도 들어온 뒤로",
+    "규칙표만 없었다. 그러면 팔레트에 보이는 `USE_SKILL[방벽]` 이 무엇에 쓰는 것인지 아무",
+    "데서도 안 보인다 — 마법이 며칠 전 딱 이 상태였고, 표를 지어 돌리자마자 코어 결함 둘이",
+    "나왔다.",
+    "",
+    "**실측은 세 구간 다 이득이 아니다** (설계/5_스킬 §2.1).",
+    "  5칸 예산(1층 60런)   뼈대 46% → 방벽 35%   무엇을 빼도 손해다",
+    "  하강 200런(레벨1)    0.89층 → 0.73층",
+    "  하강 200런(레벨12)   3.70층 → 3.73층       여유칸이 생기면 본전",
+    "",
+    "조건이 안 걸려서가 아니다 — 40런에 107회 발동했다(런당 2.7). 한 틱을 통째로 내고",
+    "2틱 50% 를 사는데, 그 틱에 때렸으면 들어갔을 공격이 더 크다."
   ],
   "rulesets": [
     {
@@ -680,6 +694,121 @@
                 "cmp": "<=",
                 "rhs": 1,
                 "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 5,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "LOWEST_HP"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ruleset_id": "v11_guard_swarm",
+      "version": 1,
+      "strategy_ko": "**`GUARD` 계열의 첫 예시다** (설계/5_스킬 §2 가 「없음」이라 적어 둔 자리). 방패를 들었는데 막는 행동이 없으면 방패는 방어력 숫자일 뿐이라, 이 표가 없으면 팔레트의 `USE_SKILL[방벽]` 이 무엇에 쓰는 것인지 보여 주는 데가 없었다. **값은 못 한다 — 1층 60런 35% 로 같은 뼈대(46%)보다 낮다.** 5칸이 꽉 차 있어 방벽을 넣으려면 무엇을 빼야 하고, 여기서는 `적거리[NEAREST] <= 1 → 공격`을 뺐다. 그 한 줄이 좁은 복도에서 옆의 적을 때리게 하던 줄이다. 「뭉쳤을 때만」인 것은 실측 때문이다 — 조건 없이 준비되면 쓰면 더 나쁘다.",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_ITEM",
+          "action_param": "POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "USE_SKILL",
+          "action_param": "GUARD_BRACE",
+          "target": "SELF",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "visible_enemy_count",
+                "cmp": ">=",
+                "rhs": 3
+              },
+              {
+                "lhs": "self_skill_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "GUARD_BRACE"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 2,
+          "action": "USE_SKILL",
+          "action_param": "SKILL_2",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "LOWEST_HP"
+              },
+              {
+                "lhs": "self_skill_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "LOWEST_HP"
               }
             ]
           }

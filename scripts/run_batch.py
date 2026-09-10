@@ -217,6 +217,7 @@ def run_one_descent(
         arguments.rooms_per_floor,
         BOSS_ROOM_ID,
         read_boss_floor(resources.balance),
+        build_gear_loadout(resources.balance, arguments.gear),
     )
 
 

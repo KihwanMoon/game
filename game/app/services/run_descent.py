@@ -18,6 +18,7 @@ from game.app.services.build_chain import build_descent
 from game.app.services.run_chain import run_room_chain
 from game.app.simulation.plan import OUTCOME_PLAYER_WIN
 from game.schemas.blocks import BlockCatalog
+from game.schemas.loadout import PlayerLoadout
 from game.schemas.room import RoomTemplate
 from game.schemas.ruleset import RuleSet
 
@@ -94,6 +95,7 @@ def run_descent_batch(
     rooms_per_floor: int,
     boss_room_id: str,
     boss_floor: int,
+    loadout: PlayerLoadout | None = None,
 ) -> DescentStats:
     """같은 규칙표로 하강을 여러 번 돌려 도달 층 분포를 낸다.
 
@@ -110,6 +112,8 @@ def run_descent_batch(
         rooms_per_floor: 층 하나에 드는 방 수.
         boss_room_id: 보스 방.
         boss_floor: 보스가 서는 층.
+        loadout: 낀 장비. None 이면 맨몸이고, 그때는 **모든 스킬이 열려 있다** —
+            승률로 규칙표를 줄 세울 때 그 전제를 적어 두어야 한다 (설계/5_스킬 §10.11).
 
     Returns:
         도달 층 분포. 승률 대신 **어디까지 갔는가**를 담는다.
@@ -133,6 +137,7 @@ def run_descent_batch(
             seed,
             floor=1,
             rooms_per_floor=rooms_per_floor,
+            loadout=loadout,
         )
         # **깬 층만 센다.** 층의 마지막 방에서 죽었으면 그 층은 안 깬 것이다 —
         # 층 단위 보상이 같은 셈을 쓰므로 여기서 다르게 세면 표가 거짓말을 한다.
