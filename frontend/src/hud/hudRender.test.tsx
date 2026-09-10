@@ -336,6 +336,25 @@ describe('사후 분석에서 잘리는 정보가 없다 (2026-09-09, 실제 신
     expect(cutRule('.hud-post__meta')).toContain('grid-area: 2 / 1 / auto / -1')
   })
 
+  it('★ 히트맵이 패널 폭을 다 쓴다 — 「반쪽만 나온다」로 읽혔다', () => {
+    // 칸을 20px 로 박아 두면 12칸이 251px 이라 380px 패널의 3분의 2만 쓰고 왼쪽으로
+    // 몰린다. 바로 아래 리플레이 도면은 같은 12x9 를 폭 가득 그리므로, 같은 방인데
+    // 하나는 반쪽으로 읽혔다 (실제 신고). 실측 251x188 → 348x261.
+    expect(cutRule('.hud-heat__grid')).toContain('width: 100%')
+    const cell = cutRule('.hud-heat__cell')
+    expect(cell).toContain('aspect-ratio: 1')
+    expect(cell).not.toContain('min-width: var(--sp-5)')
+  })
+
+  it('★ 칸이 서로 같다 — 큰 수가 든 칸만 넓어지면 좌표를 못 짚는다', () => {
+    // `min-width` 였을 때는 「650」이 든 칸만 넓어져 격자가 방의 좌표와 어긋났다.
+    // 어디서 맞았는지를 짚는 것이 이 그림이 있는 이유다.
+    const html = renderToStaticMarkup(
+      <DamageHeatmap grid={[[0, 650], [0, 0]]} caption="시험" />,
+    )
+    expect(html).toContain('repeat(2, minmax(0, 1fr))')
+  })
+
   it('★ 성적표의 열 폭을 표가 정하지 않는다 — 진단 열이 옆으로 잘렸다', () => {
     // `auto` 레이아웃에서는 진단 문구의 최소폭이 표를 밀어 380px 상자 안에서 422px 이
     // 됐다. 숫자 열을 박아 두면 남는 폭이 곧 진단 열이고 문구는 그 안에서 접힌다 —

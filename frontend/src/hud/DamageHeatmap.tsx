@@ -43,9 +43,13 @@ export function DamageHeatmap(props: DamageHeatmapProps): React.JSX.Element {
           </span>
         )}
       </p>
+      {/* **칸 폭을 고정하지 않는다** (2026-09-09, 실제 신고: 「데미지맵이 반쪽만 나와」).
+          `var(--sp-5)`(20px) 로 박아 두면 12칸이 251px 이라 380px 패널의 3분의 2만 쓰고
+          왼쪽으로 몰린다 — 바로 아래 리플레이 도면은 같은 12x9 를 폭 가득 그리므로,
+          같은 방인데 하나는 반쪽으로 읽힌다. 폭을 나눠 가지면 둘이 같은 크기가 된다. */}
       <div
         className="hud-heat__grid"
-        style={{ gridTemplateColumns: `repeat(${String(width)}, var(--sp-5))` }}
+        style={{ gridTemplateColumns: `repeat(${String(width)}, minmax(0, 1fr))` }}
       >
         {props.grid.map((row, y) =>
           row.map((value, x) => (
