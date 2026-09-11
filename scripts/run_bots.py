@@ -185,10 +185,10 @@ def run_one_bot(pool: ConnectionPool, api_url: str, bot: BotProfile, parts: dict
         if answer is None:
             break
         rewards.append(f"{floor}층 {answer.get('reward', '')}".strip())
-        # **고른 뒤에야 다음 층이 그 값으로 돈다.** 청구 순서대로 보내야 서버가 「아직
-        # 안 깬 층」으로 막지 않는다.
+        # **서버가 연 층에만 보낸다.** 죽은 층·마지막 층에는 고를 자리가 없고, 그때
+        # 보내면 닫힌 티켓에 대고 404 를 받는다 — 실제로 그렇게 로그를 더럽혔다.
         take = picked.get(floor)
-        if take is not None:
+        if take is not None and int(answer.get("reward_floor", 0)) == floor:
             send_request(
                 f"{api_url}/api/run/reward",
                 bot.token,
