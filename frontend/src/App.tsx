@@ -172,8 +172,6 @@ import {
   registerAccount,
   requestTicket,
   submitRun,
-  takeFloorReward,
-  type RewardOfferView,
   writeMeta,
   writeServerMeta,
   writeToken,
@@ -405,8 +403,6 @@ export function buildRunSetup(issued: ServerTicket, rulesetId: string): BattleSe
     floor: issued.floor,
     // 층 하나에 드는 방 수. 방 순번에서 층을 파생한다 — 서버와 같은 값을 써야 한다.
     roomsPerFloor: issued.roomsPerFloor,
-    // 지금까지 고른 층 보상 (GDD §2.2). 티켓이 실어 온 것을 그대로 쓴다.
-    rewards: issued.rewards,
     ...(issued.loadout === undefined ? {} : { loadout: issued.loadout }),
     // 장비·레벨이 확정한 플레이어 전투 입력 (결정 #13).
   }
@@ -583,11 +579,6 @@ export function App(): React.JSX.Element {
   // 층별 정산. **뜨고 사라지는 알림이 아니라 쌓이는 기록이다** — 상단에 한 줄이
   // 나타날 때마다 도면·규칙표·로그가 전부 밀려 화면이 흔들렸다 (실제 신고).
   const [settlements, setSettlements] = useState<readonly FloorSettlement[]>([])
-  // 지금 고를 수 있는 층 보상 (GDD §2.2). **서버가 층을 깰 때 실어 준다** — 화면이
-  // 지어내면 서버가 모르는 보상을 고르게 된다.
-  const [rewardFloor, setRewardFloor] = useState(0)
-  const [rewardOffers, setRewardOffers] = useState<readonly RewardOfferView[]>([])
-  const [isRewardBusy, setRewardBusy] = useState(false)
   const [autoLeft, setAutoLeft] = useState<number | undefined>(undefined)
   // **이번 방에서만 멈춘다.** 설정을 끄는 것과 다르다 — 한 번 멈추려고 기능을 끄게 하면
   // 다음 방부터도 안 넘어간다.
@@ -1338,43 +1329,6 @@ export function App(): React.JSX.Element {
    *
    * 결과를 보내는 것이 아니다. **서버가 그 층까지 처음부터 다시 돌려 확정한다** (T9).
    */
-  /**
-   * 고른 층 보상을 서버에 보내고, 티켓에 반영된 것을 화면에도 반영한다 (GDD §2.2).
-   *
-   * **판의 보상 목록을 함께 갱신한다.** 브라우저는 앞 방을 다시 돌려 인계를
-   * 계산하므로(`ChainCursor`), 안 갱신하면 다음 방부터 화면이 서버보다 약한 캐릭터로
-   * 돈다 (G3).
-   *
-   * @param rewardId 고른 보상.
-   */
-  function takeReward(rewardId: string): void {
-    const ticket = run?.ticket
-    if (account === undefined || ticket === undefined || rewardFloor <= 0) {
-      return
-    }
-    setRewardBusy(true)
-    void takeFloorReward(account, ticket.ticketId, rewardFloor, rewardId).then((isTaken) => {
-      setRewardBusy(false)
-      if (!isTaken) {
-        return
-      }
-      const floor = rewardFloor
-      setRewardFloor(0)
-      setRewardOffers([])
-      setRun((current) =>
-        current === undefined
-          ? current
-          : {
-              ...current,
-              setup: {
-                ...current.setup,
-                rewards: new Map([...(current.setup.rewards ?? []), [floor, rewardId]]),
-              },
-            },
-      )
-    })
-  }
-
   function applyFloorSettlement(finishedRun: BattleRecording): void {
     const ticket = run?.ticket
     const setup = run?.setup
@@ -1395,10 +1349,6 @@ export function App(): React.JSX.Element {
         return
       }
       setVerdict(result)
-      // **고를 것이 생겼다.** 층이 0 이면 고를 것이 없다 — 졌거나, 마지막 층이거나,
-      // 이미 고른 층이다.
-      setRewardFloor(result.rewardFloor)
-      setRewardOffers(result.rewardOffers)
       setSettlements((current) =>
         appendSettlement(
           current,
@@ -2268,10 +2218,6 @@ export function App(): React.JSX.Element {
           location={formatLocation(roomFloor, run.setup.roomId)}
           controls={battleControls}
           settlements={settlements}
-          rewardFloor={rewardFloor}
-          rewardOffers={rewardOffers}
-          isRewardBusy={isRewardBusy}
-          onTakeReward={takeReward}
           weaponCatalogId={mainWeapon}
           onOutcome={setOutcome}
         />

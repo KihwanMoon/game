@@ -20,8 +20,7 @@ from game.app.store.consumables import (
     list_consumable_slots,
 )
 from game.app.store.progress import apply_floor_progress, read_reached_floor
-from game.app.store.run_progress import apply_spent_charges, read_spent_charges
-from game.app.store.tickets import IssuedTicket
+from game.app.store.tickets import IssuedTicket, apply_spent_charges, read_spent_charges
 from game.schemas.loadout import parse_loadout
 
 

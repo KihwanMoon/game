@@ -17,7 +17,6 @@
  * (`planRenderer`). 그래서 상단 바의 배속 박스도 탭도 황동을 쓰지 않고, 지시선은 그리지
  * 않는다 — 규칙 줄이 탭 뒤로 숨을 수 있어 선의 한쪽 끝이 사라지기 때문이다.
  */
-import type { RewardOfferView } from '../storage'
 import type { VitalRow } from './vitalRows'
 import type { ReactNode, Ref } from 'react'
 
@@ -71,11 +70,6 @@ export interface BattleLandscapeProps {
   readonly entries: readonly LogRowProps[]
   /** 층별 정산. 상단 알림이 아니라 탭이다 — 알림은 뜰 때마다 아래 전부를 밀었다. */
   readonly settlements?: readonly FloorSettlement[]
-  /** 지금 고를 수 있는 층 보상 (GDD §2.2). 층이 0 이면 안 그린다. */
-  readonly rewardFloor?: number
-  readonly rewardOffers?: readonly RewardOfferView[]
-  readonly isRewardBusy?: boolean
-  readonly onTakeReward?: (rewardId: string) => void
   /** 켜진 규칙들의 누적 CPU. */
   readonly cpuUsed: number
   readonly cpuBudget: number
@@ -145,10 +139,6 @@ export function BattleLandscape(props: BattleLandscapeProps): React.JSX.Element 
             onToggleRule={props.onToggleRule}
             entries={props.entries}
             settlements={props.settlements ?? []}
-            rewardFloor={props.rewardFloor ?? 0}
-            rewardOffers={props.rewardOffers ?? []}
-            isRewardBusy={props.isRewardBusy === true}
-            onTakeReward={props.onTakeReward ?? (() => undefined)}
             cooldowns={props.cooldowns ?? ''}
             potions={props.potions}
             potionsMax={props.potionsMax}

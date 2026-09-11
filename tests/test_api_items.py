@@ -188,7 +188,7 @@ def test_unequip_returns_it_to_the_bag(client, token):
 
 def test_death_breaks_an_equipped_item_instead_of_deleting_it(client, token):
     """★ 장착 중이면 사라지지 않고 파손된다 — 복구비용을 내면 다시 쓴다."""
-    from game.api.reward_service import apply_death_penalty
+    from game.api.routes.run import apply_death_penalty
 
     headers = build_headers(token)
     account_id = client.get("/api/account", headers=headers).json()["account_id"]
@@ -205,7 +205,7 @@ def test_death_breaks_an_equipped_item_instead_of_deleting_it(client, token):
 
 def test_death_deletes_a_bagged_item(client, token):
     """★ 가방에 있으면 사라진다. 그 차이가 "끼고 다녀라" 는 유인을 만든다."""
-    from game.api.reward_service import apply_death_penalty
+    from game.api.routes.run import apply_death_penalty
 
     headers = build_headers(token)
     account_id = client.get("/api/account", headers=headers).json()["account_id"]
@@ -216,7 +216,7 @@ def test_death_deletes_a_bagged_item(client, token):
 
 
 def test_death_with_nothing_to_lose_is_quiet(client, token):
-    from game.api.reward_service import apply_death_penalty
+    from game.api.routes.run import apply_death_penalty
 
     account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
     assert apply_death_penalty(account_id) == ""
@@ -224,7 +224,7 @@ def test_death_with_nothing_to_lose_is_quiet(client, token):
 
 def test_repair_costs_currency(client, token):
     from game.api.deps import get_pool
-    from game.api.reward_service import apply_death_penalty
+    from game.api.routes.run import apply_death_penalty
     from game.app.store.equipment import REPAIR_COST, add_currency
 
     headers = build_headers(token)

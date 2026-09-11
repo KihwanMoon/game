@@ -33,11 +33,25 @@ SOURCE_MONSTER = "MONSTER_KIND"
 # 예전과 체감이 같다. 처음에 넷으로 어림잡아 18.9% 로 뒀다가 10판에 가방을 채웠다.
 # `GRADE_MISS` 는 아무것도 안 나오는 몫이다 — 등급과 같은 저울에 올려야 "안 나옴" 도
 # 분포의 일부가 된다.
+# **층이 등급을 기울인다** (2026-09-11 결정). 셋째 값은 1층에서 한 층 내려갈 때마다 기본
+# 가중치의 몇 퍼센트를 더할지다.
+#
+# 규율은 「너무 높아지지 않게, 기본적으로 낮은 등급이 높게」다. 아래 값에서 전리품 중
+# 보통의 몫은 1층 84% → 10층 72% 로만 내려간다 — 깊은 층에서도 대부분은 보통이다.
+#
+#     층      드롭률    보통    상급    유물
+#      1      3.70%   83.8%   14.9%    1.4%
+#      4      3.89%   79.5%   19.0%    1.5%
+#      7      4.10%   75.2%   22.8%    1.9%
+#     10      4.30%   71.6%   26.3%    2.1%
+#
+# **「안 나옴」은 안 기울인다.** 상위 등급이 무거워지면 저울에서 안 나옴의 몫이 저절로
+# 줄어, 깊은 층은 좋은 것이 잘 나오는 동시에 **조금 더 자주** 나온다.
 DEFAULT_GRADE_WEIGHTS: tuple[tuple[str, int, int], ...] = (
     (GRADE_MISS, 9630, 0),
     (GRADE_COMMON, 310, 0),
-    (GRADE_FINE, 55, 6),
-    (GRADE_RELIC, 5, 4),
+    (GRADE_FINE, 55, 12),
+    (GRADE_RELIC, 5, 10),
 )
 
 
@@ -93,7 +107,7 @@ def read_grade_weights(pool: ConnectionPool, source_id: int) -> tuple[tuple[str,
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT grade, weight, level_scale_pct FROM drop_grade_weight"
+            "SELECT grade, weight, floor_scale_pct FROM drop_grade_weight"
             " WHERE source_id = %s ORDER BY grade",
             (source_id,),
         ).fetchall()
@@ -156,7 +170,7 @@ def apply_drop_seed(pool: ConnectionPool, catalog: dict[str, ItemCatalogEntry]) 
             if grade == GRADE_MISS:
                 continue
             connection.execute(
-                "INSERT INTO drop_grade_weight (source_id, grade, weight, level_scale_pct)"
+                "INSERT INTO drop_grade_weight (source_id, grade, weight, floor_scale_pct)"
                 " VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING",
                 (source_id, grade, weight, scale),
             )
@@ -274,7 +288,7 @@ def save_monster_drop(
         with pool.connection() as connection:
             for name, base_weight, scale in rows:
                 connection.execute(
-                    "INSERT INTO drop_grade_weight (source_id, grade, weight, level_scale_pct)"
+                    "INSERT INTO drop_grade_weight (source_id, grade, weight, floor_scale_pct)"
                     " VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING",
                     (source_id, name, base_weight, scale),
                 )

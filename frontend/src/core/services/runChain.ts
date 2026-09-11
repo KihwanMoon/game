@@ -23,7 +23,6 @@ import type { MonsterSnapshot } from '../schemas/monsterSnapshot'
 import type { RoomTemplate } from '../schemas/room'
 import type { RuleSet } from '../schemas/ruleset'
 import { buildRuleVm } from '../rules/ruleVm'
-import { applyFloorRewards, countHpGain } from '../sim/floorRewards'
 import { readFloorHealPct, resolveFloorHeal } from './floorHeal'
 import type { DecisionPolicy } from '../sim/plan'
 import type { TickEngine } from '../sim/engine'
@@ -96,11 +95,6 @@ export interface ChainSetup {
    * HP·공격력이 갈리고, 화면이 이긴 판을 서버가 진 것으로 확정한다.
    */
   readonly roomsPerFloor?: number
-  /**
-   * 이 런에서 고른 층 보상 (GDD §2.2). 층에서 보상 id 로이며 **티켓이 실어 온다** —
-   * 화면이 지어내면 서버 재시뮬보다 센 캐릭터로 돈다 (설계/7 §4).
-   */
-  readonly rewards?: ReadonlyMap<number, string>
   /** 배치 흔들기·정예 승격. 기본은 켬 — 골든 대조가 끈다 (G3). */
   readonly isVaried?: boolean
 }
@@ -208,11 +202,6 @@ export class ChainCursor {
     // 방을 넘어가면 방 체류 틱과 기준 공격력을 지운다. entity_id 가 방마다 다시
     // 붙으므로(어느 방에나 goblin_rusher_0 이 있다) 남기면 남의 기준값을 읽는다.
     this.pressure.resetRoom()
-    const thisFloor = resolveRoomFloor(
-      this.setup.floor ?? DEFAULT_FLOOR,
-      this.index,
-      this.setup.roomsPerFloor ?? 0,
-    )
     const engine = buildEngine({
       template,
       balance: this.setup.balance,
@@ -222,17 +211,17 @@ export class ChainCursor {
       snapshots: this.setup.snapshots ?? [],
       isVaried: this.setup.isVaried ?? true,
       roomIndex: this.index,
-      floor: thisFloor,
+      floor: resolveRoomFloor(
+        this.setup.floor ?? DEFAULT_FLOOR,
+        this.index,
+        this.setup.roomsPerFloor ?? 0,
+      ),
       ...(this.setup.loadout === undefined ? {} : { loadout: this.setup.loadout }),
     })
     const player = engine.state.entities.get(PLAYER_ENTITY_ID)
     if (player === undefined) {
       throw new Error(`플레이어 엔티티가 없다: ${PLAYER_ENTITY_ID}`)
     }
-    // **층 보상을 얹는다** (GDD §2.2). 고른 층 **다음**부터 산다 — 파이썬 `run_chain` 과
-    // 같은 자리에서 같은 만큼 얹지 않으면 같은 티켓이 두 결과를 낸다 (G3).
-    const taken = this.setup.rewards ?? new Map<number, string>()
-    applyFloorRewards(player, taken, thisFloor)
     if (this.carriedHp !== undefined) {
       // **HP 와 포션만 인계한다.** 스탯까지 인계하면 압력 스케일이 두 번 얹힌다.
       const previousFloor = resolveRoomFloor(
@@ -240,18 +229,22 @@ export class ChainCursor {
         Math.max(0, this.index - 1),
         this.setup.roomsPerFloor ?? 0,
       )
-      // 인계 HP 에 이번 경계에서 새로 얻은 활력을 얹는다 — 최대치만 늘면 고른 순간에
-      // 아무 일도 안 일어난다.
-      const carried = Math.min(
-        player.hpMax,
-        this.carriedHp + countHpGain(taken, thisFloor, previousFloor),
+      const thisFloor = resolveRoomFloor(
+        this.setup.floor ?? DEFAULT_FLOOR,
+        this.index,
+        this.setup.roomsPerFloor ?? 0,
       )
       // **층을 넘을 때 회복한다** (결정 #21). 파이썬 연쇄에만 있던 규칙이라 브라우저가
-      // 더 아픈 판을 돌고 있었다 (2026-09-11).
+      // 더 아픈 판을 돌고 있었다 (2026-09-11). 골든은 이 자리를 안 덮는다 — 골든 연쇄는
+      // `roomsPerFloor` 가 0 이라 층 경계가 한 번도 안 생긴다.
       const isNewFloor = this.index > 0 && thisFloor !== previousFloor
       player.hp = isNewFloor
-        ? resolveFloorHeal(carried, player.hpMax, readFloorHealPct(this.setup.balance.floorScale))
-        : carried
+        ? resolveFloorHeal(
+            this.carriedHp,
+            player.hpMax,
+            readFloorHealPct(this.setup.balance.floorScale),
+          )
+        : this.carriedHp
       player.consumables = new Map(this.carriedPotions)
     }
     const ruleset = this.setup.playerRuleset

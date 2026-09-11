@@ -477,8 +477,30 @@ DO $$ BEGIN
     END IF;
 END $$;
 
--- ── 층 보상 선택을 티켓에 담는다 (GDD §2.2, 2026-09-11) ──────────────────
+-- ── 층 보상 선택을 되돌린다 (2026-09-11) ────────────────────────────────
 --
--- 기획의 핵심 고리인 「클리어 → 보상 선택」이 제품에 없었다. 고른 것은 런 스코프라
--- 티켓에 산다 — 계정에 남기면 그것은 런 보상이 아니라 영구 성장이다.
-ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS rewards JSONB NOT NULL DEFAULT '{}'::jsonb;
+-- 고르는 방식이 기획 의도와 달랐다. 층이 주는 것은 **아이템 하나**이고, 깊이 내려갈수록
+-- 상위 등급이 잘 나오는 것으로 「더 깊은 층」의 값을 치른다 — 고르는 칸을 두지 않는다.
+--
+-- 컬럼을 지운다. 남겨 두면 다음 사람이 「왜 아무도 안 쓰는 절이 있지」를 묻게 되고,
+-- 그 절을 다시 채우는 코드가 언젠가 생긴다.
+ALTER TABLE run_ticket DROP COLUMN IF EXISTS rewards;
+
+-- ── 등급을 기울이는 축을 레벨에서 층으로 (2026-09-11) ────────────────────
+--
+-- 예전에는 **잡은 개체의 레벨**이 상위 등급을 밀었다. 그 값은 지속 몬스터에서 내려가기도
+-- 해서(`goblin_rusher 레벨 3→1`) 깊은 층이 무작위로 더 나빠졌다. 사람이 느끼는 축은
+-- 층이므로 축을 옮기고 이름도 그렇게 고친다.
+DO $$ BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'drop_grade_weight' AND column_name = 'level_scale_pct'
+    ) THEN
+        EXECUTE 'ALTER TABLE drop_grade_weight RENAME COLUMN level_scale_pct TO floor_scale_pct';
+    END IF;
+END $$;
+
+-- **기본값이던 줄만 옮긴다.** 관리자가 조정한 무게를 배포 한 번이 되돌리면 정본이 DB
+-- 라는 말이 거짓이 된다 — 옛 기본값(6·4)과 정확히 같은 줄만 새 기본값으로 바꾼다.
+UPDATE drop_grade_weight SET floor_scale_pct = 12 WHERE grade = 'FINE' AND floor_scale_pct = 6;
+UPDATE drop_grade_weight SET floor_scale_pct = 10 WHERE grade = 'RELIC' AND floor_scale_pct = 4;

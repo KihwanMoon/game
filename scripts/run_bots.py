@@ -45,7 +45,6 @@ from game.config import (
 from game.schemas.blocks import load_block_catalog
 from game.schemas.loadout import parse_loadout
 from game.schemas.monster_snapshot import parse_snapshot, sort_snapshots
-from game.schemas.reward import build_floor_offers
 from game.schemas.room import load_room_templates
 from game.schemas.ruleset import load_rulesets, parse_ruleset
 from scripts.bot_chores import (
@@ -144,7 +143,6 @@ def run_one_bot(pool: ConnectionPool, api_url: str, bot: BotProfile, parts: dict
         return f"규칙표가 없다: {bot.ruleset_id}"
     played = build_played_ruleset(raw, bot.skill_pct)
     loadout = ticket.get("loadout")
-    picked = resolve_bot_rewards(int(ticket["seed"]), int(ticket.get("floor", 1)), len(chain))
     result = run_room_chain(
         chain,
         parts["balance"],
@@ -158,10 +156,6 @@ def run_one_bot(pool: ConnectionPool, api_url: str, bot: BotProfile, parts: dict
         loadout=parse_loadout(loadout) if loadout else None,
         floor=int(ticket.get("floor", 1)),
         rooms_per_floor=int(ticket.get("rooms_per_floor", 0)),
-        # **고를 것을 먼저 정하고 돈다** (GDD §2.2). 후보는 티켓 시드에서 나오므로 봇도
-        # 서버와 같은 셋을 굴릴 수 있다 — 안 정하고 돌면 지역 판은 보상 없이, 서버
-        # 재시뮬은 보상을 받고 돌아 두 판이 갈린다.
-        rewards=picked,
     )
     floors = resolve_claim_floors(
         int(ticket.get("floor", 1)),
@@ -185,40 +179,9 @@ def run_one_bot(pool: ConnectionPool, api_url: str, bot: BotProfile, parts: dict
         if answer is None:
             break
         rewards.append(f"{floor}층 {answer.get('reward', '')}".strip())
-        # **서버가 연 층에만 보낸다.** 죽은 층·마지막 층에는 고를 자리가 없고, 그때
-        # 보내면 닫힌 티켓에 대고 404 를 받는다 — 실제로 그렇게 로그를 더럽혔다.
-        take = picked.get(floor)
-        if take is not None and int(answer.get("reward_floor", 0)) == floor:
-            send_request(
-                f"{api_url}/api/run/reward",
-                bot.token,
-                {"ticket_id": ticket["ticket_id"], "floor": floor, "reward_id": take},
-            )
     cleared = result.cleared_rooms // max(1, int(ticket.get("rooms_per_floor", 1)))
     depth = f"{cleared}층 깼다" if cleared else "1층에서 죽었다"
     return f"{depth} · " + (" · ".join(rewards) if rewards else "정산 없음")
-
-
-def resolve_bot_rewards(seed: int, start_floor: int, rooms: int) -> dict[int, str]:
-    """봇이 층마다 고를 보상을 미리 정한다 (GDD §2.2).
-
-    **첫 후보를 고른다.** 지금 목적은 「사람과 같은 조건으로 재는 것」이지 최적을 찾는
-    것이 아니다 — 페르소나별 선호는 축이 하나 더 생기는 일이라 따로 정한다.
-
-    Args:
-        seed: 티켓 시드. 후보가 여기서 나온다.
-        start_floor: 하강이 시작한 층.
-        rooms: 이 티켓이 도는 방 수. 층 수를 여기서 어림한다.
-
-    Returns:
-        층에서 보상 id 로.
-    """
-    picked: dict[int, str] = {}
-    for floor in range(start_floor, start_floor + max(1, rooms)):
-        offers = build_floor_offers(seed, floor)
-        if offers:
-            picked[floor] = offers[0].reward_id
-    return picked
 
 
 def apply_bot_round(pool: ConnectionPool, api_url: str, parts: dict) -> int:

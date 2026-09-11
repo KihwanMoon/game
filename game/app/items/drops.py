@@ -32,6 +32,16 @@ PITY_STEP = 1
 # 몇 배가 되어 천장이 아니라 자동 지급이 된다.
 PITY_CAP_PCT = 300
 
+# **층이 얹을 수 있는 상한.** 기본 가중치의 이 퍼센트까지만 민다.
+#
+# 마지막 층이 10 이고 상급이 층당 12% 이므로 지금은 108% 까지만 올라 여기 안 닿는다 —
+# 층이 늘어날 때 상위 등급이 조용히 기본이 되는 것을 막는 **난간**이다. 사용자가 정한
+# 규율이 「너무 높아지지 않게, 기본적으로 낮은 등급이 높게」다 (2026-09-11).
+FLOOR_CAP_PCT = 150
+
+# 층 스케일의 기준 층. 1층에서는 표에 적힌 값 그대로다.
+FIRST_FLOOR = 1
+
 
 def get_below(bound: int) -> int:
     """0 이상 bound 미만의 예측 불가능한 정수.
@@ -45,25 +55,36 @@ def get_below(bound: int) -> int:
     return secrets.randbelow(bound) if bound > 1 else 0
 
 
-def compute_grade_weight(weight: int, level_scale_pct: int, level: int, misses: int) -> int:
+def compute_grade_weight(weight: int, floor_scale_pct: int, floor: int, misses: int) -> int:
     """등급 하나의 최종 가중치를 낸다.
 
-    레벨과 천장이 **더해지지 곱해지지 않는다.** 곱하면 레벨 10 짜리 개체 하나가 분포를
-    통째로 뒤집고, 그러면 층 설계가 뜻을 잃는다.
+    **층이 기울인다** (2026-09-11 결정). 예전에는 **잡은 개체의 레벨**로 기울였는데, 그
+    값은 지속 몬스터에서 내려가기도 해서(로그에 `goblin_rusher 레벨 3→1` 이 남는다) 깊은
+    층이 무작위로 더 나빠졌다. 사람이 느끼는 축은 층이므로 축을 층으로 옮겼다.
+
+    층과 천장이 **더해지지 곱해지지 않는다.** 곱하면 한 층이 분포를 통째로 뒤집고,
+    그러면 층 설계가 뜻을 잃는다.
+
+    **얹는 값에 상한이 있다** (`FLOOR_CAP_PCT`). 마지막 층이 10 이라 지금 값으로는 안
+    닿지만, 층이 늘어날 때 상위 등급이 조용히 기본이 되는 것을 막는 난간이다.
 
     천장은 **기본 가중치의 `PITY_CAP_PCT` 퍼센트까지만** 민다. 상한이 없으면 한 런에
     열여섯 번 굴리는 동안 미획득이 쌓여 천장이 자동 지급이 된다.
 
     Args:
         weight: 표에 적힌 기본 가중치.
-        level_scale_pct: 레벨 1당 기본 가중치의 몇 퍼센트를 더할지.
-        level: 잡은 개체의 레벨.
+        floor_scale_pct: 1층에서 한 층 내려갈 때마다 기본 가중치의 몇 퍼센트를 더할지.
+        floor: 이 굴림이 일어난 층. 1층이 기준이라 아무것도 안 얹힌다.
         misses: 이 등급의 연속 미획득 수.
 
     Returns:
         최종 가중치. 0 아래로는 안 내려간다.
     """
-    bonus = weight * level_scale_pct * max(0, level) // PERCENT_BASE
+    steps = max(0, floor - FIRST_FLOOR)
+    bonus = min(
+        weight * floor_scale_pct * steps // PERCENT_BASE,
+        weight * FLOOR_CAP_PCT // PERCENT_BASE,
+    )
     lifted = min(max(0, misses) * PITY_STEP, weight * PITY_CAP_PCT // PERCENT_BASE)
     return max(0, weight + bonus + lifted)
 
@@ -94,26 +115,26 @@ def get_weighted(entries: tuple[tuple[str, int], ...]) -> str | None:
 def build_grade_pool(
     weights: tuple[tuple[str, int, int], ...],
     miss_weight: int,
-    level: int,
+    floor: int,
     pity: dict[str, int],
 ) -> tuple[tuple[str, int], ...]:
     """1단계 저울을 만든다 — 「안 나옴」도 같은 저울에 올린다.
 
-    따로 두면 "먼저 나올지 정하고 그 다음 등급을 정한다" 가 되어, 레벨이 등급 분포를
-    미는 것과 드롭률을 올리는 것이 갈린다. 한 저울에 올리면 레벨이 상위 등급을 밀 때
-    「안 나옴」의 몫이 자연히 줄어든다.
+    따로 두면 "먼저 나올지 정하고 그 다음 등급을 정한다" 가 되어, 층이 등급 분포를 미는
+    것과 드롭률을 올리는 것이 갈린다. 한 저울에 올리면 층이 상위 등급을 밀 때 「안 나옴」의
+    몫이 자연히 줄어든다 — **깊이 내려가면 좋은 것이 잘 나오는 동시에 조금 더 자주 나온다.**
 
     Args:
-        weights: (등급, 가중치, 레벨당 배율%) 들.
+        weights: (등급, 가중치, 층당 배율%) 들.
         miss_weight: 아무것도 안 나오는 몫.
-        level: 잡은 개체의 레벨.
+        floor: 이 굴림이 일어난 층.
         pity: 등급별 연속 미획득 수.
 
     Returns:
         (등급 또는 MISS, 가중치) 들. 이름 순으로 정렬돼 있다.
     """
     pool = [
-        (grade, compute_grade_weight(weight, scale, level, pity.get(grade, 0)))
+        (grade, compute_grade_weight(weight, scale, floor, pity.get(grade, 0)))
         for grade, weight, scale in weights
     ]
     pool.append((GRADE_MISS, max(0, miss_weight)))

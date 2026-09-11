@@ -180,8 +180,10 @@ def create_kill_drop(account_id: int, entity_id: int, context: dict) -> str:
         return ""
 
     miss_weight = next(weight for grade, weight, _s in DEFAULT_GRADE_WEIGHTS if grade == GRADE_MISS)
+    # **층이 등급을 기울인다** (2026-09-11 결정). 예전에는 잡은 개체의 레벨이었는데, 그
+    # 값은 지속 몬스터에서 내려가기도 해서 깊은 층이 무작위로 더 나빠졌다.
     entries = build_grade_pool(
-        read_grade_weights(pool, source_id), miss_weight, level, read_pity(pool, account_id)
+        read_grade_weights(pool, source_id), miss_weight, floor, read_pity(pool, account_id)
     )
     rolled = get_weighted(entries)
     if rolled is None or rolled == GRADE_MISS:
