@@ -11,9 +11,20 @@
 안 통하고, 통계에서 빠지고, 매물이 안 보인다 — 지웠을 때와 게임상 결과가 같으면서
 기록은 남는다.
 
-**남길 계정을 이름으로 적는다.** "끌 것" 을 고르는 방식이면 새 계정이 생길 때마다 목록을
-고쳐야 하고, 한 번 빠뜨리면 남의 계정이 꺼진다. 남길 것을 적으면 빠뜨렸을 때 꺼지는
-쪽이 아니라 남는 쪽으로 실패한다.
+**남길 것을 적는다.** "끌 것" 을 고르는 방식이면 새 계정이 생길 때마다 목록을 고쳐야
+하고, 한 번 빠뜨리면 남의 계정이 꺼진다. 남길 것을 적으면 빠뜨렸을 때 꺼지는 쪽이
+아니라 남는 쪽으로 실패한다.
+
+**남길 것이 이름 하나가 아니게 됐다 (2026-09-11).** 이 스크립트를 쓸 때는 세계에
+`sinindra` 하나뿐이었는데, 그 뒤로 봇 열과 둘째 테스터와 관리자가 생겼다. 이름 목록만
+보고 돌렸으면 **봇 열이 통째로 꺼졌다.** 그래서 남길 조건을 넷으로 적는다.
+
+    봇             세계를 혼자 두지 않으려고 도는 것들이다
+    테스터 표시    G1 의 분모다 — 끄면 게이트 판정이 바뀐다
+    관리자         끄면 그 사람이 세계에 못 들어온다
+    제출이 있음    한 판이라도 논 계정은 기록이다
+
+여기 하나도 안 걸리는 계정이 **한 번도 안 논 익명**이고, 그것이 개발·탐침이 남긴 것이다.
 
 기본은 **미리보기**다. 실제로 끄려면 `--apply` 를 붙이고, 되살리려면 `--restore` 를 쓴다.
 
@@ -29,7 +40,8 @@ from psycopg_pool import ConnectionPool
 from game.app.store.accounts import apply_deactivation
 from game.app.store.connection import create_pool
 
-# 지우지 않을 계정. 여기 없는 계정은 전부 지워진다.
+# 이름으로 지킬 계정. **조건 넷에 더해지는 것이지 그것을 대신하지 않는다** — 아직 안
+# 놀았고 표시도 안 된 사람을 부르기로 했을 때 여기 적는다.
 KEEP_LOGIN_IDS: tuple[str, ...] = ("sinindra",)
 
 # 미리보기에 적는 줄 수. 전부 적으면 화면이 넘쳐 정작 무엇을 지우는지가 안 보인다.
@@ -41,6 +53,12 @@ def list_targets(
 ) -> tuple[tuple[int, str, bool, int], ...]:
     """비활성화할 계정을 읽는다.
 
+    **봇·테스터·관리자·논 적 있는 계정은 안 고른다.** 조건은 머리말에 적혀 있다 —
+    여기 안 걸리는 것이 「한 번도 안 논 익명」이고 그것이 개발·탐침이 남긴 것이다.
+
+    **티켓이 아니라 제출로 센다.** 티켓은 출격 버튼을 누르면 생기고 제출은 판을 끝내야
+    생긴다 — 발급만 받고 떠난 것은 논 것이 아니다.
+
     Args:
         pool: 연결 풀.
         is_active: 지금 활성인 것을 찾을지. 되살리기는 False 로 부른다.
@@ -50,10 +68,18 @@ def list_targets(
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT a.id, coalesce(a.login_id, ''), a.admin_role IS NOT NULL,"
+            "WITH played AS ("
+            "  SELECT t.account_id FROM run_ticket t"
+            "  JOIN run_submission s ON s.ticket_id = t.id GROUP BY t.account_id"
+            ")"
+            " SELECT a.id, coalesce(a.login_id, ''), a.admin_role IS NOT NULL,"
             " (SELECT count(*) FROM run_ticket t WHERE t.account_id = a.id)"
             " FROM account a"
             " WHERE (a.login_id IS NULL OR lower(a.login_id) <> ALL(%s))"
+            "   AND NOT a.is_bot"
+            "   AND NOT a.is_tester"
+            "   AND a.admin_role IS NULL"
+            "   AND a.id NOT IN (SELECT account_id FROM played)"
             "   AND (a.deactivated_at IS NULL) = %s"
             " ORDER BY a.id",
             ([name.lower() for name in KEEP_LOGIN_IDS], is_active),

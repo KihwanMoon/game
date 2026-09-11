@@ -19,6 +19,15 @@ from psycopg_pool import ConnectionPool
 TOKEN_BYTES = 32
 
 # 핸들에 붙일 무작위 꼬리의 길이. 같은 이름이 겹쳐도 계정이 갈리게 한다.
+# 익명 계정 이름의 접두어. **봇은 이것을 안 쓴다** (`BOT_HANDLE_PREFIX`) — 봇 계정이
+# `user_` 로 시작하면 화면 어디에서도 사람과 구분되지 않고, 그것이 실제 신고였다
+# (2026-09-11). 순위표·경매·테스터 화면이 전부 이 이름을 그대로 적는다.
+HANDLE_PREFIX = "user_"
+
+# 봇 계정 이름의 접두어. 뒤의 무작위 부분은 그대로 두고 앞만 바꾼다 — 이미 유일한
+# 값이므로 이름 충돌이 생기지 않는다.
+BOT_HANDLE_PREFIX = "bot_"
+
 HANDLE_SUFFIX_BYTES = 4
 
 
@@ -56,7 +65,7 @@ def create_account(pool: ConnectionPool) -> tuple[Account, str]:
         호출한 쪽이 그대로 돌려주지 않으면 영영 사라진다.
     """
     token = secrets.token_urlsafe(TOKEN_BYTES)
-    handle = f"user_{secrets.token_hex(HANDLE_SUFFIX_BYTES)}"
+    handle = f"{HANDLE_PREFIX}{secrets.token_hex(HANDLE_SUFFIX_BYTES)}"
     with pool.connection() as connection:
         row = connection.execute(
             "INSERT INTO account (handle) VALUES (%s) RETURNING id", (handle,)
@@ -128,6 +137,41 @@ def find_player_entity(pool: ConnectionPool, account_id: int) -> int:
     if row is None:
         raise RuntimeError(f"계정의 개체를 만들지 못했다: {account_id}")
     return int(row[0])
+
+
+def apply_bot_handle(pool: ConnectionPool, account_id: int) -> str:
+    """계정 이름을 봇 것으로 바꾼다.
+
+    **앞만 바꾸고 뒤는 그대로 둔다.** 무작위 부분이 이미 유일하므로 이름 충돌이 생기지
+    않고, 같은 계정이 늘 같은 이름으로 남는다 — 순위표에 적힌 이름이 어느 날 통째로
+    달라지면 「누가 누구였지」가 된다.
+
+    **이름이 안 보이면 봇인지 알 수 없다** (2026-09-11, 실제 신고). 봇 계정이
+    `user_` 로 시작하면 순위표·경매·도감 어디에서도 사람과 구분되지 않는다. 표를
+    따로 두지 않고 이름 자체에 싣는 이유는, 그 세 화면이 전부 이름만 적기 때문이다.
+
+    이미 봇 이름이면 아무것도 안 한다 — 여러 번 불러도 같다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 대상 계정.
+
+    Returns:
+        바뀐 뒤의 이름. 계정이 없으면 빈 문자열.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT handle FROM account WHERE id = %s", (account_id,)
+        ).fetchone()
+        if row is None:
+            return ""
+        handle = str(row[0])
+        if handle.startswith(BOT_HANDLE_PREFIX):
+            return handle
+        _, _, suffix = handle.partition("_")
+        renamed = f"{BOT_HANDLE_PREFIX}{suffix or secrets.token_hex(HANDLE_SUFFIX_BYTES)}"
+        connection.execute("UPDATE account SET handle = %s WHERE id = %s", (renamed, account_id))
+    return renamed
 
 
 def apply_deactivation(pool: ConnectionPool, account_ids: tuple[int, ...], is_active: bool) -> int:

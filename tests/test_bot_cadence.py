@@ -118,3 +118,45 @@ def test_the_store_pushes_back_a_too_fast_bot(monkeypatch):
     bot_store.apply_bot_rest(pool, 1, 1)
     gap = (written[-1][0] - before).total_seconds()
     assert gap >= MIN_CADENCE_SEC - 1
+
+
+def test_a_bot_account_is_named_like_a_bot(monkeypatch):
+    """★ **봇 이름이 `user_` 로 시작하면 안 된다** (2026-09-11, 실제 신고).
+
+    봇은 사람과 같은 익명 계정으로 태어나므로 이름이 `user_xxxx` 다. 그런데 순위표·
+    경매·도감이 전부 이 이름만 적어서, 어디에서도 봇인지 알 수 없었다.
+
+    **앞만 바꾼다.** 뒷자리는 이미 유일하므로 이름 충돌이 안 생기고, 같은 계정이 늘
+    같은 이름으로 남는다 — 순위표에 적힌 이름이 어느 날 통째로 달라지면 「누가
+    누구였지」가 된다.
+    """
+    from game.app.store.accounts import BOT_HANDLE_PREFIX, HANDLE_PREFIX, apply_bot_handle
+
+    seen: dict[str, str] = {"handle": f"{HANDLE_PREFIX}a1b2c3d4"}
+
+    class FakeCursor:
+        def fetchone(self):
+            return (seen["handle"],)
+
+    class FakeConnection:
+        def execute(self, sql, params=()):
+            if sql.startswith("UPDATE"):
+                seen["handle"] = params[0]
+            return FakeCursor()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+    class FakePool:
+        def connection(self):
+            return FakeConnection()
+
+    pool = FakePool()
+    assert apply_bot_handle(pool, 1) == f"{BOT_HANDLE_PREFIX}a1b2c3d4"
+    # 뒷자리가 그대로다 — 같은 계정이 늘 같은 이름이다.
+    assert seen["handle"].endswith("a1b2c3d4")
+    # 여러 번 불러도 같다.
+    assert apply_bot_handle(pool, 1) == f"{BOT_HANDLE_PREFIX}a1b2c3d4"

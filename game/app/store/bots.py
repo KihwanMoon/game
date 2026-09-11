@@ -17,6 +17,7 @@ from datetime import UTC, datetime, timedelta
 from psycopg_pool import ConnectionPool
 
 from game.app.bots.personas import resolve_cadence
+from game.app.store.accounts import apply_bot_handle
 
 # 실력의 하한. 0 이면 규칙표가 통째로 꺼져 폴백만 남고, 그런 봇은 무엇도 배우지 못한다.
 MIN_SKILL_PCT = 20
@@ -82,6 +83,10 @@ def create_bot(
         cadence_sec: 판 사이에 쉬는 시간(초). 상한(`MAX_RUNS_PER_HOUR`) 안으로 물려서 쓴다.
         skill_pct: 실력. 낮으면 규칙 몇 줄을 끄고 나간다.
     """
+    # **이름도 봇 것으로 바꾼다** (2026-09-11, 실제 신고). 봇은 사람과 같은 익명 계정으로
+    # 태어나므로 이름이 `user_` 로 시작하는데, 순위표·경매·도감이 전부 이 이름만 적는다 —
+    # 그러면 어디에서도 봇인지 알 수 없다. 앞만 바꾸므로 계정 id 도 뒷자리도 그대로다.
+    apply_bot_handle(pool, account_id)
     with pool.connection() as connection:
         connection.execute("UPDATE account SET is_bot = TRUE WHERE id = %s", (account_id,))
         connection.execute(
