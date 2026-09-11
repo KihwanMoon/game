@@ -9,7 +9,7 @@
 `SUMMON` 한 줄을 읽고 "한 마리씩 부르겠지" 라고 카운터를 세우며, 그 카운터가 통하지
 않는 이유를 어디에서도 찾을 수 없다. 도감이 거짓말을 하면 P1 이 뒤집힌다.
 
-아직 구현되지 않은 행동(actions.DEFERRED_ACTIONS)도 같은 이유로 표시한다. 목록이
+아직 구현되지 않은 행동(plan.DEFERRED_ACTIONS)도 같은 이유로 표시한다. 목록이
 줄어들면 이 경고도 저절로 사라지므로, 도감이 코드보다 뒤처지지 않는다.
 """
 
@@ -17,7 +17,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from game.app.simulation.actions import DEFERRED_ACTIONS
+from game.app.simulation.plan import DEFERRED_ACTIONS
 from game.config import ENEMY_RULESETS_PATH
 from game.schemas.meta_save import MetaSave
 from game.schemas.ruleset import Rule, RuleSet, StatRef, Term

@@ -20,6 +20,12 @@ import {
 export interface ConsumableSlotView {
   readonly useTag: string
   readonly slotIndex: number
+  /**
+   * **끼운 것의 쓰임새 태그** (2026-09-11). `useTag` 는 칸의 **계열**(POTION·SCROLL)이라
+   * 무엇을 끼웠는지를 못 말한다 — 주문서 칸에 순간이동을 끼우면 계열은 그대로 SCROLL 이고
+   * 이번 판에 도는 것은 BLINK 다. 빈 칸이면 빈 문자열.
+   */
+  readonly itemTag: string
   /** 끼운 소모품. 빈 문자열이면 빈 칸이다. */
   readonly catalogId: string
   readonly labelKo: string
@@ -69,6 +75,7 @@ export interface ConsumableView {
 
 interface RawSlot {
   use_tag: string
+  item_tag?: string
   slot_index: number
   catalog_id: string | null
   label_ko: string
@@ -112,6 +119,9 @@ export function buildConsumableView(body: RawBody): ConsumableView {
     slots: body.slots.map((raw) => ({
       useTag: raw.use_tag,
       slotIndex: raw.slot_index,
+      // 구버전 서버는 안 보낸다. 그때는 계열을 그대로 쓴다 — 주문서 넷이 갈리기 전의
+      // 세계에서는 둘이 같은 값이었다.
+      itemTag: raw.item_tag ?? raw.use_tag,
       catalogId: raw.catalog_id ?? '',
       labelKo: raw.label_ko,
       grade: raw.grade,

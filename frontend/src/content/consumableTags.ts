@@ -74,3 +74,20 @@ export const USE_TAG_CODES: ReadonlyMap<string, string> = new Map([
   ['FLAME', 'SC'],
   ['FOCUS', 'SC'],
 ])
+
+/**
+ * 태그가 **언제 저절로 터지는가** (2026-09-11 개정). 코어의 `scrolls.TRIGGERS` 를 사람
+ * 말로 옮긴 것이다.
+ *
+ * **화면에 반드시 적는다.** 주문서가 규칙 줄 없이 터지므로, 조건을 안 보여 주면 들고
+ * 가는 사람에게는 「언젠가 사라지는 물건」이 된다 — 이 저장소가 여러 번 다친
+ * 「안 보이면 없는 것」의 자리다.
+ *
+ * 여기 없는 태그(물약)는 규칙표로만 쓴다. 언제 마실지는 이 게임이 파는 판단 그 자체다.
+ */
+export const TRIGGER_LABELS: ReadonlyMap<string, string> = new Map([
+  ['SCROLL', '체력 30% 아래에서 적이 붙어 있으면'],
+  ['BLINK', '인접한 적이 둘 이상이면 (포위)'],
+  ['FLAME', '인접한 적이 둘 이상이면 (포위)'],
+  ['FOCUS', '적이 한 칸 차이로 안 닿으면'],
+])

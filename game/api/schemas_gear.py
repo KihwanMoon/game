@@ -12,6 +12,11 @@ class ConsumableSlotView(BaseModel):
 
     use_tag: str
     slot_index: int
+    # **끼운 것의 쓰임새 태그** (2026-09-11). `use_tag` 는 칸의 **계열**(POTION·SCROLL)
+    # 이라 무엇을 끼웠는지를 못 말한다 — 주문서 칸에 순간이동을 끼우면 계열은 그대로
+    # SCROLL 이고 이번 판에 도는 것은 BLINK 다. 화면이 「언제 저절로 터지는가」를 적으려면
+    # 이 값이 있어야 하고, 없으면 칸 계열의 조건을 잘못 적는다.
+    item_tag: str = ""
     catalog_id: str | None = None
     label_ko: str = ""
     grade: str = ""

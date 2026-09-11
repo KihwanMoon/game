@@ -10,6 +10,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
+import { TRIGGER_LABELS } from '../../content/consumableTags'
 import { BALANCE, ROOM_TEMPLATES } from '../resources'
 import { PLAYER_ENTITY_ID, buildEngine, parseBalance } from '../services/runBattle'
 import { getManhattanDistance } from '../grid/geometry'
@@ -17,6 +18,7 @@ import { GUARD_STATUS, ITEM_SCROLL } from './abilities'
 import { FREE_ITEMS, createPlannedAction } from './plan'
 import {
   FOCUS_RANGE_BONUS,
+  TRIGGERS,
   FOCUS_TICKS,
   ITEM_BLINK,
   ITEM_FLAME,
@@ -152,5 +154,64 @@ describe('주문서 이식', () => {
     }
     useScroll(engine, ITEM_FLAME)
     expect(player.consumables.get(ITEM_FLAME)).toBe(1)
+  })
+})
+
+describe('조건 발동 이식', () => {
+  it('규칙 줄 없이 터진다 — 포위되면 순간이동', () => {
+    const { engine, player } = buildProbe(ITEM_BLINK)
+    const hostiles = engine.state.listHostiles(player).slice(0, 2)
+    expect(hostiles.length).toBe(2)
+    for (const one of hostiles) {
+      one.position = { ...player.position }
+    }
+    engine.actions.applyAutoScrolls(
+      player,
+      createPlannedAction({ entityId: PLAYER_ENTITY_ID, actionId: 'HOLD' }),
+    )
+    expect(player.consumables.get(ITEM_BLINK)).toBe(0)
+  })
+
+  it('왜 터졌는지가 로그에 남는다 — 규칙 번호는 안 붙는다', () => {
+    const { engine, player } = buildProbe(ITEM_BLINK)
+    for (const one of engine.state.listHostiles(player).slice(0, 2)) {
+      one.position = { ...player.position }
+    }
+    engine.actions.applyAutoScrolls(
+      player,
+      createPlannedAction({ entityId: PLAYER_ENTITY_ID, actionId: 'HOLD' }),
+    )
+    const lines = engine.log.entries.filter((one) => one.expr.includes('인접 적'))
+    expect(lines.length, '발동 사유가 로그에 없다').toBeGreaterThan(0)
+    expect(lines[lines.length - 1]?.rule).toBe(null)
+  })
+
+  it('규칙표가 그 태그를 쓰면 자동은 물러난다 — 내가 적은 줄이 세다', () => {
+    const { engine, player } = buildProbe(ITEM_BLINK)
+    for (const one of engine.state.listHostiles(player).slice(0, 2)) {
+      one.position = { ...player.position }
+    }
+    engine.actions.applyAutoScrolls(
+      player,
+      createPlannedAction({
+        entityId: PLAYER_ENTITY_ID,
+        actionId: 'HOLD',
+        managedItems: [ITEM_BLINK],
+      }),
+    )
+    expect(player.consumables.get(ITEM_BLINK)).toBe(1)
+  })
+
+  it('★ 저절로 터지는 태그는 전부 화면에 적을 말이 있다', () => {
+    // **안 보이면 없는 것이다.** 규칙 줄 없이 터지므로, 조건을 화면이 못 적으면 들고 가는
+    // 사람에게는 「언젠가 사라지는 물건」이 된다.
+    for (const useTag of TRIGGERS.keys()) {
+      expect(TRIGGER_LABELS.get(useTag), `${useTag} 의 발동 조건을 적을 말이 없다`).toBeDefined()
+    }
+  })
+
+  it('물약에는 기본 트리거가 없다 — 언제 마실지가 이 게임의 질문이다', () => {
+    expect(TRIGGERS.has('POTION')).toBe(false)
+    expect([...TRIGGERS.keys()]).toEqual(['SCROLL', ITEM_BLINK, ITEM_FLAME, ITEM_FOCUS])
   })
 })

@@ -242,6 +242,8 @@ class TickEngine:
                 executor.apply_guard(entity, plan, skill_id)
             for use_tag in plan.free_items:
                 executor.apply_item(entity, plan, use_tag)
+            # 조건이 맞은 주문서는 규칙 줄 없이 저절로 터진다 (`scrolls.TRIGGERS`).
+            executor.apply_auto_scrolls(entity, plan)
             if plan.action_id in MOVE_ACTIONS:
                 executor.apply_move(entity, plan)
         for plan in order:

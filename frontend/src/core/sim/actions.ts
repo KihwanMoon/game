@@ -38,7 +38,7 @@ import {
   resolveSummon,
   spendItem,
 } from './abilities'
-import { ITEM_BLINK, ITEM_FLAME, ITEM_FOCUS, readReach } from './scrolls'
+import { ITEM_BLINK, ITEM_FLAME, ITEM_FOCUS, listAutoScrolls, readReach } from './scrolls'
 import { PHASE_ACT } from './phases'
 import {
   GUARD_SKILL_ID,
@@ -346,13 +346,14 @@ export class ActionExecutor {
    * @param plan 실행할 계획.
    * @param useTag 쓸 태그. 비우면 계획이 가리킨 것을 쓴다 — 자리를 안 먹는 호출은 계획의
    *   행동이 다른 것이므로 여기로 넘긴다 (`FREE_ITEMS`).
+   * @param expr 로그 왼쪽에 적을 식. 조건 발동이 **왜 터졌는지**를 여기로 넘긴다.
    */
-  applyItem(entity: Entity, plan: PlannedAction, useTag = ''): void {
+  applyItem(entity: Entity, plan: PlannedAction, useTag = '', expr = ''): void {
     const kind = useTag === '' ? (plan.itemKind ?? ITEM_POTION) : useTag
     if (kind === ITEM_SCROLL) {
       const ticks = findSkill(this.config.skills, GUARD_SKILL_ID).guardTicks
       const held = resolveScroll(entity, ticks)
-      this.recordResult(entity.entityId, plan, held.outcome, held.healed)
+      this.recordResult(entity.entityId, plan, held.outcome, held.healed, expr)
       return
     }
     // 주문서 셋은 표로 갈린다 (2026-09-11). 종류가 늘 때 여기 가지가 늘지 않아야 한다 —
@@ -360,15 +361,35 @@ export class ActionExecutor {
     const resolver = SCROLL_RESOLVERS.get(kind)
     if (resolver !== undefined) {
       const { healed, outcome } = resolver(this, entity, plan)
-      this.recordResult(entity.entityId, plan, outcome, healed)
+      this.recordResult(entity.entityId, plan, outcome, healed, expr)
       return
     }
     if (kind !== ITEM_POTION) {
-      this.recordResult(entity.entityId, plan, `${kind} 쓸 줄 모른다 — 틱 낭비`, null)
+      this.recordResult(entity.entityId, plan, `${kind} 쓸 줄 모른다 — 틱 낭비`, null, expr)
       return
     }
     const { healed, outcome } = resolvePotion(entity)
-    this.recordResult(entity.entityId, plan, outcome, healed)
+    this.recordResult(entity.entityId, plan, outcome, healed, expr)
+  }
+
+  /**
+   * 조건이 맞은 주문서를 저절로 터뜨린다 (2026-09-11 개정).
+   *
+   * **규칙 줄을 안 먹는다.** 주문서 한 줄은 슬롯 1 과 cpu 2 를 먹는데 실측이 +3%p 였다 —
+   * 5칸이 꽉 찬 규칙표에서는 내줄 줄이 없어 「못 쓰는 것」이 맞았다.
+   *
+   * **확률이 아니라 조건이다.** 전투 판정에 난수를 들이지 않고, 발동한 이유를 실측값과
+   * 함께 로그에 남긴다 — 사후 분석이 「왜 터졌나」에 답할 수 있어야 P1 이 성립한다.
+   *
+   * @param entity 들고 있는 개체.
+   * @param plan 이번 틱의 계획. 규칙표가 직접 다루는 태그를 여기서 읽는다.
+   */
+  applyAutoScrolls(entity: Entity, plan: PlannedAction): void {
+    for (const [useTag, expr] of listAutoScrolls(this.state, entity, plan.managedItems)) {
+      // **규칙 번호를 안 붙인다.** 자동 발동은 규칙이 아니므로, 붙이면 사후 분석이
+      // 「이 규칙이 통했다」를 거짓으로 말한다 (P1).
+      this.applyItem(entity, { ...plan, ruleIndex: null }, useTag, `자동 — ${expr}`)
+    }
   }
 
   /**
@@ -546,12 +567,16 @@ export class ActionExecutor {
    * @param plan 실행한 계획.
    * @param outcome 결과 설명.
    * @param delta 수치 변화. 없으면 null.
+   * @param expr 왼쪽에 적을 식. 비우면 `행동 @대상` 이다. **계획의 `expr` 을 자동으로
+   *   쓰지 않는다** — 거기에는 규칙의 조건식이 들어 있어 갈아 끼우면 모든 행동의 로그
+   *   모양이 바뀐다. 조건 발동처럼 적을 사유가 따로 있는 자리만 넘긴다.
    */
   private recordResult(
     actorId: string,
     plan: PlannedAction,
     outcome: string,
     delta: number | null,
+    expr = '',
   ): void {
     const target = plan.targetId ? ` @${plan.targetId}` : ''
     this.log.record(
@@ -559,7 +584,7 @@ export class ActionExecutor {
         tick: this.state.tick,
         entityId: actorId,
         phase: PHASE_ACT,
-        expr: `${plan.actionId}${target}`,
+        expr: expr === '' ? `${plan.actionId}${target}` : expr,
         outcome,
         rule: plan.ruleIndex,
         delta,

@@ -70,6 +70,7 @@ def build_slot_view(slot: ConsumableSlot, catalog: dict) -> ConsumableSlotView:
         use_tag=slot.use_tag,
         slot_index=slot.slot_index,
         is_base=slot.is_base,
+        item_tag=entry.use_tag or "",
         catalog_id=slot.catalog_id,
         label_ko=entry.label_ko,
         grade=entry.grade,

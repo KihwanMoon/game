@@ -33,6 +33,7 @@ __all__ = [
     "OUTCOME_ONGOING",
     "OUTCOME_PLAYER_LOSS",
     "ATTACK_ACTIONS",
+    "DEFERRED_ACTIONS",
     "MELEE_REACH",
     "OUTCOME_PLAYER_WIN",
     "OUTCOME_TIMEOUT",
@@ -86,6 +87,14 @@ FREE_SKILLS: frozenset[str] = frozenset({GUARD_SKILL_ID})
 #
 # 충전이라는 대가는 그대로다. 스킬은 쿨타임만 내지만 주문서는 **장수가 준다.**
 FREE_ITEMS: frozenset[str] = frozenset({"SCROLL"})
+
+# 아직 만들 수 없는 행동과 그 사유. 조용히 무시하지 않고 로그로 알린다.
+# **W6 통합으로 비었다.** 목록과 `record_deferred` 를 남겨 두는 것은 규칙표가 부를 수는
+# 있으나 실행할 수 없는 행동이 다시 생길 때를 위해서다. 도감도 이 표를 읽어 경고한다.
+#
+# **실행기가 아니라 여기 있다** (2026-09-11). 이동이 `movement.py` 로 갈라지면서 실행기
+# 두 곳이 같은 표를 봐야 했다 — 계획이 가리킬 수 있는 행동의 목록이므로 자리는 이쪽이다.
+DEFERRED_ACTIONS: dict[str, str] = {}
 
 # 스킬을 정체로 가리키는 행동 (블록 v5, 결정 #04).
 USE_SKILL_ACTION = "USE_SKILL"
@@ -143,6 +152,10 @@ class PlannedAction:
     # 자리를 안 먹는 소모품들 (`plan.FREE_ITEMS`). 스킬 쪽과 가른 이유는 실행기가
     # 다르기 때문이다 — 이쪽은 충전을 태우고 저쪽은 쿨타임을 건다.
     free_items: tuple[str, ...] = ()
+    # **규칙표가 직접 다루는 소모품 태그들** (2026-09-11). 조건 발동이 이 목록을 비껴
+    # 간다 — 내가 적은 줄이 기본보다 세다. 안 그러면 자동이 먼저 태워서 「내 규칙이 영영
+    # 안 뜬다」가 되고, 그것은 P1 을 가장 직접적으로 깨는 모양이다.
+    managed_items: tuple[str, ...] = ()
 
 
 class DecisionPolicy(Protocol):

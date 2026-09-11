@@ -117,6 +117,11 @@ export interface PlannedAction {
   readonly freeSkills: readonly string[]
   /** 자리를 안 먹는 소모품들 (`FREE_ITEMS`). 충전은 그대로 탄다. */
   readonly freeItems: readonly string[]
+  /**
+   * **규칙표가 직접 다루는 소모품 태그들** (2026-09-11). 조건 발동이 이 목록을 비껴
+   * 간다 — 내가 적은 줄이 기본보다 세다.
+   */
+  readonly managedItems: readonly string[]
 }
 
 /** `createPlannedAction` 이 받는 값들. 생략한 항목은 파이썬 dataclass 의 기본값과 같다. */
@@ -132,6 +137,7 @@ export interface PlannedActionInput {
   readonly blocked?: readonly BlockedRule[]
   readonly freeSkills?: readonly string[]
   readonly freeItems?: readonly string[]
+  readonly managedItems?: readonly string[]
 }
 
 /**
@@ -153,6 +159,7 @@ export function createPlannedAction(input: PlannedActionInput): PlannedAction {
     blocked: input.blocked ?? [],
     freeSkills: input.freeSkills ?? [],
     freeItems: input.freeItems ?? [],
+    managedItems: input.managedItems ?? [],
   }
 }
 

@@ -312,6 +312,8 @@ export class TickEngine {
       for (const useTag of plan.freeItems) {
         executor.applyItem(entity, plan, useTag)
       }
+      // 조건이 맞은 주문서는 규칙 줄 없이 저절로 터진다 (`scrolls.TRIGGERS`).
+      executor.applyAutoScrolls(entity, plan)
       if (MOVE_ACTIONS.has(plan.actionId)) {
         executor.applyMove(entity, plan)
       }

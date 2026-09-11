@@ -29,7 +29,7 @@ import {
   SLOT_LABELS,
   type ConsumableCell,
 } from './consumableCells'
-import { findSlotFamily } from '../content/consumableTags'
+import { TRIGGER_LABELS, findSlotFamily } from '../content/consumableTags'
 import { formatGradeClass, renderGrade } from './gradeBadge'
 import { checkLinked, type LinkState } from './linkState'
 
@@ -107,6 +107,31 @@ function renderCompares(
 }
 
 /**
+ * **언제 저절로 터지는가** 한 줄 (2026-09-11 개정).
+ *
+ * 주문서는 규칙 줄 없이 터지므로, 조건을 안 적으면 들고 가는 사람에게 「언젠가 사라지는
+ * 물건」이 된다. 물약처럼 트리거가 없는 것은 그 사실을 적는다 — 빈 자리로 두면 「아직
+ * 안 정해졌나」로 읽힌다.
+ *
+ * @param useTag 칸에 든 것의 쓰임새 태그.
+ * @param isEmpty 빈 칸인가.
+ * @returns 한 줄. 빈 칸이면 아무것도 안 그린다.
+ */
+function renderTrigger(useTag: string, isEmpty: boolean): React.JSX.Element | null {
+  if (isEmpty) {
+    return null
+  }
+  const when = TRIGGER_LABELS.get(useTag)
+  return (
+    <ValueExpr
+      text={when === undefined ? '자동 발동 없음 — 규칙표로 쓴다' : `자동: ${when}`}
+      size="sm"
+      dim
+    />
+  )
+}
+
+/**
  * 끼운 칸 하나의 상세.
  *
  * @param props 칸과 처리기들.
@@ -145,6 +170,7 @@ function renderSlotDetail(
         // 색을 못 보는 경로도 남는다.
         <SegmentedGauge value={slot.charges} max={slot.chargeMax} readout />
       )}
+      {renderTrigger(slot.itemTag, slot.catalogId === '')}
       {renderAffixes(slot.affixes)}
       {/* 빈 칸은 견줄 것이 없다 — 무엇과 견주는지가 없다. */}
       {isEmpty ? null : renderCompares(pickFromSlot(slot), view.slots)}

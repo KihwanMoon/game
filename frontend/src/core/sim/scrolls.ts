@@ -10,13 +10,20 @@
  * 아이템 등급마다 다르면 같은 규칙이 무엇을 끼웠느냐에 따라 다르게 돈다 — 등급이 바꾸는
  * 것은 **충전 수와 끼고 있는 동안의 접사**뿐이다.
  *
+ * **저절로 터진다** (2026-09-11 개정). 주문서 한 줄은 규칙 슬롯 1 과 cpu 2 를 먹는데
+ * 실측이 +3%p 였다 — 5칸이 꽉 찬 규칙표에서는 내줄 줄이 없어 「못 쓰는 것」이 맞았다.
+ * 그래서 아이템마다 고정 트리거를 주고, 조건이 맞으면 규칙 줄 없이 발동·소비된다.
+ * 확률이 아니라 **조건**이다 — 전투 판정에 난수를 들이지 않는다.
+ *
  * **파이썬이 정본이다.** 여기 상수 하나가 어긋나면 브라우저에서 돈 판이 서버 재시뮬에서
  * 다르게 끝난다 (G3).
  */
 
+import { divideFloor } from '../combat/damage'
 import { getManhattanDistance } from '../grid/geometry'
 import { WALKABLE_TILES } from '../schemas'
-import type { Entity, WorldState } from './state'
+import { MELEE_REACH } from './plan'
+import { PERCENT_BASE, type Entity, type WorldState } from './state'
 
 /** 주문서 태그. 칸 계열은 전부 SCROLL 이다 (`storage` 의 SLOT_FAMILY). */
 export const ITEM_BLINK = 'BLINK'
@@ -109,6 +116,14 @@ export function readReach(entity: Entity): number {
 }
 
 /**
+ * 포위로 치는 인접 적 수. 둘이면 이미 협공 보정이 붙는 자리다.
+ */
+export const SURROUNDED_COUNT = 2
+
+/** 보호가 자세를 잡는 체력 문턱. 규칙표의 흔한 문턱(25~30%)과 같은 자리다. */
+export const GUARD_HP_PCT = 30
+
+/**
  * 태그에서 그것이 거는 상태로. **겹쳐 쓰기를 막는 자리다** (2026-09-11 실제 요청) —
  * 이미 걸려 있는데 또 쓰면 충전만 탄다. 즉발(순간이동·화염)은 여기 없다: 남는 상태가
  * 없으므로 겹칠 것도 없다.
@@ -128,4 +143,102 @@ export const LASTING_STATUS: ReadonlyMap<string, string> = new Map([
 export function checkAlreadyHeld(entity: Entity, useTag: string): boolean {
   const status = LASTING_STATUS.get(useTag)
   return status !== undefined && (entity.statuses.get(status) ?? 0) > 0
+}
+
+/**
+ * 붙어 있는 적의 수.
+ *
+ * @param state 세계 상태.
+ * @param entity 볼 개체.
+ * @returns 인접(맨해튼 1) 적의 수.
+ */
+export function countAdjacentHostiles(state: WorldState, entity: Entity): number {
+  return state
+    .listHostiles(entity)
+    .filter((other) => getManhattanDistance(entity.position, other.position) <= MELEE_REACH).length
+}
+
+/** 조건 발동 한 건의 판정 — 참·거짓과 **실측값을 병기한 문장** (GDD §8.2). */
+export type TriggerCheck = (state: WorldState, entity: Entity) => readonly [boolean, string]
+
+/** 보호 — 체력이 문턱 아래로 내려가 있고 적이 붙어 있는가. */
+export const checkGuardTrigger: TriggerCheck = (state, entity) => {
+  const hpPct = divideFloor(entity.hp * PERCENT_BASE, Math.max(1, entity.hpMax))
+  const near = countAdjacentHostiles(state, entity)
+  const fired = hpPct < GUARD_HP_PCT && near > 0
+  return [fired, `내 HP%(${String(hpPct)}) < ${String(GUARD_HP_PCT)} AND 인접 적(${String(near)}) > 0`]
+}
+
+/** 순간이동 — 포위됐는가. 인접 적 수는 **규칙표가 못 묻는 값이다.** */
+export const checkBlinkTrigger: TriggerCheck = (state, entity) => {
+  const near = countAdjacentHostiles(state, entity)
+  return [near >= SURROUNDED_COUNT, `인접 적(${String(near)}) >= ${String(SURROUNDED_COUNT)}`]
+}
+
+/** 화염 — 포위됐는가. 순간이동과 같은 조건이고 답이 반대다. */
+export const checkFlameTrigger: TriggerCheck = (state, entity) => {
+  const near = countAdjacentHostiles(state, entity)
+  return [near >= SURROUNDED_COUNT, `인접 적(${String(near)}) >= ${String(SURROUNDED_COUNT)}`]
+}
+
+/** 부릅 — 적이 있는데 한 칸 차이로 안 닿는가. 닿으면 안 터진다. */
+export const checkFocusTrigger: TriggerCheck = (state, entity) => {
+  const hostiles = state.listHostiles(entity)
+  if (hostiles.length === 0) {
+    return [false, '적 없음']
+  }
+  const reach = readReach(entity)
+  const near = Math.min(
+    ...hostiles.map((one) => getManhattanDistance(entity.position, one.position)),
+  )
+  const fired = near === reach + FOCUS_RANGE_BONUS
+  return [
+    fired,
+    `적거리(${String(near)}) == 사거리(${String(reach)}) + ${String(FOCUS_RANGE_BONUS)}`,
+  ]
+}
+
+/**
+ * 태그에서 그것이 저절로 터지는 조건으로. 파이썬 `TRIGGERS` 와 **같은 순서**다 (G3).
+ *
+ * 여기 없는 태그는 규칙표로만 쓴다 — 물약이 그렇다: 언제 마실지는 이 게임이 파는 판단
+ * 그 자체라 기본값을 두지 않는다.
+ */
+export const TRIGGERS: ReadonlyMap<string, TriggerCheck> = new Map([
+  ['SCROLL', checkGuardTrigger],
+  [ITEM_BLINK, checkBlinkTrigger],
+  [ITEM_FLAME, checkFlameTrigger],
+  [ITEM_FOCUS, checkFocusTrigger],
+])
+
+/**
+ * 이번 틱에 저절로 터질 주문서들.
+ *
+ * **규칙표가 직접 다루는 태그는 뺀다.** 내가 적은 줄이 기본보다 세다 — 안 그러면 자동이
+ * 먼저 태워서 「내 규칙이 영영 안 뜬다」가 된다.
+ *
+ * @param state 세계 상태.
+ * @param entity 들고 있는 개체.
+ * @param managed 규칙표가 직접 쓰는 태그들.
+ * @returns [태그, 실측값을 병기한 문장] 들. 터질 것이 없으면 빈 배열.
+ */
+export function listAutoScrolls(
+  state: WorldState,
+  entity: Entity,
+  managed: readonly string[],
+): readonly (readonly [string, string])[] {
+  const fired: (readonly [string, string])[] = []
+  for (const [useTag, check] of TRIGGERS) {
+    if (managed.includes(useTag) || (entity.consumables.get(useTag) ?? 0) <= 0) {
+      continue
+    }
+    if (checkAlreadyHeld(entity, useTag)) {
+      continue
+    }
+    const [ok, expr] = check(state, entity)
+    if (ok) {
+      fired.push([useTag, expr])
+    }
+  }
+  return fired
 }

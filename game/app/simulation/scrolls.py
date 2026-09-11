@@ -11,10 +11,24 @@
 
 **겹쳐 쓸 수 없다** (같은 요청). 이미 걸려 있는데 또 쓰면 충전만 타므로, 그때는
 「불가」로 잡아 다음 규칙에 기회를 준다 — 소모품이 없을 때와 같은 자리다 (결정 #04).
+
+**저절로 터진다** (2026-09-11 개정). 주문서 한 줄은 규칙 슬롯 1 과 cpu 2 를 먹는데
+실측이 +3%p 였다 — 5칸이 꽉 찬 규칙표에서는 내줄 줄이 없어 「못 쓰는 것」이 맞았다.
+그래서 **아이템마다 고정 트리거를 주고, 그 조건이 맞으면 규칙 줄 없이 발동·소비된다.**
+
+확률이 아니라 **조건**인 이유가 둘이다. 전투 판정에는 난수가 없고(닿는 곳이 이니셔티브
+동률과 전투 전 배치뿐이다), 충전이 1~2장이라 확률은 대개 체력이 멀쩡할 때 터져 버린다 —
+방어용 소모품이 가장 안 아쉬울 때 사라진다.
+
+**규칙표가 그 태그를 직접 쓰면 자동은 물러난다** (`PlannedAction.managed_items`). 내가
+적은 줄이 기본보다 세다 — 안 그러면 「내 규칙이 영영 안 뜬다」가 된다.
 """
 
+from collections.abc import Callable
+
 from game.app.grid.geometry import get_manhattan_distance
-from game.app.simulation.state import Entity, WorldState
+from game.app.simulation.plan import MELEE_REACH
+from game.app.simulation.state import PERCENT_BASE, Entity, WorldState
 from game.schemas.room import WALKABLE_TILES
 
 # 주문서 태그. 칸 계열은 전부 SCROLL 이다 (`schemas/consumable.SLOT_FAMILY`).
@@ -113,3 +127,148 @@ def check_already_held(entity: Entity, use_tag: str) -> bool:
     """
     status = LASTING_STATUS.get(use_tag, "")
     return bool(status) and entity.statuses.get(status, 0) > 0
+
+
+# ── 조건 발동 (2026-09-11) ─────────────────────────────────────────────
+#
+# **태그마다 하나씩, 코드에 박는다.** 유지시간과 같은 규율이다 — 트리거가 아이템 등급마다
+# 다르면 같은 주문서가 무엇을 주웠느냐에 따라 다른 때 터지고, 그러면 들고 가는 사람이
+# 「언제 터지는지」를 모른다. 등급이 바꾸는 것은 충전 수와 접사뿐이다.
+#
+# **넷이 서로 다른 곤경을 덮는다.** 특히 순간이동과 화염은 **같은 상황의 두 답**이다 —
+# 포위됐을 때 빠질 것인가 태울 것인가. 그것이 곧 「어느 주문서를 들고 갈까」다 (P3).
+
+# 포위로 치는 인접 적 수. 둘이면 이미 협공 보정이 붙는 자리다 (`actions.apply_strike`).
+SURROUNDED_COUNT = 2
+
+# 보호가 자세를 잡는 체력 문턱. 규칙표의 흔한 문턱(25~30%)과 같은 자리에 둔다.
+GUARD_HP_PCT = 30
+
+
+def count_adjacent_hostiles(state: WorldState, entity: Entity) -> int:
+    """붙어 있는 적의 수.
+
+    Args:
+        state: 세계 상태.
+        entity: 볼 개체.
+
+    Returns:
+        인접(맨해튼 1) 적의 수.
+    """
+    return sum(
+        1
+        for other in state.list_hostiles(entity)
+        if get_manhattan_distance(entity.position, other.position) <= MELEE_REACH
+    )
+
+
+def check_guard_trigger(state: WorldState, entity: Entity) -> tuple[bool, str]:
+    """보호 — 체력이 문턱 아래로 내려가 있고 적이 붙어 있는가.
+
+    **맞는 순간이 아니라 틱 머리에서 본다.** 피격 시점에 끼워 넣으면 피해 경로가 갈라져
+    두 코어가 어긋나기 쉽고(G3), 「문턱을 넘으면 자세를 잡는다」가 사람에게도 더 쉽다.
+
+    Args:
+        state: 세계 상태.
+        entity: 들고 있는 개체.
+
+    Returns:
+        (발동할까, 실측값을 병기한 문장).
+    """
+    hp_pct = entity.hp * PERCENT_BASE // max(1, entity.hp_max)
+    near = count_adjacent_hostiles(state, entity)
+    fired = hp_pct < GUARD_HP_PCT and near > 0
+    return fired, f"내 HP%({hp_pct}) < {GUARD_HP_PCT} AND 인접 적({near}) > 0"
+
+
+def check_blink_trigger(state: WorldState, entity: Entity) -> tuple[bool, str]:
+    """순간이동 — 포위됐는가.
+
+    **인접 적 수는 규칙표가 못 묻는 값이다.** 인지 변수에 없으므로, 이 트리거는 규칙
+    줄로는 지을 수 없는 판단을 한다 — 그것이 이 주문서가 파는 것이다.
+
+    Args:
+        state: 세계 상태.
+        entity: 들고 있는 개체.
+
+    Returns:
+        (발동할까, 실측값을 병기한 문장).
+    """
+    near = count_adjacent_hostiles(state, entity)
+    return near >= SURROUNDED_COUNT, f"인접 적({near}) >= {SURROUNDED_COUNT}"
+
+
+def check_flame_trigger(state: WorldState, entity: Entity) -> tuple[bool, str]:
+    """화염 — 포위됐는가. 순간이동과 **같은 조건이고 답이 반대다**.
+
+    Args:
+        state: 세계 상태.
+        entity: 들고 있는 개체.
+
+    Returns:
+        (발동할까, 실측값을 병기한 문장).
+    """
+    near = count_adjacent_hostiles(state, entity)
+    return near >= SURROUNDED_COUNT, f"인접 적({near}) >= {SURROUNDED_COUNT}"
+
+
+def check_focus_trigger(state: WorldState, entity: Entity) -> tuple[bool, str]:
+    """부릅 — 적이 있는데 한 칸 차이로 **안 닿는가**?
+
+    닿는 적이 하나라도 있으면 안 터진다. 때릴 수 있는데 사거리를 사는 것은 낭비다.
+
+    Args:
+        state: 세계 상태.
+        entity: 들고 있는 개체.
+
+    Returns:
+        (발동할까, 실측값을 병기한 문장).
+    """
+    hostiles = state.list_hostiles(entity)
+    if not hostiles:
+        return False, "적 없음"
+    reach = read_reach(entity)
+    near = min(get_manhattan_distance(entity.position, one.position) for one in hostiles)
+    fired = near == reach + FOCUS_RANGE_BONUS
+    return fired, f"적거리({near}) == 사거리({reach}) + {FOCUS_RANGE_BONUS}"
+
+
+# 태그에서 그것이 저절로 터지는 조건으로. 여기 없는 태그는 규칙표로만 쓴다 — 물약이
+# 그렇다: 언제 마실지는 이 게임이 파는 판단 그 자체라 기본값을 두지 않는다.
+TRIGGERS: dict[str, Callable[[WorldState, Entity], tuple[bool, str]]] = {
+    "SCROLL": check_guard_trigger,
+    ITEM_BLINK: check_blink_trigger,
+    ITEM_FLAME: check_flame_trigger,
+    ITEM_FOCUS: check_focus_trigger,
+}
+
+
+def list_auto_scrolls(
+    state: WorldState, entity: Entity, managed: tuple[str, ...]
+) -> tuple[tuple[str, str], ...]:
+    """이번 틱에 저절로 터질 주문서들.
+
+    **`TRIGGERS` 의 순서대로 본다.** 딕셔너리를 순회해 상태를 만들지만 그 표가 **박아 둔
+    상수**라 순서가 고정돼 있다 (R5 가 막는 것은 흔들리는 순회지 고정된 순서가 아니다).
+
+    **규칙표가 직접 다루는 태그는 뺀다.** 내가 적은 줄이 기본보다 세다 — 안 그러면
+    자동이 먼저 태워서 「내 규칙이 영영 안 뜬다」가 된다.
+
+    Args:
+        state: 세계 상태.
+        entity: 들고 있는 개체.
+        managed: 규칙표가 직접 쓰는 태그들.
+
+    Returns:
+        (태그, 실측값을 병기한 문장) 들. 터질 것이 없으면 빈 튜플.
+    """
+    fired: list[tuple[str, str]] = []
+    for use_tag, check in TRIGGERS.items():
+        if use_tag in managed or entity.consumables.get(use_tag, 0) <= 0:
+            continue
+        if check_already_held(entity, use_tag):
+            continue
+        ok, expr = check(state, entity)
+        if ok:
+            fired.append((use_tag, expr))
+    return tuple(fired)

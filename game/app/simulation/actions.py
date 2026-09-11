@@ -10,10 +10,10 @@ from dataclasses import dataclass, field
 
 from game.app.combat.damage import calculate_damage
 from game.app.core.event_log import EventLog, LogEntry
-from game.app.grid.geometry import get_manhattan_distance, iter_neighbors
-from game.app.grid.vision import VisionGrid, check_line_of_sight, find_cover_positions
-from game.app.pathfinding.distance_field import build_distance_field, find_next_step
+from game.app.grid.geometry import get_manhattan_distance
+from game.app.grid.vision import VisionGrid, check_line_of_sight
 from game.app.simulation.blast_actions import BlastActionMixin
+from game.app.simulation.movement import MoveActionMixin
 from game.app.simulation.plan import (
     ATTACK_ACTIONS,
     GUARD_SKILL_ID,
@@ -34,7 +34,6 @@ from game.app.simulation.telegraph import CANCEL_BY_HIT, TelegraphBoard
 # 전부 고치는 것보다 파사드를 두는 편이 낫다.
 __all__ = ["ATTACK_ACTIONS", "MELEE_REACH", "ActionExecutor"]
 from game.app.skills.catalog import find_skill
-from game.schemas.room import TILE_DOOR, TILE_SPRING, TILE_STAIRS, WALKABLE_TILES
 
 # 퍼센트 기준. 100 이 1.0배다.
 PERCENT_BASE = 100
@@ -45,21 +44,9 @@ MOVE_ACTIONS = frozenset({"APPROACH", "RETREAT", "MOVE_TO_EXIT", "MOVE_TO_HEAL",
 
 # 이 사거리까지는 시야를 묻지 않는다. 인접한 적은 벽 너머에 있을 수 없다.
 
-# 아직 만들 수 없는 행동과 그 사유. 조용히 무시하지 않고 로그로 알린다.
-# **W6 통합으로 비었다.** 목록과 record_deferred 를 남겨 두는 것은 규칙표가 부를 수는
-# 있으나 실행할 수 없는 행동이 다시 생길 때를 위해서다. 도감도 이 표를 읽어 경고한다.
-DEFERRED_ACTIONS: dict[str, str] = {}
-
-
-# 타일을 목표로 하는 이동. 행동 id 에서 찾을 타일 갈래로.
-TILE_MOVE_TARGETS: dict[str, set[int]] = {
-    "MOVE_TO_EXIT": {TILE_DOOR, TILE_STAIRS},
-    "MOVE_TO_HEAL": {TILE_SPRING},
-}
-
 
 @dataclass
-class ActionExecutor(SupportActionMixin, BlastActionMixin):
+class ActionExecutor(SupportActionMixin, BlastActionMixin, MoveActionMixin):
     """계획을 실행하고 결과를 로그에 남긴다."""
 
     state: WorldState
@@ -85,7 +72,14 @@ class ActionExecutor(SupportActionMixin, BlastActionMixin):
         """
         self._record(entity.entity_id, plan, "쓸 줄 모른다 — 실행기가 없다", None)
 
-    def _record(self, actor_id: str, plan: PlannedAction, outcome: str, delta: int | None) -> None:
+    def _record(
+        self,
+        actor_id: str,
+        plan: PlannedAction,
+        outcome: str,
+        delta: int | None,
+        expr: str = "",
+    ) -> None:
         """실행 결과를 남긴다.
 
         Args:
@@ -93,6 +87,11 @@ class ActionExecutor(SupportActionMixin, BlastActionMixin):
             plan: 실행한 계획.
             outcome: 결과 설명.
             delta: 수치 변화. 없으면 None.
+            expr: 왼쪽에 적을 식. 비우면 `행동 @대상` 이다.
+
+                **계획의 `expr` 을 자동으로 쓰지 않는다.** 거기에는 규칙의 조건식이
+                들어 있어, 갈아 끼우면 모든 행동의 로그 모양이 바뀌고 저장된 분석이
+                갈린다. 조건 발동처럼 **적을 사유가 따로 있는 자리**만 넘긴다.
         """
         target = f" @{plan.target_id}" if plan.target_id else ""
         self.log.record(
@@ -100,7 +99,7 @@ class ActionExecutor(SupportActionMixin, BlastActionMixin):
                 tick=self.state.tick,
                 entity_id=actor_id,
                 phase=PHASE_ACT,
-                expr=f"{plan.action_id}{target}",
+                expr=expr or f"{plan.action_id}{target}",
                 outcome=outcome,
                 rule=plan.rule_index,
                 delta=delta,
@@ -175,118 +174,6 @@ class ActionExecutor(SupportActionMixin, BlastActionMixin):
             return False
         self._record(entity.entity_id, plan, "둔화 — 이번 틱은 쉰다", None)
         return True
-
-    def _find_tiles(self, kinds: set[int]) -> tuple[tuple[int, int], ...]:
-        """방에서 해당 종류의 타일 좌표를 모은다.
-
-        Args:
-            kinds: 찾을 타일 ID 집합.
-
-        Returns:
-            좌표들. 없으면 빈 튜플.
-        """
-        return tuple(
-            (x, y)
-            for y in range(self.state.room.height)
-            for x in range(self.state.room.width)
-            if self.state.get_tile(x, y) in kinds
-        )
-
-    def _apply_step(
-        self, entity: Entity, goals: tuple[tuple[int, int], ...], plan: PlannedAction
-    ) -> None:
-        """목표들 쪽으로 한 칸 간다. 막히면 제자리이며 그 틱은 낭비된다 (TDD §4.2).
-
-        Args:
-            entity: 이동할 엔티티.
-            goals: 목표 좌표들.
-            plan: 실행 중인 계획.
-        """
-        if not goals:
-            self._record(entity.entity_id, plan, "목표 없음 — 틱 낭비", None)
-            return
-        occupied = self._list_occupied(entity)
-        field_map = build_distance_field(self.state, goals, blocked=occupied)
-        step = find_next_step(field_map, entity.position)
-        if step is None:
-            self._record(entity.entity_id, plan, "길 막힘 — 틱 낭비", None)
-            return
-        if step in occupied:
-            # 거리장은 목표 칸을 점유 여부와 무관하게 0 으로 깐다(APPROACH 의 목표가
-            # 곧 적이 선 칸이므로 그래야 길이 이어진다). 그 마지막 한 걸음까지 허용하면
-            # 두 개체가 한 칸에 겹쳐 적거리 0 이 나오고 RETREAT 이 영영 막힌다.
-            self._record(entity.entity_id, plan, f"다음 칸 점유 {step} — 제자리", None)
-            return
-        entity.position = step
-        self._record(entity.entity_id, plan, f"이동 {step}", None)
-
-    def record_deferred(self, entity: Entity, plan: PlannedAction) -> None:
-        """아직 실행할 수 없는 행동이라는 사실을 로그에 남긴다.
-
-        Args:
-            entity: 행위자.
-            plan: 실행하려던 계획.
-        """
-        reason = DEFERRED_ACTIONS.get(plan.action_id, "사유 미상")
-        self._record(entity.entity_id, plan, f"미구현 — {reason}", None)
-
-    def apply_move(self, entity: Entity, plan: PlannedAction) -> None:
-        """이동 계열 행동을 실행한다.
-
-        Args:
-            entity: 이동할 엔티티.
-            plan: 실행할 계획.
-        """
-        if plan.action_id in DEFERRED_ACTIONS:
-            self.record_deferred(entity, plan)
-            return
-        # 타일을 목표로 하는 이동들. 표로 두는 이유는 가지가 늘 때마다 return 이 하나씩
-        # 늘어 함수가 상한에 닿기 때문이고, 무엇보다 **셋이 같은 모양**이라 그렇다.
-        wanted = TILE_MOVE_TARGETS.get(plan.action_id)
-        if wanted is not None:
-            self._apply_step(entity, self._find_tiles(wanted), plan)
-            return
-        if plan.action_id == "MOVE_TO_COVER":
-            self._apply_cover_move(entity, plan)
-            return
-
-        target = self.state.entities.get(plan.target_id or "")
-        if target is None or not target.is_alive:
-            self._record(entity.entity_id, plan, "대상 없음 — 틱 낭비", None)
-            return
-        if plan.action_id == "APPROACH":
-            self._apply_step(entity, (target.position,), plan)
-            return
-        occupied = self._list_occupied(entity)
-        here = get_manhattan_distance(entity.position, target.position)
-        away = tuple(
-            pos
-            for pos in iter_neighbors(entity.position)
-            if self.state.get_tile(*pos) in WALKABLE_TILES
-            and pos not in occupied
-            and get_manhattan_distance(pos, target.position) > here
-        )
-        self._apply_step(entity, away, plan)
-
-    def _apply_cover_move(self, entity: Entity, plan: PlannedAction) -> None:
-        """모든 적의 시야에서 벗어나는 칸으로 한 칸 간다 (GDD §4.4).
-
-        목표는 벽 자체가 아니라 **그 뒤에 서면 시야가 끊기는 칸**이다. 벽으로 가면
-        등을 붙인 채 그대로 노출된다.
-
-        Args:
-            entity: 이동할 엔티티.
-            plan: 실행 중인 계획.
-        """
-        # list_hostiles 는 list_actors 순서라 이미 결정론적이다. 집합으로 만들지 않는다 (R5).
-        threats = tuple(other.position for other in self.state.list_hostiles(entity))
-        goals = find_cover_positions(self._build_grid(), threats, self._list_occupied(entity))
-        if entity.position in goals:
-            # 목표 거리가 0 이면 find_next_step 이 None 을 돌려줘 "길 막힘" 으로 찍힌다.
-            # 이미 숨어 있는 것과 갈 수 없는 것은 다른 사실이다 (P1).
-            self._record(entity.entity_id, plan, "이미 엄폐 중", None)
-            return
-        self._apply_step(entity, goals, plan)
 
     def apply_attack(self, entity: Entity, plan: PlannedAction) -> None:
         """단일 대상 공격을 실행한다.

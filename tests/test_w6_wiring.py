@@ -10,9 +10,8 @@ import pytest
 from game.app.grid.vision import VisionGrid, check_exposure, find_cover_positions
 from game.app.rules.rule_vm import build_rule_vm
 from game.app.services.run_battle import assign_enemy_policies, build_engine, load_balance
-from game.app.simulation.actions import DEFERRED_ACTIONS
 from game.app.simulation.perception import DEFERRED_BLOCKS
-from game.app.simulation.plan import PlannedAction
+from game.app.simulation.plan import DEFERRED_ACTIONS, PlannedAction
 from game.app.simulation.selectors import resolve_target
 from game.app.simulation.state import FACTION_ENEMY, Entity
 from game.config import BALANCE_PATH, BLOCKS_PATH, ENEMY_RULESETS_PATH, ROOM_TEMPLATES_PATH

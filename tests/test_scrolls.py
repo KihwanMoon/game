@@ -280,3 +280,96 @@ def test_flame_keeps_the_charge_with_nobody_in_range(balance, templates):
         other.hp = 0
     use_scroll(engine, scrolls.ITEM_FLAME)
     assert player.consumables[scrolls.ITEM_FLAME] == 1
+
+
+# ── 조건 발동 (2026-09-11 개정) ────────────────────────────────────────
+
+
+def test_a_scroll_fires_without_a_rule_line(balance, templates):
+    """★ **줄값이 문제였다.**
+
+    주문서 한 줄은 규칙 슬롯 1 과 cpu 2 를 먹는데 실측이 +3%p 였다 — 5칸이 꽉 찬
+    규칙표에서는 내줄 줄이 없어 「못 쓰는 것」이 맞았다. 이제 조건이 맞으면 규칙 줄
+    없이 터진다.
+    """
+    engine, player = build_probe(balance, templates, scrolls.ITEM_BLINK)
+    # 적 둘을 붙여 포위를 만든다.
+    hostiles = engine.state.list_hostiles(player)[:2]
+    assert len(hostiles) == 2
+    hostiles[0].position = player.position[0] + 1, player.position[1]
+    hostiles[1].position = player.position[0], player.position[1] + 1
+    engine.actions.apply_auto_scrolls(player, PlannedAction(entity_id=PLAYER, action_id="HOLD"))
+    assert player.consumables[scrolls.ITEM_BLINK] == 0
+    assert scrolls.count_adjacent_hostiles(engine.state, player) < scrolls.SURROUNDED_COUNT
+
+
+def test_the_trigger_records_the_values_it_read(balance, templates):
+    """★ **왜 터졌는지가 로그에 남는다** (GDD §8.2, P1).
+
+    항별 실측값을 병기하지 않으면 사후 분석이 「주문서가 사라졌다」까지만 말한다.
+    """
+    engine, player = build_probe(balance, templates, scrolls.ITEM_BLINK)
+    for one in engine.state.list_hostiles(player)[:2]:
+        one.position = player.position
+    engine.actions.apply_auto_scrolls(player, PlannedAction(entity_id=PLAYER, action_id="HOLD"))
+    lines = [one for one in engine.log.entries if "인접 적" in one.expr]
+    assert lines, "발동 사유가 로그에 없다"
+    assert lines[-1].rule is None, "자동 발동은 규칙이 아니다 — 규칙 번호가 붙으면 안 된다"
+
+
+def test_a_rule_line_beats_the_default_trigger(balance, templates):
+    """★ **내가 적은 줄이 기본보다 세다.**
+
+    규칙표가 그 태그를 직접 쓰면 자동은 물러난다. 안 그러면 자동이 먼저 태워서
+    「내 규칙이 영영 안 뜬다」가 되고, 그것은 P1 을 가장 직접적으로 깨는 모양이다.
+    """
+    engine, player = build_probe(balance, templates, scrolls.ITEM_BLINK)
+    for one in engine.state.list_hostiles(player)[:2]:
+        one.position = player.position
+    plan = PlannedAction(entity_id=PLAYER, action_id="HOLD", managed_items=(scrolls.ITEM_BLINK,))
+    engine.actions.apply_auto_scrolls(player, plan)
+    assert player.consumables[scrolls.ITEM_BLINK] == 1
+
+
+def test_the_ruleset_declares_what_it_manages(balance, templates, catalog):
+    """★ 규칙표가 쓰는 태그를 계획이 실어 나른다 — 엔진은 규칙표를 모른다."""
+    always = Condition(op="SINGLE", terms=(Term("self_hp_percent", ">", 0, None),))
+    ruleset = RuleSet(
+        ruleset_id="managed_probe",
+        version=1,
+        rules=(
+            Rule(priority=1, conditions=always, action="USE_ITEM", action_param="POTION"),
+            Rule(
+                priority=2,
+                conditions=always,
+                action="USE_ITEM",
+                action_param=scrolls.ITEM_FLAME,
+            ),
+        ),
+    )
+    vm = RuleVm(ruleset, catalog, {})
+    assert vm.list_managed_items() == ("FLAME", "POTION")
+
+
+def test_a_held_status_does_not_retrigger(balance, templates):
+    """★ 이미 걸려 있으면 안 터진다 — 겹쳐 쓰면 남은 틱이 덮이고 충전만 탄다."""
+    engine, player = build_probe(balance, templates, "SCROLL")
+    player.hp = player.hp_max // 10
+    for one in engine.state.list_hostiles(player)[:1]:
+        one.position = player.position[0] + 1, player.position[1]
+    plan = PlannedAction(entity_id=PLAYER, action_id="HOLD")
+    engine.actions.apply_auto_scrolls(player, plan)
+    assert player.consumables["SCROLL"] == 0
+    assert player.statuses[STATUS_GUARD] > 0
+    player.consumables["SCROLL"] = 1
+    engine.actions.apply_auto_scrolls(player, plan)
+    assert player.consumables["SCROLL"] == 1, "걸려 있는데 또 태웠다"
+
+
+def test_potions_have_no_default_trigger(balance, templates):
+    """★ **물약에는 기본값을 두지 않는다.**
+
+    언제 마실지는 이 게임이 파는 판단 그 자체다 — 그것까지 기본으로 정해 주면 규칙표가
+    답할 질문이 하나 줄어든다.
+    """
+    assert "POTION" not in scrolls.TRIGGERS

@@ -465,9 +465,35 @@ export class RuleVm implements DecisionPolicy {
         blocked,
         freeSkills: free,
         freeItems,
+        managedItems: this.listManagedItems(),
       })
     }
-    return { ...this.buildDefaultAction(entity, state), blocked, freeSkills: free, freeItems }
+    return {
+      ...this.buildDefaultAction(entity, state),
+      blocked,
+      freeSkills: free,
+      freeItems,
+      managedItems: this.listManagedItems(),
+    }
+  }
+
+  /**
+   * 이 규칙표가 직접 쓰는 소모품 태그들.
+   *
+   * **조건 발동이 이 목록을 비껴 간다** (`listAutoScrolls`). 규칙 한 줄을 내어 쓰기로
+   * 한 것을 자동이 먼저 태우면, 그 줄은 영영 「불가 — 없음」으로만 뜬다.
+   *
+   * @returns 정렬된 태그들. 소모품 규칙이 없으면 빈 배열 (R5 — 집합의 순회 순서가
+   *   계획에 새어 나가면 안 된다).
+   */
+  listManagedItems(): readonly string[] {
+    const used = new Set<string>()
+    for (const rule of this.ruleset.rules) {
+      if (rule.action === USE_ITEM_ACTION) {
+        used.add(rule.actionParam ?? 'POTION')
+      }
+    }
+    return [...used].sort()
   }
 
   /**

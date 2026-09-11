@@ -9,6 +9,7 @@
 """
 
 from collections.abc import Callable
+from dataclasses import replace
 
 from game.app.core.event_log import EventLog, LogEntry
 from game.app.simulation import abilities, scrolls
@@ -52,7 +53,14 @@ class SupportActionMixin:
     config: EngineConfig
     log: EventLog
 
-    def _record(self, actor_id: str, plan: PlannedAction, outcome: str, delta: int | None) -> None:
+    def _record(
+        self,
+        actor_id: str,
+        plan: PlannedAction,
+        outcome: str,
+        delta: int | None,
+        expr: str = "",
+    ) -> None:
         """로그 한 줄을 남긴다. 구체 클래스가 구현한다.
 
         Args:
@@ -60,6 +68,7 @@ class SupportActionMixin:
             plan: 실행한 계획.
             outcome: 결과 문구.
             delta: 수치 변화. 없으면 None.
+            expr: 왼쪽에 적을 식. 비우면 `행동 @대상` 이다.
         """
         raise NotImplementedError
 
@@ -148,7 +157,9 @@ class SupportActionMixin:
             self._apply_cooldown(entity, plan.action_id)
         self._record(entity.entity_id, plan, outcome, healed or None)
 
-    def apply_item(self, entity: Entity, plan: PlannedAction, use_tag: str = "") -> None:
+    def apply_item(
+        self, entity: Entity, plan: PlannedAction, use_tag: str = "", expr: str = ""
+    ) -> None:
         """소모품을 쓴다 (v6, #54).
 
         **종류로 갈린다.** `USE_POTION` 은 `USE_ITEM[POTION]` 의 별칭이므로 태그가 없으면
@@ -163,22 +174,42 @@ class SupportActionMixin:
             plan: 실행할 계획.
             use_tag: 쓸 태그. 비우면 계획이 가리킨 것을 쓴다 — 자리를 안 먹는 호출은
                 계획의 행동이 다른 것이므로 여기로 넘긴다 (`plan.FREE_ITEMS`).
+            expr: 로그 왼쪽에 적을 식. 조건 발동이 **왜 터졌는지**를 여기로 넘긴다.
         """
         kind = use_tag or plan.item_kind or abilities.ITEM_POTION
         if kind == abilities.ITEM_SCROLL:
             ticks = find_skill(self.config.skills, GUARD_SKILL_ID).guard_ticks
             held, outcome = abilities.resolve_scroll(entity, ticks)
-            self._record(entity.entity_id, plan, outcome, held)
+            self._record(entity.entity_id, plan, outcome, held, expr)
             return
         if kind in SCROLL_RESOLVERS:
             amount, outcome = SCROLL_RESOLVERS[kind](self, entity, plan)
-            self._record(entity.entity_id, plan, outcome, amount)
+            self._record(entity.entity_id, plan, outcome, amount, expr)
             return
         if kind != abilities.ITEM_POTION:
-            self._record(entity.entity_id, plan, f"{kind} 쓸 줄 모른다 — 틱 낭비", None)
+            self._record(entity.entity_id, plan, f"{kind} 쓸 줄 모른다 — 틱 낭비", None, expr)
             return
         healed, outcome = abilities.resolve_potion(entity)
-        self._record(entity.entity_id, plan, outcome, healed)
+        self._record(entity.entity_id, plan, outcome, healed, expr)
+
+    def apply_auto_scrolls(self, entity: Entity, plan: PlannedAction) -> None:
+        """조건이 맞은 주문서를 저절로 터뜨린다 (2026-09-11 개정).
+
+        **규칙 줄을 안 먹는다.** 주문서 한 줄은 슬롯 1 과 cpu 2 를 먹는데 실측이 +3%p
+        였다 — 5칸이 꽉 찬 규칙표에서는 내줄 줄이 없어 「못 쓰는 것」이 맞았다.
+
+        **확률이 아니라 조건이다.** 전투 판정에 난수를 들이지 않고(닿는 곳이 이니셔티브
+        동률과 전투 전 배치뿐이다), 발동한 이유를 실측값과 함께 로그에 남긴다 — 사후
+        분석이 「왜 터졌나」에 답할 수 있어야 P1 이 성립한다.
+
+        Args:
+            entity: 들고 있는 개체.
+            plan: 이번 틱의 계획. 규칙표가 직접 다루는 태그를 여기서 읽는다.
+        """
+        for use_tag, expr in scrolls.list_auto_scrolls(self.state, entity, plan.managed_items):
+            # **규칙 번호를 안 붙인다.** 자동 발동은 규칙이 아니므로, 붙이면 사후 분석이
+            # 「이 규칙이 통했다」를 거짓으로 말한다 (P1).
+            self.apply_item(entity, replace(plan, rule_index=None), use_tag, f"자동 — {expr}")
 
     def apply_guard(self, entity: Entity, plan: PlannedAction, skill_id: str = "") -> None:
         """방어 태세를 세운다 (블록 v5, 결정 #16).

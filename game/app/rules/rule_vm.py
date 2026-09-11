@@ -170,13 +170,32 @@ class RuleVm:
                 blocked=tuple(blocked),
                 free_skills=tuple(free),
                 free_items=tuple(free_items),
+                managed_items=self.list_managed_items(),
             )
         return replace(
             self._build_default_action(entity, state),
             blocked=tuple(blocked),
             free_skills=tuple(free),
             free_items=tuple(free_items),
+            managed_items=self.list_managed_items(),
         )
+
+    def list_managed_items(self) -> tuple[str, ...]:
+        """이 규칙표가 직접 쓰는 소모품 태그들.
+
+        **조건 발동이 이 목록을 비껴 간다** (`scrolls.list_auto_scrolls`). 규칙 한 줄을
+        내어 쓰기로 한 것을 자동이 먼저 태우면, 그 줄은 영영 「불가 — 없음」으로만 뜬다.
+
+        Returns:
+            정렬된 태그들. 소모품 규칙이 없으면 빈 튜플 (R5 — 집합을 그대로 내보내면
+            순회 순서가 계획에 새어 나간다).
+        """
+        used = {
+            rule.action_param or ITEM_POTION
+            for rule in self.ruleset.rules
+            if rule.action == USE_ITEM_ACTION
+        }
+        return tuple(sorted(used))
 
     def _get_headroom(self, entity: Entity) -> int:
         """남은 CPU 예산 (GDD §3.6).

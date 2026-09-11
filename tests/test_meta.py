@@ -25,7 +25,7 @@ from game.app.services.record_bestiary import (
     list_bestiary_pages,
     load_strategy_notes,
 )
-from game.app.simulation.actions import DEFERRED_ACTIONS
+from game.app.simulation.plan import DEFERRED_ACTIONS
 from game.config import BALANCE_PATH, BLOCKS_PATH, ENEMY_RULESETS_PATH
 from game.schemas.blocks import load_block_catalog
 from game.schemas.meta_save import (

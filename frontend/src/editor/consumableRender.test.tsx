@@ -37,6 +37,7 @@ const noop = () => undefined
 function buildSlot(over: Partial<ConsumableSlotView> = {}): ConsumableSlotView {
   return {
     useTag: 'POTION',
+    itemTag: 'POTION',
     slotIndex: 0,
     catalogId: '',
     labelKo: '',
