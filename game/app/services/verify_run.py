@@ -138,6 +138,7 @@ def evaluate_submission(
     snapshots: tuple[MonsterSnapshot, ...] = (),
     loadout: PlayerLoadout | None = None,
     room_ids: tuple[str, ...] = (),
+    rewards: dict[int, str] | None = None,
     floor: int = 1,
     rooms_per_floor: int = 0,
     room_limit: int = 0,
@@ -160,7 +161,8 @@ def evaluate_submission(
         room_ids: **티켓이 얼려 둔** 방 목록. 비어 있으면 `room_id` 한 방만 돈다 —
             구버전 티켓이 그 경우다. 여기가 비면 브라우저는 세 방을 도는데 서버는 한
             방만 계산해, 이긴 판이 진 것으로 확정된다.
-
+        rewards: **티켓이 얼려 둔** 층 보상 선택 (GDD §2.2). 제출이 실어 오면 안 고른
+            보상을 적어 보낼 수 있고, 그러면 재시뮬이 화면보다 센 캐릭터로 돈다.
         floor: **티켓이 얼려 둔** 시작 층. 안 넘기면 재시뮬이 1층으로 돌아, 깊은 층을
             이긴 판이 진 것으로 확정된다 — 반려가 아니라 **틀린 결과가 기록된다.**
         rooms_per_floor: 층 하나에 드는 방 수. 방 순번에서 층을 파생한다.
@@ -224,6 +226,9 @@ def evaluate_submission(
         loadout=loadout,
         floor=floor,
         rooms_per_floor=rooms_per_floor,
+        # **고른 보상도 티켓에서 온다.** 제출이 실어 오면 안 고른 보상을 적어 보낼 수
+        # 있고, 그러면 재시뮬이 화면보다 센 캐릭터로 돈다 (설계/7 §4).
+        rewards=rewards,
         run_room=run_and_tally,
     )
     encountered = tuple(sorted(kind for tally in tallies for kind in tally[0]))

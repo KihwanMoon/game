@@ -476,3 +476,9 @@ DO $$ BEGIN
         EXECUTE 'ALTER TABLE account DROP COLUMN is_admin';
     END IF;
 END $$;
+
+-- ── 층 보상 선택을 티켓에 담는다 (GDD §2.2, 2026-09-11) ──────────────────
+--
+-- 기획의 핵심 고리인 「클리어 → 보상 선택」이 제품에 없었다. 고른 것은 런 스코프라
+-- 티켓에 산다 — 계정에 남기면 그것은 런 보상이 아니라 영구 성장이다.
+ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS rewards JSONB NOT NULL DEFAULT '{}'::jsonb;

@@ -16,47 +16,18 @@ from dataclasses import dataclass
 
 from game.app.core.rng import DeterministicRng
 from game.schemas.loadout import PlayerLoadout
-
-REWARD_MODULE = "MODULE"
-REWARD_STAT_AFFIX = "STAT_AFFIX"
-REWARD_POTION = "POTION"
-REWARD_RULE_SLOT = "RULE_SLOT"
-
-# 한 번에 제시할 후보 수. 셋이면 고르는 값이 생기고, 넷을 넘으면 방마다 고민이 길어져
-# 15~25분 런(GDD §1)이 늘어진다.
-REWARD_OPTION_COUNT = 3
-
-# 최대 HP 를 올리는 보상은 현재 HP 도 함께 올린다. 그러지 않으면 그 방에서는 아무 일도
-# 일어나지 않아 보상으로 읽히지 않는다.
-STAT_HP_MAX = "hp_max"
-
-
-@dataclass(frozen=True)
-class RewardOption:
-    """보상 후보 하나. target_stat 은 RunState 의 필드 이름이다."""
-
-    reward_id: str
-    kind: str
-    label_ko: str
-    target_stat: str
-    amount: int
-
-
-# 상승폭은 GDD §6.1 이 정한 "전 구간 20~30% 이내"에 맞춰 낮게 잡았다. 스탯으로 뭉갤 수
-# 있으면 이 게임이 파는 것(로직 설계)이 사라진다.
-REWARD_CATALOG = (
-    RewardOption("module_slot", REWARD_MODULE, "확장 슬롯", "rule_slots", 1),
-    RewardOption("module_core", REWARD_MODULE, "연산 코어", "cpu_budget", 3),
-    RewardOption("affix_attack", REWARD_STAT_AFFIX, "예리함", "attack", 2),
-    RewardOption("affix_defense", REWARD_STAT_AFFIX, "견고함", "defense", 1),
-    RewardOption("affix_vitality", REWARD_STAT_AFFIX, "활력", STAT_HP_MAX, 10),
-    # **여기의 target_stat 은 필드 이름이 아니라 소모품 태그다** (2026-09-11). 주머니가
-    # 정수 하나에서 태그별 수로 바뀌면서, 이 한 줄만 가리키는 것이 달라졌다 — 주문서
-    # 꾸러미를 더하고 싶으면 태그만 바꿔 한 줄 더한다 (후보가 늘면 뽑기가 흔들리므로
-    # 그때는 시즌이 갈린다).
-    RewardOption("potion_pair", REWARD_POTION, "포션 꾸러미", "POTION", 2),
-    RewardOption("rule_slot", REWARD_RULE_SLOT, "규칙 슬롯", "rule_slots", 1),
+from game.schemas.reward import (
+    REWARD_CATALOG,
+    REWARD_MODULE,
+    REWARD_OPTION_COUNT,
+    STAT_HP_MAX,
+    RewardOption,
 )
+
+# **카탈로그와 굴림은 `schemas/reward.py` 가 정본이다** (2026-09-11). 보상 선택을 제품에
+# 붙이면서 두 코어가 같은 표를 봐야 했고, TS 로 이식되는 자산은 `schemas/` 에 산다
+# (CLAUDE.md §12). 여기 남은 것은 **헤드리스 배치 러너의 런 상태**뿐이다.
+REWARD_POTION = "POTION"
 
 
 @dataclass

@@ -24,6 +24,8 @@ import type { LogRowProps } from '../ds'
 import { SHEET_TABS, SHEET_TAB_LABELS, formatRuleCondition, type SheetTab } from './portraitSheet'
 import type { VitalRow } from './vitalRows'
 import type { FloorSettlement } from './settlement'
+import { RewardChoice } from './RewardChoice'
+import type { RewardOfferView } from '../storage'
 import { SettlementPanel } from './SettlementPanel'
 import type { RuleRowView } from './ruleRows'
 
@@ -164,6 +166,14 @@ export interface BattleSheetProps {
   readonly vitals?: readonly VitalRow[]
   /** 층별 정산. 로그와 같은 급의 탭으로 선다. */
   readonly settlements?: readonly FloorSettlement[]
+  /**
+   * 지금 고를 수 있는 층 보상 (GDD §2.2). 층이 0 이면 안 그린다 — 졌거나, 마지막
+   * 층이거나, 이미 고른 층이다.
+   */
+  readonly rewardFloor?: number
+  readonly rewardOffers?: readonly RewardOfferView[]
+  readonly isRewardBusy?: boolean
+  readonly onTakeReward?: (rewardId: string) => void
   /** 스킬 쿨타임 한 줄. 비어 있으면 안 그린다 — 도는 쿨이 없을 때 빈 줄은 자리 낭비다. */
   readonly cooldowns?: string
   /** 남은 물약·주문서와 실은 수. 로그 바로 위에 선다 — 규칙이 「없음」으로 떨어진
@@ -254,7 +264,16 @@ export function BattleSheet(props: BattleSheetProps): React.JSX.Element {
             {...(props.currentTick === undefined ? {} : { currentTick: props.currentTick })}
           />
         ) : props.tab === 'reward' ? (
-          <SettlementPanel settlements={props.settlements ?? []} />
+          <>
+            {/* **고를 것이 먼저 선다.** 기록(정산)보다 지금 해야 하는 일이 위다. */}
+            <RewardChoice
+              floor={props.rewardFloor ?? 0}
+              offers={props.rewardOffers ?? []}
+              isBusy={props.isRewardBusy === true}
+              onTake={props.onTakeReward ?? (() => undefined)}
+            />
+            <SettlementPanel settlements={props.settlements ?? []} />
+          </>
         ) : (
           <RuleSheet rules={props.rules} onToggle={props.onToggleRule} />
         )}

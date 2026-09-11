@@ -4,8 +4,6 @@
 저장하는 클라이언트 값은 규칙표 하나뿐이고, 그마저 서버에서 다시 검증된다.
 """
 
-import secrets
-
 from fastapi import APIRouter, HTTPException, status
 
 from game.api.deps import (
@@ -23,26 +21,25 @@ from game.api.floor_service import (
     count_floor_rooms,
     resolve_claim,
 )
-from game.api.loot_service import create_run_drops, list_floor_defeats
 from game.api.maintenance_service import apply_maintenance
 from game.api.monster_service import apply_monster_outcome
+from game.api.reward_service import apply_run_rewards, build_floor_offer
 from game.api.schemas import SubmissionRequest, SubmissionResponse
-from game.app.items.loot import compute_run_currency
-from game.app.progression.levels import add_run_xp
+from game.api.schemas_reward import (
+    RewardChoiceRequest,
+    RewardChoiceResponse,
+)
 from game.app.services.manage_meta import apply_run_result
-from game.app.services.verify_run import VerifiedRun, check_submission_version, evaluate_submission
-from game.app.store.accounts import find_player_entity
-from game.app.store.equipment import add_currency, mark_item_broken, remove_item
-from game.app.store.items import list_equipment, list_inventory
+from game.app.services.verify_run import (
+    VERDICT_REJECTED,
+    VerifiedRun,
+    check_submission_version,
+    evaluate_submission,
+)
 from game.app.store.meta import load_meta_payload, save_meta_payload
 from game.app.store.monster_snapshots import load_snapshots
-from game.app.store.progress import (
-    add_player_xp,
-    read_progress,
-    save_leaderboard,
-)
+from game.app.store.run_progress import apply_floor_claim, apply_reward_choice
 from game.app.store.runs import (
-    VERDICT_REJECTED,
     VERDICT_VERIFIED,
     StoredResult,
     save_run_result,
@@ -50,118 +47,18 @@ from game.app.store.runs import (
 )
 from game.app.store.tickets import (
     IssuedTicket,
-    apply_floor_claim,
     find_open_ticket,
     mark_ticket_consumed,
     read_void_reason,
 )
 from game.schemas.loadout import parse_loadout
 from game.schemas.meta_save import MetaSave, build_meta_payload, parse_meta_save
+from game.schemas.reward import check_offer_holds, count_floor_bonus
 
 router = APIRouter()
 
 # 승리로 세는 결과 문자열. 코어가 내는 값과 같아야 한다.
 OUTCOME_WIN = "PLAYER_WIN"
-
-
-def apply_death_penalty(account_id: int) -> str:
-    """사망 손실을 적용한다 (결정 #34).
-
-    **장착·인벤토리를 통틀어 장비 하나만 뽑는다.** 뽑힌 것이 장착 중이었으면 파손되고
-    복구비용을 내야 다시 쓰며, 가방에 있었으면 사라진다 — 그 차이가 "좋은 건 끼고
-    다녀라" 는 유인을 만든다.
-
-    몬스터가 사본을 가져가는 절반은 아직 없다. 지속 몬스터가 E단계이고, 받을 개체가
-    없는 상태에서 사본만 만들면 주인 없는 아이템이 쌓인다.
-
-    Args:
-        account_id: 죽은 계정.
-
-    Returns:
-        무슨 일이 있었는지. 잃을 것이 없으면 빈 문자열.
-    """
-    pool = get_pool()
-    entity_id = find_player_entity(pool, account_id)
-    equipped = [(item.item_id, True) for item in list_equipment(pool, entity_id).values()]
-    carried = [
-        (entry.item.item_id, False)
-        for entry in list_inventory(pool, entity_id)
-        if entry.item is not None
-    ]
-    pool_of_items = equipped + carried
-    if not pool_of_items:
-        return ""
-    item_id, was_equipped = pool_of_items[secrets.randbelow(len(pool_of_items))]
-    if was_equipped:
-        mark_item_broken(pool, entity_id, item_id)
-        return f"장착 중이던 장비가 파손됐다 (#{item_id})"
-    remove_item(pool, entity_id, item_id)
-    return f"가방의 장비를 잃었다 (#{item_id})"
-
-
-def apply_run_rewards(
-    account_id: int,
-    submission_id: int,
-    verified: VerifiedRun,
-    mode: str,
-    core_version: str,
-    floor: int = 1,
-    ticket_id: str = "",
-    start_floor: int = 1,
-    rooms_per_floor: int = 0,
-) -> str:
-    """검증된 런의 보상을 준다.
-
-    **여기가 아이템이 세계에 들어오는 유일한 문이다** (결정 #02). 클라이언트는 아이템을
-    만들 수 없고, 발급 경로가 서버 하나뿐이라는 것이 시드 파생의 '재현으로 검증' 을
-    대신한다.
-
-    Args:
-        account_id: 받을 계정.
-        submission_id: 이 결과의 제출 id.
-        verified: 서버가 확정한 결과.
-        mode: 런 모드. 순위표를 가르는 값이다.
-        core_version: 이 서버의 코어 버전. 시즌을 가르는 값이다.
-        floor: 이 런의 층. 화폐가 이것에 비례한다 — 안 넘기면 깊이 들어가도 1층 값이다.
-        ticket_id: 이 런의 티켓. 처치별 굴림이 스냅샷에서 개체 레벨을 찾는다.
-        start_floor: 하강이 시작한 층. 이번 층의 처치만 골라내는 데 쓴다.
-        rooms_per_floor: 층 하나에 드는 방 수.
-
-    Returns:
-        플레이어에게 보여줄 한 줄. 없으면 빈 문자열.
-    """
-    if verified.verdict != VERDICT_VERIFIED:
-        return ""
-    is_cleared = verified.outcome == OUTCOME_WIN
-    add_currency(get_pool(), account_id, compute_run_currency(is_cleared, floor))
-    notes = [f"화폐 +{compute_run_currency(is_cleared, floor)}"]
-    # **처치마다 굴린다** (설계/4_아이템 §15.3). 런 단위로 굴리면 몬스터 레벨이 개입할
-    # 자리가 없다. 재시뮬이 확정한 처치 목록만 쓴다 — 클라이언트 보고로 굴리면 "많이
-    # 잡았다" 고 적어 보내는 것이 곧 파밍이 된다.
-    notes.extend(
-        create_run_drops(
-            account_id,
-            submission_id,
-            list_floor_defeats(verified.room_kinds, start_floor, floor, rooms_per_floor),
-            floor,
-            ticket_id,
-        )
-    )
-    # 경험치는 **검증된 런에서만** 오른다. 클라이언트 보고로 오르면 순위표가 곧
-    # 거짓이 된다 — 순위의 근거가 누적 경험치이기 때문이다.
-    pool = get_pool()
-    entity_id = find_player_entity(pool, account_id)
-    gained = add_run_xp(is_cleared)
-    level = add_player_xp(pool, entity_id, gained)
-    notes.append(f"경험치 +{gained}")
-    progress = read_progress(pool, entity_id)
-    save_leaderboard(pool, str(mode), core_version, account_id, progress.total_xp, level)
-
-    if not is_cleared:
-        penalty = apply_death_penalty(account_id)
-        if penalty:
-            notes.append(penalty)
-    return " · ".join(notes)
 
 
 def build_rejection(detail: str) -> VerifiedRun:
@@ -197,6 +94,8 @@ def check_run_submission(
         return build_rejection(mismatch)
     player = get_context().balance["player"]
     loadout = parse_loadout(ticket.loadout) if ticket.loadout else None
+    # 이 층에 들어가기 전까지 고른 것만 센다 — 전투에 얹는 것과 같은 자리다.
+    limit = count_floor_bonus(ticket.rewards, max(claimed, ticket.floor))
     # **한도도 티켓에서 온다.** 기본값으로 검증하면 레벨·장비로 늘어난 CPU·슬롯이
     # 에디터에서는 쓰이는데 제출에서 반려된다 — 성장이 벌이 된다.
     return evaluate_submission(
@@ -204,14 +103,18 @@ def check_run_submission(
         request.ruleset,
         ticket.room_id,
         ticket.seed,
-        loadout.cpu_budget if loadout else int(player["cpu_budget"]),
-        loadout.rule_slots if loadout else int(player["rule_slots"]),
+        # **고른 보상이 한도를 늘린다** (GDD §2.2). 안 더하면 「확장 슬롯」을 고른
+        # 사람이 그 줄을 쓰는 순간 제출이 반려된다 — 보상이 벌이 된다.
+        (loadout.cpu_budget if loadout else int(player["cpu_budget"])) + limit.get("cpu_budget", 0),
+        (loadout.rule_slots if loadout else int(player["rule_slots"])) + limit.get("rule_slots", 0),
         # **서버가 조회한다.** 제출이 스냅샷을 실어 오면 약한 것으로 바꿀 수 있다 (T8).
         load_snapshots(get_pool(), ticket.ticket_id),
         # 로드아웃도 티켓에서 온다. 제출이 실어 오면 강한 캐릭터로 바꿔 보낼 수 있다.
         loadout,
         # 방 목록도 티켓에서 온다. 제출이 실어 오면 쉬운 방만 골라 담을 수 있다 (T2).
         ticket.room_ids,
+        # 고른 층 보상도 티켓에서 온다 (GDD §2.2).
+        ticket.rewards,
         # 층도 티켓에서 온다. 제출이 실어 오면 1층으로 적어 보내 쉬운 판으로 검증받는다.
         ticket.floor,
         ticket.rooms_per_floor,
@@ -353,7 +256,52 @@ def create_run_submission(
     # `summary` 는 응답에 싣지 않는다 — 서버가 무엇으로 세이브를 갱신했는지는 클라이언트가
     # 알 필요가 없고, 실으면 그것을 되보내려는 경로가 생긴다.
     fields = {key: value for key, value in vars(verified).items() if key != "summary"}
-    return SubmissionResponse(submission_id=submission_id, reward=reward, **fields)
+    offer_floor, offers = build_floor_offer(ticket, claimed, verified, is_run_closed)
+    return SubmissionResponse(
+        submission_id=submission_id,
+        reward=reward,
+        reward_floor=offer_floor,
+        reward_offers=offers,
+        **fields,
+    )
+
+
+@router.post("/api/run/reward", response_model=RewardChoiceResponse)
+def create_reward_choice(
+    request: RewardChoiceRequest, account: CurrentAccount
+) -> RewardChoiceResponse:
+    """층 보상 하나를 고른다 (GDD §2.2).
+
+    **서버가 후보를 되굴려 확인한다.** 고른 것을 적어 보낼 자리는 있지만 없는 보상을
+    적어 보낼 자리는 없다 (설계/7 §4).
+
+    Args:
+        request: 티켓·층·고른 보상.
+        account: 요청한 계정.
+
+    Returns:
+        반영된 뒤의 이 런 보너스.
+
+    Raises:
+        HTTPException: 티켓이 없거나(404), 그 층의 후보가 아니거나(400), 이미 고른
+            층이면(409).
+    """
+    pool = get_pool()
+    ticket = find_open_ticket(pool, request.ticket_id, account.account_id)
+    if ticket is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "쓸 수 있는 티켓이 아니다")
+    if request.floor > ticket.cleared_floor:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "아직 안 깬 층이다")
+    if not check_offer_holds(ticket.seed, request.floor, request.reward_id):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "그 층의 후보가 아니다")
+    if not apply_reward_choice(pool, ticket.ticket_id, request.floor, request.reward_id):
+        raise HTTPException(status.HTTP_409_CONFLICT, "이미 고른 층이다")
+    taken = {**ticket.rewards, request.floor: request.reward_id}
+    return RewardChoiceResponse(
+        floor=request.floor,
+        reward_id=request.reward_id,
+        bonus=count_floor_bonus(taken, request.floor + 1),
+    )
 
 
 def apply_verified_meta(account_id: int, verified: VerifiedRun) -> None:

@@ -7,6 +7,7 @@
 
 from pydantic import BaseModel, Field
 
+from game.api.schemas_reward import RewardOfferView
 from game.schemas.run_ticket import MAX_SEED
 
 # 규칙표 절의 크기 상한. 슬롯 상한이 있으므로 정상 규칙표는 훨씬 작다 — 상한이 없으면
@@ -76,6 +77,10 @@ class TicketResponse(BaseModel):
     # 이 런이 도는 방들 (로드맵 W3). 브라우저가 이 목록대로 이어 돌고 서버가 같은
     # 목록으로 재시뮬한다 — 여기가 비면 브라우저는 세 방, 서버는 한 방을 돈다.
     room_ids: list[str] = Field(default_factory=list)
+    # **이 런에서 지금까지 고른 층 보상** (GDD §2.2, 2026-09-11). 브라우저가 앞 방을 다시
+    # 돌려 인계를 계산하므로(`ChainCursor`), 이것이 없으면 **화면의 재생이 서버 재시뮬과
+    # 다른 캐릭터로 돈다** — 고른 보상만큼 약한 쪽으로.
+    rewards: dict[int, str] = Field(default_factory=dict)
 
 
 class SubmissionRequest(BaseModel):
@@ -105,6 +110,11 @@ class SubmissionResponse(BaseModel):
     detail: str = ""
     # 이 런이 준 것. 아이템은 **서버가 발급한다** (결정 #02).
     reward: str = ""
+    # **이 층이 제시하는 보상 후보** (GDD §2.2, 2026-09-11). 층을 깨면 셋 중 하나를
+    # 고르고 그것이 다음 층부터 산다. 고를 것이 없으면 층이 0 이고 목록이 비어 있다 —
+    # 졌거나, 마지막 층이거나, 이미 고른 층이다.
+    reward_floor: int = 0
+    reward_offers: list[RewardOfferView] = []
 
 
 class MetaResponse(BaseModel):

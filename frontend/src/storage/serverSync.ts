@@ -18,6 +18,7 @@ import type {
   RawPlayerLoadout,
 } from '../core/schemas'
 import { parseRuleSet, parseLoadout, parseSnapshot, sortSnapshots } from '../core/schemas'
+import { readTaken } from '../core/schemas/reward'
 import { buildMetaPayload, parseMetaPayload, removeMeta } from './metaSave'
 import { removeSave, type StorageLike } from './saveStore'
 
@@ -394,6 +395,13 @@ export interface ServerTicket {
   readonly floor: number
   /** 층 하나에 드는 방 수. 방 순번에서 층을 파생하는 데 쓴다. */
   readonly roomsPerFloor: number
+  /**
+   * 이 런에서 지금까지 고른 층 보상 (GDD §2.2).
+   *
+   * **전투에 반드시 넘겨야 한다.** 브라우저는 앞 방을 다시 돌려 인계를 계산하므로,
+   * 없으면 화면의 재생이 서버 재시뮬보다 약한 캐릭터로 돈다.
+   */
+  readonly rewards: ReadonlyMap<number, string>
   readonly mode: string
   readonly coreVersion: string
   /**
@@ -458,6 +466,7 @@ export async function requestTicket(
     monster_snapshot?: RawMonsterSnapshot[]
     loadout?: RawPlayerLoadout | null
     room_ids?: string[]
+    rewards?: Record<string, string>
   }
   return {
     ticketId: body.ticket_id,
@@ -472,6 +481,7 @@ export async function requestTicket(
     // 채우면 서버가 계산하지 않은 방을 브라우저가 돈다.
     roomIds: body.room_ids ?? [body.room_id],
     roomsPerFloor: body.rooms_per_floor ?? 0,
+    rewards: readTaken(body.rewards),
   }
 }
 
@@ -490,6 +500,12 @@ export interface RunVerdict {
    * 20칸에서 새 것을 찾아내는 사람은 없다.
    */
   readonly reward: string
+  /**
+   * 이 층이 제시하는 보상 후보 (GDD §2.2). 층이 0 이면 고를 것이 없다 — 졌거나,
+   * 마지막 층이거나, 이미 고른 층이다.
+   */
+  readonly rewardFloor: number
+  readonly rewardOffers: readonly RewardOfferView[]
 }
 
 /**
@@ -528,6 +544,8 @@ export async function submitRun(
     player_hp: number
     detail?: string
     reward?: string
+    reward_floor?: number
+    reward_offers?: RawRewardOffer[]
   }
   return {
     verdict: body.verdict,
@@ -536,7 +554,58 @@ export async function submitRun(
     playerHp: body.player_hp,
     detail: body.detail ?? '',
     reward: body.reward ?? '',
+    // 구버전 서버는 안 보낸다. 그때는 고를 것이 없는 것으로 본다 — 없는 후보를 지어
+    // 그리면 눌러도 아무 일이 안 일어나는 카드가 된다.
+    rewardFloor: body.reward_floor ?? 0,
+    rewardOffers: (body.reward_offers ?? []).map((raw) => ({
+      rewardId: raw.reward_id,
+      labelKo: raw.label_ko,
+      targetStat: raw.target_stat,
+      amount: raw.amount,
+    })),
   }
+}
+
+/** 서버가 보낸 보상 후보 절. */
+interface RawRewardOffer {
+  reward_id: string
+  label_ko: string
+  target_stat: string
+  amount: number
+}
+
+/** 화면이 그릴 보상 후보 하나. */
+export interface RewardOfferView {
+  readonly rewardId: string
+  readonly labelKo: string
+  readonly targetStat: string
+  readonly amount: number
+}
+
+/**
+ * 층 보상 하나를 고른다 (GDD §2.2).
+ *
+ * **고른 것만 보낸다.** 후보는 티켓 시드와 층에서 나오므로 서버가 되굴려 확인한다 —
+ * 없는 보상을 적어 보낼 자리가 없다 (설계/7 §4).
+ *
+ * @param token 기기 토큰.
+ * @param ticketId 이 런의 티켓.
+ * @param floor 고른 층.
+ * @param rewardId 고른 보상.
+ * @returns 반영됐으면 true. 서버가 거절했으면 false.
+ */
+export async function takeFloorReward(
+  token: string,
+  ticketId: string,
+  floor: number,
+  rewardId: string,
+): Promise<boolean> {
+  const response = await sendRequest('/run/reward', {
+    method: 'POST',
+    headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ticket_id: ticketId, floor, reward_id: rewardId }),
+  })
+  return response !== undefined && response.ok
 }
 
 /** 요구조건 한 줄. 실측값을 함께 받는다 — 무엇이 얼마나 모자란지가 화면에 있어야 한다. */

@@ -25,6 +25,7 @@
  *
  * 상태를 들지 않는다. 값과 콜백만 받으므로 테스트가 직접 불러 트리를 볼 수 있다.
  */
+import type { RewardOfferView } from '../storage'
 import type { ReactNode, Ref } from 'react'
 
 import { ThreatNotice } from '../ds'
@@ -56,6 +57,11 @@ export interface BattleFrameProps {
   readonly tick: number
   /** 층별 정산. 없으면 정산 탭이 0 으로 선다. */
   readonly settlements?: readonly FloorSettlement[]
+  /** 지금 고를 수 있는 층 보상 (GDD §2.2). 층이 0 이면 안 그린다. */
+  readonly rewardFloor?: number
+  readonly rewardOffers?: readonly RewardOfferView[]
+  readonly isRewardBusy?: boolean
+  readonly onTakeReward?: (rewardId: string) => void
   /** 상태 탭의 줄들 — 체력·소모품·쿨타임·예산. 한 줄에 하나씩 쌓인다. */
   readonly vitals: readonly VitalRow[]
   readonly tab: SheetTab
@@ -119,6 +125,10 @@ export function BattleFrame(props: BattleFrameProps): React.JSX.Element {
         currentTick={props.tick}
         vitals={props.vitals}
         settlements={props.settlements ?? []}
+        rewardFloor={props.rewardFloor ?? 0}
+        rewardOffers={props.rewardOffers ?? []}
+        isRewardBusy={props.isRewardBusy === true}
+        onTakeReward={props.onTakeReward ?? (() => undefined)}
         bodyRef={props.bodyRef}
         {...(props.foot === undefined ? {} : { foot: props.foot })}
       />

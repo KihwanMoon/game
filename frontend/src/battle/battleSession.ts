@@ -68,6 +68,13 @@ export interface BattleSetup {
   /** 층 하나에 드는 방 수. 서버가 티켓에 실어 준다. */
   readonly roomsPerFloor?: number
   /**
+   * 이 런에서 지금까지 고른 층 보상 (GDD §2.2). 서버가 티켓에 실어 준다.
+   *
+   * **이것이 없으면 화면은 보상을 못 받은 캐릭터로 싸우고 서버는 받은 캐릭터로
+   * 재시뮬한다** — 이긴 판이 진 것으로 확정되는 자리다 (G3).
+   */
+  readonly rewards?: ReadonlyMap<number, string>
+  /**
    * 이 판이 연쇄의 몇 번째 방인가.
    *
    * **앞 방들을 여기서 다시 돌린다.** 그래야 "같은 setup 이면 같은 판" (R5) 이 유지되고,
@@ -221,6 +228,7 @@ function buildChainRoom(
     floor: setup.floor ?? 1,
     isVaried: setup.isVaried ?? true,
     roomsPerFloor: setup.roomsPerFloor ?? 0,
+    ...(setup.rewards === undefined ? {} : { rewards: setup.rewards }),
     ...(setup.loadout === undefined ? {} : { loadout: setup.loadout }),
   })
   for (let index = 0; index < position.index; index += 1) {

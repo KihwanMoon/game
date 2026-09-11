@@ -114,11 +114,13 @@ export {
   registerAccount,
   requestTicket,
   submitRun,
+  takeFloorReward,
   writeServerMeta,
   writeToken,
 } from './serverSync'
 export type {
   AccountState,
+  RewardOfferView,
   AuthOutcome,
   AuctionView,
   BestiaryEntry,

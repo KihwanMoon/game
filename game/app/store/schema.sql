@@ -63,6 +63,12 @@ CREATE TABLE IF NOT EXISTS run_ticket (
     -- 제출한다 — T6 의 「한 티켓 한 제출」을 「**더 깊은 층으로만 나아갈 수 있다**」로
     -- 다시 세운 것이다. 같은 층을 두 번 제출해 보상을 두 번 받는 길을 이 값이 막는다.
     cleared_floor   INTEGER   NOT NULL DEFAULT 0,
+    -- **이 런에서 고른 층 보상** (GDD §2.2, 2026-09-11). `{"3": "module_slot"}` 처럼
+    -- 층에서 보상 id 로 적는다. 런 스코프다 — 티켓이 사라지면 함께 사라진다.
+    --
+    -- **후보는 안 저장한다.** 티켓 시드와 층으로 다시 굴리면 같은 셋이 나오므로, 서버는
+    -- 클라이언트가 보낸 선택이 그 층의 후보였는지 되굴려 확인한다 (설계/7 §4).
+    rewards       JSONB       NOT NULL DEFAULT '{}'::jsonb,
     mode          TEXT        NOT NULL,
     core_version  TEXT        NOT NULL,
     issued_at     TIMESTAMPTZ NOT NULL DEFAULT now(),

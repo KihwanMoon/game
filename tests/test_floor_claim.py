@@ -151,7 +151,7 @@ def issued():
 
 def test_the_same_floor_cannot_be_claimed_twice(issued):
     """★ 같은 층을 두 번 청구하면 보상이 두 번 나간다 — 그것이 T6 이 막던 것이다."""
-    from game.app.store.tickets import apply_floor_claim
+    from game.app.store.run_progress import apply_floor_claim
 
     pool, body = issued
     assert apply_floor_claim(pool, body["ticket_id"], 1)
@@ -160,7 +160,7 @@ def test_the_same_floor_cannot_be_claimed_twice(issued):
 
 def test_a_shallower_claim_is_refused(issued):
     """★ 되돌아가 청구하면 지나온 층의 보상을 다시 받는다."""
-    from game.app.store.tickets import apply_floor_claim
+    from game.app.store.run_progress import apply_floor_claim
 
     pool, body = issued
     assert apply_floor_claim(pool, body["ticket_id"], 3)
@@ -169,7 +169,8 @@ def test_a_shallower_claim_is_refused(issued):
 
 def test_a_consumed_ticket_refuses_every_claim(issued):
     """★ 닫힌 티켓으로 더 청구할 수 있으면 죽은 뒤에도 보상이 나간다."""
-    from game.app.store.tickets import apply_floor_claim, mark_ticket_consumed
+    from game.app.store.run_progress import apply_floor_claim
+    from game.app.store.tickets import mark_ticket_consumed
 
     pool, body = issued
     assert mark_ticket_consumed(pool, body["ticket_id"])

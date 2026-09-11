@@ -225,6 +225,7 @@ describe('티켓 → 전투 조립 (E4, 결정 #13)', () => {
     roomId: 'corridor',
     floor: 1,
     roomsPerFloor: 3,
+    rewards: new Map<number, string>(),
     coreVersion: 'b5.v2.e1',
     mode: 'PRACTICE' as const,
     roomIds: ['corridor', 'corridor', 'corridor'],
@@ -397,6 +398,7 @@ describe('서버가 정한 방 목록 (W3)', () => {
         roomId: 'corridor',
         floor: 1,
         roomsPerFloor: 3,
+        rewards: new Map<number, string>(),
         coreVersion: 'x',
         mode: 'PRACTICE',
         snapshots: [],
@@ -471,6 +473,7 @@ describe('하강하며 층이 오른다', () => {
   it('★ 네 번째 방부터 2층이다 — 안 오르면 화면이 계속 1층이라고 말한다', () => {
     const ticket = {
       ticketId: 't', seed: 1, roomId: 'open_field', floor: 1, roomsPerFloor: 3,
+      rewards: new Map<number, string>(),
       coreVersion: 'x', mode: 'PRACTICE',
       roomIds: ['a', 'b', 'c', 'd', 'e', 'f'],
       snapshots: [],

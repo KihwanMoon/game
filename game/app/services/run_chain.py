@@ -21,6 +21,7 @@ from game.app.services.run_battle import (
     run_battle,
 )
 from game.app.simulation.engine import TickEngine
+from game.app.simulation.floor_rewards import apply_floor_rewards, count_hp_gain
 from game.app.simulation.plan import OUTCOME_PLAYER_WIN
 from game.app.simulation.pressure import PressureTracker, build_pressure_rules
 from game.schemas.blocks import BlockCatalog
@@ -67,6 +68,7 @@ def run_room_chain(
     loadout: PlayerLoadout | None = None,
     floor: int = 1,
     rooms_per_floor: int = 0,
+    rewards: dict[int, str] | None = None,
 ) -> ChainResult:
     """방들을 순서대로 돌고 결과를 모은다.
 
@@ -90,6 +92,9 @@ def run_room_chain(
             화면과 서버가 다른 판을 돌고 정상 제출이 전부 반려된다.
         rooms_per_floor: 층 하나에 드는 방 수. 0 이면 연쇄 전체가 한 층이다 — 하강이
             아닌 옛 호출(헤드리스 배치·골든)이 그 길로 온다.
+        rewards: 이 런에서 고른 층 보상 (GDD §2.2). 층에서 보상 id 로이며, **그 층에
+            들어가기 전까지 고른 것만** 얹는다 — 같은 층에 소급되면 재시뮬이 브라우저와
+            다른 판을 돈다 (G3).
 
     Returns:
         연쇄 결과.
@@ -127,17 +132,24 @@ def run_room_chain(
             room_index=index,
         )
         player = engine.state.entities["player"]
+        # **층 보상을 얹는다** (GDD §2.2). 고른 층 **다음**부터 산다 — 그래야 「고른 것이
+        # 다음 층을 바꾼다」가 되고, 브라우저와 재시뮬이 같은 자리에서 같은 만큼 얹는다.
+        this_floor = resolve_room_floor(floor, index, rooms_per_floor)
+        apply_floor_rewards(player, rewards or {}, this_floor)
         if carried_hp is not None:
             # **층을 넘을 때만 회복한다** (결정 #21). 방마다 주면 방 수가 곧 회복량이
             # 되어 긴 층이 오히려 쉬워지고, 안 주면 30방을 한 HP 바로 간다 — 실측으로
             # 그때는 18개 규칙표 중 아무도 2층을 못 넘었다.
-            is_new_floor = index > 0 and resolve_room_floor(
-                floor, index, rooms_per_floor
-            ) != resolve_room_floor(floor, index - 1, rooms_per_floor)
+            previous_floor = resolve_room_floor(floor, max(0, index - 1), rooms_per_floor)
+            is_new_floor = index > 0 and this_floor != previous_floor
+            # **인계 HP 에 활력 보상을 얹는다.** 최대치만 늘리면 고른 그 순간에는 아무
+            # 일도 안 일어나 보상으로 안 읽힌다 (헤드리스 러너가 같은 규칙이다).
+            carried = min(
+                player.hp_max,
+                carried_hp + count_hp_gain(rewards or {}, this_floor, previous_floor),
+            )
             player.hp = (
-                resolve_floor_heal(carried_hp, player.hp_max, heal_pct)
-                if is_new_floor
-                else carried_hp
+                resolve_floor_heal(carried, player.hp_max, heal_pct) if is_new_floor else carried
             )
             player.consumables = dict(carried_potions or {})
         if player_ruleset is not None:

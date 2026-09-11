@@ -29,6 +29,7 @@
  * 세운다 — 도면(가변) + 우측 340px 시트. 세 배치가 같은 값 묶음을 받으므로, 기기를
  * 돌리면 트리만 바뀌고 판은 그대로 이어진다.
  */
+import type { RewardOfferView } from '../storage'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
@@ -109,6 +110,11 @@ export interface BattleViewProps {
    * 정산은 사라지는 알림이 아니라 쌓이는 기록이므로 로그와 같은 급의 탭으로 옮겼다.
    */
   readonly settlements?: readonly FloorSettlement[]
+  /** 지금 고를 수 있는 층 보상 (GDD §2.2). 층이 0 이면 안 그린다. */
+  readonly rewardFloor?: number
+  readonly rewardOffers?: readonly RewardOfferView[]
+  readonly isRewardBusy?: boolean
+  readonly onTakeReward?: (rewardId: string) => void
   /**
    * 내가 낀 주무기의 카탈로그 id (설계/10_외형과_모션).
    *
@@ -394,6 +400,10 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         cpuBudget={cpuBudget}
         entries={session.engine.log.entries.slice(-LOG_TAIL)}
         settlements={props.settlements ?? []}
+        rewardFloor={props.rewardFloor ?? 0}
+        rewardOffers={props.rewardOffers ?? []}
+        isRewardBusy={props.isRewardBusy === true}
+        onTakeReward={props.onTakeReward ?? (() => undefined)}
         hp={player?.hp ?? 0}
         hpMax={player?.hpMax ?? 1}
         potions={player === undefined ? 0 : countItem(player, 'POTION')}
@@ -436,6 +446,10 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
       onToggleRule={toggleRule}
       entries={session.engine.log.entries.slice(-LOG_TAIL)}
       settlements={props.settlements ?? []}
+      rewardFloor={props.rewardFloor ?? 0}
+      rewardOffers={props.rewardOffers ?? []}
+      isRewardBusy={props.isRewardBusy === true}
+      onTakeReward={props.onTakeReward ?? (() => undefined)}
       vitals={buildVitalRows({
         hp: player?.hp ?? 0,
         hpMax: player?.hpMax ?? 1,

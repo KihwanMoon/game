@@ -23,6 +23,7 @@
  * 들고 있고 여기로는 값과 콜백만 내려온다. 훅이 없으므로 테스트가 이 함수를 직접 불러
  * 반환된 트리에서 핸들러를 눌러 볼 수 있다 — jsdom 없이 상호작용을 검증하는 수단이다.
  */
+import type { RewardOfferView } from '../storage'
 import type { ReactNode, Ref } from 'react'
 
 import { Button } from '../ds'
@@ -91,6 +92,11 @@ export interface BattlePortraitProps {
   readonly entries: readonly LogRowProps[]
   /** 층별 정산. 상단 알림이 아니라 탭이다 — 알림은 뜰 때마다 아래 전부를 밀었다. */
   readonly settlements?: readonly FloorSettlement[]
+  /** 지금 고를 수 있는 층 보상 (GDD §2.2). 층이 0 이면 안 그린다. */
+  readonly rewardFloor?: number
+  readonly rewardOffers?: readonly RewardOfferView[]
+  readonly isRewardBusy?: boolean
+  readonly onTakeReward?: (rewardId: string) => void
   /**
    * 상태 탭의 줄들 — 체력·소모품·쿨타임·예산.
    *
@@ -142,6 +148,10 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
         entries={props.entries}
         tick={props.tick}
         settlements={props.settlements ?? []}
+        rewardFloor={props.rewardFloor ?? 0}
+        rewardOffers={props.rewardOffers ?? []}
+        isRewardBusy={props.isRewardBusy === true}
+        onTakeReward={props.onTakeReward ?? (() => undefined)}
         vitals={props.vitals}
         tab={props.tab}
         onTabChange={props.onTabChange}
