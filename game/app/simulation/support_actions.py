@@ -101,32 +101,39 @@ class SupportActionMixin:
         healed, outcome = abilities.resolve_potion(entity)
         self._record(entity.entity_id, plan, outcome, healed)
 
-    def apply_guard(self, entity: Entity, plan: PlannedAction) -> None:
+    def apply_guard(self, entity: Entity, plan: PlannedAction, skill_id: str = "") -> None:
         """방어 태세를 세운다 (블록 v5, 결정 #16).
 
         상태에 남은 틱 수로 들어가고 UPKEEP 이 줄인다. 피해 감소는 `apply_damage` 가
         본다 — 감소를 여기서 미리 계산해 두면 그동안 들어온 피해원마다 다르게 적용되고,
         그 차이가 로그에 안 남는다.
 
+        **이 틱을 안 쓴다** (2026-09-10 결정). 엔진이 행동 고리보다 **앞에서** 부르고,
+        그 뒤 개체는 제 할 일을 그대로 한다 — 켜는 데 한 틱을 내던 것이 방벽이 어느
+        구간에서도 값을 못 하던 이유였다 (설계/5_스킬 §2.1).
+
         Args:
             entity: 시전자.
-            plan: 실행할 계획.
+            plan: 실행할 계획. 로그에 규칙 번호와 식을 싣는다.
+            skill_id: 켤 스킬. 비우면 계획의 행동 id 를 쓴다 — 자리를 안 먹는 호출은
+                계획의 행동이 다른 것이므로 여기로 넘긴다.
         """
-        ticks = find_skill(self.config.skills, plan.action_id).guard_ticks
+        used = skill_id or plan.action_id
+        ticks = find_skill(self.config.skills, used).guard_ticks
         entity.statuses[STATUS_GUARD] = ticks
-        percent = find_skill(self.config.skills, plan.action_id).guard_pct
+        percent = find_skill(self.config.skills, used).guard_pct
         self.log.record(
             LogEntry(
                 tick=self.state.tick,
                 entity_id=entity.entity_id,
                 phase=PHASE_ACT,
                 expr=plan.expr,
-                outcome=f"{plan.action_id} 방어 {percent}% / {ticks}틱",
+                outcome=f"{used} 방어 {percent}% / {ticks}틱",
                 rule=plan.rule_index,
                 fired=True,
             )
         )
-        self._apply_cooldown(entity, plan.action_id)
+        self._apply_cooldown(entity, used)
 
     def apply_hold(self, entity: Entity, plan: PlannedAction) -> None:
         """의도적으로 아무것도 하지 않는다. 무시와 구분하기 위해 로그는 남긴다.

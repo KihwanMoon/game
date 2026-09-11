@@ -305,6 +305,10 @@ export class TickEngine {
       if (entity === undefined || resting.has(plan.entityId)) {
         continue
       }
+      // 자리를 안 먹는 행동을 켠다 — 이 틱의 행동이 아니다 (`plan.FREE_SKILLS`).
+      for (const skillId of plan.freeSkills) {
+        executor.applyGuard(entity, plan, skillId)
+      }
       if (MOVE_ACTIONS.has(plan.actionId)) {
         executor.applyMove(entity, plan)
       }

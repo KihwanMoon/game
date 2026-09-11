@@ -12,7 +12,7 @@
 
 from game.app.core.rng import DeterministicRng
 from game.app.grid.vision import VisionGrid, check_line_of_sight
-from game.app.rules.rule_vm import check_sight_blocked
+from game.app.rules.sight import check_sight_blocked
 from game.app.simulation.state import Entity, WorldState
 from game.config import ROOM_TEMPLATES_PATH
 from game.schemas.room import load_room_templates

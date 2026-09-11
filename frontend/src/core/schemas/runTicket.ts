@@ -17,7 +17,8 @@ import type { RuleSet } from './ruleset'
 // e7: 예고 둘을 고쳤다 — 버티기가 제 시전을 안 끊고, AREA 예고의 중심이 시전자
 //     발밑이 아니라 겨눈 곳이다 (설계/5_스킬 §10.3).
 // e8: 둔화가 이동만이 아니라 **행동 전체**를 늦춘다.
-export const ENGINE_VERSION = 8
+// e9: 방벽이 **틱을 안 쓴다** (`plan.FREE_SKILLS`).
+export const ENGINE_VERSION = 9
 
 /**
  * 시드 상한. `Number.MAX_SAFE_INTEGER` 이며, 이것은 밸런스가 아니라 **이식 제약**이다.

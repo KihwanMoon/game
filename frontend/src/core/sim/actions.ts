@@ -369,17 +369,23 @@ export class ActionExecutor {
    * @param entity 시전자.
    * @param plan 실행할 계획.
    */
-  applyGuard(entity: Entity, plan: PlannedAction): void {
-    const ticks = findSkill(this.config.skills, plan.actionId).guardTicks
+  applyGuard(entity: Entity, plan: PlannedAction, skillId = ''): void {
+    // **이 틱을 안 쓴다** (2026-09-10 결정). 엔진이 행동 고리보다 앞에서 부르고, 그 뒤
+    // 개체는 제 할 일을 그대로 한다 — 켜는 데 한 틱을 내던 것이 방벽이 어느 구간에서도
+    // 값을 못 하던 이유였다 (설계/5_스킬 §2.1).
+    //
+    // `skillId` 를 따로 받는 이유: 자리를 안 먹는 호출은 계획의 행동이 다른 것이다.
+    const used = skillId === '' ? plan.actionId : skillId
+    const ticks = findSkill(this.config.skills, used).guardTicks
     entity.statuses.set(GUARD_STATUS, ticks)
-    const percent = findSkill(this.config.skills, plan.actionId).guardPct
+    const percent = findSkill(this.config.skills, used).guardPct
     this.recordResult(
       entity.entityId,
       plan,
-      `${plan.actionId} 방어 ${String(percent)}% / ${String(ticks)}틱`,
+      `${used} 방어 ${String(percent)}% / ${String(ticks)}틱`,
       null,
     )
-    this.applyCooldown(entity, plan.actionId)
+    this.applyCooldown(entity, used)
   }
 
   /**

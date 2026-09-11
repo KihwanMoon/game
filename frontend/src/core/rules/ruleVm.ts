@@ -31,6 +31,7 @@ import {
 } from '../schemas'
 import { type PerceptionSnapshot, readSnapshot } from '../sim/perception'
 import {
+  FREE_SKILLS,
   ATTACK_ACTIONS,
   MELEE_REACH,
   USE_ITEM_ACTION,
@@ -374,6 +375,7 @@ export class RuleVm implements DecisionPolicy {
    */
   planAction(entity: Entity, snapshot: PerceptionSnapshot, state: WorldState): PlannedAction {
     const blocked: BlockedRule[] = []
+    const free: string[] = []
     for (const rule of this.ruleset.rules) {
       const { target, isUsable } = this.resolveRuleTarget(rule, entity, state)
       if (!isUsable) {
@@ -423,6 +425,13 @@ export class RuleVm implements DecisionPolicy {
         blocked.push({ ruleIndex: rule.priority, expr, reason: '시야 없음' })
         continue
       }
+      // **켜 두고 다음 규칙으로 간다** (`plan.FREE_SKILLS`). 여기서 돌려주면 그 틱의
+      // 행동이 「켜기」로 끝나고, 그 한 틱이 방벽이 값을 못 하던 이유였다.
+      // 미장착·시야 검사 뒤에 둔다 — 앞에 두면 「불가」가 안 잡힌다 (결정 #04).
+      if (rule.action === USE_SKILL_ACTION && FREE_SKILLS.has(rule.actionParam ?? '')) {
+        free.push(rule.actionParam ?? '')
+        continue
+      }
       return createPlannedAction({
         entityId: entity.entityId,
         actionId: rule.action,
@@ -433,9 +442,10 @@ export class RuleVm implements DecisionPolicy {
         skillId: rule.action === USE_SKILL_ACTION ? rule.actionParam : null,
         itemKind,
         blocked,
+        freeSkills: free,
       })
     }
-    return { ...this.buildDefaultAction(entity, state), blocked }
+    return { ...this.buildDefaultAction(entity, state), blocked, freeSkills: free }
   }
 
   /**

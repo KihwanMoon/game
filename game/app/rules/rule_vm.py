@@ -15,13 +15,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 
 from game.app.grid.geometry import get_manhattan_distance
-from game.app.grid.vision import VisionGrid, check_line_of_sight
 from game.app.rules.rhs_readers import RHS_STAT_READERS
+from game.app.rules.sight import check_sight_blocked
 from game.app.simulation.abilities import ITEM_POTION
 from game.app.simulation.perception import PerceptionSnapshot
 from game.app.simulation.plan import (
-    ATTACK_ACTIONS,
-    MELEE_REACH,
+    FREE_SKILLS,
     USE_ITEM_ACTION,
     USE_SKILL_ACTION,
     BlockedRule,
@@ -245,6 +244,7 @@ class RuleVm:
             최초로 참이 된 규칙의 계획. 전부 거짓이면 DEFAULT 계획.
         """
         blocked: list[BlockedRule] = []
+        free: list[str] = []
         for rule in self.ruleset.rules:
             target, usable = self._resolve_rule_target(rule, entity, state)
             if not usable:
@@ -298,6 +298,12 @@ class RuleVm:
             if check_sight_blocked(rule.action, entity, target, state):
                 blocked.append(BlockedRule(rule_index=rule.priority, expr=expr, reason="시야 없음"))
                 continue
+            # **켜 두고 다음 규칙으로 간다** (`plan.FREE_SKILLS`). 여기서 return 하면
+            # 그 틱의 행동이 「켜기」로 끝나고, 그 한 틱이 방벽이 값을 못 하던 이유였다.
+            # 미장착·시야 검사 뒤에 둔다 — 앞에 두면 「불가」가 안 잡힌다 (결정 #04).
+            if rule.action == USE_SKILL_ACTION and rule.action_param in FREE_SKILLS:
+                free.append(rule.action_param or "")
+                continue
             return PlannedAction(
                 entity_id=entity.entity_id,
                 action_id=rule.action,
@@ -310,8 +316,13 @@ class RuleVm:
                 if rule.action == USE_ITEM_ACTION
                 else None,
                 blocked=tuple(blocked),
+                free_skills=tuple(free),
             )
-        return replace(self._build_default_action(entity, state), blocked=tuple(blocked))
+        return replace(
+            self._build_default_action(entity, state),
+            blocked=tuple(blocked),
+            free_skills=tuple(free),
+        )
 
     def _get_headroom(self, entity: Entity) -> int:
         """남은 CPU 예산 (GDD §3.6).
@@ -344,31 +355,6 @@ class RuleVm:
             target_id=target.entity_id,
             expr=f"모든 규칙 거짓 → DEFAULT (적거리 {distance})",
         )
-
-
-def check_sight_blocked(
-    action: str, entity: Entity, target: Entity | None, state: WorldState
-) -> bool:
-    """원거리 공격인데 직선 시야가 막혔는가 (GDD §4.1).
-
-    근접은 안 본다 — 인접한 칸에 시야를 묻는 것은 뜻이 없고, 물으면 벽 모서리에서 근접
-    공격이 안 나가는 일이 생긴다.
-
-    Args:
-        action: 규칙이 고른 행동.
-        entity: 행위자.
-        target: 셀렉터가 고른 대상. None 이면 막힌 것이 아니다.
-        state: 지금 세계. 부순 벽을 반영해야 하므로 템플릿이 아니라 상태를 본다.
-
-    Returns:
-        막혔으면 True.
-    """
-    if action not in ATTACK_ACTIONS or target is None:
-        return False
-    if entity.attack_range <= MELEE_REACH:
-        return False
-    grid = VisionGrid(state, state.room.width, state.room.height)
-    return not check_line_of_sight(grid, entity.position, target.position)
 
 
 def build_rule_vm(ruleset: RuleSet, catalog: BlockCatalog, kind_types: dict[str, str]) -> RuleVm:

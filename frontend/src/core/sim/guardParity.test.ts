@@ -70,3 +70,38 @@ describe('방어 태세 이식', () => {
     expect(engine.log.entries.some((entry) => entry.outcome.includes('쓸 줄 모른다'))).toBe(false)
   })
 })
+
+describe('방벽은 자리를 안 먹는다 (2026-09-10 결정)', () => {
+  it('★ 켜면서 그 틱에 때리기도 한다 — 파이썬 `FREE_SKILLS` 와 같다', () => {
+    // 켜는 데 한 틱을 내던 것이 방벽이 어느 구간에서도 값을 못 하던 이유였다
+    // (설계/5_스킬 §2.1). 규칙표에서 한 줄은 여전히 차지한다 — 틱값만 없앴다.
+    const balance = parseBalance(BALANCE)
+    const template = ROOM_TEMPLATES.find((one) => one.templateId === 'corridor')
+    if (template === undefined) {
+      throw new Error('corridor 템플릿이 없다')
+    }
+    const engine = buildEngine({ template, balance, seed: 3 })
+    const player = engine.state.entities.get(PLAYER_ENTITY_ID)
+    if (player === undefined) {
+      throw new Error('플레이어가 없다')
+    }
+    const target = engine.state.listHostiles(player)[0]
+    if (target === undefined) {
+      throw new Error('적이 없다')
+    }
+    target.position = { x: player.position.x + 1, y: player.position.y }
+    const before = target.hp
+
+    engine.state.tick = 2
+    engine.applyActions([
+      createPlannedAction({
+        entityId: PLAYER_ENTITY_ID,
+        actionId: 'ATTACK',
+        targetId: target.entityId,
+        freeSkills: ['GUARD_BRACE'],
+      }),
+    ])
+    expect(player.statuses.get('GUARD') ?? 0, '방벽이 안 켜졌다').toBeGreaterThan(0)
+    expect(target.hp, '방벽을 켜느라 때리지 못했다').toBeLessThan(before)
+  })
+})

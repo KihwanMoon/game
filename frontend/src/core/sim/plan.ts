@@ -59,6 +59,15 @@ export const MELEE_REACH = 1
 /** 방어 감소율과 유지 틱을 읽을 스킬 id. GUARD 계열이 하나뿐이라 상수로 둔다. */
 export const GUARD_SKILL_ID = 'GUARD_BRACE'
 
+/**
+ * 틱을 안 쓰는 스킬들. 파이썬 `FREE_SKILLS` 와 같다.
+ *
+ * **규칙표에서는 한 줄을 차지하지만 그 틱의 행동은 아니다.** 데이터가 아니라 상수인
+ * 이유: 「자리를 안 먹는다」는 밸런스 값이 아니라 규칙이다 — 데이터로 두면 공격 스킬에
+ * 켜 볼 수 있고, 그러면 한 틱에 둘을 때린다.
+ */
+export const FREE_SKILLS: ReadonlySet<string> = new Set([GUARD_SKILL_ID])
+
 /** 둔화. **이동이 두 틱에 한 칸이 된다** (GDD §211). */
 export const STATUS_SLOW = 'SLOW'
 
@@ -90,6 +99,11 @@ export interface PlannedAction {
    * 조용히 다음 규칙으로 가면 플레이어는 왜 안 떴는지 알 수 없다 (P1).
    */
   readonly blocked: readonly BlockedRule[]
+  /**
+   * **자리를 안 먹는 행동들** (2026-09-10 결정). 규칙표는 켜고 끄는 것만 정하고 틱을
+   * 안 쓴다 — 방벽이 그 첫 자리다. 파이썬 `free_skills` 와 같다.
+   */
+  readonly freeSkills: readonly string[]
 }
 
 /** `createPlannedAction` 이 받는 값들. 생략한 항목은 파이썬 dataclass 의 기본값과 같다. */
@@ -103,6 +117,7 @@ export interface PlannedActionInput {
   readonly skillId?: string | null
   readonly itemKind?: string | null
   readonly blocked?: readonly BlockedRule[]
+  readonly freeSkills?: readonly string[]
 }
 
 /**
@@ -122,6 +137,7 @@ export function createPlannedAction(input: PlannedActionInput): PlannedAction {
     skillId: input.skillId ?? null,
     itemKind: input.itemKind ?? null,
     blocked: input.blocked ?? [],
+    freeSkills: input.freeSkills ?? [],
   }
 }
 

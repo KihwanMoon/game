@@ -250,6 +250,9 @@ class TickEngine:
             entity = self._get_live_entity(plan)
             if entity is None or plan.entity_id in resting:
                 continue
+            # 자리를 안 먹는 행동을 켠다 — 이 틱의 행동이 아니다 (`plan.FREE_SKILLS`).
+            for skill_id in plan.free_skills:
+                executor.apply_guard(entity, plan, skill_id)
             if plan.action_id in MOVE_ACTIONS:
                 executor.apply_move(entity, plan)
         for plan in order:
