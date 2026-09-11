@@ -63,11 +63,39 @@ def get_below(bound: int) -> int:
     return secrets.randbelow(bound) if bound > 1 else 0
 
 
+def resolve_rolled_value(base: int, percent: int) -> int:
+    """기준값 하나를 굴림 폭으로 흔든다.
+
+    **굴림은 값을 흔드는 것이지 지우는 것이 아니다** (2026-09-11, 실제 신고). 정수 내림이라
+    `1 * 80 // 100 == 0` 이고, 그래서 **「물약 주머니」가 이름만 남고 칸을 안 늘렸다** —
+    굴림 폭 80~120 중 절반(80~99)이 그 결과였다. 칸·회로처럼 값이 ±1 인 접사는 0 이 되는
+    순간 접사가 아니라 **거짓말**이 된다: 이름은 무언가를 약속하는데 아무 일도 안 일어난다.
+
+    나쁘게 굴린 아이템은 그대로 둔다 — `4 → 3` 은 여전히 나온다. 막는 것은 **사라지는
+    것**뿐이다.
+
+    **음수도 같이 지킨다.** 내림이라 저주는 원래 안 사라졌고(`-1 * 80 // 100 == -1`),
+    그래서 고치기 전에는 축복만 증발하고 저주는 남는 비대칭이 있었다.
+
+    Args:
+        base: 카탈로그가 적어 둔 기준값.
+        percent: 이번 굴림의 비율.
+
+    Returns:
+        흔든 값. 기준값이 0 이 아니면 결과도 0 이 아니다.
+    """
+    if base == 0:
+        return 0
+    scaled = base * percent // PERCENT_BASE
+    if scaled != 0:
+        return scaled
+    return 1 if base > 0 else -1
+
+
 def convert_affix_roll(affix: Affix) -> Affix:
     """접사 값을 굴림 폭 안에서 흔든다.
 
-    정수 나눗셈이며 내림이다. 0 이 되는 것을 막지 않는다 — 나쁘게 굴린 아이템이 있어야
-    좋게 굴린 것이 뜻을 갖는다.
+    정수 나눗셈이며 내림이다. **접사를 지우지는 않는다** (`resolve_rolled_value`).
 
     Args:
         affix: 카탈로그의 기준 접사.
@@ -79,8 +107,8 @@ def convert_affix_roll(affix: Affix) -> Affix:
     percent = AFFIX_MIN_PERCENT + get_below(span)
     return Affix(
         stat=affix.stat,
-        flat=affix.flat * percent // PERCENT_BASE,
-        percent=affix.percent * percent // PERCENT_BASE,
+        flat=resolve_rolled_value(affix.flat, percent),
+        percent=resolve_rolled_value(affix.percent, percent),
         label_ko=affix.label_ko,
     )
 
