@@ -19,6 +19,17 @@ docker compose up -d              # frontend + backend
 docker compose run --rm check     # 게이트
 ```
 
+**코어를 고쳤으면 `bots`·`watchdog` 도 함께 굽는다** (2026-09-11).
+
+```bash
+docker compose up -d --build backend frontend bots watchdog
+```
+
+상주 프로세스가 넷인데 **코어를 이미지에 담아 도는 것도 넷이다.** `backend` 와
+`frontend` 만 올리면 봇은 **옛 코어로 판을 돌린 티켓**을 새 서버에 낸다 — 서버는
+재시뮬로 확정하므로 그 판은 다르게 끝나거나 `core_version` 이 안 맞아 버려진다.
+`ENGINE_VERSION`·블록 목록·밸런스 중 하나라도 바뀐 배포에서 이 줄이 필요하다.
+
 | 서비스 | 종류 | 하는 일 |
 |:--|:--|:--|
 | `frontend` | 상주 | `game-frontend-1:8090`. **실제 앱** — 규칙 에디터·전투 관전·사후 분석 |
