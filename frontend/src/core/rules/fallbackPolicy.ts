@@ -16,6 +16,7 @@ import {
   type PlannedAction,
   createPlannedAction,
 } from '../sim/plan'
+import { readReach } from '../sim/scrolls'
 import { countItem } from '../sim/state'
 import type { Entity, WorldState } from '../sim/state'
 
@@ -52,13 +53,14 @@ export class FallbackPolicy implements DecisionPolicy {
       other.entityId,
     ]) as Entity
     const distance = getManhattanDistance(entity.position, nearest.position)
-    const inRange = distance <= entity.attackRange
+    const reach = readReach(entity)
+    const inRange = distance <= reach
     const comparison = inRange ? '<=' : '>'
     return createPlannedAction({
       entityId: entity.entityId,
       actionId: inRange ? 'ATTACK' : 'APPROACH',
       targetId: nearest.entityId,
-      expr: `적거리(${distance}) ${comparison} 사거리(${entity.attackRange})`,
+      expr: `적거리(${distance}) ${comparison} 사거리(${reach})`,
     })
   }
 }

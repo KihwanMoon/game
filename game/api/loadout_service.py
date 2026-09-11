@@ -132,7 +132,7 @@ def build_ticket_loadout(account_id: int) -> dict:
         progress.level,
         int(player["rule_slots"]),
         progress.stats,
-        count_slot_charges(slots),
+        count_slot_charges(slots, catalog),
         list_loaded_consumables(slots, catalog),
         read_disabled_skills(pool, account_id),
     )

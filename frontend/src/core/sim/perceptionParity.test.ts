@@ -18,33 +18,45 @@ import blocksRaw from '@resources/balance/blocks.json'
 
 import { BALANCE, ROOM_TEMPLATES } from '../resources'
 import { PLAYER_ENTITY_ID, buildEngine, parseBalance } from '../services/runBattle'
+import { ITEM_POTION, ITEM_SCROLL } from './abilities'
+import { SCROLL_RESOLVERS } from './actions'
 import { buildSnapshot, readSnapshot } from './perception'
 
-/** `blocks.json` 이 정한 `USE_SKILL` 파라미터 — 인지가 만들어야 할 스킬 전량. */
-function listCatalogSkills(): readonly string[] {
-  const actions = (blocksRaw as { actions: { id: string; param?: { values: string[] } }[] }).actions
-  const useSkill = actions.find((one) => one.id === 'USE_SKILL')
-  expect(useSkill?.param?.values, 'USE_SKILL 파라미터가 없다').toBeDefined()
-  return useSkill?.param?.values ?? []
+interface RawBlock {
+  id: string
+  param?: { values: string[] }
+}
+
+/** 카탈로그가 정한 파라미터 값들. 없으면 그 자체가 실패다 — 조용히 빈 목록이 되면 안 된다. */
+function listCatalogValues(group: 'actions' | 'perceptions', blockId: string): readonly string[] {
+  const blocks = (blocksRaw as unknown as Record<string, RawBlock[]>)[group] ?? []
+  const found = blocks.find((one) => one.id === blockId)
+  expect(found?.param?.values, `${blockId} 파라미터가 없다`).toBeDefined()
+  return found?.param?.values ?? []
+}
+
+/** 인지 스냅샷 하나. 두 시험이 같은 값을 본다. */
+function buildProbeSnapshot() {
+  const template = ROOM_TEMPLATES.find((one) => one.templateId === 'open_field')
+  if (template === undefined) {
+    throw new Error('open_field 템플릿이 없다')
+  }
+  const engine = buildEngine({ template, balance: parseBalance(BALANCE), seed: 3 })
+  const player = engine.state.entities.get(PLAYER_ENTITY_ID)
+  if (player === undefined) {
+    throw new Error('플레이어가 없다')
+  }
+  return buildSnapshot({
+    state: engine.state,
+    entity: player,
+    kindTypes: engine.config.kindTypes,
+  })
 }
 
 describe('스킬 인지 목록', () => {
   it('★ `USE_SKILL` 이 부를 수 있는 스킬은 전부 인지값을 갖는다', () => {
-    const template = ROOM_TEMPLATES.find((one) => one.templateId === 'open_field')
-    if (template === undefined) {
-      throw new Error('open_field 템플릿이 없다')
-    }
-    const engine = buildEngine({ template, balance: parseBalance(BALANCE), seed: 3 })
-    const player = engine.state.entities.get(PLAYER_ENTITY_ID)
-    if (player === undefined) {
-      throw new Error('플레이어가 없다')
-    }
-    const snapshot = buildSnapshot({
-      state: engine.state,
-      entity: player,
-      kindTypes: engine.config.kindTypes,
-    })
-    for (const skill of listCatalogSkills()) {
+    const snapshot = buildProbeSnapshot()
+    for (const skill of listCatalogValues('actions', 'USE_SKILL')) {
       // **`undefined` 가 아니어야 한다.** false 는 「지금은 못 쓴다」이고 `undefined` 는
       // 「그런 질문을 만들지도 않았다」다 — 화면이 「없음」이라 적는 쪽이다.
       expect(readSnapshot(snapshot, 'self_skill_ready', skill), `self_skill_ready[${skill}]`).toBeDefined()
@@ -53,6 +65,29 @@ describe('스킬 인지 목록', () => {
         `self_cooldown_ready[${skill}]`,
       ).toBeDefined()
       expect(readSnapshot(snapshot, 'self_has_skill', skill), `self_has_skill[${skill}]`).toBeDefined()
+    }
+  })
+
+  it('★ `self_has_status` 가 묻는 상태는 전부 인지값을 갖는다', () => {
+    // 스킬에서 겪은 것과 같은 자리다 (2026-09-11). 주문서 겹쳐 쓰기를 규칙표로 피하려면
+    // `self_has_status[FOCUS]` 를 물을 수 있어야 하고, 키가 없으면 「없음」이 뜬다.
+    const snapshot = buildProbeSnapshot()
+    for (const status of listCatalogValues('perceptions', 'self_has_status')) {
+      expect(
+        readSnapshot(snapshot, 'self_has_status', status),
+        `self_has_status[${status}]`,
+      ).toBeDefined()
+    }
+  })
+})
+
+describe('소모품 태그 목록', () => {
+  it('★ `USE_ITEM` 이 가리키는 태그는 전부 실행기가 안다', () => {
+    // 고를 수 있는데 실행기가 모르면 「쓸 줄 모른다 — 틱 낭비」로 떨어진다. 규칙표를 짠
+    // 사람에게 그것은 **참인데 아무 일도 안 일어나는 규칙**이다 (P1).
+    const known = new Set([ITEM_POTION, ITEM_SCROLL, ...SCROLL_RESOLVERS.keys()])
+    for (const tag of listCatalogValues('actions', 'USE_ITEM')) {
+      expect(known.has(tag), `실행기가 모르는 태그다: ${tag}`).toBe(true)
     }
   })
 })

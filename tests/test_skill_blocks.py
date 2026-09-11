@@ -21,7 +21,7 @@ from game.config import BLOCKS_PATH
 from game.schemas.blocks import ACTION_COUNT, PERCEPTION_COUNT, load_block_catalog
 from game.schemas.ruleset import parse_ruleset
 
-BLOCK_LIST_VERSION = 10  # v10: 마법 셋이 스킬 파라미터에 들어왔다 (§10.6)
+BLOCK_LIST_VERSION = 11  # v11: 주문서가 넷으로 갈리고 상태 둘이 늘었다 (2026-09-11)
 LEGACY_ACTIONS = ("SKILL_1", "SKILL_2", "AREA_ATTACK", "HEAL", "SUMMON")
 
 
@@ -62,7 +62,7 @@ def build_skill_ruleset(skill_id: str):
 # ── 카탈로그 (§4) ────────────────────────────────────────────────────────
 
 
-def test_catalog_is_v10(raw_blocks):
+def test_catalog_is_the_pinned_version(raw_blocks):
     assert raw_blocks["block_list_version"] == BLOCK_LIST_VERSION
 
 

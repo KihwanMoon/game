@@ -701,6 +701,14 @@
           false
         ],
         [
+          "self_has_status[GUARD]",
+          false
+        ],
+        [
+          "self_has_status[FOCUS]",
+          false
+        ],
+        [
           "flag_state[A]",
           false
         ],
@@ -948,6 +956,14 @@
         ],
         [
           "self_has_status[STUN]",
+          false
+        ],
+        [
+          "self_has_status[GUARD]",
+          false
+        ],
+        [
+          "self_has_status[FOCUS]",
           false
         ],
         [
@@ -1201,6 +1217,14 @@
           false
         ],
         [
+          "self_has_status[GUARD]",
+          false
+        ],
+        [
+          "self_has_status[FOCUS]",
+          false
+        ],
+        [
           "flag_state[A]",
           false
         ],
@@ -1448,6 +1472,14 @@
         ],
         [
           "self_has_status[STUN]",
+          false
+        ],
+        [
+          "self_has_status[GUARD]",
+          false
+        ],
+        [
+          "self_has_status[FOCUS]",
           false
         ],
         [
@@ -1701,6 +1733,14 @@
           false
         ],
         [
+          "self_has_status[GUARD]",
+          false
+        ],
+        [
+          "self_has_status[FOCUS]",
+          false
+        ],
+        [
           "flag_state[A]",
           false
         ],
@@ -1948,6 +1988,14 @@
         ],
         [
           "self_has_status[STUN]",
+          false
+        ],
+        [
+          "self_has_status[GUARD]",
+          false
+        ],
+        [
+          "self_has_status[FOCUS]",
           false
         ],
         [

@@ -27,7 +27,38 @@ FREE_CHARGES = 1
 
 # 쓰임새마다 칸을 늘리는 능력치 이름. **`COMBAT_STATS` 에 있는 이름이어야 한다** —
 # 없으면 접사가 파싱은 되고 합산은 안 되어 조용히 무효가 된다 (§4).
+#
+# **계열 이름으로 적는다** — 주문서 종류가 늘어도 칸은 늘지 않는다 (아래 `SLOT_FAMILY`).
 SLOT_STATS: dict[str, str] = {"POTION": "potion_slots", "SCROLL": "scroll_slots"}
+
+# 쓰임새에서 **칸 계열**로 (2026-09-11). 칸은 계열이고 태그는 끼운 것이다.
+#
+# **주문서 종류를 늘리면서 칸을 안 늘리려고 가른 것이다.** 태그마다 칸을 주면 순간이동·
+# 화염·부릅이 각각 공짜 칸을 하나씩 받아 「무엇을 들고 갈까」가 선택이 아니게 된다 —
+# 전부 들고 가면 되니까. 주문서 칸 하나를 넷이 다투게 두면 그 자리가 선택이 된다.
+#
+# `USE_ITEM` 이 읽는 것은 **태그**다. 순간이동 주문서를 끼우면 `USE_ITEM[BLINK]` 가
+# 돌고 `USE_ITEM[SCROLL]` 은 「불가」가 된다 — 무엇을 끼웠는지가 규칙표에 그대로 나타난다.
+SLOT_FAMILY: dict[str, str] = {
+    "POTION": "POTION",
+    "SCROLL": "SCROLL",
+    "BLINK": "SCROLL",
+    "FLAME": "SCROLL",
+    "FOCUS": "SCROLL",
+}
+
+
+def find_slot_family(use_tag: str | None) -> str:
+    """이 쓰임새가 들어가는 칸 계열.
+
+    Args:
+        use_tag: 소모품의 쓰임새.
+
+    Returns:
+        칸 계열 이름. 모르는 쓰임새면 빈 문자열 — 어느 칸에도 못 들어간다.
+    """
+    return SLOT_FAMILY.get(use_tag or "", "")
+
 
 # 한 쓰임새가 가질 수 있는 칸 수의 상한. **접사가 무한히 쌓이는 것을 막는다** — 상한이
 # 없으면 봉인을 여러 번 연 캐릭터가 물약을 열 개 들고 다니고, 그러면 한도가 한도가
@@ -53,15 +84,19 @@ def check_slot_fit(use_tag: str | None, slot_tag: str) -> bool:
     **코드가 읽는 태그는 `use_tag` 하나다** (§4). 표시용 이름표(`tags`)를 보면 물약에
     분류 이름표를 하나 더 붙이는 것만으로 주문서 칸에 들어가게 된다.
 
+    **계열로 본다 (2026-09-11).** 주문서 종류가 넷이 되면서 태그와 칸이 갈렸다 —
+    순간이동 주문서는 `BLINK` 지만 들어가는 칸은 주문서 칸이다. 태그로 비교하면 새
+    종류를 더할 때마다 칸이 하나씩 늘고, 그러면 전부 들고 갈 수 있어 선택이 사라진다.
+
     Args:
         use_tag: 소모품의 쓰임새. 없으면 어느 칸에도 못 들어간다 — 쓰임새가 없는 것은
             어떤 `USE_ITEM` 도 가리키지 못하므로, 끼워 봐야 쓸 수 없다.
-        slot_tag: 칸의 쓰임새.
+        slot_tag: 칸의 계열.
 
     Returns:
         끼울 수 있으면 True.
     """
-    return bool(use_tag) and use_tag == slot_tag
+    return bool(use_tag) and find_slot_family(use_tag) == slot_tag
 
 
 def resolve_slot_count(use_tag: str, extra: int = 0) -> int:

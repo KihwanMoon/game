@@ -137,6 +137,13 @@ def _add_vision_values(
 # **TS 쪽이 갈려 있었다 (2026-09-10, 실제 신고).** 여기에는 마법 셋이 들어왔는데
 # `core/sim/perception.ts` 가 안 따라왔고, 전투는 브라우저에서 도므로 같은 판이 두
 # 코어에서 다르게 돌고 있었다 (G3). 이제 양쪽 시험이 `blocks.json` 과 대조한다.
+# 인지 변수를 만드는 상태 목록. 스킬과 같은 규율이다 — `blocks.json` 의
+# `self_has_status` 파라미터와 갈리면 키째로 안 만들어지고, 화면에 「없음」이 뜬다.
+#
+# **GUARD·FOCUS 는 2026-09-11 에 들어왔다.** 둘 다 내가 스스로 거는 것이라, 물을 수
+# 없으면 「이미 걸렸으면 딴 걸 한다」를 규칙표로 지을 방법이 없다.
+STATUS_NAMES: tuple[str, ...] = ("POISON", "SLOW", "STUN", "GUARD", "FOCUS")
+
 SKILL_IDS: tuple[str, ...] = (
     "SKILL_1",
     "SKILL_2",
@@ -234,7 +241,7 @@ def build_snapshot(
         has_skill = entity.check_has_skill(skill)
         values[f"self_has_skill[{skill}]"] = has_skill
         values[f"self_skill_ready[{skill}]"] = has_skill and is_ready
-    for status in ("POISON", "SLOW", "STUN"):
+    for status in STATUS_NAMES:
         values[f"self_has_status[{status}]"] = entity.statuses.get(status, 0) > 0
     for flag in ("A", "B", "C", "D"):
         values[f"flag_state[{flag}]"] = entity.flags.get(flag, False)

@@ -65,8 +65,12 @@ const COOLDOWN_SKILLS: readonly string[] = [
   'FROST_FIELD',
 ]
 
-/** 인지 변수 self_has_status 가 묻는 상태이상들. */
-const STATUS_NAMES: readonly string[] = ['POISON', 'SLOW', 'STUN']
+/**
+ * 인지 변수 self_has_status 가 묻는 상태들. `blocks.json` 의 `self_has_status`
+ * 파라미터와 같아야 한다 — 갈리면 키째로 안 만들어지고 화면에 「없음」이 뜬다
+ * (2026-09-10 에 스킬 목록으로 실제로 겪은 자리다).
+ */
+const STATUS_NAMES: readonly string[] = ['POISON', 'SLOW', 'STUN', 'GUARD', 'FOCUS']
 
 /** 규칙표가 쓰는 플래그 4종. */
 const FLAG_NAMES: readonly string[] = ['A', 'B', 'C', 'D']

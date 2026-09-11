@@ -9,6 +9,7 @@
  * 목록은 전부 `ReadonlyMap` 순회 순서, 곧 JSON 에 적힌 순서를 유지한다. 팔레트의 순서가
  * 실행마다 달라지면 손이 위치를 외울 수 없어 편집 속도가 그대로 무너진다.
  */
+import { USE_TAG_LABELS } from '../content/consumableTags'
 import type {
   ActionBlock,
   BlockCatalog,
@@ -213,8 +214,9 @@ export function formatActionLabel(rule: Rule, catalog: BlockCatalog): string {
  * 여기 없는 값은 id 를 그대로 쓴다 — 데이터가 앞서 나갔을 때 빈칸이 되는 것보다 낫다.
  */
 const PARAM_LABELS: ReadonlyMap<string, string> = new Map([
-  ['POTION', '물약'],
-  ['SCROLL', '주문서'],
+  // 소모품 태그는 `content/consumableTags` 가 정본이다. 사본을 두면 새 주문서가 규칙
+  // 편집기에서만 영문 id 로 뜬다 — 화면마다 다른 이름으로 불리는 것이 더 나쁘다.
+  ...USE_TAG_LABELS,
   ['SKILL_1', '스킬 1'],
   ['SKILL_2', '스킬 2'],
   ['AREA_ATTACK', '광역 공격'],
@@ -222,6 +224,15 @@ const PARAM_LABELS: ReadonlyMap<string, string> = new Map([
   ['HEAL', '치유'],
   ['ATTACK', '공격'],
   ['GUARD_BRACE', '방어 태세'],
+  ['METEOR', '메테오'],
+  ['CHAIN_BOLT', '연쇄 번개'],
+  ['FROST_FIELD', '서리 장판'],
+  // `self_has_status` 가 묻는 상태들. GUARD·FOCUS 는 **스스로 거는 것**이라 규칙표가
+  // 겹쳐 쓰기를 피하는 데 쓴다 — 이름이 없으면 「내 상태이상[GUARD]」로 적힌다.
+  ['POISON', '중독'],
+  ['SLOW', '둔화'],
+  ['STUN', '기절'],
+  ['GUARD', '방어 태세'],
 ])
 
 /**

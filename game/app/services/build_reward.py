@@ -50,7 +50,11 @@ REWARD_CATALOG = (
     RewardOption("affix_attack", REWARD_STAT_AFFIX, "예리함", "attack", 2),
     RewardOption("affix_defense", REWARD_STAT_AFFIX, "견고함", "defense", 1),
     RewardOption("affix_vitality", REWARD_STAT_AFFIX, "활력", STAT_HP_MAX, 10),
-    RewardOption("potion_pair", REWARD_POTION, "포션 꾸러미", "potions", 2),
+    # **여기의 target_stat 은 필드 이름이 아니라 소모품 태그다** (2026-09-11). 주머니가
+    # 정수 하나에서 태그별 수로 바뀌면서, 이 한 줄만 가리키는 것이 달라졌다 — 주문서
+    # 꾸러미를 더하고 싶으면 태그만 바꿔 한 줄 더한다 (후보가 늘면 뽑기가 흔들리므로
+    # 그때는 시즌이 갈린다).
+    RewardOption("potion_pair", REWARD_POTION, "포션 꾸러미", "POTION", 2),
     RewardOption("rule_slot", REWARD_RULE_SLOT, "규칙 슬롯", "rule_slots", 1),
 )
 
@@ -67,9 +71,17 @@ class RunState:
     hp_max: int
     attack: int
     defense: int
-    potions: int
-    rule_slots: int
-    cpu_budget: int
+    # 들고 다니는 소모품. **정렬된 쌍으로 담는다** — 딕셔너리 순회 순서가 런 상태에
+    # 새어 나가면 안 된다 (R5).
+    #
+    # **예전에는 `potions: int` 하나였다** (2026-09-11 에 고쳤다). 그래서 층을 도는
+    # 쪽(`run_room_loop`)이 방에 들어갈 때마다 주머니를 `{"POTION": n}` 으로 덮었고,
+    # **주문서는 들고 들어가도 사라졌다.** 실제 판(`run_chain`)은 전부 인계하므로 두
+    # 경로가 다른 판을 돌고 있었다 — 배치로 잰 값이 실제 판과 같아야 한다는 이 모듈의
+    # 규율이 바로 그 자리에서 깨져 있었고, 주문서 넷을 재려 하자마자 드러났다.
+    consumables: tuple[tuple[str, int], ...] = ()
+    rule_slots: int = 0
+    cpu_budget: int = 0
     modules: tuple[str, ...] = ()
 
 
@@ -94,7 +106,7 @@ def create_run_state(balance: dict, loadout: PlayerLoadout | None = None) -> Run
             hp_max=stats["hp_max"],
             attack=stats["attack"],
             defense=stats["defense"],
-            potions=stats["potions"],
+            consumables=(("POTION", stats["potions"]),),
             rule_slots=stats["rule_slots"],
             cpu_budget=stats["cpu_budget"],
         )
@@ -103,10 +115,39 @@ def create_run_state(balance: dict, loadout: PlayerLoadout | None = None) -> Run
         hp_max=loadout.hp_max,
         attack=loadout.attack,
         defense=loadout.defense,
-        potions=dict(loadout.consumables).get("POTION", stats["potions"]),
+        # **전부 들고 간다.** 물약만 옮기면 주문서를 끼운 칸이 판에서 사라진다.
+        consumables=tuple(sorted(loadout.consumables)),
         rule_slots=loadout.rule_slots,
         cpu_budget=loadout.cpu_budget,
     )
+
+
+def read_charges(state: RunState, use_tag: str) -> int:
+    """지금 들고 있는 그 소모품의 수.
+
+    Args:
+        state: 런 상태.
+        use_tag: 소모품 태그.
+
+    Returns:
+        남은 수. 안 들고 있으면 0.
+    """
+    return dict(state.consumables).get(use_tag, 0)
+
+
+def apply_charges(state: RunState, use_tag: str, count: int) -> None:
+    """그 소모품의 수를 고쳐 쓴다.
+
+    **정렬해 다시 담는다.** 순서가 런 상태에 새어 나가면 같은 시드가 다른 판을 돈다 (R5).
+
+    Args:
+        state: 런 상태. 제자리에서 바뀐다.
+        use_tag: 소모품 태그.
+        count: 새 수.
+    """
+    left = dict(state.consumables)
+    left[use_tag] = count
+    state.consumables = tuple(sorted(left.items()))
 
 
 def build_reward_options(
@@ -138,6 +179,13 @@ def apply_reward(state: RunState, option: RewardOption) -> None:
         state: 바뀔 런 상태.
         option: 고른 후보.
     """
+    # 소모품만 갈래가 하나 있다. 주머니가 **태그별 수**라 필드 이름으로 못 짚는다 —
+    # 갈래가 여기 하나뿐이므로 종류가 늘어도 이 함수는 그대로다.
+    if option.kind == REWARD_POTION:
+        apply_charges(
+            state, option.target_stat, read_charges(state, option.target_stat) + option.amount
+        )
+        return
     setattr(state, option.target_stat, getattr(state, option.target_stat) + option.amount)
     if option.target_stat == STAT_HP_MAX:
         state.hp += option.amount

@@ -26,6 +26,17 @@ import { divideFloor } from '../combat/damage'
 import type { EngineConfig, PlannedAction, RawEnemyKind, RawTelegraphSetting } from './plan'
 import { getScaledEnemyStats } from './scaling'
 import { type Entity, type WorldState, countItem, createEntity, isAlive } from './state'
+import {
+  FLAME_COEF_PCT,
+  FLAME_RADIUS,
+  FOCUS_RANGE_BONUS,
+  FOCUS_TICKS,
+  ITEM_BLINK,
+  ITEM_FOCUS,
+  STATUS_FOCUS,
+  findBlinkSpot,
+  readReach,
+} from './scrolls'
 import { type TelegraphBoard, buildBlastTiles, buildLineTiles } from './telegraph'
 import { SHAPE_LINE } from '../skills/catalog'
 
@@ -244,7 +255,7 @@ export function resolveHeal(
   // 사거리로 넘어가므로 `??` 로 바꾸면 사거리 0 스킬의 동작이 달라진다.
   const declared = findSkill(config.skills, plan.actionId).reach
   const reach =
-    declared === undefined || declared === null || declared === 0 ? actor.attackRange : declared
+    declared === undefined || declared === null || declared === 0 ? readReach(actor) : declared
   const distance = getManhattanDistance(actor.position, target.position)
   if (distance > reach) {
     return { healed: 0, outcome: `사거리 밖(${distance} > ${reach}) — 틱 낭비` }
@@ -309,6 +320,80 @@ export function resolveScroll(entity: Entity, ticks: number): PotionResult {
   }
   entity.statuses.set(GUARD_STATUS, ticks)
   return { healed: ticks, outcome: `방어 태세 ${String(ticks)}틱` }
+}
+
+/**
+ * 순간이동 주문서 — 적에게서 물러선다 (2026-09-11).
+ *
+ * **이동이 한 칸씩인 세계라 포위를 푸는 유일한 수단이다.** `RETREAT` 는 한 칸이고 적도
+ * 한 칸 따라오므로 거리가 안 벌어진다 — 규칙표가 답할 질문은 「언제 쓸 것인가」다.
+ *
+ * @param state 세계 상태.
+ * @param entity 쓰는 개체.
+ * @returns 벌린 거리와 로그 문자열. 주문서가 없거나 갈 곳이 없으면 거리가 null 이다.
+ */
+export function resolveBlink(state: WorldState, entity: Entity): PotionResult {
+  const spot = findBlinkSpot(state, entity)
+  if (spot === null) {
+    return { healed: null, outcome: '물러설 칸 없음 — 틱 낭비' }
+  }
+  if (!spendItem(entity, ITEM_BLINK)) {
+    return { healed: null, outcome: '순간이동 주문서 없음 — 틱 낭비' }
+  }
+  const moved = getManhattanDistance(entity.position, spot)
+  entity.position = spot
+  return {
+    healed: moved,
+    outcome: `순간이동 ${String(moved)}칸 → (${String(spot.x)}, ${String(spot.y)})`,
+  }
+}
+
+/**
+ * 화염 주문서가 태울 적들 (2026-09-11).
+ *
+ * **자기 오사는 없다.** 마법과 다른 점이며, 그래서 붙어서 쓸 수 있다 — 대신 반경이 1 이라
+ * 뭉친 적에게만 값을 한다.
+ *
+ * @param state 세계 상태.
+ * @param entity 쓰는 개체.
+ * @returns 반경 안의 적들. 없으면 빈 배열 — 그때는 주문서를 태우지 않는다.
+ */
+export function listFlameVictims(state: WorldState, entity: Entity): readonly Entity[] {
+  return state
+    .listHostiles(entity)
+    .filter((other) => getManhattanDistance(entity.position, other.position) <= FLAME_RADIUS)
+}
+
+/**
+ * 화염 한 장이 한 명에게 넣는 피해.
+ *
+ * **공격력에 비례한다.** 고정값으로 두면 1층에서는 과하고 8층에서는 종잇장이 된다.
+ *
+ * @param entity 쓰는 개체.
+ * @returns 피해량.
+ */
+export function readFlameDamage(entity: Entity): number {
+  return divideFloor(entity.attack * FLAME_COEF_PCT, PERCENT_BASE)
+}
+
+/**
+ * 부릅 주문서 — 몇 틱 동안 사거리가 한 칸 는다 (2026-09-11).
+ *
+ * **`적거리 <= 사거리` 가 그 몇 틱만 참이 된다.** 무기를 안 바꾸고 규칙표의 뜻이 달라지는
+ * 자리이며, 그래서 P2 를 만족한다 — 사거리는 거리 스칼라가 아니라 판을 읽는 값이다.
+ *
+ * @param entity 쓰는 개체.
+ * @returns 유지 틱과 로그 문자열. 주문서가 없으면 틱이 null 이다.
+ */
+export function resolveFocus(entity: Entity): PotionResult {
+  if (!spendItem(entity, ITEM_FOCUS)) {
+    return { healed: null, outcome: '부릅 주문서 없음 — 틱 낭비' }
+  }
+  entity.statuses.set(STATUS_FOCUS, FOCUS_TICKS)
+  return {
+    healed: FOCUS_TICKS,
+    outcome: `부릅 ${String(FOCUS_TICKS)}틱 — 사거리 +${String(FOCUS_RANGE_BONUS)}`,
+  }
 }
 
 export function resolvePotion(entity: Entity): PotionResult {

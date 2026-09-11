@@ -41,6 +41,7 @@ import {
   type PlannedAction,
   createPlannedAction,
 } from '../sim/plan'
+import { checkAlreadyHeld, readReach } from '../sim/scrolls'
 import { resolveTarget } from '../sim/selectors'
 import { countItem, type Entity, type WorldState, checkHasSkill, getHpPercent } from '../sim/state'
 
@@ -60,7 +61,7 @@ export const TARGET_BLOCKS: ReadonlySet<string> = new Set([
  * 지킨다. `Record` 가 아니라 `Map` 인 이유는 키 순회 순서다 (R5).
  */
 export const RHS_STAT_READERS: ReadonlyMap<string, (actor: Entity) => number> = new Map([
-  ['attack_range', (actor: Entity) => actor.attackRange],
+  ['attack_range', (actor: Entity) => readReach(actor)],
   ['attack', (actor: Entity) => actor.attack],
   ['defense', (actor: Entity) => actor.defense],
   ['hp_max', (actor: Entity) => actor.hpMax],
@@ -314,7 +315,7 @@ export function checkSightBlocked(
   if (!ATTACK_ACTIONS.has(action) || target === undefined) {
     return false
   }
-  if (entity.attackRange <= MELEE_REACH) {
+  if (readReach(entity) <= MELEE_REACH) {
     return false
   }
   const grid = new VisionGrid(state, state.room.width, state.room.height)
@@ -413,6 +414,17 @@ export class RuleVm implements DecisionPolicy {
           ruleIndex: rule.priority,
           expr,
           reason: `${String(itemKind)} 없음`,
+        })
+        continue
+      }
+      // **겹쳐 쓰면 충전만 탄다** (2026-09-11, 실제 요청). 이미 걸려 있는데 또 쓰면 남은
+      // 틱이 덮일 뿐이고, 그 사실은 로그에도 안 남는다. 「불가」로 잡으면 다음 규칙이
+      // 기회를 얻는다 — 소모품이 없을 때와 같은 자리다.
+      if (rule.action === USE_ITEM_ACTION && checkAlreadyHeld(entity, itemKind ?? '')) {
+        blocked.push({
+          ruleIndex: rule.priority,
+          expr,
+          reason: `${String(itemKind)} 이미 걸림`,
         })
         continue
       }

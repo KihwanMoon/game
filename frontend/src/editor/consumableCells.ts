@@ -11,27 +11,19 @@
  *
  * 순수 값이다. 렌더 검사가 훅 없이 셀 배치를 볼 수 있어야 한다.
  */
+import {
+  SLOT_LABELS,
+  USE_TAG_CODES as TAG_CODES,
+  checkSlotFit,
+} from '../content/consumableTags'
 import type { ConsumableOptionView, ConsumableSlotView, ConsumableView } from '../storage'
 
 import type { CellFace } from './gridCell'
 import { clipCellLabel, pickHeadlineFromAffixes } from './inventoryCells'
 
-/** 칸 쓰임새의 한글 이름. 상세와 머리글이 쓴다. */
-export const USE_TAG_LABELS: ReadonlyMap<string, string> = new Map([
-  ['POTION', '물약'],
-  ['SCROLL', '주문서'],
-])
-
-/**
- * 쓰임새의 두 글자 도식 코드.
- *
- * 장비 칸이 부위 코드(`WM`·`HD`)를 다는 것과 같은 자리다 — 칸 구석은 **어디에 들어가는
- * 것인가**를 말한다. 물약을 주문서 칸에 끼울 수 없으므로 이것이 곧 그 칸의 자리다.
- */
-export const USE_TAG_CODES: ReadonlyMap<string, string> = new Map([
-  ['POTION', 'PO'],
-  ['SCROLL', 'SC'],
-])
+// 이름표와 칸 계열은 `content/consumableTags` 가 정본이다. 화면 셋이 함께 보는 표라
+// 여기 사본을 두면 새 주문서가 어느 한 곳에서만 이름 없이 뜬다.
+export { SLOT_LABELS, USE_TAG_CODES, USE_TAG_LABELS } from '../content/consumableTags'
 
 /**
  * 소모품 격자 칸 하나.
@@ -56,7 +48,8 @@ export interface ConsumableCell extends CellFace {
  * @returns `물약 1` 같은 한 줄.
  */
 export function formatSlotName(slot: ConsumableSlotView): string {
-  const label = USE_TAG_LABELS.get(slot.useTag) ?? slot.useTag
+  // 칸 이름은 계열이다 — 주문서 칸은 넷 중 무엇을 끼워도 「주문서 n」이다.
+  const label = SLOT_LABELS.get(slot.useTag) ?? slot.useTag
   return `${label} ${String(slot.slotIndex + 1)}`
 }
 
@@ -71,7 +64,7 @@ export function formatSlotName(slot: ConsumableSlotView): string {
  * @returns `PO1` 꼴.
  */
 export function formatSlotCode(useTag: string, slotIndex: number): string {
-  return `${USE_TAG_CODES.get(useTag) ?? 'CS'}${String(slotIndex + 1)}`
+  return `${TAG_CODES.get(useTag) ?? 'CS'}${String(slotIndex + 1)}`
 }
 
 /**
@@ -119,7 +112,7 @@ export function buildConsumableStockCells(
 ): readonly ConsumableCell[] {
   return (view?.options ?? []).map((option) => ({
     key: `cstock:${option.catalogId}`,
-    code: USE_TAG_CODES.get(option.useTag) ?? 'CS',
+    code: TAG_CODES.get(option.useTag) ?? 'CS',
     label: clipCellLabel(option.labelKo),
     grade: option.grade,
     marks: [],
@@ -199,5 +192,5 @@ export function findFreeConsumableSlot(
   if (view === undefined || option === undefined) {
     return undefined
   }
-  return view.slots.find((slot) => slot.useTag === option.useTag && slot.catalogId === '')
+  return view.slots.find((slot) => checkSlotFit(option.useTag, slot.useTag) && slot.catalogId === '')
 }

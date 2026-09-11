@@ -148,3 +148,37 @@ def test_the_skill_perception_list_matches_the_catalog():
         "values"
     ]
     assert set(SKILL_IDS) == set(params), "인지 목록과 USE_SKILL 파라미터가 갈렸다"
+
+
+def test_the_status_perception_list_matches_the_catalog():
+    """★ **상태 목록도 같은 규율이다** (2026-09-11).
+
+    스킬에서 겪은 것과 같은 자리다 — `self_has_status[GUARD]` 를 물었는데 인지가 그 키를
+    안 만들면 화면에 「없음」이 뜨고 그 규칙은 영영 발동하지 않는다. 주문서 겹쳐 쓰기를
+    규칙표로 피하려면 이 둘이 반드시 붙어 있어야 한다.
+    """
+    from game.app.simulation.perception import STATUS_NAMES
+
+    catalog = json.loads(BLOCKS_PATH.read_text(encoding="utf-8"))
+    params = [block for block in catalog["perceptions"] if block["id"] == "self_has_status"][0][
+        "param"
+    ]["values"]
+    assert set(STATUS_NAMES) == set(params), "인지 목록과 self_has_status 파라미터가 갈렸다"
+
+
+def test_every_item_tag_the_catalog_names_can_be_used():
+    """★ **블록이 가리키는 태그는 전부 실행기가 안다** (2026-09-11).
+
+    `USE_ITEM[FLAME]` 을 고를 수 있는데 실행기가 그 태그를 모르면 「쓸 줄 모른다 — 틱
+    낭비」로 떨어진다. 규칙표를 짠 사람에게 그것은 **참인데 아무 일도 안 일어나는 규칙**,
+    즉 P1 을 가장 직접적으로 깨는 모양이다.
+    """
+    from game.app.simulation.abilities import ITEM_POTION, ITEM_SCROLL
+    from game.app.simulation.support_actions import SCROLL_RESOLVERS
+
+    catalog = json.loads(BLOCKS_PATH.read_text(encoding="utf-8"))
+    params = [block for block in catalog["actions"] if block["id"] == "USE_ITEM"][0]["param"][
+        "values"
+    ]
+    known = {ITEM_POTION, ITEM_SCROLL} | set(SCROLL_RESOLVERS)
+    assert set(params) <= known, f"실행기가 모르는 태그다: {set(params) - known}"

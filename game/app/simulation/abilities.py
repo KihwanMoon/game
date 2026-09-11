@@ -26,6 +26,7 @@ R5 다 — 같은 시드가 같은 자리를 내야 리플레이가 성립한다
 """
 
 from game.app.grid.geometry import get_manhattan_distance, iter_steps
+from game.app.simulation import scrolls
 from game.app.simulation.plan import STATUS_GUARD, EngineConfig, PlannedAction
 from game.app.simulation.scaling import get_scaled_enemy_stats
 from game.app.simulation.state import Entity, WorldState
@@ -225,6 +226,83 @@ def register_blast(
     return f"예고 {len(tiles)}칸 — {telegraph['lead_ticks']}틱 뒤 발동"
 
 
+def resolve_blink(state: WorldState, entity: Entity) -> tuple[int | None, str]:
+    """순간이동 주문서 — 적에게서 물러선다 (2026-09-11).
+
+    **이동이 한 칸씩인 세계라 포위를 푸는 유일한 수단이다.** `RETREAT` 는 한 칸이고
+    적도 한 칸 따라오므로 거리가 안 벌어진다 — 규칙표가 답할 질문은 「언제 쓸 것인가」다.
+
+    Args:
+        state: 세계 상태.
+        entity: 쓰는 개체.
+
+    Returns:
+        (벌린 거리, 로그 문자열). 주문서가 없거나 갈 곳이 없으면 거리가 None 이다.
+    """
+    spot = scrolls.find_blink_spot(state, entity)
+    if spot is None:
+        return None, "물러설 칸 없음 — 틱 낭비"
+    if not remove_item(entity, scrolls.ITEM_BLINK):
+        return None, "순간이동 주문서 없음 — 틱 낭비"
+    moved = get_manhattan_distance(entity.position, spot)
+    entity.position = spot
+    return moved, f"순간이동 {moved}칸 → {spot}"
+
+
+def list_flame_victims(state: WorldState, entity: Entity) -> tuple[Entity, ...]:
+    """화염 주문서가 태울 적들 (2026-09-11).
+
+    **자기 오사는 없다.** 마법과 다른 점이며, 그래서 붙어서 쓸 수 있다 — 대신 반경이
+    1 이라 뭉친 적에게만 값을 한다.
+
+    Args:
+        state: 세계 상태.
+        entity: 쓰는 개체.
+
+    Returns:
+        반경 안의 적들. 없으면 빈 튜플 — 그때는 주문서를 태우지 않는다.
+    """
+    return tuple(
+        other
+        for other in state.list_hostiles(entity)
+        if get_manhattan_distance(entity.position, other.position) <= scrolls.FLAME_RADIUS
+    )
+
+
+def read_flame_damage(entity: Entity) -> int:
+    """화염 한 장이 한 명에게 넣는 피해.
+
+    **공격력에 비례한다.** 고정값으로 두면 1층에서는 과하고 8층에서는 종잇장이 된다.
+
+    Args:
+        entity: 쓰는 개체.
+
+    Returns:
+        피해량.
+    """
+    return entity.attack * scrolls.FLAME_COEF_PCT // PERCENT_BASE
+
+
+def resolve_focus(entity: Entity) -> tuple[int | None, str]:
+    """부릅 주문서 — 몇 틱 동안 사거리가 한 칸 는다 (2026-09-11).
+
+    **`적거리 <= 사거리` 가 그 몇 틱만 참이 된다.** 무기를 안 바꾸고 규칙표의 뜻이
+    달라지는 자리이며, 그래서 P2 를 만족한다 — 사거리는 거리 스칼라가 아니라 판을 읽는
+    값이다.
+
+    Args:
+        entity: 쓰는 개체.
+
+    Returns:
+        (유지 틱, 로그 문자열). 주문서가 없으면 틱이 None 이다.
+    """
+    if not remove_item(entity, scrolls.ITEM_FOCUS):
+        return None, "부릅 주문서 없음 — 틱 낭비"
+    entity.statuses[scrolls.STATUS_FOCUS] = scrolls.FOCUS_TICKS
+    ticks = scrolls.FOCUS_TICKS
+    return ticks, f"부릅 {ticks}틱 — 사거리 +{scrolls.FOCUS_RANGE_BONUS}"
+
+
 def resolve_heal(
     state: WorldState, config: EngineConfig, actor: Entity, plan: PlannedAction
 ) -> tuple[int, str]:
@@ -246,7 +324,7 @@ def resolve_heal(
     target = state.entities.get(plan.target_id or "")
     if target is None or not target.is_alive:
         return 0, "대상 없음 — 틱 낭비"
-    reach = find_skill(config.skills, plan.action_id).reach or actor.attack_range
+    reach = find_skill(config.skills, plan.action_id).reach or scrolls.read_reach(actor)
     distance = get_manhattan_distance(actor.position, target.position)
     if distance > reach:
         return 0, f"사거리 밖({distance} > {reach}) — 틱 낭비"

@@ -10,6 +10,7 @@
 
 from game.app.grid.vision import VisionGrid, check_line_of_sight
 from game.app.simulation.plan import ATTACK_ACTIONS, MELEE_REACH
+from game.app.simulation.scrolls import read_reach
 from game.app.simulation.state import Entity, WorldState
 
 
@@ -36,7 +37,7 @@ def check_sight_blocked(
     """
     if action not in ATTACK_ACTIONS or target is None:
         return False
-    if entity.attack_range <= MELEE_REACH:
+    if read_reach(entity) <= MELEE_REACH:
         return False
     grid = VisionGrid(state, state.room.width, state.room.height)
     return not check_line_of_sight(grid, entity.position, target.position)

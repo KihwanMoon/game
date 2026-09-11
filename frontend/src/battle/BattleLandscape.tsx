@@ -17,6 +17,7 @@
  * (`planRenderer`). 그래서 상단 바의 배속 박스도 탭도 황동을 쓰지 않고, 지시선은 그리지
  * 않는다 — 규칙 줄이 탭 뒤로 숨을 수 있어 선의 한쪽 끝이 사라지기 때문이다.
  */
+import type { VitalRow } from './vitalRows'
 import type { ReactNode, Ref } from 'react'
 
 import { HpGauge, ThreatNotice } from '../ds'
@@ -76,6 +77,8 @@ export interface BattleLandscapeProps {
   readonly hpMax: number
   readonly potions: number
   readonly potionsMax: number
+  /** 물약·보호 주문서 밖의 소모품 줄들 (2026-09-11). 없으면 안 그린다. */
+  readonly extras?: readonly VitalRow[] | undefined
   /** 남은 주문서와 실은 수. 물약과 같은 자리다 — 소모품 현황이 플레이 중에 보여야 한다. */
   readonly scrolls: number
   readonly scrollsMax: number
@@ -139,6 +142,7 @@ export function BattleLandscape(props: BattleLandscapeProps): React.JSX.Element 
             cooldowns={props.cooldowns ?? ''}
             potions={props.potions}
             potionsMax={props.potionsMax}
+            extras={props.extras}
             scrolls={props.scrolls}
             scrollsMax={props.scrollsMax}
             bodyRef={props.bodyRef}

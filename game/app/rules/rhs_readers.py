@@ -7,10 +7,12 @@
 
 from collections.abc import Callable
 
+from game.app.simulation.scrolls import read_reach
 from game.app.simulation.state import Entity
 
 RHS_STAT_READERS: dict[str, Callable[[Entity], int]] = {
-    "attack_range": lambda actor: actor.attack_range,
+    # **버프를 포함한 값이다** — 규칙표의 `사거리` 가 실제로 닿는 거리와 같아야 한다.
+    "attack_range": read_reach,
     "attack": lambda actor: actor.attack,
     "defense": lambda actor: actor.defense,
     "hp_max": lambda actor: actor.hp_max,

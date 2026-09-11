@@ -26,9 +26,10 @@ import {
   formatClearLabel,
   formatRefillLabel,
   formatSlotName,
-  USE_TAG_LABELS,
+  SLOT_LABELS,
   type ConsumableCell,
 } from './consumableCells'
+import { findSlotFamily } from '../content/consumableTags'
 import { formatGradeClass, renderGrade } from './gradeBadge'
 import { checkLinked, type LinkState } from './linkState'
 
@@ -98,7 +99,8 @@ function renderCompares(
 ): React.JSX.Element {
   const compares = compareToSlots(picked, slots)
   if (compares.length === 0) {
-    const label = USE_TAG_LABELS.get(picked.useTag) ?? picked.useTag
+    // 없다고 적을 것은 **칸**이다 — 순간이동 주문서를 끼울 칸의 이름은 「주문서」다.
+    const label = SLOT_LABELS.get(findSlotFamily(picked.useTag)) ?? picked.useTag
     return <ValueExpr text={`견줄 ${label} 칸이 없다`} size="sm" dim />
   }
   return <>{compares.map(renderSlotCompare)}</>

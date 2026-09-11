@@ -172,6 +172,11 @@ export interface BattleSheetProps {
   readonly potionsMax?: number
   readonly scrolls?: number
   readonly scrollsMax?: number
+  /**
+   * 물약·보호 주문서 밖의 소모품 줄들 (2026-09-11). 주문서가 넷으로 갈린 뒤로, 들고 온
+   * 것이 `BLINK` 인데 「주문서 0/0」만 뜨면 아무것도 안 들고 온 것처럼 보인다.
+   */
+  readonly extras?: readonly VitalRow[] | undefined
   /** 탭 본문 아래 고정되는 하단. 배치마다 배열이 달라 슬롯으로 받는다. */
   readonly foot?: ReactNode
   /**
@@ -202,6 +207,7 @@ export function formatGearLine(props: {
   readonly potionsMax?: number
   readonly scrolls?: number
   readonly scrollsMax?: number
+  readonly extras?: readonly VitalRow[] | undefined
 }): string {
   const parts: string[] = []
   if (props.potionsMax !== undefined) {
@@ -209,6 +215,9 @@ export function formatGearLine(props: {
   }
   if (props.scrollsMax !== undefined) {
     parts.push(`▤ 주문서 ${String(props.scrolls ?? 0)}/${String(props.scrollsMax)}`)
+  }
+  for (const row of props.extras ?? []) {
+    parts.push(`▤ ${row.label} ${row.value.replace(/ /g, '')}`)
   }
   if (props.cooldowns !== undefined && props.cooldowns !== '') {
     parts.push(props.cooldowns)

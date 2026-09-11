@@ -18,7 +18,8 @@ import type { RuleSet } from './ruleset'
 //     발밑이 아니라 겨눈 곳이다 (설계/5_스킬 §10.3).
 // e8: 둔화가 이동만이 아니라 **행동 전체**를 늦춘다.
 // e9: 방벽이 **틱을 안 쓴다** (`plan.FREE_SKILLS`).
-export const ENGINE_VERSION = 9
+// e10: 주문서가 넷으로 갈리고, 이미 걸린 주문서를 또 쓰는 규칙은 「불가」가 된다.
+export const ENGINE_VERSION = 10
 
 /**
  * 시드 상한. `Number.MAX_SAFE_INTEGER` 이며, 이것은 밸런스가 아니라 **이식 제약**이다.

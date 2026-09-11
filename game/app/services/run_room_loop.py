@@ -22,9 +22,11 @@ from game.app.rules.rule_vm import build_rule_vm
 from game.app.services.build_reward import (
     RewardOption,
     RunState,
+    apply_charges,
     apply_reward,
     build_reward_options,
     create_run_state,
+    read_charges,
 )
 from game.app.services.run_battle import (
     BattleResult,
@@ -32,6 +34,7 @@ from game.app.services.run_battle import (
     build_engine,
     run_battle,
 )
+from game.app.simulation.abilities import ITEM_POTION
 from game.app.simulation.plan import OUTCOME_PLAYER_WIN
 from game.config import DEFAULT_MAX_TICKS
 from game.schemas.blocks import BlockCatalog
@@ -196,7 +199,7 @@ def apply_node_effect(node: FloorNode, state: RunState, rng: DeterministicRng) -
         state.hp += healed
         return f"휴식 — HP +{healed}"
     if node.node_type == NODE_SHOP:
-        state.potions += SHOP_POTIONS
+        apply_charges(state, ITEM_POTION, read_charges(state, ITEM_POTION) + SHOP_POTIONS)
         return f"상점 — 포션 +{SHOP_POTIONS}"
     if node.node_type == NODE_EVENT:
         if rng.get_below(PERCENT) < EVENT_GOOD_PCT:
@@ -240,7 +243,9 @@ def run_node_battle(
     player.hp = min(state.hp, state.hp_max)
     player.attack = state.attack
     player.defense = state.defense
-    player.consumables = {"POTION": state.potions}
+    # **들고 있는 것을 전부 넘긴다.** 예전에는 여기서 `{"POTION": n}` 으로 덮어, 주문서를
+    # 끼우고 들어와도 판에서는 빈손이었다 — 그 판을 잰 배치 수치가 실제 판과 달랐다.
+    player.consumables = dict(state.consumables)
     player.cpu_budget = state.cpu_budget
     if ruleset is not None:
         engine.policies["player"] = build_rule_vm(
@@ -250,7 +255,7 @@ def run_node_battle(
 
     result = run_battle(engine)
     state.hp = player.hp
-    state.potions = player.count_item("POTION")
+    state.consumables = tuple(sorted(player.consumables.items()))
     return result
 
 

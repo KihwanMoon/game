@@ -8,8 +8,10 @@
 엔진이 어느 쪽에 넘길지를 알아야 하고, 그 판단이 늘어날 때마다 엔진이 두꺼워진다.
 """
 
+from collections.abc import Callable
+
 from game.app.core.event_log import EventLog, LogEntry
-from game.app.simulation import abilities
+from game.app.simulation import abilities, scrolls
 from game.app.simulation.plan import (
     GUARD_SKILL_ID,
     PHASE_ACT,
@@ -19,6 +21,23 @@ from game.app.simulation.plan import (
 )
 from game.app.simulation.state import Entity, WorldState
 from game.app.skills.catalog import find_skill
+
+# 주문서 태그에서 그것을 푸는 함수로 (2026-09-11). **표로 두는 이유**는 종류가 늘 때
+# `apply_item` 의 가지가 늘지 않게 하려는 것이다 — 마법이 `apply_cast` 로 겪은 자리다
+# (설계/5_스킬 §10.8): 이름으로 갈리는 실행기는 새 종류가 어느 갈래에도 안 닿는다.
+#
+# **세계가 아니라 실행기를 받는다.** 화염은 피해를 넣어야 하고, 피해는 `apply_damage`
+# 하나를 거쳐야 방어 태세·시전 취소·피격자별 로그가 함께 따라온다 — 직접 HP 를 깎으면
+# 그 셋이 조용히 빠지고, 사후 분석의 피해 지도에서 화염이 안 보인다.
+ScrollResolver = Callable[["SupportActionMixin", Entity, PlannedAction], tuple[int | None, str]]
+
+SCROLL_RESOLVERS: dict[str, ScrollResolver] = {
+    scrolls.ITEM_BLINK: lambda actor, entity, _plan: abilities.resolve_blink(actor.state, entity),
+    scrolls.ITEM_FLAME: lambda actor, entity, plan: actor.resolve_flame(entity, plan),
+    # 부릅은 세계를 안 읽는다. 시그니처를 맞춰 표에 넣는다 — 표가 갈리면 그때부터
+    # 「어느 표에 있더라」를 찾아야 한다.
+    scrolls.ITEM_FOCUS: lambda _actor, entity, _plan: abilities.resolve_focus(entity),
+}
 
 
 class SupportActionMixin:
@@ -52,6 +71,60 @@ class SupportActionMixin:
             action_id: 사용한 행동 id.
         """
         raise NotImplementedError
+
+    def apply_damage(
+        self,
+        target: Entity,
+        amount: int,
+        phase: str,
+        expr: str,
+        actor_id: str,
+        rule: int | None = None,
+    ) -> None:
+        """피해를 넣고 로그를 남긴다. 구체 클래스가 구현한다.
+
+        Args:
+            target: 피격자.
+            amount: 피해량.
+            phase: 발생한 페이즈.
+            expr: 로그에 남길 문자열.
+            actor_id: 피해를 일으킨 주체.
+            rule: 이 피해를 일으킨 규칙의 우선순위. 없으면 None.
+        """
+        raise NotImplementedError
+
+    def resolve_flame(self, entity: Entity, plan: PlannedAction) -> tuple[int | None, str]:
+        """화염 주문서 — 예고 없이 둘레를 태운다 (2026-09-11).
+
+        **예고가 없는 것이 이 주문서의 전부다.** 마법은 전부 예고를 쓰므로(설계/5_스킬
+        §10) 「비켜설 틈을 안 주는 광역」은 소모품만 할 수 있는 일이고, 대가는 충전 수다.
+
+        **적이 없으면 주문서를 안 태운다.** 빈 허공에 쓴 한 장이 그냥 사라지면, 규칙표를
+        고칠 사람에게는 「주문서가 왜 벌써 없지」로만 보인다.
+
+        Args:
+            entity: 쓰는 개체.
+            plan: 실행할 계획. 피해 로그에 규칙 번호를 싣는다.
+
+        Returns:
+            (준 피해 합, 로그 문자열). 못 썼으면 피해가 None 이다.
+        """
+        victims = abilities.list_flame_victims(self.state, entity)
+        if not victims:
+            return None, "반경 안에 적 없음 — 틱 낭비"
+        if not abilities.remove_item(entity, scrolls.ITEM_FLAME):
+            return None, "화염 주문서 없음 — 틱 낭비"
+        amount = abilities.read_flame_damage(entity)
+        for victim in victims:
+            self.apply_damage(
+                victim,
+                amount,
+                PHASE_ACT,
+                f"화염 @{victim.entity_id}",
+                actor_id=entity.entity_id,
+                rule=plan.rule_index,
+            )
+        return amount * len(victims), f"화염 {len(victims)}명 × {amount}"
 
     def apply_summon(self, entity: Entity, plan: PlannedAction) -> None:
         """잡몹을 부른다 (GDD §5). 주기는 쿨타임[SUMMON] 이 맡는다.
@@ -94,6 +167,10 @@ class SupportActionMixin:
             ticks = find_skill(self.config.skills, GUARD_SKILL_ID).guard_ticks
             held, outcome = abilities.resolve_scroll(entity, ticks)
             self._record(entity.entity_id, plan, outcome, held)
+            return
+        if kind in SCROLL_RESOLVERS:
+            amount, outcome = SCROLL_RESOLVERS[kind](self, entity, plan)
+            self._record(entity.entity_id, plan, outcome, amount)
             return
         if kind != abilities.ITEM_POTION:
             self._record(entity.entity_id, plan, f"{kind} 쓸 줄 모른다 — 틱 낭비", None)

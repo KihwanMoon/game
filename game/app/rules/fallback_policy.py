@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from game.app.grid.geometry import get_manhattan_distance
 from game.app.simulation.perception import PerceptionSnapshot
 from game.app.simulation.plan import PlannedAction
+from game.app.simulation.scrolls import read_reach
 from game.app.simulation.state import Entity, WorldState
 
 LOW_HP_PERCENT = 30
@@ -55,11 +56,11 @@ class FallbackPolicy:
             ),
         )
         distance = get_manhattan_distance(entity.position, nearest.position)
-        in_range = distance <= entity.attack_range
+        in_range = distance <= read_reach(entity)
         comparison = "<=" if in_range else ">"
         return PlannedAction(
             entity_id=entity.entity_id,
             action_id="ATTACK" if in_range else "APPROACH",
             target_id=nearest.entity_id,
-            expr=f"적거리({distance}) {comparison} 사거리({entity.attack_range})",
+            expr=f"적거리({distance}) {comparison} 사거리({read_reach(entity)})",
         )

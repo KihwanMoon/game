@@ -6009,7 +6009,13 @@
           "attack": 17,
           "defense": 5,
           "rule_slots": 4,
-          "cpu_budget": 7
+          "cpu_budget": 7,
+          "zone_floor": 0,
+          "room_index": -1,
+          "attack_range": 0,
+          "skills": [],
+          "potions": -1,
+          "ruleset": null
         }
       ],
       "loadout": null,
@@ -6143,7 +6149,13 @@
           "attack": 24,
           "defense": 9,
           "rule_slots": 6,
-          "cpu_budget": 10
+          "cpu_budget": 10,
+          "zone_floor": 0,
+          "room_index": -1,
+          "attack_range": 0,
+          "skills": [],
+          "potions": -1,
+          "ruleset": null
         }
       ],
       "loadout": null,
@@ -6289,13 +6301,18 @@
         "cpu_budget": 11,
         "rule_slots": 6,
         "skill_power_pct": 100,
+        "cast_lead_cut": 0,
+        "steady_cast": 0,
+        "blast_radius": 0,
+        "cast_cooldown_add": 0,
         "consumables": {},
         "skills": [
           "ATTACK",
           "GUARD_BRACE",
           "SKILL_1",
           "SKILL_2"
-        ]
+        ],
+        "main_weapon": ""
       },
       "max_ticks": 400,
       "floor": 1,
@@ -6426,11 +6443,16 @@
         "cpu_budget": 8,
         "rule_slots": 5,
         "skill_power_pct": 100,
+        "cast_lead_cut": 0,
+        "steady_cast": 0,
+        "blast_radius": 0,
+        "cast_cooldown_add": 0,
         "consumables": {},
         "skills": [
           "ATTACK",
           "SKILL_2"
-        ]
+        ],
+        "main_weapon": ""
       },
       "max_ticks": 400,
       "floor": 1,
@@ -6551,11 +6573,16 @@
         "cpu_budget": 8,
         "rule_slots": 5,
         "skill_power_pct": 160,
+        "cast_lead_cut": 0,
+        "steady_cast": 0,
+        "blast_radius": 0,
+        "cast_cooldown_add": 0,
         "consumables": {},
         "skills": [
           "ATTACK",
           "SKILL_2"
-        ]
+        ],
+        "main_weapon": ""
       },
       "max_ticks": 400,
       "floor": 1,

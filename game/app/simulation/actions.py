@@ -23,6 +23,7 @@ from game.app.simulation.plan import (
     EngineConfig,
     PlannedAction,
 )
+from game.app.simulation.scrolls import read_reach
 from game.app.simulation.slow import check_slowed_this_tick
 from game.app.simulation.state import Entity, WorldState
 from game.app.simulation.support_actions import SupportActionMixin
@@ -298,7 +299,7 @@ class ActionExecutor(SupportActionMixin, BlastActionMixin):
         if target is None or not target.is_alive:
             self._record(entity.entity_id, plan, "대상 없음 — 틱 낭비", None)
             return
-        reach = find_skill(self.config.skills, plan.action_id).reach or entity.attack_range
+        reach = find_skill(self.config.skills, plan.action_id).reach or read_reach(entity)
         distance = get_manhattan_distance(entity.position, target.position)
         if distance > reach:
             self._record(entity.entity_id, plan, f"사거리 밖({distance} > {reach}) — 틱 낭비", None)

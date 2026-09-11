@@ -26,6 +26,7 @@ from game.app.simulation.plan import (
     BlockedRule,
     PlannedAction,
 )
+from game.app.simulation.scrolls import check_already_held
 from game.app.simulation.selectors import resolve_target
 from game.app.simulation.state import Entity, WorldState
 from game.schemas.blocks import BlockCatalog
@@ -286,6 +287,18 @@ class RuleVm:
                         rule_index=rule.priority,
                         expr=expr,
                         reason=f"{item_kind} 없음",
+                    )
+                )
+                continue
+            # **겹쳐 쓰면 충전만 탄다** (2026-09-11, 실제 요청). 이미 걸려 있는데 또
+            # 쓰면 남은 틱이 덮일 뿐이고, 그 사실은 로그에도 안 남는다. 「불가」로
+            # 잡으면 다음 규칙이 기회를 얻는다 — 소모품이 없을 때와 같은 자리다.
+            if rule.action == USE_ITEM_ACTION and check_already_held(entity, item_kind):
+                blocked.append(
+                    BlockedRule(
+                        rule_index=rule.priority,
+                        expr=expr,
+                        reason=f"{item_kind} 이미 걸림",
                     )
                 )
                 continue

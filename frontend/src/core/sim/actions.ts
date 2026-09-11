@@ -22,16 +22,23 @@ import {
 import { VisionGrid, checkLineOfSight, findCoverPositions } from '../grid/vision'
 import { buildDistanceField, findNextStep } from '../pathfinding/distanceField'
 import { TILE_DOOR, TILE_SPRING, TILE_STAIRS, WALKABLE_TILES } from '../schemas'
+import type { PotionResult } from './abilities'
 import {
   GUARD_STATUS,
   ITEM_POTION,
   ITEM_SCROLL,
+  listFlameVictims,
+  readFlameDamage,
   registerBlast,
+  resolveBlink,
+  resolveFocus,
   resolveHeal,
   resolvePotion,
   resolveScroll,
   resolveSummon,
+  spendItem,
 } from './abilities'
+import { ITEM_BLINK, ITEM_FLAME, ITEM_FOCUS, readReach } from './scrolls'
 import { PHASE_ACT } from './phases'
 import {
   GUARD_SKILL_ID,
@@ -88,6 +95,28 @@ export const DEFERRED_ACTIONS: ReadonlyMap<string, string> = new Map()
 export function checkSlowedThisTick(entity: Entity, tick: number): boolean {
   return (entity.statuses.get(STATUS_SLOW) ?? 0) > 0 && tick % SLOW_EVERY !== 0
 }
+
+/**
+ * 주문서 태그에서 그것을 푸는 함수로 (2026-09-11). 파이썬 `support_actions.SCROLL_RESOLVERS`
+ * 의 짝이다.
+ *
+ * **세계가 아니라 실행기를 받는다.** 화염은 피해를 넣어야 하고, 피해는 `applyDamage`
+ * 하나를 거쳐야 방어 태세·시전 취소·피격자별 로그가 함께 따라온다.
+ */
+export const SCROLL_RESOLVERS: ReadonlyMap<
+  string,
+  (actor: ActionExecutor, entity: Entity, plan: PlannedAction) => PotionResult
+> = new Map([
+  [ITEM_BLINK, (actor: ActionExecutor, entity: Entity): PotionResult => resolveBlink(actor.state, entity)],
+  [
+    ITEM_FLAME,
+    (actor: ActionExecutor, entity: Entity, plan: PlannedAction): PotionResult =>
+      actor.resolveFlame(entity, plan),
+  ],
+  // 부릅은 세계를 안 읽는다. 시그니처를 맞춰 표에 넣는다 — 표가 갈리면 그때부터
+  // 「어느 표에 있더라」를 찾아야 한다.
+  [ITEM_FOCUS, (_actor: ActionExecutor, entity: Entity): PotionResult => resolveFocus(entity)],
+])
 
 export class ActionExecutor {
   /**
@@ -199,7 +228,7 @@ export class ActionExecutor {
     // 엔티티 사거리로 넘어가므로 `??` 로 바꾸면 사거리 0 스킬의 동작이 달라진다.
     const declared = findSkill(this.config.skills, plan.actionId).reach
     const reach = declared === undefined || declared === null || declared === 0
-      ? entity.attackRange
+      ? readReach(entity)
       : declared
     const distance = getManhattanDistance(entity.position, target.position)
     if (distance > reach) {
@@ -324,12 +353,51 @@ export class ActionExecutor {
       this.recordResult(entity.entityId, plan, held.outcome, held.healed)
       return
     }
+    // 주문서 셋은 표로 갈린다 (2026-09-11). 종류가 늘 때 여기 가지가 늘지 않아야 한다 —
+    // 이름으로 갈리는 실행기는 새 종류가 어느 갈래에도 안 닿는다 (설계/5_스킬 §10.8).
+    const resolver = SCROLL_RESOLVERS.get(kind)
+    if (resolver !== undefined) {
+      const { healed, outcome } = resolver(this, entity, plan)
+      this.recordResult(entity.entityId, plan, outcome, healed)
+      return
+    }
     if (kind !== ITEM_POTION) {
       this.recordResult(entity.entityId, plan, `${kind} 쓸 줄 모른다 — 틱 낭비`, null)
       return
     }
     const { healed, outcome } = resolvePotion(entity)
     this.recordResult(entity.entityId, plan, outcome, healed)
+  }
+
+  /**
+   * 화염 주문서 — 예고 없이 둘레를 태운다 (2026-09-11).
+   *
+   * **피해는 `applyDamage` 하나를 거친다.** 직접 HP 를 깎으면 방어 태세·시전 취소·
+   * 피격자별 로그가 조용히 빠지고, 사후 분석의 피해 지도에서 화염이 안 보인다.
+   *
+   * **적이 없으면 주문서를 안 태운다.** 빈 허공에 쓴 한 장이 그냥 사라지면, 규칙표를 고칠
+   * 사람에게는 「주문서가 왜 벌써 없지」로만 보인다.
+   *
+   * @param entity 쓰는 개체.
+   * @param plan 실행할 계획. 피해 로그에 규칙 번호를 싣는다.
+   * @returns 준 피해 합과 로그 문자열. 못 썼으면 피해가 null 이다.
+   */
+  resolveFlame(entity: Entity, plan: PlannedAction): PotionResult {
+    const victims = listFlameVictims(this.state, entity)
+    if (victims.length === 0) {
+      return { healed: null, outcome: '반경 안에 적 없음 — 틱 낭비' }
+    }
+    if (!spendItem(entity, ITEM_FLAME)) {
+      return { healed: null, outcome: '화염 주문서 없음 — 틱 낭비' }
+    }
+    const amount = readFlameDamage(entity)
+    for (const victim of victims) {
+      this.applyDamage(victim, amount, PHASE_ACT, `화염 @${victim.entityId}`, entity.entityId, plan.ruleIndex)
+    }
+    return {
+      healed: amount * victims.length,
+      outcome: `화염 ${String(victims.length)}명 × ${String(amount)}`,
+    }
   }
 
   /**

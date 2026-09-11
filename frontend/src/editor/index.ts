@@ -58,6 +58,7 @@ export {
   formatSlotCode,
   formatSlotName,
   USE_TAG_CODES,
+  SLOT_LABELS,
   USE_TAG_LABELS,
 } from './consumableCells'
 export type { ConsumableCell } from './consumableCells'

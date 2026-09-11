@@ -54,7 +54,7 @@ import { buildRunRulesets, toggleRulePriority, type SheetTab } from './portraitS
 import { buildRuleRows } from './ruleRows'
 import { PlanCanvas } from './PlanCanvas'
 import { buildLookOf } from './weaponLook'
-import { buildVitalRows } from './vitalRows'
+import { buildVitalRows, listExtraConsumableRows } from './vitalRows'
 import { buildPlanScene } from './planScene'
 import {
   checkPlanThemeSame,
@@ -137,6 +137,17 @@ export interface BattleViewProps {
  * @param kind 소모품 태그.
  * @returns 실은 수. 로드아웃이 없으면(구버전 티켓) 0 이고, 화면은 분모를 안 그린다.
  */
+const EMPTY_VITALS = {
+  hp: 0,
+  hpMax: 1,
+  potions: 0,
+  potionsMax: 0,
+  scrolls: 0,
+  scrollsMax: 0,
+  cpuUsed: 0,
+  cpuBudget: 0,
+}
+
 function readCarried(setup: BattleSetup, kind: string): number {
   const carried = setup.loadout?.consumables ?? []
   for (const [tag, count] of carried) {
@@ -389,6 +400,11 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         potionsMax={readCarried(props.setup, 'POTION')}
         scrolls={player === undefined ? 0 : countItem(player, 'SCROLL')}
         scrollsMax={readCarried(props.setup, 'SCROLL')}
+        extras={listExtraConsumableRows({
+          ...EMPTY_VITALS,
+          carried: new Map(props.setup.loadout?.consumables ?? []),
+          held: player?.consumables,
+        })}
         cooldowns={formatCooldowns(
           player?.cooldowns,
           listRulesetSkills(session.ruleset.rules),
@@ -427,6 +443,9 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         potionsMax: readCarried(props.setup, 'POTION'),
         scrolls: player === undefined ? 0 : countItem(player, 'SCROLL'),
         scrollsMax: readCarried(props.setup, 'SCROLL'),
+        // 주문서가 넷으로 갈린 뒤로 「무엇을 들고 왔는가」가 태그로 갈린다 (2026-09-11).
+        carried: new Map(props.setup.loadout?.consumables ?? []),
+        held: player?.consumables,
         cpuUsed,
         cpuBudget,
         attack: player?.attack ?? 0,

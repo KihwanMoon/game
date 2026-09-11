@@ -11,6 +11,8 @@
  * 순수 함수다. 화면 상태를 안 건드리므로 테스트가 값만 보고 판정할 수 있다.
  */
 
+import { USE_TAG_LABELS } from '../content/consumableTags'
+
 /** 상태 한 줄. 이름과 값, 그리고 눈에 띄어야 하는지. */
 export interface VitalRow {
   /** 왼쪽 이름. */
@@ -37,11 +39,15 @@ export const COOLDOWN_LABELS: ReadonlyMap<string, string> = new Map([
   ['GUARD_BRACE', '방어'],
 ])
 
-/** 상태이상 이름표. 코어의 상태 id 를 사람이 읽는 말로. */
+/** 상태 이름표. 코어의 상태 id 를 사람이 읽는 말로. */
 export const STATUS_LABELS: ReadonlyMap<string, string> = new Map([
   ['POISON', '중독'],
   ['SLOW', '둔화'],
   ['STUN', '기절'],
+  // 둘은 **내가 스스로 건 것**이다 (2026-09-11). 규칙표가 `self_has_status` 로 묻는
+  // 목록과 같아야 한다 — 여기 없으면 걸어 놓고도 화면에서 확인할 수 없다.
+  ['GUARD', '방어'],
+  ['FOCUS', '부릅'],
 ])
 
 /** 깃발 이름들. 규칙표가 세우고 읽는 넷이다 (`flag_state[A]`). */
@@ -76,6 +82,16 @@ export interface VitalInput {
   readonly defense?: number
   readonly attackRange?: number
   readonly initiative?: number
+  /**
+   * 주문서 넷이 갈린 뒤로 필요해진 둘 (2026-09-11). `carried` 는 들고 들어온 수,
+   * `held` 는 지금 남은 수이며 둘 다 **태그**로 센다.
+   *
+   * **물약·주문서 줄로는 안 보인다.** 순간이동을 끼우고 들어오면 그 판의 소모품은
+   * `BLINK` 인데 화면에는 「주문서 0 / 0」만 떠서, 들고 온 것이 없는 것처럼 보인다 —
+   * 이 저장소가 여러 번 다친 「안 보이면 없는 것」의 자리다.
+   */
+  readonly carried?: ReadonlyMap<string, number> | undefined
+  readonly held?: ReadonlyMap<string, number> | undefined
   /** 남은 쿨타임. 코어의 `entity.cooldowns` 를 그대로 받는다. */
   readonly cooldowns?: ReadonlyMap<string, number> | undefined
   /** 걸린 상태이상. 코어의 `entity.statuses` 를 그대로 받는다. */
@@ -124,6 +140,34 @@ export function listCombatRows(input: VitalInput): readonly VitalRow[] {
     { label: '사거리', value: String(input.attackRange ?? 0) },
     { label: '선공', value: String(input.initiative ?? 0) },
   ]
+}
+
+/**
+ * 물약·보호 주문서 밖의 소모품 줄들 (2026-09-11).
+ *
+ * **들고 온 것만 적는다.** 태그 다섯을 늘 적으면 안 들고 온 넷이 「0 / 0」으로 서서 줄만
+ * 넉 줄 는다 — 이 화면에서 가장 비싼 것이 세로 공간이다.
+ *
+ * 순서는 `USE_TAG_LABELS` 의 순서다. 맵을 순회해 만들지만 그 맵이 **박아 둔 상수**라
+ * 순서가 고정돼 있다 (R5 가 금지하는 것은 흔들리는 순회지 고정된 순서가 아니다).
+ *
+ * @param input 상태 값들.
+ * @returns 줄들. 그런 소모품을 안 들고 왔으면 빈 배열.
+ */
+export function listExtraConsumableRows(input: VitalInput): readonly VitalRow[] {
+  const rows: VitalRow[] = []
+  for (const [tag, label] of USE_TAG_LABELS) {
+    if (tag === 'POTION' || tag === 'SCROLL') {
+      continue
+    }
+    const max = input.carried?.get(tag) ?? 0
+    const left = input.held?.get(tag) ?? 0
+    if (max <= 0 && left <= 0) {
+      continue
+    }
+    rows.push({ label, value: `${String(left)} / ${String(max)}` })
+  }
+  return rows
 }
 
 /**
@@ -179,6 +223,7 @@ export function buildVitalRows(input: VitalInput): readonly VitalRow[] {
     { label: '체력', value: `${String(input.hp)} / ${String(input.hpMax)}`, isWarning: isLow },
     { label: '물약', value: `${String(input.potions)} / ${String(input.potionsMax)}` },
     { label: '주문서', value: `${String(input.scrolls)} / ${String(input.scrollsMax)}` },
+    ...listExtraConsumableRows(input),
     ...listCombatRows(input),
     ...listCooldownRows(input),
     formatStatusRow(input),

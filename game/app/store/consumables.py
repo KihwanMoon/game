@@ -79,7 +79,9 @@ def list_consumable_slots(
     return tuple(slots)
 
 
-def count_slot_charges(slots: tuple[ConsumableSlot, ...]) -> dict[str, int]:
+def count_slot_charges(
+    slots: tuple[ConsumableSlot, ...], catalog: dict | None = None
+) -> dict[str, int]:
     """칸들이 이번 런에 실어 보내는 충전 수를 쓰임새별로 센다.
 
     **빈 기본 칸은 공짜로 한 개다** (§5). 안 그러면 새 계정이 물약 없이 시작한다 —
@@ -88,21 +90,33 @@ def count_slot_charges(slots: tuple[ConsumableSlot, ...]) -> dict[str, int]:
     **접사가 연 칸은 공짜가 아니다** (2026-09-08). 주면 그 접사가 파는 것이 「담을
     자리」가 아니라 공짜 소모품이 되고, 실측으로 그 값이 유물 접사 한 줄을 넘었다.
 
+    **세는 열쇠는 칸이 아니라 끼운 것의 태그다 (2026-09-11).** 칸은 계열이고
+    (주문서 칸 하나), 그 안에 무엇을 끼웠느냐가 `USE_ITEM[태그]` 를 정한다 — 순간이동
+    주문서를 끼우면 `BLINK` 로 세어지고 `USE_ITEM[SCROLL]` 은 「불가」가 된다.
+
+    **빈 칸은 계열 이름으로 센다.** 아무것도 안 끼운 주문서 칸이 주는 공짜 한 장은
+    기본 주문서(방어)다 — 무엇을 줄지 고르지 않았으니 기본이 나온다.
+
     Args:
         slots: 읽어 온 칸들.
+        catalog: 카탈로그. 없으면 칸 계열을 그대로 태그로 쓴다 — 옛 호출부가 그 경우다.
 
     Returns:
         쓰임새에서 충전 수로. 0 인 쓰임새는 담지 않는다.
     """
     counts: dict[str, int] = {}
     for slot in slots:
+        tag = slot.use_tag
+        entry = (catalog or {}).get(slot.catalog_id or "")
+        if entry is not None and entry.use_tag:
+            tag = entry.use_tag
         # **기본 칸은 빈 칸보다 나빠지지 않는다.** 예전에는 「비었으면 1」이라, 좋은
         # 물약을 끼우고 다 마시면 그 칸이 0 이 됐다 — 새 계정보다 못한 손이 되고,
         # 한 모금이라도 쓴 아이템은 빼도 안 돌아온다(`create_consumable_clear`).
         # 「담아 두면 손해」는 이 시스템이 팔려는 것의 정반대다.
         amount = max(FREE_CHARGES, slot.charges) if slot.is_base else slot.charges
         if amount > 0:
-            counts[slot.use_tag] = counts.get(slot.use_tag, 0) + amount
+            counts[tag] = counts.get(tag, 0) + amount
     return counts
 
 

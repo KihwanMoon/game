@@ -5,6 +5,7 @@
 """
 
 from fastapi import APIRouter
+from psycopg_pool import ConnectionPool
 from pydantic import BaseModel
 
 from game.api.deps import CurrentAccount, get_pool
@@ -16,7 +17,7 @@ from game.app.store.doppels import apply_doppel_opt_in, check_doppel_opt_in
 router = APIRouter()
 
 
-def build_account_response(pool: object, account: Account) -> AccountResponse:
+def build_account_response(pool: ConnectionPool, account: Account) -> AccountResponse:
     """계정 하나를 응답 모양으로 만든다.
 
     **토큰은 안 싣는다.** 만들 때와 로그인할 때만 나온다.
