@@ -17,7 +17,8 @@ import pytest
 from game.app.rules.rule_vm import RuleVm
 from game.app.services.run_battle import build_engine, load_balance
 from game.app.simulation import scrolls
-from game.app.simulation.plan import PlannedAction
+from game.app.simulation.abilities import ITEM_SCROLL
+from game.app.simulation.plan import FREE_ITEMS, STATUS_GUARD, PlannedAction
 from game.config import BALANCE_PATH, BLOCKS_PATH, ROOM_TEMPLATES_PATH
 from game.schemas.blocks import load_block_catalog
 from game.schemas.room import load_room_templates
@@ -151,6 +152,54 @@ def test_an_instant_scroll_is_never_blocked(balance, templates):
     _engine, player = build_probe(balance, templates, scrolls.ITEM_BLINK, charges=2)
     assert scrolls.check_already_held(player, scrolls.ITEM_BLINK) is False
     assert scrolls.check_already_held(player, scrolls.ITEM_FLAME) is False
+
+
+# ── 보호 주문서는 틱을 안 쓴다 (2026-09-11 실측) ───────────────────────
+
+
+def test_the_guard_scroll_does_not_spend_the_tick(balance, templates, catalog):
+    """★ **같은 기제면 같은 규칙이다.**
+
+    보호 주문서는 방벽과 똑같은 `GUARD` 상태를 똑같은 값으로 거는데, 한쪽만 틱을 내면
+    세계에 규칙이 둘이 된다. 실측도 같은 말을 했다 — 층 배치 80런에서 보호 주문서를 쓰는
+    규칙표가 기준(57%)보다 **낮은** 47% 였다: 켜는 데 낸 한 틱이 2틱 50% 보다 컸다.
+
+    그래서 규칙표는 켜고 끄는 것만 정하고, 그 틱의 행동은 **다음 규칙이 정한다.**
+    """
+    engine, player = build_probe(balance, templates, "SCROLL")
+    always = Condition(op="SINGLE", terms=(Term("self_hp_percent", ">", 0, None),))
+    ruleset = RuleSet(
+        ruleset_id="guard_probe",
+        version=1,
+        rules=(
+            Rule(priority=1, conditions=always, action="USE_ITEM", action_param="SCROLL"),
+            Rule(priority=2, conditions=always, action="HOLD"),
+        ),
+    )
+    vm = RuleVm(ruleset, catalog, engine.config.kind_types)
+    plan = vm.plan_action(player, engine.build_perceptions()[PLAYER], engine.state)
+    assert plan.action_id == "HOLD", "주문서가 그 틱의 행동을 먹었다"
+    assert plan.free_items == ("SCROLL",)
+
+
+def test_the_free_scroll_still_burns_a_charge(balance, templates):
+    """★ **공짜인 것은 틱이지 장수가 아니다.**
+
+    스킬은 쿨타임만 내지만 주문서는 충전을 낸다 — 그것이 안 타면 한 장이 판 전체를 산다.
+    """
+    engine, player = build_probe(balance, templates, "SCROLL", charges=2)
+    engine.actions.apply_item(player, PlannedAction(entity_id=PLAYER, action_id="HOLD"), "SCROLL")
+    assert player.consumables["SCROLL"] == 1
+    assert player.statuses[STATUS_GUARD] > 0
+
+
+def test_the_instant_scrolls_still_cost_the_tick(balance, templates):
+    """★ **즉발은 그 자체가 행동이다.** 공짜가 되는 것은 켜 두고 기다리는 것뿐이다."""
+    assert scrolls.ITEM_BLINK not in FREE_ITEMS
+    assert scrolls.ITEM_FLAME not in FREE_ITEMS
+    assert scrolls.ITEM_FOCUS not in FREE_ITEMS
+    # 실행기가 아는 태그와 같은 글자여야 한다 — 갈리면 「공짜」가 아무 데도 안 걸린다.
+    assert ITEM_SCROLL in FREE_ITEMS
 
 
 # ── 순간이동 ───────────────────────────────────────────────────────────

@@ -148,7 +148,7 @@ class SupportActionMixin:
             self._apply_cooldown(entity, plan.action_id)
         self._record(entity.entity_id, plan, outcome, healed or None)
 
-    def apply_item(self, entity: Entity, plan: PlannedAction) -> None:
+    def apply_item(self, entity: Entity, plan: PlannedAction, use_tag: str = "") -> None:
         """소모품을 쓴다 (v6, #54).
 
         **종류로 갈린다.** `USE_POTION` 은 `USE_ITEM[POTION]` 의 별칭이므로 태그가 없으면
@@ -161,8 +161,10 @@ class SupportActionMixin:
         Args:
             entity: 사용자.
             plan: 실행할 계획.
+            use_tag: 쓸 태그. 비우면 계획이 가리킨 것을 쓴다 — 자리를 안 먹는 호출은
+                계획의 행동이 다른 것이므로 여기로 넘긴다 (`plan.FREE_ITEMS`).
         """
-        kind = plan.item_kind or abilities.ITEM_POTION
+        kind = use_tag or plan.item_kind or abilities.ITEM_POTION
         if kind == abilities.ITEM_SCROLL:
             ticks = find_skill(self.config.skills, GUARD_SKILL_ID).guard_ticks
             held, outcome = abilities.resolve_scroll(entity, ticks)

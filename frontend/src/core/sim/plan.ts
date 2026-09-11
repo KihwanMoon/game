@@ -68,6 +68,17 @@ export const GUARD_SKILL_ID = 'GUARD_BRACE'
  */
 export const FREE_SKILLS: ReadonlySet<string> = new Set([GUARD_SKILL_ID])
 
+/**
+ * 틱을 안 쓰는 소모품들. 파이썬 `FREE_ITEMS` 와 같다 (2026-09-11 실측).
+ *
+ * **같은 기제면 같은 규칙이다** — 보호 주문서는 방벽과 똑같은 `GUARD` 상태를 똑같은
+ * 값으로 거는데, 한쪽만 틱을 내면 세계에 규칙이 둘이 된다. 실측도 같은 말을 했다: 층
+ * 배치 80런에서 보호 주문서를 쓰는 규칙표가 기준(57%)보다 **낮은** 47% 였다.
+ *
+ * **즉발 주문서는 여기 없다.** 순간이동·화염은 그 자체가 행동이라 틱을 낸다.
+ */
+export const FREE_ITEMS: ReadonlySet<string> = new Set(['SCROLL'])
+
 /** 둔화. **이동이 두 틱에 한 칸이 된다** (GDD §211). */
 export const STATUS_SLOW = 'SLOW'
 
@@ -104,6 +115,8 @@ export interface PlannedAction {
    * 안 쓴다 — 방벽이 그 첫 자리다. 파이썬 `free_skills` 와 같다.
    */
   readonly freeSkills: readonly string[]
+  /** 자리를 안 먹는 소모품들 (`FREE_ITEMS`). 충전은 그대로 탄다. */
+  readonly freeItems: readonly string[]
 }
 
 /** `createPlannedAction` 이 받는 값들. 생략한 항목은 파이썬 dataclass 의 기본값과 같다. */
@@ -118,6 +131,7 @@ export interface PlannedActionInput {
   readonly itemKind?: string | null
   readonly blocked?: readonly BlockedRule[]
   readonly freeSkills?: readonly string[]
+  readonly freeItems?: readonly string[]
 }
 
 /**
@@ -138,6 +152,7 @@ export function createPlannedAction(input: PlannedActionInput): PlannedAction {
     itemKind: input.itemKind ?? null,
     blocked: input.blocked ?? [],
     freeSkills: input.freeSkills ?? [],
+    freeItems: input.freeItems ?? [],
   }
 }
 

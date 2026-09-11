@@ -9,11 +9,8 @@ import json
 
 import pytest
 
-from game.app.rules.rule_vm import (
-    build_rule_vm,
-    count_cpu_usage,
-    evaluate_condition,
-)
+from game.app.rules.condition import evaluate_condition
+from game.app.rules.rule_vm import build_rule_vm, count_cpu_usage
 from game.app.rules.validator import validate_ruleset
 from game.app.services.run_battle import (
     build_engine,

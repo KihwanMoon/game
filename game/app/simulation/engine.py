@@ -32,7 +32,6 @@ from game.app.simulation.plan import (
     OUTCOME_TIMEOUT,
     PHASE_DECIDE,
     PHASE_TELEGRAPH,
-    PHASE_UPKEEP,
     USE_ITEM_ACTION,
     DecisionPolicy,
     EngineConfig,
@@ -41,13 +40,10 @@ from game.app.simulation.plan import (
     resolve_skill_plan,
 )
 from game.app.simulation.pressure import PressureTracker
-from game.app.simulation.springs import apply_spring_drain, remove_drained_springs
+from game.app.simulation.springs import remove_drained_springs
 from game.app.simulation.state import FACTION_PLAYER, Entity, WorldState
 from game.app.simulation.telegraph import Telegraph, TelegraphBoard, apply_act_cancel
-from game.schemas.room import TILE_LAVA, TILE_SPRING
-
-LAVA_DAMAGE = 3
-SPRING_REGEN_PER_TICK = 2
+from game.app.simulation.upkeep import apply_entity_upkeep
 
 
 @dataclass
@@ -114,18 +110,9 @@ class TickEngine:
         """
         self.pressure.run_upkeep(self.state, self.log)
         self.register_newcomers()
-        executor = self.actions
         in_combat = any(e.faction != FACTION_PLAYER for e in self.state.list_actors())
         for entity in self.state.list_actors():
-            for skill, remaining in entity.cooldowns.items():
-                entity.cooldowns[skill] = max(0, remaining - 1)
-            for status, remaining in entity.statuses.items():
-                entity.statuses[status] = max(0, remaining - 1)
-            if self.state.get_tile(*entity.position) == TILE_LAVA:
-                executor.apply_damage(
-                    entity, LAVA_DAMAGE, PHASE_UPKEEP, "용암 위", actor_id=entity.entity_id
-                )
-            self._apply_regen(entity, in_combat=in_combat)
+            apply_entity_upkeep(self.state, self.config, self.actions, entity, in_combat=in_combat)
 
     def run_telegraph(self) -> None:
         """예고를 1틱 진행하고 만기된 것을 터뜨린다 (페이즈 2).
@@ -253,6 +240,8 @@ class TickEngine:
             # 자리를 안 먹는 행동을 켠다 — 이 틱의 행동이 아니다 (`plan.FREE_SKILLS`).
             for skill_id in plan.free_skills:
                 executor.apply_guard(entity, plan, skill_id)
+            for use_tag in plan.free_items:
+                executor.apply_item(entity, plan, use_tag)
             if plan.action_id in MOVE_ACTIONS:
                 executor.apply_move(entity, plan)
         for plan in order:
@@ -377,24 +366,3 @@ class TickEngine:
         ]
         keyed.sort(key=lambda item: (item[0], item[1]))
         return tuple(item[2] for item in keyed)
-
-    def _apply_regen(self, entity: Entity, *, in_combat: bool) -> None:
-        """회복을 적용한다. 전투 중에는 감쇠하고 샘은 잔여량을 깎는다 (GDD §7).
-
-        Args:
-            entity: 대상.
-            in_combat: 전투 중인가.
-        """
-        tile_regen = 0
-        position = entity.position
-        if self.state.get_tile(*position) == TILE_SPRING:
-            # 잔여량 항목이 없는 좌표에 0 을 써 넣지 않는다 — 써 넣으면 그 샘이
-            # 초기화되기도 전에 RESOLVE 의 소멸 대상이 된다.
-            tile_regen = apply_spring_drain(self.state, position, SPRING_REGEN_PER_TICK)
-        # 전투 중 감쇠는 GDD §7 의 어뷰징 차단이다. 정수 연산이라 regen_base 1 은
-        # 전투 중 0 이 된다 — 문서의 0.5 를 내림한 값이며 의도된 결과다.
-        regen_pct = self.config.combat_regen_pct if in_combat else 100
-        base = entity.regen_base * regen_pct // 100
-        healed = min(entity.hp_max - entity.hp, base + tile_regen)
-        if healed > 0:
-            entity.hp += healed

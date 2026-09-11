@@ -309,6 +309,9 @@ export class TickEngine {
       for (const skillId of plan.freeSkills) {
         executor.applyGuard(entity, plan, skillId)
       }
+      for (const useTag of plan.freeItems) {
+        executor.applyItem(entity, plan, useTag)
+      }
       if (MOVE_ACTIONS.has(plan.actionId)) {
         executor.applyMove(entity, plan)
       }

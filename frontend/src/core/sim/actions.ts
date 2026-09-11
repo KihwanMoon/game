@@ -344,9 +344,11 @@ export class ActionExecutor {
    *
    * @param entity 사용자.
    * @param plan 실행할 계획.
+   * @param useTag 쓸 태그. 비우면 계획이 가리킨 것을 쓴다 — 자리를 안 먹는 호출은 계획의
+   *   행동이 다른 것이므로 여기로 넘긴다 (`FREE_ITEMS`).
    */
-  applyItem(entity: Entity, plan: PlannedAction): void {
-    const kind = plan.itemKind ?? ITEM_POTION
+  applyItem(entity: Entity, plan: PlannedAction, useTag = ''): void {
+    const kind = useTag === '' ? (plan.itemKind ?? ITEM_POTION) : useTag
     if (kind === ITEM_SCROLL) {
       const ticks = findSkill(this.config.skills, GUARD_SKILL_ID).guardTicks
       const held = resolveScroll(entity, ticks)

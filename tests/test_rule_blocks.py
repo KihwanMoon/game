@@ -9,11 +9,9 @@ import re
 
 import pytest
 
-from game.app.rules.rule_vm import (
-    RHS_STAT_READERS,
-    build_rule_vm,
-    evaluate_condition,
-)
+from game.app.rules.condition import evaluate_condition
+from game.app.rules.rhs_readers import RHS_STAT_READERS
+from game.app.rules.rule_vm import build_rule_vm
 from game.app.rules.validator import validate_ruleset
 from game.app.services.run_battle import (
     assign_enemy_policies,

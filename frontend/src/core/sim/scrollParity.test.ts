@@ -13,7 +13,8 @@ import { describe, expect, it } from 'vitest'
 import { BALANCE, ROOM_TEMPLATES } from '../resources'
 import { PLAYER_ENTITY_ID, buildEngine, parseBalance } from '../services/runBattle'
 import { getManhattanDistance } from '../grid/geometry'
-import { createPlannedAction } from './plan'
+import { GUARD_STATUS, ITEM_SCROLL } from './abilities'
+import { FREE_ITEMS, createPlannedAction } from './plan'
 import {
   FOCUS_RANGE_BONUS,
   FOCUS_TICKS,
@@ -81,6 +82,25 @@ describe('주문서 이식', () => {
     expect(checkAlreadyHeld(player, ITEM_FOCUS)).toBe(true)
     expect(checkAlreadyHeld(player, ITEM_BLINK)).toBe(false)
     expect(checkAlreadyHeld(player, ITEM_FLAME)).toBe(false)
+  })
+
+  it('보호 주문서는 틱을 안 쓴다 — 같은 기제면 같은 규칙이다', () => {
+    const { engine, player } = buildProbe(ITEM_SCROLL, 2)
+    engine.actions.applyItem(
+      player,
+      createPlannedAction({ entityId: PLAYER_ENTITY_ID, actionId: 'HOLD' }),
+      ITEM_SCROLL,
+    )
+    // 공짜인 것은 틱이지 장수가 아니다 — 충전이 안 타면 한 장이 판 전체를 산다.
+    expect(player.consumables.get(ITEM_SCROLL)).toBe(1)
+    expect(player.statuses.get(GUARD_STATUS) ?? 0).toBeGreaterThan(0)
+  })
+
+  it('즉발 주문서는 그대로 틱을 낸다 — 공짜는 켜 두고 기다리는 것뿐이다', () => {
+    expect(FREE_ITEMS.has(ITEM_SCROLL)).toBe(true)
+    expect(FREE_ITEMS.has(ITEM_BLINK)).toBe(false)
+    expect(FREE_ITEMS.has(ITEM_FLAME)).toBe(false)
+    expect(FREE_ITEMS.has(ITEM_FOCUS)).toBe(false)
   })
 
   it('순간이동이 한 칸으로는 못 벌리는 거리를 연다', () => {

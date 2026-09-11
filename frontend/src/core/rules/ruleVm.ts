@@ -31,6 +31,7 @@ import {
 } from '../schemas'
 import { type PerceptionSnapshot, readSnapshot } from '../sim/perception'
 import {
+  FREE_ITEMS,
   FREE_SKILLS,
   ATTACK_ACTIONS,
   MELEE_REACH,
@@ -377,6 +378,7 @@ export class RuleVm implements DecisionPolicy {
   planAction(entity: Entity, snapshot: PerceptionSnapshot, state: WorldState): PlannedAction {
     const blocked: BlockedRule[] = []
     const free: string[] = []
+    const freeItems: string[] = []
     for (const rule of this.ruleset.rules) {
       const { target, isUsable } = this.resolveRuleTarget(rule, entity, state)
       if (!isUsable) {
@@ -444,6 +446,13 @@ export class RuleVm implements DecisionPolicy {
         free.push(rule.actionParam ?? '')
         continue
       }
+      // 보호 주문서도 같다 — **같은 상태를 같은 값으로 거는데 한쪽만 틱을 내면 세계에
+      // 규칙이 둘이 된다.** 없음·겹침 검사 뒤에 둔다: 앞에 두면 빈 칸으로도 「켰다」가
+      // 되고, 그러면 주문서가 없다는 사실이 화면 어디에도 안 보인다.
+      if (rule.action === USE_ITEM_ACTION && FREE_ITEMS.has(itemKind ?? '')) {
+        freeItems.push(itemKind ?? '')
+        continue
+      }
       return createPlannedAction({
         entityId: entity.entityId,
         actionId: rule.action,
@@ -455,9 +464,10 @@ export class RuleVm implements DecisionPolicy {
         itemKind,
         blocked,
         freeSkills: free,
+        freeItems,
       })
     }
-    return { ...this.buildDefaultAction(entity, state), blocked, freeSkills: free }
+    return { ...this.buildDefaultAction(entity, state), blocked, freeSkills: free, freeItems }
   }
 
   /**
