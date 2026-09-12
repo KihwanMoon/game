@@ -836,6 +836,102 @@
           }
         }
       ]
+    },
+    {
+      "ruleset_id": "v12_who_strikes_first",
+      "version": 1,
+      "strategy_ko": "선공을 읽는다 (v12). **나보다 빠른 적에게는 붙지 않는다** — 붙어 있는 한 늘 먼저 맞으므로 물러서서 사거리로 친다. 느린 적에게는 그냥 붙는다. 선공은 오래 화면에만 있고 규칙표가 못 읽던 값이었다 (실측: 아이템이 움직일 수 있는 폭 44~66 에서 승률 변화가 0 이었다).",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_ITEM",
+          "action_param": "POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "RETREAT",
+          "action_param": null,
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_initiative",
+                "cmp": ">",
+                "rhs": {
+                  "stat": "initiative"
+                },
+                "lhs_param": "NEAREST"
+              },
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "action_param": null,
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": {
+                  "stat": "attack_range"
+                },
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "MOVE_TO_ENEMY",
+          "action_param": null,
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

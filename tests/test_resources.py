@@ -90,6 +90,9 @@ def test_rhs_stats_are_a_closed_list(catalog):
         "cpu_budget",
         "potions",
         "scrolls",
+        # v12 — 선공을 규칙표가 읽는다. `대상 선공` 인지와 짝이며, 둘이 있어야 「내가
+        # 먼저 치는가」가 조건이 된다 (2026-09-11 실측: 그 전까지 이 값은 화면에만 있었다).
+        "initiative",
     }
     for stat in catalog.rhs_stats.values():
         assert stat.label_ko, f"{stat.block_id} 의 한글 라벨이 비어 있다"

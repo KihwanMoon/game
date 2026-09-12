@@ -17,6 +17,9 @@ RHS_STAT_READERS: dict[str, Callable[[Entity], int]] = {
     "defense": lambda actor: actor.defense,
     "hp_max": lambda actor: actor.hp_max,
     "cpu_budget": lambda actor: actor.cpu_budget,
+    # **행동 순서를 정하는 값이다** (v12). `대상 선공` 과 짝이며, 둘이 있어야 「내가 먼저
+    # 치는가」가 규칙표의 질문이 된다.
+    "initiative": lambda actor: actor.initiative,
     "potions": lambda actor: actor.count_item("POTION"),
     "scrolls": lambda actor: actor.count_item("SCROLL"),
 }

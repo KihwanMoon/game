@@ -19,12 +19,12 @@
 
 /** 동결된 개수. 로드 때마다 실제 개수와 대조한다. */
 // v7 에서 self_scroll_count 가 들어왔다 (§5 소모품 칸).
-export const PERCEPTION_COUNT = 22
+export const PERCEPTION_COUNT = 23
 export const ACTION_COUNT = 16 // v6 에서 USE_ITEM 이 들어왔다 (#54)
 // v8 에서 SELF(자기 자신)가 들어왔다.
 export const SELECTOR_COUNT = 10
 // v7 에서 scrolls 가 들어왔다 — potions 와 짝.
-export const RHS_STAT_COUNT = 7
+export const RHS_STAT_COUNT = 8
 
 /** 셀렉터가 고르는 진영. 행동의 targetFaction 도 이 둘 중 하나다. */
 export const FACTION_ENEMY = 'enemy'

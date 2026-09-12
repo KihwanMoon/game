@@ -53,6 +53,7 @@ export type MeasuredValue = number | boolean | undefined
 export const TARGET_BLOCKS: ReadonlySet<string> = new Set([
   'target_hp_percent',
   'target_is_casting',
+  'target_initiative',
 ])
 
 /**
@@ -67,6 +68,8 @@ export const RHS_STAT_READERS: ReadonlyMap<string, (actor: Entity) => number> = 
   ['defense', (actor: Entity) => actor.defense],
   ['hp_max', (actor: Entity) => actor.hpMax],
   ['cpu_budget', (actor: Entity) => actor.cpuBudget],
+  // 행동 순서를 정하는 값 (v12). `대상 선공` 과 짝이다.
+  ['initiative', (actor: Entity) => actor.initiative],
   ['potions', (actor: Entity) => countItem(actor, 'POTION')],
   ['scrolls', (actor: Entity) => countItem(actor, 'SCROLL')],
 ])
@@ -135,6 +138,12 @@ export function readTermValue(
 ): MeasuredValue {
   if (term.lhs === 'target_hp_percent') {
     return target === undefined ? undefined : getHpPercent(target)
+  }
+  // **선공은 v12 에서 열렸다** (2026-09-11 실측). 틱 안 행동 순서를 정하는 값인데 규칙표가
+  // 못 읽어서, 신발을 바꿔도 규칙을 다시 짤 이유가 안 생겼다 — 아이템이 움직일 수 있는
+  // 폭에서 승률 변화가 0 이었다.
+  if (term.lhs === 'target_initiative') {
+    return target === undefined ? undefined : target.initiative
   }
   if (term.lhs === 'target_is_casting') {
     return target === undefined ? undefined : castingIds.includes(target.entityId)

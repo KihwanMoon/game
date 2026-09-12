@@ -20,7 +20,7 @@ from game.schemas.blocks import BlockCatalog
 from game.schemas.ruleset import OP_OR, Condition, StatRef, Term
 
 # 대상이 정해져야 값이 나오는 인지 변수. 스냅샷이 아니라 해석된 대상에서 읽는다.
-TARGET_BLOCKS = frozenset({"target_hp_percent", "target_is_casting"})
+TARGET_BLOCKS = frozenset({"target_hp_percent", "target_is_casting", "target_initiative"})
 
 
 DEFAULT_ACTION = "APPROACH"
@@ -62,6 +62,11 @@ def read_term_value(
         return target.hp_percent if target is not None else None
     if term.lhs == "target_is_casting":
         return target.entity_id in casting_ids if target is not None else None
+    # **선공은 v12 에서 열렸다** (2026-09-11 실측). 틱 안 행동 순서를 정하는 값인데
+    # 규칙표가 못 읽어서, 신발을 바꿔도 규칙을 다시 짤 이유가 안 생겼다 — 아이템이
+    # 움직일 수 있는 폭에서 승률 변화가 0 이었다. 이제 「내가 먼저 치는가」를 묻는다.
+    if term.lhs == "target_initiative":
+        return target.initiative if target is not None else None
     if term.lhs == "self_cpu_headroom":
         return cpu_headroom
     if term.lhs in TARGET_BLOCKS:

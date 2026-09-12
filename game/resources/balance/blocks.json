@@ -1,6 +1,6 @@
 {
   "_comment": "블록 카탈로그 v5. 스킬을 액션마다 더하지 않고 USE_SKILL[skill_id] 파라미터 하나로 묶었다 — 스킬이 늘어도 액션 종류가 고정이라 랭킹 시즌이 갈리지 않는다 (docs/설계/5_스킬 §4). 기존 SKILL_1·SKILL_2·AREA_ATTACK·HEAL·SUMMON 과 self_cooldown_ready 는 지우지 않고 별칭으로 남긴다: 지우면 저장된 규칙표와 골든 리플레이가 전부 깨진다. 장비 전용 블록은 만들지 않는다 — 장비는 전투 전에 캐릭터 능력치·스킬로 녹고 규칙표는 캐릭터만 읽는다 (결정 #13). v6: USE_ITEM[kind] 를 더했다 (#54). 보호 주문서가 카탈로그에 있는데 그것을 쓸 수 있는 행동이 없어, 얻어도 영영 쓰지 못했다. USE_POTION 은 별칭으로 남는다.",
-  "block_list_version": 11,
+  "block_list_version": 12,
   "perceptions": [
     {
       "id": "self_hp_percent",
@@ -123,6 +123,17 @@
       ],
       "label_ko": "대상 HP%",
       "_note": "이 규칙의 TARGET 이 가리키는 대상의 HP% 다. 그 대상이 아군 셀렉터로 정해졌으면 아군의 HP% 를 읽는다 — GDD §5 의 '아군 HP% 낮으면' 이 새 인지 변수 없이 성립하는 이유다."
+    },
+    {
+      "id": "target_initiative",
+      "category": "enemy",
+      "returns": "int",
+      "range": [
+        0,
+        100
+      ],
+      "label_ko": "대상 선공",
+      "_note": "v12 (2026-09-11 실측). 선공은 틱 안 행동 순서를 정하는데 **규칙표가 읽을 수 없어** 장비를 바꿔도 규칙을 다시 짤 이유가 안 생겼다 — 아이템이 움직일 수 있는 폭 (44~66)에서 승률 변화가 0 이었다. 내 선공(rhs_stats.initiative)과 함께 열어, 「내가 먼저 치는가」를 조건으로 쓸 수 있게 한다. 사거리가 이미 그런 축이다 (P3)."
     },
     {
       "id": "target_is_casting",
@@ -421,6 +432,10 @@
     {
       "id": "scrolls",
       "label_ko": "주문서 수"
+    },
+    {
+      "id": "initiative",
+      "label_ko": "선공"
     }
   ],
   "selectors": [
