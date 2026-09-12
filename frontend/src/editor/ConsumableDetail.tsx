@@ -29,7 +29,8 @@ import {
   SLOT_LABELS,
   type ConsumableCell,
 } from './consumableCells'
-import { TRIGGER_LABELS, findSlotFamily } from '../content/consumableTags'
+import { findSlotFamily } from '../content/consumableTags'
+import { formatTrigger, formatUseEffect } from '../content/consumableEffects'
 import { formatGradeClass, renderGrade } from './gradeBadge'
 import { checkLinked, type LinkState } from './linkState'
 
@@ -56,13 +57,16 @@ function renderAffixes(affixes: readonly string[]): React.JSX.Element | null {
   // **옵션 하나에 한 줄이다.** 가운뎃점으로 이으면 옵션 넷이 문장 하나가 되어, 어디까지가
   // 한 옵션인지 눈으로 갈라야 한다.
   return (
-    <ul className="invd__affixes">
-      {affixes.map((line) => (
-        <li className="invd__affix" key={line}>
-          <ValueExpr text={line} size="sm" />
-        </li>
-      ))}
-    </ul>
+    <div className="invd__role">
+      <span className="invd__role-name">끼면</span>
+      <ul className="invd__affixes">
+        {affixes.map((line) => (
+          <li className="invd__affix" key={line}>
+            <ValueExpr text={line} size="sm" />
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -107,6 +111,26 @@ function renderCompares(
 }
 
 /**
+ * 성격이 다른 셋을 같은 모양으로 적는다 — 끼면 / 쓰면 / 자동 (2026-09-11 요청).
+ *
+ * **역할을 왼쪽에 박는다.** 줄만 늘어놓으면 어느 것이 끼고 있을 때의 값이고 어느 것이
+ * 태울 때의 값인지 읽는 사람이 짐작해야 한다 — 그 짐작이 「무엇을 들고 갈까」를 고를
+ * 근거를 지운다.
+ *
+ * @param role 역할 이름.
+ * @param text 적을 말.
+ * @returns 한 줄.
+ */
+function renderRole(role: string, text: string): React.JSX.Element {
+  return (
+    <div className="invd__role">
+      <span className="invd__role-name">{role}</span>
+      <ValueExpr text={text} size="sm" />
+    </div>
+  )
+}
+
+/**
  * **언제 저절로 터지는가** 한 줄 (2026-09-11 개정).
  *
  * 주문서는 규칙 줄 없이 터지므로, 조건을 안 적으면 들고 가는 사람에게 「언젠가 사라지는
@@ -121,14 +145,21 @@ function renderTrigger(useTag: string, isEmpty: boolean): React.JSX.Element | nu
   if (isEmpty) {
     return null
   }
-  const when = TRIGGER_LABELS.get(useTag)
-  return (
-    <ValueExpr
-      text={when === undefined ? '자동 발동 없음 — 규칙표로 쓴다' : `자동: ${when}`}
-      size="sm"
-      dim
-    />
-  )
+  const when = formatTrigger(useTag)
+  // **없다는 것도 적는다.** 빈 자리로 두면 「아직 안 정해졌나」로 읽힌다.
+  return renderRole('자동', when === '' ? '없음 — 규칙표로만 쓴다' : when)
+}
+
+/**
+ * 한 장을 태우면 무엇이 일어나는가 (2026-09-11 요청).
+ *
+ * @param useTag 쓰임새 태그.
+ * @param isEmpty 빈 칸인가.
+ * @returns 한 줄. 빈 칸이거나 모르는 태그면 안 그린다 — 지어내지 않는다.
+ */
+function renderUseEffect(useTag: string, isEmpty: boolean): React.JSX.Element | null {
+  const effect = isEmpty ? '' : formatUseEffect(useTag)
+  return effect === '' ? null : renderRole('쓰면', effect)
 }
 
 /**
@@ -170,8 +201,9 @@ function renderSlotDetail(
         // 색을 못 보는 경로도 남는다.
         <SegmentedGauge value={slot.charges} max={slot.chargeMax} readout />
       )}
-      {renderTrigger(slot.itemTag, slot.catalogId === '')}
       {renderAffixes(slot.affixes)}
+      {renderUseEffect(slot.itemTag, isEmpty)}
+      {renderTrigger(slot.itemTag, isEmpty)}
       {/* 빈 칸은 견줄 것이 없다 — 무엇과 견주는지가 없다. */}
       {isEmpty ? null : renderCompares(pickFromSlot(slot), view.slots)}
       {isEmpty ? null : (
@@ -243,6 +275,8 @@ export function ConsumableDetail(props: ConsumableDetailProps): React.JSX.Elemen
           아니라 그렇게 설계된 것이고, 화면이 그 사실을 말해야 「없는데?」가 안 나온다. */}
       <ValueExpr text="등급은 충전 용량을 정한다 — 봉인 칸은 장비의 것" size="sm" dim />
       {renderAffixes(option.affixes)}
+      {renderUseEffect(option.useTag, false)}
+      {renderTrigger(option.useTag, false)}
       {renderCompares(pickFromOption(option), view.slots)}
       <div className="invd__row invd__row--tools">
         <Button

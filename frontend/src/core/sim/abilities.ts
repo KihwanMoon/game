@@ -49,8 +49,13 @@ export const HEAL_ACTION = 'HEAL'
 /** 정수 퍼센트의 분모. 부동소수를 쓰지 않으므로 비율은 전부 이 값으로 나눈다 (R5). */
 const PERCENT_BASE = 100
 
-/** 포션이 채우는 몫. 최대 HP 의 절반이다. */
-const POTION_HEAL_DIVISOR = 2
+/**
+ * 포션이 채우는 몫. 최대 HP 의 절반이다.
+ *
+ * **화면도 이 값을 읽는다** (`content/consumableEffects`). 설명에 숫자를 손으로 적으면
+ * 값을 고친 날 화면만 옛말을 한다.
+ */
+export const POTION_HEAL_DIVISOR = 2
 
 /** 회복 한 번의 결과. 파이썬의 `(int, str)` 튜플에 대응한다. */
 export interface HealResult {

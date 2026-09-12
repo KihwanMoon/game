@@ -412,3 +412,57 @@ describe('가방에서 칸으로', () => {
     expect(findFreeConsumableSlot(scrollOnly, 'potion_elixir')).toBeUndefined()
   })
 })
+
+describe('소모품 설명 — 끼면 / 쓰면 / 자동 (2026-09-11 요청)', () => {
+  function renderSlot(over: Partial<ConsumableSlotView>): string {
+    const view = buildView({ slots: [buildSlot(over)] })
+    return renderToStaticMarkup(
+      <ConsumableDetail
+        cell={buildConsumableSlotCells(view)[0]!}
+        view={view}
+        link="online"
+        onClear={noop}
+        onRefill={noop}
+        onSell={noop}
+        onLoadStock={noop}
+      />,
+    )
+  }
+
+  it('★ 끼운 칸이 셋을 다 적는다', () => {
+    const html = renderSlot({
+      useTag: 'SCROLL',
+      itemTag: 'BLINK',
+      catalogId: 'scroll_blink',
+      labelKo: '순간이동 주문서',
+      charges: 2,
+      chargeMax: 2,
+      affixes: ['빠져나감 · 선공 +1'],
+    })
+    expect(html).toContain('끼면')
+    expect(html).toContain('빠져나감')
+    expect(html).toContain('쓰면')
+    expect(html).toContain('3칸까지 물러선다')
+    expect(html).toContain('자동')
+    expect(html).toContain('인접한 적이 2 이상')
+  })
+
+  it('★ 물약은 자동 발동이 없다는 것을 적는다 — 빈 자리는 「안 정해졌나」로 읽힌다', () => {
+    const html = renderSlot({
+      useTag: 'POTION',
+      itemTag: 'POTION',
+      catalogId: 'potion_heal',
+      labelKo: '회복 물약',
+      charges: 2,
+      chargeMax: 2,
+    })
+    expect(html).toContain('최대 체력의 1/2')
+    expect(html).toContain('규칙표로만 쓴다')
+  })
+
+  it('★ 빈 칸에는 안 적는다 — 끼운 것이 없으면 할 말이 없다', () => {
+    const html = renderSlot({ useTag: 'SCROLL', itemTag: '', catalogId: '' })
+    expect(html).not.toContain('쓰면')
+    expect(html).not.toContain('자동')
+  })
+})

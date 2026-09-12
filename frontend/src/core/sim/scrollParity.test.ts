@@ -10,7 +10,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { TRIGGER_LABELS } from '../../content/consumableTags'
+import { formatTrigger } from '../../content/consumableEffects'
 import { BALANCE, ROOM_TEMPLATES } from '../resources'
 import { PLAYER_ENTITY_ID, buildEngine, parseBalance } from '../services/runBattle'
 import { getManhattanDistance } from '../grid/geometry'
@@ -206,7 +206,7 @@ describe('조건 발동 이식', () => {
     // **안 보이면 없는 것이다.** 규칙 줄 없이 터지므로, 조건을 화면이 못 적으면 들고 가는
     // 사람에게는 「언젠가 사라지는 물건」이 된다.
     for (const useTag of TRIGGERS.keys()) {
-      expect(TRIGGER_LABELS.get(useTag), `${useTag} 의 발동 조건을 적을 말이 없다`).toBeDefined()
+      expect(formatTrigger(useTag), `${useTag} 의 발동 조건을 적을 말이 없다`).not.toBe('')
     }
   })
 

@@ -16,6 +16,8 @@ import { describe, expect, it } from 'vitest'
 
 import blocksRaw from '@resources/balance/blocks.json'
 
+import { formatUseEffect } from '../../content/consumableEffects'
+
 import { BALANCE, ROOM_TEMPLATES } from '../resources'
 import { PLAYER_ENTITY_ID, buildEngine, parseBalance } from '../services/runBattle'
 import { ITEM_POTION, ITEM_SCROLL } from './abilities'
@@ -88,6 +90,14 @@ describe('소모품 태그 목록', () => {
     const known = new Set([ITEM_POTION, ITEM_SCROLL, ...SCROLL_RESOLVERS.keys()])
     for (const tag of listCatalogValues('actions', 'USE_ITEM')) {
       expect(known.has(tag), `실행기가 모르는 태그다: ${tag}`).toBe(true)
+    }
+  })
+
+  it('★ 그 태그들은 전부 **쓰면 무엇이 되는지** 적을 말이 있다', () => {
+    // **안 적히면 고를 근거가 없다** (2026-09-11 요청: 「소모품들 설명 보충해줘」).
+    // 이름과 등급만 보이면 「무엇을 들고 갈까」가 찍기가 된다.
+    for (const tag of listCatalogValues('actions', 'USE_ITEM')) {
+      expect(formatUseEffect(tag), `${tag} 의 사용 효과를 적을 말이 없다`).not.toBe('')
     }
   })
 })

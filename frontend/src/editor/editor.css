@@ -2434,3 +2434,22 @@
   color: var(--text-data);
   white-space: nowrap;
 }
+
+/* 소모품 상세의 역할 줄 — 끼면 / 쓰면 / 자동 (2026-09-11 요청).
+
+   **역할 이름을 왼쪽에 고정폭으로 박는다.** 줄만 늘어놓으면 어느 것이 끼고 있을 때의
+   값이고 어느 것이 태울 때의 값인지 읽는 사람이 짐작해야 한다. 이름은 흐리게 두어
+   값이 앞에 서게 한다. */
+.invd__role {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: baseline;
+}
+
+.invd__role-name {
+  flex: 0 0 auto;
+  min-width: calc(var(--sp-3) * 3);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+}
