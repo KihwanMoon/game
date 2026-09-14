@@ -55,7 +55,7 @@
     {
       "id": "goblin_rusher",
       "type": "MELEE",
-      "label_ko": "고블린 돌격병",
+      "label_ko": "몽둥이 도깨비",
       "hp_max": 40,
       "attack": 8,
       "defense": 2,
@@ -72,7 +72,7 @@
     {
       "id": "goblin_archer",
       "type": "RANGED",
-      "label_ko": "고블린 궁수",
+      "label_ko": "불티 도깨비",
       "hp_max": 26,
       "attack": 10,
       "defense": 1,
@@ -89,7 +89,7 @@
     {
       "id": "goblin_summoner",
       "type": "SUMMONER",
-      "label_ko": "고블린 소환사",
+      "label_ko": "부르는 도깨비",
       "hp_max": 34,
       "attack": 5,
       "defense": 3,
@@ -111,7 +111,7 @@
     {
       "id": "bomb_slime",
       "type": "BOMBER",
-      "label_ko": "폭탄 슬라임",
+      "label_ko": "터지는 도깨비불",
       "hp_max": 22,
       "attack": 4,
       "defense": 0,
@@ -138,7 +138,7 @@
     {
       "id": "mender_acolyte",
       "type": "HEALER",
-      "label_ko": "수복 사제",
+      "label_ko": "박수 제자",
       "hp_max": 30,
       "attack": 4,
       "defense": 2,
@@ -155,7 +155,7 @@
     {
       "id": "veteran_rusher",
       "type": "MELEE",
-      "label_ko": "정예 돌격병",
+      "label_ko": "큰 도깨비",
       "hp_max": 70,
       "attack": 13,
       "defense": 5,
@@ -172,7 +172,7 @@
     {
       "id": "longbow_archer",
       "type": "RANGED",
-      "label_ko": "장궁병",
+      "label_ko": "산포수",
       "hp_max": 34,
       "attack": 14,
       "defense": 2,
@@ -189,7 +189,7 @@
     {
       "id": "arch_summoner",
       "type": "SUMMONER",
-      "label_ko": "대소환사",
+      "label_ko": "큰무당",
       "hp_max": 55,
       "attack": 7,
       "defense": 4,
@@ -211,7 +211,7 @@
     {
       "id": "stone_gatekeeper",
       "type": "MELEE",
-      "label_ko": "석상의 문지기",
+      "label_ko": "장승",
       "hp_max": 185,
       "attack": 16,
       "defense": 8,
@@ -228,7 +228,7 @@
     {
       "id": "dire_wolf",
       "type": "MELEE",
-      "label_ko": "굶주린 늑대",
+      "label_ko": "주린 이리",
       "hp_max": 24,
       "attack": 7,
       "defense": 0,
@@ -245,7 +245,7 @@
     {
       "id": "shield_golem",
       "type": "MELEE",
-      "label_ko": "방패 골렘",
+      "label_ko": "돌미륵",
       "hp_max": 110,
       "attack": 6,
       "defense": 8,
@@ -262,7 +262,7 @@
     {
       "id": "hex_archer",
       "type": "RANGED",
-      "label_ko": "저주 사수",
+      "label_ko": "저주 포수",
       "hp_max": 28,
       "attack": 18,
       "defense": 0,
@@ -279,7 +279,7 @@
     {
       "id": "plague_mender",
       "type": "HEALER",
-      "label_ko": "역병 사제",
+      "label_ko": "역귀 무당",
       "hp_max": 48,
       "attack": 6,
       "defense": 2,
@@ -296,7 +296,7 @@
     {
       "id": "doppelganger",
       "type": "MELEE",
-      "label_ko": "도플갱어",
+      "label_ko": "둔갑",
       "hp_max": 100,
       "attack": 12,
       "defense": 5,

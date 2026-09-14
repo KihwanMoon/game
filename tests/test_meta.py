@@ -171,7 +171,11 @@ def test_unknown_enemy_is_rejected(balance, enemy_rulesets):
 def test_page_carries_stats_and_label(balance, enemy_rulesets):
     page = build_bestiary_page(ARCHER_KIND, balance, enemy_rulesets)
     stats = {line.key: line.value for line in page.stats}
-    assert page.label_ko == "고블린 궁수"
+    # 표시명은 세계관을 따라 바뀐다 (`기획/4_세계관` §5.5) — **id 가 열쇠이고 이름은
+    # 옷이다.** 여기서 보는 것은 「도감이 밸런스의 이름을 그대로 싣는가」이지 특정
+    # 문자열이 아니므로, 파일에서 읽어 대조한다.
+    archer = next(one for one in balance["enemies"] if one["id"] == ARCHER_KIND)
+    assert page.label_ko == archer["label_ko"]
     assert stats["hp_max"] == 26
     assert stats["attack_range"] == 4
 
