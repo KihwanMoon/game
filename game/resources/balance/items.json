@@ -5,7 +5,7 @@
     {
       "id": "sword_short",
       "kind": "EQUIPMENT",
-      "label_ko": "단검",
+      "label_ko": "비수",
       "slot": "WEAPON_MAIN",
       "hands": "ONE",
       "affixes": [
@@ -23,7 +23,7 @@
     {
       "id": "sword_great",
       "kind": "EQUIPMENT",
-      "label_ko": "대검",
+      "label_ko": "협도",
       "slot": "WEAPON_MAIN",
       "hands": "TWO",
       "affixes": [
@@ -55,7 +55,7 @@
     {
       "id": "bow_long",
       "kind": "EQUIPMENT",
-      "label_ko": "장궁",
+      "label_ko": "각궁",
       "slot": "WEAPON_MAIN",
       "hands": "TWO",
       "affixes": [
@@ -74,7 +74,7 @@
     {
       "id": "shield_buckler",
       "kind": "EQUIPMENT",
-      "label_ko": "소형 방패",
+      "label_ko": "등패",
       "slot": "WEAPON_OFF",
       "hands": "OFFHAND",
       "affixes": [
@@ -93,7 +93,7 @@
     {
       "id": "helm_iron",
       "kind": "EQUIPMENT",
-      "label_ko": "철 투구",
+      "label_ko": "쇠투구",
       "slot": "HEAD",
       "affixes": [
         {
@@ -106,7 +106,7 @@
     {
       "id": "armor_plate",
       "kind": "EQUIPMENT",
-      "label_ko": "판금 갑옷",
+      "label_ko": "두정갑",
       "slot": "BODY",
       "affixes": [
         {
@@ -130,7 +130,7 @@
     {
       "id": "armor_pouch",
       "kind": "EQUIPMENT",
-      "label_ko": "주머니 조끼",
+      "label_ko": "전대 조끼",
       "slot": "BODY",
       "grade": "COMMON",
       "min_floor": 1,
@@ -165,7 +165,7 @@
     {
       "id": "boots_swift",
       "kind": "EQUIPMENT",
-      "label_ko": "경보 신발",
+      "label_ko": "미투리",
       "slot": "FEET",
       "affixes": [
         {
@@ -178,7 +178,7 @@
     {
       "id": "boots_pack",
       "kind": "EQUIPMENT",
-      "label_ko": "등짐 신발",
+      "label_ko": "등짐 짚신",
       "slot": "FEET",
       "grade": "COMMON",
       "min_floor": 1,
@@ -202,7 +202,7 @@
     {
       "id": "gloves_core",
       "kind": "EQUIPMENT",
-      "label_ko": "연산 장갑",
+      "label_ko": "식자 토시",
       "slot": "HANDS",
       "affixes": [
         {
@@ -226,7 +226,7 @@
     {
       "id": "potion_heal",
       "kind": "CONSUMABLE",
-      "label_ko": "회복 물약",
+      "label_ko": "탕약",
       "stack_max": 9,
       "tags": [
         "POTION"
@@ -244,7 +244,7 @@
     {
       "id": "scroll_shield",
       "kind": "CONSUMABLE",
-      "label_ko": "보호 주문서",
+      "label_ko": "호신부",
       "stack_max": 5,
       "tags": [
         "SCROLL"
@@ -262,7 +262,7 @@
     {
       "id": "quest_seal",
       "kind": "QUEST",
-      "label_ko": "봉인된 각인",
+      "label_ko": "봉한 판목",
       "tags": [
         "QUEST"
       ],
@@ -271,7 +271,7 @@
     {
       "id": "sword_saber",
       "kind": "EQUIPMENT",
-      "label_ko": "도신검",
+      "label_ko": "환도",
       "slot": "WEAPON_MAIN",
       "hands": "ONE",
       "grade": "FINE",
@@ -297,7 +297,7 @@
     {
       "id": "axe_heavy",
       "kind": "EQUIPMENT",
-      "label_ko": "전투 도끼",
+      "label_ko": "쇠도끼",
       "slot": "WEAPON_MAIN",
       "hands": "TWO",
       "grade": "FINE",
@@ -330,7 +330,7 @@
     {
       "id": "bow_recurve",
       "kind": "EQUIPMENT",
-      "label_ko": "곡궁",
+      "label_ko": "철태궁",
       "slot": "WEAPON_MAIN",
       "hands": "TWO",
       "grade": "FINE",
@@ -362,7 +362,7 @@
     {
       "id": "shield_tower",
       "kind": "EQUIPMENT",
-      "label_ko": "탑 방패",
+      "label_ko": "장패",
       "slot": "WEAPON_OFF",
       "hands": "OFFHAND",
       "grade": "FINE",
@@ -387,7 +387,7 @@
     {
       "id": "helm_visor",
       "kind": "EQUIPMENT",
-      "label_ko": "투시 투구",
+      "label_ko": "트인 면갑",
       "slot": "HEAD",
       "grade": "FINE",
       "min_floor": 3,
@@ -407,7 +407,7 @@
     {
       "id": "helm_sight",
       "kind": "EQUIPMENT",
-      "label_ko": "조준 투구",
+      "label_ko": "겨눔 투구",
       "slot": "HEAD",
       "grade": "FINE",
       "min_floor": 3,
@@ -444,7 +444,7 @@
     {
       "id": "armor_mesh",
       "kind": "EQUIPMENT",
-      "label_ko": "사슬 갑옷",
+      "label_ko": "쇄자갑",
       "slot": "BODY",
       "grade": "FINE",
       "min_floor": 3,
@@ -470,7 +470,7 @@
     {
       "id": "armor_apothecary",
       "kind": "EQUIPMENT",
-      "label_ko": "약사 갑옷",
+      "label_ko": "약방 배자",
       "slot": "BODY",
       "grade": "FINE",
       "min_floor": 3,
@@ -510,7 +510,7 @@
     {
       "id": "boots_gale",
       "kind": "EQUIPMENT",
-      "label_ko": "질풍 신발",
+      "label_ko": "축지 미투리",
       "slot": "FEET",
       "grade": "FINE",
       "min_floor": 3,
@@ -525,7 +525,7 @@
     {
       "id": "gloves_lattice",
       "kind": "EQUIPMENT",
-      "label_ko": "격자 장갑",
+      "label_ko": "조판 토시",
       "slot": "HANDS",
       "grade": "FINE",
       "min_floor": 3,
@@ -550,7 +550,7 @@
     {
       "id": "sword_edge",
       "kind": "EQUIPMENT",
-      "label_ko": "단층 검",
+      "label_ko": "사인검",
       "slot": "WEAPON_MAIN",
       "hands": "ONE",
       "grade": "RELIC",
@@ -583,7 +583,7 @@
     {
       "id": "bow_storm",
       "kind": "EQUIPMENT",
-      "label_ko": "폭풍 활",
+      "label_ko": "풍우궁",
       "slot": "WEAPON_MAIN",
       "hands": "TWO",
       "grade": "RELIC",
@@ -616,7 +616,7 @@
     {
       "id": "axe_collapse",
       "kind": "EQUIPMENT",
-      "label_ko": "붕락 도끼",
+      "label_ko": "뇌부",
       "slot": "WEAPON_MAIN",
       "hands": "TWO",
       "grade": "RELIC",
@@ -650,7 +650,7 @@
     {
       "id": "shield_aegis",
       "kind": "EQUIPMENT",
-      "label_ko": "이지스",
+      "label_ko": "귀면패",
       "slot": "WEAPON_OFF",
       "hands": "OFFHAND",
       "grade": "RELIC",
@@ -687,7 +687,7 @@
     {
       "id": "helm_oracle",
       "kind": "EQUIPMENT",
-      "label_ko": "예지 투구",
+      "label_ko": "무관",
       "slot": "HEAD",
       "grade": "RELIC",
       "min_floor": 6,
@@ -714,7 +714,7 @@
     {
       "id": "armor_bulwark",
       "kind": "EQUIPMENT",
-      "label_ko": "보루 갑옷",
+      "label_ko": "성곽 갑옷",
       "slot": "BODY",
       "grade": "RELIC",
       "min_floor": 6,
@@ -748,7 +748,7 @@
     {
       "id": "armor_channeler",
       "kind": "EQUIPMENT",
-      "label_ko": "술사 갑옷",
+      "label_ko": "무복",
       "slot": "BODY",
       "grade": "RELIC",
       "min_floor": 6,
@@ -789,7 +789,7 @@
     {
       "id": "boots_phase",
       "kind": "EQUIPMENT",
-      "label_ko": "위상 신발",
+      "label_ko": "운혜",
       "slot": "FEET",
       "grade": "RELIC",
       "min_floor": 6,
@@ -812,7 +812,7 @@
     {
       "id": "gloves_engine",
       "kind": "EQUIPMENT",
-      "label_ko": "연산 기관",
+      "label_ko": "주자소 토시",
       "slot": "HANDS",
       "grade": "RELIC",
       "min_floor": 6,
@@ -844,7 +844,7 @@
     {
       "id": "potion_greater",
       "kind": "CONSUMABLE",
-      "label_ko": "큰 회복 물약",
+      "label_ko": "보약",
       "grade": "FINE",
       "min_floor": 3,
       "stack_max": 5,
@@ -864,7 +864,7 @@
     {
       "id": "potion_elixir",
       "kind": "CONSUMABLE",
-      "label_ko": "영약",
+      "label_ko": "선약",
       "grade": "RELIC",
       "min_floor": 6,
       "stack_max": 3,
@@ -884,7 +884,7 @@
     {
       "id": "scroll_ward",
       "kind": "CONSUMABLE",
-      "label_ko": "수호 주문서",
+      "label_ko": "수호부",
       "grade": "FINE",
       "min_floor": 4,
       "stack_max": 3,
@@ -904,7 +904,7 @@
     {
       "id": "scroll_sigil",
       "kind": "CONSUMABLE",
-      "label_ko": "인장 주문서",
+      "label_ko": "인장부",
       "grade": "RELIC",
       "min_floor": 6,
       "stack_max": 2,
@@ -925,7 +925,7 @@
     {
       "id": "scroll_blink",
       "kind": "CONSUMABLE",
-      "label_ko": "순간이동 주문서",
+      "label_ko": "축지부",
       "min_floor": 2,
       "stack_max": 4,
       "charges": 2,
@@ -945,7 +945,7 @@
     {
       "id": "scroll_focus",
       "kind": "CONSUMABLE",
-      "label_ko": "부릅 주문서",
+      "label_ko": "눈밝이 부적",
       "grade": "FINE",
       "min_floor": 3,
       "stack_max": 3,
@@ -966,7 +966,7 @@
     {
       "id": "scroll_flame",
       "kind": "CONSUMABLE",
-      "label_ko": "화염 주문서",
+      "label_ko": "불부적",
       "grade": "FINE",
       "min_floor": 4,
       "stack_max": 3,
@@ -987,7 +987,7 @@
     {
       "id": "scepter_foresight",
       "kind": "EQUIPMENT",
-      "label_ko": "예지의 홀",
+      "label_ko": "서죽",
       "slot": "WEAPON_OFF",
       "hands": "OFFHAND",
       "grade": "RELIC",
@@ -1019,7 +1019,7 @@
     {
       "id": "signet_anchor",
       "kind": "EQUIPMENT",
-      "label_ko": "정착의 인장",
+      "label_ko": "관인",
       "slot": "HANDS",
       "grade": "RELIC",
       "min_floor": 6,
@@ -1055,7 +1055,7 @@
     {
       "id": "core_bloom",
       "kind": "EQUIPMENT",
-      "label_ko": "확산의 핵",
+      "label_ko": "번짐 먹",
       "slot": "BODY",
       "grade": "RELIC",
       "min_floor": 6,
@@ -1121,7 +1121,7 @@
     {
       "id": "wand_conduit",
       "kind": "EQUIPMENT",
-      "label_ko": "전도 막대",
+      "label_ko": "신장대",
       "slot": "WEAPON_MAIN",
       "hands": "ONE",
       "attack_range": 3,
@@ -1158,7 +1158,7 @@
     {
       "id": "staff_fallstar",
       "kind": "EQUIPMENT",
-      "label_ko": "낙성 지팡이",
+      "label_ko": "별똥 지팡이",
       "slot": "WEAPON_MAIN",
       "hands": "TWO",
       "grade": "FINE",
@@ -1197,7 +1197,7 @@
     {
       "id": "dagger_off",
       "kind": "EQUIPMENT",
-      "label_ko": "보조 단검",
+      "label_ko": "소도",
       "slot": "WEAPON_OFF",
       "hands": "OFFHAND",
       "affixes": [
@@ -1220,7 +1220,7 @@
     {
       "id": "lamp_sigil",
       "kind": "EQUIPMENT",
-      "label_ko": "각인 등불",
+      "label_ko": "부적 등롱",
       "slot": "WEAPON_OFF",
       "hands": "OFFHAND",
       "grade": "FINE",
@@ -1257,7 +1257,7 @@
     {
       "id": "boots_peddler",
       "kind": "EQUIPMENT",
-      "label_ko": "행상 신발",
+      "label_ko": "봇짐 신",
       "slot": "FEET",
       "grade": "RELIC",
       "min_floor": 6,
@@ -1287,7 +1287,7 @@
     {
       "id": "helm_farsight",
       "kind": "EQUIPMENT",
-      "label_ko": "원견 투구",
+      "label_ko": "천리 투구",
       "slot": "HEAD",
       "grade": "RELIC",
       "min_floor": 6,

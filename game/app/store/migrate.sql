@@ -504,3 +504,60 @@ END $$;
 -- 라는 말이 거짓이 된다 — 옛 기본값(6·4)과 정확히 같은 줄만 새 기본값으로 바꾼다.
 UPDATE drop_grade_weight SET floor_scale_pct = 12 WHERE grade = 'FINE' AND floor_scale_pct = 6;
 UPDATE drop_grade_weight SET floor_scale_pct = 10 WHERE grade = 'RELIC' AND floor_scale_pct = 4;
+
+-- ── 아이템 이름을 한국 전설의 결로 (2026-09-14) ──────────────────────────
+--
+-- 세계관이 잡히면서 표시명을 갈았다 (`기획/4_세계관` §5.5 · `5_설정집`). **id 는 안
+-- 건드린다** — 인스턴스·원장·경매·드롭 표가 전부 그것을 열쇠로 쓴다.
+--
+-- 카탈로그 정본은 DB 이므로(§15.7) 파일만 고치면 라이브가 안 바뀐다. 여기서 옮기되
+-- **옛 기본값과 정확히 같은 줄만** 바꾼다 — 관리자가 고쳐 둔 이름을 배포가 되돌리면
+-- 정본이 DB 라는 말이 거짓이 된다.
+UPDATE item_catalog SET label_ko = '비수' WHERE catalog_id = 'sword_short' AND label_ko = '단검';
+UPDATE item_catalog SET label_ko = '환도' WHERE catalog_id = 'sword_saber' AND label_ko = '도신검';
+UPDATE item_catalog SET label_ko = '협도' WHERE catalog_id = 'sword_great' AND label_ko = '대검';
+UPDATE item_catalog SET label_ko = '사인검' WHERE catalog_id = 'sword_edge' AND label_ko = '단층 검';
+UPDATE item_catalog SET label_ko = '쇠도끼' WHERE catalog_id = 'axe_heavy' AND label_ko = '전투 도끼';
+UPDATE item_catalog SET label_ko = '뇌부' WHERE catalog_id = 'axe_collapse' AND label_ko = '붕락 도끼';
+UPDATE item_catalog SET label_ko = '소도' WHERE catalog_id = 'dagger_off' AND label_ko = '보조 단검';
+UPDATE item_catalog SET label_ko = '각궁' WHERE catalog_id = 'bow_long' AND label_ko = '장궁';
+UPDATE item_catalog SET label_ko = '철태궁' WHERE catalog_id = 'bow_recurve' AND label_ko = '곡궁';
+UPDATE item_catalog SET label_ko = '풍우궁' WHERE catalog_id = 'bow_storm' AND label_ko = '폭풍 활';
+UPDATE item_catalog SET label_ko = '신장대' WHERE catalog_id = 'wand_conduit' AND label_ko = '전도 막대';
+UPDATE item_catalog SET label_ko = '별똥 지팡이' WHERE catalog_id = 'staff_fallstar' AND label_ko = '낙성 지팡이';
+UPDATE item_catalog SET label_ko = '부적 등롱' WHERE catalog_id = 'lamp_sigil' AND label_ko = '각인 등불';
+UPDATE item_catalog SET label_ko = '서죽' WHERE catalog_id = 'scepter_foresight' AND label_ko = '예지의 홀';
+UPDATE item_catalog SET label_ko = '관인' WHERE catalog_id = 'signet_anchor' AND label_ko = '정착의 인장';
+UPDATE item_catalog SET label_ko = '번짐 먹' WHERE catalog_id = 'core_bloom' AND label_ko = '확산의 핵';
+UPDATE item_catalog SET label_ko = '등패' WHERE catalog_id = 'shield_buckler' AND label_ko = '소형 방패';
+UPDATE item_catalog SET label_ko = '장패' WHERE catalog_id = 'shield_tower' AND label_ko = '탑 방패';
+UPDATE item_catalog SET label_ko = '귀면패' WHERE catalog_id = 'shield_aegis' AND label_ko = '이지스';
+UPDATE item_catalog SET label_ko = '쇠투구' WHERE catalog_id = 'helm_iron' AND label_ko = '철 투구';
+UPDATE item_catalog SET label_ko = '트인 면갑' WHERE catalog_id = 'helm_visor' AND label_ko = '투시 투구';
+UPDATE item_catalog SET label_ko = '겨눔 투구' WHERE catalog_id = 'helm_sight' AND label_ko = '조준 투구';
+UPDATE item_catalog SET label_ko = '무관' WHERE catalog_id = 'helm_oracle' AND label_ko = '예지 투구';
+UPDATE item_catalog SET label_ko = '천리 투구' WHERE catalog_id = 'helm_farsight' AND label_ko = '원견 투구';
+UPDATE item_catalog SET label_ko = '두정갑' WHERE catalog_id = 'armor_plate' AND label_ko = '판금 갑옷';
+UPDATE item_catalog SET label_ko = '쇄자갑' WHERE catalog_id = 'armor_mesh' AND label_ko = '사슬 갑옷';
+UPDATE item_catalog SET label_ko = '전대 조끼' WHERE catalog_id = 'armor_pouch' AND label_ko = '주머니 조끼';
+UPDATE item_catalog SET label_ko = '약방 배자' WHERE catalog_id = 'armor_apothecary' AND label_ko = '약사 갑옷';
+UPDATE item_catalog SET label_ko = '성곽 갑옷' WHERE catalog_id = 'armor_bulwark' AND label_ko = '보루 갑옷';
+UPDATE item_catalog SET label_ko = '무복' WHERE catalog_id = 'armor_channeler' AND label_ko = '술사 갑옷';
+UPDATE item_catalog SET label_ko = '미투리' WHERE catalog_id = 'boots_swift' AND label_ko = '경보 신발';
+UPDATE item_catalog SET label_ko = '등짐 짚신' WHERE catalog_id = 'boots_pack' AND label_ko = '등짐 신발';
+UPDATE item_catalog SET label_ko = '축지 미투리' WHERE catalog_id = 'boots_gale' AND label_ko = '질풍 신발';
+UPDATE item_catalog SET label_ko = '운혜' WHERE catalog_id = 'boots_phase' AND label_ko = '위상 신발';
+UPDATE item_catalog SET label_ko = '봇짐 신' WHERE catalog_id = 'boots_peddler' AND label_ko = '행상 신발';
+UPDATE item_catalog SET label_ko = '식자 토시' WHERE catalog_id = 'gloves_core' AND label_ko = '연산 장갑';
+UPDATE item_catalog SET label_ko = '조판 토시' WHERE catalog_id = 'gloves_lattice' AND label_ko = '격자 장갑';
+UPDATE item_catalog SET label_ko = '주자소 토시' WHERE catalog_id = 'gloves_engine' AND label_ko = '연산 기관';
+UPDATE item_catalog SET label_ko = '탕약' WHERE catalog_id = 'potion_heal' AND label_ko = '회복 물약';
+UPDATE item_catalog SET label_ko = '보약' WHERE catalog_id = 'potion_greater' AND label_ko = '큰 회복 물약';
+UPDATE item_catalog SET label_ko = '선약' WHERE catalog_id = 'potion_elixir' AND label_ko = '영약';
+UPDATE item_catalog SET label_ko = '호신부' WHERE catalog_id = 'scroll_shield' AND label_ko = '보호 주문서';
+UPDATE item_catalog SET label_ko = '수호부' WHERE catalog_id = 'scroll_ward' AND label_ko = '수호 주문서';
+UPDATE item_catalog SET label_ko = '인장부' WHERE catalog_id = 'scroll_sigil' AND label_ko = '인장 주문서';
+UPDATE item_catalog SET label_ko = '축지부' WHERE catalog_id = 'scroll_blink' AND label_ko = '순간이동 주문서';
+UPDATE item_catalog SET label_ko = '눈밝이 부적' WHERE catalog_id = 'scroll_focus' AND label_ko = '부릅 주문서';
+UPDATE item_catalog SET label_ko = '불부적' WHERE catalog_id = 'scroll_flame' AND label_ko = '화염 주문서';
+UPDATE item_catalog SET label_ko = '봉한 판목' WHERE catalog_id = 'quest_seal' AND label_ko = '봉인된 각인';
