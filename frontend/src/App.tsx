@@ -61,6 +61,7 @@ const PLAYER_BASE = BALANCE.player as Record<string, number>
 import type { RawBalanceFile } from './core/resources'
 import { validateRuleSet } from './core/rules/validator'
 import type { RuleSet } from './core/schemas'
+import { findRoomTitle } from './core/schemas/room'
 import { ReplayView } from './admin/ReplayView'
 import type { ReplayInput, RunHistoryRow } from './storage'
 import { OUTCOME_ONGOING, OUTCOME_PLAYER_WIN } from './core/sim/phases'
@@ -269,12 +270,15 @@ const RULE_SLOTS_KEY = 'rule_slots'
  * **층이 박혀 있었다.** 하강이 층을 넘어가는데 머리글은 늘 `1층` 이라고 적었다 — 화면에서
  * 가장 크게 적히는 자리가 거짓말을 하고 있었다.
  *
+ * **id 가 아니라 이름을 받는다.** 예전에는 `4층 · pillars` 라고 적혔다 — 화면에서 가장
+ * 크게 적히는 자리가 영문 id 였다. 부르는 쪽이 `findRoomTitle` 로 이름을 만들어 넘긴다.
+ *
  * @param floor 지금 층.
- * @param roomId 지금 방.
- * @returns 「4층 · pillars」.
+ * @param room 지금 방의 이름(없으면 id).
+ * @returns 「4층 · 기둥 숲」.
  */
-export function formatLocation(floor: number, roomId: string): string {
-  return `${String(floor)}층 · ${roomId}`
+export function formatLocation(floor: number, room: string): string {
+  return `${String(floor)}층 · ${room}`
 }
 
 /**
@@ -2215,7 +2219,7 @@ export function App(): React.JSX.Element {
         <BattleView
           setup={run.setup}
           rulesets={run.rulesets}
-          location={formatLocation(roomFloor, run.setup.roomId)}
+          location={formatLocation(roomFloor, findRoomTitle(ROOM_TEMPLATES, run.setup.roomId))}
           controls={battleControls}
           settlements={settlements}
           weaponCatalogId={mainWeapon}

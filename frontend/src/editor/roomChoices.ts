@@ -10,7 +10,12 @@
  *
  * 그래서 층으로 묶고 한 줄에 뜻을 함께 적는다. 층으로 묶는 이유는 그것이 데이터가 이미
  * 정한 난이도 축이기 때문이다 — 새 축을 여기서 지어내면 그것이 또 어긋난다.
+ *
+ * **이제 앞에 서는 것은 이름이다** (2026-09-14). 방마다 `label_ko` 가 생겼으므로 줄은
+ * 「너른 마당 · 엄폐가 없어 포위가 성립한다」가 된다. id 는 버리지 않고 마우스를 올렸을
+ * 때의 전문으로 옮겼다 — 버그를 적을 때 필요한 것은 이름이 아니라 id 다.
  */
+import { readRoomTitle } from '../core/schemas/room'
 import type { RoomTemplate } from '../core/schemas/room'
 
 /** 한 줄에 넣을 뜻의 최대 길이. 넘으면 자르고 말줄임을 붙인다. */
@@ -26,9 +31,9 @@ export interface RoomGroup {
 /** 고를 수 있는 방 한 줄. */
 export interface RoomChoice {
   readonly templateId: string
-  /** 목록에 보일 한 줄. id 와 뜻을 함께 적는다. */
+  /** 목록에 보일 한 줄. 이름과 뜻을 함께 적는다. */
   readonly label: string
-  /** 마우스를 올렸을 때 보일 전문. 자르지 않는다. */
+  /** 마우스를 올렸을 때 보일 전문. 자르지 않고, id 도 여기 남는다. */
   readonly title: string
 }
 
@@ -64,11 +69,12 @@ export function buildRoomGroups(templates: readonly RoomTemplate[]): RoomGroup[]
       left.minFloor - right.minFloor || left.templateId.localeCompare(right.templateId),
   )) {
     const purpose = clipPurpose(template.purpose)
+    const name = readRoomTitle(template)
     const rooms = byFloor.get(template.minFloor) ?? []
     rooms.push({
       templateId: template.templateId,
-      label: purpose === '' ? template.templateId : `${template.templateId} · ${purpose}`,
-      title: template.purpose,
+      label: purpose === '' ? name : `${name} · ${purpose}`,
+      title: `${template.templateId} — ${template.purpose}`,
     })
     byFloor.set(template.minFloor, rooms)
   }

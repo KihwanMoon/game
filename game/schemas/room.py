@@ -59,6 +59,22 @@ class RoomTemplate:
     # 나오는가" 로 표현하는 자리다 — 정예와 사제가 층 1 에 흩뿌려지면 첫 방에서 배울
     # 것이 없어진다. 층 배치(build_floor)가 이 값으로 후보를 거른다.
     min_floor: int = FIRST_FLOOR
+    # 화면에 보일 이름. **비면 id 가 대신 보인다** — 「방이 `open_field` 로 보인다」가
+    # 그 상태다. 발행된 콘텐츠 팩에는 이 칸이 없을 수 있어(팩은 DB 에 굳어 있다)
+    # 필수로 만들지 않았고, 대신 저장소 파일은 `tests/test_room_names.py` 가 본다.
+    label_ko: str = ""
+
+    @property
+    def title(self) -> str:
+        """화면에 쓸 이름. 이름이 없으면 id 다.
+
+        **부르는 쪽마다 `or` 를 적지 않게 한다.** 한 곳이라도 빠뜨리면 그 화면만 id 를
+        보이고, 그것은 「어떤 화면은 이름이 안 뜬다」로 신고된다.
+
+        Returns:
+            이름 또는 id.
+        """
+        return self.label_ko or self.template_id
 
     @property
     def width(self) -> int:
@@ -183,6 +199,7 @@ def load_room_templates(source_path: Path) -> tuple[RoomTemplate, ...]:
                     for spawn in item["enemy_spawns"]
                 ),
                 min_floor=min_floor,
+                label_ko=str(item.get("label_ko", "")),
             )
         )
     return tuple(templates)

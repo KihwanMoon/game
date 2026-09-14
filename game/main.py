@@ -256,7 +256,7 @@ def main() -> int:
         return 1
 
     template = context.rooms[arguments.room]
-    print(f"방 {template.template_id} — {template.purpose}")
+    print(f"방 {template.title} — {template.purpose}")
     print(f"시드 {arguments.seed} / 규칙표 {arguments.ruleset or 'fallback'}\n")
 
     if arguments.replay_last > 0:

@@ -31,18 +31,22 @@ describe('층으로 묶는다', () => {
     }
   })
 
-  it('★ 한 줄이 id 와 뜻을 함께 적는다', () => {
+  it('★ 한 줄이 이름과 뜻을 함께 적는다', () => {
+    // **앞에 서는 것이 이름이다** (2026-09-14). 예전에는 여기가 `corridor` 였다.
     const corridor = groups
       .flatMap((group) => group.rooms)
       .find((room) => room.templateId === 'corridor')
-    expect(corridor?.label).toContain('corridor')
+    expect(corridor?.label).toContain('외길')
     expect(corridor?.label).toContain('좁은 통로')
+    expect(corridor?.label).not.toContain('corridor')
   })
 
   it('전문은 자르지 않고 title 로 남긴다 — 목록은 훑는 곳이고 전문은 확인하는 곳이다', () => {
     for (const room of groups.flatMap((group) => group.rooms)) {
       const source = ROOM_TEMPLATES.find((item) => item.templateId === room.templateId)
-      expect(room.title).toBe(source?.purpose)
+      // **id 는 버리지 않고 여기로 옮겼다.** 버그를 적을 때 필요한 것은 이름이 아니다.
+      expect(room.title).toContain(room.templateId)
+      expect(room.title).toContain(source?.purpose ?? '')
     }
   })
 })

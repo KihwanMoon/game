@@ -17,6 +17,7 @@ import { useMemo, useRef, useState } from 'react'
 import { BattleFrame, PlanCanvas, buildLookOf } from '../battle'
 import type { SheetTab } from '../battle'
 import { BLOCK_CATALOG } from '../core/resources'
+import { readRoomTitle } from '../core/schemas/room'
 import type { PlanTheme } from '../battle'
 import { Button, Panel } from '../ds'
 
@@ -101,7 +102,7 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
       <header className="hud-post__head">
         <h2 className="hud-post__title">사후 분석 — {formatOutcome(recording.outcome)}</h2>
         <span className="hud-post__meta">
-          {recording.template.templateId} · {formatTickLabel(recording.ticks)} · HP{' '}
+          {readRoomTitle(recording.template)} · {formatTickLabel(recording.ticks)} · HP{' '}
           {recording.playerHp}
         </span>
         <Button size="sm" variant="secondary" glyph="✕" onClick={props.onClose}>

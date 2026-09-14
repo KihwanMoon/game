@@ -247,7 +247,9 @@ describe('PostMortem', () => {
 
   it('승패와 틱을 머리에 적는다', () => {
     expect(html).toContain('사후 분석 — 쓰러짐')
-    expect(html).toContain('hazard_field')
+    // **id 가 아니라 이름이다** (2026-09-14). 예전에는 여기가 `hazard_field` 였다.
+    expect(html).toContain('불 밭')
+    expect(html).not.toContain('hazard_field')
   })
 
   it('★ 도면 테마가 없어도 되감기는 선다 — 캔버스만 비운다', () => {

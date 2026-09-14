@@ -14,6 +14,7 @@ import { useMemo, useState } from 'react'
 
 import { Button } from '../ds'
 import { G0_RULESETS, ROOM_TEMPLATES } from '../core/resources'
+import { findRoomTitle, readRoomTitle } from '../core/schemas/room'
 import { BattleView } from './BattleView'
 import type { BattleSetup, ExtraEnemy } from './battleSession'
 
@@ -72,7 +73,7 @@ export function BattleCheck(): React.JSX.Element {
               setRoomId(template.templateId)
             }}
           >
-            {template.templateId}
+            {readRoomTitle(template)}
           </Button>
         ))}
       </div>
@@ -121,7 +122,7 @@ export function BattleCheck(): React.JSX.Element {
     <BattleView
       setup={setup}
       rulesets={G0_RULESETS}
-      location={`1층 · ${roomId}`}
+      location={`1층 · ${findRoomTitle(ROOM_TEMPLATES, roomId)}`}
       controls={controls}
     />
   )

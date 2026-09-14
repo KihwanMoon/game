@@ -78,6 +78,41 @@ export interface RoomTemplate {
    * 값을 읽어 두기만 한다 — 두 코어가 같은 데이터를 같게 해석하는지 대조하기 위해서다.
    */
   readonly minFloor: number
+  /**
+   * 화면에 보일 이름. **비면 id 가 대신 보인다** — 「방이 `open_field` 로 보인다」가 그
+   * 상태다. 발행된 콘텐츠 팩에는 이 칸이 없을 수 있어(팩은 DB 에 굳어 있다) 파서가
+   * 필수로 요구하지 않는다. 대신 저장소 파일은 시험이 본다.
+   */
+  readonly labelKo: string
+}
+
+/**
+ * 화면에 쓸 방 이름. 이름이 없으면 id 다.
+ *
+ * **부르는 쪽마다 `??` 를 적지 않게 한다.** 한 곳이라도 빠뜨리면 그 화면만 id 를 보이고,
+ * 그것은 「어떤 화면은 이름이 안 뜬다」로 신고된다. 파이썬 쪽 `RoomTemplate.title` 과
+ * 같은 규칙이다.
+ *
+ * @param template 방 템플릿.
+ * @returns 이름 또는 id.
+ */
+export function readRoomTitle(template: RoomTemplate): string {
+  return template.labelKo === '' ? template.templateId : template.labelKo
+}
+
+/**
+ * id 로 방 이름을 찾는다.
+ *
+ * **못 찾으면 id 를 그대로 돌려준다.** 발행된 팩에 없는 방이 저장에 남아 있을 수 있고,
+ * 그때 빈 칸을 보이면 「방이 사라졌다」로 읽힌다. id 라도 보이는 편이 낫다.
+ *
+ * @param templates 지금 실린 방 목록.
+ * @param roomId 찾을 방 id.
+ * @returns 이름. 없으면 id.
+ */
+export function findRoomTitle(templates: readonly RoomTemplate[], roomId: string): string {
+  const found = templates.find((one) => one.templateId === roomId)
+  return found === undefined ? roomId : readRoomTitle(found)
 }
 
 /** templates.json 의 원시 형태. */
@@ -93,6 +128,7 @@ export interface RawRoomTemplate {
   readonly player_spawn: readonly number[]
   readonly enemy_spawns: readonly RawEnemySpawn[]
   readonly min_floor?: number
+  readonly label_ko?: string
 }
 
 export interface RawRoomFile {
@@ -262,6 +298,7 @@ export function loadRoomTemplates(raw: RawRoomFile): readonly RoomTemplate[] {
         position: parseGridPosition(spawn.pos, `${item.id}.enemy_spawns`),
       })),
       minFloor,
+      labelKo: item.label_ko ?? '',
     }
   })
 }

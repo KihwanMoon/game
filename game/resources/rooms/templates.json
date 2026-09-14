@@ -50,6 +50,7 @@
   "templates": [
     {
       "id": "open_field",
+      "label_ko": "너른 마당",
       "purpose": "엄폐가 없어 포위가 성립한다. 돌진형이 인접 8칸을 채우는 상황을 학습시킨다.",
       "min_floor": 1,
       "rows": [
@@ -86,6 +87,7 @@
     },
     {
       "id": "corridor",
+      "label_ko": "외길",
       "purpose": "좁은 통로가 유일한 경로다. 유인해 1:1 구도를 만드는 전략이 유효해진다.",
       "min_floor": 1,
       "rows": [
@@ -122,6 +124,7 @@
     },
     {
       "id": "pillars",
+      "label_ko": "기둥 숲",
       "purpose": "엄폐물이 LOS 를 끊는다. 사격형 상대로 MOVE_TO_COVER 가 성립하는 방.",
       "min_floor": 1,
       "rows": [
@@ -158,6 +161,7 @@
     },
     {
       "id": "hazard_field",
+      "label_ko": "불 밭",
       "purpose": "용암과 함정이 최단 경로를 막는다. 접근 경로 선택이 의미를 갖는다.",
       "min_floor": 1,
       "rows": [
@@ -194,6 +198,7 @@
     },
     {
       "id": "spring_bait",
+      "label_ko": "드러난 샘",
       "purpose": "생명의 샘이 방 한가운데 노출돼 있다. 회복과 LOS 노출이 맞바뀐다.",
       "min_floor": 7,
       "rows": [
@@ -237,6 +242,7 @@
     },
     {
       "id": "blast_yard",
+      "label_ko": "불티 마당",
       "purpose": "가운데 덩어리가 경로를 두 갈래로 가른다. 자폭 예고가 뜬 칸에서 어느 쪽으로 비켜설지가 선택이 된다.",
       "min_floor": 2,
       "rows": [
@@ -273,6 +279,7 @@
     },
     {
       "id": "chapel",
+      "label_ko": "굿청",
       "purpose": "위쪽 벽감 안쪽에 사제가 서고 앞을 돌격병이 막는다. 사제를 먼저 끊거나 사거리 2 밖으로 떼어 놓지 않으면 집중 사격이 흩어진다.",
       "min_floor": 2,
       "rows": [
@@ -316,6 +323,7 @@
     },
     {
       "id": "longshot",
+      "label_ko": "화살 길",
       "purpose": "엄폐 기둥이 줄지어 선 사선이다. 장궁병의 사거리 5 가 플레이어의 사격 4 보다 길어 같은 사거리 싸움으로는 이길 수 없다.",
       "min_floor": 3,
       "rows": [
@@ -352,6 +360,7 @@
     },
     {
       "id": "warlord_gate",
+      "label_ko": "장수 문",
       "purpose": "가로지르는 벽에 틈이 하나뿐이다. 정예 돌격병을 그 틈으로 유인해 1:1 을 만들지 않으면 뒤쪽 궁수와 함께 맞는다.",
       "min_floor": 3,
       "rows": [
@@ -388,6 +397,7 @@
     },
     {
       "id": "summoner_vault",
+      "label_ko": "큰굿 방",
       "purpose": "소환실 문을 열면 대소환사가 코앞에 있다. 궁수가 늘기 전에 끊지 못하면 엄폐물 사이에서 사거리 4 밖으로 맞기만 한다.",
       "min_floor": 6,
       "rows": [
@@ -417,6 +427,7 @@
     },
     {
       "id": "twin_door",
+      "label_ko": "두 문",
       "purpose": "문이 둘이라 적이 두 갈래로 온다. 한쪽을 막고 다른 쪽을 상대하는 순서가 생긴다.",
       "min_floor": 1,
       "rows": [
@@ -453,6 +464,7 @@
     },
     {
       "id": "narrow_cross",
+      "label_ko": "네거리",
       "purpose": "십자 통로. 교차점을 먼저 차지하면 셋을 하나씩 상대할 수 있다.",
       "min_floor": 1,
       "rows": [
@@ -496,6 +508,7 @@
     },
     {
       "id": "open_pit",
+      "label_ko": "덫 밭",
       "purpose": "가운데가 함정밭이다. 질러가면 빠르고 아프며, 돌아가면 느리다.",
       "min_floor": 5,
       "rows": [
@@ -532,6 +545,7 @@
     },
     {
       "id": "cover_row",
+      "label_ko": "가림 줄",
       "purpose": "엄폐물이 한 줄로 서 있다. 사격형 상대로 그 줄을 따라 붙는 것이 유효하다.",
       "min_floor": 4,
       "rows": [
@@ -575,6 +589,7 @@
     },
     {
       "id": "archer_nest",
+      "label_ko": "포수 자리",
       "purpose": "장궁병이 엄폐 뒤에 앉았다. 시야를 끊으면서 붙지 않으면 사거리 5 를 그대로 맞는다.",
       "min_floor": 6,
       "rows": [
@@ -618,6 +633,7 @@
     },
     {
       "id": "bomb_alley",
+      "label_ko": "불티 골목",
       "purpose": "좁은 길에 자폭형이 온다. 예고 타일이 뜬 칸에서 비켜설 자리가 한 칸뿐이다.",
       "min_floor": 2,
       "rows": [
@@ -661,6 +677,7 @@
     },
     {
       "id": "thorn_maze",
+      "label_ko": "가시덤불",
       "purpose": "가시덤불이 최단 경로를 덮었다. 밟으면 아프고 돌면 늦는다.",
       "min_floor": 4,
       "rows": [
@@ -697,6 +714,7 @@
     },
     {
       "id": "spring_alcove",
+      "label_ko": "샘 굴",
       "purpose": "생명의 샘이 벽감 안에 있다. 회복하러 들어가면 나올 길이 하나다.",
       "min_floor": 5,
       "rows": [
@@ -740,6 +758,7 @@
     },
     {
       "id": "lava_bridge",
+      "label_ko": "불 다리",
       "purpose": "용암 사이에 다리가 하나다. 그 위에서는 물러설 곳이 없다.",
       "min_floor": 6,
       "rows": [
@@ -776,6 +795,7 @@
     },
     {
       "id": "summon_pit",
+      "label_ko": "굿 구덩이",
       "purpose": "대소환사가 좁은 목 뒤에 있다. 궁수가 늘기 전에 목을 통과해야 한다.",
       "min_floor": 8,
       "rows": [
@@ -812,6 +832,7 @@
     },
     {
       "id": "mender_wall",
+      "label_ko": "무당 벽",
       "purpose": "사제가 파괴 가능 벽 뒤에 있다. 벽을 부수거나 돌아가는 동안 앞이 회복된다.",
       "min_floor": 9,
       "rows": [
@@ -855,6 +876,7 @@
     },
     {
       "id": "crossfire",
+      "label_ko": "엇사선",
       "purpose": "장궁병 둘이 대각으로 앉았다. 한쪽 시야를 끊으면 다른 쪽이 열린다.",
       "min_floor": 5,
       "rows": [
@@ -898,6 +920,7 @@
     },
     {
       "id": "veteran_hall",
+      "label_ko": "장수 마당",
       "purpose": "정예 돌격병 둘이 넓은 방에 있다. 엄폐가 없어 하나씩 떼어 놓을 방법이 없다.",
       "min_floor": 9,
       "rows": [
@@ -941,6 +964,7 @@
     },
     {
       "id": "bomb_garden",
+      "label_ko": "불티 뜰",
       "purpose": "자폭형이 셋이다. 예고가 겹치는 칸이 생기고, 그 칸은 두 번 터진다.",
       "min_floor": 3,
       "rows": [
@@ -984,6 +1008,7 @@
     },
     {
       "id": "long_gallery",
+      "label_ko": "긴 회랑",
       "purpose": "긴 사선에 기둥이 줄지어 섰다. 기둥 사이를 건너는 동안만 맞는다.",
       "min_floor": 7,
       "rows": [
@@ -1027,6 +1052,7 @@
     },
     {
       "id": "double_summon",
+      "label_ko": "두 큰굿",
       "purpose": "대소환사 둘이 양쪽에 있다. 한쪽을 끊는 동안 다른 쪽이 방을 채운다.",
       "min_floor": 9,
       "rows": [
@@ -1070,6 +1096,7 @@
     },
     {
       "id": "gauntlet",
+      "label_ko": "다섯 관문",
       "purpose": "다섯 유형이 하나씩 있다. 무엇을 먼저 끊는가가 그대로 답이 된다.",
       "min_floor": 10,
       "rows": [
@@ -1127,6 +1154,7 @@
     },
     {
       "id": "lava_ring",
+      "label_ko": "불 고리",
       "purpose": "용암이 고리를 이룬다. 안쪽 적을 치려면 고리를 밟거나 틈으로 들어가야 한다.",
       "min_floor": 8,
       "rows": [
@@ -1170,6 +1198,7 @@
     },
     {
       "id": "spring_trap",
+      "label_ko": "덫 샘",
       "purpose": "샘 둘레가 함정이다. 회복은 언제나 대가를 받는다.",
       "min_floor": 8,
       "rows": [
@@ -1213,6 +1242,7 @@
     },
     {
       "id": "last_gate",
+      "label_ko": "마지막 목",
       "purpose": "문 사이에 벽이 가로놓인 마지막 관문이다. 좁은 목을 지나야만 반대편에 닿는다.",
       "min_floor": 10,
       "rows": [
@@ -1263,6 +1293,7 @@
     },
     {
       "id": "boss_hall",
+      "label_ko": "장승 마당",
       "purpose": "석상의 문지기가 홀 가운데에 선다. 기둥 넷 말고는 몸을 숨길 곳이 없고, 문지기의 사거리는 2 다.",
       "min_floor": 10,
       "rows": [
