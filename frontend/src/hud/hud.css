@@ -449,3 +449,75 @@
   padding: var(--sp-2) var(--sp-3);
   border-top: var(--bw) solid var(--line);
 }
+
+/* ── 장 카드 ────────────────────────────────────────────────────────── */
+
+/* **덮되 가리지 않는다.** 뒤의 판이 비쳐야 「이 판을 적은 글」로 읽힌다 — 완전히 덮으면
+   다른 화면으로 넘어온 것이 되고, 돌아갈 곳을 잃는다. 사후 분석(`.hud-post`)과 달리
+   폭을 좁게 잡는 것도 같은 이유다. 글은 한 단으로 읽는 것이다. */
+.story-card {
+  position: fixed;
+  inset-block: var(--sp-0);
+  inset-inline: var(--sp-0);
+  z-index: 11;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-4);
+  /* 뒤가 비치되 글자는 읽혀야 한다. 그림자를 안 쓰므로(디자인 규율) 바탕을 눌러 가른다. */
+  background: color-mix(in srgb, var(--surface-base) 82%, transparent);
+}
+
+.story-card__sheet {
+  display: grid;
+  gap: var(--sp-4);
+  inline-size: min(52ch, 100%);
+  max-block-size: 100%;
+  overflow-y: auto;
+  padding: var(--sp-5) var(--sp-5) var(--sp-4);
+  background: var(--surface-panel);
+  /* 인출된 낱장이다 — 1px 괘선 하나로 종이의 가장자리를 만든다. */
+  border: var(--border-strong);
+}
+
+.story-card__head {
+  display: grid;
+  gap: var(--sp-1);
+  padding-bottom: var(--sp-3);
+  border-bottom: var(--border);
+}
+
+.story-card__title {
+  margin: var(--sp-0);
+  font-family: var(--font-display);
+  font-size: var(--fs-display-m);
+  color: var(--text-display);
+}
+
+.story-card__foot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--sp-2);
+  border-top: var(--border);
+}
+
+/* ── 수첩 글 (장 카드와 「권」 탭이 함께 쓴다) ──────────────────────── */
+
+.story-note {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.story-note__line {
+  margin: var(--sp-0);
+  font-size: var(--fs-body);
+  line-height: 1.7;
+  color: var(--text-body);
+  /* 글은 한 단이다. 65자쯤에서 접혀야 눈이 줄을 안 잃는다. */
+  max-inline-size: 52ch;
+  text-wrap: pretty;
+}
+
+.story-note__strong {
+  font-weight: 600;
+  color: var(--text-display);
+}

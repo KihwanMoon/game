@@ -53,6 +53,8 @@ export { buildReplayTrace, findDecision } from './replayTrace'
 export type { ReplayTraceRow } from './replayTrace'
 
 export { DamageHeatmap } from './DamageHeatmap'
+export { ChapterCard } from './ChapterCard'
+export type { ChapterCardProps } from './ChapterCard'
 export type { DamageHeatmapProps } from './DamageHeatmap'
 
 export { HudScreen } from './HudScreen'

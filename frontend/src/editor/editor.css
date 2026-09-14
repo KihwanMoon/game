@@ -2453,3 +2453,91 @@
   font-family: var(--font-mono);
   font-size: var(--fs-mono-s);
 }
+
+/* ── 「권」 탭 ──────────────────────────────────────────────────────── */
+
+.story-lede {
+  margin: var(--sp-0) var(--sp-0) var(--sp-3);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--text-dim);
+  max-inline-size: 52ch;
+}
+
+.story-list {
+  display: grid;
+  gap: var(--sp-1);
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  list-style: none;
+}
+
+/* 펼친 글이 줄 아래에 붙는다 — 따로 창을 띄우면 목록에서 자리를 잃는다. */
+.story-list__item {
+  display: grid;
+  gap: var(--sp-2);
+  padding-block-end: var(--sp-2);
+  border-bottom: var(--border);
+}
+
+/* 장 번호는 자릿수가 달라도 같은 칸을 쓴다 — 안 그러면 이름 줄이 층마다 어긋난다. */
+.story-list__ord {
+  display: inline-block;
+  min-inline-size: 4ch;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+
+.story-list__name {
+  color: var(--text-body);
+}
+
+.story-terms {
+  display: grid;
+  gap: var(--sp-2);
+  margin: var(--sp-0);
+}
+
+/* **미디어쿼리를 안 쓴다** — 경계는 design/tokens/spacing.css 한 곳이다. 좁아지면 뜻이
+   제 줄로 내려가는 것을 `flex-basis` 가 스스로 정한다. */
+.story-terms__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+  align-items: baseline;
+}
+
+.story-terms__term {
+  flex: 0 0 auto;
+  min-inline-size: 10ch;
+  font-family: var(--font-display);
+  color: var(--text-display);
+}
+
+.story-terms__gloss {
+  /* 24ch 보다 좁아지면 제 줄로 내려간다 — 두 글자씩 접히는 것보다 낫다. */
+  flex: 1 1 24ch;
+  margin: var(--sp-0);
+  font-size: var(--fs-body-s);
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.story-taboos {
+  display: grid;
+  gap: var(--sp-2);
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  list-style: none;
+}
+
+.story-taboos__item {
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.story-taboos__gloss {
+  font-size: var(--fs-body-s);
+  line-height: 1.6;
+  color: var(--text-dim);
+}

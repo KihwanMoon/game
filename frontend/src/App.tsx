@@ -28,7 +28,7 @@
  * 그대로 구워 localStorage 에 디바운스 저장한다(`storage/`). 상태를 조각조각 들고 있으면
  * 새로 만든 조각을 저장에 넣는 것을 잊게 되고, 그런 결함은 새로고침을 해 봐야 드러난다.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   BattleView,
@@ -62,6 +62,8 @@ import type { RawBalanceFile } from './core/resources'
 import { validateRuleSet } from './core/rules/validator'
 import type { RuleSet } from './core/schemas'
 import { findRoomTitle } from './core/schemas/room'
+import { SHADOW, findChapter } from './content/story'
+import { DOPPEL_KIND_ID } from './battle/actorKind'
 import { ReplayView } from './admin/ReplayView'
 import type { ReplayInput, RunHistoryRow } from './storage'
 import { OUTCOME_ONGOING, OUTCOME_PLAYER_WIN } from './core/sim/phases'
@@ -71,6 +73,7 @@ import {
   AccountPanel,
   AdminPanel,
   BestiaryPanel,
+  VolumePanel,
   DiscoveryPanel,
   EvictionNotice,
   GrowthPanel,
@@ -109,8 +112,8 @@ import {
 } from './editor'
 import type { EditorTab, LinkState } from './editor'
 import { ErrorBoundary, formatCrash } from './ErrorBoundary'
-import { PostMortem, formatOutcome, recordBattle, usePlanTheme } from './hud'
-import type { BattleRecording } from './hud'
+import { ChapterCard, PostMortem, formatOutcome, recordBattle, usePlanTheme } from './hud'
+import type { BattleRecording, ChapterCardProps } from './hud'
 import {
   applyPresetImport,
   applyPresetLoad,
@@ -584,6 +587,13 @@ export function App(): React.JSX.Element {
   // 나타날 때마다 도면·규칙표·로그가 전부 밀려 화면이 흔들렸다 (실제 신고).
   const [settlements, setSettlements] = useState<readonly FloorSettlement[]>([])
   const [autoLeft, setAutoLeft] = useState<number | undefined>(undefined)
+  // 아직 안 읽은 장 카드들. **줄을 세운다** — 같은 판에서 그림자와 장이 함께 걸릴 수
+  // 있고, 둘을 겹쳐 띄우면 뒤엣것이 앞엣것을 가린다.
+  const [cards, setCards] = useState<readonly ChapterCardProps[]>([])
+  // 이미 띄운 것. **다시 안 띄운다** — 되풀이 관전에서 매번 걸리면 글이 방해물이 된다.
+  // 상태가 아니라 ref 인 이유는 이 값이 바뀌어도 화면이 다시 그려질 이유가 없어서다.
+  const seenFloors = useRef<Set<number>>(new Set())
+  const seenShadow = useRef(false)
   // **이번 방에서만 멈춘다.** 설정을 끄는 것과 다르다 — 한 번 멈추려고 기능을 끄게 하면
   // 다음 방부터도 안 넘어간다.
   const [isAutoStopped, setAutoStopped] = useState(false)
@@ -1240,6 +1250,11 @@ export function App(): React.JSX.Element {
    * 않고 시작할 때 얼린 것을 그대로 쓴다 — 방 중간에 규칙이 바뀌면 관전한 판과 서버가
    * 재시뮬한 판이 갈린다.
    */
+  /** 맨 앞 카드를 덮는다. 줄에 남은 것이 있으면 그것이 이어 선다. */
+  function dropCard(): void {
+    setCards((open) => open.slice(1))
+  }
+
   function goToNextRoom(): void {
     if (run === undefined) {
       return
@@ -1265,6 +1280,46 @@ export function App(): React.JSX.Element {
     setRun({ ...run, setup: next })
   }
 
+  // **글은 판이 끝난 뒤에 적힌다.** 수첩이므로 그것이 자연스럽고, 무엇보다 싸우는 동안
+  // 화면을 안 덮는다. 층을 다 돈 순간이 곧 한 장을 찍어 낸 순간이다 (`기획/6_1막_인출방`).
+  //
+  // **그림자는 층에 안 묶는다.** 둔갑은 죽은 자리에 서므로 몇 층에 설지 아무도 미리 못
+  // 정한다 — 지금 프로덕션은 스무 마리가 전부 9층이다. 층에 묶으면 「5장에서 만난다」가
+  // 대개 거짓이 된다.
+  useEffect(() => {
+    if (run === undefined || outcome !== OUTCOME_PLAYER_WIN) {
+      return
+    }
+    const floor = resolveRoomFloor(
+      run.setup.floor ?? 1,
+      run.setup.chain?.index ?? 0,
+      run.setup.roomsPerFloor ?? 0,
+    )
+    const hasShadow = (run.setup.snapshots ?? []).some(
+      (one) => one.kindId === DOPPEL_KIND_ID && (one.zoneFloor === 0 || one.zoneFloor === floor),
+    )
+    const chapter = checkFloorCleared(run.setup.chain?.index ?? 0, run.setup.roomsPerFloor ?? 0)
+      ? findChapter(floor)
+      : undefined
+    const added: ChapterCardProps[] = []
+    if (hasShadow && !seenShadow.current) {
+      seenShadow.current = true
+      added.push({ title: SHADOW.titleKo, note: SHADOW.noteKo, ordinal: '', onClose: dropCard })
+    }
+    if (chapter !== undefined && !seenFloors.current.has(chapter.floor)) {
+      seenFloors.current.add(chapter.floor)
+      added.push({
+        title: chapter.titleKo,
+        note: chapter.noteKo,
+        ordinal: `${String(chapter.floor)}장`,
+        onClose: dropCard,
+      })
+    }
+    if (added.length > 0) {
+      setCards((open) => [...open, ...added])
+    }
+  }, [outcome, run])
+
   // **방을 비우면 저절로 넘어간다.** 다만 곧장은 아니다 — 방 사이는 규칙을 고치는 유일한
   // 창이고(GDD §2.2), 곧장 넘기면 "고치려고 했는데 이미 넘어가 있다" 가 된다. 몇 초를
   // 세어 보여 주고, 그동안 멈출 수 있다.
@@ -1278,7 +1333,9 @@ export function App(): React.JSX.Element {
       isFinished: !isEditing && !checkOngoing(outcome),
       hasNext: run !== undefined && buildNextRoomSetup(run.setup, outcome) !== undefined,
       isEnabled: isAutoOn,
-      isStopped: isAutoStopped,
+      // **읽는 동안은 안 넘어간다.** 카드를 덮기도 전에 다음 방이 시작되면, 글을
+      // 읽은 대가로 판 하나를 못 본 셈이 된다.
+      isStopped: isAutoStopped || cards.length > 0,
     })
     if (!isEligible) {
       setAutoLeft(undefined)
@@ -1291,7 +1348,7 @@ export function App(): React.JSX.Element {
     return () => {
       clearInterval(timer)
     }
-  }, [outcome, run, isAutoOn, isAutoStopped, isEditing])
+  }, [outcome, run, isAutoOn, isAutoStopped, isEditing, cards.length])
 
   // 세다가 0 이 되면 넘어간다. **세는 것과 넘어가는 것을 갈라 둔다** — 한 효과에 두면
   // 넘어가면서 상태가 바뀌고 그 바뀜이 다시 타이머를 세워, 방 하나를 건너뛴다.
@@ -2010,6 +2067,13 @@ export function App(): React.JSX.Element {
         ),
       },
       {
+        // **막간은 흐르고 탭은 남는다.** 장 카드는 지날 때 한 번 뜨므로, 다시 읽을 자리가
+        // 없으면 그 글은 사실상 없는 것과 같다.
+        id: 'volume',
+        label: '권',
+        main: <VolumePanel bestFloor={meta.bestFloor} />,
+      },
+      {
         id: 'learn',
         label: '배움',
         main: (
@@ -2225,6 +2289,9 @@ export function App(): React.JSX.Element {
           weaponCatalogId={mainWeapon}
           onOutcome={setOutcome}
         />
+        {/* **장 카드가 사후 분석보다 앞선다.** 둘이 겹칠 일은 거의 없지만(카드는 이긴
+            판에만, 자동 사후 분석은 진 판에만 뜬다) 겹친다면 먼저 읽을 것은 글이다. */}
+        {cards[0] === undefined ? null : <ChapterCard {...cards[0]} />}
         {showPost && recording !== undefined ? (
           <PostMortem
             recording={recording}
