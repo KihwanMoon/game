@@ -20,7 +20,8 @@ import type { RuleSet } from './ruleset'
 // e9: 방벽이 **틱을 안 쓴다** (`plan.FREE_SKILLS`).
 // e10: 주문서가 넷으로 갈리고, 이미 걸린 주문서를 또 쓰는 규칙은 「불가」가 된다.
 // e11: 주문서가 조건 트리거로 **저절로 터진다** — 규칙표가 그 태그를 쓰면 자동은 물러난다.
-export const ENGINE_VERSION = 11
+// e12: 적 선공이 **플레이어를 따라 옮긴다** — 밴드가 보존되고 턴 순서가 바뀐다.
+export const ENGINE_VERSION = 12
 
 /**
  * 시드 상한. `Number.MAX_SAFE_INTEGER` 이며, 이것은 밸런스가 아니라 **이식 제약**이다.

@@ -106,7 +106,7 @@ def create_minion(
         등장한 개체.
     """
     stats = config.enemy_stats[kind_id]
-    hp_max, attack = get_scaled_enemy_stats(stats, config.floor_scale, config.floor)
+    hp_max, attack, initiative = get_scaled_enemy_stats(stats, config.floor_scale, config.floor)
     # 일련번호는 단조 증가여야 같은 시드가 같은 id 를 만든다 (R5).
     state.spawn_counter += 1
     minion = Entity(
@@ -119,7 +119,7 @@ def create_minion(
         attack=attack,
         defense=stats["defense"],
         attack_range=stats["attack_range"],
-        initiative=stats["initiative"],
+        initiative=initiative,
         regen_base=stats.get("regen_base", 0),
         cpu_budget=stats.get("cpu_budget", 0),
         consumables={ITEM_POTION: int(stats.get("potions", 0))},

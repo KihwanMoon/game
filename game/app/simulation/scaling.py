@@ -40,16 +40,22 @@ PERCENT_BASE = 100
 
 @dataclass(frozen=True)
 class FloorScale:
-    """balance.json 의 floor_scale 절을 그대로 담는 값."""
+    """개체를 만들 때 스탯에 얹는 것들. 대부분은 balance.json 의 floor_scale 절이다."""
 
     mult_pct_per_floor: int = DEFAULT_MULT_PCT_PER_FLOOR
+    # 선공에 더할 값. **층이 아니라 플레이어를 따라간다** — 파일에서 오지 않고 판을
+    # 짤 때 계산된다 (`services/run_battle.build_engine`). 여기 얹어 두는 이유는 개체를
+    # 만드는 세 자리가 이미 이 값을 들고 다니기 때문이고, 따로 실어 나르면 언젠가 한
+    # 자리가 빠진다 — 그러면 같은 방에 기준이 다른 적이 섞인다.
+    initiative_shift: int = 0
 
 
-def build_floor_scale(floor_scale: dict) -> FloorScale:
+def build_floor_scale(floor_scale: dict, initiative_shift: int = 0) -> FloorScale:
     """floor_scale 절을 규칙 값으로 옮긴다.
 
     Args:
         floor_scale: balance.json 의 floor_scale 딕셔너리.
+        initiative_shift: 적 선공에 더할 값. 플레이어가 기준값에서 얼마나 자랐는가다.
 
     Returns:
         읽어들인 규칙. 빠진 항목은 기본값으로 채운다.
@@ -61,7 +67,7 @@ def build_floor_scale(floor_scale: dict) -> FloorScale:
     mult = int(floor_scale.get("enemy_mult_pct_per_floor", DEFAULT_MULT_PCT_PER_FLOOR))
     if mult < PERCENT_BASE:
         raise ValueError(f"층 스케일 배율은 100 이상이어야 한다: {mult}")
-    return FloorScale(mult_pct_per_floor=mult)
+    return FloorScale(mult_pct_per_floor=mult, initiative_shift=initiative_shift)
 
 
 def calculate_scaled_stat(base: int, mult_pct_per_floor: int, floor: int) -> int:
@@ -85,11 +91,12 @@ def calculate_scaled_stat(base: int, mult_pct_per_floor: int, floor: int) -> int
     return value
 
 
-def get_scaled_enemy_stats(stats: dict, scale: FloorScale, floor: int) -> tuple[int, int]:
-    """적 한 종류의 층 스케일된 최대 HP 와 공격력.
+def get_scaled_enemy_stats(stats: dict, scale: FloorScale, floor: int) -> tuple[int, int, int]:
+    """적 한 종류의 조정된 최대 HP · 공격력 · 선공.
 
     개체를 만드는 모든 자리(방 배치·소환·추격자)가 이 함수를 거쳐야 한다. 한 자리라도
     빠뜨리면 같은 층에 서로 다른 기준의 적이 섞여, 도감이 적은 수치와 실제가 갈린다.
+    **선공을 여기에 함께 둔 것도 그래서다** — 따로 두면 세 자리 중 하나가 빠진다.
 
     Args:
         stats: balance.json 의 그 종류 항목.
@@ -97,9 +104,34 @@ def get_scaled_enemy_stats(stats: dict, scale: FloorScale, floor: int) -> tuple[
         floor: 현재 층.
 
     Returns:
-        (최대 HP, 공격력).
+        (최대 HP, 공격력, 선공).
     """
     return (
         calculate_scaled_stat(stats["hp_max"], scale.mult_pct_per_floor, floor),
         calculate_scaled_stat(stats["attack"], scale.mult_pct_per_floor, floor),
+        get_shifted_initiative(stats["initiative"], scale),
     )
+
+
+def get_shifted_initiative(base: int, scale: FloorScale) -> int:
+    """플레이어를 따라 옮긴 선공 (2026-09-14).
+
+    **선공은 절대값이 아니라 밴드다.** 적 선공은 20~78 로 고정인데 플레이어 선공은
+    `50 + 2×민첩` 으로 한계 없이 자란다. 그래서 민첩을 올린 캐릭터에게는 5층부터 모든
+    적이 느려지고, 레벨 20 을 넘기면 전 층에서 그렇게 된다 (실측: 붙은 틱 30번 중
+    「나보다 빠른 적」 0번). 그 상태에서 `적 선공 > 내 선공` 은 **영영 거짓인 항**이고,
+    그것을 읽는 규칙은 cpu 만 먹는다.
+
+    옮기면 밴드가 보존된다 — 돌미륵은 늘 나보다 30 느리고 주린 이리는 늘 28 빠르다.
+    **민첩이 선공 순서를 사지는 못하게 된다**(방어는 그대로 산다). 그 대가로 축이
+    레벨·빌드와 무관하게 살아 있다 (실측: 죽은 층 10 → 1).
+
+    Args:
+        base: balance.json 에 적힌 그 종류의 선공.
+        scale: 옮길 양을 담은 규칙.
+
+    Returns:
+        옮긴 선공. **0 아래로는 안 내려간다** — 음수 선공은 정렬에서만 뜻이 있고
+        화면에서는 읽을 수 없는 수다.
+    """
+    return max(0, base + scale.initiative_shift)

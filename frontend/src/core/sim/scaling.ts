@@ -32,6 +32,12 @@ const PERCENT_BASE = 100
 /** balance.json 의 floor_scale 절을 그대로 담는 값. */
 export interface FloorScale {
   readonly multPctPerFloor: number
+  /**
+   * 선공에 더할 값. **층이 아니라 플레이어를 따라간다** — 파일에서 오지 않고 판을 짤 때
+   * 계산된다 (`services/runBattle.buildEngine`). 여기 얹어 두는 이유는 개체를 만드는 세
+   * 자리가 이미 이 값을 들고 다니기 때문이고, 따로 실어 나르면 언젠가 한 자리가 빠진다.
+   */
+  readonly initiativeShift: number
 }
 
 /** balance.json 의 floor_scale 절 원시 형태. */
@@ -44,6 +50,7 @@ export interface RawFloorScale {
 /** 절이 통째로 빠졌을 때의 안전망. 값을 바꿀 자리가 아니다. */
 export const DEFAULT_FLOOR_SCALE: FloorScale = {
   multPctPerFloor: DEFAULT_MULT_PCT_PER_FLOOR,
+  initiativeShift: 0,
 }
 
 /**
@@ -54,12 +61,15 @@ export const DEFAULT_FLOOR_SCALE: FloorScale = {
  * @throws 퍼센트가 음수인 경우. 층이 깊어질수록 적이 약해지면 층 진행이 난이도가 아니라
  *   보상이 된다.
  */
-export function buildFloorScale(floorScale: RawFloorScale | undefined): FloorScale {
+export function buildFloorScale(
+  floorScale: RawFloorScale | undefined,
+  initiativeShift = 0,
+): FloorScale {
   const mult = Math.trunc(Number(floorScale?.enemy_mult_pct_per_floor ?? DEFAULT_MULT_PCT_PER_FLOOR))
   if (mult < PERCENT_BASE) {
     throw new Error(`층 스케일 배율은 100 이상이어야 한다: ${String(mult)}`)
   }
-  return { multPctPerFloor: mult }
+  return { multPctPerFloor: mult, initiativeShift }
 }
 
 /**
@@ -81,16 +91,34 @@ export function calculateScaledStat(base: number, multPctPerFloor: number, floor
   return value
 }
 
-/** 층 스케일을 거친 최대 HP 와 공격력. */
+/** 조정을 거친 최대 HP · 공격력 · 선공. */
 export interface ScaledEnemyStats {
   readonly hpMax: number
   readonly attack: number
+  readonly initiative: number
 }
 
-/** 스케일 대상이 되는 능력치. balance.json 의 적 항목이 이 모양을 만족한다. */
+/** 조정 대상이 되는 능력치. balance.json 의 적 항목이 이 모양을 만족한다. */
 export interface ScalableStats {
   readonly hp_max: number
   readonly attack: number
+  readonly initiative: number
+}
+
+/**
+ * 플레이어를 따라 옮긴 선공 (2026-09-14) — 파이썬 `get_shifted_initiative` 의 이식.
+ *
+ * **선공은 절대값이 아니라 밴드다.** 적 선공은 20~78 로 고정인데 플레이어 선공은
+ * `50 + 2×민첩` 으로 한계 없이 자란다. 그래서 민첩을 올린 캐릭터에게는 5층부터 모든 적이
+ * 느려지고, 레벨 20 을 넘기면 전 층에서 그렇게 된다 — 그 상태에서 `적 선공 > 내 선공` 은
+ * 영영 거짓인 항이고, 그것을 읽는 규칙은 cpu 만 먹는다.
+ *
+ * @param base balance.json 에 적힌 그 종류의 선공.
+ * @param scale 옮길 양을 담은 규칙.
+ * @returns 옮긴 선공. 0 아래로는 안 내려간다.
+ */
+export function getShiftedInitiative(base: number, scale: FloorScale): number {
+  return Math.max(0, base + scale.initiativeShift)
 }
 
 /**
@@ -112,5 +140,6 @@ export function getScaledEnemyStats(
   return {
     hpMax: calculateScaledStat(stats.hp_max, scale.multPctPerFloor, floor),
     attack: calculateScaledStat(stats.attack, scale.multPctPerFloor, floor),
+    initiative: getShiftedInitiative(stats.initiative, scale),
   }
 }

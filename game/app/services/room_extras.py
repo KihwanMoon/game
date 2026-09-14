@@ -127,7 +127,7 @@ def build_enemy_entity(
     Returns:
         만들어진 개체.
     """
-    hp_max, attack = get_scaled_enemy_stats(kind, scale, floor)
+    hp_max, attack, initiative = get_scaled_enemy_stats(kind, scale, floor)
     defense = kind["defense"]
     cpu_budget = kind.get("cpu_budget", 0)
     attack_range = kind["attack_range"]
@@ -155,7 +155,7 @@ def build_enemy_entity(
         attack=attack,
         defense=defense,
         attack_range=attack_range,
-        initiative=kind["initiative"],
+        initiative=initiative,
         regen_base=kind["regen_base"],
         cpu_budget=cpu_budget,
         consumables={"POTION": potions},

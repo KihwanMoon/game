@@ -80,8 +80,36 @@ def test_scaling_stays_integer_and_rounds_down():
 def test_enemy_stats_scale_both_axes(balance):
     scale = build_floor_scale(balance["floor_scale"])
     rusher = next(kind for kind in balance["enemies"] if kind["id"] == "goblin_rusher")
-    assert get_scaled_enemy_stats(rusher, scale, FIRST_FLOOR) == (RUSHER_HP, RUSHER_ATTACK)
-    assert get_scaled_enemy_stats(rusher, scale, DEEP_FLOOR) == (57, 10)
+    base_initiative = rusher["initiative"]
+    assert get_scaled_enemy_stats(rusher, scale, FIRST_FLOOR) == (
+        RUSHER_HP,
+        RUSHER_ATTACK,
+        base_initiative,
+    )
+    assert get_scaled_enemy_stats(rusher, scale, DEEP_FLOOR) == (57, 10, base_initiative)
+
+
+def test_initiative_follows_the_player_not_the_floor(balance):
+    """★ 선공은 층이 아니라 플레이어를 따라 옮긴다 (2026-09-14).
+
+    안 옮기면 민첩을 올린 캐릭터에게 모든 적이 느려지고, `적 선공 > 내 선공` 은 영영
+    거짓인 항이 된다 — 그것을 읽는 규칙은 cpu 만 먹는다.
+    """
+    rusher = next(kind for kind in balance["enemies"] if kind["id"] == "goblin_rusher")
+    base_initiative = rusher["initiative"]
+    # 층이 깊어져도 선공은 안 자란다. 자라는 것은 HP 와 공격력뿐이다.
+    flat = build_floor_scale(balance["floor_scale"])
+    assert get_scaled_enemy_stats(rusher, flat, DEEP_FLOOR)[2] == base_initiative
+    # 플레이어가 50 만큼 자랐으면 적도 50 만큼 따라온다 — 밴드가 보존된다.
+    shifted = build_floor_scale(balance["floor_scale"], initiative_shift=50)
+    assert get_scaled_enemy_stats(rusher, shifted, FIRST_FLOOR)[2] == base_initiative + 50
+
+
+def test_shifted_initiative_never_goes_below_zero(balance):
+    """★ 음수 선공은 정렬에서만 뜻이 있고 화면에서는 읽을 수 없는 수다."""
+    slow = {"hp_max": 1, "attack": 1, "initiative": 5}
+    scale = build_floor_scale(balance["floor_scale"], initiative_shift=-99)
+    assert get_scaled_enemy_stats(slow, scale, FIRST_FLOOR)[2] == 0
 
 
 def test_room_spawns_carry_the_floor_scale(balance, templates):
@@ -161,8 +189,8 @@ def test_scaling_does_not_touch_the_player(balance, templates):
 
 def test_extra_entities_can_be_scaled_by_hand():
     # 골든 스크립트처럼 템플릿 밖에서 개체를 세우는 자리도 같은 함수를 쓴다.
-    stats = {"hp_max": RUSHER_HP, "attack": RUSHER_ATTACK}
-    hp_max, attack = get_scaled_enemy_stats(stats, FloorScale(), DEEP_FLOOR)
+    stats = {"hp_max": RUSHER_HP, "attack": RUSHER_ATTACK, "initiative": 60}
+    hp_max, attack, _initiative = get_scaled_enemy_stats(stats, FloorScale(), DEEP_FLOOR)
     entity = Entity(
         entity_id="x",
         kind_id="goblin_rusher",

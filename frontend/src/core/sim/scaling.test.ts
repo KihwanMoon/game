@@ -15,11 +15,13 @@ import {
   buildFloorScale,
   calculateScaledStat,
   getScaledEnemyStats,
+  getShiftedInitiative,
 } from './scaling'
 import { calculateScaledAttack } from './pressure'
 
 const RUSHER_HP = 40
 const RUSHER_ATTACK = 8
+const RUSHER_INITIATIVE = 60
 const DEEP_FLOOR = 3
 const STALL_TICKS = 100
 
@@ -67,13 +69,27 @@ describe('층 깊이 스케일', () => {
     expect(Number.isInteger(calculateScaledStat(7, 110, DEEP_FLOOR))).toBe(true)
   })
 
+  it('★ 선공은 층이 아니라 플레이어를 따라 옮긴다 (G3)', () => {
+    // 파이썬 `test_initiative_follows_the_player_not_the_floor` 와 같은 질문이다.
+    // 안 옮기면 민첩을 올린 캐릭터에게 모든 적이 느려지고, `적 선공 > 내 선공` 은
+    // 영영 거짓인 항이 된다 — 그것을 읽는 규칙은 cpu 만 먹는다 (2026-09-14 실측).
+    const stats = { hp_max: RUSHER_HP, attack: RUSHER_ATTACK, initiative: RUSHER_INITIATIVE }
+    const flat = buildFloorScale(BALANCE_DATA.floorScale)
+    expect(getScaledEnemyStats(stats, flat, DEEP_FLOOR).initiative).toBe(RUSHER_INITIATIVE)
+    const shifted = buildFloorScale(BALANCE_DATA.floorScale, 50)
+    expect(getScaledEnemyStats(stats, shifted, FIRST_FLOOR).initiative).toBe(RUSHER_INITIATIVE + 50)
+    expect(getShiftedInitiative(5, buildFloorScale(BALANCE_DATA.floorScale, -99))).toBe(0)
+  })
+
   it('최대 HP 와 공격력 두 축을 각각 스케일한다', () => {
     const scaled = getScaledEnemyStats(
-      { hp_max: RUSHER_HP, attack: RUSHER_ATTACK },
+      { hp_max: RUSHER_HP, attack: RUSHER_ATTACK, initiative: RUSHER_INITIATIVE },
       buildFloorScale(BALANCE_DATA.floorScale),
       DEEP_FLOOR,
     )
-    expect(scaled).toEqual({ hpMax: 57, attack: 10 })
+    // **선공은 층으로 안 자란다.** 자라는 것은 HP 와 공격력뿐이고, 선공이 움직이는
+    // 축은 층이 아니라 플레이어다 (아래 시험).
+    expect(scaled).toEqual({ hpMax: 57, attack: 10, initiative: RUSHER_INITIATIVE })
   })
 
   it('방 배치가 층 스케일을 거친다', () => {

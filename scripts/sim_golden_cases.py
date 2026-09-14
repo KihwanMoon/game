@@ -131,6 +131,24 @@ LOADOUT_CASES: tuple[tuple[tuple[str, int, int], PlayerLoadout], ...] = (
             skills=("ATTACK", "SKILL_2"),
         ),
     ),
+    (
+        # **선공이 기준값(50)보다 높다** (e12). 적 선공이 그만큼 따라 옮겨지므로 턴
+        # 순서가 이 사례에서만 달라진다 — 다른 골든은 전부 선공 50 이라 이동량이 0 이고,
+        # 그래서 **이 경로를 아무도 안 덮고 있었다.** 깊은 층으로 둔 이유는 층 스케일과
+        # 함께 걸릴 때 두 코어가 갈릴 자리가 가장 많기 때문이다 (G3).
+        ("veteran_hall", 4646, 9),
+        PlayerLoadout(
+            hp_max=130,
+            attack=18,
+            defense=9,
+            attack_range=1,
+            initiative=86,
+            cpu_budget=8,
+            rule_slots=5,
+            skill_power_pct=BASE_SKILL_POWER_PCT,
+            skills=("ATTACK", "SKILL_2"),
+        ),
+    ),
 )
 
 # USE_SKILL 이 실행할 스킬. 이 정책은 규칙표를 타지 않으므로 여기서 정한다.

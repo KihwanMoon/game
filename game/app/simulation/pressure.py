@@ -257,7 +257,7 @@ class PressureTracker:
             return None
 
         position = state.rng.get_choice(spawns)
-        hp_max, attack = get_scaled_enemy_stats(stats, self.floor_scale, self.floor)
+        hp_max, attack, initiative = get_scaled_enemy_stats(stats, self.floor_scale, self.floor)
         # 소환물과 같은 일련번호를 쓴다. id 가 겹치면 한쪽이 조용히 덮인다.
         state.spawn_counter += 1
         self.hunter_count += 1
@@ -271,7 +271,7 @@ class PressureTracker:
             attack=attack,
             defense=stats["defense"],
             attack_range=stats["attack_range"],
-            initiative=stats["initiative"],
+            initiative=initiative,
             regen_base=stats.get("regen_base", 0),
             cpu_budget=stats.get("cpu_budget", 0),
             flags={HUNTER_FLAG: True},

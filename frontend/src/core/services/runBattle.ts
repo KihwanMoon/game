@@ -277,7 +277,13 @@ export function buildEngine(setup: EngineSetup): TickEngine {
 
   const byId = new Map(balance.enemies.map((kind) => [kind.id, kind]))
   const floor = setup.floor ?? DEFAULT_FLOOR
-  const scale = buildFloorScale(balance.floorScale)
+  // **선공은 플레이어를 따라 옮긴다** (`sim/scaling.getShiftedInitiative`). 여기서
+  // 계산하는 이유는 플레이어가 방금 세워졌고, 이 한 개의 `scale` 이 개체를 만드는 세
+  // 자리(방 배치·소환·추격자)로 그대로 흘러가기 때문이다. 파이썬과 같은 줄이다 (G3).
+  const scale = buildFloorScale(
+    balance.floorScale,
+    (loadout?.initiative ?? playerStats.initiative) - playerStats.initiative,
+  )
   // 스냅샷은 entityId 로 겹친다. 방 배치가 `{kind}_{index}` 로 붙이므로 그 이름을
   // 겨냥하며, 이름이 갈리면 스냅샷이 아무에게도 적용되지 않고 조용히 넘어간다.
   const overrides = buildFloorOverrides(setup.snapshots ?? [], floor, setup.roomIndex ?? -1)
@@ -322,7 +328,7 @@ export function buildEngine(setup: EngineSetup): TickEngine {
         // 스탯만 대체하던 때는 장궁 든 봇의 그림자가 사거리 1 근접으로 싸웠다. 안 실린
         // 값은 종의 것을 그대로 쓰므로, 옛 티켓은 예전과 똑같이 재시뮬된다 (R5).
         attackRange: found?.attackRange || kind.attack_range,
-        initiative: kind.initiative,
+        initiative: scaled.initiative,
         regenBase: kind.regen_base ?? 0,
         cpuBudget: found?.cpuBudget ?? kind.cpu_budget ?? 0,
         consumables: new Map([

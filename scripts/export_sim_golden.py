@@ -23,16 +23,15 @@ from typing import Any
 
 from game.app.progression.attributes import build_attribute_bonus
 from game.app.services.run_battle import build_engine, load_balance, run_battle
-from game.app.simulation.engine import TickEngine
 from game.app.simulation.perception import PerceptionSnapshot
 from game.app.simulation.plan import PlannedAction
-from game.app.simulation.scaling import build_floor_scale, get_scaled_enemy_stats
 from game.app.simulation.selectors import SELECTOR_NEAREST, resolve_target
-from game.app.simulation.state import FACTION_ENEMY, Entity, WorldState
+from game.app.simulation.state import Entity, WorldState
 from game.config import BALANCE_PATH, ROOM_TEMPLATES_PATH
 from game.schemas.loadout import PlayerLoadout, build_loadout_payload
 from game.schemas.monster_snapshot import MonsterSnapshot, build_snapshot_payload
 from game.schemas.room import RoomTemplate, load_room_templates
+from scripts.golden_battle_cases import add_extra_enemies
 from scripts.sim_golden_cases import (
     ACTION_CYCLE,
     ATTRIBUTE_CASES,
@@ -120,43 +119,6 @@ def find_template(templates: tuple[RoomTemplate, ...], template_id: str) -> Room
         if template.template_id == template_id:
             return template
     raise KeyError(f"룸 템플릿이 없다: {template_id}")
-
-
-def add_extra_enemies(
-    engine: TickEngine, balance: dict, extras: tuple[tuple[str, int, int], ...]
-) -> None:
-    """템플릿에 없는 적을 방에 덧붙인다.
-
-    id 는 `{종류}_x{순번}` 이다. 템플릿 스폰의 `_{index}` 와 겹치지 않아야 한 쪽이 조용히
-    덮이지 않는다.
-
-    Args:
-        engine: 조립된 엔진.
-        balance: 밸런스 딕셔너리.
-        extras: (종류 id, x, y) 목록.
-    """
-    by_id = {kind["id"]: kind for kind in balance["enemies"]}
-    scale = build_floor_scale(balance.get("floor_scale", {}))
-    for index, (kind_id, x, y) in enumerate(extras):
-        kind = by_id[kind_id]
-        hp_max, attack = get_scaled_enemy_stats(kind, scale, engine.config.floor)
-        entity_id = f"{kind_id}_x{index}"
-        engine.state.entities[entity_id] = Entity(
-            entity_id=entity_id,
-            kind_id=kind_id,
-            faction=FACTION_ENEMY,
-            position=(x, y),
-            hp=hp_max,
-            hp_max=hp_max,
-            attack=attack,
-            defense=kind["defense"],
-            attack_range=kind["attack_range"],
-            initiative=kind["initiative"],
-            regen_base=kind["regen_base"],
-            cpu_budget=kind.get("cpu_budget", 0),
-            consumables={"POTION": int(kind.get("potions", 0))},
-        )
-    engine.register_newcomers()
 
 
 def build_case(

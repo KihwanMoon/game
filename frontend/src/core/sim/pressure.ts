@@ -426,7 +426,7 @@ export class PressureTracker {
       attack: scaled.attack,
       defense: stats.defense,
       attackRange: stats.attack_range,
-      initiative: stats.initiative,
+      initiative: scaled.initiative,
       regenBase: stats.regen_base ?? 0,
       cpuBudget: stats.cpu_budget ?? 0,
       flags: new Map([[HUNTER_FLAG, true]]),

@@ -12,7 +12,7 @@ from game.app.services.run_battle import (
     load_balance,
 )
 from game.app.simulation.engine import TickEngine
-from game.app.simulation.scaling import build_floor_scale, get_scaled_enemy_stats
+from game.app.simulation.scaling import get_scaled_enemy_stats
 from game.app.simulation.state import FACTION_ENEMY, Entity
 from game.config import (
     BALANCE_PATH,
@@ -186,8 +186,9 @@ def add_extra_enemies(
 ) -> None:
     """템플릿에 없는 적을 방에 덧붙인다.
 
-    층 깊이 스케일을 방 배치와 같은 함수로 건다. 걸지 않으면 층 2 이상의 케이스에서
-    덧붙인 적만 층 1 스탯으로 서서, 같은 방에 두 기준이 섞인 것을 기준 문서가 고정한다.
+    **골든 내보내기 둘이 같은 벌을 쓴다.** 예전에는 이 함수가 두 파일에 똑같이
+    복사돼 있었고, e12 에서 한쪽만 고쳤다가 다른 쪽이 조용히 옛 기준으로 적을
+    세웠다 — 같은 방에 기준이 둘이면 기준 문서가 그 어긋남을 고정한다 (§3).
 
     id 는 `{종류}_x{순번}` 이다. 템플릿 스폰의 `_{index}` 와 겹치지 않아야 한 쪽이 조용히
     덮이지 않는다.
@@ -198,10 +199,12 @@ def add_extra_enemies(
         extras: (종류 id, x, y) 목록.
     """
     by_id = {kind["id"]: kind for kind in balance["enemies"]}
-    scale = build_floor_scale(balance.get("floor_scale", {}))
+    # **엔진이 쓰는 것을 그대로 쓴다.** 여기서 다시 지으면 선공 이동량(e12)이 빠져,
+    # 덧붙인 적만 다른 기준으로 서게 된다 — 같은 방에 기준이 둘이면 대조가 거짓말한다.
+    scale = engine.config.floor_scale
     for index, (kind_id, x, y) in enumerate(extras):
         kind = by_id[kind_id]
-        hp_max, attack = get_scaled_enemy_stats(kind, scale, engine.config.floor)
+        hp_max, attack, initiative = get_scaled_enemy_stats(kind, scale, engine.config.floor)
         entity_id = f"{kind_id}_x{index}"
         engine.state.entities[entity_id] = Entity(
             entity_id=entity_id,
@@ -213,7 +216,7 @@ def add_extra_enemies(
             attack=attack,
             defense=kind["defense"],
             attack_range=kind["attack_range"],
-            initiative=kind["initiative"],
+            initiative=initiative,
             regen_base=kind["regen_base"],
             cpu_budget=kind.get("cpu_budget", 0),
             consumables={"POTION": int(kind.get("potions", 0))},

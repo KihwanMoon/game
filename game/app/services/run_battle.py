@@ -179,7 +179,13 @@ def build_engine(
 
     kinds = balance["enemies"]
     by_id = {kind["id"]: kind for kind in kinds}
-    scale = build_floor_scale(balance.get("floor_scale", {}))
+    # **선공은 플레이어를 따라 옮긴다** (scaling.get_shifted_initiative). 여기서
+    # 계산하는 이유는 플레이어가 방금 세워졌고, 이 한 개의 `scale` 이 개체를 만드는
+    # 세 자리(방 배치·소환·추격자)로 그대로 흘러가기 때문이다.
+    scale = build_floor_scale(
+        balance.get("floor_scale", {}),
+        initiative_shift=state.entities["player"].initiative - player_stats["initiative"],
+    )
     # 스냅샷은 entity_id 로 겹친다. 방 배치가 `{kind}_{index}` 로 붙이므로 그 이름을
     # 겨냥하며, 이름이 갈리면 스냅샷이 아무에게도 적용되지 않고 그 사실이 조용히 넘어간다.
     overrides = build_floor_overrides(snapshots, floor, room_index)
