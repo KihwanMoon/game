@@ -11,6 +11,10 @@
  * **시즌 이름이 코어 버전이다** (결정 #06). 밸런스나 블록 목록이 바뀌면 과거 기록이
  * 재현되지 않으므로 순위표가 새로 시작한다 — 화면이 그 이유를 적어 둔다.
  *
+ * **이름이 「명부」인 이유** (2026-09-15). 예전에는 「비각」이었는데 그것이 게임 이름이
+ * 되면서 앱 이름과 탭 이름이 같아졌다. 비각은 **기억이 사는 곳**이고, 이 탭이 펴 보이는
+ * 것은 그 안의 **이름들**이다 — 목록에서 빠진 것은 세상에서도 빠진다(`기획/6_1막`).
+ *
  * **경매장도 여기 있지 않다.** 세계 탭은 「나 밖의 일」인데 경매는 내 가방을 바꾸는
  * 일이다 — 사면 돈이 나가고 아이템이 들어오며 되돌릴 수 없다(귀속된다, 결정 #07).
  * 순위표 아래에 있으면 그만한 무게로 안 보였고, 매물 열둘이면 순위표가 화면 밖으로
@@ -94,7 +98,7 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
   const leaderboard = board === 'doppel' ? props.doppelBoard : props.leaderboard
   return (
     <Panel
-      title="비각"
+      title="명부"
       meta={leaderboard === undefined ? "" : `시즌 ${leaderboard.coreVersion}`}
       tone="panel"
       padded

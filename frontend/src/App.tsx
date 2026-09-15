@@ -2108,7 +2108,7 @@ export function App(): React.JSX.Element {
       },
       {
         id: 'world',
-        label: '비각',
+        label: '명부',
         main: (
           <>
               <WorldPanel
