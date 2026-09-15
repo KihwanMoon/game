@@ -19,7 +19,12 @@ from fastapi import APIRouter, HTTPException, status
 from game.api.deps import CurrentAccount, get_core_version, get_pool
 from game.api.schemas import MetaRequest, MetaResponse
 from game.app.store.meta import load_meta_payload, save_meta_payload
-from game.schemas.meta_save import MetaSave, build_meta_payload, parse_meta_save
+from game.schemas.meta_save import (
+    MetaSave,
+    build_meta_payload,
+    parse_meta_save,
+    resolve_draft,
+)
 
 router = APIRouter()
 
@@ -73,10 +78,16 @@ def save_meta(request: MetaRequest, account: CurrentAccount) -> MetaResponse:
     # 초안(편집 중인 규칙표)은 성취가 아니라 **쓰는 사람의 것**이라 그대로 받는다.
     # 예전에는 프리셋만 얹었고, 그래서 기기를 바꾸면 규칙이 사라졌다 — 올라오긴 했는데
     # 여기서 버려지고 있었다.
+    #
+    # **다만 빈 초안은 안 받는다** (`resolve_draft`, 2026-09-15). 0줄짜리 하나면 남이 몇
+    # 시간 짠 것이 사라지고, 브라우저에 옛 코드가 남아 있는 한 클라이언트를 고쳐도 계속
+    # 온다 — 실제로 한 계정에서 세 번 그렇게 지워졌다. 클라이언트는 적대적이라고
+    # 전제하므로 이 판단은 여기에 있어야 한다.
+    kept = parse_meta_save(stored) if stored else MetaSave()
     merged = replace(
-        parse_meta_save(stored) if stored else MetaSave(),
+        kept,
         presets=incoming.presets,
-        draft=incoming.draft,
+        draft=resolve_draft(kept.draft, incoming.draft),
     )
     payload = build_meta_payload(merged)
     save_meta_payload(pool, account.account_id, payload, get_core_version())

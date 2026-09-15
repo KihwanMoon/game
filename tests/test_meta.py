@@ -32,8 +32,9 @@ from game.schemas.meta_save import (
     MAX_SLOT_BONUS,
     BestiaryRecord,
     MetaSave,
+    resolve_draft,
 )
-from game.schemas.ruleset import load_rulesets
+from game.schemas.ruleset import Condition, Rule, RuleSet, Term, load_rulesets
 
 SUMMONER_KIND = "goblin_summoner"
 BOMBER_KIND = "bomb_slime"
@@ -296,3 +297,48 @@ def test_the_slot_bonus_is_reachable_at_all():
     reached = resolve_deepest_floor(1, 20, 5)
     assert reached == 4
     assert get_slot_bonus(reached) == 3
+
+
+# ── 빈 초안은 서버가 안 받는다 (2026-09-15) ──────────────────────────────
+
+
+def build_rule() -> Rule:
+    """시험용 규칙 한 줄.
+
+    Returns:
+        가장 단순한 규칙.
+    """
+    return Rule(
+        priority=1,
+        conditions=Condition(
+            op="SINGLE",
+            terms=(Term(lhs="self_hp_percent", comparison="<=", rhs=50),),
+        ),
+        action="ATTACK",
+    )
+
+
+def test_empty_draft_never_replaces_a_saved_one():
+    """★ 0줄짜리 하나면 남이 몇 시간 짠 것이 사라진다.
+
+    실제로 한 계정에서 **세 번** 그렇게 지워졌다. 클라이언트를 세 자리 고쳤는데도
+    브라우저에 옛 코드가 남아 있는 한 같은 요청이 계속 왔다 — 그래서 판단이 서버에
+    있어야 한다 (CLAUDE.md: 클라이언트는 적대적이라고 전제한다).
+    """
+    saved = RuleSet(ruleset_id="mine", version=1, rules=(build_rule(),))
+    empty = RuleSet(ruleset_id="mine", version=1, rules=())
+    assert resolve_draft(saved, empty) is saved
+
+
+def test_a_real_draft_wins():
+    """★ 지키기가 저장을 막으면 안 된다 — 한 줄이라도 오면 그것이 이긴다."""
+    saved = RuleSet(ruleset_id="old", version=1, rules=(build_rule(),))
+    fresh = RuleSet(ruleset_id="new", version=2, rules=(build_rule(),))
+    assert resolve_draft(saved, fresh) is fresh
+
+
+def test_nothing_saved_yet_takes_what_comes():
+    """저장된 것이 없으면 온 것을 둔다 — 새 계정이 그 경우다."""
+    empty = RuleSet(ruleset_id="first_rule", version=1, rules=())
+    assert resolve_draft(None, empty) is empty
+    assert resolve_draft(None, None) is None

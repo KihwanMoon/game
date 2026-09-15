@@ -73,6 +73,39 @@ class MetaSave:
     draft: RuleSet | None = None
 
 
+def resolve_draft(stored: RuleSet | None, incoming: RuleSet | None) -> RuleSet | None:
+    """저장된 초안과 방금 올라온 초안 중 **잃을 것이 없는 쪽**을 고른다.
+
+    **클라이언트는 적대적이라고 전제한다** (CLAUDE.md). 버그 있는 클라이언트와 악의적인
+    클라이언트는 서버에서 구별할 수 없고, 둘 다 같은 요청을 보낸다 — 0줄짜리 초안 하나면
+    남이 몇 시간 짠 것이 사라진다. 실제로 2026-09-15 에 한 계정에서 **세 번** 그렇게
+    지워졌고, 브라우저에 옛 코드가 남아 있는 한 클라이언트 수정만으로는 안 막혔다.
+
+    비어 있는 것은 **선택이 아니라 부재**다. 「다 지웠다」와 「아직 아무것도 없다」를
+    서버가 구별할 방법이 없으므로, 구별이 안 될 때는 **지우지 않는 쪽**에 붙는다.
+    한 줄이라도 올라오면 그것이 이긴다 — 지키기가 저장을 막으면 안 된다.
+
+    **빈 초안을 못 만들게 되는 대가는 치를 만하다.** 규칙이 0줄인 내력으로는 출격도
+    안 되고(`App.findLaunchBlocker`), 한 줄을 적어 저장하면 그 순간 덮인다.
+
+    **프리셋에는 이 규율을 안 건다.** 슬롯을 지우는 것은 버튼을 눌러야 하는 명시적
+    행동이라 「마지막 하나를 지웠다」가 실제 뜻일 수 있다. 초안은 그렇게 비우는 물건이
+    아니다.
+
+    Args:
+        stored: 지금 저장돼 있는 초안. 없으면 None.
+        incoming: 방금 올라온 초안. 없으면 None.
+
+    Returns:
+        저장할 초안. 둘 다 비어 있으면 올라온 것을 둔다 — 이름과 판을 지키기 위해서다.
+    """
+    if incoming is not None and incoming.rules:
+        return incoming
+    if stored is not None and stored.rules:
+        return stored
+    return incoming if incoming is not None else stored
+
+
 def get_format_version(tag: str) -> int:
     """형식 태그에서 버전 정수를 읽는다.
 
