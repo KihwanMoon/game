@@ -410,10 +410,14 @@ export function adoptPresets(
  * @returns 새 세션.
  */
 export function adoptAccount(session: EditorSession, meta: MetaSave): EditorSession {
+  // **0줄은 「없음」과 같이 다룬다** (2026-09-15, 같은 사고 두 번째). 로그인은 서버가
+  // 이기지만, 그 계정의 초안이 비어 있다면 이길 것이 없다 — 빈 것으로 갈아 끼우면
+  // 방금까지 짜던 것이 사라지고 그 손실은 되돌릴 수 없다.
+  const adopted = (meta.draft?.rules.length ?? 0) > 0 ? meta.draft : undefined
   return {
     ...session,
     presets: meta.presets.slice(0, MAX_PRESET_SLOTS),
-    history: meta.draft === undefined ? session.history : createHistory(meta.draft),
+    history: adopted === undefined ? session.history : createHistory(adopted),
   }
 }
 

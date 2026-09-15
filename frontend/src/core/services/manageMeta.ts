@@ -186,9 +186,37 @@ export function adoptServerMeta(server: MetaSave, local: MetaSave): MetaSave {
   return {
     ...server,
     presets: local.presets.length > 0 ? local.presets : server.presets,
-    // **이 기기에 초안이 없을 때만 서버 것을 받는다.** 새 기기가 정확히 그 경우이고,
-    // 그때 안 받으면 규칙이 통째로 사라진 것처럼 보인다. 이미 짜던 것이 있으면 안
-    // 건드린다 — 덮어쓰면 방금 한 편집이 사라지고 그 손실은 되돌릴 수 없다.
-    draft: local.draft ?? server.draft,
+    draft: pickDraft(local.draft, server.draft),
   }
+}
+
+/**
+ * 이 기기의 초안과 서버의 초안 중 **잃을 것이 없는 쪽**을 고른다.
+ *
+ * **0줄은 `undefined` 가 아니다** (2026-09-15, 같은 사고 두 번째). 예전에는
+ * `local.draft ?? server.draft` 였는데, `??` 는 없을 때만 서버 것을 쓰므로 **비어 있는
+ * 초안이 서버의 여섯 줄을 이겼다.** 그리고 합친 결과는 곧바로 서버로 밀려 올라가므로,
+ * 화면을 여는 것만으로 남의 기기에서 짠 규칙이 지워졌다.
+ *
+ * 슬롯은 이미 길이로 재고 있었다(`presets`). 초안만 `??` 였다 — **같은 규율을 두 줄이
+ * 다르게 적고 있던 것**이 이 사고의 모양이다.
+ *
+ * 비어 있는 것은 **선택이 아니라 부재**다. 「다 지웠다」와 「아직 아무것도 없다」를
+ * 구별할 수 없으므로, 구별이 안 될 때는 **지우지 않는 쪽**에 붙는다.
+ *
+ * @param local 이 기기의 초안.
+ * @param server 서버의 초안.
+ * @returns 실을 초안. 둘 다 비었으면 이 기기 것을 둔다 — 이름과 판을 지키기 위해서다.
+ */
+export function pickDraft(
+  local: RuleSet | undefined,
+  server: RuleSet | undefined,
+): RuleSet | undefined {
+  if ((local?.rules.length ?? 0) > 0) {
+    return local
+  }
+  if ((server?.rules.length ?? 0) > 0) {
+    return server
+  }
+  return local ?? server
 }

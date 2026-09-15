@@ -130,9 +130,12 @@ describe('로그인은 서버가 이긴다', () => {
     // **여기가 마지막 구멍이었다.** 로컬을 지키는 규칙이 mount 에는 맞지만 로그인에는
     // 틀리다 — 모바일에서 짠 규칙이 컴퓨터에 안 보인 이유가 이것이다.
     const mine = buildSession()
+    // **표본에 규칙을 넣어 둔다.** 예전에는 0줄짜리를 썼는데, 그것은 「서버가 이긴다」가
+    // 아니라 **「빈 것이 이긴다」를 계약으로 굳히는 것**이었다 — 실제로 그 길로 사람의
+    // 규칙이 두 번 지워졌다 (2026-09-15). 빈 초안의 몫은 아래 절이 따로 본다.
     const server = {
       ...createEmptyMeta(),
-      draft: { rulesetId: 'from_server', version: 1, rules: [] },
+      draft: { ...getSessionRuleSet(mine), rulesetId: 'from_server' },
     }
     const adopted = adoptAccount(mine, server)
     expect(getSessionRuleSet(adopted).rulesetId).toBe('from_server')
@@ -196,5 +199,46 @@ describe('빈 초안이 서버의 초안을 덮지 않는가 (2026-09-15, 실제
     const session = buildSession()
     const next = adoptDraft(session, { rulesetId: 'other', version: 1, rules: [] }, true)
     expect(next).toBe(session)
+  })
+})
+
+describe('빈 초안은 어디서도 이기지 않는다 (2026-09-15, 같은 사고 두 번째)', () => {
+  /** 규칙이 없는 초안. 「다 지웠다」가 아니라 「아직 아무것도 없다」다. */
+  const EMPTY_DRAFT = { rulesetId: 'first_rule', version: 1, rules: [] }
+
+  it('★ 합칠 때 — 0줄짜리 이 기기 초안이 서버의 여러 줄을 못 이긴다', () => {
+    // 여기가 두 번째 구멍이었다. `local.draft ?? server.draft` 는 **없을 때만** 서버
+    // 것을 쓰는데, 0줄은 `undefined` 가 아니다. 그리고 합친 결과는 곧바로 서버로
+    // 올라가므로 **화면을 여는 것만으로** 남의 기기에서 짠 규칙이 지워졌다.
+    const full = getSessionRuleSet(buildSession())
+    const merged = adoptServerMeta(
+      { ...createEmptyMeta(), draft: full },
+      { ...createEmptyMeta(), draft: EMPTY_DRAFT },
+    )
+    expect(merged.draft?.rules.length).toBe(full.rules.length)
+  })
+
+  it('짜 둔 것이 있으면 이 기기 것이 이긴다 — 방금 한 편집이 사라지면 안 된다', () => {
+    const mine = getSessionRuleSet(buildSession())
+    const merged = adoptServerMeta(
+      { ...createEmptyMeta(), draft: EMPTY_DRAFT },
+      { ...createEmptyMeta(), draft: mine },
+    )
+    expect(merged.draft).toBe(mine)
+  })
+
+  it('둘 다 비었으면 이 기기 것을 둔다 — 이름과 판을 지킨다', () => {
+    const merged = adoptServerMeta(
+      { ...createEmptyMeta(), draft: undefined },
+      { ...createEmptyMeta(), draft: EMPTY_DRAFT },
+    )
+    expect(merged.draft).toBe(EMPTY_DRAFT)
+  })
+
+  it('★ 로그인할 때 — 계정 초안이 0줄이면 짜던 것을 안 지운다', () => {
+    // 로그인은 서버가 이기지만, **이길 것이 없으면 이기지 않는다.**
+    const session = buildSession()
+    const next = adoptAccount(session, { ...createEmptyMeta(), draft: EMPTY_DRAFT })
+    expect(getSessionRuleSet(next).rules.length).toBe(getSessionRuleSet(session).rules.length)
   })
 })
