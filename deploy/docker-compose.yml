@@ -14,6 +14,20 @@ x-build: &build
     APP_UID: ${APP_UID:-1000}
     APP_GID: ${APP_GID:-1000}
 
+# 로그 상한. **안 걸면 무한이다** — json-file 기본값에는 회전이 없고, 봇은 30초마다
+# 긴 줄을 남긴다. 컨테이너 하나가 30MB 를 넘지 않게 자른다 (10MB × 3장).
+#
+# 이 디스크는 `/` 에 있고 이미 80% 다. 로그가 디스크를 채우면 **DB 와 같은 칸을
+# 먹으므로** 게임이 아니라 저장이 먼저 멈춘다.
+#
+# 오래된 줄은 버린다. 남겨야 할 것은 로그가 아니라 DB 이고(제출·결과·원장),
+# 진단이 필요하면 그때 늘린다.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
 
   # ══ 서빙 스택 — up -d 로 띄운다 ═══════════════════════════════════════════
@@ -39,6 +53,7 @@ services:
   #   - dev 서버는 파일이 하나 깨지면 프로세스가 죽는다. 정적 산출물은 그런 자리가 없다.
   # 개발 중에는 이 서비스를 내리고 호스트에서 `npm run dev` 를 쓴다 (deploy/README.md).
   frontend:
+    logging: *logging
     build:
       context: ..
       dockerfile: deploy/Dockerfile.frontend
@@ -63,6 +78,7 @@ services:
   # ── 데이터베이스 ─────────────────────────────────────────────────────────
   # 공개하지 않는다. game_net 안에서만 보이며 backend 만 붙는다.
   postgres:
+    logging: *logging
     image: postgres:16-alpine
     container_name: game-postgres-1
     restart: unless-stopped
@@ -87,6 +103,7 @@ services:
   # 클라이언트의 주장을 저장하지 않고 재시뮬해서 확정한다
   # (docs/설계/7_변조방지 §3). 컨테이너명은 edge-proxy 와의 계약이라 바꾸지 않는다.
   backend:
+    logging: *logging
     build:
       context: ..
       dockerfile: deploy/Dockerfile
@@ -119,6 +136,7 @@ services:
   # 지금은 결정론 자체 점검만 돈다 — 배치 러너는 Phase 1 W3 산출물이고,
   # 생기면 이 command 를 scripts/ 의 러너로 바꾼다.
   sim:
+    logging: *logging
     profiles: ["tools"]
     build:
       <<: *build
@@ -130,6 +148,7 @@ services:
 
   # 저장소 전량 게이트. 호스트에 도구를 깔지 않아도 §7.1 의 동일 버전으로 검사한다.
   check:
+    logging: *logging
     profiles: ["tools"]
     build:
       <<: *build
@@ -147,6 +166,7 @@ services:
   # 하나가 **관리자 권한까지 갖고 있었다** — 검사는 관리자 경로를 확인해야 하므로 스스로를
   # 승격시킨다. 그 권한이 프로덕션에 남는 것은 검사의 잘못이 아니라 배치의 잘못이다.
   test:
+    logging: *logging
     profiles: ["tools"]
     build:
       <<: *build
@@ -174,6 +194,7 @@ services:
   #   docker compose run --rm ops uv run python -m scripts.purge_test_accounts
   #   docker compose run --rm ops uv run python -m scripts.grant_admin <아이디> --role owner
   ops:
+    logging: *logging
     profiles: ["tools"]
     build:
       <<: *build
@@ -201,6 +222,7 @@ services:
   #
   # 봇마다 시간당 다섯 판이 상한이고 `bot_profile.next_run_at` 이 그것을 물린다.
   bots:
+    logging: *logging
     build:
       <<: *build
       # **`api` 스테이지를 쓴다.** 거기에 `game/` 과 `scripts/` 가 이미 들어 있고 개발
@@ -230,6 +252,7 @@ services:
   # 백엔드에 안 붙는다. 지킴이가 보는 값들(도플갱어 나이·봇 가방 포화·정비가 남긴 일)은
   # 라우트가 안 내주는 것이라 DB 를 직접 읽는다 — 대신 쓰기 질의를 한 줄도 안 둔다.
   watchdog:
+    logging: *logging
     build:
       <<: *build
       target: api
@@ -253,6 +276,7 @@ services:
 
   # 개발 셸. uv·Python 3.11 을 호스트에 설치하지 않고 동일 환경을 쓴다.
   dev:
+    logging: *logging
     profiles: ["tools"]
     build:
       <<: *build
