@@ -21,7 +21,7 @@ from game.config import BLOCKS_PATH
 from game.schemas.blocks import ACTION_COUNT, PERCEPTION_COUNT, load_block_catalog
 from game.schemas.ruleset import parse_ruleset
 
-BLOCK_LIST_VERSION = 14  # v14: 재주가 이름을 얻었다 — 일격·사격 (2026-09-15)
+BLOCK_LIST_VERSION = 15  # v15: 「우선」 셀렉터 셋 — 없으면 가장 가까운 것으로 (2026-09-15)
 LEGACY_ACTIONS = ("SKILL_1", "SKILL_2", "AREA_ATTACK", "HEAL", "SUMMON")
 
 

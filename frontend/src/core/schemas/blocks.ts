@@ -22,7 +22,7 @@
 export const PERCEPTION_COUNT = 23
 export const ACTION_COUNT = 16 // v6 에서 USE_ITEM 이 들어왔다 (#54)
 // v8 에서 SELF(자기 자신)가 들어왔다.
-export const SELECTOR_COUNT = 10
+export const SELECTOR_COUNT = 13
 // v7 에서 scrolls 가 들어왔다 — potions 와 짝.
 export const RHS_STAT_COUNT = 8
 

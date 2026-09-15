@@ -537,6 +537,18 @@
           0
         ],
         [
+          "target_distance[TYPE_RANGED_FIRST]",
+          7
+        ],
+        [
+          "target_distance[TYPE_SUMMONER_FIRST]",
+          10
+        ],
+        [
+          "target_distance[TYPE_HEALER_FIRST]",
+          2
+        ],
+        [
           "nearest_tile_distance[DOOR]",
           1
         ],
@@ -793,6 +805,18 @@
         [
           "target_distance[SELF]",
           0
+        ],
+        [
+          "target_distance[TYPE_RANGED_FIRST]",
+          1
+        ],
+        [
+          "target_distance[TYPE_SUMMONER_FIRST]",
+          1
+        ],
+        [
+          "target_distance[TYPE_HEALER_FIRST]",
+          1
         ],
         [
           "nearest_tile_distance[DOOR]",
@@ -1053,6 +1077,18 @@
           0
         ],
         [
+          "target_distance[TYPE_RANGED_FIRST]",
+          5
+        ],
+        [
+          "target_distance[TYPE_SUMMONER_FIRST]",
+          5
+        ],
+        [
+          "target_distance[TYPE_HEALER_FIRST]",
+          5
+        ],
+        [
           "nearest_tile_distance[DOOR]",
           5
         ],
@@ -1309,6 +1345,18 @@
         [
           "target_distance[SELF]",
           0
+        ],
+        [
+          "target_distance[TYPE_RANGED_FIRST]",
+          -1
+        ],
+        [
+          "target_distance[TYPE_SUMMONER_FIRST]",
+          -1
+        ],
+        [
+          "target_distance[TYPE_HEALER_FIRST]",
+          -1
         ],
         [
           "nearest_tile_distance[DOOR]",
@@ -1569,6 +1617,18 @@
           0
         ],
         [
+          "target_distance[TYPE_RANGED_FIRST]",
+          3
+        ],
+        [
+          "target_distance[TYPE_SUMMONER_FIRST]",
+          3
+        ],
+        [
+          "target_distance[TYPE_HEALER_FIRST]",
+          3
+        ],
+        [
           "nearest_tile_distance[DOOR]",
           1
         ],
@@ -1827,6 +1887,18 @@
           0
         ],
         [
+          "target_distance[TYPE_RANGED_FIRST]",
+          2
+        ],
+        [
+          "target_distance[TYPE_SUMMONER_FIRST]",
+          2
+        ],
+        [
+          "target_distance[TYPE_HEALER_FIRST]",
+          7
+        ],
+        [
           "nearest_tile_distance[DOOR]",
           1
         ],
@@ -2079,6 +2151,24 @@
       "picked_id": "player"
     },
     {
+      "world_id": "field_mixed",
+      "actor_id": "player",
+      "selector": "TYPE_RANGED_FIRST",
+      "picked_id": "e_charlie"
+    },
+    {
+      "world_id": "field_mixed",
+      "actor_id": "player",
+      "selector": "TYPE_SUMMONER_FIRST",
+      "picked_id": "e_delta"
+    },
+    {
+      "world_id": "field_mixed",
+      "actor_id": "player",
+      "selector": "TYPE_HEALER_FIRST",
+      "picked_id": "e_alpha"
+    },
+    {
       "world_id": "throne",
       "actor_id": "player",
       "selector": "NEAREST",
@@ -2139,6 +2229,24 @@
       "picked_id": "player"
     },
     {
+      "world_id": "throne",
+      "actor_id": "player",
+      "selector": "TYPE_RANGED_FIRST",
+      "picked_id": "e_minion"
+    },
+    {
+      "world_id": "throne",
+      "actor_id": "player",
+      "selector": "TYPE_SUMMONER_FIRST",
+      "picked_id": "e_minion"
+    },
+    {
+      "world_id": "throne",
+      "actor_id": "player",
+      "selector": "TYPE_HEALER_FIRST",
+      "picked_id": "e_minion"
+    },
+    {
       "world_id": "spring",
       "actor_id": "player",
       "selector": "NEAREST",
@@ -2199,6 +2307,24 @@
       "picked_id": "player"
     },
     {
+      "world_id": "spring",
+      "actor_id": "player",
+      "selector": "TYPE_RANGED_FIRST",
+      "picked_id": "e_archer"
+    },
+    {
+      "world_id": "spring",
+      "actor_id": "player",
+      "selector": "TYPE_SUMMONER_FIRST",
+      "picked_id": "e_archer"
+    },
+    {
+      "world_id": "spring",
+      "actor_id": "player",
+      "selector": "TYPE_HEALER_FIRST",
+      "picked_id": "e_archer"
+    },
+    {
       "world_id": "solitude",
       "actor_id": "player",
       "selector": "NEAREST",
@@ -2259,6 +2385,24 @@
       "picked_id": "player"
     },
     {
+      "world_id": "solitude",
+      "actor_id": "player",
+      "selector": "TYPE_RANGED_FIRST",
+      "picked_id": null
+    },
+    {
+      "world_id": "solitude",
+      "actor_id": "player",
+      "selector": "TYPE_SUMMONER_FIRST",
+      "picked_id": null
+    },
+    {
+      "world_id": "solitude",
+      "actor_id": "player",
+      "selector": "TYPE_HEALER_FIRST",
+      "picked_id": null
+    },
+    {
       "world_id": "wounded",
       "actor_id": "player",
       "selector": "NEAREST",
@@ -2317,6 +2461,24 @@
       "actor_id": "player",
       "selector": "SELF",
       "picked_id": "player"
+    },
+    {
+      "world_id": "wounded",
+      "actor_id": "player",
+      "selector": "TYPE_RANGED_FIRST",
+      "picked_id": "e_alpha"
+    },
+    {
+      "world_id": "wounded",
+      "actor_id": "player",
+      "selector": "TYPE_SUMMONER_FIRST",
+      "picked_id": "e_alpha"
+    },
+    {
+      "world_id": "wounded",
+      "actor_id": "player",
+      "selector": "TYPE_HEALER_FIRST",
+      "picked_id": "e_alpha"
     },
     {
       "world_id": "ward",
@@ -2380,6 +2542,24 @@
     },
     {
       "world_id": "ward",
+      "actor_id": "player",
+      "selector": "TYPE_RANGED_FIRST",
+      "picked_id": "e_grunt"
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "player",
+      "selector": "TYPE_SUMMONER_FIRST",
+      "picked_id": "e_grunt"
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "player",
+      "selector": "TYPE_HEALER_FIRST",
+      "picked_id": "e_mender"
+    },
+    {
+      "world_id": "ward",
       "actor_id": "e_mender",
       "selector": "NEAREST",
       "picked_id": "a_scout"
@@ -2437,6 +2617,24 @@
       "actor_id": "e_mender",
       "selector": "SELF",
       "picked_id": "e_mender"
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "e_mender",
+      "selector": "TYPE_RANGED_FIRST",
+      "picked_id": "a_scout"
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "e_mender",
+      "selector": "TYPE_SUMMONER_FIRST",
+      "picked_id": "a_scout"
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "e_mender",
+      "selector": "TYPE_HEALER_FIRST",
+      "picked_id": "a_scout"
     }
   ],
   "validator": [

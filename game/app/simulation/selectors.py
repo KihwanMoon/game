@@ -23,6 +23,23 @@ SELECTOR_BOSS = "BOSS"
 SELECTOR_ALLY_WOUNDED = "ALLY_WOUNDED"
 SELECTOR_SELF = "SELF"
 
+# 유형을 **우선**하되 없으면 가장 가까운 것으로 떨어지는 셀렉터들 (블록 v15).
+#
+# **선호 대상이 없는 방에서 아무것도 안 하는 표가 벤치마크에 다섯 벌 있었다** — 전부
+# 0% 였다(2026-09-15 실측, 층 생성 120런). 소환사를 우선하는데 소환사가 없으면 그 줄이
+# 영영 거짓이고, 규칙이 전부 거짓이면 엔진이 접근으로 채운다 — 걸어가다 죽는다.
+#
+# 고치는 길은 두 가지였다. **줄을 하나 더 받치거나**(v8_cut_the_healer 가 그렇게 했다),
+# 셀렉터가 스스로 떨어지거나. 앞의 것은 슬롯 다섯 중 하나를 먹는다 — 예산이 줄면 못
+# 쓴다. 그래서 뒤의 것을 연다.
+#
+# **기존 셀렉터는 안 바꾼다.** 「그 유형만, 없으면 아무것도 안 함」은 여전히 적을 수
+# 있어야 한다 — 그것이 뜻인 표가 있고(굿판이 차기 전에 부르는 쪽만 끊는다), 바꾸면
+# 저장된 내력이 조용히 다른 판을 돈다.
+SELECTOR_TYPE_RANGED_FIRST = "TYPE_RANGED_FIRST"
+SELECTOR_TYPE_SUMMONER_FIRST = "TYPE_SUMMONER_FIRST"
+SELECTOR_TYPE_HEALER_FIRST = "TYPE_HEALER_FIRST"
+
 # 순서는 blocks.json 의 selectors 절과 같다. 인지 스냅샷이 이 순서로 거리를 푼다.
 ALL_SELECTORS = (
     SELECTOR_NEAREST,
@@ -35,6 +52,9 @@ ALL_SELECTORS = (
     SELECTOR_BOSS,
     SELECTOR_ALLY_WOUNDED,
     SELECTOR_SELF,
+    SELECTOR_TYPE_RANGED_FIRST,
+    SELECTOR_TYPE_SUMMONER_FIRST,
+    SELECTOR_TYPE_HEALER_FIRST,
 )
 
 # 적 유형을 직접 가리키는 셀렉터들. BOSS 도 유형 하나이므로 같은 표에 둔다.
@@ -43,7 +63,15 @@ TYPE_BY_SELECTOR = {
     SELECTOR_TYPE_SUMMONER: "SUMMONER",
     SELECTOR_TYPE_HEALER: "HEALER",
     SELECTOR_BOSS: "BOSS",
+    SELECTOR_TYPE_RANGED_FIRST: "RANGED",
+    SELECTOR_TYPE_SUMMONER_FIRST: "SUMMONER",
+    SELECTOR_TYPE_HEALER_FIRST: "HEALER",
 }
+
+# 후보가 없을 때 가장 가까운 적으로 떨어지는 셀렉터들 (블록 v15).
+FALLBACK_SELECTORS = frozenset(
+    {SELECTOR_TYPE_RANGED_FIRST, SELECTOR_TYPE_SUMMONER_FIRST, SELECTOR_TYPE_HEALER_FIRST}
+)
 
 # HP 가 가장 낮은 쪽을 고르는 셀렉터들. 적대·아군 양쪽에 하나씩이다.
 LOWEST_HP_SELECTORS = frozenset({SELECTOR_LOWEST_HP, SELECTOR_ALLY_WOUNDED})
@@ -103,6 +131,10 @@ def resolve_target(
         고른 대상. 조건에 맞는 후보가 없으면 None.
     """
     candidates = list_candidates(selector_id, actor, state, kind_types)
+    if not candidates and selector_id in FALLBACK_SELECTORS:
+        # **떨어지는 자리는 여기 하나다.** 후보를 고르는 쪽에서 섞으면 「소환사 우선」이
+        # 소환사가 있을 때도 가까운 것을 후보에 넣게 되어 우선이 아니게 된다.
+        candidates = list_candidates(SELECTOR_NEAREST, actor, state, kind_types)
     if not candidates:
         return None
 

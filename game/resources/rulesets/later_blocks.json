@@ -940,6 +940,99 @@
           }
         }
       ]
+    },
+    {
+      "ruleset_id": "v15_healer_first",
+      "label_ko": "고치는 쪽 우선 · 네 줄",
+      "version": 1,
+      "strategy_ko": "`v8_cut_the_healer` 에서 **받침 줄을 빼고 셀렉터로 대신했다** (v15). 저쪽은 「치유형을 겨눈다」 뒤에 「가장 약한 것을 겨눈다」를 받쳐 두었는데, `TYPE_HEALER_FIRST` 는 없을 때 가장 가까운 것으로 떨어지므로 그 줄 없이도 논다.\n\n**다만 그 줄은 받침만이 아니었다.** 실측 45% → 35% (각 120런, 2026-09-15) — 빼고 나니 10%p 를 잃었다. 겨누던 것이 달랐기 때문이다: 받침 줄은 `LOWEST_HP` 를, 폴백은 `NEAREST` 를 고른다. **셀렉터가 슬롯을 벌어 주기는 해도 그 슬롯이 하던 일까지 대신하지는 않는다** — 이 표는 그 차이를 재라고 남긴다.",
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_ITEM",
+          "action_param": "POTION",
+          "target": null,
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<",
+                "rhs": 30
+              },
+              {
+                "lhs": "self_potion_count",
+                "cmp": ">",
+                "rhs": 0
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "USE_SKILL",
+          "action_param": "SKILL_2",
+          "target": "TYPE_HEALER_FIRST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 4,
+                "lhs_param": "TYPE_HEALER_FIRST"
+              },
+              {
+                "lhs": "self_skill_ready",
+                "cmp": "==",
+                "rhs": true,
+                "lhs_param": "SKILL_2"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": "<=",
+                "rhs": 1,
+                "lhs_param": "NEAREST"
+              }
+            ]
+          }
+        },
+        {
+          "priority": 4,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "LOWEST_HP",
+          "set_flag": null,
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "cmp": ">",
+                "rhs": 1,
+                "lhs_param": "LOWEST_HP"
+              }
+            ]
+          }
+        }
+      ],
+      "cpu_total": 6
     }
   ]
 }

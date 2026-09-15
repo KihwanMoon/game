@@ -186,6 +186,9 @@ def test_selector_ids_match_gdd(catalog):
         "BOSS",
         "ALLY_WOUNDED",
         "SELF",
+        "TYPE_RANGED_FIRST",
+        "TYPE_SUMMONER_FIRST",
+        "TYPE_HEALER_FIRST",
     }
 
 
