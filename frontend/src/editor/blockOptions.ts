@@ -20,6 +20,7 @@ import type {
   StatBlock,
 } from '../core/schemas'
 import { resolveWantedFaction } from '../core/rules/validator'
+import { readSkillName } from '../core/resources'
 
 /** 카테고리 하나로 묶인 블록들. 팔레트가 이 단위로 접히고 펼쳐진다. */
 export interface BlockGroup<BlockT> {
@@ -217,8 +218,9 @@ const PARAM_LABELS: ReadonlyMap<string, string> = new Map([
   // 소모품 태그는 `content/consumableTags` 가 정본이다. 사본을 두면 새 주문서가 규칙
   // 편집기에서만 영문 id 로 뜬다 — 화면마다 다른 이름으로 불리는 것이 더 나쁘다.
   ...USE_TAG_LABELS,
-  ['SKILL_1', '재주 1'],
-  ['SKILL_2', '재주 2'],
+  // 재주 이름의 정본은 `skills.json` 이다 — 소모품 태그와 같은 규율이다.
+  ['SKILL_1', readSkillName('SKILL_1')],
+  ['SKILL_2', readSkillName('SKILL_2')],
   ['AREA_ATTACK', '광역 공격'],
   ['SUMMON', '소환'],
   ['HEAL', '치유'],

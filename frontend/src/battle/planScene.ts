@@ -22,6 +22,7 @@ import { PHASE_ACT } from '../core/sim/phases'
 
 import { GUARD_STATUS } from '../core/sim/abilities'
 import { checkDoppel, resolveActorKind, resolveActorLabel } from './actorKind'
+import { readSkillName } from '../core/resources'
 
 /** 도면에 그릴 말 하나. */
 export interface PlanActorView {
@@ -234,11 +235,16 @@ function collectHazards(engine: TickEngine, foresightTicks: number): readonly Pl
  * @param engine 돌고 있는 엔진. 읽기만 한다.
  * @returns 그릴 값 묶음.
  */
-/** 행동 id 에서 이펙트 이름표로. 여기 없는 행동은 수치만 적는다. */
+/**
+ * 행동 id 에서 이펙트 이름표로. 여기 없는 행동은 수치만 적는다.
+ *
+ * **재주 이름은 여기 안 적는다** — 정본은 `skills.json` 이고 아래에서 덮어 채운다.
+ * 손으로 적어 두면 이름을 고칠 때 도면만 옛 이름으로 남는다 (2026-09-15).
+ */
 const PULSE_LABELS: ReadonlyMap<string, string> = new Map([
   ['ATTACK', ''],
-  ['SKILL_1', '재주1'],
-  ['SKILL_2', '재주2'],
+  ['SKILL_1', readSkillName('SKILL_1')],
+  ['SKILL_2', readSkillName('SKILL_2')],
   ['AREA_ATTACK', '광역'],
   ['HEAL', '치유'],
   ['GUARD_BRACE', '방어'],

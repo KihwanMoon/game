@@ -35,6 +35,7 @@ import type { ReactNode } from 'react'
 import { useViewportMode, watchViewport } from '../ds'
 import { BLOCK_CATALOG } from '../core/resources'
 import { buildActorNames, readLogTone, replaceIds, translateActions } from './logNames'
+import { readCooldownLabel } from './vitalRows'
 import { PLAYER_ENTITY_ID } from '../core/services/runBattle'
 import { countItem } from '../core/sim/state'
 import {
@@ -159,15 +160,18 @@ function readCarried(setup: BattleSetup, kind: string): number {
   return 0
 }
 
-/** 쿨타임 줄에 적을 스킬 이름. 규칙 편집기의 인자 이름과 같은 말이다. */
-const COOLDOWN_LABELS: ReadonlyMap<string, string> = new Map([
-  ['ATTACK', '공격'],
-  ['SKILL_1', '재주 1'],
-  ['SKILL_2', '재주 2'],
-  ['AREA_ATTACK', '광역'],
-  ['HEAL', '치유'],
-  ['SUMMON', '소환'],
-  ['GUARD_BRACE', '방어'],
+/**
+ * 쿨타임 줄에 세울 수 있는 행동들. **이름은 여기 안 적는다** — 정본은 `skills.json`
+ * 이고 `readCooldownLabel` 이 읽는다 (2026-09-15).
+ */
+const COOLDOWN_IDS: ReadonlySet<string> = new Set([
+  'ATTACK',
+  'SKILL_1',
+  'SKILL_2',
+  'AREA_ATTACK',
+  'HEAL',
+  'SUMMON',
+  'GUARD_BRACE',
 ])
 
 /**
@@ -199,7 +203,7 @@ export function listRulesetSkills(
   for (const rule of rules) {
     if (rule.action === 'USE_SKILL' && rule.actionParam !== null) {
       skills.add(rule.actionParam)
-    } else if (COOLDOWN_LABELS.has(rule.action)) {
+    } else if (COOLDOWN_IDS.has(rule.action)) {
       // 별칭 시절의 규칙표 — SKILL_2 가 행동 id 로 직접 적혀 있다.
       skills.add(rule.action)
     }
@@ -231,7 +235,7 @@ export function formatCooldowns(
   const parts = skills.map((skill) => {
     const left = cooldowns?.get(skill) ?? 0
     const total = totals?.get(skill) ?? 0
-    const name = COOLDOWN_LABELS.get(skill) ?? skill
+    const name = readCooldownLabel(skill)
     return `${name} ${String(left)}/${String(total)}틱`
   })
   return `쿨 — ${parts.join(' · ')}`

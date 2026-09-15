@@ -433,7 +433,7 @@ describe('연결선 그리기', () => {
         y: 3,
         isGain: false,
         delta: -40,
-        label: '재주1',
+        label: '일격',
         // 자국은 때린 말에서 맞은 말 쪽으로 간다 (설계/10_외형과_모션).
         from: { x: 1, y: 1 },
         byKindId: 'player',
@@ -650,9 +650,9 @@ describe('쿨타임 줄', () => {
     ])
     expect(skills).toEqual(['AREA_ATTACK', 'SKILL_1', 'SKILL_2'])
     // 남은틱/전체틱 — 0/10 이 곧 「준비됨」이다.
-    expect(formatCooldowns(table, skills, totals)).toBe('쿨 — 광역 3/10틱 · 재주 1 0/6틱 · 재주 2 0/4틱')
+    expect(formatCooldowns(table, skills, totals)).toBe('쿨 — 광역 3/10틱 · 일격 0/6틱 · 사격 0/4틱')
     // **안 쓴 틱에도 줄이 산다** — 사라지면 「정보가 없어졌다」로 읽힌다 (실제 신고).
-    expect(formatCooldowns(undefined, skills, totals)).toBe('쿨 — 광역 0/10틱 · 재주 1 0/6틱 · 재주 2 0/4틱')
+    expect(formatCooldowns(undefined, skills, totals)).toBe('쿨 — 광역 0/10틱 · 일격 0/6틱 · 사격 0/4틱')
     expect(formatCooldowns(undefined, [], totals)).toBe('')
   })
 })

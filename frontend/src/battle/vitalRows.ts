@@ -12,6 +12,7 @@
  */
 
 import { USE_TAG_LABELS } from '../content/consumableTags'
+import { readSkillName } from '../core/resources'
 
 /** 상태 한 줄. 이름과 값, 그리고 눈에 띄어야 하는지. */
 export interface VitalRow {
@@ -28,16 +29,27 @@ export interface VitalRow {
   readonly isWarning?: boolean
 }
 
-/** 쿨타임 이름표. 코어의 행동 id 를 사람이 읽는 말로. */
-export const COOLDOWN_LABELS: ReadonlyMap<string, string> = new Map([
+/**
+ * 쿨타임 이름표. 코어의 행동 id 를 사람이 읽는 말로.
+ *
+ * **재주 이름은 여기 안 적는다** — 정본은 `skills.json` 이고 `readSkillName` 이 읽는다.
+ * 손으로 적어 두면 이름을 고칠 때 이 줄만 옛 이름으로 남는다 (2026-09-15).
+ */
+const COOLDOWN_EXTRA: ReadonlyMap<string, string> = new Map([
   ['ATTACK', '공격'],
-  ['SKILL_1', '재주 1'],
-  ['SKILL_2', '재주 2'],
   ['AREA_ATTACK', '광역'],
-  ['HEAL', '치유'],
   ['SUMMON', '소환'],
-  ['GUARD_BRACE', '방어'],
 ])
+
+/**
+ * 그 쿨타임 줄에 적을 이름.
+ *
+ * @param id 행동·재주 id.
+ * @returns 한글 이름. 모르면 id.
+ */
+export function readCooldownLabel(id: string): string {
+  return COOLDOWN_EXTRA.get(id) ?? readSkillName(id)
+}
 
 /** 상태 이름표. 코어의 상태 id 를 사람이 읽는 말로. */
 export const STATUS_LABELS: ReadonlyMap<string, string> = new Map([
@@ -115,7 +127,7 @@ export interface VitalInput {
  */
 export function listCooldownRows(input: VitalInput): readonly VitalRow[] {
   return (input.skills ?? []).map((skill) => ({
-    label: COOLDOWN_LABELS.get(skill) ?? skill,
+    label: readCooldownLabel(skill),
     value: `${String(input.cooldowns?.get(skill) ?? 0)} / ${String(input.totals?.get(skill) ?? 0)}틱`,
   }))
 }

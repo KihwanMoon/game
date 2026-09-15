@@ -23,7 +23,7 @@ export { BattleCheck } from './BattleCheck'
 export { BattleFrame } from './BattleFrame'
 
 // 상태 탭의 줄들. **정보 하나에 한 줄** — 세 화면이 같은 값을 같은 모양으로 낸다.
-export { COOLDOWN_LABELS, buildVitalRows, listCooldownRows } from './vitalRows'
+export { readCooldownLabel, buildVitalRows, listCooldownRows } from './vitalRows'
 export type { VitalInput, VitalRow } from './vitalRows'
 export type { BattleFrameProps } from './BattleFrame'
 

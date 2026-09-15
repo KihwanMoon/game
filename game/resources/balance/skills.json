@@ -19,7 +19,7 @@
       "_note": "range null = 엔티티의 attack_range 를 쓴다"
     },
     {
-      "id": "SKILL_1",
+      "id": "SKILL_1", "label_ko": "일격",
       "family": "ATTACK",
       "shape": {
         "kind": "SINGLE"

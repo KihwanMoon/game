@@ -194,6 +194,32 @@ export const ALL_SKILL_IDS: readonly string[] = SKILLS.skills
   .sort()
 
 /**
+ * 재주 id 에서 한글 이름으로. **정본은 `skills.json` 의 `label_ko` 하나다.**
+ *
+ * 예전에는 화면 넷이 각자 `['SKILL_1', '재주 1']` 을 손으로 들고 있었다 — 쿨타임 줄,
+ * 도면 이름표, 팔레트, 로그. 이름을 고치면 넷을 다 찾아 고쳐야 하고, **하나를 빠뜨리면
+ * 그 화면만 옛 이름으로 말한다.** 방 이름·내력 이름에서 겪은 것과 같은 자리다.
+ *
+ * 이름이 없는 재주는 id 그대로 둔다 — 지어내면 화면이 정본에 없는 말을 하게 된다.
+ */
+export const SKILL_NAMES: ReadonlyMap<string, string> = new Map(
+  SKILLS.skills.map((skill) => {
+    const row = skill as { readonly id: string; readonly label_ko?: string }
+    return [row.id, row.label_ko ?? row.id]
+  }),
+)
+
+/**
+ * 그 재주의 이름.
+ *
+ * @param skillId 재주 id.
+ * @returns 한글 이름. 정본에 이름이 없으면 id.
+ */
+export function readSkillName(skillId: string): string {
+  return SKILL_NAMES.get(skillId) ?? skillId
+}
+
+/**
  * 이 코어가 아는 소모품 태그 전부, 정렬해서.
  *
  * 캐릭터 시트가 **들고 있지 않은 것을 「불가」로** 보여주는 데 쓴다 — `USE_ITEM[SCROLL]`

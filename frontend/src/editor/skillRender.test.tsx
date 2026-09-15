@@ -30,7 +30,7 @@ describe('스킬 세팅', () => {
   it('★ 한글 이름으로 적는다 — id 를 그대로 두면 그 줄만 다른 언어가 된다', () => {
     const html = render(VIEW)
     expect(html).toContain('공격')
-    expect(html).toContain('재주 1')
+    expect(html).toContain('일격')
     expect(html).toContain('치유')
   })
 
