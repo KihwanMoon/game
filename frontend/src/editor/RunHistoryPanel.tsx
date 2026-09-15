@@ -14,6 +14,8 @@ import type { RunHistoryRow } from '../storage'
 
 import { LinkNoticeLine } from './LinkNoticeLine'
 import { checkLinked, type LinkState } from './linkState'
+import { ROOM_TEMPLATES } from '../core/resources'
+import { findRoomTitle } from '../core/schemas/room'
 
 /** 못 닿았을 때 무엇을 못 보는가. 앞머리는 linkState 가 든다. */
 const MISSING_HINT = '지나간 판은 서버가 안다'
@@ -66,7 +68,7 @@ export function RunHistoryPanel(props: RunHistoryPanelProps): React.JSX.Element 
         <ul className="runs">
           {props.runs.map((run) => (
             <li className="runs__row" key={run.submissionId}>
-              <span className="runs__cell">{`${run.roomId} · ${String(run.floor)}층`}</span>
+              <span className="runs__cell">{`${findRoomTitle(ROOM_TEMPLATES, run.roomId)} · ${String(run.floor)}장`}</span>
               <GlyphState
                 state={run.outcome === 'PLAYER_WIN' ? 'true' : 'false'}
                 size="sm"

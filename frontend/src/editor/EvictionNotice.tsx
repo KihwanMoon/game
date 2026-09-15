@@ -14,7 +14,7 @@ export interface EvictionNoticeProps {
 }
 
 export const EVICTION_TEXT =
-  '다른 기기에서 로그인했다 — 이 기기는 연결이 끊겼다. 이 기기의 규칙표는 그대로 있고,' +
+  '다른 기기에서 로그인했다 — 이 기기는 연결이 끊겼다. 이 기기의 내력은 그대로 있고,' +
   ' 다시 로그인하면 계정이 돌아온다'
 
 /**

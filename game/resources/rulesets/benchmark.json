@@ -11,6 +11,7 @@
   "rulesets": [
     {
       "ruleset_id": "focus_lowest",
+      "label_ko": "약한 것부터",
       "version": 1,
       "strategy_ko": "가장 약한 적부터 지운다. 적 수를 빨리 줄이는 쪽에 건다.",
       "rules": [
@@ -101,6 +102,7 @@
     },
     {
       "ruleset_id": "focus_summoner",
+      "label_ko": "부르는 쪽부터",
       "version": 1,
       "strategy_ko": "소환사부터 지운다. 잡몹이 늘기 전에 근원을 끊는다.",
       "rules": [
@@ -191,6 +193,7 @@
     },
     {
       "ruleset_id": "focus_ranged",
+      "label_ko": "쏘는 쪽부터",
       "version": 1,
       "strategy_ko": "궁수부터 지운다. 쫓아갈 수 없는 위협을 먼저 없앤다.",
       "rules": [
@@ -281,6 +284,7 @@
     },
     {
       "ruleset_id": "focus_threat",
+      "label_ko": "센 것부터",
       "version": 1,
       "strategy_ko": "위협도가 가장 높은 적부터. 공격력이 대리 지표다.",
       "rules": [
@@ -371,6 +375,7 @@
     },
     {
       "ruleset_id": "sniper",
+      "label_ko": "거리 지킴",
       "version": 1,
       "strategy_ko": "플래그 없이 거리만으로 카이팅한다. 2칸 안으로 들어오면 물러난다.",
       "rules": [
@@ -461,6 +466,7 @@
     },
     {
       "ruleset_id": "area_sweep",
+      "label_ko": "뭉치면 쓸기",
       "version": 1,
       "strategy_ko": "적이 뭉치면 광역으로 쓴다. 포위당하는 것을 오히려 기회로 삼는다.",
       "rules": [
@@ -574,6 +580,7 @@
     },
     {
       "ruleset_id": "spring_camp",
+      "label_ko": "샘 끼고",
       "version": 1,
       "strategy_ko": "회복타일을 끼고 싸운다. 샘 잔여량이 다하기 전에 끝내야 한다.",
       "rules": [
@@ -669,6 +676,7 @@
     },
     {
       "ruleset_id": "door_hold",
+      "label_ko": "목 지킴",
       "version": 1,
       "strategy_ko": "문 앞을 지킨다. 통로에서 1:1 구도를 만드는 데 건다.",
       "rules": [
@@ -759,6 +767,7 @@
     },
     {
       "ruleset_id": "kite_summoner",
+      "label_ko": "부르는 쪽 떼기",
       "version": 1,
       "strategy_ko": "도감을 읽고 지었다. 카이팅은 그대로 두고 사격 대상만 소환사로 돌린다 — ai_summoner 는 사거리 3 안에서만 부르므로 사거리 4 의 사격이 일방적으로 닿는다.",
       "rules": [
@@ -855,6 +864,7 @@
     },
     {
       "ruleset_id": "focus_lowest_guard",
+      "label_ko": "약한 것부터 · 막기",
       "version": 1,
       "strategy_ko": "가장 약한 적 우선 + 붙은 적 먼저. focus_lowest 와 **한 줄만 다르다** — 「적거리(NEAREST) <= 1 → 공격」을 접근 규칙 위에 끼웠다. 그 한 줄이 없으면 좁은 복도에서 목표를 쫓다 길이 막히고, 바로 옆의 적을 한 번도 때리지 못한 채 죽는다 (로그: 「길 막힘 — 틱 낭비」).",
       "target_room": "corridor",
@@ -964,6 +974,7 @@
     },
     {
       "ruleset_id": "focus_threat_guard",
+      "label_ko": "센 것부터 · 막기",
       "version": 1,
       "strategy_ko": "가장 위협적인 적 우선 + 붙은 적 먼저. focus_threat 와 **한 줄만 다르다** — 「적거리(NEAREST) <= 1 → 공격」을 접근 규칙 위에 끼웠다. 그 한 줄이 없으면 좁은 복도에서 목표를 쫓다 길이 막히고, 바로 옆의 적을 한 번도 때리지 못한 채 죽는다 (로그: 「길 막힘 — 틱 낭비」).",
       "target_room": "corridor",
@@ -1073,6 +1084,7 @@
     },
     {
       "ruleset_id": "focus_summoner_guard",
+      "label_ko": "부르는 쪽 · 막기",
       "version": 1,
       "strategy_ko": "소환사 우선 + 붙은 적 먼저. focus_summoner 와 **한 줄만 다르다** — 「적거리(NEAREST) <= 1 → 공격」을 접근 규칙 위에 끼웠다. 그 한 줄이 없으면 좁은 복도에서 목표를 쫓다 길이 막히고, 바로 옆의 적을 한 번도 때리지 못한 채 죽는다 (로그: 「길 막힘 — 틱 낭비」).",
       "target_room": "corridor",
@@ -1182,6 +1194,7 @@
     },
     {
       "ruleset_id": "focus_ranged_guard",
+      "label_ko": "쏘는 쪽 · 막기",
       "version": 1,
       "strategy_ko": "원거리 적 우선 + 붙은 적 먼저. focus_ranged 와 **한 줄만 다르다** — 「적거리(NEAREST) <= 1 → 공격」을 접근 규칙 위에 끼웠다. 그 한 줄이 없으면 좁은 복도에서 목표를 쫓다 길이 막히고, 바로 옆의 적을 한 번도 때리지 못한 채 죽는다 (로그: 「길 막힘 — 틱 낭비」).",
       "target_room": "corridor",
@@ -1291,6 +1304,7 @@
     },
     {
       "ruleset_id": "weapon_reach",
+      "label_ko": "사거리 읽기",
       "version": 1,
       "strategy_ko": "무기 사거리를 읽는다 — 「적거리 <= 내 사거리」 로 쓰면 무기를 바꾸는 것만으로 같은 규칙표가 다른 전투를 만든다. 단검(1)이면 붙어야 때리고 장궁(4)이면 멀리서 때린다. 숫자를 박아 두면 무기를 바꿔도 규칙표를 다시 짜야 한다.",
       "target_room": "corridor",

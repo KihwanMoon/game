@@ -121,7 +121,7 @@ export function SkillPanel(props: SkillPanelProps): React.JSX.Element {
               <GlyphState
                 state={picked.isOn ? 'true' : 'false'}
                 size="sm"
-                label={picked.isOn ? '다음 티켓에 실린다' : '꺼짐 — 규칙표에서 「미장착」이 된다'}
+                label={picked.isOn ? '다음 티켓에 실린다' : '꺼짐 — 내력에서 「미장착」이 된다'}
               />
             )}
           </div>

@@ -32,7 +32,7 @@ const VIEWS: readonly { readonly id: View; readonly label: string }[] = [
 ]
 
 /** 못 닿았을 때 무엇을 못 보는가. 앞머리(`서버에 닿지 못했다`)는 linkState 가 든다. */
-const MISSING_HINT = '도감은 서버가 안다'
+const MISSING_HINT = '이문록은 서버가 안다'
 
 /**
  * 도감 줄들을 칸으로 바꾼다.
@@ -107,7 +107,7 @@ export function DiscoveryPanel(props: DiscoveryPanelProps): React.JSX.Element {
         <CellGrid
           cells={buildDiscoveryCells(rows, picked)}
           onSelect={setPicked}
-          emptyText="세계에 아직 아무것도 없다"
+          emptyText="비각에 아직 아무것도 없다"
         />
 
         {pickedRow === undefined ? null : (

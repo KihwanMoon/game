@@ -155,7 +155,7 @@ function AuctionRow(props: {
         inputMode="numeric"
         placeholder="호가"
         value={price}
-        aria-label="경매 호가"
+        aria-label="저잣거리 호가"
         onChange={(event) => {
           setPrice(event.target.value)
         }}
@@ -166,7 +166,7 @@ function AuctionRow(props: {
         variant="secondary"
         glyph="⇪"
         disabled={!isValid}
-        title="경매에 건다 — 수수료는 걸 때 나가고 내려도 안 돌아온다"
+        title="저잣거리에 건다 — 수수료는 걸 때 나가고 내려도 안 돌아온다"
         onClick={() => {
           props.onList(props.itemId, asked)
           setPrice('')

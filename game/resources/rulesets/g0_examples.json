@@ -12,6 +12,7 @@
   "rulesets": [
     {
       "ruleset_id": "g0_pressure",
+      "label_ko": "밀어붙임",
       "version": 1,
       "strategy_ko": "근접 압박 — 붙어서 최단 시간에 처리한다. 소환사를 따로 노리지 않는다.",
       "target_room": "open_field",
@@ -102,6 +103,7 @@
     },
     {
       "ruleset_id": "g0_kite",
+      "label_ko": "치고 빠짐",
       "version": 1,
       "strategy_ko": "카이팅 — 붙으면 물러나며 플래그를 세우고, 사거리가 벌어지면 사격한다. GDD §3.5 예시.",
       "target_room": "corridor",
@@ -199,6 +201,7 @@
     },
     {
       "ruleset_id": "g0_cover",
+      "label_ko": "몸 숨김",
       "version": 1,
       "strategy_ko": "엄폐 우선 — LOS 를 끊어 사격형을 무력화하고 소환사를 먼저 지운다.",
       "target_room": "pillars",

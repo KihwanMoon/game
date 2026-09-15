@@ -464,7 +464,7 @@ describe('정비 에디터 화면', () => {
   })
 
   it('★ 서버에 못 닿으면 그 사실을 적는다', () => {
-    expect(renderEditor(undefined)).toContain('정비 규칙을 못 읽는다')
+    expect(renderEditor(undefined)).toContain('벼림 내력을 못 읽는다')
   })
 
   it('★ 행이 없으면 아무것도 안 한다고 적는다 — 빈 목록은 「켜져 있다」로 읽힌다', () => {

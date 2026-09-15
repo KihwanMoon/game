@@ -82,7 +82,7 @@ export function buildRoomGroups(templates: readonly RoomTemplate[]): RoomGroup[]
     .sort((left, right) => left[0] - right[0])
     .map(([minFloor, rooms]) => ({
       minFloor,
-      label: `${String(minFloor)}층부터`,
+      label: `${String(minFloor)}장부터`,
       rooms,
     }))
 }

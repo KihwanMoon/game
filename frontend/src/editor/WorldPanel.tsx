@@ -64,7 +64,7 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
   const { progress, leaderboard, link } = props;
   return (
     <Panel
-      title="세계"
+      title="비각"
       meta={leaderboard === undefined ? "" : `시즌 ${leaderboard.coreVersion}`}
       tone="panel"
       padded

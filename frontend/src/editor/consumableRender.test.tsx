@@ -457,7 +457,7 @@ describe('소모품 설명 — 끼면 / 쓰면 / 자동 (2026-09-11 요청)', ()
       chargeMax: 2,
     })
     expect(html).toContain('최대 체력의 1/2')
-    expect(html).toContain('규칙표로만 쓴다')
+    expect(html).toContain('내력으로만 쓴다')
   })
 
   it('★ 빈 칸에는 안 적는다 — 끼운 것이 없으면 할 말이 없다', () => {

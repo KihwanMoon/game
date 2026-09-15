@@ -50,7 +50,7 @@ describe('정산 쌓기', () => {
 
 describe('정산 탭 카운트', () => {
   it('정산한 층 수를 적는다', () => {
-    expect(formatSettlementTabCount([{ floor: 1, lines: ['화폐 +40'] }])).toBe('1층')
+    expect(formatSettlementTabCount([{ floor: 1, lines: ['화폐 +40'] }])).toBe('1장')
   })
 
   it('정산한 것이 없으면 비운다 — `0층` 은 아무것도 안 말한다', () => {

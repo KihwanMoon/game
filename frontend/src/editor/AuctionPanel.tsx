@@ -26,7 +26,7 @@ import { LinkNoticeLine } from './LinkNoticeLine'
 import { checkLinked, type LinkState } from './linkState'
 
 /** 못 닿았을 때 무엇을 못 보는가. 앞머리(`서버에 닿지 못했다`)는 linkState 가 든다. */
-const MISSING_HINT = '경매는 서버가 안다'
+const MISSING_HINT = '저잣거리는 서버가 안다'
 
 export interface AuctionPanelProps {
   readonly auction: AuctionView | undefined
@@ -173,7 +173,7 @@ export function AuctionPanel(props: AuctionPanelProps): React.JSX.Element {
 
   return (
     <Panel
-      title="경매장"
+      title="저잣거리"
       meta={auction === undefined ? '' : `수수료 ${String(auction.feePercent)}% · 잔액 ${String(auction.balance)}`}
       tone="panel"
       padded

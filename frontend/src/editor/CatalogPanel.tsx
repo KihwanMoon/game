@@ -95,7 +95,7 @@ export function EnemyDetail(props: { readonly row: CatalogEnemyRow }): React.JSX
         size="sm"
       />
       {/* 몬스터의 정체는 스탯이 아니라 규칙표다 (설계/6_몬스터 §2). */}
-      <ValueExpr text={`규칙표 ${row.rulesetId}`} size="sm" dim />
+      <ValueExpr text={`내력 ${row.rulesetId}`} size="sm" dim />
     </div>
   )
 }
@@ -204,7 +204,7 @@ export function CatalogPanel(props: CatalogPanelProps): React.JSX.Element | null
                   size="sm"
                 />
                 {/* 몬스터의 정체는 스탯이 아니라 규칙표다 (설계/6_몬스터 §2). */}
-                <ValueExpr text={`규칙표 ${pickedEnemy.rulesetId}`} size="sm" dim />
+                <ValueExpr text={`내력 ${pickedEnemy.rulesetId}`} size="sm" dim />
               </div>
             )}
           </>

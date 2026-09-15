@@ -147,7 +147,7 @@ function renderTrigger(useTag: string, isEmpty: boolean): React.JSX.Element | nu
   }
   const when = formatTrigger(useTag)
   // **없다는 것도 적는다.** 빈 자리로 두면 「아직 안 정해졌나」로 읽힌다.
-  return renderRole('자동', when === '' ? '없음 — 규칙표로만 쓴다' : when)
+  return renderRole('자동', when === '' ? '없음 — 내력으로만 쓴다' : when)
 }
 
 /**

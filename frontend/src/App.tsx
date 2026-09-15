@@ -103,7 +103,6 @@ import {
   createRow as createMaintenanceRow,
   AuctionPanel,
   SkillPanel,
-  MetaPanel,
   RuleLibrary,
   checkCanRedo,
   checkCanUndo,
@@ -281,7 +280,7 @@ const RULE_SLOTS_KEY = 'rule_slots'
  * @returns 「4층 · 기둥 숲」.
  */
 export function formatLocation(floor: number, room: string): string {
-  return `${String(floor)}층 · ${room}`
+  return `${String(floor)}장 · ${room}`
 }
 
 /**
@@ -1531,7 +1530,7 @@ export function App(): React.JSX.Element {
           label={
             saveState === 'blocked'
               ? '저장 안 됨 — 이 브라우저가 저장을 막고 있다 (프라이빗 창?)'
-              : '저장 안 됨 — 이 규칙표를 저장 형식으로 못 만든다'
+              : '저장 안 됨 — 이 내력을 저장 형식으로 못 만든다'
           }
         />
       )}
@@ -1608,7 +1607,7 @@ export function App(): React.JSX.Element {
         glyph={session.isSeedPinned ? '◉' : '○'}
         title={
           session.isSeedPinned
-            ? `시드 ${String(session.seed)} 로 고정했다 — 끄면 판마다 새 던전이 나온다`
+            ? `시드 ${String(session.seed)} 로 고정했다 — 끄면 판마다 새 장이 나온다`
             : '판마다 새 시드가 나온다 — 켜면 방금 돈 판을 그대로 다시 돈다'
         }
         onClick={() => {
@@ -1622,7 +1621,7 @@ export function App(): React.JSX.Element {
         variant="primary"
         glyph="▶"
         disabled={checkLaunchLocked(blocker, isLaunching)}
-        title={blocker === '' ? '이 규칙표로 던전에 내보낸다' : blocker}
+        title={blocker === '' ? '이 내력으로 비각에 든다' : blocker}
         onClick={startRun}
       >
         {/* **기다리는 중임을 말한다.** 눌렀는데 아무 일도 없으면 사람은 다시 누른다. */}
@@ -1801,7 +1800,7 @@ export function App(): React.JSX.Element {
     const preview = buildMaintenancePreview(rows, inventory, consumables, PLAYER_BASE)
     return {
       id: 'upkeep',
-      label: '정비 규칙',
+      label: '벼림 내력',
       palette: (
         <MaintenancePalette
           disabled={!checkLinked(link) || upkeep === undefined}
@@ -2021,7 +2020,7 @@ export function App(): React.JSX.Element {
         // 경매는 내 가방을 바꾸는 일이다 — 사면 돈이 나가고 아이템이 들어오며 되돌릴 수
         // 없다(귀속된다, 결정 #07). 순위표 아래에 있으면 그만한 무게로 안 보였다.
         id: 'auction',
-        label: '경매',
+        label: '저잣거리',
         main: (
           <AuctionPanel
             auction={auction}
@@ -2040,7 +2039,7 @@ export function App(): React.JSX.Element {
       },
       {
         id: 'world',
-        label: '세계',
+        label: '비각',
         main: (
           <>
               <WorldPanel
@@ -2108,7 +2107,6 @@ export function App(): React.JSX.Element {
                   setTutorialId(undefined)
                 }}
               />
-              <MetaPanel meta={meta} baseSlots={limits.ruleSlots} />
           </>
         ),
       },
@@ -2176,7 +2174,7 @@ export function App(): React.JSX.Element {
       {/* **지금 몇 층인지 말한다.** 하강은 층을 넘어가며 적이 세지는데, 그 사실을
           말하는 자리가 없으면 갑자기 어려워진 이유를 알 수 없다. */}
       <ValueExpr
-        text={`${String(roomFloor)}층 · 방 ${String((run.setup.chain?.index ?? 0) % Math.max(1, run.setup.roomsPerFloor ?? CHAIN_LENGTH) + 1)}/${String(run.setup.roomsPerFloor ?? CHAIN_LENGTH)}`}
+        text={`${String(roomFloor)}장 · 방 ${String((run.setup.chain?.index ?? 0) % Math.max(1, run.setup.roomsPerFloor ?? CHAIN_LENGTH) + 1)}/${String(run.setup.roomsPerFloor ?? CHAIN_LENGTH)}`}
         size="sm"
       />
       <ValueExpr text={`seed ${String(run.setup.seed)}`} size="sm" dim />
@@ -2259,8 +2257,8 @@ export function App(): React.JSX.Element {
           높이라 라벨이 길면 이것이 세 번째 줄로 밀려 통째로 잘렸다 — 「고쳐서 다시
           도전한다」가 이 게임의 유일한 동사인데(GDD §2.1) 그 입구가 안 보였다.
           그래서 다른 넷은 글리프만 남기고 **이것과 「다음 n/m」만 글자를 지킨다.** */}
-      <Button size="sm" variant="ghost" glyph="↰" title="규칙표를 고치러 간다" onClick={goToEditor}>
-        규칙표
+      <Button size="sm" variant="ghost" glyph="↰" title="내력을 고치러 간다" onClick={goToEditor}>
+        내력
       </Button>
     </div>
   )

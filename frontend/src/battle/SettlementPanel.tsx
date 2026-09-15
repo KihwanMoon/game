@@ -12,7 +12,7 @@ import { ValueExpr } from '../ds/ValueExpr'
 import type { FloorSettlement } from './settlement'
 
 /** 아직 정산한 층이 없을 때 적는 말. 빈 화면은 고장으로 읽힌다. */
-const EMPTY_HINT = '아직 정산한 층이 없다 — 한 층을 깨면 여기에 쌓인다'
+const EMPTY_HINT = '아직 정산한 장이 없다 — 한 장을 깨면 여기에 쌓인다'
 
 /** 항목 줄 앞에 붙는 도형. 색은 --chalk-dim 이며 황동 예산에 들지 않는다. */
 const ITEM_GLYPH = '·'
@@ -40,7 +40,7 @@ export function SettlementPanel(props: SettlementPanelProps): React.JSX.Element 
     <div className="settle">
       {props.settlements.map((item) => (
         <div className="settle__floor" key={item.floor}>
-          <div className="settle__head">{`${String(item.floor)}층 정산`}</div>
+          <div className="settle__head">{`${String(item.floor)}장 정산`}</div>
           {item.lines.map((line, index) => (
             <div className="settle__row" key={`${String(item.floor)}:${String(index)}`}>
               <span className="settle__glyph" aria-hidden="true">

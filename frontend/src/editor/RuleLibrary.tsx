@@ -41,7 +41,7 @@ interface Notice {
 }
 
 /** 이름을 비운 채 내보낼 때 코드에 실리는 이름. */
-const UNNAMED = '이름 없는 규칙표'
+const UNNAMED = '이름 없는 내력'
 
 /**
  * 코드 라이브러리를 그린다.
@@ -124,7 +124,7 @@ export function RuleLibrary(props: RuleLibraryProps): React.JSX.Element {
             size="sm"
             variant="secondary"
             glyph="⌸"
-            title={blocked === '' ? '지금 규칙표를 이 이름으로 저장한다' : blocked}
+            title={blocked === '' ? '지금 내력을 이 이름으로 저장한다' : blocked}
             onClick={handleSave}
           >
             {existing ? '덮어쓰기' : '저장'}
@@ -133,7 +133,7 @@ export function RuleLibrary(props: RuleLibraryProps): React.JSX.Element {
 
         {props.presets.length === 0 ? (
           <p className="library__hint">
-            저장한 규칙표가 없다. 이름을 적고 저장하면 새로고침해도 남는다.
+            저장한 내력이 없다. 이름을 적고 저장하면 새로고침해도 남는다.
           </p>
         ) : (
           <ul className="library__slots">
@@ -147,7 +147,7 @@ export function RuleLibrary(props: RuleLibraryProps): React.JSX.Element {
                   size="sm"
                   variant="ghost"
                   glyph="↥"
-                  title="이 규칙표를 편집기로 싣는다"
+                  title="이 내력을 편집기로 싣는다"
                   onClick={() => {
                     props.onLoad(at)
                     setNotice({ kind: 'true', text: `${preset.name} 을 편집기에 실었다` })
@@ -202,7 +202,7 @@ export function RuleLibrary(props: RuleLibraryProps): React.JSX.Element {
               size="sm"
               variant="ghost"
               glyph="⇧"
-              title="지금 규칙표를 코드로 굽는다"
+              title="지금 내력을 코드로 굽는다"
               onClick={() => {
                 handleCode(props.onExport(trimmed === '' ? UNNAMED : trimmed))
               }}

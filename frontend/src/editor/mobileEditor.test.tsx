@@ -129,7 +129,7 @@ function buildProps(patch: Partial<RuleEditMobileProps> = {}): RuleEditMobilePro
     onReorder: vi.fn(),
     onCancel: vi.fn(),
     onSave: vi.fn(),
-    backLabel: '규칙표',
+    backLabel: '내력',
     ...patch,
   }
 }
@@ -622,7 +622,7 @@ describe('좁은 화면의 규칙표 탭', () => {
       ),
     )
     expect(html).toContain('edit-m__tabs')
-    expect(html).toContain('전투 규칙')
+    expect(html).toContain('싸움 내력')
     expect(html).toContain('정비 규칙')
   })
 

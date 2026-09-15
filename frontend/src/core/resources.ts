@@ -63,7 +63,13 @@ export const BLOCK_CATALOG: BlockCatalog = loadBlockCatalog(
  */
 export interface RuleTemplate {
   readonly templateId: string
-  /** 이 규칙표가 무엇을 노리는가. JSON 의 `strategy_ko` 를 그대로 쓴다. */
+  /**
+   * 화면에 보일 이름. **비면 id 가 대신 보인다** — 목록이 `g0_cover` 스물다섯 줄이던
+   * 자리다. 방 이름과 같은 규율이고(`schemas/room`), 잠긴 팩에 이 칸이 없을 수 있어
+   * 파서가 필수로 요구하지 않는다.
+   */
+  readonly labelKo: string
+  /** 이 내력이 무엇을 노리는가. JSON 의 `strategy_ko` 를 그대로 쓴다. */
   readonly strategyKo: string
   readonly ruleset: RuleSet
   /** 이 규칙표가 쓰는 CPU 합계. 예산 안에 드는지 고르기 전에 보여야 한다. */
@@ -83,9 +89,10 @@ export interface RuleTemplate {
 function collectTemplates(file: RawRuleSetFile): readonly RuleTemplate[] {
   return file.rulesets.map((raw) => {
     const ruleset = parseRuleSet(raw)
-    const described = raw as unknown as { strategy_ko?: string }
+    const described = raw as unknown as { strategy_ko?: string; label_ko?: string }
     return {
       templateId: ruleset.rulesetId,
+      labelKo: described.label_ko ?? '',
       strategyKo: described.strategy_ko ?? '',
       ruleset,
       cpuTotal: ruleset.rules.reduce((sum, rule) => sum + rule.cpuCost, 0),

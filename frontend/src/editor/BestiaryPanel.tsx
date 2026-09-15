@@ -27,8 +27,8 @@ export interface BestiaryPanelProps {
 }
 
 /** 못 닿았을 때 무엇을 못 보는가. 앞머리(`서버에 닿지 못했다`)는 linkState 가 든다. */
-const MISSING_HINT = '세계의 몬스터는 서버가 안다'
-const EMPTY_HINT = '아직 세계에 지속 몬스터가 없다'
+const MISSING_HINT = '비각의 몬스터는 서버가 안다'
+const EMPTY_HINT = '아직 비각에 지속 몬스터가 없다'
 
 /**
  * 그 개체의 규칙표를 사람이 읽는 줄들로 만든다.
@@ -60,7 +60,7 @@ export function BestiaryPanel(props: BestiaryPanelProps): React.JSX.Element {
 
   return (
     <Panel
-      title="도감"
+      title="이문록"
       meta={mine === 0 ? '' : `내 것 ${String(mine)}`}
       tone="panel"
       padded
@@ -89,7 +89,7 @@ export function BestiaryPanel(props: BestiaryPanelProps): React.JSX.Element {
                 {/* **얼마나 센가.** 규칙표만으로는 어떻게 싸우는지만 알 수 있고,
                     이길 수 있는지는 알 수 없다. */}
                 <ValueExpr
-                  text={`층${String(entry.zoneFloor)} · hp ${String(entry.hpMax)} · 공 ${String(entry.attack)} · 방 ${String(entry.defense)}`}
+                  text={`${String(entry.zoneFloor)}장 · hp ${String(entry.hpMax)} · 공 ${String(entry.attack)} · 방 ${String(entry.defense)}`}
                   size="sm"
                   dim
                 />

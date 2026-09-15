@@ -350,7 +350,7 @@ export function checkMaintenanceRows(
     problems.push({
       index: earnAt,
       isBlocking: false,
-      text: '파는 행이 쓰는 행보다 아래에 있다 — 판 돈은 이번 정비에서 못 쓴다',
+      text: '파는 행이 쓰는 행보다 아래에 있다 — 판 돈은 이번 벼림에서 못 쓴다',
     })
   }
   return problems

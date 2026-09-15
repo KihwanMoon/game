@@ -62,7 +62,12 @@ export function TemplateRow(props: TemplateRowProps): React.JSX.Element {
   return (
     <li className="tpl__entry">
       <div className="tpl__row">
-        <span className="tpl__name">{template.templateId}</span>
+        {/* **이름이 앞에 선다** (2026-09-15). 예전에는 여기가 `g0_cover` 였고,
+            영문 id 스물다섯 줄로는 무엇을 고를지 알 수 없었다. id 는 버리지 않고
+            마우스를 올렸을 때로 옮겼다 — 버그를 적을 때 필요한 것은 이름이 아니다. */}
+        <span className="tpl__name" title={template.templateId}>
+          {template.labelKo === '' ? template.templateId : template.labelKo}
+        </span>
         <ValueExpr
           text={`규칙 ${String(template.ruleset.rules.length)} · cpu ${String(template.cpuTotal)} / ${String(props.cpuBudget)}`}
           size="sm"
@@ -75,7 +80,7 @@ export function TemplateRow(props: TemplateRowProps): React.JSX.Element {
           size="sm"
           variant="ghost"
           glyph={props.isOpen ? '▾' : '▸'}
-          title="이 규칙표가 무엇을 하는지 한 줄씩 읽는다"
+          title="이 내력이 무엇을 하는지 한 줄씩 읽는다"
           onClick={() => {
             props.onToggle(template.templateId)
           }}
@@ -120,7 +125,7 @@ export function TemplatePanel(props: TemplatePanelProps): React.JSX.Element {
 
   return (
     <Panel
-      title="규칙표 고르기"
+      title="내력 고르기"
       meta={`${String(props.templates.length)}벌`}
       tone="panel"
       padded

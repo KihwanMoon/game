@@ -122,14 +122,14 @@ export function GrowthPanel(props: GrowthPanelProps): React.JSX.Element {
             <div className="wld__row">
               <span className="wld__label">깊이</span>
               <ValueExpr
-                text={`${String(progress.reachedFloor)} / ${String(progress.floorCap)}층`}
+                text={`${String(progress.reachedFloor)} / ${String(progress.floorCap)}장`}
                 size="sm"
               />
               <ValueExpr
                 text={
                   progress.reachedFloor >= progress.floorCap
                     ? '끝까지 왔다'
-                    : `층마다 적이 HP +${String(FLOOR_HP_PCT)}% · 공격 +${String(FLOOR_ATTACK_PCT)}% 로 세진다`
+                    : `장마다 적이 HP +${String(FLOOR_HP_PCT)}% · 공격 +${String(FLOOR_ATTACK_PCT)}% 로 세진다`
                 }
                 size="sm"
                 dim

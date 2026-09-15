@@ -122,7 +122,7 @@ export function BattleCheck(): React.JSX.Element {
     <BattleView
       setup={setup}
       rulesets={G0_RULESETS}
-      location={`1층 · ${findRoomTitle(ROOM_TEMPLATES, roomId)}`}
+      location={`1장 · ${findRoomTitle(ROOM_TEMPLATES, roomId)}`}
       controls={controls}
     />
   )

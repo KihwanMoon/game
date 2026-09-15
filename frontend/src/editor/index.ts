@@ -118,8 +118,6 @@ export {
 export type { MaintenancePreview, PreviewRow } from './maintenancePreview'
 export { SkillPanel } from './SkillPanel'
 export type { InventoryPanelProps } from './InventoryPanel'
-export { MetaPanel } from './MetaPanel'
-export type { MetaPanelProps } from './MetaPanel'
 export { RuleLibrary } from './RuleLibrary'
 export type { RuleLibraryProps } from './RuleLibrary'
 export { writeClipboard } from './clipboard'

@@ -98,7 +98,7 @@ function renderLibrary(presets: readonly RulePreset[]): string {
 describe('코드 라이브러리', () => {
   it('빈 라이브러리는 무엇을 하면 되는지 적는다', () => {
     const markup = renderLibrary([])
-    expect(markup).toContain('저장한 규칙표가 없다')
+    expect(markup).toContain('저장한 내력이 없다')
     expect(markup).toContain(`0 / ${String(MAX_PRESET_SLOTS)}`)
   })
 

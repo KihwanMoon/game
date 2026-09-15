@@ -60,7 +60,7 @@ describe('첫 화면', () => {
   it('규칙 에디터가 먼저 뜬다', () => {
     // 데스크톱 세 열을 지우면서 제목이 「규칙 에디터」에서 「규칙표」로 바뀌었다 —
     // 명세 C 가 그린 화면의 이름이 그것이다.
-    expect(markup).toContain('규칙표')
+    expect(markup).toContain('내력')
     expect(markup).toContain('edit-m__rules')
   })
 
@@ -117,7 +117,7 @@ describe('첫 화면', () => {
     expect(markup).toContain('edit-m__tabs')
     // 묶음은 「무엇에 대한 것인가」로 가른다. 「나」가 「캐릭터」가 되고 스킬이 가방에서
     // 갈라진 것은, 레벨·능력치가 세계에서 이쪽으로 오면서 탭의 뜻이 분명해져서다.
-    for (const label of ['전투 규칙', '정비 규칙', '캐릭터', '가방', '스킬', '경매', '세계', '배움']) {
+    for (const label of ['싸움 내력', '벼림 내력', '캐릭터', '가방', '스킬', '저잣거리', '비각', '권', '배움']) {
       expect(markup).toContain(`>${label}<`)
     }
   })
@@ -170,8 +170,8 @@ describe('표기', () => {
   it('★ 층과 방을 함께 적는다 — **층이 박혀 있었다**', () => {
     // 하강이 층을 넘어가는데 머리글은 늘 `1층` 이라고 적었다 — 화면에서 가장 크게
     // 적히는 자리가 거짓말을 하고 있었다.
-    expect(formatLocation(4, 'open_field')).toBe('4층 · open_field')
-    expect(formatLocation(1, 'corridor')).toBe('1층 · corridor')
+    expect(formatLocation(4, 'open_field')).toBe('4장 · open_field')
+    expect(formatLocation(1, 'corridor')).toBe('1장 · corridor')
   })
 
   it('직전 판이 없으면 아무것도 적지 않는다', () => {

@@ -143,7 +143,7 @@ function MaintenanceRow(props: {
         type="button"
         className="mnt__hit"
         aria-pressed={props.isPicked}
-        aria-label={`정비 ${String(index + 1)} 고르기`}
+        aria-label={`벼림 ${String(index + 1)} 고르기`}
         onClick={() => {
           props.onPick(index)
         }}
@@ -283,7 +283,7 @@ export function MaintenancePalette(props: {
   readonly onAdd: (action: string) => void
 }): React.JSX.Element {
   return (
-    <Panel title="정비 행동" meta="누르면 맨 아래에 선다" tone="panel" padded scroll>
+    <Panel title="벼림 행동" meta="누르면 맨 아래에 선다" tone="panel" padded scroll>
       <div className="mnt__palette">
         {MAINTENANCE_ACTIONS.map((action) => (
           <button
@@ -336,7 +336,7 @@ export function MaintenanceCheck(props: {
       scroll
     >
       {blocking.length === 0 ? (
-        <GlyphState state="true" label="저장할 수 있는 정비 규칙이다" size="sm" />
+        <GlyphState state="true" label="저장할 수 있는 벼림 내력이다" size="sm" />
       ) : (
         <ul className="check-list">
           {blocking.map((problem) => (
@@ -367,7 +367,7 @@ export function MaintenanceCheck(props: {
       <div className="mnt__sum">
         <ValueExpr text={ESTIMATE_TEXT} size="sm" dim />
         {!props.hasRows ? (
-          <ValueExpr text="행이 없다 — 정비는 아무것도 안 한다" size="sm" dim />
+          <ValueExpr text="행이 없다 — 벼림은 아무것도 안 한다" size="sm" dim />
         ) : checkPreviewIdle(props.preview) ? (
           // **「돌긴 도는데 하는 일이 없다」를 말해야 한다.** 안 그러면 켜 놓고
           // 도는 줄 알았던 정비가 몇 판 내내 아무것도 안 한다.
@@ -397,8 +397,8 @@ export function MaintenanceEditor(props: MaintenanceEditorProps): React.JSX.Elem
   const view = props.view
   if (view === undefined) {
     return (
-      <Panel title="정비 규칙" tone="panel" padded scroll>
-        <ValueExpr text="서버에 닿지 못했다 — 정비 규칙을 못 읽는다" size="sm" dim />
+      <Panel title="벼림 내력" tone="panel" padded scroll>
+        <ValueExpr text="서버에 닿지 못했다 — 벼림 내력을 못 읽는다" size="sm" dim />
       </Panel>
     )
   }
@@ -414,7 +414,7 @@ export function MaintenanceEditor(props: MaintenanceEditorProps): React.JSX.Elem
 
   return (
     <Panel
-      title="정비 규칙"
+      title="벼림 내력"
       meta={`행 ${String(rows.length)} / ${String(MAX_MAINTENANCE_ROWS)}`}
       padded
       scroll
@@ -444,7 +444,7 @@ export function MaintenanceEditor(props: MaintenanceEditorProps): React.JSX.Elem
         ) : null}
         {rows.length === 0 ? (
           <ValueExpr
-            text="정비 규칙이 없다 — 「정비 행동」에서 하나를 눌러 세운다. 없으면 아무것도 안 한다"
+            text="벼림 내력이 없다 — 「벼림 행동」에서 하나를 눌러 세운다. 없으면 아무것도 안 한다"
             size="sm"
             dim
           />

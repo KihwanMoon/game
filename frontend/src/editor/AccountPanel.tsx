@@ -135,19 +135,19 @@ export function AccountPanel(props: AccountPanelProps): React.JSX.Element {
               size="sm"
               label={
                 account?.doppelOptIn
-                  ? '깊은 층에서 죽으면 내 빌드가 남의 던전에 그림자로 선다'
-                  : '내 그림자는 안 선다'
+                  ? '깊은 장에서 죽으면 내 내력이 남의 판에 둔갑으로 선다'
+                  : '내 둔갑은 안 선다'
               }
             />
             <Button
               size="sm"
               variant="ghost"
-              title="그림자는 내 규칙표로 싸운다 — 관전하는 사람이 내 해답을 어느 정도 읽게 된다"
+              title="둔갑은 내 내력으로 싸운다 — 관전하는 사람이 내 해답을 어느 정도 읽게 된다"
               onClick={() => {
                 props.onDoppelOptIn?.(!(account?.doppelOptIn ?? false))
               }}
             >
-              {account?.doppelOptIn ? '그림자 끄기' : '그림자 켜기'}
+              {account?.doppelOptIn ? '둔갑 끄기' : '둔갑 켜기'}
             </Button>
           </div>
         ) : null}

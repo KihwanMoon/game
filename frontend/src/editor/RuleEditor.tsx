@@ -54,7 +54,7 @@ const DECIMAL_RADIX = 10
 const EMPTY_READINGS: TermReadings = new Map()
 
 /** 모바일 편집 화면에서 돌아갈 곳의 이름. 이 앱에서 편집 화면의 뒤는 규칙표 목록이다. */
-const BACK_LABEL = '규칙표'
+const BACK_LABEL = '내력'
 
 /** RuleEditor 의 props. */
 export interface RuleEditorProps {

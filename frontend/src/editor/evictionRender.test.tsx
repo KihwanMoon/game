@@ -25,7 +25,7 @@ describe('튕김 안내', () => {
   })
 
   it('★ 이 기기의 규칙표는 그대로라고 말한다 — 튕긴 것은 내가 고른 일이 아니다', () => {
-    expect(shown).toContain('규칙표는 그대로')
+    expect(shown).toContain('내력은 그대로')
     expect(EVICTION_TEXT).not.toContain('지워')
   })
 

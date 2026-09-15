@@ -38,7 +38,7 @@ import type { RuleRowActions } from './ruleRowActions'
 import { formatMeasuredCondition, type TermReadings } from './termMeasure'
 
 /** 화면 글자. 한 곳에 모아 두어 두 배치가 같은 말을 쓰게 한다. */
-const LIST_TITLE = '규칙표'
+const LIST_TITLE = '내력'
 const ADD_RULE_TEXT = '＋ 규칙 추가'
 const CANCEL_TEXT = '되돌리기'
 const SAVE_TEXT = '저장'
@@ -138,7 +138,7 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
             props.onTab?.(COMBAT_TAB_ID)
           }}
         >
-          전투 규칙
+          싸움 내력
         </button>
         {tabs.map((tab) => (
           <button

@@ -19,7 +19,7 @@ export interface RuleTableProps {
  */
 export function RuleTable(props: RuleTableProps): React.JSX.Element {
   return (
-    <ul className="ds-rule-table" aria-label="규칙표">
+    <ul className="ds-rule-table" aria-label="내력">
       {props.children}
     </ul>
   )

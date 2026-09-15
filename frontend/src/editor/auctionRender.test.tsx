@@ -260,6 +260,6 @@ describe('경매 — 서버 없음', () => {
       />,
     )
     expect(markup).toContain('서버에 닿지 못했다')
-    expect(markup).toContain('경매는 서버가 안다')
+    expect(markup).toContain('저잣거리는 서버가 안다')
   })
 })

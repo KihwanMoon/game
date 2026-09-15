@@ -37,7 +37,7 @@ export const SHEET_TABS: readonly SheetTab[] = ['vitals', 'rules', 'log', 'rewar
 /** 탭 라벨. 카운트는 따로 붙인다. */
 export const SHEET_TAB_LABELS: ReadonlyMap<SheetTab, string> = new Map([
   ['vitals', '상태'],
-  ['rules', '규칙표'],
+  ['rules', '내력'],
   ['log', '실행 로그'],
   ['reward', '정산'],
 ])

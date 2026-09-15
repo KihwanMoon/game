@@ -137,10 +137,10 @@ function BattleSkeleton(): React.JSX.Element {
 
   return (
     <div className="gal__battle">
-      <TopBar location="1층 · 파수실" tick={SAMPLE_TICK} speed={speed} onSpeedChange={setSpeed} />
+      <TopBar location="1장 · 파수실" tick={SAMPLE_TICK} speed={speed} onSpeedChange={setSpeed} />
       <div className="gal__cols">
         <div className="gal__col">
-          <Panel title="규칙표" meta={`cpu ${String(SAMPLE_CPU_USED)} / ${String(SAMPLE_CPU_BUDGET)}`} padded={false} scroll>
+          <Panel title="내력" meta={`cpu ${String(SAMPLE_CPU_USED)} / ${String(SAMPLE_CPU_BUDGET)}`} padded={false} scroll>
             <RuleTable>
               <RuleRow
                 index={1}

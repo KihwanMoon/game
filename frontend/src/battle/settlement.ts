@@ -65,5 +65,5 @@ export function appendSettlement(
  * @returns `3층` 꼴. 정산한 층이 없으면 빈 문자열.
  */
 export function formatSettlementTabCount(list: readonly FloorSettlement[]): string {
-  return list.length === 0 ? '' : `${String(list.length)}층`
+  return list.length === 0 ? '' : `${String(list.length)}장`
 }

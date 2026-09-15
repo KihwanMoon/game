@@ -78,7 +78,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     }
     return (
       <div className="app-crash">
-        <Panel title="판이 중단됐다" meta="규칙표를 고쳐 다시 시도한다" tone="raised">
+        <Panel title="판이 중단됐다" meta="내력을 고쳐 다시 시도한다" tone="raised">
           <p className="app-crash__text">{message}</p>
           <Button
             variant="secondary"

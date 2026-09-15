@@ -50,7 +50,7 @@ export function TextView(props: TextViewProps): React.JSX.Element {
           className="textview__area"
           spellCheck={false}
           value={props.text}
-          aria-label="규칙표 텍스트"
+          aria-label="내력 텍스트"
           onChange={handleChange}
         />
         <div className="textview__status">

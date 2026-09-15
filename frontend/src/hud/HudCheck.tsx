@@ -41,7 +41,7 @@ export function HudCheck(): React.JSX.Element {
       // 조합이 바뀌면 화면 상태(재생 위치·추적 여부)도 처음으로 돌린다.
       key={demo.caseId}
       recording={recording}
-      location={`1층 · ${readRoomTitle(recording.template)}`}
+      location={`1장 · ${readRoomTitle(recording.template)}`}
       controls={
         <div className="hud-check">
           {DEMO_CASES.map((item) => (

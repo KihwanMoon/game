@@ -31,7 +31,11 @@ describe('추천 규칙표', () => {
   it('★ 저장소에 있는 규칙표가 하나도 안 빠진다 — 못 고르는 것은 없는 것과 같다', () => {
     expect(RULE_TEMPLATES.length).toBeGreaterThanOrEqual(17)
     for (const item of RULE_TEMPLATES) {
-      expect(MARKUP).toContain(`<span class="tpl__name">${item.templateId}</span>`)
+      // **이름이 앞에 선다** (2026-09-15). id 는 버리지 않고 툴팁으로 갔다 — 버그를
+      // 적을 때 필요한 것은 이름이 아니다.
+      expect(MARKUP).toContain(`title="${item.templateId}"`)
+      expect(item.labelKo, `${item.templateId} 에 이름이 없다`).not.toBe('')
+      expect(MARKUP).toContain(`title="${item.templateId}">${item.labelKo}</span>`)
     }
   })
 

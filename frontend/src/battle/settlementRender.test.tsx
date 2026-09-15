@@ -20,12 +20,12 @@ describe('SettlementPanel', () => {
   it('★ 항목마다 제 줄을 갖는다 — 한 줄에 정보 하나가 이 탭의 이유다', () => {
     const html = renderToStaticMarkup(<SettlementPanel settlements={SETTLED} />)
     expect(html.split('settle__row').length - 1).toBe(4)
-    expect(html).toContain('1층 정산')
+    expect(html).toContain('1장 정산')
     expect(html).toContain('사슬 갑옷(FINE) 획득')
   })
 
   it('빈 목록에도 말을 한다 — 빈 화면은 고장으로 읽힌다', () => {
-    expect(renderToStaticMarkup(<SettlementPanel settlements={[]} />)).toContain('아직 정산한 층')
+    expect(renderToStaticMarkup(<SettlementPanel settlements={[]} />)).toContain('아직 정산한 장')
   })
 })
 
@@ -37,7 +37,7 @@ describe('SettlementPanel', () => {
  */
 function buildProps(patch: Partial<BattlePortraitProps> = {}): BattlePortraitProps {
   return {
-    location: '2층 · corridor',
+    location: '2장 · corridor',
     tick: 12,
     speed: 1,
     onSpeedChange: () => undefined,
@@ -62,9 +62,9 @@ describe('전투 화면의 정산 탭', () => {
   it('★ 로그와 같은 급의 탭으로 선다 — 상단 알림이 아니다', () => {
     const html = renderToStaticMarkup(<BattlePortrait {...buildProps({ settlements: SETTLED })} />)
     expect(html).toContain('정산')
-    expect(html).toContain('2층 정산')
+    expect(html).toContain('2장 정산')
     // 탭 카운트가 정산한 층 수를 적는다.
-    expect(html).toContain('2층<')
+    expect(html).toContain('2장<')
   })
 
   it('정산 탭을 안 보고 있으면 본문에 안 나온다', () => {
