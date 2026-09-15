@@ -118,8 +118,8 @@ export {
 export type { MaintenancePreview, PreviewRow } from './maintenancePreview'
 export { SkillPanel } from './SkillPanel'
 export type { InventoryPanelProps } from './InventoryPanel'
-export { RuleLibrary, RulePresetList } from './RuleLibrary'
-export type { RuleLibraryProps, RulePresetListProps } from './RuleLibrary'
+export { RuleLibrary } from './RuleLibrary'
+export type { RuleLibraryProps } from './RuleLibrary'
 export { writeClipboard } from './clipboard'
 export {
   HISTORY_LIMIT,

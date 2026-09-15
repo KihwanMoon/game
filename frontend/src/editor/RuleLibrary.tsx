@@ -1,17 +1,12 @@
 /**
- * 내력 저장과 공유 코드 (GDD §2.3, §10).
+ * 코드 라이브러리 — 저장 · 조회 · 불러오기 · 공유 코드 (GDD §2.3, §10).
  *
- * **저장하는 곳과 찾는 곳을 갈랐다** (2026-09-15 요청: 「저장은 괜찮은데 내가 저장한 걸
- * 조회하고 불러오는 게 필요하다」). 예전에는 목록이 편집기 맨 아래, 규칙 줄들과 검증
- * 뒤에 있었다 — **저장은 눈앞에서 되는데 꺼내려면 한참을 내려가야** 했다.
+ * **넷이 한 패널에 있고 자리는 편집기 아래다** (2026-09-15 요청). 한 번 「배움」 탭으로
+ * 목록만 떼어 봤다가 되돌렸다 — 라이브러리는 **개인용**이고, 저장한 것을 꺼내는 일은
+ * 규칙을 고치는 일의 한 부분이지 다른 화면으로 가는 일이 아니다.
  *
- * 그래서 이 파일이 둘을 내보낸다.
- *
- *     RuleLibrary      편집기 아래. 이름 붙여 저장 + 공유 코드 주고받기
- *     RulePresetList   「배움」 탭. 저장한 것을 훑고 불러오는 자리
- *
- * **목록은 한 자리에만 둔다.** 양쪽에 두면 슬롯이 여덟인데 목록이 둘이 되고, 지운 뒤
- * 다른 쪽이 아직 그것을 보이는 순간이 생긴다.
+ * 찾기 쉬우라고 목록을 위로 올리지도 않는다. 위는 고치는 자리이고, 여기는 **그 일이
+ * 끝난 뒤에 들르는 자리**다.
  *
  * 슬롯이 8개인 것은 메타 세이브의 계약이다(`game/schemas/meta_save.py`). 무한히 늘리지
  * 않는 이유는 저장 용량이 아니라 **고르는 일**이다 — 이름 붙인 내력이 수십 개가 되면
@@ -30,24 +25,18 @@ import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import { MAX_PRESET_SLOTS, type RulePreset } from '../storage'
 import { writeClipboard } from './clipboard'
 
-/** RuleLibrary 의 props — 저장과 공유 코드. */
+/** RuleLibrary 의 props. */
 export interface RuleLibraryProps {
-  /** 몇 칸이 찼는지 세고, 같은 이름이면 덮어쓰기로 바꾸기 위해 받는다. */
   readonly presets: readonly RulePreset[]
   /** 지금 내력을 이 이름으로 슬롯에 넣는다. */
   readonly onSave: (name: string) => void
+  /** 슬롯의 내력을 편집기로 싣는다. */
+  readonly onLoad: (index: number) => void
+  readonly onRemove: (index: number) => void
   /** 공유 코드를 읽어 들인다. 실패 사유를 돌려주고, 성공이면 빈 문자열이다. */
   readonly onImport: (code: string) => string
   /** 지금 내력을 공유 코드로 굽는다. */
   readonly onExport: (name: string) => string
-}
-
-/** RulePresetList 의 props — 조회와 불러오기. */
-export interface RulePresetListProps {
-  readonly presets: readonly RulePreset[]
-  /** 슬롯의 내력을 편집기로 싣는다. */
-  readonly onLoad: (index: number) => void
-  readonly onRemove: (index: number) => void
   /** 슬롯 하나를 공유 코드로 굽는다. */
   readonly onExportSlot: (index: number) => string
 }
@@ -114,7 +103,7 @@ export function RuleLibrary(props: RuleLibraryProps): React.JSX.Element {
 
   return (
     <Panel
-      title="저장과 공유 코드"
+      title="코드 라이브러리"
       meta={`${String(props.presets.length)} / ${String(MAX_PRESET_SLOTS)}`}
       padded={false}
       scroll
@@ -148,6 +137,58 @@ export function RuleLibrary(props: RuleLibraryProps): React.JSX.Element {
             {existing ? '덮어쓰기' : '저장'}
           </Button>
         </div>
+
+        {props.presets.length === 0 ? (
+          <p className="library__hint">
+            저장한 내력이 없다. 이름을 적고 저장하면 새로고침해도 남는다.
+          </p>
+        ) : (
+          <ul className="library__slots">
+            {props.presets.map((preset, at) => (
+              <li className="library__slot" key={preset.name}>
+                <span className="library__name" title={preset.ruleset.rulesetId}>
+                  {preset.name}
+                </span>
+                <ValueExpr text={`규칙 ${String(preset.ruleset.rules.length)}`} size="sm" dim />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  glyph="↥"
+                  title="이 내력을 편집기로 싣는다"
+                  onClick={() => {
+                    props.onLoad(at)
+                    setNotice({ kind: 'true', text: `${preset.name} 을 편집기에 실었다` })
+                  }}
+                >
+                  불러오기
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  glyph="⧉"
+                  title="이 슬롯의 공유 코드를 만든다"
+                  onClick={() => {
+                    handleCode(props.onExportSlot(at))
+                  }}
+                >
+                  코드
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  glyph="✕"
+                  title="이 슬롯을 지운다"
+                  onClick={() => {
+                    props.onRemove(at)
+                    setNotice({ kind: 'true', text: `${preset.name} 슬롯을 지웠다` })
+                  }}
+                >
+                  삭제
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
 
         <div className="library__share">
           <label className="library__label" htmlFor="library-code">
@@ -207,85 +248,3 @@ export function RuleLibrary(props: RuleLibraryProps): React.JSX.Element {
  * @param props 슬롯들과 조작.
  * @returns 렌더 트리.
  */
-export function RulePresetList(props: RulePresetListProps): React.JSX.Element {
-  const [notice, setNotice] = useState<Notice | undefined>(undefined)
-
-  /**
-   * 슬롯 하나의 코드를 클립보드에 넣는다.
-   *
-   * **칸에 안 보인다.** 목록 쪽에는 코드 칸이 없으므로 클립보드만 채우고 그 사실을
-   * 알린다 — 보이지 않는 곳으로 조용히 복사되면 붙여넣기 전에는 확인할 길이 없다.
-   *
-   * @param at 슬롯 자리.
-   */
-  function handleSlotCode(at: number): void {
-    writeClipboard(props.onExportSlot(at))
-    setNotice({ kind: 'true', text: '공유 코드를 클립보드에 넣었다' })
-  }
-
-  return (
-    <Panel
-      title="내가 저장한 내력"
-      meta={`${String(props.presets.length)} / ${String(MAX_PRESET_SLOTS)}`}
-      padded={false}
-      scroll
-    >
-      <div className="library">
-        {props.presets.length === 0 ? (
-          <p className="library__hint">
-            저장한 내력이 없다. 이름을 적고 저장하면 새로고침해도 남는다.
-          </p>
-        ) : (
-          <ul className="library__slots">
-            {props.presets.map((preset, at) => (
-              <li className="library__slot" key={preset.name}>
-                <span className="library__name" title={preset.ruleset.rulesetId}>
-                  {preset.name}
-                </span>
-                <ValueExpr text={`규칙 ${String(preset.ruleset.rules.length)}`} size="sm" dim />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  glyph="↥"
-                  title="이 내력을 편집기로 싣는다"
-                  onClick={() => {
-                    props.onLoad(at)
-                    setNotice({ kind: 'true', text: `${preset.name} 을 편집기에 실었다` })
-                  }}
-                >
-                  불러오기
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  glyph="⧉"
-                  title="이 슬롯의 공유 코드를 만든다"
-                  onClick={() => {
-                    handleSlotCode(at)
-                  }}
-                >
-                  코드
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  glyph="✕"
-                  title="이 슬롯을 지운다"
-                  onClick={() => {
-                    props.onRemove(at)
-                    setNotice({ kind: 'true', text: `${preset.name} 슬롯을 지웠다` })
-                  }}
-                >
-                  삭제
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-        {notice === undefined ? null : (
-          <GlyphState state={notice.kind} size="sm" label={notice.text} />
-        )}
-      </div>
-    </Panel>
-  )
-}

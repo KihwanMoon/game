@@ -135,13 +135,14 @@ describe('첫 화면', () => {
     expect(markup).not.toContain('장비와 가방')
   })
 
-  it('★ 저장은 규칙을 고치는 열에 있다', () => {
+  it('★ 코드 라이브러리는 규칙을 고치는 열에 있다', () => {
     // 이 슬롯이 원래 그것을 위해 만들어졌는데(RuleEditor 의 `library` 주석) 곁다리 탭
-    // 하나로 들어가 있었다. 이름 붙여 저장하는 일은 탭을 고르는 일이 아니라 편집의
-    // 일부다. **꺼내는 일은 다르다** — 목록은 「배움」 탭에 있다 (2026-09-15).
-    expect(markup).toContain('저장과 공유 코드')
+    // 하나로 들어가 있었다. 라이브러리는 **개인용**이고, 저장·조회·불러오기는 전부
+    // 규칙을 고치는 일의 한 부분이다 — 탭을 고르는 일이 아니다 (2026-09-15).
+    expect(markup).toContain('코드 라이브러리')
     expect(markup).not.toContain('>서고<')
-    expect(markup.slice(markup.indexOf('edit-m__rules'))).toContain('저장과 공유 코드')
+    // 규칙 목록과 같은 화면, **그 아래**에 있다. 위는 고치는 자리고 여기는 들르는 자리다.
+    expect(markup.slice(markup.indexOf('edit-m__rules'))).toContain('코드 라이브러리')
   })
 
   it('★ 관리 탭은 관리자에게만 생긴다 — 빈 탭도 경로의 존재를 알려 준다', () => {

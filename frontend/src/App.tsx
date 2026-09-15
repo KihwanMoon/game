@@ -104,7 +104,6 @@ import {
   AuctionPanel,
   SkillPanel,
   RuleLibrary,
-  RulePresetList,
   checkCanRedo,
   checkCanUndo,
   checkTextEntry,
@@ -1685,8 +1684,15 @@ export function App(): React.JSX.Element {
                 onSave={(name) => {
                   setSession((current) => applyPresetSave(current, name))
                 }}
+                onLoad={(index) => {
+                  setSession((current) => applyPresetLoad(current, index))
+                }}
+                onRemove={(index) => {
+                  setSession((current) => applyPresetRemove(current, index))
+                }}
                 onImport={readSharedCode}
                 onExport={(name) => exportSessionCode(session, name)}
+                onExportSlot={(index) => exportSlotCode(session, index)}
               />
             </>
           }
@@ -1879,17 +1885,6 @@ export function App(): React.JSX.Element {
         label: '배움',
         main: (
           <>
-              {/* **내 것이 먼저다.** 찾으러 오는 사람은 대개 자기가 저장한 것을 찾는다. */}
-              <RulePresetList
-                presets={session.presets}
-                onLoad={(index) => {
-                  setSession((current) => applyPresetLoad(current, index))
-                }}
-                onRemove={(index) => {
-                  setSession((current) => applyPresetRemove(current, index))
-                }}
-                onExportSlot={(index) => exportSlotCode(session, index)}
-              />
               <TemplatePanel
                 templates={RULE_TEMPLATES}
                 catalog={BLOCK_CATALOG}
