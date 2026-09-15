@@ -112,7 +112,7 @@ export function CharacterPanel(props: CharacterPanelProps): React.JSX.Element {
 
   return (
     <Panel
-      title="캐릭터"
+      title="서생"
       meta={progress === undefined ? '' : `레벨 ${String(progress.level)}`}
       tone="panel"
       padded
@@ -168,7 +168,7 @@ export function CharacterPanel(props: CharacterPanelProps): React.JSX.Element {
                 <ValueExpr text={`= ${String(loadout.ruleSlots)}`} size="sm" />
               </li>
               <li className="chr__row">
-                <span className="chr__label">스킬위력</span>
+                <span className="chr__label">재주 위력</span>
                 <ValueExpr
                   text={`100% · ${formatDelta(loadout.skillPowerPct - 100, '%')}`}
                   size="sm"
@@ -199,7 +199,7 @@ export function CharacterPanel(props: CharacterPanelProps): React.JSX.Element {
               })}
             </ul>
 
-            <div className="chr__head">스킬 · 장착한 것만 규칙에 쓸 수 있다</div>
+            <div className="chr__head">재주 · 장착한 것만 내력에 쓸 수 있다</div>
             <ul className="chr__list">
               {allSkills.map((skill) => (
                 <li className="chr__row" key={skill}>
@@ -209,7 +209,7 @@ export function CharacterPanel(props: CharacterPanelProps): React.JSX.Element {
                     label={skill}
                   />
                   {equipped.has(skill) ? null : (
-                    <ValueExpr text="이 스킬을 여는 장비를 끼면 열린다" size="sm" dim />
+                    <ValueExpr text="이 재주를 여는 장비를 끼면 열린다" size="sm" dim />
                   )}
                 </li>
               ))}

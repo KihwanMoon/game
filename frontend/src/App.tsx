@@ -1871,12 +1871,52 @@ export function App(): React.JSX.Element {
    */
   function buildScreenTabs(): EditorTab[] {
     const tabs: EditorTab[] = [
+      // **배움이 내력 옆에 선다** (2026-09-15). 처음 오는 사람이 「무엇을 적어야
+      // 하나」를 묻는 자리가 여기인데, 탭 줄 맨 끝이라 가장 늦게 보였다.
+      {
+        id: 'learn',
+        label: '배움',
+        main: (
+          <>
+              <TemplatePanel
+                templates={RULE_TEMPLATES}
+                catalog={BLOCK_CATALOG}
+                cpuBudget={limits.cpuBudget}
+                ruleSlots={limits.ruleSlots}
+                onLoad={(next) => {
+                  // 편집 한 단계로 쌓는다 — 되돌리기로 돌아간다. 공유 코드 불러오기와
+                  // 같은 방식이라 "눌렀다가 내 것이 사라졌다" 가 되지 않는다.
+                  setSession((current) => applyRuleSetEdit(current, next))
+                }}
+              />
+              <TutorialPanel
+                stages={TUTORIAL_STAGES}
+                cleared={tutorialCleared}
+                activeId={tutorialId}
+                onOpen={(stage) => {
+                  // **틀린 규칙표를 싣는다.** 실패한 판을 한 번 보고 나서 고치는 것이
+                  // 이 게임의 학습 방식이다 (P1).
+                  setTutorialId(stage.stageId)
+                  setSession((current) => applyTutorialStage(current, stage, stage.startRules))
+                }}
+                onHint={(stage) => {
+                  // 막히면 답을 준다. 벽에 부딪힌 사람을 세워 두면 G1 이 재는 것이
+                  // "재미" 가 아니라 "인내" 가 된다.
+                  setSession((current) => applyTutorialStage(current, stage, stage.solutionRules))
+                }}
+                onClose={() => {
+                  setTutorialId(undefined)
+                }}
+              />
+          </>
+        ),
+      },
       {
         // **레벨과 능력치가 여기로 왔다.** 세계 패널에 있었는데, 그것은 세계에 대한
         // 사실이 아니라 나에 대한 사실이다 — 「내 캐릭터가 뭘 찍을 수 있나」를 보려고
         // 세계를 여는 것이 이상했다.
         id: 'me',
-        label: '캐릭터',
+        label: '서생',
         main: (
           <>
               <AccountPanel
@@ -1992,7 +2032,7 @@ export function App(): React.JSX.Element {
         // **가방에서 갈라 나왔다.** 스킬은 장비가 열지만 「무엇을 들고 갈까」는 가방을
         // 뒤지는 일과 다른 질문이다 — 한 탭에 있으면 소모품·정비 아래로 밀려 안 보인다.
         id: 'skill',
-        label: '스킬',
+        label: '재주',
         main: (
             <SkillPanel
                 view={skillPrefs}
@@ -2071,44 +2111,6 @@ export function App(): React.JSX.Element {
         id: 'volume',
         label: '권',
         main: <VolumePanel bestFloor={meta.bestFloor} />,
-      },
-      {
-        id: 'learn',
-        label: '배움',
-        main: (
-          <>
-              <TemplatePanel
-                templates={RULE_TEMPLATES}
-                catalog={BLOCK_CATALOG}
-                cpuBudget={limits.cpuBudget}
-                ruleSlots={limits.ruleSlots}
-                onLoad={(next) => {
-                  // 편집 한 단계로 쌓는다 — 되돌리기로 돌아간다. 공유 코드 불러오기와
-                  // 같은 방식이라 "눌렀다가 내 것이 사라졌다" 가 되지 않는다.
-                  setSession((current) => applyRuleSetEdit(current, next))
-                }}
-              />
-              <TutorialPanel
-                stages={TUTORIAL_STAGES}
-                cleared={tutorialCleared}
-                activeId={tutorialId}
-                onOpen={(stage) => {
-                  // **틀린 규칙표를 싣는다.** 실패한 판을 한 번 보고 나서 고치는 것이
-                  // 이 게임의 학습 방식이다 (P1).
-                  setTutorialId(stage.stageId)
-                  setSession((current) => applyTutorialStage(current, stage, stage.startRules))
-                }}
-                onHint={(stage) => {
-                  // 막히면 답을 준다. 벽에 부딪힌 사람을 세워 두면 G1 이 재는 것이
-                  // "재미" 가 아니라 "인내" 가 된다.
-                  setSession((current) => applyTutorialStage(current, stage, stage.solutionRules))
-                }}
-                onClose={() => {
-                  setTutorialId(undefined)
-                }}
-              />
-          </>
-        ),
       },
     ]
     if (admin !== undefined) {

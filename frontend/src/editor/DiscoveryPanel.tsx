@@ -28,7 +28,7 @@ type View = 'items' | 'skills'
 
 const VIEWS: readonly { readonly id: View; readonly label: string }[] = [
   { id: 'items', label: '아이템' },
-  { id: 'skills', label: '스킬' },
+  { id: 'skills', label: '재주' },
 ]
 
 /** 못 닿았을 때 무엇을 못 보는가. 앞머리(`서버에 닿지 못했다`)는 linkState 가 든다. */
@@ -70,7 +70,7 @@ export function DiscoveryPanel(props: DiscoveryPanelProps): React.JSX.Element {
 
   if (!checkLinked(link) || discovery === undefined) {
     return (
-      <Panel title="수집" tone="panel" padded>
+      <Panel title="이문록 · 물건과 재주" tone="panel" padded>
         <LinkNoticeLine link={link} missing={MISSING_HINT} />
       </Panel>
     )
@@ -81,7 +81,7 @@ export function DiscoveryPanel(props: DiscoveryPanelProps): React.JSX.Element {
 
   return (
     <Panel
-      title="수집"
+      title="이문록 · 물건과 재주"
       meta={`${String(discovery.found)} / ${String(discovery.total)}`}
       tone="panel"
       padded

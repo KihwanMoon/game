@@ -60,7 +60,7 @@ export function BestiaryPanel(props: BestiaryPanelProps): React.JSX.Element {
 
   return (
     <Panel
-      title="이문록"
+      title="이문록 · 비각의 것들"
       meta={mine === 0 ? '' : `내 것 ${String(mine)}`}
       tone="panel"
       padded

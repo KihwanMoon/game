@@ -31,8 +31,8 @@ export interface VitalRow {
 /** 쿨타임 이름표. 코어의 행동 id 를 사람이 읽는 말로. */
 export const COOLDOWN_LABELS: ReadonlyMap<string, string> = new Map([
   ['ATTACK', '공격'],
-  ['SKILL_1', '스킬 1'],
-  ['SKILL_2', '스킬 2'],
+  ['SKILL_1', '재주 1'],
+  ['SKILL_2', '재주 2'],
   ['AREA_ATTACK', '광역'],
   ['HEAL', '치유'],
   ['SUMMON', '소환'],

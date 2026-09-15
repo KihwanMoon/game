@@ -327,7 +327,7 @@ export function ActionCard(props: ActionCardProps): React.JSX.Element {
         />
         {action?.param == null ? null : (
           <EditField
-            label={`${label} ${action.param.name === 'item' ? '소모품' : '스킬'}`}
+            label={`${label} ${action.param.name === 'item' ? '소모품' : '재주'}`}
             value={rule.actionParam ?? action.param.values[0] ?? ''}
             options={action.param.values.map((value) => ({
               value,

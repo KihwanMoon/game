@@ -21,7 +21,7 @@ from game.config import BLOCKS_PATH
 from game.schemas.blocks import ACTION_COUNT, PERCEPTION_COUNT, load_block_catalog
 from game.schemas.ruleset import parse_ruleset
 
-BLOCK_LIST_VERSION = 12  # v12: 선공을 규칙표가 읽는다 (2026-09-11)
+BLOCK_LIST_VERSION = 13  # v13: 낱말이 설정집의 말을 쓴다 — 스킬 → 재주 (2026-09-15)
 LEGACY_ACTIONS = ("SKILL_1", "SKILL_2", "AREA_ATTACK", "HEAL", "SUMMON")
 
 

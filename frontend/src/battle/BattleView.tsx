@@ -161,8 +161,8 @@ function readCarried(setup: BattleSetup, kind: string): number {
 /** 쿨타임 줄에 적을 스킬 이름. 규칙 편집기의 인자 이름과 같은 말이다. */
 const COOLDOWN_LABELS: ReadonlyMap<string, string> = new Map([
   ['ATTACK', '공격'],
-  ['SKILL_1', '스킬 1'],
-  ['SKILL_2', '스킬 2'],
+  ['SKILL_1', '재주 1'],
+  ['SKILL_2', '재주 2'],
   ['AREA_ATTACK', '광역'],
   ['HEAL', '치유'],
   ['SUMMON', '소환'],

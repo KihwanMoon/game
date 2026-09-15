@@ -217,8 +217,8 @@ const PARAM_LABELS: ReadonlyMap<string, string> = new Map([
   // 소모품 태그는 `content/consumableTags` 가 정본이다. 사본을 두면 새 주문서가 규칙
   // 편집기에서만 영문 id 로 뜬다 — 화면마다 다른 이름으로 불리는 것이 더 나쁘다.
   ...USE_TAG_LABELS,
-  ['SKILL_1', '스킬 1'],
-  ['SKILL_2', '스킬 2'],
+  ['SKILL_1', '재주 1'],
+  ['SKILL_2', '재주 2'],
   ['AREA_ATTACK', '광역 공격'],
   ['SUMMON', '소환'],
   ['HEAL', '치유'],

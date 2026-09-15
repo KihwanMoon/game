@@ -237,8 +237,8 @@ function collectHazards(engine: TickEngine, foresightTicks: number): readonly Pl
 /** 행동 id 에서 이펙트 이름표로. 여기 없는 행동은 수치만 적는다. */
 const PULSE_LABELS: ReadonlyMap<string, string> = new Map([
   ['ATTACK', ''],
-  ['SKILL_1', '스킬1'],
-  ['SKILL_2', '스킬2'],
+  ['SKILL_1', '재주1'],
+  ['SKILL_2', '재주2'],
   ['AREA_ATTACK', '광역'],
   ['HEAL', '치유'],
   ['GUARD_BRACE', '방어'],

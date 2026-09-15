@@ -1,6 +1,6 @@
 {
   "_comment": "블록 카탈로그 v5. 스킬을 액션마다 더하지 않고 USE_SKILL[skill_id] 파라미터 하나로 묶었다 — 스킬이 늘어도 액션 종류가 고정이라 랭킹 시즌이 갈리지 않는다 (docs/설계/5_스킬 §4). 기존 SKILL_1·SKILL_2·AREA_ATTACK·HEAL·SUMMON 과 self_cooldown_ready 는 지우지 않고 별칭으로 남긴다: 지우면 저장된 규칙표와 골든 리플레이가 전부 깨진다. 장비 전용 블록은 만들지 않는다 — 장비는 전투 전에 캐릭터 능력치·스킬로 녹고 규칙표는 캐릭터만 읽는다 (결정 #13). v6: USE_ITEM[kind] 를 더했다 (#54). 보호 주문서가 카탈로그에 있는데 그것을 쓸 수 있는 행동이 없어, 얻어도 영영 쓰지 못했다. USE_POTION 은 별칭으로 남는다.",
-  "block_list_version": 12,
+  "block_list_version": 13,
   "perceptions": [
     {
       "id": "self_hp_percent",
@@ -35,7 +35,7 @@
       "id": "self_cooldown_ready",
       "category": "self",
       "returns": "bool",
-      "label_ko": "내 쿨타임[스킬] 완료",
+      "label_ko": "내 쿨타임[재주] 완료",
       "param": {
         "name": "skill",
         "values": [
@@ -222,7 +222,7 @@
       "id": "self_skill_ready",
       "category": "self",
       "returns": "bool",
-      "label_ko": "내 스킬 준비됨",
+      "label_ko": "내 재주 준비됨",
       "param": {
         "name": "skill",
         "values": [
@@ -244,7 +244,7 @@
       "id": "self_has_skill",
       "category": "self",
       "returns": "bool",
-      "label_ko": "내 스킬 보유",
+      "label_ko": "내 재주 보유",
       "param": {
         "name": "skill",
         "values": [
@@ -276,7 +276,7 @@
       "category": "attack",
       "targeted": true,
       "target_faction": "enemy",
-      "label_ko": "스킬 1",
+      "label_ko": "재주 1",
       "_alias_of": "USE_SKILL[SKILL_1]"
     },
     {
@@ -284,7 +284,7 @@
       "category": "attack",
       "targeted": true,
       "target_faction": "enemy",
-      "label_ko": "스킬 2",
+      "label_ko": "재주 2",
       "_alias_of": "USE_SKILL[SKILL_2]"
     },
     {
@@ -368,7 +368,7 @@
       "category": "attack",
       "targeted": true,
       "target_faction": "enemy",
-      "label_ko": "스킬 사용",
+      "label_ko": "재주 사용",
       "param": {
         "name": "skill",
         "values": [

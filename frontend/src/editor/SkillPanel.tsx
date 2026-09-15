@@ -89,14 +89,14 @@ export function SkillPanel(props: SkillPanelProps): React.JSX.Element {
   const view = props.view
   if (view === undefined) {
     return (
-      <Panel title="스킬 세팅">
+      <Panel title="재주 세팅">
         <ValueExpr text="서버에 닿지 못했다 — 스킬을 못 읽는다" size="sm" dim />
       </Panel>
     )
   }
   const picked = view.rows.find((row) => row.skillId === pickedId)
   return (
-    <Panel title="스킬 세팅">
+    <Panel title="재주 세팅">
       <ValueExpr
         text="장비가 연 스킬만 보인다 — 칸을 누르면 수치와 제약이 뜬다"
         size="sm"

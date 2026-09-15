@@ -104,7 +104,7 @@ describe('캐릭터 시트 화면', () => {
     // 이 게임은 참/거짓을 색·글리프·명도 셋으로 표기하므로 글리프가 곧 정보다.
     const html = render(PROGRESS)
     expect(html).toContain('GUARD_BRACE')
-    expect(html).toContain('이 스킬을 여는 장비를 끼면 열린다')
+    expect(html).toContain('이 재주를 여는 장비를 끼면 열린다')
     expect(html).toContain(STATE_GLYPHS.get('blocked'))
     expect(html).toContain(STATE_GLYPHS.get('true'))
   })
