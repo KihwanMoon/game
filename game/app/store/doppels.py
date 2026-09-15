@@ -17,9 +17,24 @@ import json
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
-from game.app.bots.doppel import DOPPEL_KIND_ID, DOPPEL_LIVES, MAX_DOPPELS
+from game.app.bots.doppel import (
+    DOPPEL_KIND_ID,
+    DOPPEL_LIVES,
+    DOPPELS_PER_SOURCE,
+    MAX_DOPPELS_PER_FLOOR,
+    compute_doppel_cap,
+)
 from game.app.monsters.growth import compute_level_xp
 from game.app.monsters.tiers import MonsterTier
+from game.app.store.doppel_quota import (
+    count_doppel_sources,
+    count_doppels_on_floor,
+    count_own_doppels,
+    find_crowded_doppel,
+    find_oldest_doppel_on_floor,
+    find_own_doppel_on_floor,
+    find_own_oldest_doppel,
+)
 
 
 def count_doppels(pool: ConnectionPool) -> int:
@@ -36,56 +51,6 @@ def count_doppels(pool: ConnectionPool) -> int:
             "SELECT count(*) FROM entity_record WHERE kind = 'MONSTER' AND is_doppel AND alive"
         ).fetchone()
     return int(row[0]) if row else 0
-
-
-def find_shallowest_doppel(pool: ConnectionPool) -> tuple[int, int]:
-    """가장 얕은 그림자. 같은 깊이면 가장 오래된 것.
-
-    **밀어낼 하나를 고르는 자리다.** 얕은 것부터 내보내야 남는 것이 「가장 깊은 스물」이
-    된다. 같은 깊이가 여럿이면 오래된 것을 내보낸다 — 그래야 같은 깊이가 계속 나올 때도
-    보토가 돌고, 하루 종일 같은 그림자를 만나지 않는다.
-
-    Args:
-        pool: 연결 풀.
-
-    Returns:
-        (개체 id, 그 층). 하나도 없으면 (0, 0).
-    """
-    with pool.connection() as connection:
-        row = connection.execute(
-            "SELECT id, zone_floor FROM entity_record"
-            " WHERE kind = 'MONSTER' AND is_doppel AND alive"
-            " ORDER BY zone_floor ASC, id ASC LIMIT 1"
-        ).fetchone()
-    return (int(row[0]), int(row[1] or 0)) if row else (0, 0)
-
-
-def find_oldest_doppel_on_floor(pool: ConnectionPool, floor: int) -> tuple[int, str]:
-    """그 층에서 가장 오래된 그림자와 그 자리.
-
-    **자리가 다 찼을 때 물려받을 하나를 고른다.** 순위표(`find_shallowest_doppel`)는
-    전체에서 가장 얕은 것을 고르는데, 그것이 다른 층에 있으면 지워 봐야 **이 층의 자리는
-    그대로 차 있다.** 실측으로 4층 자리 열하나가 다 차자 그 사이 봇이 4층을 115번 깼는데
-    새 그림자가 하나도 안 섰다 (알려진 이슈 Z10).
-
-    같은 깊이면 오래된 것을 내보낸다 — `create_doppel` 의 머리말이 「밀려나는 것은 그
-    깊이에서 가장 오래된 그림자다」라고 적어 둔 그 규칙이다. id 순이 곧 생성 순이다.
-
-    Args:
-        pool: 연결 풀.
-        floor: 볼 층.
-
-    Returns:
-        (개체 id, 자리 이름). 그 층에 그림자가 없으면 (0, "").
-    """
-    with pool.connection() as connection:
-        row = connection.execute(
-            "SELECT id, coalesce(entity_slot, '') FROM entity_record"
-            " WHERE kind = 'MONSTER' AND is_doppel AND alive AND zone_floor = %s"
-            " ORDER BY id ASC LIMIT 1",
-            (floor,),
-        ).fetchone()
-    return (int(row[0]), str(row[1])) if row else (0, "")
 
 
 def remove_doppel(pool: ConnectionPool, record_id: int) -> bool:
@@ -137,30 +102,6 @@ def apply_doppel_defeat(pool: ConnectionPool, record_id: int) -> int:
     if left <= 0:
         remove_doppel(pool, record_id)
     return left
-
-
-def find_free_slot(pool: ConnectionPool, floor: int, slots: tuple[str, ...]) -> str:
-    """그 층에서 아직 아무도 안 앉은 자리를 찾는다.
-
-    **템플릿의 자리여야 한다.** 방 배치에 없는 이름으로 세우면 스냅샷이 아무에게도
-    안 붙어서, 개체는 있는데 아무도 못 만나는 상태가 된다.
-
-    Args:
-        pool: 연결 풀.
-        floor: 세울 층.
-        slots: 그 층 방들의 스폰 자리 이름들. 순서가 곧 우선순위다.
-
-    Returns:
-        빈 자리 이름. 없으면 빈 문자열.
-    """
-    with pool.connection() as connection:
-        rows = connection.execute(
-            "SELECT entity_slot FROM entity_record"
-            " WHERE kind = 'MONSTER' AND zone_floor = %s AND entity_slot IS NOT NULL",
-            (floor,),
-        ).fetchall()
-    taken = {str(row[0]) for row in rows}
-    return next((slot for slot in slots if slot not in taken), "")
 
 
 def list_origin_gear(pool: ConnectionPool, account_id: int) -> list[dict]:
@@ -231,14 +172,24 @@ def create_doppel(
 ) -> int:
     """도플갱어 하나를 세운다.
 
-    **자리가 아니라 순위표다** (개정 2026-09-04). 상한에 닿으면 버리는 것이 아니라 **가장
-    얕은 그림자와 견준다** — 새 죽음이 그것보다 깊거나 같으면 밀어내고 선다. 예전에는
-    선착순이었고 비우는 길이 없어서, 자리가 2층 그림자로 차는 순간 그 뒤의 모든 죽음이
-    조용히 버려졌다. 2층 죽음이 가장 흔하므로 **가장 얕은 빌드가 자리를 영구히 점유**했고,
-    그것은 「거기까지 실제로 내려간 빌드」라는 이 기제의 전제와 정반대였다.
+    **정원을 장마다 잰다** (개정 2026-09-15). 예전에는 세계 상한 하나였고 그것이 깊이로
+    줄을 세웠다 — 「가장 깊은 스물을 남긴다」. 그래서 실측으로 **스물 중 열아홉이 9장에
+    몰렸고 주인은 셋뿐**이었다. 한 장이 도는 방이 다섯이고 `build_room_doppels` 가 방마다
+    하나씩 세우므로, 9장에 닿은 사람은 **다섯 방이 전부 그림자**였고 2~8장에서는 하나도
+    못 만났다. 깊이로 줄을 세우면 얕은 장이 영원히 진다.
 
-    **같은 깊이면 새 것이 이긴다.** 더 깊을 때만 밀어내게 하면 봇이 한 깊이에서 평평해지는
-    순간 보토가 다시 굳는다 — 밀려나는 것은 그 깊이에서 가장 오래된 그림자다.
+    이제 셋을 함께 본다 (`doppel_quota`).
+
+    1. **한 원천은 한 장에 하나.** 같은 사람의 새 죽음은 제 옛 그림자를 **물려받는다** —
+       자리까지 함께. 없으면 한 사람이 그 장의 정원을 통째로 가져가 다섯 방에서 같은
+       빌드를 두 번 만나게 된다.
+    2. **한 원천은 세계에 둘까지.** 넘으면 제 것 중 가장 오래된 것이 물러난다. 세계
+       상한이 **원천 수에 비례**하는 것은 이 규칙의 결과다 — 총량에만 걸면 계정 둘이
+       아홉 장을 나눠 차지해도 통과한다.
+    3. **한 장에 둘까지.** 넘으면 — 또는 방 배치에 빈 자리가 없으면 — 그 장에서 가장
+       오래된 것이 나가고 새 그림자가 **그 자리를 물려받는다**.
+    4. **마지막으로 세계 상한(원천 수 × 2)을 한 번 더 잰다.** 넘으면 **가장 붐비는
+       장**에서 가장 오래된 것이 나간다 — 가장 얕은 것이 아니다.
 
     Args:
         pool: 연결 풀.
@@ -251,20 +202,38 @@ def create_doppel(
     Returns:
         만들어진 개체 id. 자리가 없거나 순위에 못 들면 0.
     """
-    if not slot:
-        # **자리 고갈은 「순위에 못 듦」과 다르다** (Z10). 예전에는 둘 다 0 을 돌려줘
-        # 구분되지 않았고, 그래서 아래 순위표가 **한 번도 안 돌았다** — 그 층 자리가
-        # 차는 순간 뒤의 모든 죽음이 조용히 버려졌다. 「자리가 굳는 것이 원래 고치려던
-        # 병」이라고 이 머리말이 적어 둔 그 병이 다른 문으로 돌아와 있었다.
-        evicted, slot = find_oldest_doppel_on_floor(pool, floor)
-        if evicted == 0 or not slot:
+    # **제 그림자를 먼저 물려받는다.** 이것을 뒤로 미루면 아래 정원 검사가 제 것을 남의
+    # 것으로 세어, 같은 사람이 그 장을 둘 다 차지하는 길이 열린다.
+    own, own_slot = find_own_doppel_on_floor(pool, origin_account_id, floor)
+    if own != 0:
+        remove_doppel(pool, own)
+        slot = slot or own_slot
+    # **비례는 여기서 걸린다.** 세계 총량에만 상한을 두면 계정 둘이 아홉 장을 하나씩
+    # 차지해도 통과한다 — 세계는 안 덮였는데 만나는 빌드는 둘뿐이다. 넘치면 **제 것 중
+    # 가장 오래된 것**이 물러난다; 남의 것을 밀어내면 「내가 깊이 갔다」가 남의 자리를
+    # 빼앗는 일이 된다.
+    if count_own_doppels(pool, origin_account_id) >= DOPPELS_PER_SOURCE:
+        retired = find_own_oldest_doppel(pool, origin_account_id)
+        if retired == 0:
+            return 0
+        remove_doppel(pool, retired)
+    # **자리 고갈도 같은 문으로 들어온다** (Z10). 정원이 남았는데 자리가 없는 경우가
+    # 있다 — 방 배치의 자리 이름은 여느 지속 몬스터와 나눠 쓰기 때문이다. 예전에는 그때
+    # 그냥 0 을 돌려줬고, 그래서 4층 자리 열하나가 찬 뒤 봇이 4층을 115번 깼는데 새
+    # 그림자가 하나도 안 섰다. 둘 다 「그 층의 가장 오래된 것이 비켜 준다」로 푼다.
+    if count_doppels_on_floor(pool, floor) >= MAX_DOPPELS_PER_FLOOR or not slot:
+        evicted, evicted_slot = find_oldest_doppel_on_floor(pool, floor)
+        if evicted == 0:
             return 0
         remove_doppel(pool, evicted)
-    if count_doppels(pool) >= MAX_DOPPELS:
-        record_id, shallowest = find_shallowest_doppel(pool)
-        if record_id == 0 or floor < shallowest:
+        slot = slot or evicted_slot
+    if not slot:
+        return 0
+    if count_doppels(pool) >= compute_doppel_cap(count_doppel_sources(pool)):
+        crowded = find_crowded_doppel(pool)
+        if crowded == 0:
             return 0
-        remove_doppel(pool, record_id)
+        remove_doppel(pool, crowded)
     level = max(1, floor)
     # **키트도 함께 얼린다** (개정 2026-09-04). 예전에는 스탯 셋만 담아서, 장궁 든 봇의
     # 그림자가 사거리 1 근접으로 싸웠다 — 빌드에서 가장 그 빌드다운 것이 빠진 채 숫자만
@@ -287,6 +256,12 @@ def create_doppel(
             "  rule_slots, cpu_budget, lives)"
             " VALUES ('MONSTER', %s, %s, 'PERSISTENT', %s, %s, %s, %s, %s, %s, TRUE, %s, %s,"
             "  %s, %s, %s)"
+            # **경합은 예외가 아니라 0 이다.** 위의 정원 검사와 이 INSERT 는 한
+            # 트랜잭션이 아니라, 봇 열이 한꺼번에 죽으면 같은 사람의 그림자가 한 장에
+            # 둘 설 수 있다. 인덱스가 그것을 막고 여기서는 「안 섰다」로 떨어진다 —
+            # 예외로 터지면 제출 전체가 500 이 된다.
+            " ON CONFLICT (origin_account_id, zone_floor)"
+            "  WHERE is_doppel AND alive AND origin_account_id IS NOT NULL DO NOTHING"
             " RETURNING id",
             (
                 DOPPEL_KIND_ID,

@@ -825,3 +825,30 @@ CREATE TABLE IF NOT EXISTS doppel_bout (
 );
 
 CREATE INDEX IF NOT EXISTS doppel_bout_origin_idx ON doppel_bout (origin_account_id, at DESC);
+
+-- 한 원천은 한 장에 하나 (2026-09-15). **셋이 스물을 쥐고 있었다** — 그림자 스물 중
+-- 열아홉이 9장에 몰렸고 주인은 세 계정뿐이었다. 한 장이 도는 방이 다섯이고
+-- `build_room_doppels` 가 방마다 하나씩 세우므로, 9장에 닿은 사람은 다섯 방이 전부
+-- 그림자였고 2~8장에서는 하나도 못 만났다.
+--
+-- **인덱스가 마지막 관문이다.** 정원은 `doppel_quota` 가 세지만, 그 검사와 INSERT 사이는
+-- 한 트랜잭션이 아니다 — 봇 열이 동시에 죽으면 같은 사람의 그림자가 한 장에 둘 설 수 있다.
+--
+-- 앞의 DELETE 는 인덱스를 걸기 위한 정리다. 겹치는 것 중 **새 것을 남긴다** — 같은 사람의
+-- 더 최근 빌드가 더 그 사람답다. 한 번 정리되면 인덱스가 막으므로 이후로는 0건이다.
+DELETE FROM entity_record e
+ WHERE e.is_doppel
+   AND e.alive
+   AND e.origin_account_id IS NOT NULL
+   AND EXISTS (
+        SELECT 1 FROM entity_record other
+         WHERE other.is_doppel
+           AND other.alive
+           AND other.origin_account_id = e.origin_account_id
+           AND other.zone_floor = e.zone_floor
+           AND other.id > e.id
+   );
+
+CREATE UNIQUE INDEX IF NOT EXISTS entity_record_doppel_origin_floor_idx
+    ON entity_record (origin_account_id, zone_floor)
+ WHERE is_doppel AND alive AND origin_account_id IS NOT NULL;

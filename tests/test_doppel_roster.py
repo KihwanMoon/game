@@ -5,12 +5,19 @@
 
 가르는 선은 책임이다 (§4). 파일이 400줄 상한을 넘은 것이 계기였을 뿐이다.
 
-여기서 지키는 것은 셋이다.
+**정원이 셋으로 늘었다** (개정 2026-09-15). 예전에는 세계 상한 하나였고 그것이 깊이로
+줄을 세웠다 — 그래서 실측으로 **스물 중 열아홉이 9장에 몰렸고 주인은 세 계정뿐**이었다.
+한 장이 도는 방이 다섯이고 `build_room_doppels` 가 방마다 하나씩 세우므로, 9장에 닿은
+사람은 다섯 방이 전부 그림자였고 2~8장에서는 하나도 못 만났다.
 
-1. **상한을 넘기지 않는다.** 세계가 그림자로 덮이면 「가끔 만나는 것」이 아니게 된다.
-2. **자리가 아니라 순위표다.** 남는 것은 가장 깊은 것들이어야 한다 — 예전에는 선착순에
-   비우는 길이 없어서, 가장 흔한 2층 죽음이 자리를 영구히 점유했다.
-3. **잡으면 사라진다.** 지속 몬스터를 안 지우는 사유(되찾기 동기)가 이 종에는 안 붙는다 —
+여기서 지키는 것은 넷이다.
+
+1. **한 원천은 한 장에 하나.** 없으면 다섯 방을 돌며 같은 빌드를 두 번 만난다 —
+   「누구의 그림자인가」가 뜻을 잃는다.
+2. **한 원천은 세계에 둘까지.** 세계 상한이 원천 수에 비례하는 것은 이 규칙의 결과다 —
+   총량에만 걸면 계정 둘이 아홉 장을 하나씩 차지해도 통과한다.
+3. **한 장에 둘까지.** 그 장의 그림자 수가 곧 「다섯 방 중 몇 방에서 만나는가」다.
+4. **잡으면 사라진다.** 지속 몬스터를 안 지우는 사유(되찾기 동기)가 이 종에는 안 붙는다 —
    애초에 아무것도 안 들기 때문이다.
 """
 
@@ -76,34 +83,6 @@ def build_bot_account(client):
     return account_id
 
 
-def test_the_ceiling_holds(client):
-    """★ 상한을 넘기지 않는다 — 세계가 그림자로 덮이면 「가끔 만나는 것」이 아니게 된다."""
-    from game.api.deps import get_pool
-    from game.app.bots.doppel import MAX_DOPPELS
-    from game.app.store.doppels import count_doppels, create_doppel
-
-    pool = get_pool()
-    account_id = build_bot_account(client)
-    for step in range(MAX_DOPPELS + 3):
-        create_doppel(pool, account_id, 2 + (step % 4), f"probe_slot_{step}", {"hp_max": 10}, {})
-    assert count_doppels(pool) <= MAX_DOPPELS
-
-
-def fill_doppels(pool, account_id, floor):
-    """상한까지 그 층 그림자로 채운다.
-
-    Args:
-        pool: 연결 풀.
-        account_id: 원본 계정.
-        floor: 세울 층.
-    """
-    from game.app.bots.doppel import MAX_DOPPELS
-    from game.app.store.doppels import create_doppel
-
-    for step in range(MAX_DOPPELS):
-        create_doppel(pool, account_id, floor, f"fill_slot_{step}", {"hp_max": 10}, {})
-
-
 def read_floors(pool):
     """지금 선 그림자들의 층. 정렬해서 돌려준다.
 
@@ -121,68 +100,91 @@ def read_floors(pool):
     return [int(row[0]) for row in rows]
 
 
-def test_a_deeper_death_pushes_out_the_shallowest(client):
-    """★ 자리가 아니라 순위표다 — 남는 것이 「가장 깊은 스물」이어야 한다.
+def test_the_cap_follows_the_source_count():
+    """★ 세계 상한은 원천 수에 비례한다 — 고정값은 적은 사람의 빌드로 세계를 채운다.
 
-    예전에는 선착순이었고 비우는 길이 없었다. 2층 죽음이 가장 흔하므로 자리가 2층으로
-    차는 순간 그 뒤의 모든 죽음이 조용히 버려졌고 — 실제로 하루에 1,170판이 그렇게
-    버려졌다 — **가장 얕은 빌드가 자리를 영구히 점유**했다. 「거기까지 실제로 내려간
-    빌드」라는 이 기제의 전제와 정반대다.
+    실측이 그 병이었다 (2026-09-15): 계정 셋이 그림자 스물을 쥐고 있었다. 세계의 크기가
+    아니라 **얼마나 여러 사람이 있는가**가 그림자의 다양성을 정한다.
     """
-    from game.api.deps import get_pool
-    from game.app.bots.doppel import MAX_DOPPELS
-    from game.app.store.doppels import count_doppels, create_doppel
+    from game.app.bots.doppel import DOPPELS_PER_SOURCE, compute_doppel_cap
 
-    pool = get_pool()
-    account_id = build_bot_account(client)
-    fill_doppels(pool, account_id, 2)
-
-    record_id = create_doppel(pool, account_id, 7, "deep_slot", {"hp_max": 10}, {})
-
-    assert record_id != 0, "더 깊은데 못 섰다"
-    assert count_doppels(pool) == MAX_DOPPELS, "밀어내지 않고 늘렸다"
-    assert 7 in read_floors(pool)
-    assert read_floors(pool).count(2) == MAX_DOPPELS - 1
+    assert compute_doppel_cap(0) == 0, "원천이 없는 세계에 그림자가 서면 안 된다"
+    assert compute_doppel_cap(1) == DOPPELS_PER_SOURCE, "한 사람이 곧 제 몫이다"
+    assert compute_doppel_cap(3) == 3 * DOPPELS_PER_SOURCE
+    assert compute_doppel_cap(11) > compute_doppel_cap(3), "사람이 늘어도 안 늘면 비례가 아니다"
 
 
-def test_a_shallower_death_does_not_push_anyone_out(client):
-    """★ 얕은 것이 깊은 것을 밀어내면 순위표가 아니다."""
+def test_one_source_holds_one_place_per_floor(client):
+    """★ 한 원천은 한 장에 하나 — 같은 빌드를 한 장에서 두 번 만나면 안 된다.
+
+    한 장이 도는 방이 다섯이고 방마다 그림자가 하나씩 서므로(`build_room_doppels`),
+    같은 사람이 그 장에 둘 서면 **다섯 방 중 둘이 같은 사람**이 된다.
+
+    새로 죽은 쪽이 이긴다 — 같은 사람의 더 최근 빌드가 더 그 사람답다.
+    """
     from game.api.deps import get_pool
     from game.app.store.doppels import create_doppel
 
     pool = get_pool()
     account_id = build_bot_account(client)
-    fill_doppels(pool, account_id, 5)
 
-    assert create_doppel(pool, account_id, 3, "shallow_slot", {"hp_max": 10}, {}) == 0
-    assert set(read_floors(pool)) == {5}
+    first = create_doppel(pool, account_id, 4, "first_slot", {"hp_max": 10}, {})
+    second = create_doppel(pool, account_id, 4, "second_slot", {"hp_max": 10}, {})
+
+    assert first != 0 and second != 0, "제 옛 그림자 때문에 못 섰다"
+    assert read_floors(pool) == [4], "같은 사람이 한 장에 둘 섰다"
+    with pool.connection() as connection:
+        assert (
+            connection.execute("SELECT id FROM entity_record WHERE id = %s", (first,)).fetchone()
+            is None
+        ), "옛 그림자가 남았다 — 새 것이 이겨야 한다"
 
 
-def test_the_same_depth_goes_to_the_newer_one(client):
-    """★ 같은 깊이면 새 것이 이긴다.
+def test_one_source_holds_only_two_places(client):
+    """★ 한 원천은 세계에 둘까지 — 비례가 실제로 걸리는 자리다.
 
-    더 깊을 때만 밀어내게 하면 봇이 한 깊이에서 평평해지는 순간 보토가 다시 굳는다 —
-    하루 종일 같은 그림자를 만나게 된다. 밀려나는 것은 그 깊이에서 가장 오래된 것이다.
+    총량에만 상한을 두면 계정 **둘**이 아홉 장을 하나씩 차지해도 통과한다. 세계는 안
+    덮였는데 만나는 빌드는 둘뿐이다 — 실측이 그 모양이었다 (주인 셋이 그림자 스물).
+
+    넘치면 **제 것 중 가장 오래된 것**이 물러난다. 남의 것을 밀어내면 「내가 깊이 갔다」가
+    남의 자리를 빼앗는 일이 되고, 그것이 이 정원이 막으려던 쏠림이다.
     """
     from game.api.deps import get_pool
-    from game.app.bots.doppel import MAX_DOPPELS
-    from game.app.store.doppels import count_doppels, create_doppel
+    from game.app.bots.doppel import DOPPELS_PER_SOURCE
+    from game.app.store.doppel_quota import count_own_doppels
+    from game.app.store.doppels import create_doppel
 
     pool = get_pool()
     account_id = build_bot_account(client)
-    fill_doppels(pool, account_id, 4)
+    oldest = create_doppel(pool, account_id, 2, "slot_2", {"hp_max": 10}, {})
+    for floor in range(3, 3 + DOPPELS_PER_SOURCE + 1):
+        create_doppel(pool, account_id, floor, f"slot_{floor}", {"hp_max": 10}, {})
+
+    assert count_own_doppels(pool, account_id) == DOPPELS_PER_SOURCE
     with pool.connection() as connection:
-        oldest = int(
-            connection.execute(
-                "SELECT id FROM entity_record WHERE kind = 'MONSTER' AND is_doppel"
-                " ORDER BY id ASC LIMIT 1"
-            ).fetchone()[0]
-        )
+        assert (
+            connection.execute("SELECT id FROM entity_record WHERE id = %s", (oldest,)).fetchone()
+            is None
+        ), "제 것 중 가장 오래된 것이 아니라 다른 것이 물러났다"
 
-    record_id = create_doppel(pool, account_id, 4, "same_slot", {"hp_max": 10}, {})
 
-    assert record_id != 0
-    assert count_doppels(pool) == MAX_DOPPELS
+def test_a_floor_holds_only_its_quota(client):
+    """★ 한 장에 둘까지 — 그 수가 곧 「다섯 방 중 몇 방에서 만나는가」다.
+
+    다섯이면 모든 방이 그림자가 되어 「가끔 만나는 것」이 아니게 된다. 넘치면 그 장에서
+    가장 오래된 것이 나간다 — 그래야 붐빌 때도 보토가 돈다.
+    """
+    from game.api.deps import get_pool
+    from game.app.bots.doppel import MAX_DOPPELS_PER_FLOOR
+    from game.app.store.doppel_quota import count_doppels_on_floor
+    from game.app.store.doppels import create_doppel
+
+    pool = get_pool()
+    oldest = create_doppel(pool, build_bot_account(client), 5, "slot_a", {"hp_max": 10}, {})
+    for step in range(MAX_DOPPELS_PER_FLOOR + 2):
+        create_doppel(pool, build_bot_account(client), 5, f"slot_{step}", {"hp_max": 10}, {})
+
+    assert count_doppels_on_floor(pool, 5) == MAX_DOPPELS_PER_FLOOR
     with pool.connection() as connection:
         assert (
             connection.execute("SELECT id FROM entity_record WHERE id = %s", (oldest,)).fetchone()
@@ -190,136 +192,54 @@ def test_the_same_depth_goes_to_the_newer_one(client):
         ), "가장 오래된 것이 아니라 다른 것을 밀어냈다"
 
 
-def test_beating_a_doppel_frees_its_place(client):
-    """★ 잡으면 사라진다 — 그래야 이긴 것이 세계에 남고 자리가 돈다.
+def test_a_shallow_place_survives_deep_deaths(client):
+    """★ 얕은 장이 깊은 죽음에 밀리지 않는다 — 예전에는 그것이 병이었다.
 
-    지속 몬스터를 안 지우는 이유는 되찾기 동기가 함께 사라지기 때문인데(결정 #35),
-    도플갱어는 애초에 아무것도 안 들어 되찾을 것이 없다 — 그 사유가 이 종에는 안 붙는다.
+    세계 상한 하나가 깊이로 줄을 세우던 때, 남는 것은 「가장 깊은 스물」이었고 실측으로
+    열아홉이 9장에 몰렸다. **닿는 사람이 가장 적은 장에 그림자가 다 모여 있었다.**
     """
     from game.api.deps import get_pool
-    from game.app.store.doppels import count_doppels, create_doppel, remove_doppel
-
-    pool = get_pool()
-    record_id = create_doppel(pool, build_bot_account(client), 4, "beat_slot", {"hp_max": 10}, {})
-    assert count_doppels(pool) == 1
-
-    assert remove_doppel(pool, record_id) is True
-    assert count_doppels(pool) == 0
-    # 두 번 지워도 조용하다 — 같은 판이 두 번 정산되는 길이 있다.
-    assert remove_doppel(pool, record_id) is False
-
-
-def test_removal_only_touches_shadows(client):
-    """★ 지우는 길이 일반 몬스터로 새면 결정 #35 가 통째로 뚫린다."""
-    from game.api.deps import get_pool
-    from game.app.store.doppels import remove_doppel
-
-    pool = get_pool()
-    with pool.connection() as connection:
-        record_id = int(
-            connection.execute(
-                "INSERT INTO entity_record (kind, catalog_id, tier, level, zone_floor)"
-                " VALUES ('MONSTER', 'goblin_rusher', 'NORMAL', 1, 2) RETURNING id"
-            ).fetchone()[0]
-        )
-
-    assert remove_doppel(pool, record_id) is False
-    with pool.connection() as connection:
-        assert (
-            connection.execute(
-                "SELECT id FROM entity_record WHERE id = %s", (record_id,)
-            ).fetchone()
-            is not None
-        ), "일반 몬스터가 지워졌다"
-        connection.execute("DELETE FROM entity_record WHERE id = %s", (record_id,))
-
-
-def test_a_shadow_survives_two_beatings(client):
-    """★ 한 번 잡았다고 사라지지 않는다 — 셋을 견딘다.
-
-    처치가 자리를 비우게 한 직후에 나온 문제다: 봇들이 쉼 없이 싸우니 그림자가 서자마자
-    지워져 **사람이 만날 새가 없었다.** 그렇다고 안 지우면 자리가 굳는다 — 그것이 원래
-    고치려던 병이다. 목숨 셋이 그 사이를 잡는다.
-    """
-    from game.api.deps import get_pool
-    from game.app.bots.doppel import DOPPEL_LIVES
-    from game.app.store.doppels import apply_doppel_defeat, count_doppels, create_doppel
-
-    pool = get_pool()
-    record_id = create_doppel(pool, build_bot_account(client), 4, "lives_slot", {"hp_max": 10}, {})
-
-    left = [apply_doppel_defeat(pool, record_id) for _ in range(DOPPEL_LIVES)]
-
-    assert left == [2, 1, 0], f"목숨이 {left} 로 줄었다"
-    assert count_doppels(pool) == 0, "다 쓰고도 안 지워졌다"
-
-
-def test_a_beaten_shadow_still_holds_its_place(client):
-    """★ 목숨이 남았으면 그 자리는 아직 그 그림자의 것이다.
-
-    잡혔다고 자리를 놓으면 세 번 만나는 이야기가 성립하지 않는다 — 두 번째로 만나기
-    전에 더 깊은 죽음 하나가 밀어내 버린다.
-    """
-    from game.api.deps import get_pool
-    from game.app.store.doppels import apply_doppel_defeat, count_doppels, create_doppel
-
-    pool = get_pool()
-    record_id = create_doppel(pool, build_bot_account(client), 4, "held_slot", {"hp_max": 10}, {})
-
-    assert apply_doppel_defeat(pool, record_id) == 2
-    assert count_doppels(pool) == 1
-    assert read_floors(pool) == [4]
-
-
-def test_beating_something_that_is_not_a_shadow_changes_nothing(client):
-    """★ 목숨을 쓰는 길이 일반 몬스터로 새면 결정 #35 가 뚫린다."""
-    from game.api.deps import get_pool
-    from game.app.store.doppels import apply_doppel_defeat
-
-    pool = get_pool()
-    with pool.connection() as connection:
-        record_id = int(
-            connection.execute(
-                "INSERT INTO entity_record (kind, catalog_id, tier, level, zone_floor)"
-                " VALUES ('MONSTER', 'goblin_rusher', 'NORMAL', 1, 2) RETURNING id"
-            ).fetchone()[0]
-        )
-
-    assert apply_doppel_defeat(pool, record_id) == -1
-    with pool.connection() as connection:
-        assert (
-            connection.execute(
-                "SELECT lives FROM entity_record WHERE id = %s", (record_id,)
-            ).fetchone()[0]
-            == 1
-        ), "일반 몬스터의 목숨이 줄었다"
-        connection.execute("DELETE FROM entity_record WHERE id = %s", (record_id,))
-
-
-def test_a_new_shadow_stands_with_its_lives(client):
-    """★ 목숨을 갖고 선다 — 기본값 1 로 서면 첫 판에 사라진다."""
-    from game.api.deps import get_pool
-    from game.app.bots.doppel import DOPPEL_LIVES
     from game.app.store.doppels import create_doppel
 
     pool = get_pool()
-    record_id = create_doppel(pool, build_bot_account(client), 4, "born_slot", {"hp_max": 10}, {})
+    shallow = create_doppel(pool, build_bot_account(client), 2, "shallow_slot", {"hp_max": 10}, {})
+    for step in range(8):
+        create_doppel(pool, build_bot_account(client), 9, f"deep_slot_{step}", {"hp_max": 10}, {})
 
+    assert 2 in read_floors(pool), "얕은 장이 깊은 죽음에 밀려났다"
     with pool.connection() as connection:
-        lives = connection.execute(
-            "SELECT lives FROM entity_record WHERE id = %s", (record_id,)
-        ).fetchone()[0]
-    assert lives == DOPPEL_LIVES
+        assert (
+            connection.execute("SELECT id FROM entity_record WHERE id = %s", (shallow,)).fetchone()
+            is not None
+        )
 
 
-# ── 자리 고갈 (알려진 이슈 Z10) ──────────────────────────────────────────
+def test_the_world_cap_holds(client):
+    """★ 세계가 상한을 넘기지 않는다 — 덮이면 「가끔 만나는 것」이 아니게 된다."""
+    from game.api.deps import get_pool
+    from game.app.bots.doppel import compute_doppel_cap
+    from game.app.store.doppel_quota import count_doppel_sources
+    from game.app.store.doppels import count_doppels, create_doppel
+
+    pool = get_pool()
+    for step in range(12):
+        create_doppel(
+            pool,
+            build_bot_account(client),
+            2 + (step % 9),
+            f"probe_slot_{step}",
+            {"hp_max": 10},
+            {},
+        )
+
+    assert count_doppels(pool) <= compute_doppel_cap(count_doppel_sources(pool))
 
 
 def test_a_full_floor_hands_its_oldest_slot_over(client):
     """★ **자리 고갈은 「순위에 못 듦」과 다르다.**
 
     예전에는 둘 다 0 을 돌려줘 구분되지 않았고, `apply_doppel_from_death` 가
-    `find_free_slot` 을 먼저 부르므로 그 층 자리가 차는 순간 **순위표가 한 번도 안
+    `find_free_slot` 을 먼저 부르므로 그 층 자리가 차는 순간 **정원 검사가 한 번도 안
     돌았다.** 실측: 4층 자리 열하나가 다 찬 뒤 봇이 4층을 115번 깼는데 새 그림자가
     하나도 안 섰다 — 「자리가 굳는 것이 원래 고치려던 병」이라고 `create_doppel` 의
     머리말이 적어 둔 그 병이 다른 문으로 돌아와 있었다.

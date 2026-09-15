@@ -14,7 +14,8 @@ from game.app.bots.doppel import MIN_DOPPEL_FLOOR
 from game.app.services.verify_run import VERDICT_VERIFIED, VerifiedRun
 from game.app.simulation.plan import OUTCOME_PLAYER_WIN
 from game.app.store.bots import check_is_bot
-from game.app.store.doppels import check_doppel_opt_in, create_doppel, find_free_slot
+from game.app.store.doppel_quota import find_free_slot
+from game.app.store.doppels import check_doppel_opt_in, create_doppel
 from game.schemas.monster_snapshot import build_entity_id
 from game.schemas.room import RoomTemplate
 
