@@ -1,4 +1,8 @@
-"""봉인 해제 — 화폐를 내면 서버가 옵션을 부여한다 (설계/4_아이템 §17).
+"""봉인 해제와 재주조 — 서버가 옵션을 부여한다 (설계/4_아이템 §17).
+
+**여는 것은 푼, 다시 찍는 것은 활자다.** 둘을 같은 재화로 두면 푼만 모으면 원하는 값이
+나올 때까지 돌릴 수 있고, 그러면 봉인이 아무것도 막지 않는다 — 열기 전에 모르는 것이 이
+기제의 전부다. 활자는 내 둔갑이 남의 장에서 이겨야 들어오므로 그렇게 못 돈다.
 
 **서버가 굴린다.** 클라이언트가 굴리면 마음에 드는 값이 나올 때까지 다시 굴릴 수 있고,
 그러면 봉인이 아무것도 막지 않는다.
@@ -13,19 +17,24 @@
 from fastapi import APIRouter, HTTPException, status
 
 from game.api.deps import CurrentAccount, get_pool
-from game.api.schemas import ItemActionRequest, WalletResponse
+from game.api.schemas_item import AffixRecastRequest, ItemActionRequest, WalletResponse
+from game.api.wallet_view import build_wallet
 from game.app.items.sealed import (
+    RECAST_COST,
     compute_unseal_cost,
     create_sealed_affix,
 )
 from game.app.store.accounts import find_player_entity
-from game.app.store.equipment import REPAIR_COST, add_currency, read_balance
-from game.app.store.items import apply_unseal, find_item, list_affix_pool, record_item_event
+from game.app.store.affixes import apply_recast, apply_unseal, list_affix_pool
+from game.app.store.equipment import add_currency, read_balance
+from game.app.store.items import find_item, record_item_event
+from game.app.store.letters import add_letters
 from game.schemas.item import GRADE_SEALED_SLOTS
 
 router = APIRouter()
 
 EVENT_UNSEAL = "unseal"
+EVENT_RECAST = "recast"
 
 
 @router.post("/api/item/unseal", response_model=WalletResponse)
@@ -53,7 +62,7 @@ def create_unseal(request: ItemActionRequest, account: CurrentAccount) -> Wallet
     opened = count_opened(stored)
     cost = compute_unseal_cost(opened)
     if read_balance(pool, account.account_id) < cost:
-        raise HTTPException(status.HTTP_409_CONFLICT, f"화폐가 모자란다 — {cost} 이 필요하다")
+        raise HTTPException(status.HTTP_409_CONFLICT, f"푼이 모자란다 — {cost}푼이 필요하다")
 
     # **먼저 뺀다.** 굴린 뒤에 빼면 굴림은 성공하고 차감이 실패하는 창이 생긴다.
     add_currency(pool, account.account_id, -cost)
@@ -66,7 +75,49 @@ def create_unseal(request: ItemActionRequest, account: CurrentAccount) -> Wallet
         add_currency(pool, account.account_id, cost)
         raise HTTPException(status.HTTP_409_CONFLICT, "열 봉인이 없다")
     record_item_event(pool, entity_id, request.item_id, EVENT_UNSEAL, affix.label_ko)
-    return WalletResponse(balance=read_balance(pool, account.account_id), repair_cost=REPAIR_COST)
+    return build_wallet(pool, account.account_id)
+
+
+@router.post("/api/item/recast", response_model=WalletResponse)
+def create_recast(request: AffixRecastRequest, account: CurrentAccount) -> WalletResponse:
+    """봉인에서 나온 옵션 한 줄을 활자로 다시 찍는다.
+
+    **서버가 굴린다.** 여는 쪽과 같은 이유다 — 클라이언트가 굴리면 마음에 드는 값이 나올
+    때까지 다시 굴릴 수 있고, 그러면 값을 치를 이유가 사라진다.
+
+    **활자를 먼저 뺀다.** 굴린 뒤에 빼면 굴림은 성공하고 차감이 실패하는 창이 생긴다.
+
+    Args:
+        request: 아이템 id 와 바꿀 자리.
+        account: 토큰으로 푼 계정.
+
+    Returns:
+        다시 찍은 뒤의 지갑.
+
+    Raises:
+        HTTPException: 가진 아이템이 아니거나, 봉인에서 나온 자리가 아니거나, 활자가
+            모자란 경우.
+    """
+    pool = get_pool()
+    entity_id = find_player_entity(pool, account.account_id)
+    if find_item(pool, entity_id, request.item_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "가진 아이템이 아니다")
+    try:
+        add_letters(pool, account.account_id, -RECAST_COST)
+    except ValueError as error:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, f"활자가 모자란다 — {RECAST_COST}개가 필요하다"
+        ) from error
+    try:
+        affix = create_sealed_affix(list_affix_pool(pool))
+    except ValueError as error:
+        add_letters(pool, account.account_id, RECAST_COST)
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(error)) from error
+    if not apply_recast(pool, request.item_id, request.affix_index, affix):
+        add_letters(pool, account.account_id, RECAST_COST)
+        raise HTTPException(status.HTTP_409_CONFLICT, "봉인에서 나온 자리가 아니다")
+    record_item_event(pool, entity_id, request.item_id, EVENT_RECAST, affix.label_ko)
+    return build_wallet(pool, account.account_id)
 
 
 def count_opened(stored: object) -> int:

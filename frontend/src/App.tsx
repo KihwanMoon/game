@@ -1206,7 +1206,7 @@ export function App(): React.JSX.Element {
         ),
       ).then((result) => {
         setVerdict(result)
-        // 전리품과 화폐가 여기서 들어온다. 다시 읽어야 화면이 그것을 안다.
+        // 전리품과 푼이 여기서 들어온다. 다시 읽어야 화면이 그것을 안다.
         refreshBag(account)
         // 판이 끝나면 몬스터가 컸거나 내 장비를 가져갔을 수 있다.
         void readBestiary(account).then(setBestiary)
@@ -2011,6 +2011,9 @@ export function App(): React.JSX.Element {
                 feePercent={auction?.feePercent ?? 0}
                 onUnseal={(itemId) => {
                   applyItem('/item/unseal', { item_id: itemId })
+                }}
+                onRecast={(itemId, affixIndex) => {
+                  applyItem('/item/recast', { item_id: itemId, affix_index: affixIndex })
                 }}
                 onList={(itemId, price) => {
                   // **경매에 걸면 가방과 지갑이 함께 바뀐다.** 아이템이 빠지고 수수료가

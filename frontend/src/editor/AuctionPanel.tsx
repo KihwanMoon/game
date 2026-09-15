@@ -80,7 +80,7 @@ export function AuctionDetail(props: {
             dim
           />
         )}
-        <ValueExpr text={`${String(listing.price)} 화폐`} size="sm" />
+        <ValueExpr text={`${String(listing.price)}푼`} size="sm" />
       </div>
       {listing.affixes.length === 0 ? null : (
         // 저주 접사는 음수다. 모르고 사면 돈을 내고 약해진다 — 옵션 하나에 한 줄이다.

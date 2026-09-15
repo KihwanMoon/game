@@ -178,7 +178,8 @@ def test_the_pool_offers_the_slot_options(client):
     서버에는 영영 안 들어간다 — 카탈로그와 드롭 표에서 이미 두 번 겪었다.
     """
     from game.api.deps import get_pool
-    from game.app.store.items import apply_affix_pool_seed, list_affix_pool
+    from game.app.store.affixes import list_affix_pool
+    from game.app.store.items import apply_affix_pool_seed
 
     assert client is not None
     apply_affix_pool_seed(get_pool())

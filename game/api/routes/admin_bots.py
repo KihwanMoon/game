@@ -22,14 +22,8 @@ from game.api.deps import (
     get_pool,
 )
 from game.api.routes.items import build_inventory_response
-from game.api.schemas import (
-    AdminBotOverviewResponse,
-    AdminBotView,
-    AdminDoppelView,
-    InventoryResponse,
-    InventorySlotView,
-    ItemView,
-)
+from game.api.schemas import AdminBotOverviewResponse, AdminBotView, AdminDoppelView
+from game.api.schemas_item import InventoryResponse, InventorySlotView, ItemView
 from game.app.bots.personas import MAX_RUNS_PER_HOUR, MIN_CADENCE_SEC
 from game.app.store.accounts import find_player_entity
 from game.app.store.admin import record_admin_action
@@ -47,7 +41,7 @@ router = APIRouter()
 
 
 class BotCoinRequest(BaseModel):
-    """내 화폐를 봇에게 넘긴다.
+    """내 푼을 봇에게 넘긴다.
 
     **한 방향이다.** 아이템 선물과 같은 규율이며(결정 #07), 돌려받는 길을 두면 봇을
     금고로 쓰는 계정이 생긴다.
@@ -247,16 +241,16 @@ def create_bot_gift(request: BotGiftRequest, account: CurrentOperator) -> AdminB
 
 @router.post("/api/admin/bot/coin", response_model=AdminBotOverviewResponse)
 def create_bot_coin(request: BotCoinRequest, account: CurrentOperator) -> AdminBotOverviewResponse:
-    """내 화폐를 봇에게 넘긴다 (2026-09-06).
+    """내 푼을 봇에게 넘긴다 (2026-09-06).
 
-    **봇에게 밑천을 주는 자리다.** 봇이 경매에서 사려면 화폐가 있어야 하는데, 벌이가
+    **봇에게 밑천을 주는 자리다.** 봇이 경매에서 사려면 푼이 있어야 하는데, 벌이가
     느린 봇은 영영 못 산다 — 그러면 「봇이 아무것도 안 산다」가 봇의 규칙이 아니라 잔액의
     문제가 되고, 우리가 보려던 것(봇이 무엇을 고르는가)이 안 보인다.
 
     **한 방향이다.** 아이템 선물과 같은 규율이며(결정 #07), 돌려받는 길을 두면 봇을
     금고로 쓰는 계정이 생긴다.
 
-    **화폐를 만들지 않는다.** 주는 쪽에서 빠진 만큼만 들어가므로 총량이 그대로다 —
+    **푼을 만들지 않는다.** 주는 쪽에서 빠진 만큼만 들어가므로 총량이 그대로다 —
     늘리는 문은 검증된 런 하나뿐이다 (결정 #02).
 
     Args:
@@ -271,7 +265,7 @@ def create_bot_coin(request: BotCoinRequest, account: CurrentOperator) -> AdminB
     """
     pool = get_pool()
     if not check_is_bot(pool, request.account_id):
-        # 사람에게 넘기는 길을 두면 계정 사이 화폐 이동이 열리고, 그 순간 봇 파밍으로
+        # 사람에게 넘기는 길을 두면 계정 사이 푼 이동이 열리고, 그 순간 봇 파밍으로
         # 번 것을 사람 계정에 모을 수 있다 (T11).
         raise HTTPException(status.HTTP_409_CONFLICT, "봇에게만 넘길 수 있다")
     try:

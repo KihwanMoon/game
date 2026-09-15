@@ -38,6 +38,7 @@ MAX_SPAWN_SEED = 1 << 40
 COLUMN_SPAWN_SEED = 8
 COLUMN_RULESET = 9
 COLUMN_STATS = 10
+COLUMN_ORIGIN = 11
 
 
 @dataclass(frozen=True)
@@ -63,6 +64,11 @@ class MonsterRecord:
     # 실측으로 7층 그림자가 공격 24 대 70, 방어 7 대 42 였다. 빌드를 얼려 두고 안 쓰면
     # 「그 빌드로 여기까지 왔다」가 이름뿐인 말이 된다.
     stat_json: dict | None = None
+    # **누구의 그림자인가.** 0 이면 그림자가 아니다. 이것이 레코드에 실리는 이유는
+    # 하나다 — **제 그림자는 제 판에 안 세운다** (2026-09-15). 내 규칙표가 내 앞에 서면
+    # 새로 알 것이 없고, 전적도 「자기 그림자」라 안 적힌다(`record_bout`). 정예 자리
+    # 하나가 통째로 버려지는 셈이다.
+    origin_account_id: int = 0
     # 어느 방에 서는가. -1 이면 그 층 모든 방이다 — 여느 지속 몬스터는 방 배치의 자리를
     # 채우므로 방을 안 고르고, 그림자만 「한 방에 하나」라 방을 지정해서 선다.
     room_index: int = -1
@@ -147,6 +153,11 @@ def _build_record(row: tuple) -> MonsterRecord:
         ),
         ruleset_json=(json.loads(raw_ruleset) if isinstance(raw_ruleset, str) else raw_ruleset),
         stat_json=(json.loads(raw_stats) if isinstance(raw_stats, str) else raw_stats),
+        origin_account_id=(
+            int(row[COLUMN_ORIGIN])
+            if len(row) > COLUMN_ORIGIN and row[COLUMN_ORIGIN] is not None
+            else 0
+        ),
     )
 
 
@@ -166,7 +177,7 @@ def list_monsters(pool: ConnectionPool, zone_floor: int) -> tuple[MonsterRecord,
     with pool.connection() as connection:
         rows = connection.execute(
             "SELECT id, catalog_id, tier, zone_floor, entity_slot, total_xp, level, alive,"
-            " spawn_seed, ruleset_json, stat_json"
+            " spawn_seed, ruleset_json, stat_json, coalesce(origin_account_id, 0)"
             " FROM entity_record WHERE kind = 'MONSTER' AND zone_floor = %s AND alive = true"
             " ORDER BY entity_slot",
             (zone_floor,),
@@ -187,7 +198,7 @@ def find_monster(pool: ConnectionPool, record_id: int) -> MonsterRecord | None:
     with pool.connection() as connection:
         row = connection.execute(
             "SELECT id, catalog_id, tier, zone_floor, entity_slot, total_xp, level, alive,"
-            " spawn_seed, ruleset_json, stat_json"
+            " spawn_seed, ruleset_json, stat_json, coalesce(origin_account_id, 0)"
             " FROM entity_record WHERE kind = 'MONSTER' AND id = %s",
             (record_id,),
         ).fetchone()

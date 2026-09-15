@@ -35,6 +35,7 @@ from game.app.store.doppel_quota import (
     find_own_doppel_on_floor,
     find_own_oldest_doppel,
 )
+from game.app.store.letters import apply_doppel_settlement
 
 
 def count_doppels(pool: ConnectionPool) -> int:
@@ -60,6 +61,10 @@ def remove_doppel(pool: ConnectionPool, record_id: int) -> bool:
     때문인데(결정 #35), 도플갱어는 **애초에 아무것도 안 든다** — 되찾기가 코드로 막혀
     있으므로 그 사유가 이 종에는 안 붙는다.
 
+    **물러나는 자리에서 활자를 정산한다** (2026-09-15). 그림자가 사라지는 길은 둘이다 —
+    목숨을 다 썼거나 정원에 밀렸거나. 둘 다 이 함수를 지나므로 여기 하나만 걸면 새는 길이
+    없다. 정산을 부르는 쪽에 두었더니 정원 퇴출 경로가 조용히 빠졌었다.
+
     Args:
         pool: 연결 풀.
         record_id: 지울 개체.
@@ -69,9 +74,14 @@ def remove_doppel(pool: ConnectionPool, record_id: int) -> bool:
     """
     with pool.connection() as connection:
         row = connection.execute(
-            "DELETE FROM entity_record WHERE id = %s AND is_doppel RETURNING id", (record_id,)
+            "DELETE FROM entity_record WHERE id = %s AND is_doppel"
+            " RETURNING id, coalesce(origin_account_id, 0)",
+            (record_id,),
         ).fetchone()
-    return row is not None
+    if row is None:
+        return False
+    apply_doppel_settlement(pool, record_id, int(row[1]))
+    return True
 
 
 def apply_doppel_defeat(pool: ConnectionPool, record_id: int) -> int:

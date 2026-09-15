@@ -184,7 +184,7 @@ def test_the_catalog_response_carries_the_canon(client, admin):
 def test_the_sealed_option_pool_stays_inside_the_canon(client):
     """★ 봉인 옵션이 정본 밖 스탯이면 **돈을 받고 아무것도 안 준다** (§17)."""
     from game.api.deps import get_pool
-    from game.app.store.items import list_affix_pool
+    from game.app.store.affixes import list_affix_pool
     from game.schemas.item import COMBAT_STATS
 
     rows = list_affix_pool(get_pool())

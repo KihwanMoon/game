@@ -67,6 +67,7 @@ const WORN_HELM: ItemView = {
   isRecovered: false,
   sealedSlots: 0,
   unsealCost: 0,
+  recastFrom: 0,
   grade: 'COMMON',
   attackRange: 0,
   affixes: [{ stat: 'hp_max', flat: 3, percent: 0, labelKo: '', statLabel: '최대체력' }],

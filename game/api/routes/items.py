@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from game.api.catalog_view import build_affix_view
 from game.api.deps import CurrentAccount, get_context, get_item_catalog, get_pool
-from game.api.schemas import (
+from game.api.schemas_item import (
     EquipRequest,
     InventoryResponse,
     InventorySlotView,
@@ -21,9 +21,10 @@ from game.api.schemas import (
     RequirementView,
     WalletResponse,
 )
+from game.api.wallet_view import build_wallet
 from game.app.items.catalog import find_item as find_catalog_item
 from game.app.items.requirements import check_requirements
-from game.app.items.sealed import compute_unseal_cost
+from game.app.items.sealed import RECAST_COST, compute_unseal_cost
 from game.app.items.stats import get_effective_slots
 from game.app.progression.attributes import build_attribute_bonus
 from game.app.store.accounts import find_player_entity
@@ -37,6 +38,7 @@ from game.app.store.equipment import (
     remove_item,
 )
 from game.app.store.items import StoredItem, find_item, list_equipment, list_inventory
+from game.app.store.letters import read_letters
 from game.app.store.progress import read_progress
 from game.schemas.item import GRADE_SEALED_SLOTS, EquipSlot, ItemKind
 
@@ -117,6 +119,12 @@ def build_item_view(
         grade=stored.grade,
         unseal_cost=compute_unseal_cost(
             max(0, GRADE_SEALED_SLOTS.get(stored.grade, 0) - stored.sealed_slots)
+        ),
+        # 봉인에서 나온 것은 **꼬리 쪽**이다 — `apply_unseal` 이 뒤에 붙이기 때문이다.
+        recast_from=max(
+            0,
+            len(stored.affixes)
+            - max(0, GRADE_SEALED_SLOTS.get(stored.grade, 0) - stored.sealed_slots),
         ),
         # **인스턴스가 가진 것만 보낸다.** 예전에는 비어 있으면 카탈로그 기본값으로
         # 메웠는데, 그것이 곧 "카탈로그를 고치면 남의 가방이 바뀐다" 였다 — 그래서
@@ -220,6 +228,8 @@ def build_inventory_response(account_id: int) -> InventoryResponse:
         ],
         balance=read_balance(pool, account_id),
         repair_cost=REPAIR_COST,
+        letters=read_letters(pool, account_id),
+        recast_cost=RECAST_COST,
     )
 
 
@@ -340,10 +350,10 @@ def create_repair(request: ItemActionRequest, account: CurrentAccount) -> Wallet
     if find_item(pool, entity_id, request.item_id) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "가진 아이템이 아니다")
     try:
-        balance = apply_repair(pool, account.account_id, entity_id, request.item_id)
+        apply_repair(pool, account.account_id, entity_id, request.item_id)
     except ValueError as error:
         raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
-    return WalletResponse(balance=balance, repair_cost=REPAIR_COST)
+    return build_wallet(pool, account.account_id)
 
 
 @router.get("/api/wallet", response_model=WalletResponse)
@@ -354,15 +364,13 @@ def read_wallet(account: CurrentAccount) -> WalletResponse:
         account: 토큰으로 푼 계정.
 
     Returns:
-        잔액과 복구비용.
+        잔액·활자와 값들.
     """
-    return WalletResponse(
-        balance=read_balance(get_pool(), account.account_id), repair_cost=REPAIR_COST
-    )
+    return build_wallet(get_pool(), account.account_id)
 
 
 def add_run_currency(account_id: int, amount: int) -> None:
-    """런 보상 화폐를 넣는다. 런 라우트가 부른다.
+    """런 보상 푼을 넣는다. 런 라우트가 부른다.
 
     Args:
         account_id: 받을 계정.

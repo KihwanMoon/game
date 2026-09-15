@@ -35,7 +35,7 @@ AFFIX_MIN_PERCENT = 80
 AFFIX_MAX_PERCENT = 120
 PERCENT_BASE = 100
 
-# 승리 보상 화폐. 층이 깊을수록 는다.
+# 승리 보상 푼. 층이 깊을수록 는다.
 # 난이도 개편(층당 5방·스킬 v3·복리 스케일)과 함께 올렸다 — 층이 5/3배 길어지고
 # 적이 세졌으므로, 층 하나의 값도 그만큼 커야 보충·복구 경제가 돌아간다.
 WIN_CURRENCY = 80
@@ -132,10 +132,10 @@ def list_droppable(catalog: dict[str, ItemCatalogEntry]) -> tuple[ItemCatalogEnt
 
 
 def compute_run_currency(is_cleared: bool, floor: int = 1) -> int:
-    """이 런이 주는 화폐를 낸다.
+    """이 런이 주는 푼을 낸다.
 
-    **화폐는 런 단위로 남는다.** 아이템은 처치마다 굴리도록 바뀌었지만(설계/4_아이템
-    §15.3), 화폐까지 처치마다 주면 방에 적이 많은 것이 곧 수입이 되어 방 설계가
+    **푼은 런 단위로 남는다.** 아이템은 처치마다 굴리도록 바뀌었지만(설계/4_아이템
+    §15.3), 푼까지 처치마다 주면 방에 적이 많은 것이 곧 수입이 되어 방 설계가
     난이도가 아니라 수입 조절 장치가 된다.
 
     Args:
@@ -143,7 +143,7 @@ def compute_run_currency(is_cleared: bool, floor: int = 1) -> int:
         floor: 도달한 층.
 
     Returns:
-        줄 화폐.
+        줄 푼.
     """
     return (WIN_CURRENCY if is_cleared else LOSS_CURRENCY) * max(1, floor)
 
@@ -156,7 +156,7 @@ def create_loot_roll(
     Args:
         catalog: 아이템 카탈로그.
         is_cleared: 이겼는가.
-        floor: 도달한 층. 화폐가 이것에 비례한다.
+        floor: 도달한 층. 푼이 이것에 비례한다.
 
     Returns:
         굴림 결과. `catalog_id` 가 None 이면 아이템이 안 나온 것이다.

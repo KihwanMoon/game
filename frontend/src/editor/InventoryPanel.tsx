@@ -34,6 +34,7 @@ export interface InventoryPanelProps {
   readonly onDiscard: (itemId: number) => void
   readonly onList: (itemId: number, price: number) => void
   readonly onUnseal: (itemId: number) => void
+  readonly onRecast: (itemId: number, affixIndex: number) => void
   /** 걸 때 떼는 수수료율(%). 걸기 전에 얼마가 나가는지 알아야 한다. */
   readonly feePercent: number
   readonly onRepair: (itemId: number) => void
@@ -120,7 +121,13 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
   return (
     <Panel
       title="장비와 가방"
-      meta={inventory === undefined ? '' : `화폐 ${String(inventory.balance)}`}
+      // **둘을 함께 적는다.** 푼은 봉인을 열고 활자는 연 것을 다시 찍는다 — 가방에서
+      // 묻는 것이 그 둘이라, 하나만 보이면 나머지를 찾으러 다른 탭에 가야 한다.
+      meta={
+        inventory === undefined
+          ? ''
+          : `${String(inventory.balance)}푼 · 활자 ${String(inventory.letters)}`
+      }
       tone="panel"
       padded
       scroll
@@ -143,12 +150,15 @@ export function InventoryPanel(props: InventoryPanelProps): React.JSX.Element {
                     worn={findWorn(inventory, choice)}
                     link={link}
                     repairCost={inventory.repairCost}
+                    letters={inventory.letters}
+                    recastCost={inventory.recastCost}
                     feePercent={props.feePercent}
                     onEquip={props.onEquip}
                     onUnequip={props.onUnequip}
                     onDiscard={props.onDiscard}
                     onRepair={props.onRepair}
                     onUnseal={props.onUnseal}
+                    onRecast={props.onRecast}
                     onList={props.onList}
                   />
                 )

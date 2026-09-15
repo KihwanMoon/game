@@ -1,10 +1,10 @@
 """경매장 흐름과 아이템 귀속 (결정 #20, #07).
 
-**수수료가 이 게임의 유일한 화폐 배출구다.** 없으면 화폐가 단조 증가해 몇 주 만에 가격이
+**수수료가 이 게임의 유일한 푼 배출구다.** 없으면 푼이 단조 증가해 몇 주 만에 가격이
 무의미해진다. 수식 자체는 `test_auction.py` 가 DB 없이 보고, 여기서는 흐름을 본다.
 
 **거래 후 귀속**(#07)이 여기 함께 있는 이유는 그것이 경제 규칙이기 때문이다. 자유 거래로
-두면 같은 아이템을 A→B→A 로 돌려 계정 사이에 화폐를 씻을 수 있고, 봇이 파밍해 파는 것이
+두면 같은 아이템을 A→B→A 로 돌려 계정 사이에 푼을 씻을 수 있고, 봇이 파밍해 파는 것이
 최적 전략이 된다.
 """
 
@@ -99,7 +99,7 @@ def grant_currency(client, token, amount):
 
 
 def test_listing_burns_a_fee(client, token):
-    """★ 수수료가 이 게임의 유일한 화폐 배출구다."""
+    """★ 수수료가 이 게임의 유일한 푼 배출구다."""
     from game.app.store.auction import compute_fee, list_open
 
     headers = build_headers(token)
@@ -218,7 +218,7 @@ def test_a_fresh_item_is_not_bound(client, token):
 def test_buying_binds_the_item(client, token):
     """★ **여기가 #07 의 전부다.**
 
-    산 물건이 다시 팔리면 같은 아이템을 A→B→A 로 돌려 계정 사이에 화폐를 씻을 수 있고,
+    산 물건이 다시 팔리면 같은 아이템을 A→B→A 로 돌려 계정 사이에 푼을 씻을 수 있고,
     봇이 파밍해 파는 것이 최적 전략이 된다.
     """
     headers = build_headers(token)

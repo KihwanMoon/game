@@ -87,7 +87,7 @@ describe('세계 현황', () => {
   it('★ 지금까지 볼 방법이 아예 없던 값들이 보인다', () => {
     const html = render(OVERVIEW)
     expect(html).toContain('지속 몬스터')
-    expect(html).toContain('풀린 화폐')
+    expect(html).toContain('풀린 푼')
     expect(html).toContain('1234')
   })
 

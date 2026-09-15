@@ -25,6 +25,10 @@
 **목숨은 판당 한 번만 깎인다.** 스냅샷에 개체가 하나이므로 여러 방에서 만나도 결산은
 한 번이다 — 다섯 방에서 다섯 번 죽는 것이 아니다.
 
+**제 그림자는 제 판에 안 선다** (2026-09-15). 내 규칙표가 내 앞에 서면 새로 알 것이
+없고, 이겨도 져도 전적에 안 적힌다 — `record_bout` 이 「자기 그림자」를 건너뛰기 때문이다.
+정예 자리 하나가 통째로 버려지는 셈이라, 고르기 전에 뺀다.
+
 **고르는 것은 티켓을 낼 때다.** 골라 둔 것이 티켓에 얼어붙으므로 재시뮬은 같은 판을
 본다 — 굴림이 코어 밖이라 R5 를 안 건드리는 것도 전리품 굴림과 같은 자리다 (결정 #02).
 """
@@ -79,6 +83,7 @@ def build_room_doppels(
     rooms_per_floor: int,
     start_floor: int,
     roll: Callable[[int], int],
+    viewer_account_id: int = 0,
 ) -> list[MonsterRecord]:
     """**방마다 그림자 하나씩** 세우고, 방 배치에 없는 전용 자리를 준다.
 
@@ -93,18 +98,27 @@ def build_room_doppels(
 
     **여느 몬스터는 안 건드린다.** 층당 셋 상한은 이미 `apply_floor_seed` 가 지킨다.
 
+    **제 그림자는 뺀다.** 내 규칙표가 내 앞에 서면 새로 알 것이 없고, 전적에도 안 적힌다
+    (`record_bout` 이 자기 그림자를 건너뛴다) — 정예 자리 하나가 통째로 버려진다.
+
     Args:
         records: 이 하강이 쓸 지속 몬스터들.
         room_ids: 하강 전체의 방 목록.
         rooms_per_floor: 층 하나에 드는 방 수.
         start_floor: 하강이 시작한 층.
         roll: `n` 을 받아 `0..n-1` 을 주는 굴림. 0 이하면 부르지 않는다.
+        viewer_account_id: 이 판을 도는 계정. 그 계정의 그림자는 빠진다. 0 이면 안 거른다.
 
     Returns:
         추린 레코드들. 여느 몬스터가 먼저, 고른 그림자가 뒤에 온다.
     """
     plain = [record for record in records if not check_is_doppel(record.catalog_id)]
-    shadows = [record for record in records if check_is_doppel(record.catalog_id)]
+    shadows = [
+        record
+        for record in records
+        if check_is_doppel(record.catalog_id)
+        and (viewer_account_id <= 0 or record.origin_account_id != viewer_account_id)
+    ]
     if not shadows:
         return plain
 

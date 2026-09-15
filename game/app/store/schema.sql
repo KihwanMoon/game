@@ -270,7 +270,7 @@ CREATE TABLE IF NOT EXISTS quest_pouch (
     PRIMARY KEY (account_id, catalog_id)
 );
 
--- 지갑. 복구비용의 통화이며 나중에 거래 화폐로 그대로 쓴다.
+-- 지갑. 복구비용의 통화이며 나중에 거래 푼으로 그대로 쓴다.
 CREATE TABLE IF NOT EXISTS wallet (
     account_id  BIGINT      PRIMARY KEY REFERENCES account(id) ON DELETE CASCADE,
     balance     BIGINT      NOT NULL DEFAULT 0,
@@ -357,7 +357,7 @@ CREATE TABLE IF NOT EXISTS daily_entry (
 -- 수 없으면 문의에 답할 수 없고, 자전거래 탐지도 불가능해진다.
 --
 -- 경제 설계에서 이 표가 담당하는 것은 셋이다.
---   * **수수료** — 등록할 때 떼는 몫이 화폐를 태운다. 인플레이션의 유일한 배출구다.
+--   * **수수료** — 등록할 때 떼는 몫이 푼을 태운다. 인플레이션의 유일한 배출구다.
 --   * **만료** — 안 팔린 물건이 영원히 걸려 있으면 시세가 굳는다.
 --   * **자전거래 흔적** — 판 사람과 산 사람이 원장에 남아 계정 간 이전을 셀 수 있다.
 CREATE TABLE IF NOT EXISTS auction_listing (
@@ -389,9 +389,9 @@ ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS loadout JSONB;
 ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS room_ids JSONB;
 
 -- 아이템 귀속 (결정 #07). **거래 후 귀속**이다 — 주운 것은 한 번 팔 수 있고, 산 사람에게
--- 묶인다. 자유 거래로 두면 같은 아이템을 A→B→A 로 돌려 계정 사이에 화폐를 씻을 수 있고,
+-- 묶인다. 자유 거래로 두면 같은 아이템을 A→B→A 로 돌려 계정 사이에 푼을 씻을 수 있고,
 -- 봇이 파밍해 파는 것이 최적 전략이 된다. 완전 귀속으로 두면 경매장이 죽고 그와 함께
--- 유일한 화폐 배출구가 사라진다.
+-- 유일한 푼 배출구가 사라진다.
 --
 -- **기존 아이템은 전부 미귀속으로 시작한다** (기본값 FALSE). 지금 유통량이 거의 없어
 -- 실질 차이가 없고, "언제 얻었나" 를 따지는 예외를 만들지 않는 편이 규칙을 단순하게 한다.
@@ -852,3 +852,22 @@ DELETE FROM entity_record e
 CREATE UNIQUE INDEX IF NOT EXISTS entity_record_doppel_origin_floor_idx
     ON entity_record (origin_account_id, zone_floor)
  WHERE is_doppel AND alive AND origin_account_id IS NOT NULL;
+
+-- 활자 (2026-09-15). **둘째 재화다.** 푼은 흔하고 활자는 귀하다 — 푼으로는 봉인을 열 수
+-- 있지만 **연 것을 다시 찍을 수는 없다**. 그 하나를 활자가 한다.
+--
+-- **둔갑이 물러날 때만 들어온다.** 내 규칙표가 남의 장에 서서 이긴 만큼, 그 그림자가
+-- 목숨을 다 쓰고 사라지는 자리에서 한꺼번에 정산된다. 푼처럼 판마다 나오면 또 하나의
+-- 노가다 지표가 될 뿐이고, 그러면 둘로 가른 뜻이 없다.
+--
+-- 지갑에 열을 더한다. 표를 따로 두면 잔액을 볼 때마다 조인이 하나 늘고, 둘은 언제나
+-- 함께 읽힌다.
+ALTER TABLE wallet ADD COLUMN IF NOT EXISTS letters BIGINT NOT NULL DEFAULT 0;
+
+DO $$
+BEGIN
+    ALTER TABLE wallet ADD CONSTRAINT wallet_letters_nonneg CHECK (letters >= 0);
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END
+$$;

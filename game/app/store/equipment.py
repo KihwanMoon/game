@@ -31,7 +31,7 @@ REPAIR_COST = 120
 def read_balance(pool: ConnectionPool, account_id: int) -> int:
     """지갑 잔액을 읽는다. 없으면 0 이다.
 
-    **계정 단위다.** 화폐는 사람의 것이지 개체의 것이 아니다 — 개체 단위로 두면
+    **계정 단위다.** 푼은 사람의 것이지 개체의 것이 아니다 — 개체 단위로 두면
     몬스터가 지갑을 갖는 셈이 되고, 거래가 붙을 때 누구의 돈인지가 흐려진다.
 
     Args:
@@ -49,7 +49,7 @@ def read_balance(pool: ConnectionPool, account_id: int) -> int:
 
 
 def add_currency(pool: ConnectionPool, account_id: int, amount: int) -> int:
-    """화폐를 더한다. **계정 단위다** (read_balance 참조).
+    """푼을 더한다. **계정 단위다** (read_balance 참조).
 
     Args:
         pool: 연결 풀.

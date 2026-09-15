@@ -360,7 +360,7 @@ export function AdminScreen(): React.JSX.Element {
                   return
                 }
                 setBots(updated)
-                setDetail(`화폐 ${String(amount)} 을 넘겼다 — 돌아오지 않는다`)
+                setDetail(`${String(amount)}푼을 넘겼다 — 돌아오지 않는다`)
               })
             }}
             onGift={(accountId, itemId) => {

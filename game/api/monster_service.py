@@ -106,7 +106,7 @@ def apply_win_to_monsters(
         # 개체가 1층 기준으로 감쇠해 「레벨 1→1」이 된다 (실제 신고).
         level = apply_monster_defeat(pool, item.record_id, resolve_home_floor(pool, item, ticket))
         # **바뀐 것만 적는다.** 하강이 열 층을 돌아 스냅샷이 서른 마리가 되면서,
-        # 「레벨 6→6」 서른 줄이 화폐·전리품을 밀어냈다(실제 신고).
+        # 「레벨 6→6」 서른 줄이 푼·전리품을 밀어냈다(실제 신고).
         if level != item.level:
             notes.append(f"{item.kind_id} 레벨 {item.level}→{level}")
         # 그 개체가 들고 있던 **내 것**을 되찾는다 (`설계/6_몬스터` §5).

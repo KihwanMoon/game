@@ -94,7 +94,7 @@ def test_a_verified_run_grants_currency(client, token):
         headers=headers,
     ).json()
     assert body["verdict"] == "verified"
-    assert "화폐" in body["reward"]
+    assert "푼" in body["reward"]
     assert client.get("/api/wallet", headers=headers).json()["balance"] > 0
 
 

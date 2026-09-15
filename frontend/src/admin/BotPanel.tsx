@@ -84,7 +84,7 @@ export interface BotPanelProps {
   /** 내 가방의 아이템 하나를 이 봇에게 넘긴다. **한 방향이다** — 돌아오는 길은 없다. */
   readonly onGift?: (accountId: number, itemId: number) => void
   /**
-   * 내 화폐를 봇에게 넘긴다 (2026-09-06).
+   * 내 푼을 봇에게 넘긴다 (2026-09-06).
    *
    * **밑천을 주는 자리다.** 벌이가 느린 봇은 경매에서 영영 못 산다 — 그러면 「봇이
    * 아무것도 안 산다」가 봇의 규칙이 아니라 잔액의 문제가 된다.
@@ -138,7 +138,7 @@ function renderRow(
       <span className="botrow__cell">{`실력 ${String(bot.skillPct)}%`}</span>
       <span className="botrow__cell">{formatCadence(bot.cadenceSec)}</span>
       <span className="botrow__cell">{bot.isActive ? formatDue(bot.dueInSec) : '—'}</span>
-      <span className="botrow__cell">{`화폐 ${String(bot.balance)} · 물건 ${String(bot.items)}`}</span>
+      <span className="botrow__cell">{`${String(bot.balance)}푼 · 물건 ${String(bot.items)}`}</span>
     </button>
   )
 }
@@ -321,17 +321,17 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
           것을 한 화면에 두 번 그리면 어느 쪽이 최신인지 알 수 없고, 실제로 넘긴 뒤에
           한쪽만 갱신되는 창이 생긴다. 여기 남길 이유는 하나뿐이다: **넘길 물건을 고르는
           곳**이라는 것. */}
-      {/* **화폐는 가방과 따로다.** 물건을 고르는 흐름에 숫자 입력이 끼면 「무엇을
+      {/* **푼은 가방과 따로다.** 물건을 고르는 흐름에 숫자 입력이 끼면 「무엇을
           넘기는 중인지」가 흐려진다. */}
       {props.onCoin === undefined ? null : (
         <div className="bots__gift">
-          <ValueExpr text={`화폐 ${String(bot.balance)} · ${bot.handle} 에게 넘김`} size="sm" />
+          <ValueExpr text={`${String(bot.balance)}푼 · ${bot.handle} 에게 넘김`} size="sm" />
           <input
             className="cat__input"
             inputMode="numeric"
             value={coin}
             placeholder="양"
-            aria-label="넘길 화폐"
+            aria-label="넘길 푼"
             onChange={(event) => {
               setCoin(event.target.value)
             }}
@@ -340,7 +340,7 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
             size="sm"
             variant="ghost"
             disabled={!(Number.parseInt(coin, DECIMAL_RADIX) > 0)}
-            title="한 방향이다 — 넘긴 화폐는 돌아오지 않는다"
+            title="한 방향이다 — 넘긴 푼은 돌아오지 않는다"
             onClick={() => {
               props.onCoin?.(bot.accountId, Number.parseInt(coin, DECIMAL_RADIX))
               setCoin('')

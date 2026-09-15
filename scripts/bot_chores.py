@@ -78,7 +78,7 @@ def read_worn_gear(api_url: str, bot: BotProfile) -> dict[str, GearItem]:
 def apply_bot_shopping(api_url: str, bot: BotProfile, base_stats: dict[str, int]) -> str:
     """판이 끝난 뒤 시장을 한 번 본다.
 
-    사람도 판이 끝나면 가방과 시장을 본다. 봇이 그것을 안 하면 번 화폐가 영영 안 쓰이고,
+    사람도 판이 끝나면 가방과 시장을 본다. 봇이 그것을 안 하면 번 푼이 영영 안 쓰이고,
     그러면 봇은 경제에 들어와 있지 않은 것이다.
 
     **사기만 한다.** 거는 길은 여기 없다 — 봇이 물건을 걸면 「봇이 파밍해서 사람에게

@@ -251,7 +251,7 @@ def test_the_bestiary_counts_defeats_separately(client, token, monkeypatch):
 
 
 def test_deeper_floors_pay_more(client, token):
-    """★ 층이 깊을수록 화폐가 는다 — 안 그러면 깊이 들어갈 이유가 하나 준다.
+    """★ 층이 깊을수록 푼이 는다 — 안 그러면 깊이 들어갈 이유가 하나 준다.
 
     `create_loot_roll` 은 처음부터 층을 받았는데 호출부가 안 넘겨서 늘 1층 값이었다.
     문서가 말하는 동작과 실제가 갈려 있었고, 갈린 쪽이 조용했다.

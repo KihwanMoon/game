@@ -1,4 +1,4 @@
-"""봉인된 옵션 — 등급이 칸을 주고 화폐가 그것을 연다 (설계/4_아이템 §17).
+"""봉인된 옵션 — 등급이 칸을 주고 푼이 그것을 연다 (설계/4_아이템 §17).
 
 여기서 지키는 것은 여섯이다.
 
@@ -95,7 +95,7 @@ def test_unsealing_adds_an_option_the_server_chose(client, token):
 
 def test_the_request_carries_no_result(client, token):
     """★ 결과를 받을 자리가 있으면 원하는 값을 적어 보내는 것이 최적이 된다."""
-    from game.api.schemas import ItemActionRequest
+    from game.api.schemas_item import ItemActionRequest
 
     assert set(ItemActionRequest.model_fields) == {"item_id"}
 
@@ -170,7 +170,7 @@ def test_the_store_itself_refuses_an_empty_seal(client, token):
     때문이다. 실제로 지키는 것은 이쪽이므로 이쪽을 직접 본다.
     """
     from game.api.deps import get_pool
-    from game.app.store.items import apply_unseal
+    from game.app.store.affixes import apply_unseal
     from game.schemas.item import Affix
 
     _account, entity_id, item_id = build_item(client, token, "COMMON")

@@ -12,8 +12,8 @@ import { buildVitalRows } from './vitalRows'
 import { SettlementPanel } from './SettlementPanel'
 
 const SETTLED = [
-  { floor: 1, lines: ['화폐 +40', '경험치 +80'] },
-  { floor: 2, lines: ['화폐 +80', '사슬 갑옷(FINE) 획득'] },
+  { floor: 1, lines: ['푼 +40', '경험치 +80'] },
+  { floor: 2, lines: ['푼 +80', '사슬 갑옷(FINE) 획득'] },
 ]
 
 describe('SettlementPanel', () => {

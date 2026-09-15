@@ -70,7 +70,7 @@ def test_an_unwanted_listing_is_fair_game():
 
 
 def test_a_bot_does_not_buy_its_own():
-    """제 물건을 사면 화폐가 제자리를 돈다."""
+    """제 물건을 사면 푼이 제자리를 돈다."""
     assert not check_is_open_to_bots(build_listing(1, 10, is_mine=True))
 
 
@@ -211,7 +211,7 @@ def test_a_bot_repairs_what_it_can_wear():
 
 
 def test_a_bot_leaves_what_is_not_broken():
-    """멀쩡한 것을 고치면 화폐만 나간다."""
+    """멀쩡한 것을 고치면 푼만 나간다."""
     assert list_repairable((build_bag_item(1, is_broken=False),), 1000, 120) == ()
 
 

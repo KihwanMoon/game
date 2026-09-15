@@ -18,13 +18,12 @@ from game.app.bots.gear_item import GearItem
 from game.app.bots.upgrade import GEAR_PRIORITY_WEIGHTS, find_upgrades_by_weights
 from game.app.items.requirements import check_requirements
 from game.app.items.sealed import compute_unseal_cost, create_sealed_affix
+from game.app.store.affixes import apply_unseal, list_affix_pool
 from game.app.store.consumables import apply_slot_clear, apply_slot_load, list_consumable_slots
 from game.app.store.equipment import add_currency, apply_equip, read_balance
 from game.app.store.inventory_slots import apply_stack_grant, apply_stack_take
 from game.app.store.items import (
     StoredItem,
-    apply_unseal,
-    list_affix_pool,
     list_equipment,
     list_inventory,
     record_item_event,

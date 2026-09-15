@@ -10,7 +10,7 @@
 2. **내 것만 돌려받는다** (M1). 처치 보상을 "그 몬스터가 들고 있던 것 중 자기 것" 으로
    한정하는 것이 동시 처치의 보상 복제를 막는 방식이다.
 3. **되찾은 것은 귀속된다.** 사본이라 총량이 이미 한 번 늘었고, 그것이 경매로 흘러들면
-   사망이 화폐 발행이 된다 (결정 #07·#34).
+   사망이 푼 발행이 된다 (결정 #07·#34).
 """
 
 import os
@@ -104,7 +104,7 @@ def test_defeating_it_takes_my_item_back(client, token, monster):
 
 
 def test_a_recovered_item_is_bound(client, token, monster):
-    """★ 사본이라 총량이 이미 늘었다. 경매로 흘러들면 사망이 화폐 발행이 된다."""
+    """★ 사본이라 총량이 이미 늘었다. 경매로 흘러들면 사망이 푼 발행이 된다."""
     from game.api.deps import get_pool
     from game.app.store.items import list_inventory
     from game.app.store.trophies import apply_recovery

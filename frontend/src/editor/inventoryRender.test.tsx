@@ -45,6 +45,7 @@ function buildItem(over: Partial<ItemView> = {}): ItemView {
     isRecovered: false,
     sealedSlots: 0,
     unsealCost: 0,
+    recastFrom: 0,
     grade: 'COMMON',
     attackRange: 1,
     affixes: [],
@@ -88,6 +89,8 @@ const INVENTORY: InventoryView = {
   ],
   balance: 500,
   repairCost: 120,
+  letters: 0,
+  recastCost: 1,
 }
 
 describe('셀 모델', () => {
@@ -157,6 +160,7 @@ describe('격자 렌더', () => {
       onList={noop}
       feePercent={5}
       onUnseal={noop}
+      onRecast={noop}
     />,
   )
 
@@ -193,6 +197,7 @@ describe('격자 렌더', () => {
         onList={noop}
         feePercent={5}
         onUnseal={noop}
+        onRecast={noop}
       />,
     )
     expect(offline).toContain('서버에 닿지 못했다')
@@ -206,12 +211,15 @@ function renderDetail(kind: 'equip' | 'bag', entry: SlotView, slot = 'BODY'): st
       link="online"
       worn={undefined}
       repairCost={120}
+      letters={0}
+      recastCost={1}
       feePercent={5}
       onEquip={noop}
       onUnequip={noop}
       onDiscard={noop}
       onRepair={noop}
       onUnseal={noop}
+      onRecast={noop}
       onList={noop}
     />,
   )

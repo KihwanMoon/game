@@ -2089,6 +2089,16 @@
   font-size: var(--fs-sm);
 }
 
+/* 옵션 한 줄. **값이 왼쪽, 「다시 찍기」가 오른쪽이다** — 단추가 값을 밀어내지 않게
+   `space-between` 으로 벌리고, 값이 길면 줄바꿈으로 흘린다. */
+.invd__affix {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
 /* 옵션 줄 목록. 상세와 같은 결이다 — 옵션 하나에 한 줄. */
 .invd__affixes {
   display: flex;

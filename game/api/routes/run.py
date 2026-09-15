@@ -122,7 +122,7 @@ def apply_run_rewards(
         verified: 서버가 확정한 결과.
         mode: 런 모드. 순위표를 가르는 값이다.
         core_version: 이 서버의 코어 버전. 시즌을 가르는 값이다.
-        floor: 이 런의 층. 화폐가 이것에 비례한다 — 안 넘기면 깊이 들어가도 1층 값이다.
+        floor: 이 런의 층. 푼이 이것에 비례한다 — 안 넘기면 깊이 들어가도 1층 값이다.
         ticket_id: 이 런의 티켓. 처치별 굴림이 스냅샷에서 개체 레벨을 찾는다.
         start_floor: 하강이 시작한 층. 이번 층의 처치만 골라내는 데 쓴다.
         rooms_per_floor: 층 하나에 드는 방 수.
@@ -134,7 +134,7 @@ def apply_run_rewards(
         return ""
     is_cleared = verified.outcome == OUTCOME_WIN
     add_currency(get_pool(), account_id, compute_run_currency(is_cleared, floor))
-    notes = [f"화폐 +{compute_run_currency(is_cleared, floor)}"]
+    notes = [f"푼 +{compute_run_currency(is_cleared, floor)}"]
     # **처치마다 굴린다** (설계/4_아이템 §15.3). 런 단위로 굴리면 몬스터 레벨이 개입할
     # 자리가 없다. 재시뮬이 확정한 처치 목록만 쓴다 — 클라이언트 보고로 굴리면 "많이
     # 잡았다" 고 적어 보내는 것이 곧 파밍이 된다.

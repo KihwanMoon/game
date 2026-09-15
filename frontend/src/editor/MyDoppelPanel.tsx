@@ -10,6 +10,10 @@
  *
  * **비어 있는 것과 꺼 둔 것을 가른다.** 그림자를 안 세우기로 한 계정은 전적이 없는 것이
  * 정상이고, 그때 「아직 없다」라고만 적으면 켜면 생긴다는 사실이 어디에도 안 보인다.
+ *
+ * **셈이 언제 끝나는지를 적는다** (2026-09-15). 이긴 판은 활자가 되는데, 들어오는 것은
+ * 이긴 그 순간이 아니라 **그림자가 물러날 때**다 — 안 적으면 「이겼는데 활자가 안 늘었다」
+ * 로 보인다. 서 있는 동안 몇을 이겼는지는 여기 줄에 그대로 있다.
  */
 import { GlyphState, Panel, ValueExpr } from '../ds'
 import type { MyDoppelView } from '../storage'
@@ -30,6 +34,9 @@ const OFF_HINT = '둔갑을 안 세우는 중이다 — 계정에서 켜면 내 
 
 /** 한 번도 안 만났을 때. */
 const EMPTY_HINT = '아직 아무도 내 둔갑을 못 만났다'
+
+/** 활자가 언제 들어오는가. **이긴 순간이 아니다** — 안 적으면 셈이 틀린 것으로 보인다. */
+const LETTER_HINT = '이긴 판은 그 둔갑이 물러날 때 활자가 되어 들어온다'
 
 /**
  * 전적 한 줄을 사람이 읽는 말로.
@@ -74,6 +81,7 @@ export function MyDoppelPanel(props: MyDoppelPanelProps): React.JSX.Element {
             text={`만난 판 ${String(view.met)} · 이긴 판 ${String(view.won)}`}
             size="sm"
           />
+          <ValueExpr text={LETTER_HINT} size="sm" dim />
           {view.standing.length === 0 ? (
             <ValueExpr text="지금 서 있는 둔갑이 없다 — 깊은 장에서 죽으면 선다" size="sm" dim />
           ) : (

@@ -189,7 +189,7 @@ CREATE INDEX IF NOT EXISTS account_active_idx ON account (id) WHERE deactivated_
 
 -- ── 봉인된 옵션 칸 (설계/4_아이템 §17) ──────────────────────────────────
 --
--- 등급이 올라가면 옵션 칸이 하나씩 는다. 획득 시점에는 **봉인돼 있고**, 화폐를 내면
+-- 등급이 올라가면 옵션 칸이 하나씩 는다. 획득 시점에는 **봉인돼 있고**, 푼을 내면
 -- 서버가 무작위 옵션 하나를 굴려 붙인다.
 --
 -- **남은 칸 수만 센다.** 무엇이 들어올지를 미리 정해 두면 그것이 클라이언트에 실려 나가고,
@@ -322,7 +322,7 @@ ALTER TABLE run_ticket ADD COLUMN IF NOT EXISTS rooms_per_floor INTEGER NOT NULL
 
 -- ── 층 단위 보상 (로드맵 W14) ────────────────────────────────────────────
 --
--- 층을 깰 때마다 경험치·화폐·아이템을 주려면 한 티켓으로 여러 번 제출해야 한다. T6 의
+-- 층을 깰 때마다 경험치·푼·아이템을 주려면 한 티켓으로 여러 번 제출해야 한다. T6 의
 -- 「한 티켓 한 제출」을 **「더 깊은 층으로만 나아갈 수 있다」**로 다시 세운다 — 같은 층을
 -- 두 번 제출해 보상을 두 번 받는 길을 이 값이 막는다.
 --
@@ -606,3 +606,22 @@ DELETE FROM entity_record e
 CREATE UNIQUE INDEX IF NOT EXISTS entity_record_doppel_origin_floor_idx
     ON entity_record (origin_account_id, zone_floor)
  WHERE is_doppel AND alive AND origin_account_id IS NOT NULL;
+
+-- 활자 (2026-09-15). **둘째 재화다.** 푼은 흔하고 활자는 귀하다 — 푼으로는 봉인을 열 수
+-- 있지만 **연 것을 다시 찍을 수는 없다**. 그 하나를 활자가 한다.
+--
+-- **둔갑이 물러날 때만 들어온다.** 내 규칙표가 남의 장에 서서 이긴 만큼, 그 그림자가
+-- 목숨을 다 쓰고 사라지는 자리에서 한꺼번에 정산된다. 푼처럼 판마다 나오면 또 하나의
+-- 노가다 지표가 될 뿐이고, 그러면 둘로 가른 뜻이 없다.
+--
+-- 지갑에 열을 더한다. 표를 따로 두면 잔액을 볼 때마다 조인이 하나 늘고, 둘은 언제나
+-- 함께 읽힌다.
+ALTER TABLE wallet ADD COLUMN IF NOT EXISTS letters BIGINT NOT NULL DEFAULT 0;
+
+DO $$
+BEGIN
+    ALTER TABLE wallet ADD CONSTRAINT wallet_letters_nonneg CHECK (letters >= 0);
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END
+$$;

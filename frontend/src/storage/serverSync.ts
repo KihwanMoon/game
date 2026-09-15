@@ -483,7 +483,7 @@ export interface RunVerdict {
   readonly playerHp: number
   readonly detail: string
   /**
-   * 이 판으로 무엇을 얻었는가 — 화폐·아이템·경험치·몬스터 변화.
+   * 이 판으로 무엇을 얻었는가 — 푼·아이템·경험치·몬스터 변화.
    *
    * **서버가 처음부터 보내고 있었는데 이 계층이 버리고 있었다.** 아이템은 이겨도 60%
    * 로만 나오므로, 나왔다는 말이 없으면 안 나온 것과 구별되지 않는다. 가방을 열어
@@ -580,6 +580,13 @@ export interface ItemView {
   readonly sealedSlots: number
   /** 다음 칸을 여는 값. 화면이 다시 계산하면 두 곳이 갈린다. */
   readonly unsealCost: number
+  /**
+   * 다시 찍을 수 있는 첫 접사의 첨자. 이 자리부터 꼬리까지가 봉인에서 나온 줄이다.
+   *
+   * **화면이 계산하지 않는다.** 등급별 칸 수를 여기서 다시 들면 정본이 둘이 되고,
+   * 등급을 하나 더할 때 고친 쪽에서만 맞는다 — 서버가 준 값을 그대로 쓴다.
+   */
+  readonly recastFrom: number
   /** 굴린 등급. 봉인 칸 수가 여기서 나온다. */
   readonly grade: string
   /**
@@ -651,6 +658,10 @@ export interface InventoryView {
   readonly equipment: readonly SlotView[]
   readonly balance: number
   readonly repairCost: number
+  /** 가진 활자. 봉인에서 나온 옵션을 다시 찍는 데 쓴다 — 내 둔갑이 이겨야 들어온다. */
+  readonly letters: number
+  /** 한 줄을 다시 찍는 값(활자). 화면이 지어내면 서버와 갈린다. */
+  readonly recastCost: number
 }
 
 interface RawRequirement {
@@ -704,6 +715,7 @@ interface RawItem {
   is_recovered?: boolean
   sealed_slots?: number
   unseal_cost?: number
+  recast_from?: number
   grade?: string
   affixes?: RawAffix[]
   attack_range?: number
@@ -757,6 +769,7 @@ function readSlot(raw: RawSlot): SlotView {
             isRecovered: raw.item.is_recovered ?? false,
             sealedSlots: raw.item.sealed_slots ?? 0,
             unsealCost: raw.item.unseal_cost ?? 0,
+            recastFrom: raw.item.recast_from ?? Number.MAX_SAFE_INTEGER,
             grade: raw.item.grade ?? '',
             attackRange: raw.item.attack_range ?? 0,
             affixes: readAffixRows(raw.item.affixes),
@@ -787,12 +800,16 @@ export function readInventoryPayload(raw: Record<string, unknown>): InventoryVie
     equipment: RawSlot[]
     balance: number
     repair_cost: number
+    letters?: number
+    recast_cost?: number
   }
   return {
     slots: body.slots.map(readSlot),
     equipment: body.equipment.map(readSlot),
     balance: body.balance,
     repairCost: body.repair_cost,
+    letters: body.letters ?? 0,
+    recastCost: body.recast_cost ?? 0,
   }
 }
 
@@ -839,6 +856,8 @@ export async function applyItemAction(
     equipment?: RawSlot[]
     balance?: number
     repair_cost?: number
+    letters?: number
+    recast_cost?: number
   }
   if (raw.slots === undefined) {
     return { inventory: undefined, detail: '' }
@@ -849,6 +868,8 @@ export async function applyItemAction(
       equipment: (raw.equipment ?? []).map(readSlot),
       balance: raw.balance ?? 0,
       repairCost: raw.repair_cost ?? 0,
+      letters: raw.letters ?? 0,
+      recastCost: raw.recast_cost ?? 0,
     },
     detail: '',
   }

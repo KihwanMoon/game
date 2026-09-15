@@ -76,6 +76,7 @@ const INVENTORY = {
         isRecovered: false,
         sealedSlots: 0,
         unsealCost: 0,
+        recastFrom: 0,
         grade: 'COMMON',
         attackRange: 0,
         affixes: [],
@@ -107,6 +108,7 @@ const INVENTORY = {
         isRecovered: true,
         sealedSlots: 0,
         unsealCost: 0,
+        recastFrom: 0,
         grade: 'COMMON',
         attackRange: 0,
         affixes: [],
@@ -139,6 +141,7 @@ const INVENTORY = {
         isRecovered: false,
         sealedSlots: 0,
         unsealCost: 0,
+        recastFrom: 0,
         grade: 'COMMON',
         attackRange: 0,
         affixes: [],
@@ -150,6 +153,8 @@ const INVENTORY = {
   ],
   balance: 100,
   repairCost: 40,
+  letters: 0,
+  recastCost: 1,
 } as unknown as InventoryView
 
 /** 물약 칸 하나가 1/2 이라 보충비 20. 재고 물약 둘이 개당 30. */
@@ -217,6 +222,7 @@ function buildHelm(defense: number, itemId: number, equipped: boolean): Record<s
       isRecovered: false,
       sealedSlots: 0,
       unsealCost: 0,
+      recastFrom: 0,
       grade: 'COMMON',
       attackRange: 0,
       affixes: [{ stat: 'defense', flat: defense, percent: 0, labelKo: '', statLabel: '방어' }],
@@ -698,6 +704,7 @@ function buildBagSlot(
       isRecovered: item.isRecovered,
       sealedSlots: 0,
       unsealCost: 0,
+      recastFrom: 0,
       grade: item.grade,
       attackRange: 0,
       affixes: [],
@@ -721,6 +728,8 @@ describe('★ 전부 버리기 — 조심이 가방을 영영 안 비웠다', ()
     equipment: [],
     balance: 0,
     repairCost: 0,
+    letters: 0,
+    recastCost: 1,
   })
 
   it('등급으로 버리면 되찾은 것과 다른 등급은 남는다', () => {

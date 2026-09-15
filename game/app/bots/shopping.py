@@ -94,7 +94,7 @@ def resolve_budget(balance: int) -> int:
     """이번에 쓸 수 있는 최대 금액.
 
     Args:
-        balance: 가진 화폐.
+        balance: 가진 푼.
 
     Returns:
         쓸 수 있는 금액. 잔액의 일부는 남긴다.
@@ -112,7 +112,7 @@ def list_buyable(listings: tuple[Listing, ...], balance: int) -> tuple[Listing, 
 
     Args:
         listings: 지금 열려 있는 매물들.
-        balance: 봇의 화폐.
+        balance: 봇의 푼.
 
     Returns:
         사람 우선권·시장 하한·예산을 다 통과한 매물들.
@@ -202,7 +202,7 @@ def find_purchase(
 
     **나은 것이 먼저, 없으면 싼 것.** 예전에는 싼 것만 샀다 — 6시간 넘게 안 팔린 것 중
     제일 싼 것이라 정의상 가장 값 안 나가는 물건이고, 봇의 가방에 쌓였다가 정비의
-    버리기나 사망 페널티가 지웠다. 사실상 화폐 소각기였다.
+    버리기나 사망 페널티가 지웠다. 사실상 푼 소각기였다.
 
     싼 것 사기를 **없애지는 않았다.** 봇이 시장에서 사 주는 것 자체가 사람이 드롭을 팔
     곳이고, 나은 것만 사면 그 자리가 크게 준다. 그래서 둘을 순서로 둔다: 쓸모를 먼저
@@ -213,7 +213,7 @@ def find_purchase(
 
     Args:
         listings: 지금 열려 있는 매물들.
-        balance: 봇의 화폐.
+        balance: 봇의 푼.
         worn: 자리에서 지금 낀 것으로. 없으면 견줌을 건너뛴다.
         weights: 이 봇의 저울. 없으면 견줌을 건너뛴다.
         base_stats: 퍼센트를 값으로 바꾸는 기준.

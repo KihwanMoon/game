@@ -447,12 +447,12 @@ describe('판정 응답이 보상을 잃지 않는다', () => {
           outcome: 'PLAYER_WIN',
           ticks: 10,
           player_hp: 5,
-          reward: '화폐 +40 · 소형 방패 획득',
+          reward: '푼 +40 · 소형 방패 획득',
         }),
       ),
     )
     return submitRun('t', 'ticket', {}, 'b1.v1.i1.s1.r1.a1.e1').then((result) => {
-      expect(result?.reward).toBe('화폐 +40 · 소형 방패 획득')
+      expect(result?.reward).toBe('푼 +40 · 소형 방패 획득')
     })
   })
 

@@ -43,12 +43,17 @@ export interface InventoryDetailProps {
   readonly worn: ItemView | undefined
   readonly link: LinkState
   readonly repairCost: number
+  /** 가진 활자. 모자라면 다시 찍기 단추가 막힌다. */
+  readonly letters: number
+  /** 한 줄을 다시 찍는 값(활자). 서버가 정한다. */
+  readonly recastCost: number
   readonly feePercent: number
   readonly onEquip: (itemId: number, slot: string) => void
   readonly onUnequip: (slot: string) => void
   readonly onDiscard: (itemId: number) => void
   readonly onRepair: (itemId: number) => void
   readonly onUnseal: (itemId: number) => void
+  readonly onRecast: (itemId: number, affixIndex: number) => void
   readonly onList: (itemId: number, price: number) => void
 }
 
@@ -86,25 +91,80 @@ function renderCompare(picked: ItemView, worn: ItemView | undefined): React.JSX.
  * @param item 아이템.
  * @returns 능력치 줄. 없으면 null.
  */
-function renderAffixes(item: ItemView): React.JSX.Element | null {
-  const lines: string[] = []
+function renderAffixes(item: ItemView, recast: RecastOffer): React.JSX.Element | null {
+  const rows: { readonly text: string; readonly index: number }[] = []
   if (item.attackRange > 0) {
-    lines.push(`사거리 ${String(item.attackRange)}`)
+    // **사거리는 접사가 아니라 필드다.** 첨자 -1 이 「다시 찍을 수 없는 줄」을 뜻한다.
+    rows.push({ text: `사거리 ${String(item.attackRange)}`, index: -1 })
   }
-  lines.push(...item.affixes.map(formatAffix))
-  if (lines.length === 0) {
+  item.affixes.forEach((affix, index) => {
+    rows.push({ text: formatAffix(affix), index })
+  })
+  if (rows.length === 0) {
     return null
   }
   // **옵션 하나에 한 줄이다.** 가운뎃점으로 이으면 옵션 넷이 문장 하나가 되어, 어디까지가
   // 한 옵션인지 눈으로 갈라야 한다(실제 요청).
   return (
     <ul className="invd__affixes">
-      {lines.map((line) => (
-        <li className="invd__affix" key={line}>
-          <ValueExpr text={line} size="sm" />
+      {rows.map((row) => (
+        <li className="invd__affix" key={`${String(row.index)}:${row.text}`}>
+          <ValueExpr text={row.text} size="sm" />
+          {renderRecastButton(item, row.index, recast)}
         </li>
       ))}
     </ul>
+  )
+}
+
+/** 한 줄을 다시 찍는 단추에 필요한 것. */
+interface RecastOffer {
+  readonly letters: number
+  readonly cost: number
+  readonly disabled: boolean
+  readonly onRecast: (itemId: number, affixIndex: number) => void
+}
+
+/**
+ * 봉인에서 나온 줄에만 「다시 찍기」를 붙인다.
+ *
+ * **드롭이 달고 나온 접사에는 안 붙는다.** 어디부터가 봉인에서 나온 것인지는 서버가
+ * `recastFrom` 으로 말한다 — 등급별 칸 수를 화면이 다시 들면 정본이 둘이 된다.
+ *
+ * **모자랄 때도 단추를 지우지 않는다.** 사라지면 「이 줄은 못 바꾸는 것」으로 읽히는데,
+ * 사실은 「지금 활자가 없는 것」이다 — 둘은 사람이 할 일이 다르다 (P1).
+ *
+ * @param item 아이템.
+ * @param index 그 줄의 첨자. -1 이면 접사가 아니다.
+ * @param recast 값과 가진 활자.
+ * @returns 단추. 다시 찍을 수 없는 줄이면 null.
+ */
+function renderRecastButton(
+  item: ItemView,
+  index: number,
+  recast: RecastOffer,
+): React.JSX.Element | null {
+  if (index < 0 || index < item.recastFrom) {
+    return null
+  }
+  const poor = recast.letters < recast.cost
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      glyph="⟳"
+      disabled={recast.disabled || poor}
+      title={
+        poor
+          ? `활자가 모자란다 — ${String(recast.cost)}개가 필요한데 ${String(recast.letters)}개다`
+          : '활자를 내고 이 줄을 다시 찍는다 — 결과는 서버가 정한다'
+      }
+      onClick={() => {
+        recast.onRecast(item.itemId, index)
+      }}
+    >
+      {`다시 찍기 ${String(recast.cost)}`}
+    </Button>
   )
 }
 
@@ -235,7 +295,12 @@ export function InventoryDetail(props: InventoryDetailProps): React.JSX.Element 
           <GlyphState state="true" size="sm" label="되찾음 · 빼앗겼던 것" />
         ) : null}
       </div>
-      {renderAffixes(item)}
+      {renderAffixes(item, {
+        letters: props.letters,
+        cost: props.recastCost,
+        disabled,
+        onRecast: props.onRecast,
+      })}
       {/* **가방 칸에서만 견준다.** 장비 칸을 고르면 견줄 상대가 자기 자신이다. */}
       {choice.kind === 'equip' ? null : renderCompare(item, props.worn)}
       {renderRequirements(item)}
@@ -275,7 +340,7 @@ export function InventoryDetail(props: InventoryDetailProps): React.JSX.Element 
               props.onRepair(item.itemId)
             }}
           >
-            {`복구 ${String(props.repairCost)}`}
+            {`복구 ${String(props.repairCost)}푼`}
           </Button>
         ) : null}
         {item.sealedSlots > 0 ? (
@@ -284,12 +349,12 @@ export function InventoryDetail(props: InventoryDetailProps): React.JSX.Element 
             variant="secondary"
             glyph="◈"
             disabled={disabled}
-            title="화폐를 내고 옵션 하나를 연다 — 결과는 서버가 정한다"
+            title="푼을 내고 옵션 하나를 연다 — 결과는 서버가 정한다"
             onClick={() => {
               props.onUnseal(item.itemId)
             }}
           >
-            {`봉인 해제 ${String(item.unsealCost)}`}
+            {`봉인 해제 ${String(item.unsealCost)}푼`}
           </Button>
         ) : null}
         {choice.kind === 'bag' ? (

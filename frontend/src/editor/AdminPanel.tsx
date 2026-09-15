@@ -2,7 +2,7 @@
  * 관리자 화면 — 세계에 무슨 일이 벌어지는지 보고, 필요하면 손댄다.
  *
  * **지금까지 세계 상태를 볼 방법이 아예 없었다.** 지속 몬스터가 몇이고 누가 남의 장비를
- * 들고 있는지, 화폐가 얼마나 풀렸는지 확인하려면 매번 임시 스크립트를 써야 했다 — 그
+ * 들고 있는지, 푼이 얼마나 풀렸는지 확인하려면 매번 임시 스크립트를 써야 했다 — 그
  * 상태로는 "세계가 건강한가" 를 아무도 답할 수 없다.
  *
  * **콘텐츠는 여기서 고치지 않는다.** 아이템 카탈로그·레벨 곡선·방 구성은
@@ -34,7 +34,7 @@ const SUMMARY_ROWS: readonly { readonly key: keyof AdminOverview; readonly label
   { key: 'itemsBound', label: '귀속' },
   { key: 'itemsHeldByMonsters', label: '몬스터 보유' },
   { key: 'listingsOpen', label: '열린 매물' },
-  { key: 'currencyTotal', label: '풀린 화폐' },
+  { key: 'currencyTotal', label: '풀린 푼' },
   { key: 'verifiedRuns', label: '검증된 런' },
 ]
 
