@@ -807,3 +807,21 @@ ALTER TABLE account ADD COLUMN IF NOT EXISTS doppel_opt_in BOOLEAN NOT NULL DEFA
 -- 제출 수로 거르지 않은 이유는 그것이 순환이기 때문이다. 「많이 논 계정」만 분모에 넣고
 -- 「평균 재도전 3회」를 재면 기준이 저절로 통과된다.
 ALTER TABLE account ADD COLUMN IF NOT EXISTS is_tester BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- 둔갑의 전적 (2026-09-15). **돌아오는 길이 없었다** — 내 빌드가 남의 장에 서는데,
+-- 몇 번 섰고 누구를 만났고 이겼는지가 주인에게 아무것도 안 갔다. 그래서 성장이 곧
+-- 난이도가 되는 트레드밀만 남았다.
+--
+-- **`record_id` 에 외래키를 안 건다.** 둔갑은 목숨을 다 쓰면 지워지는데 전적은 남아야
+-- 한다 — 이 세계의 규칙이 「찍은 자국은 안 지워진다」이고, 그 규칙을 표가 그대로 지킨다.
+CREATE TABLE IF NOT EXISTS doppel_bout (
+    id                  BIGSERIAL   PRIMARY KEY,
+    record_id           BIGINT      NOT NULL,
+    origin_account_id   BIGINT      NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    opponent_account_id BIGINT      NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    floor               INTEGER     NOT NULL,
+    is_doppel_win       BOOLEAN     NOT NULL,
+    at                  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS doppel_bout_origin_idx ON doppel_bout (origin_account_id, at DESC);

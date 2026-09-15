@@ -14,10 +14,11 @@ from psycopg_pool import ConnectionPool
 
 from game.api.deps import get_pool
 from game.api.discovery_service import record_item_discovery
-from game.app.bots.doppel import check_is_doppel
+from game.app.bots.doppel import build_doppel_slot, check_is_doppel
 from game.app.services.verify_run import VERDICT_VERIFIED, VerifiedRun
 from game.app.simulation.plan import OUTCOME_PLAYER_WIN as OUTCOME_WIN
 from game.app.store.accounts import find_player_entity
+from game.app.store.doppel_bouts import record_bout
 from game.app.store.doppels import apply_doppel_defeat
 from game.app.store.items import list_equipment, list_inventory
 from game.app.store.monster_snapshots import load_snapshots
@@ -86,6 +87,11 @@ def apply_win_to_monsters(
         # 서자마자 사라져 사람이 만날 새가 없었다. 셋을 두고 **잡을 때마다 감쇠시켜**,
         # 같은 그림자를 세 번 만나되 만날 때마다 약해지게 한다.
         if check_is_doppel(item.kind_id):
+            # **전적을 먼저 남긴다** (2026-09-15). 목숨을 다 쓰면 개체가 지워지는데,
+            # 지워진 뒤에 남기려 들면 주인을 못 찾는다 — 「찍은 자국은 안 지워진다」를
+            # 표가 지키려면 지워지기 전에 적어야 한다.
+            home = resolve_home_floor(pool, item, ticket)
+            record_bout(pool, item.record_id, account_id, home, False)
             left = apply_doppel_defeat(pool, item.record_id)
             if left == 0:
                 notes.append(f"{item.kind_id} 를 끝내 지웠다")
@@ -188,6 +194,15 @@ def apply_monster_outcome(
             notes.append(f"{item.kind_id} 레벨 {item.level}→{level}")
     # 사본을 가져갈 개체를 고를 때 도플갱어를 건너뛴다. 들면 그 순간 「내 것을 들고 있는
     # 개체」가 되고, 되찾기가 그 위에 길을 낸다 — 봇의 장비가 사람에게 가는 통로다.
+    # **막타를 친 것이 그림자면 그 그림자가 이긴 것이다** (2026-09-15). 서버는 이미
+    # 막타를 아는데(`verified.killer_slot`) 그 사실이 주인에게 안 가고 있었다 — 내
+    # 빌드가 남을 이겨도 나는 영영 모른다.
+    for item in snapshots:
+        if not check_is_doppel(item.kind_id):
+            continue
+        if build_doppel_slot(item.record_id) == verified.killer_slot:
+            home = resolve_home_floor(pool, item, ticket)
+            record_bout(pool, item.record_id, account_id, home, True)
     holders = [item for item in snapshots if not check_is_doppel(item.kind_id)]
     taken = apply_trophy_transfer(account_id, find_holder(holders, verified.killer_slot))
     if taken:

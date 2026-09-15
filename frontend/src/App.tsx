@@ -60,6 +60,8 @@ const BALANCE = ACTIVE.balance
 const PLAYER_BASE = BALANCE.player as Record<string, number>
 import type { RawBalanceFile } from './core/resources'
 import { validateRuleSet } from './core/rules/validator'
+import { readMyDoppels } from './storage'
+import type { MyDoppelView } from './storage'
 import type { RuleSet } from './core/schemas'
 import { findRoomTitle } from './core/schemas/room'
 import { SHADOW, findChapter } from './content/story'
@@ -73,6 +75,7 @@ import {
   AccountPanel,
   AdminPanel,
   BestiaryPanel,
+  MyDoppelPanel,
   VolumePanel,
   DiscoveryPanel,
   EvictionNotice,
@@ -625,6 +628,8 @@ export function App(): React.JSX.Element {
   const [discovery, setDiscovery] = useState<DiscoveryView | undefined>(undefined)
   // 세계 — 성장·순위·경매장. 전부 서버가 아는 것이라 오프라인에서는 비어 있다.
   const [progress, setProgress] = useState<ProgressView | undefined>(undefined)
+  // 내 내력이 남의 장에서 무엇을 했는지. **성장과 무관한 유일한 눈금이다.**
+  const [myDoppels, setMyDoppels] = useState<MyDoppelView | undefined>(undefined)
   const [leaderboard, setLeaderboard] = useState<LeaderboardView | undefined>(undefined)
   const [auction, setAuction] = useState<AuctionView | undefined>(undefined)
   const [worldDetail, setWorldDetail] = useState('')
@@ -949,6 +954,7 @@ export function App(): React.JSX.Element {
       return
     }
     void readProgress(account).then(setProgress)
+    void readMyDoppels(account).then(setMyDoppels)
     void readLeaderboard(account).then(setLeaderboard)
     void readAuction(account).then(setAuction)
     refreshBag(account)
@@ -1024,6 +1030,7 @@ export function App(): React.JSX.Element {
     setBestiary(await readBestiary(token))
     setDiscovery(await readDiscovery(token))
     setProgress(await readProgress(token))
+    setMyDoppels(await readMyDoppels(token))
     setLeaderboard(await readLeaderboard(token))
     setAuction(await readAuction(token))
     setRuns(await readRunHistory(token))
@@ -1088,6 +1095,7 @@ export function App(): React.JSX.Element {
     )
     setInventory(undefined)
     setProgress(undefined)
+    setMyDoppels(undefined)
     setAdmin(undefined)
     if (held !== undefined) {
       void applyLogout(held, storage)
@@ -1947,6 +1955,7 @@ export function App(): React.JSX.Element {
                   })
                 }}
               />
+              <MyDoppelPanel view={myDoppels} link={link} />
               <GrowthPanel
                 progress={progress}
                 link={link}

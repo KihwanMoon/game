@@ -2483,3 +2483,34 @@
   line-height: 1.6;
   color: var(--text-dim);
 }
+
+/* ── 내 둔갑 (2026-09-15) ──────────────────────────────────────────────── */
+
+.doppel-mine {
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.doppel-mine__list {
+  display: grid;
+  gap: var(--sp-1);
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  list-style: none;
+}
+
+.doppel-mine__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-1) var(--sp-3);
+  padding-block: var(--sp-1);
+  border-bottom: var(--border);
+}
+
+/* 장 번호는 자릿수가 달라도 같은 칸을 쓴다 — 목록이 층마다 어긋나지 않게. */
+.doppel-mine__floor {
+  min-inline-size: 4ch;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}

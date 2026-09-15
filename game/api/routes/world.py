@@ -26,9 +26,12 @@ from game.api.schemas import (
     ProgressResponse,
     TicketResponse,
 )
+from game.api.schemas_doppel import DoppelBout, DoppelStanding, MyDoppelResponse
 from game.app.progression.floors import read_floor_cap
 from game.app.progression.levels import STAT_KEYS, check_allocation
 from game.app.store.accounts import find_player_entity
+from game.app.store.doppel_bouts import count_bouts, list_bouts, list_my_doppels
+from game.app.store.doppels import check_doppel_opt_in
 from game.app.store.monster_snapshots import build_monster_snapshot, save_snapshots
 from game.app.store.monsters import list_monsters
 from game.app.store.progress import (
@@ -136,6 +139,39 @@ def read_leaderboard(
         mode=mode,
         core_version=core_version,
         entries=list(list_leaderboard(get_pool(), mode, core_version)),
+    )
+
+
+# 최근 전적으로 낼 줄 수. **열 줄이면 「요즘 어땠나」가 보이고, 그보다 길면 읽는 일이
+# 아니라 훑는 일이 된다** — 지나간 판 목록과 같은 눈금이다.
+BOUT_LIMIT = 10
+
+
+@router.get("/api/doppels/mine", response_model=MyDoppelResponse)
+def read_my_doppels(account: CurrentAccount) -> MyDoppelResponse:
+    """내 둔갑이 지금 어디 서 있고 무엇을 했는지 본다.
+
+    **이 게임의 거의 모든 축이 나를 따라온다** — 층 스케일도, 둔갑의 레벨도, 선공도.
+    그래서 세져도 체감이 같고, 순위는 누적 경험치라 오래 돌린 쪽이 앞선다. 「내가 잘
+    적었다」가 쌓이는 자리가 없었다.
+
+    내 빌드가 남의 장에 서서 누구를 만나고 이겼는지는 **성장과 무관한 사실**이다.
+
+    Args:
+        account: 토큰으로 푼 계정.
+
+    Returns:
+        서 있는 둔갑들과 전적. 그림자를 안 세우기로 한 계정이면 전부 비어 있고
+        `is_opted_in` 이 거짓이다 — **비어 있는 것과 끄고 있는 것은 다르다.**
+    """
+    pool = get_pool()
+    met, won = count_bouts(pool, account.account_id)
+    return MyDoppelResponse(
+        standing=[DoppelStanding(**one) for one in list_my_doppels(pool, account.account_id)],
+        met=met,
+        won=won,
+        recent=[DoppelBout(**one) for one in list_bouts(pool, account.account_id, BOUT_LIMIT)],
+        is_opted_in=check_doppel_opt_in(pool, account.account_id),
     )
 
 

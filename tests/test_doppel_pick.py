@@ -9,6 +9,8 @@
 몇을 만나는가」가 달라졌다.
 """
 
+from pathlib import Path
+
 from game.api.doppel_pick import (
     build_room_doppels,
     list_floor_rooms,
@@ -201,3 +203,31 @@ def test_only_shadows_are_added_to_rooms():
 
     assert list_extra_slots({"w1": 1, "w2": 1, "goblin_rusher_0": 1}, set()) == ()
     assert list_extra_slots({"w1": 1, "doppel_42": 1}, set()) == ("doppel_42",)
+
+
+# ── 전적이 돌아오는가 (2026-09-15) ────────────────────────────────────────
+
+
+def test_bout_is_not_recorded_against_my_own_shadow():
+    """★ 제 그림자를 잡는 것은 전적이 아니라 되풀이다.
+
+    봇은 쉼 없이 돌고 제 둔갑을 다시 만난다. 그것을 세면 전적이 「내가 나를 몇 번
+    이겼나」가 되고, 그 수는 아무것도 안 말한다.
+    """
+    from game.app.store.doppel_bouts import record_bout
+
+    assert record_bout.__doc__ is not None
+    assert "제 둔갑과 만난 판은 안 센다" in record_bout.__doc__
+
+
+def test_bout_survives_the_shadow():
+    """★ 둔갑이 지워져도 전적은 남는다 — 「찍은 자국은 안 지워진다」.
+
+    목숨을 다 쓰면 개체가 지워진다. 전적에 외래키를 걸면 그때 함께 지워져, 「내 그림자가
+    누구를 이겼다」가 그림자의 수명만큼만 산다.
+    """
+    schema = (Path("game/app/store/schema.sql")).read_text(encoding="utf-8")
+    start = schema.index("CREATE TABLE IF NOT EXISTS doppel_bout")
+    block = schema[start : schema.index(");", start)]
+    assert "record_id" in block
+    assert "REFERENCES entity_record" not in block

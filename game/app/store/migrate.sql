@@ -561,3 +561,21 @@ UPDATE item_catalog SET label_ko = '축지부' WHERE catalog_id = 'scroll_blink'
 UPDATE item_catalog SET label_ko = '눈밝이 부적' WHERE catalog_id = 'scroll_focus' AND label_ko = '부릅 주문서';
 UPDATE item_catalog SET label_ko = '불부적' WHERE catalog_id = 'scroll_flame' AND label_ko = '화염 주문서';
 UPDATE item_catalog SET label_ko = '봉한 판목' WHERE catalog_id = 'quest_seal' AND label_ko = '봉인된 각인';
+
+-- 둔갑의 전적 (2026-09-15). **돌아오는 길이 없었다** — 내 빌드가 남의 장에 서는데,
+-- 몇 번 섰고 누구를 만났고 이겼는지가 주인에게 아무것도 안 갔다. 그래서 성장이 곧
+-- 난이도가 되는 트레드밀만 남았다.
+--
+-- **`record_id` 에 외래키를 안 건다.** 둔갑은 목숨을 다 쓰면 지워지는데 전적은 남아야
+-- 한다 — 이 세계의 규칙이 「찍은 자국은 안 지워진다」이고, 그 규칙을 표가 그대로 지킨다.
+CREATE TABLE IF NOT EXISTS doppel_bout (
+    id                  BIGSERIAL   PRIMARY KEY,
+    record_id           BIGINT      NOT NULL,
+    origin_account_id   BIGINT      NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    opponent_account_id BIGINT      NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    floor               INTEGER     NOT NULL,
+    is_doppel_win       BOOLEAN     NOT NULL,
+    at                  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS doppel_bout_origin_idx ON doppel_bout (origin_account_id, at DESC);

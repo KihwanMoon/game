@@ -108,6 +108,7 @@ export {
   applyLogout,
   listenEviction,
   readAdminOverview,
+  readMyDoppels,
   readProgress,
   readServerMeta,
   readToken,
@@ -151,3 +152,4 @@ export type {
   SlotView,
   SyncOutcome,
 } from './serverSync'
+export type { MyDoppelView, DoppelBout, DoppelStanding } from './serverSync'

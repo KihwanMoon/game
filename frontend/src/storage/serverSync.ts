@@ -1880,3 +1880,71 @@ export async function applyLogout(token: string, storage: StorageLike | undefine
     // 지우기 실패도 로그아웃을 막지 않는다.
   }
 }
+
+/** 지금 서 있는 내 둔갑 하나. */
+export interface DoppelStanding {
+  readonly recordId: number
+  readonly floor: number
+  readonly level: number
+  readonly lives: number
+}
+
+/** 내 둔갑이 만난 한 판. */
+export interface DoppelBout {
+  readonly floor: number
+  readonly isDoppelWin: boolean
+  readonly opponent: string
+  readonly at: string
+}
+
+/**
+ * 내 둔갑의 지금과 전적.
+ *
+ * **성장과 무관한 사실만 담는다.** 이 게임의 축은 거의 다 플레이어를 따라오므로(층
+ * 스케일·둔갑 레벨·선공) 세져도 체감이 같고, 순위는 누적 경험치라 오래 돌린 쪽이
+ * 앞선다. 「내가 잘 적었다」가 쌓이는 자리가 여기다.
+ */
+export interface MyDoppelView {
+  readonly standing: readonly DoppelStanding[]
+  readonly met: number
+  readonly won: number
+  readonly recent: readonly DoppelBout[]
+  readonly isOptedIn: boolean
+}
+
+/**
+ * 내 둔갑을 읽는다.
+ *
+ * @param token 기기 토큰.
+ * @returns 둔갑과 전적. 못 닿으면 undefined.
+ */
+export async function readMyDoppels(token: string): Promise<MyDoppelView | undefined> {
+  const response = await sendRequest('/doppels/mine', { headers: { [TOKEN_HEADER]: token } })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  const body = (await response.json()) as {
+    standing?: { record_id: number; floor: number; level: number; lives: number }[]
+    met?: number
+    won?: number
+    recent?: { floor: number; is_doppel_win: boolean; opponent: string; at: string }[]
+    is_opted_in?: boolean
+  }
+  return {
+    standing: (body.standing ?? []).map((one) => ({
+      recordId: one.record_id,
+      floor: one.floor,
+      level: one.level,
+      lives: one.lives,
+    })),
+    met: body.met ?? 0,
+    won: body.won ?? 0,
+    recent: (body.recent ?? []).map((one) => ({
+      floor: one.floor,
+      isDoppelWin: one.is_doppel_win,
+      opponent: one.opponent,
+      at: one.at,
+    })),
+    isOptedIn: body.is_opted_in ?? false,
+  }
+}
