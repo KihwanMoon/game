@@ -407,6 +407,6 @@ describe('소모품의 쓰임새 (설계/4_아이템 §4)', () => {
 
   it('★ 쓰임새가 없으면 그 사실을 말한다 — 조용히 비면 왜 못 쓰는지 알 길이 없다', () => {
     const bare = { ...potion, useTag: '' }
-    expect(draw(bare)).toContain('어느 규칙도 못 쓴다')
+    expect(draw(bare)).toContain('어느 내력도 못 쓴다')
   })
 })

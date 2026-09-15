@@ -91,10 +91,10 @@ export function EnemyRuleEditor(props: EnemyRuleEditorProps): React.JSX.Element 
   )
 
   return (
-    <Panel title="적 규칙표" meta={`${String(ids.length)}벌`} tone="panel" padded scroll>
+    <Panel title="적 내력" meta={`${String(ids.length)}벌`} tone="panel" padded scroll>
       <div className="cat">
         <ValueExpr
-          text="플레이어 규칙표와 같은 형식이라 같은 편집기를 쓴다 — 본 것을 그대로 고칠 수 있다"
+          text="플레이어 내력과 같은 형식이라 같은 편집기를 쓴다 — 본 것을 그대로 고칠 수 있다"
           size="sm"
           dim
         />

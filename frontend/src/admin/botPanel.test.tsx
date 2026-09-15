@@ -74,7 +74,7 @@ describe('봇 패널', () => {
 
   it('★ 판·승·최고층이 줄에 있다 — 성격보다 결과가 먼저다', () => {
     expect(html).toContain('3 / 40 (8%)')
-    expect(html).toContain('2층')
+    expect(html).toContain('2장')
     expect(html).toContain('bot1')
   })
 
@@ -106,8 +106,8 @@ describe('봇 패널', () => {
   it('★ 도플갱어가 여기 없다 — 제 탭으로 갈라 나갔다', () => {
     // 한 탭에 봇 표와 도플갱어 표가 함께 있어서, 봇 하나를 열면 그 상세가 도플갱어
     // 목록 뒤로 밀렸다 — 두 표가 서로의 자리를 다퉜다.
-    expect(html).not.toContain('도플갱어')
-    expect(html).not.toContain('의 그림자')
+    expect(html).not.toContain('둔갑')
+    expect(html).not.toContain('의 둔갑')
   })
 
   it('★ 넘기기는 되돌릴 수 없다고 먼저 말한다 — 귀속은 눌러 본 뒤에 알면 늦다', () => {

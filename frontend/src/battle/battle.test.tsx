@@ -674,10 +674,10 @@ describe('전투 화면 골격', () => {
     // 서버 렌더에는 화면이 없어 토큰을 못 읽으므로 `DEFAULT_LAYOUT_MODE` 가 선다.
     // 그것이 세로라는 것이 이 검사의 전부다 — 세로 골격 자체는 portrait.test.tsx 가 본다.
     const html = renderToStaticMarkup(
-      <BattleView setup={CHECK_SETUP} rulesets={G0_RULESETS} location="1층 · pillars" />,
+      <BattleView setup={CHECK_SETUP} rulesets={G0_RULESETS} location="1장 · pillars" />,
     )
     expect(html).toContain('battle--portrait')
-    expect(html).toContain('1층 · pillars')
+    expect(html).toContain('1장 · pillars')
     // 아직 한 틱도 돌지 않았으므로 규칙 줄은 전부 미평가다.
     expect(html).toContain('ds-rule-row--pending')
     expect(html).not.toContain('ds-rule-row--armed')
@@ -687,7 +687,7 @@ describe('전투 화면 골격', () => {
     // 예전에는 셋이었다(도면·규칙·지시선). 지시선은 데스크톱 배치와 함께 사라졌다 —
     // 세로에서는 규칙 줄이 시트 탭 뒤로 숨을 수 있어 선의 한쪽 끝이 없어진다.
     const html = renderToStaticMarkup(
-      <BattleView setup={CHECK_SETUP} rulesets={G0_RULESETS} location="1층 · pillars" />,
+      <BattleView setup={CHECK_SETUP} rulesets={G0_RULESETS} location="1장 · pillars" />,
     )
     expect(html).not.toContain('ds-button--primary')
   })
@@ -790,7 +790,7 @@ describe('판정 라벨은 한 벌이다', () => {
   })
 
   it('판정 한 줄은 글리프와 다음에 할 일을 함께 적는다', () => {
-    expect(formatOutcomeNotice('PLAYER_LOSS')).toBe('✕ 쓰러짐 · 규칙을 고쳐 다시')
+    expect(formatOutcomeNotice('PLAYER_LOSS')).toBe('✕ 쓰러짐 · 내력을 고쳐 다시')
     expect(formatOutcomeNotice('PLAYER_WIN')).toBe('✓ 방 클리어 · 다음 실로')
     expect(formatOutcomeNotice('ONGOING')).toBe('◆ 전투 중')
     expect(formatOutcomeNotice('TIMEOUT')).toBe('◈ 추격자 도착')
@@ -804,7 +804,7 @@ describe('판정 라벨은 한 벌이다', () => {
 
   it('진행 중에는 판정을 적지 않는다', () => {
     const html = renderToStaticMarkup(
-      <BattleView setup={CHECK_SETUP} rulesets={G0_RULESETS} location="1층 · pillars" />,
+      <BattleView setup={CHECK_SETUP} rulesets={G0_RULESETS} location="1장 · pillars" />,
     )
     expect(html).not.toContain('battle__outcome')
   })

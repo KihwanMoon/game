@@ -163,7 +163,7 @@ export function BotRuns(props: {
             </Button>
           )}
           <span className="botd__run-room">{run.roomId}</span>
-          <span className="botd__run-floor">{`${String(run.floor)}층`}</span>
+          <span className="botd__run-floor">{`${String(run.floor)}장`}</span>
           <GlyphState
             state={run.outcome === 'PLAYER_WIN' ? 'true' : 'false'}
             size="sm"
@@ -192,7 +192,7 @@ export function BotRuns(props: {
  */
 function BotUpkeep(props: { readonly rows: BotDetail['maintenance']['rows'] }): React.JSX.Element {
   if (props.rows.length === 0) {
-    return <ValueExpr text="정비 규칙이 없다 — 이 봇은 판 뒤에 아무것도 안 한다" size="sm" dim />
+    return <ValueExpr text="벼림 내력이 없다 — 이 봇은 판 뒤에 아무것도 안 한다" size="sm" dim />
   }
   return (
     <ul className="mnt__list">
@@ -218,7 +218,7 @@ export function BotDetailPanel(props: BotDetailProps): React.JSX.Element {
   if (detail === undefined) {
     return (
       <Panel title="봇 상세" tone="panel" padded>
-        <ValueExpr text="위에서 봇 줄을 고르면 그 봇의 규칙표·가방·판을 연다" size="sm" dim />
+        <ValueExpr text="위에서 봇 줄을 고르면 그 봇의 내력·가방·판을 연다" size="sm" dim />
       </Panel>
     )
   }
@@ -230,9 +230,9 @@ export function BotDetailPanel(props: BotDetailProps): React.JSX.Element {
         <>
           {/* **절이 아니라 id 다.** 봇의 전투 규칙표는 우리가 고른 견본이고, 그 내용은
               사람 화면의 견본 목록에 이미 있다 — 여기 베끼면 두 곳이 갈린다. */}
-          <ValueExpr text={`전투 규칙표 · ${detail.rulesetId}`} size="sm" />
+          <ValueExpr text={`전투 내력 · ${detail.rulesetId}`} size="sm" />
           <ValueExpr
-            text="견본 하나를 그대로 돌린다 — 고치려면 위의 봇 표에서 규칙표를 바꾼다"
+            text="견본 하나를 그대로 돌린다 — 고치려면 위의 봇 표에서 내력을 바꾼다"
             size="sm"
             dim
           />
@@ -241,11 +241,11 @@ export function BotDetailPanel(props: BotDetailProps): React.JSX.Element {
     },
     {
       id: 'upkeep',
-      label: '정비 규칙',
+      label: '벼림 내력',
       body: (
         <>
           <ValueExpr
-            text={`정비 행동 ${String(MAINTENANCE_ACTIONS.length)}종 중 이 봇이 켠 것`}
+            text={`벼림 행동 ${String(MAINTENANCE_ACTIONS.length)}종 중 이 봇이 켠 것`}
             size="sm"
             dim
           />
@@ -296,7 +296,7 @@ export function BotDetailPanel(props: BotDetailProps): React.JSX.Element {
           {/* **봇도 소모품 칸을 쓴다.** 러너가 빈 칸을 채우고(`apply_bot_supplies`),
               정비가 보충·교체한다 — 쓰는데 볼 자리가 없으면 「왜 안 채워졌지」를 DB 로만
               알 수 있다. 사람 화면과 **같은 격자**다. */}
-          <ValueExpr text="보기만 한다 — 채우는 것은 러너와 정비 규칙이 한다" size="sm" dim />
+          <ValueExpr text="보기만 한다 — 채우는 것은 러너와 벼림 내력이 한다" size="sm" dim />
           <ConsumableGrid view={detail.consumables} pickedKey="" onPick={() => undefined} />
         </>
       ),
@@ -343,7 +343,7 @@ export function BotDetailPanel(props: BotDetailProps): React.JSX.Element {
 
 /** 도플갱어에 없는 것들. **빈 탭으로 두지 않고 왜 없는지를 적는다.** */
 const DOPPEL_MISSING =
-  '정비 규칙·스킬·리플레이는 없다 — 계정이 아니라 얼려 둔 개체 기록이라 그것들이 딸려 있지 않다'
+  '벼림 내력·재주·리플레이는 없다 — 계정이 아니라 얼려 둔 개체 기록이라 그것들이 딸려 있지 않다'
 
 export interface DoppelDetailProps {
   readonly detail: DoppelDetail | undefined
@@ -368,8 +368,8 @@ export function DoppelDetailPanel(props: DoppelDetailProps): React.JSX.Element {
   const { detail } = props
   if (detail === undefined) {
     return (
-      <Panel title="도플갱어 상세" tone="panel" padded>
-        <ValueExpr text="위에서 줄을 고르면 그 개체의 규칙표와 장비를 연다" size="sm" dim />
+      <Panel title="둔갑 상세" tone="panel" padded>
+        <ValueExpr text="위에서 줄을 고르면 그 개체의 내력과 장비를 연다" size="sm" dim />
       </Panel>
     )
   }
@@ -380,7 +380,7 @@ export function DoppelDetailPanel(props: DoppelDetailProps): React.JSX.Element {
       label: '전투 규칙',
       body:
         rules.length === 0 ? (
-          <ValueExpr text="얼려 둔 규칙표가 비었다" size="sm" dim />
+          <ValueExpr text="얼려 둔 내력이 비었다" size="sm" dim />
         ) : (
           <ul className="mnt__list">
             {rules.map((rule, index) => (
@@ -404,7 +404,7 @@ export function DoppelDetailPanel(props: DoppelDetailProps): React.JSX.Element {
             <ValueExpr text={`레벨 ${String(detail.level)}`} size="sm" />
           </li>
           <li className="botd__skill">
-            <ValueExpr text={`${String(detail.zoneFloor)}층 · ${detail.entitySlot}`} size="sm" />
+            <ValueExpr text={`${String(detail.zoneFloor)}장 · ${detail.entitySlot}`} size="sm" />
           </li>
           <li className="botd__skill">
             <GlyphState
@@ -436,8 +436,8 @@ export function DoppelDetailPanel(props: DoppelDetailProps): React.JSX.Element {
   ]
   return (
     <DetailShell
-      title={`도플갱어 · ${detail.originHandle || String(detail.recordId)}`}
-      meta={`${String(detail.zoneFloor)}층 · lv${String(detail.level)}`}
+      title={`둔갑 · ${detail.originHandle || String(detail.recordId)}`}
+      meta={`${String(detail.zoneFloor)}장 · lv${String(detail.level)}`}
       tabs={tabs}
       missing={DOPPEL_MISSING}
     />

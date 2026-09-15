@@ -57,15 +57,15 @@ describe('도플갱어 목록', () => {
         gear={undefined}
       />,
     )
-    expect(html).toContain('아직 도플갱어가 없다')
+    expect(html).toContain('아직 둔갑이 없다')
   })
 
   it('도플갱어가 있으면 누구의 그림자인지 적는다', () => {
     const html = renderToStaticMarkup(
       <DoppelPanel overview={OVERVIEW} detail={undefined} gear={undefined} />,
     )
-    expect(html).toContain('bot1 의 그림자')
-    expect(html).toContain('3층')
+    expect(html).toContain('bot1 의 둔갑')
+    expect(html).toContain('3장')
   })
 
   it('★ 안 골랐으면 상세가 자기 자리를 지키며 비어 있다 — 빈 패널은 고장으로 읽힌다', () => {
@@ -103,7 +103,7 @@ describe('도플갱어 상세 — 봇과 같은 UI, 다른 탭 수', () => {
 
   it('머리에 원본과 층·레벨을 적는다 — 탭을 안 열어도 무엇인지 알아야 한다', () => {
     expect(html).toContain('bot1')
-    expect(html).toContain('3층 · lv6')
+    expect(html).toContain('3장 · lv6')
   })
 })
 
@@ -133,7 +133,7 @@ describe('★ 리플레이는 기록을 트는 것이 아니라 다시 돌리는
       />,
     )
     // 빈 규칙표로 돌리면 **다른 판**이 나온다 — 그것을 재생이라 부르면 화면이 거짓말한다.
-    expect(html).toContain('빈 규칙표로 돌리면 다른 판이 나온다')
+    expect(html).toContain('빈 내력으로 돌리면 다른 판이 나온다')
   })
 
   it('★ 그때의 결과를 함께 적는다 — 재생이 같은 답을 내는지 눈으로 대조해야 한다', async () => {

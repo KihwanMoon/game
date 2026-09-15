@@ -365,7 +365,7 @@ describe('상태줄 — 판정 네 가지 (명세 D)', () => {
     const loss = renderToStaticMarkup(
       <BattlePortrait {...buildProps({ outcome: OUTCOME_PLAYER_LOSS })} />,
     )
-    expect(loss).toContain('✕ 쓰러짐 · 규칙을 고쳐 다시')
+    expect(loss).toContain('✕ 쓰러짐 · 내력을 고쳐 다시')
     expect(loss).toContain('battle__verdict--danger')
   })
 

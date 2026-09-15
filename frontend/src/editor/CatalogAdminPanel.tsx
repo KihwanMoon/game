@@ -465,7 +465,7 @@ export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
             className="cat__input"
             aria-label="쓰임새"
             value={useTag}
-            placeholder={row.useTag === '' ? '없음 — 어느 규칙도 못 쓴다' : row.useTag}
+            placeholder={row.useTag === '' ? '없음 — 어느 내력도 못 쓴다' : row.useTag}
             onChange={(event) => {
               setUseTag(event.target.value.toUpperCase())
             }}

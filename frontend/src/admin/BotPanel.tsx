@@ -133,7 +133,7 @@ function renderRow(
         label={bot.isActive ? '돌림' : '멈춤'}
       />
       <span className="botrow__cell">{formatWinRate(bot.wins, bot.runs)}</span>
-      <span className="botrow__cell">{`${String(bot.bestFloor)}층`}</span>
+      <span className="botrow__cell">{`${String(bot.bestFloor)}장`}</span>
       <span className="botrow__cell">{bot.rulesetId}</span>
       <span className="botrow__cell">{`실력 ${String(bot.skillPct)}%`}</span>
       <span className="botrow__cell">{formatCadence(bot.cadenceSec)}</span>
@@ -173,7 +173,7 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
               <GlyphState
                 state="danger"
                 size="sm"
-                label="아직 아무 봇도 못 이겼다 — 전리품·경매·순위가 생기지 않는다"
+                label="아직 아무 봇도 못 이겼다 — 전리품·저잣거리·순위가 생기지 않는다"
               />
             ) : null}
             {/* **줄에 머리글을 붙인다.** 라벨 없는 「0 / 13」은 무엇을 세는지 알 수
@@ -183,7 +183,7 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
               <span className="botrow__cell">상태</span>
               <span className="botrow__cell">승 / 판</span>
               <span className="botrow__cell">최고</span>
-              <span className="botrow__cell">규칙표</span>
+              <span className="botrow__cell">내력</span>
               <span className="botrow__cell">실력</span>
               <span className="botrow__cell">리듬</span>
               <span className="botrow__cell">다음</span>
@@ -259,7 +259,7 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
       <span className="bots__edit-name">{`${bot.handle} · ${bot.label}`}</span>
       <select
         className="bots__field"
-        aria-label="규칙표"
+        aria-label="내력"
         value={bot.rulesetId}
         onChange={(event) => {
           props.onSave({ ...toDraft(bot), rulesetId: event.target.value })

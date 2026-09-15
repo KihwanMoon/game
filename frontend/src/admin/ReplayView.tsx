@@ -109,7 +109,7 @@ export function ReplayView(props: ReplayViewProps): React.JSX.Element | null {
         <GlyphState
           state="danger"
           size="sm"
-          label="이 제출의 규칙표를 못 읽는다 — 빈 규칙표로 돌리면 다른 판이 나온다"
+          label="이 제출의 내력을 못 읽는다 — 빈 내력으로 돌리면 다른 판이 나온다"
         />
         <Button size="sm" variant="ghost" glyph="✕" onClick={props.onClose}>
           닫기
@@ -154,7 +154,7 @@ export function ReplayView(props: ReplayViewProps): React.JSX.Element | null {
           >
             {resolveRoomFloor(replay.floor, index + 1, replay.roomsPerFloor) === floor
               ? `다음 방 (${String(index + 2)} / ${String(rooms.length)})`
-              : `다음 층 (${String(floor + 1)}층)`}
+              : `다음 장 (${String(floor + 1)}장)`}
           </Button>
         ) : null}
         {index === 0 ? null : (

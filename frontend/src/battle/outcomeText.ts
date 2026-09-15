@@ -47,7 +47,7 @@ export const OUTCOME_GLYPHS: ReadonlyMap<string, string> = new Map([
 export const OUTCOME_NOTICES: ReadonlyMap<string, string> = new Map([
   [OUTCOME_ONGOING, '전투 중'],
   [OUTCOME_PLAYER_WIN, '방 클리어 · 다음 실로'],
-  [OUTCOME_PLAYER_LOSS, '쓰러짐 · 규칙을 고쳐 다시'],
+  [OUTCOME_PLAYER_LOSS, '쓰러짐 · 내력을 고쳐 다시'],
   [OUTCOME_TIMEOUT, '추격자 도착'],
 ])
 

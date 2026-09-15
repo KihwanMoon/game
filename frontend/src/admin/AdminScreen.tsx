@@ -81,14 +81,14 @@ type Tab =
 
 const TABS: readonly { readonly id: Tab; readonly label: string }[] = [
   { id: 'balance', label: '밸런스' },
-  { id: 'enemies', label: '적 규칙표' },
-  { id: 'skills', label: '스킬' },
+  { id: 'enemies', label: '적 내력' },
+  { id: 'skills', label: '재주' },
   { id: 'rooms', label: '룸' },
   { id: 'catalog', label: '아이템' },
   // 봇은 우리가 들인 것이라 우리가 봐야 한다 (T11). 표시만 하고 보는 자리가 없으면
   // 「몇 마리가 무엇을 하고 있는지」를 DB 로만 알 수 있고, 그러면 아무도 안 본다.
   { id: 'bots', label: '봇' },
-  { id: 'doppel', label: '도플갱어' },
+  { id: 'doppel', label: '둔갑' },
   // G1 의 **분모**를 정하는 자리다. 익명으로 시작하는 게임이라 자동으로 세면 한 판
   // 내고 떠난 계정까지 테스터가 되고, 그 숫자는 「재미있었는가」를 안 잰다.
   { id: 'testers', label: '테스터' },
@@ -316,7 +316,7 @@ export function AdminScreen(): React.JSX.Element {
             // 제목이 「몬스터 스탯」이었는데 이 파일에는 플레이어 기본값·피해 공식·
             // 층 스케일·어뷰징 방지도 들어 있다. 안에 없는 것을 적으면 찾는 사람이
             // 다른 탭을 뒤진다.
-            title="밸런스 · 플레이어 · 적 · 피해 공식 · 층 스케일"
+            title="밸런스 · 플레이어 · 적 · 피해 공식 · 장 스케일"
             onSave={(text, note) => {
               applyContent('/admin/content/draft', 'balance', text, note)
             }}

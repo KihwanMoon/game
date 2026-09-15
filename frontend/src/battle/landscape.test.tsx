@@ -118,7 +118,7 @@ const ROWS_OFF: readonly RuleRowView[] = buildRuleRows({
  */
 function buildProps(patch: Partial<BattleLandscapeProps> = {}): BattleLandscapeProps {
   return {
-    location: '1층 · pillars',
+    location: '1장 · pillars',
     tick: 27,
     speed: 1,
     onSpeedChange: () => undefined,
@@ -302,7 +302,7 @@ describe('가로 치수는 전부 토큰에서 온다 (명세 B)', () => {
 describe('상단 바 (명세 B)', () => {
   it('층·실 · 틱 · 배속 박스가 이 순서로 선다', () => {
     const html = renderToStaticMarkup(<BattleLandscape {...buildProps()} />)
-    const location = html.indexOf('1층 · pillars')
+    const location = html.indexOf('1장 · pillars')
     const tick = html.indexOf('battle__tick')
     const speed = html.indexOf('battle__speed')
     expect(location).toBeGreaterThan(-1)
@@ -371,7 +371,7 @@ describe('하단 바가 상태줄을 겸한다 (명세 B·D)', () => {
     const lost = renderToStaticMarkup(
       <BattleLandscape {...buildProps({ outcome: OUTCOME_PLAYER_LOSS })} />,
     )
-    expect(lost).toContain('✕ 쓰러짐 · 규칙을 고쳐 다시')
+    expect(lost).toContain('✕ 쓰러짐 · 내력을 고쳐 다시')
     expect(lost).toContain('battle__verdict--danger')
   })
 

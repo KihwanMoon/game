@@ -12,6 +12,7 @@
 전제가 "클라이언트는 적대적이다" 이고, 예전 형태는 그 전제와 정면으로 어긋났다.
 """
 
+import logging
 from dataclasses import replace
 
 from fastapi import APIRouter, HTTPException, status
@@ -27,6 +28,7 @@ from game.schemas.meta_save import (
 )
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/api/meta", response_model=MetaResponse)
@@ -84,11 +86,17 @@ def save_meta(request: MetaRequest, account: CurrentAccount) -> MetaResponse:
     # 온다 — 실제로 한 계정에서 세 번 그렇게 지워졌다. 클라이언트는 적대적이라고
     # 전제하므로 이 판단은 여기에 있어야 한다.
     kept = parse_meta_save(stored) if stored else MetaSave()
-    merged = replace(
-        kept,
-        presets=incoming.presets,
-        draft=resolve_draft(kept.draft, incoming.draft),
-    )
+    draft = resolve_draft(kept.draft, incoming.draft)
+    if draft is kept.draft and incoming.draft is not kept.draft:
+        # **빈 초안이 올라왔다는 것은 사고의 신호다.** 막았다는 사실을 남겨야 어느 기기가
+        # 아직 옛 코드를 돌고 있는지 사람이 알 수 있다 — 조용히 막으면 「왜 안 돌아오지」가
+        # 된다. 규칙 내용은 안 적는다. 필요한 것은 개수뿐이다.
+        logger.warning(
+            "빈 초안을 거절했다 — 계정 %s, 저장된 %s줄을 지킨다",
+            account.account_id,
+            len(kept.draft.rules) if kept.draft else 0,
+        )
+    merged = replace(kept, presets=incoming.presets, draft=draft)
     payload = build_meta_payload(merged)
     save_meta_payload(pool, account.account_id, payload, get_core_version())
     return MetaResponse(payload=payload, core_version=get_core_version())

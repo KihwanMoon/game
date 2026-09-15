@@ -252,7 +252,7 @@ export function buildBattleSession(
   const template = findRoomTemplate(setup.roomId)
   const ruleset = rulesets.get(setup.rulesetId)
   if (ruleset === undefined) {
-    throw new Error(`없는 규칙표 id 다: ${setup.rulesetId}`)
+    throw new Error(`없는 내력 id 다: ${setup.rulesetId}`)
   }
   const balance = parseBalance(BALANCE)
   let tracer: TracingRuleVm | undefined

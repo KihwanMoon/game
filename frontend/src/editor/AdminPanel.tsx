@@ -54,7 +54,7 @@ export function AdminPanel(props: AdminPanelProps): React.JSX.Element | null {
   return (
     <Panel title="관리자" meta={overview.coreVersion} tone="panel" padded scroll>
       <div className="adm">
-        <div className="adm__head">세계 현황</div>
+        <div className="adm__head">비각 현황</div>
         <ul className="adm__list">
           {SUMMARY_ROWS.map((row) => (
             <li className="adm__row" key={String(row.key)}>
@@ -92,9 +92,9 @@ export function AdminPanel(props: AdminPanelProps): React.JSX.Element | null {
           </ul>
         )}
 
-        <div className="adm__head">지속 몬스터 · 층 / 레벨 / 보유</div>
+        <div className="adm__head">지속 몬스터 · 장 / 레벨 / 보유</div>
         {overview.monsters.length === 0 ? (
-          <ValueExpr text="아직 세계에 지속 몬스터가 없다" size="sm" dim />
+          <ValueExpr text="아직 비각에 지속 몬스터가 없다" size="sm" dim />
         ) : (
           <ul className="adm__list">
             {overview.monsters.map((row) => (
@@ -106,7 +106,7 @@ export function AdminPanel(props: AdminPanelProps): React.JSX.Element | null {
                     label={`${row.catalogId} · ${row.tier}`}
                   />
                   <ValueExpr
-                    text={`층${String(row.zoneFloor)} · lv ${String(row.level)}/${String(row.levelCap)}`}
+                    text={`${String(row.zoneFloor)}장 · lv ${String(row.level)}/${String(row.levelCap)}`}
                     size="sm"
                   />
                   {row.heldItems === 0 ? null : (
@@ -162,7 +162,7 @@ export function AdminPanel(props: AdminPanelProps): React.JSX.Element | null {
                   size="sm"
                   variant="ghost"
                   glyph="✕"
-                  title="세계에서 거둔다. 되돌릴 수 없고 사유가 남는다"
+                  title="비각에서 거둔다. 되돌릴 수 없고 사유가 남는다"
                   onClick={() => {
                     const reason = draft[-row.itemId] ?? ''
                     props.onIntervene('/admin/item/recall', row.itemId, reason)

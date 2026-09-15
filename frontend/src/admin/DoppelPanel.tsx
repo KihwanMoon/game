@@ -18,7 +18,7 @@ import type { DoppelDetail, InventoryView } from '../storage'
 import { DoppelDetailPanel } from './BotDetail'
 
 /** 아무것도 없을 때 적는 말. 빈 화면은 고장으로 읽힌다. */
-const EMPTY_DOPPELS = '아직 도플갱어가 없다 — 봇이 깊은 층에서 죽으면 그 빌드가 여기 선다'
+const EMPTY_DOPPELS = '아직 둔갑이 없다 — 봇이 깊은 장에서 죽으면 그 내력이 여기 선다'
 
 export interface DoppelPanelProps {
   readonly overview: BotOverview | undefined
@@ -41,7 +41,7 @@ export function DoppelPanel(props: DoppelPanelProps): React.JSX.Element {
   const rows = props.overview?.doppels ?? []
   return (
     <div className="bots">
-      <Panel title="도플갱어" meta={`${String(rows.length)}`} tone="panel" padded>
+      <Panel title="둔갑" meta={`${String(rows.length)}`} tone="panel" padded>
         {rows.length === 0 ? (
           <ValueExpr text={EMPTY_DOPPELS} size="sm" dim />
         ) : (
@@ -65,7 +65,7 @@ export function DoppelPanel(props: DoppelPanelProps): React.JSX.Element {
                   size="sm"
                   label={item.alive ? '살아 있다' : '죽었다'}
                 />
-                <span className="botrow__cell">{`${String(item.zoneFloor)}층`}</span>
+                <span className="botrow__cell">{`${String(item.zoneFloor)}장`}</span>
                 {/* **목숨은 셋에서 줄어든다.** 잡을 때마다 하나 쓰고 레벨이 감쇠하므로,
                     같은 그림자를 세 번 만나되 만날 때마다 약해진다. 남은 수를 안 적으면
                     「왜 아직 서 있지」와 「왜 사라졌지」를 둘 다 설명할 수 없다. */}
@@ -73,7 +73,7 @@ export function DoppelPanel(props: DoppelPanelProps): React.JSX.Element {
                 <span className="botrow__cell">{`레벨 ${String(item.level)}`}</span>
                 <span className="botrow__cell">{item.entitySlot}</span>
                 <span className="botrow__cell">
-                  {item.originHandle === '' ? '주인 없음' : `${item.originHandle} 의 그림자`}
+                  {item.originHandle === '' ? '주인 없음' : `${item.originHandle} 의 둔갑`}
                 </span>
               </button>
             ))}
