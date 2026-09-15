@@ -898,3 +898,48 @@
   font-size: var(--fs-body-s);
   color: var(--text-dim);
 }
+
+/* ── 실행 로그 — 누가·누구에게·무엇을·얼마나 (2026-09-15) ─────────────────
+   **색은 세 채널 중 하나다.** 결마다 글리프(✦✚✕⊘◇)와 낭독용 말이 함께 붙으므로,
+   색을 못 보는 화면에서도 「피해」와 「헛돎」이 갈린다 (design/README D-1). */
+
+.ds-log-row__actor {
+  /* 이름 길이가 줄마다 달라도 본문 시작선이 안 흔들린다 — 로그는 훑는 것이다. */
+  flex: 0 0 auto;
+  min-inline-size: 9ch;
+  max-inline-size: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-dim);
+}
+
+/* 내 줄만 밝다. 적이 다수라 그쪽을 칠하면 화면이 온통 그 색이 된다. */
+.ds-log-row__actor--mine {
+  color: var(--text-value);
+}
+
+.ds-log-row--damage .ds-log-row__fired {
+  color: var(--state-damage);
+}
+
+.ds-log-row--heal .ds-log-row__fired {
+  color: var(--state-heal);
+}
+
+.ds-log-row--death .ds-log-row__fired {
+  color: var(--text-danger);
+}
+
+/* 헛돈 줄은 눈에서 물러나야 한다 — 수가 가장 많고 읽을 것이 가장 적다. */
+.ds-log-row--waste {
+  color: var(--text-dim);
+}
+
+.ds-log-row--waste .ds-log-row__fired {
+  color: var(--state-warn);
+}
+
+.ds-log-row--world .ds-log-row__fired {
+  color: var(--text-accent);
+}

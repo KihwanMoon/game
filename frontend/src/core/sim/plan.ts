@@ -225,6 +225,8 @@ export interface RawEnemyKind {
   readonly tier?: string
   readonly id: string
   readonly type: string
+  /** 화면에 보일 이름. 로그와 이문록이 이것을 쓴다 — 없으면 화면이 id 로 말한다. */
+  readonly label_ko?: string
   readonly hp_max: number
   readonly attack: number
   readonly defense: number

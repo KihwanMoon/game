@@ -47,6 +47,9 @@ export function LogPanel(props: LogPanelProps): React.JSX.Element {
           delta={entry.delta ?? null}
           fired={entry.fired === true}
           isNow={props.currentTick !== undefined && entry.tick === props.currentTick}
+          {...(entry.actor === undefined ? {} : { actor: entry.actor })}
+          {...(entry.isMine === undefined ? {} : { isMine: entry.isMine })}
+          {...(entry.tone === undefined ? {} : { tone: entry.tone })}
         />
       ))}
     </div>

@@ -34,6 +34,7 @@ import type { ReactNode } from 'react'
 
 import { useViewportMode, watchViewport } from '../ds'
 import { BLOCK_CATALOG } from '../core/resources'
+import { buildActorNames, readLogTone, replaceIds, translateActions } from './logNames'
 import { PLAYER_ENTITY_ID } from '../core/services/runBattle'
 import { countItem } from '../core/sim/state'
 import {
@@ -355,6 +356,31 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
   const cpuUsed = session.ruleset.rules.reduce((sum, rule) => sum + rule.cpuCost, 0)
   // 화면이 그리는 것은 규칙표 **전량**이다. 끈 줄까지 보여야 다시 켤 수 있다.
   const allRules = props.rulesets.get(props.setup.rulesetId)?.rules ?? session.ruleset.rules
+  // **로그가 id 로 말하면 그것은 로그가 아니라 덤프다** (2026-09-15 신고). 이름표는
+  // 상태에서 만든다 — id 를 잘라 붙이면 소환물·추격자에서 조용히 어긋난다.
+  const actorNames = useMemo(
+    () =>
+      buildActorNames(
+        session.engine.state,
+        new Map(session.balance.enemies.map((kind) => [kind.id, kind.label_ko ?? kind.id])),
+      ),
+    [session.engine.state, session.balance],
+  )
+  const logRows = session.engine.log.entries.slice(-LOG_TAIL).map((entry) => {
+    const actor = actorNames.get(entry.entityId)
+    return {
+      tick: entry.tick,
+      rule: entry.rule,
+      expr: replaceIds(entry.expr, actorNames),
+      outcome: translateActions(replaceIds(entry.outcome, actorNames), BLOCK_CATALOG),
+      delta: entry.delta,
+      fired: entry.fired,
+      actor: actor?.name ?? entry.entityId,
+      isMine: actor?.isMine ?? false,
+      tone: readLogTone(entry),
+    }
+  })
+
   const rows = buildRuleRows({
     rules: allRules,
     trace,
@@ -392,7 +418,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         onToggleRule={toggleRule}
         cpuUsed={cpuUsed}
         cpuBudget={cpuBudget}
-        entries={session.engine.log.entries.slice(-LOG_TAIL)}
+        entries={logRows}
         settlements={props.settlements ?? []}
         hp={player?.hp ?? 0}
         hpMax={player?.hpMax ?? 1}
@@ -434,7 +460,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
       plan={plan}
       rows={rows}
       onToggleRule={toggleRule}
-      entries={session.engine.log.entries.slice(-LOG_TAIL)}
+      entries={logRows}
       settlements={props.settlements ?? []}
       vitals={buildVitalRows({
         hp: player?.hp ?? 0,

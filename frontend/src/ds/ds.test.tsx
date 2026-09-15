@@ -24,6 +24,7 @@ import {
   HpGauge,
   LOW_HP_PERCENT,
   LogPanel,
+  LogRow,
   Panel,
   DEFAULT_LAYOUT_MODE,
   LAYOUT_MODES,
@@ -610,5 +611,37 @@ describe('★ 로그가 지금 틱을 짚는다', () => {
 
   it('틱을 안 주면 아무 줄도 안 짚는다 — 시간축이 없는 자리가 있다', () => {
     expect(renderToStaticMarkup(<LogPanel entries={ENTRIES} />)).not.toContain('ds-log-row--now')
+  })
+})
+
+describe('실행 로그 한 줄 — 누가·무엇을·얼마나 (2026-09-15)', () => {
+  it('★ 행위자가 줄에 선다 — 없으면 누가 한 것인지 알 수 없다', () => {
+    const markup = renderToStaticMarkup(
+      <LogRow tick={12} rule={3} expr="적거리(1) <= 1" outcome="기본 공격 → 몽둥이 도깨비 ①"
+        delta={-12} fired actor="나" isMine tone="damage" />,
+    )
+    expect(markup).toContain('나')
+    expect(markup).toContain('몽둥이 도깨비 ①')
+    expect(markup).toContain('-12')
+  })
+
+  it('★ 결은 색만으로 적지 않는다 — 글리프와 말이 함께 붙는다', () => {
+    const markup = renderToStaticMarkup(
+      <LogRow tick={1} expr="" outcome="" delta={-3} fired tone="damage" />,
+    )
+    expect(markup).toContain('✦')
+    expect(markup).toContain('피해')
+    const wasted = renderToStaticMarkup(
+      <LogRow tick={1} expr="" outcome="길 막힘 — 틱 낭비" fired={false} tone="waste" />,
+    )
+    expect(wasted).toContain('⊘')
+    expect(wasted).toContain('헛돎')
+  })
+
+  it('내 줄과 남의 줄이 갈린다 — 색이 그것을 가른다', () => {
+    const mine = renderToStaticMarkup(<LogRow tick={1} expr="" outcome="" actor="나" isMine />)
+    const other = renderToStaticMarkup(<LogRow tick={1} expr="" outcome="" actor="몽둥이 도깨비 ①" />)
+    expect(mine).toContain('ds-log-row__actor--mine')
+    expect(other).not.toContain('ds-log-row__actor--mine')
   })
 })

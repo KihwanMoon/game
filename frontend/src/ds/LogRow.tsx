@@ -21,6 +21,29 @@ const FIRED_GLYPH = '▸'
 const IDLE_GLYPH = '·'
 
 /**
+ * 결마다의 글리프. **색과 같은 것을 가리킨다** — 색을 못 보는 화면에서도 이 한 글자가
+ * 남으므로, 색이 정보의 유일한 채널이 되지 않는다 (design/README D-1).
+ */
+const TONE_GLYPHS: Readonly<Record<string, string>> = {
+  damage: '✦',
+  heal: '✚',
+  death: '✕',
+  waste: '⊘',
+  world: '◇',
+  decide: '·',
+}
+
+/** 결마다의 말. 화면 낭독기가 읽는 것이 이것이다. */
+const TONE_WORDS: Readonly<Record<string, string>> = {
+  damage: '피해',
+  heal: '회복',
+  death: '쓰러짐',
+  waste: '헛돎',
+  world: '세계',
+  decide: '판단',
+}
+
+/**
  * LogRow 가 받는 props.
  *
  * `rule` 과 `delta` 가 `number | null` 을 받는 것은 코어가 "없음" 을 null 로 내보내기
@@ -33,6 +56,23 @@ export interface LogRowProps {
   readonly outcome: string
   readonly delta?: number | null
   readonly fired?: boolean
+  /**
+   * 이 줄을 남긴 개체의 이름. **없으면 누가 한 것인지 알 수 없다** — 한 틱에 여러
+   * 개체가 줄을 남기므로, 행위자 칸이 없으면 전부 한 덩어리로 읽힌다 (2026-09-15 신고).
+   *
+   * 코어 레코드의 `entity_id` 에 대응한다. id 를 그대로 넣지 말고 이름으로 바꿔 넣는다
+   * (`battle/logNames`) — 화면이 id 로 말하면 그것은 로그가 아니라 덤프다.
+   */
+  readonly actor?: string
+  /** 그 개체가 내 편인가. 색이 이것을 가른다. */
+  readonly isMine?: boolean
+  /**
+   * 줄의 결 — `damage`·`heal`·`waste`·`death`·`decide`·`world`.
+   *
+   * **색은 세 채널 중 하나일 뿐이다.** 결마다 글리프와 말이 함께 붙으므로 색을 못 봐도
+   * 읽힌다 (design/README D-1).
+   */
+  readonly tone?: string
   /**
    * 지금 보고 있는 틱의 줄인가.
    *
@@ -65,17 +105,26 @@ export function LogRow(props: LogRowProps): React.JSX.Element {
   const delta = props.delta ?? null
   const deltaTone = delta !== null && delta < 0 ? 'down' : 'up'
 
+  const tone = props.tone ?? ''
+
   return (
     <div
       className={`ds-log-row${fired ? '' : ' ds-log-row--idle'}${
         props.isNow === true ? ' ds-log-row--now' : ''
-      }`}
+      }${tone === '' ? '' : ` ds-log-row--${tone}`}`}
     >
       <span className="ds-log-row__tick">T{String(props.tick).padStart(TICK_PAD_WIDTH, '0')}</span>
       <span className="ds-log-row__fired" aria-hidden="true">
-        {fired ? FIRED_GLYPH : IDLE_GLYPH}
+        {TONE_GLYPHS[tone] ?? (fired ? FIRED_GLYPH : IDLE_GLYPH)}
       </span>
-      <span className="ds-sr">{fired ? '발동' : '미발동'}</span>
+      <span className="ds-sr">{TONE_WORDS[tone] ?? (fired ? '발동' : '미발동')}</span>
+      {props.actor === undefined ? null : (
+        <span
+          className={`ds-log-row__actor${props.isMine === true ? ' ds-log-row__actor--mine' : ''}`}
+        >
+          {props.actor}
+        </span>
+      )}
       <span className="ds-log-row__rule">{rule === null ? '' : `[${String(rule)}]`}</span>
       <span className="ds-log-row__body">
         <ValueExpr text={props.expr} size="sm" dim={!fired} />
