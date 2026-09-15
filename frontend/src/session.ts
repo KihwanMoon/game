@@ -331,7 +331,16 @@ export function exportSessionCode(session: EditorSession, name: string): string 
  * @returns 코드 라이브러리가 실린 메타 세이브.
  */
 export function buildMetaFromSession(session: EditorSession, meta: MetaSave): MetaSave {
-  return { ...meta, presets: session.presets, draft: getSessionRuleSet(session) }
+  const draft = getSessionRuleSet(session)
+  // **빈 초안은 안 올린다** (2026-09-15, 실제 사고). 규칙 여섯 줄이 서버에 있는 계정이
+  // 빈 기기에서 화면을 열자, 그 기기의 **0줄짜리 초안이 서버의 여섯 줄을 덮었다.**
+  // 사람에게 그것은 「전투 규칙이 사라졌다」로 보인다.
+  //
+  // 비어 있는 것은 **선택이 아니라 부재**다. 「다 지웠다」와 「아직 아무것도 없다」를
+  // 구별할 수 없으므로, 구별이 안 될 때는 **지우지 않는 쪽**으로 붙는다 —
+  // `adoptPresets` 가 이미 같은 규율이다.
+  const keep = draft.rules.length === 0 && (meta.draft?.rules.length ?? 0) > 0
+  return { ...meta, presets: session.presets, draft: keep ? meta.draft : draft }
 }
 
 /**
@@ -413,7 +422,13 @@ export function adoptDraft(
   draft: RuleSet | undefined,
   hasLocalSave: boolean,
 ): EditorSession {
-  if (draft === undefined || hasLocalSave) {
+  if (draft === undefined) {
+    return session
+  }
+  // **이 기기의 초안이 비어 있으면 저장이 있어도 싣는다** (2026-09-15, 실제 사고).
+  // 「저장이 있다」와 「짜 둔 것이 있다」는 다르다 — 시드나 방만 한 번 고른 기기에도
+  // 저장은 생기고, 그 기기가 서버의 여섯 줄을 가린 채 0줄을 도로 밀어 올렸다.
+  if (hasLocalSave && getSessionRuleSet(session).rules.length > 0) {
     return session
   }
   return { ...session, history: createHistory(draft) }

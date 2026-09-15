@@ -153,3 +153,48 @@ describe('로그인은 서버가 이긴다', () => {
     expect(adoptAccount(mine, server).presets[0]?.name).toBe('계정 것')
   })
 })
+
+describe('빈 초안이 서버의 초안을 덮지 않는가 (2026-09-15, 실제 사고)', () => {
+  /** 규칙이 한 줄도 없는 세션. 아무것도 안 짜 본 기기가 이 모양이다. */
+  function buildEmptySession() {
+    const first = ROOM_TEMPLATES[0]
+    if (first === undefined) {
+      throw new Error('룸 템플릿이 없다')
+    }
+    return createSession(undefined, {
+      ruleset: { rulesetId: 'empty', version: 1, rules: [] },
+      roomId: first.templateId,
+      seed: 1,
+    })
+  }
+
+  it('★ 0줄짜리 초안은 서버의 여러 줄을 안 덮는다', () => {
+    // 실제로 이것이 일어났다 — 여섯 줄을 짜 둔 계정이 빈 기기에서 화면을 열자 서버
+    // 초안이 0줄로 덮였고, 사람에게 그것은 「전투 규칙이 사라졌다」로 보였다.
+    const stored = { ...createEmptyMeta(), draft: getSessionRuleSet(buildSession()) }
+    expect(stored.draft?.rules.length).toBeGreaterThan(0)
+    const merged = buildMetaFromSession(buildEmptySession(), stored)
+    expect(merged.draft).toBe(stored.draft)
+  })
+
+  it('한 줄이라도 있으면 그것이 올라간다 — 지키기가 저장을 막으면 안 된다', () => {
+    const stored = { ...createEmptyMeta(), draft: getSessionRuleSet(buildEmptySession()) }
+    const session = buildSession()
+    const merged = buildMetaFromSession(session, stored)
+    expect(merged.draft?.rules.length).toBe(getSessionRuleSet(session).rules.length)
+  })
+
+  it('★ 이 기기의 초안이 비어 있으면 저장이 있어도 서버 것을 싣는다', () => {
+    // 「저장이 있다」와 「짜 둔 것이 있다」는 다르다 — 시드나 방만 한 번 고른 기기에도
+    // 저장은 생긴다.
+    const fromServer = getSessionRuleSet(buildSession())
+    const next = adoptDraft(buildEmptySession(), fromServer, true)
+    expect(getSessionRuleSet(next).rules.length).toBe(fromServer.rules.length)
+  })
+
+  it('짜 둔 것이 있으면 서버 것이 안 덮는다 — 방금 한 편집이 사라지면 안 된다', () => {
+    const session = buildSession()
+    const next = adoptDraft(session, { rulesetId: 'other', version: 1, rules: [] }, true)
+    expect(next).toBe(session)
+  })
+})

@@ -117,7 +117,7 @@ describe('첫 화면', () => {
     expect(markup).toContain('edit-m__tabs')
     // 묶음은 「무엇에 대한 것인가」로 가른다. 「나」가 「캐릭터」가 되고 스킬이 가방에서
     // 갈라진 것은, 레벨·능력치가 세계에서 이쪽으로 오면서 탭의 뜻이 분명해져서다.
-    for (const label of ['싸움 내력', '벼림 내력', '배움', '서생', '가방', '재주', '저잣거리', '비각', '권']) {
+    for (const label of ['전투 규칙', '정비 규칙', '배움', '서생', '가방', '재주', '저잣거리', '비각', '기록']) {
       expect(markup).toContain(`>${label}<`)
     }
   })
@@ -135,14 +135,13 @@ describe('첫 화면', () => {
     expect(markup).not.toContain('장비와 가방')
   })
 
-  it('★ 코드 라이브러리는 규칙을 고치는 열에 있다', () => {
+  it('★ 저장은 규칙을 고치는 열에 있다', () => {
     // 이 슬롯이 원래 그것을 위해 만들어졌는데(RuleEditor 의 `library` 주석) 곁다리 탭
-    // 하나로 들어가 있었다. 규칙표를 저장하고 불러오는 일은 탭을 고르는 일이 아니라
-    // 편집의 일부다.
-    expect(markup).toContain('코드 라이브러리')
+    // 하나로 들어가 있었다. 이름 붙여 저장하는 일은 탭을 고르는 일이 아니라 편집의
+    // 일부다. **꺼내는 일은 다르다** — 목록은 「배움」 탭에 있다 (2026-09-15).
+    expect(markup).toContain('저장과 공유 코드')
     expect(markup).not.toContain('>서고<')
-    // 규칙 목록과 같은 화면에 있다 — 탭을 골라 가는 것이 아니라 편집의 일부다.
-    expect(markup.slice(markup.indexOf('edit-m__rules'))).toContain('코드 라이브러리')
+    expect(markup.slice(markup.indexOf('edit-m__rules'))).toContain('저장과 공유 코드')
   })
 
   it('★ 관리 탭은 관리자에게만 생긴다 — 빈 탭도 경로의 존재를 알려 준다', () => {

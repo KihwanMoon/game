@@ -104,6 +104,7 @@ import {
   AuctionPanel,
   SkillPanel,
   RuleLibrary,
+  RulePresetList,
   checkCanRedo,
   checkCanUndo,
   checkTextEntry,
@@ -260,6 +261,9 @@ const META_PUSH_DELAY_MS = 1500
 
 /** 1초. 자동 진행 카운트다운이 쓴다. */
 const SECOND_MS = 1000
+
+/** 규칙이 한 줄도 없을 때 출격을 막는 사유. */
+const EMPTY_RULESET_BLOCKER = '내력이 비었다 — 한 줄이라도 적어야 나간다'
 
 const PLAYER_SECTION = 'player'
 const CPU_BUDGET_KEY = 'cpu_budget'
@@ -1474,7 +1478,11 @@ export function App(): React.JSX.Element {
     }
   }
 
-  const blocker = findLaunchBlocker(problems)
+  // **빈 내력으로는 못 나간다** (2026-09-15, 실제 사고). 0줄이면 엔진의 기본 행동만
+  // 돌아 그냥 접근하다 죽는데, 화면에는 아무 이유도 안 적힌다 — 「적힌 대로만 움직인다」가
+  // 이 게임의 전제이므로 **적은 것이 없는 채로 내보내는 것은 출격이 아니다.**
+  // 검증기에 안 넣은 이유는 그쪽이 두 코어가 함께 얼린 문구 표이기 때문이다 (G3).
+  const blocker = ruleset.rules.length === 0 ? EMPTY_RULESET_BLOCKER : findLaunchBlocker(problems)
   const resultText = describeRunResult(session.lastResult)
   // 서버 판정이 다르면 그것을 숨기지 않는다. mismatch 는 치트의 증거가 아니라
   // 두 코어가 갈렸다는 신호이고, 대개 우리 쪽 버그다 (docs/설계/7_변조방지 §8).
@@ -1677,15 +1685,8 @@ export function App(): React.JSX.Element {
                 onSave={(name) => {
                   setSession((current) => applyPresetSave(current, name))
                 }}
-                onLoad={(index) => {
-                  setSession((current) => applyPresetLoad(current, index))
-                }}
-                onRemove={(index) => {
-                  setSession((current) => applyPresetRemove(current, index))
-                }}
                 onImport={readSharedCode}
                 onExport={(name) => exportSessionCode(session, name)}
-                onExportSlot={(index) => exportSlotCode(session, index)}
               />
             </>
           }
@@ -1800,7 +1801,7 @@ export function App(): React.JSX.Element {
     const preview = buildMaintenancePreview(rows, inventory, consumables, PLAYER_BASE)
     return {
       id: 'upkeep',
-      label: '벼림 내력',
+      label: '정비 규칙',
       palette: (
         <MaintenancePalette
           disabled={!checkLinked(link) || upkeep === undefined}
@@ -1878,6 +1879,17 @@ export function App(): React.JSX.Element {
         label: '배움',
         main: (
           <>
+              {/* **내 것이 먼저다.** 찾으러 오는 사람은 대개 자기가 저장한 것을 찾는다. */}
+              <RulePresetList
+                presets={session.presets}
+                onLoad={(index) => {
+                  setSession((current) => applyPresetLoad(current, index))
+                }}
+                onRemove={(index) => {
+                  setSession((current) => applyPresetRemove(current, index))
+                }}
+                onExportSlot={(index) => exportSlotCode(session, index)}
+              />
               <TemplatePanel
                 templates={RULE_TEMPLATES}
                 catalog={BLOCK_CATALOG}
@@ -1940,7 +1952,6 @@ export function App(): React.JSX.Element {
                   })
                 }}
               />
-              <RunHistoryPanel runs={runs} link={link} onReplay={openReplay} />
               <GrowthPanel
                 progress={progress}
                 link={link}
@@ -1965,6 +1976,10 @@ export function App(): React.JSX.Element {
                 allItems={ALL_ITEM_TAGS}
                 link={link}
               />
+              {/* **지나간 판이 맨 아래다** (2026-09-15 요청). 계정 → 성장 → 서생 →
+                  지나간 판. 앞의 셋은 「지금 나」이고 이것은 「내가 한 일」이라,
+                  사이에 끼면 시트를 보러 온 사람이 기록을 지나쳐야 한다. */}
+              <RunHistoryPanel runs={runs} link={link} onReplay={openReplay} />
           </>
         ),
       },
@@ -2109,7 +2124,7 @@ export function App(): React.JSX.Element {
         // **막간은 흐르고 탭은 남는다.** 장 카드는 지날 때 한 번 뜨므로, 다시 읽을 자리가
         // 없으면 그 글은 사실상 없는 것과 같다.
         id: 'volume',
-        label: '권',
+        label: '기록',
         main: <VolumePanel bestFloor={meta.bestFloor} />,
       },
     ]

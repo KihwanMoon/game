@@ -19,7 +19,7 @@ import { BLOCK_CATALOG, G0_RULESETS } from '../core/resources'
 import type { RuleSet } from '../core/schemas'
 import { MAX_PRESET_SLOTS, type RulePreset } from '../storage'
 import { RuleEditor } from './RuleEditor'
-import { RuleLibrary } from './RuleLibrary'
+import { RuleLibrary, RulePresetList } from './RuleLibrary'
 
 const CPU_BUDGET = 8
 const RULE_SLOTS = 5
@@ -76,7 +76,7 @@ describe('규칙 에디터 렌더', () => {
 })
 
 /**
- * 코드 라이브러리를 마크업 문자열로 굽는다.
+ * 저장·공유 코드 패널을 마크업 문자열로 굽는다.
  *
  * @param presets 실을 슬롯들.
  * @returns 정적 마크업.
@@ -86,24 +86,47 @@ function renderLibrary(presets: readonly RulePreset[]): string {
     <RuleLibrary
       presets={presets}
       onSave={() => undefined}
-      onLoad={() => undefined}
-      onRemove={() => undefined}
       onImport={() => ''}
       onExport={() => 'v2:code'}
+    />,
+  )
+}
+
+/**
+ * 저장한 내력 목록을 마크업 문자열로 굽는다.
+ *
+ * @param presets 실을 슬롯들.
+ * @returns 정적 마크업.
+ */
+function renderPresetList(presets: readonly RulePreset[]): string {
+  return renderToStaticMarkup(
+    <RulePresetList
+      presets={presets}
+      onLoad={() => undefined}
+      onRemove={() => undefined}
       onExportSlot={() => 'v2:code'}
     />,
   )
 }
 
 describe('코드 라이브러리', () => {
-  it('빈 라이브러리는 무엇을 하면 되는지 적는다', () => {
-    const markup = renderLibrary([])
+  it('★ 저장하는 곳에는 목록이 없다 — 목록은 한 자리에만 둔다', () => {
+    // 양쪽에 두면 슬롯이 여덟인데 목록이 둘이 되고, 지운 뒤 다른 쪽이 아직 그것을
+    // 보이는 순간이 생긴다 (2026-09-15).
+    const markup = renderLibrary([{ name: '근접 압박', ruleset: PRESSURE }])
+    expect(markup).not.toContain('불러오기')
+    expect(markup).toContain('저장')
+    expect(markup).toContain('공유 코드')
+  })
+
+  it('빈 목록은 무엇을 하면 되는지 적는다', () => {
+    const markup = renderPresetList([])
     expect(markup).toContain('저장한 내력이 없다')
     expect(markup).toContain(`0 / ${String(MAX_PRESET_SLOTS)}`)
   })
 
   it('슬롯마다 이름과 세 조작이 나간다', () => {
-    const markup = renderLibrary([{ name: '근접 압박', ruleset: PRESSURE }])
+    const markup = renderPresetList([{ name: '근접 압박', ruleset: PRESSURE }])
     expect(markup).toContain('근접 압박')
     expect(markup).toContain('불러오기')
     expect(markup).toContain('코드')
