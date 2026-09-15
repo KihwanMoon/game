@@ -39,8 +39,8 @@ const PROGRESS: ProgressView = {
 const LEADERBOARD: LeaderboardView = {
   coreVersion: 'b5.v2.e1',
   entries: [
-    { rank: 1, handle: 'victor', score: 900, level: 6, accountId: 7 },
-    { rank: 2, handle: 'other', score: 400, level: 3, accountId: 8 },
+    { rank: 1, handle: 'victor', score: 900, level: 6, accountId: 7, met: -1 },
+    { rank: 2, handle: 'other', score: 400, level: 3, accountId: 8, met: -1 },
   ],
 }
 
@@ -49,6 +49,7 @@ describe('세계 패널', () => {
     <WorldPanel
       progress={PROGRESS}
       leaderboard={LEADERBOARD}
+      doppelBoard={undefined}
       accountId={7}
       link="online"
       detail=""
@@ -110,6 +111,7 @@ describe('★ 경매가 세계에서 나갔다', () => {
     <WorldPanel
       progress={PROGRESS}
       leaderboard={LEADERBOARD}
+      doppelBoard={undefined}
       accountId={7}
       link="online"
       detail=""
@@ -134,6 +136,7 @@ describe('세계 패널 — 서버 없음', () => {
       <WorldPanel
         progress={undefined}
         leaderboard={undefined}
+        doppelBoard={undefined}
         accountId={undefined}
         link="offline"
         detail=""
@@ -162,6 +165,7 @@ describe('세계 패널이 나에 대한 것을 안 그린다', () => {
     <WorldPanel
       progress={PROGRESS}
       leaderboard={LEADERBOARD}
+      doppelBoard={undefined}
       accountId={7}
       link="online"
       detail=""
@@ -177,5 +181,63 @@ describe('세계 패널이 나에 대한 것을 안 그린다', () => {
   it('★ 레벨과 깊이도 없다 — 나에 대한 사실은 성장 패널이 든다', () => {
     expect(markup).not.toContain('10층')
     expect(markup).not.toContain('표현력')
+  })
+})
+
+describe('둔갑 판', () => {
+  const DOPPEL_BOARD: LeaderboardView = {
+    coreVersion: 'b5.v2.e1',
+    entries: [
+      { rank: 1, handle: 'victor', score: 12, level: 0, accountId: 7, met: 20 },
+      { rank: 2, handle: 'other', score: 9, level: 0, accountId: 8, met: 51 },
+    ],
+  }
+
+  it('★ 줄이 있으면 둔갑 판을 먼저 편다 — 누적 경험치는 「오래 돌린 사람이 이긴다」다', () => {
+    const html = renderToStaticMarkup(
+      <WorldPanel
+        progress={PROGRESS}
+        leaderboard={LEADERBOARD}
+        doppelBoard={DOPPEL_BOARD}
+        accountId={7}
+        link="online"
+        detail=""
+        onDaily={() => undefined}
+      />,
+    )
+    expect(html).toContain('점수는 내 둔갑이 이긴 판이다')
+    expect(html).not.toContain('점수는 누적 경험치다')
+  })
+
+  it('★ 승수 옆에 만난 판이 선다 — 열 번을 스무 판에 이룬 쪽과 쉰 판에 이룬 쪽은 다르다', () => {
+    const html = renderToStaticMarkup(
+      <WorldPanel
+        progress={PROGRESS}
+        leaderboard={LEADERBOARD}
+        doppelBoard={DOPPEL_BOARD}
+        accountId={7}
+        link="online"
+        detail=""
+        onDaily={() => undefined}
+      />,
+    )
+    expect(html).toContain('20판')
+    expect(html).toContain('51판')
+    expect(html).not.toContain('lv0')
+  })
+
+  it('★ 빈 둔갑 판은 안 편다 — 빈 판이 첫 화면이면 순위표가 비었다로 읽힌다', () => {
+    const html = renderToStaticMarkup(
+      <WorldPanel
+        progress={PROGRESS}
+        leaderboard={LEADERBOARD}
+        doppelBoard={{ coreVersion: 'b5.v2.e1', entries: [] }}
+        accountId={7}
+        link="online"
+        detail=""
+        onDaily={() => undefined}
+      />,
+    )
+    expect(html).toContain('점수는 누적 경험치다')
   })
 })

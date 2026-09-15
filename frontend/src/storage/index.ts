@@ -97,6 +97,7 @@ export {
   readInventory,
   readItemContext,
   readLeaderboard,
+  MODE_DOPPEL,
   applyAdminAction,
   applyMonsterLevel,
   readAdminCatalog,

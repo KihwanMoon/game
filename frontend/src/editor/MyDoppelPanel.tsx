@@ -38,6 +38,23 @@ const EMPTY_HINT = '아직 아무도 내 둔갑을 못 만났다'
 /** 활자가 언제 들어오는가. **이긴 순간이 아니다** — 안 적으면 셈이 틀린 것으로 보인다. */
 const LETTER_HINT = '이긴 판은 그 둔갑이 물러날 때 활자가 되어 들어온다'
 
+/** 아직 아무것도 안 끝났을 때. **「없다」가 아니라 「아직」이다.** */
+const NO_RETIRED_HINT = '아직 물러난 둔갑이 없다 — 목숨 셋을 다 쓰면 그때 셈이 끝난다'
+
+/**
+ * 물러난 둔갑 한 줄을 사람이 읽는 말로.
+ *
+ * **활자를 함께 적는다.** 승수와 같은 수지만, 그 둘이 같다는 사실 자체가 화면에
+ * 없으면 「몇을 이겼는지」와 「무엇을 받았는지」를 사람이 속으로 이어야 한다.
+ *
+ * @param one 물러난 둔갑.
+ * @returns 한 줄.
+ */
+export function formatRetired(one: { floor: number; won: number; lost: number }): string {
+  const tail = one.won === 0 ? '활자 없음' : `활자 +${String(one.won)}`
+  return `${String(one.floor)}장 · ${String(one.won)}승 ${String(one.lost)}패 → ${tail}`
+}
+
 /**
  * 전적 한 줄을 사람이 읽는 말로.
  *
@@ -98,6 +115,23 @@ export function MyDoppelPanel(props: MyDoppelPanelProps): React.JSX.Element {
               ))}
             </ul>
           )}
+          <div className="doppel-mine__head">물러난 둔갑</div>
+          {view.retired.length === 0 ? (
+            <ValueExpr text={NO_RETIRED_HINT} size="sm" dim />
+          ) : (
+            <ul className="doppel-mine__list">
+              {view.retired.map((one) => (
+                <li className="doppel-mine__row" key={one.recordId}>
+                  <GlyphState
+                    state={one.won > 0 ? 'armed' : 'false'}
+                    size="sm"
+                    label={formatRetired(one)}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="doppel-mine__head">최근 만난 판</div>
           {view.recent.length === 0 ? (
             <ValueExpr text={EMPTY_HINT} size="sm" dim />
           ) : (

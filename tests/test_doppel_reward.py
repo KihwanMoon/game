@@ -9,6 +9,10 @@
    하나의 노가다 지표가 되고, 그러면 푼과 둘로 가른 뜻이 없다.
 3. **사라지는 길이 둘인데 둘 다 정산한다.** 목숨을 다 썼거나 정원에 밀렸거나 —
    `remove_doppel` 하나를 지나므로 새는 길이 없다.
+4. **끝난 셈이 보인다.** 활자는 이길 때가 아니라 물러날 때 들어오므로, 물러난 것을
+   안 내면 화면에서 「이겼는데 활자가 안 늘었다」로 보인다.
+5. **둔갑 판은 시즌을 가른다.** 규칙이 바뀐 뒤의 승리와 그 전의 승리를 한 줄에 세우면
+   무엇을 이긴 것인지가 달라졌는데 수치는 같아 보인다 (결정 #06).
 """
 
 import os
@@ -190,3 +194,80 @@ def test_being_pushed_out_settles_too(client):
         create_doppel(pool, build_bot_account(client), 6, f"push_slot_{step}", {"hp_max": 10}, {})
 
     assert read_letters(pool, account_id) == 1, "밀려난 그림자의 승리가 사라졌다"
+
+
+def test_a_retired_shadow_shows_up_with_its_letters(client):
+    """★ 끝난 셈이 보인다 — 서 있는 동안에는 안 나오고, 물러나면 나온다."""
+    from game.api.deps import get_pool
+    from game.app.store.doppel_bouts import list_retired_doppels, record_bout
+    from game.app.store.doppels import remove_doppel
+
+    pool = get_pool()
+    account_id, record_id = build_shadow(client, floor=5)
+    rival = build_bot_account(client)
+    record_bout(pool, record_id, rival, 5, True)
+    record_bout(pool, record_id, rival, 5, False)
+
+    assert list_retired_doppels(pool, account_id, 10) == (), "서 있는데 물러난 것으로 셌다"
+
+    remove_doppel(pool, record_id)
+    retired = list_retired_doppels(pool, account_id, 10)
+
+    assert len(retired) == 1
+    assert retired[0]["won"] == 1, "활자로 준 수와 달라진다"
+    assert retired[0]["lost"] == 1
+    assert retired[0]["floor"] == 5
+
+
+def test_the_doppel_board_ranks_by_wins(client):
+    """★ 둔갑 판은 이긴 판으로 줄 세운다 — 누적 경험치와 재는 것이 다르다.
+
+    **동률이면 적은 판으로 이룬 쪽이 위다.** 같은 열 번을 이겼다면 스무 판 만에 이룬 쪽이
+    쉰 판 만에 이룬 쪽보다 잘 적은 것이다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.doppel_bouts import list_doppel_leaderboard, record_bout
+
+    pool = get_pool()
+    season = "b99.test"
+    keen_account, keen = build_shadow(client, floor=3)
+    slow_account, slow = build_shadow(client, floor=4)
+    rival = build_bot_account(client)
+    for record_id, wins, losses in ((keen, 2, 0), (slow, 2, 3)):
+        for _step in range(wins):
+            record_bout(pool, record_id, rival, 3, True, season)
+        for _step in range(losses):
+            record_bout(pool, record_id, rival, 3, False, season)
+
+    rows = [row for row in list_doppel_leaderboard(pool, season)]
+    ranked = [row["account_id"] for row in rows]
+
+    assert ranked.index(keen_account) < ranked.index(slow_account), "적은 판으로 이룬 쪽이 아래다"
+    assert all(
+        row["score"] == 2 for row in rows if row["account_id"] in (keen_account, slow_account)
+    )
+
+
+def test_the_doppel_board_splits_seasons(client):
+    """★ 시즌을 가른다 — 규칙이 바뀐 뒤의 승리와 그 전의 승리는 같은 것이 아니다."""
+    from game.api.deps import get_pool
+    from game.app.store.doppel_bouts import list_doppel_leaderboard, record_bout
+
+    pool = get_pool()
+    account_id, record_id = build_shadow(client, floor=3)
+    record_bout(pool, record_id, build_bot_account(client), 3, True, "b1.old")
+
+    assert account_id not in [row["account_id"] for row in list_doppel_leaderboard(pool, "b2.new")]
+    assert account_id in [row["account_id"] for row in list_doppel_leaderboard(pool, "b1.old")]
+
+
+def test_a_board_without_a_win_stays_empty(client):
+    """★ 0 승은 안 싣는다 — 줄줄이 서면 순위표가 참가자 명부가 된다."""
+    from game.api.deps import get_pool
+    from game.app.store.doppel_bouts import list_doppel_leaderboard, record_bout
+
+    pool = get_pool()
+    account_id, record_id = build_shadow(client, floor=3)
+    record_bout(pool, record_id, build_bot_account(client), 3, False, "b3.zero")
+
+    assert account_id not in [row["account_id"] for row in list_doppel_leaderboard(pool, "b3.zero")]

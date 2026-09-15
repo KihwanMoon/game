@@ -52,6 +52,21 @@ const SINGLE_DEVICE_HINT =
 const PROMOTE_HINT = '가입해도 지금까지의 기록은 그대로 따라온다'
 const LOGIN_WARNING = '로그인하면 이 기기의 익명 기록은 따라오지 않는다'
 
+/** 켜 둔 쪽에 적는 말. **무엇을 얻는지까지 적는다.** */
+const DOPPEL_ON_HINT = '깊은 장에서 죽으면 내 내력이 남의 판에 둔갑으로 선다 — 그 둔갑이 이긴 만큼 활자가 들어온다'
+
+/**
+ * 꺼 둔 쪽에 적는 말.
+ *
+ * **놓치는 것을 적는다.** 예전에는 「내 둔갑은 안 선다」뿐이었고, 그 상태에서 동의한
+ * 사람은 195명 중 1명이었다 — 화면이 대가만 말하고 얻는 것을 안 말했다.
+ */
+const DOPPEL_OFF_HINT = '내 둔갑은 안 선다 — 둔갑 순위표에도 안 서고 활자도 안 들어온다'
+
+/** 켜고 끄는 단추의 설명. 대가와 얻는 것을 한 문장에 둔다. */
+const DOPPEL_TRADE_HINT =
+  '둔갑은 내 내력으로 싸운다 — 관전하는 사람이 내 해답을 어느 정도 읽게 되고, 대신 그 둔갑이 물러날 때 이긴 만큼 활자를 남긴다'
+
 /**
  * 계정 패널을 그린다.
  *
@@ -127,22 +142,25 @@ export function AccountPanel(props: AccountPanelProps): React.JSX.Element {
 
         {/* **내 그림자를 세울지는 내가 정한다** (설계/6_몬스터). 그림자는 내 규칙표로
             싸우므로 관전하며 행동을 보면 내 해답이 어느 정도 역산된다 — 켜는 사람이
-            알고 켜야 하는 대가라 기본은 꺼져 있다. */}
+            알고 켜야 하는 대가라 기본은 꺼져 있다.
+
+            **얻는 것도 함께 적는다** (2026-09-15). 꺼진 쪽에 「안 선다」만 적혀 있던
+            동안 동의한 사람은 195명 중 1명이었다 — 대가만 보이고 무엇을 놓치는지는
+            어디에도 없었다. 켜면 둔갑 순위표에 서고, 그 그림자가 이긴 만큼 활자가
+            들어온다(봉인 옵션을 다시 찍는 재화). */}
         {isOnline && props.onDoppelOptIn !== undefined ? (
           <div className="account__actions">
             <GlyphState
               state={account?.doppelOptIn ? 'true' : 'false'}
               size="sm"
               label={
-                account?.doppelOptIn
-                  ? '깊은 장에서 죽으면 내 내력이 남의 판에 둔갑으로 선다'
-                  : '내 둔갑은 안 선다'
+                account?.doppelOptIn ? DOPPEL_ON_HINT : DOPPEL_OFF_HINT
               }
             />
             <Button
               size="sm"
               variant="ghost"
-              title="둔갑은 내 내력으로 싸운다 — 관전하는 사람이 내 해답을 어느 정도 읽게 된다"
+              title={DOPPEL_TRADE_HINT}
               onClick={() => {
                 props.onDoppelOptIn?.(!(account?.doppelOptIn ?? false))
               }}

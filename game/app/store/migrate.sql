@@ -625,3 +625,25 @@ EXCEPTION
     WHEN duplicate_object THEN NULL;
 END
 $$;
+
+-- 둔갑 전적에 시즌을 새긴다 (2026-09-15). 순위표는 `core_version` 으로 시즌을 가르는데
+-- (결정 #06), 둔갑 판만 안 가르면 **규칙이 바뀐 뒤의 승리와 그 전의 승리가 같은 줄에
+-- 선다.** 무엇을 이긴 것인지가 달라졌는데 수치는 같아 보인다.
+--
+-- 기본값을 빈 문자열로 둔다 — 이 열이 생기기 전의 줄은 어느 시즌인지 말할 수 없고,
+-- 「모른다」를 아무 시즌으로 우겨 넣는 것보다 판에서 빠지는 편이 정직하다.
+ALTER TABLE doppel_bout ADD COLUMN IF NOT EXISTS core_version TEXT NOT NULL DEFAULT '';
+
+CREATE INDEX IF NOT EXISTS doppel_bout_season_idx ON doppel_bout (core_version, origin_account_id);
+
+-- 대검(`sword_great_fine`)의 사거리를 채운다 (2026-09-15).
+--
+-- **프로덕션에만 있는 줄이다.** 씨앗(`items.json`)에 없고 `sword_great`(협도, TWO, 사거리
+-- 1)의 중복인데 `attack_range` 가 비어 있었다 — 그래서 가방이 사거리 줄을 아예 안 그렸다.
+-- 2026-09-14 에 폐기 표시만 했고 인스턴스 20개(사람이 든 것 12개)는 그대로 남아 있다.
+--
+-- **`hands` 는 안 건드린다.** 지금 ONE 인데 TWO 로 고치면 그것을 낀 12명의 보조 칸이
+-- 갑자기 봉인된다 — 데이터 정합을 맞추자고 남의 장비 구성을 바꾸는 것은 값이 안 맞는다.
+-- 사거리만 지금 겪고 있는 값(근접 1)으로 못박아 화면이 그것을 말하게 한다.
+UPDATE item_catalog SET attack_range = 1
+ WHERE catalog_id = 'sword_great_fine' AND attack_range IS NULL;

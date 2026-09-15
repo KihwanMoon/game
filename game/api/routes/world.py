@@ -26,11 +26,23 @@ from game.api.schemas import (
     ProgressResponse,
     TicketResponse,
 )
-from game.api.schemas_doppel import DoppelBout, DoppelStanding, MyDoppelResponse
+from game.api.schemas_doppel import (
+    DoppelBout,
+    DoppelRetirement,
+    DoppelStanding,
+    MyDoppelResponse,
+)
 from game.app.progression.floors import read_floor_cap
 from game.app.progression.levels import STAT_KEYS, check_allocation
 from game.app.store.accounts import find_player_entity
-from game.app.store.doppel_bouts import count_bouts, list_bouts, list_my_doppels
+from game.app.store.doppel_bouts import (
+    MODE_DOPPEL,
+    count_bouts,
+    list_bouts,
+    list_doppel_leaderboard,
+    list_my_doppels,
+    list_retired_doppels,
+)
 from game.app.store.doppels import check_doppel_opt_in
 from game.app.store.monster_snapshots import build_monster_snapshot, save_snapshots
 from game.app.store.monsters import list_monsters
@@ -128,13 +140,23 @@ def read_leaderboard(
     """순위표를 본다. 로그인하지 않아도 볼 수 있다.
 
     Args:
-        mode: 순위표 종류.
+        mode: 순위표 종류. `doppel` 이면 둔갑 승수 판이고, 그 밖에는 누적 경험치 판이다.
         token: 기기 토큰. 없어도 된다 — 순위표는 공개다.
 
     Returns:
         이 시즌의 순위. `core_version` 이 시즌 이름이다.
     """
     core_version = get_core_version()
+    # **재는 것이 다르면 판이 달라야 한다.** 누적 경험치는 얼마나 멀리 왔는가라 오래 돌린
+    # 쪽이 이기고, 둔갑 승수는 **내가 없는 동안 내 규칙표가 버틴 횟수**다 — 하나로 합치면
+    # 둘 다 뜻을 잃는다. 기존 판을 안 없애는 이유는 둔갑을 안 켠 사람이 순위표에서
+    # 통째로 사라지지 않게 하기 위해서다.
+    if mode == MODE_DOPPEL:
+        return LeaderboardResponse(
+            mode=mode,
+            core_version=core_version,
+            entries=list(list_doppel_leaderboard(get_pool(), core_version)),
+        )
     return LeaderboardResponse(
         mode=mode,
         core_version=core_version,
@@ -171,6 +193,12 @@ def read_my_doppels(account: CurrentAccount) -> MyDoppelResponse:
         met=met,
         won=won,
         recent=[DoppelBout(**one) for one in list_bouts(pool, account.account_id, BOUT_LIMIT)],
+        # **셈이 끝난 것을 따로 낸다.** 활자는 이길 때가 아니라 물러날 때 들어오므로,
+        # 안 적으면 「이겼는데 활자가 안 늘었다」로 보인다 (2026-09-15).
+        retired=[
+            DoppelRetirement(**one)
+            for one in list_retired_doppels(pool, account.account_id, BOUT_LIMIT)
+        ],
         is_opted_in=check_doppel_opt_in(pool, account.account_id),
     )
 

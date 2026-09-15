@@ -10,7 +10,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { MyDoppelPanel, formatBout } from './MyDoppelPanel'
+import { MyDoppelPanel, formatBout, formatRetired } from './MyDoppelPanel'
 import type { MyDoppelView } from '../storage'
 
 const VIEW: MyDoppelView = {
@@ -21,6 +21,7 @@ const VIEW: MyDoppelView = {
     { floor: 9, isDoppelWin: true, opponent: 'sinindra', at: '2026-09-15T00:00:00Z' },
     { floor: 4, isDoppelWin: false, opponent: 'bot1', at: '2026-09-14T00:00:00Z' },
   ],
+  retired: [],
   isOptedIn: true,
 }
 
@@ -64,5 +65,15 @@ describe('내 둔갑', () => {
   it('못 닿으면 그 사실을 적는다', () => {
     const markup = renderToStaticMarkup(<MyDoppelPanel view={undefined} link="offline" />)
     expect(markup).toContain('내 둔갑은 서버가 안다')
+  })
+})
+
+describe('물러난 둔갑', () => {
+  it('★ 이긴 만큼 활자가 들어왔음을 적는다 — 셈이 끝나는 자리가 안 보이면 틀린 것으로 읽힌다', () => {
+    expect(formatRetired({ floor: 4, won: 3, lost: 4 })).toBe('4장 · 3승 4패 → 활자 +3')
+  })
+
+  it('★ 한 번도 못 이긴 둔갑은 「활자 없음」이다 — 0 을 더했다고 적으면 거짓말이다', () => {
+    expect(formatRetired({ floor: 9, won: 0, lost: 3 })).toBe('9장 · 0승 3패 → 활자 없음')
   })
 })

@@ -16,7 +16,10 @@
  * 순위표 아래에 있으면 그만한 무게로 안 보였고, 매물 열둘이면 순위표가 화면 밖으로
  * 밀려나기도 했다. `AuctionPanel` 로 나갔다.
  */
+import { useState } from 'react'
+
 import { Button, GlyphState, Panel, ValueExpr } from "../ds";
+
 import type { LeaderboardView, ProgressView } from "../storage";
 
 import { LinkNoticeLine } from './LinkNoticeLine'
@@ -25,6 +28,14 @@ import { checkLinked, type LinkState } from './linkState'
 export interface WorldPanelProps {
   readonly progress: ProgressView | undefined;
   readonly leaderboard: LeaderboardView | undefined;
+  /**
+   * 둔갑 승수 판.
+   *
+   * **판을 따로 두는 이유는 재는 것이 다르기 때문이다.** 누적 경험치는 얼마나 멀리
+   * 왔는가라 오래 돌린 쪽이 이기고, 둔갑 승수는 **내가 없는 동안 내 규칙표가 버틴
+   * 횟수**다 — 이 게임에서 성장과 무관한 유일한 수치다 (2026-09-15).
+   */
+  readonly doppelBoard: LeaderboardView | undefined;
   readonly accountId: number | undefined;
   readonly link: LinkState;
   readonly detail: string;
@@ -33,6 +44,15 @@ export interface WorldPanelProps {
 
 /** 못 닿았을 때 무엇을 못 보는가. 앞머리(`서버에 닿지 못했다`)는 linkState 가 든다. */
 const MISSING_HINT = '순위는 서버가 안다'
+
+/** 판마다 점수가 무엇인지. **안 적으면 두 판의 숫자가 같은 것으로 읽힌다.** */
+const BOARD_HEADS = {
+  doppel: '순위 — 점수는 내 둔갑이 이긴 판이다',
+  xp: '순위 — 점수는 누적 경험치다',
+} as const
+
+/** 둔갑 판이 비었을 때. **없는 것이 아니라 아직 아무도 못 이긴 것**이라고 적는다. */
+const DOPPEL_EMPTY = '아직 아무 둔갑도 못 이겼다 — 계정에서 둔갑을 켜면 여기 선다'
 
 
 /** 격차 막대의 칸 수. 여덟이면 한 칸이 12.5%라 눈이 그 단위로 읽는다. */
@@ -61,7 +81,17 @@ export function buildBarSegments(score: number, top: number): boolean[] {
  */
 
 export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
-  const { progress, leaderboard, link } = props;
+  const { progress, link } = props;
+  // **둔갑 판을 먼저 보인다.** 누적 경험치 판은 「오래 돌린 사람이 이긴다」를 공개적으로
+  // 말하는 수치라, 그것이 첫 화면이면 이 게임이 무엇을 재는지가 그렇게 읽힌다. 다만
+  // 없애지는 않는다 — 둔갑을 안 켠 사람이 순위표에서 통째로 사라지면 안 된다.
+  //
+  // **줄이 없으면 안 편다.** 빈 판이 첫 화면이면 「순위표가 비었다」로 읽히고, 그 뒤에
+  // 사람이 사는 판이 있다는 사실이 안 보인다 — 시즌이 갈린 직후가 늘 그 상태다.
+  const [picked, setPicked] = useState<'doppel' | 'xp' | undefined>(undefined)
+  const hasDoppel = (props.doppelBoard?.entries.length ?? 0) > 0
+  const board = picked ?? (hasDoppel ? 'doppel' : 'xp')
+  const leaderboard = board === 'doppel' ? props.doppelBoard : props.leaderboard
   return (
     <Panel
       title="비각"
@@ -75,9 +105,35 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
           <LinkNoticeLine link={link} missing={MISSING_HINT} />
         ) : (
           <>
-            <div className="wld__head">순위 — 점수는 누적 경험치다</div>
+            <div className="wld__boards">
+              <Button
+                size="sm"
+                variant="ghost"
+                active={board === 'doppel'}
+                onClick={() => {
+                  setPicked('doppel')
+                }}
+              >
+                둔갑
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                active={board === 'xp'}
+                onClick={() => {
+                  setPicked('xp')
+                }}
+              >
+                깊이
+              </Button>
+            </div>
+            <div className="wld__head">{BOARD_HEADS[board]}</div>
             {leaderboard === undefined || leaderboard.entries.length === 0 ? (
-              <ValueExpr text="아직 기록이 없다" size="sm" dim />
+              <ValueExpr
+                text={board === 'doppel' ? DOPPEL_EMPTY : '아직 기록이 없다'}
+                size="sm"
+                dim
+              />
             ) : (
               <ul className="wld__list">
                 {leaderboard.entries.slice(0, 10).map((entry) => (
@@ -90,7 +146,12 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
                         점수도 줄마다 시작 자리가 달랐다. */}
                     <span className="wld__rank-no">{String(entry.rank)}</span>
                     <span className="wld__name">{entry.handle}</span>
-                    <span className="wld__rank-lv">{`lv${String(entry.level)}`}</span>
+                    {/* **판마다 옆에 붙는 수가 다르다.** 둔갑 판에서 레벨은 아무것도
+                        안 말하고, 대신 「몇 판 만에 이룬 것인가」가 승수의 뜻을 정한다 —
+                        열 번을 스무 판에 이긴 쪽과 쉰 판에 이긴 쪽은 다르다. */}
+                    <span className="wld__rank-lv">
+                      {entry.met < 0 ? `lv${String(entry.level)}` : `${String(entry.met)}판`}
+                    </span>
                     <span className="wld__rank-score">{String(entry.score)}</span>
                     {/* 1등 대비 격차. **색이 아니라 칸 수가 정보이고, 숫자가 정본이다** —
                         칸은 「얼마나 멀리 있나」를 세지 않고 알게 해 주는 보조다. */}

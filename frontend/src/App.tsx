@@ -157,6 +157,7 @@ import {
   readBestiary,
   readDiscovery,
   readLeaderboard,
+  MODE_DOPPEL,
   applyAdminAction,
   applyMonsterLevel,
   readAdminOverview,
@@ -631,6 +632,9 @@ export function App(): React.JSX.Element {
   // 내 내력이 남의 장에서 무엇을 했는지. **성장과 무관한 유일한 눈금이다.**
   const [myDoppels, setMyDoppels] = useState<MyDoppelView | undefined>(undefined)
   const [leaderboard, setLeaderboard] = useState<LeaderboardView | undefined>(undefined)
+  // **둔갑 판은 따로 읽는다.** 재는 것이 다르므로 한 요청에 합치면 어느 수치가 어느
+  // 판의 것인지 화면이 다시 갈라야 한다 (2026-09-15).
+  const [doppelBoard, setDoppelBoard] = useState<LeaderboardView | undefined>(undefined)
   const [auction, setAuction] = useState<AuctionView | undefined>(undefined)
   const [worldDetail, setWorldDetail] = useState('')
   // **경매의 사유는 경매 탭에 선다.** 경매가 세계에서 갈라져 나오면서 자리가 갈렸다 —
@@ -956,6 +960,7 @@ export function App(): React.JSX.Element {
     void readProgress(account).then(setProgress)
     void readMyDoppels(account).then(setMyDoppels)
     void readLeaderboard(account).then(setLeaderboard)
+    void readLeaderboard(account, MODE_DOPPEL).then(setDoppelBoard)
     void readAuction(account).then(setAuction)
     refreshBag(account)
     // **관리자가 아니면 undefined 로 남는다.** 서버가 404 로 답하므로 관리자 경로가
@@ -1032,6 +1037,7 @@ export function App(): React.JSX.Element {
     setProgress(await readProgress(token))
     setMyDoppels(await readMyDoppels(token))
     setLeaderboard(await readLeaderboard(token))
+    setDoppelBoard(await readLeaderboard(token, MODE_DOPPEL))
     setAuction(await readAuction(token))
     setRuns(await readRunHistory(token))
     // 관리자가 아니면 undefined 로 남는다 — 서버가 404 로 답한다.
@@ -1215,6 +1221,7 @@ export function App(): React.JSX.Element {
         // 판이 끝나면 경험치와 순위가 올랐다.
         void readProgress(account).then(setProgress)
         void readLeaderboard(account).then(setLeaderboard)
+        void readLeaderboard(account, MODE_DOPPEL).then(setDoppelBoard)
         // **서버가 확정한 성취를 받아 온다.** 아래에서 기기가 낙관적으로 먼저 반영하지만
         // 정본은 서버의 재시뮬이다 — 둘이 갈리면 화면에 뜬 해금이 다음 접속에 사라진다.
         void readServerMeta(account).then((outcome) => {
@@ -2107,6 +2114,7 @@ export function App(): React.JSX.Element {
               <WorldPanel
                 progress={progress}
                 leaderboard={leaderboard}
+                doppelBoard={doppelBoard}
                 accountId={profile?.accountId}
                 link={link}
                 detail={worldDetail}

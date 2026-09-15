@@ -12,7 +12,7 @@ import secrets
 
 from psycopg_pool import ConnectionPool
 
-from game.api.deps import get_pool
+from game.api.deps import get_core_version, get_pool
 from game.api.discovery_service import record_item_discovery
 from game.app.bots.doppel import build_doppel_slot, check_is_doppel
 from game.app.services.verify_run import VERDICT_VERIFIED, VerifiedRun
@@ -91,7 +91,7 @@ def apply_win_to_monsters(
             # 지워진 뒤에 남기려 들면 주인을 못 찾는다 — 「찍은 자국은 안 지워진다」를
             # 표가 지키려면 지워지기 전에 적어야 한다.
             home = resolve_home_floor(pool, item, ticket)
-            record_bout(pool, item.record_id, account_id, home, False)
+            record_bout(pool, item.record_id, account_id, home, False, get_core_version())
             left = apply_doppel_defeat(pool, item.record_id)
             if left == 0:
                 notes.append(f"{item.kind_id} 를 끝내 지웠다")
@@ -202,7 +202,7 @@ def apply_monster_outcome(
             continue
         if build_doppel_slot(item.record_id) == verified.killer_slot:
             home = resolve_home_floor(pool, item, ticket)
-            record_bout(pool, item.record_id, account_id, home, True)
+            record_bout(pool, item.record_id, account_id, home, True, get_core_version())
     holders = [item for item in snapshots if not check_is_doppel(item.kind_id)]
     taken = apply_trophy_transfer(account_id, find_holder(holders, verified.killer_slot))
     if taken:

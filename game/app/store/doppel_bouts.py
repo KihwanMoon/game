@@ -14,6 +14,9 @@
 
 from psycopg_pool import ConnectionPool
 
+# 둔갑 승수 판의 이름. `/api/leaderboard?mode=` 가 이 값으로 갈린다.
+MODE_DOPPEL = "doppel"
+
 
 def record_bout(
     pool: ConnectionPool,
@@ -21,6 +24,7 @@ def record_bout(
     opponent_account_id: int,
     floor: int,
     is_doppel_win: bool,
+    core_version: str = "",
 ) -> bool:
     """둔갑이 누군가와 만난 한 판을 남긴다.
 
@@ -39,6 +43,8 @@ def record_bout(
         opponent_account_id: 맞선 사람의 계정.
         floor: 만난 장.
         is_doppel_win: 둔갑이 이겼는가.
+        core_version: 이 판이 돈 코어 버전. 순위표가 시즌을 이것으로 가른다 (결정 #06) —
+            비우면 어느 시즌에도 안 잡힌다.
 
     Returns:
         남겼으면 True.
@@ -53,9 +59,10 @@ def record_bout(
             return False
         connection.execute(
             "INSERT INTO doppel_bout"
-            " (record_id, origin_account_id, opponent_account_id, floor, is_doppel_win)"
-            " VALUES (%s, %s, %s, %s, %s)",
-            (record_id, int(row[0]), opponent_account_id, floor, is_doppel_win),
+            " (record_id, origin_account_id, opponent_account_id, floor, is_doppel_win,"
+            "  core_version)"
+            " VALUES (%s, %s, %s, %s, %s, %s)",
+            (record_id, int(row[0]), opponent_account_id, floor, is_doppel_win, core_version),
         )
     return True
 
@@ -133,4 +140,94 @@ def list_my_doppels(pool: ConnectionPool, account_id: int) -> tuple[dict, ...]:
     return tuple(
         {"record_id": int(row[0]), "floor": int(row[1]), "level": int(row[2]), "lives": int(row[3])}
         for row in rows
+    )
+
+
+def list_retired_doppels(pool: ConnectionPool, account_id: int, limit: int) -> tuple[dict, ...]:
+    """물러난 내 둔갑들과 그것이 남긴 활자.
+
+    **셈이 끝나는 자리가 안 보였다** (2026-09-15). 이긴 판은 활자가 되는데 들어오는 것은
+    이긴 순간이 아니라 그림자가 사라질 때라, 화면에 「이겼는데 활자가 안 늘었다」로
+    보였다. 여기서 끝난 것들을 적는다.
+
+    **표를 새로 안 만든다.** 개체가 지워져도 전적은 남으므로(`record_id` 에 외래키를 안
+    걸었다), 「전적은 있는데 개체가 없는 것」이 곧 물러난 둔갑이다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 주인 계정.
+        limit: 최대 줄 수.
+
+    Returns:
+        최근에 물러난 순서의 줄들. 만난 적이 없는 둔갑은 전적이 없으므로 안 나온다.
+    """
+    with pool.connection() as connection:
+        rows = connection.execute(
+            "SELECT b.record_id, max(b.floor),"
+            " count(*) FILTER (WHERE b.is_doppel_win),"
+            " count(*) FILTER (WHERE NOT b.is_doppel_win), max(b.at)"
+            " FROM doppel_bout b"
+            " WHERE b.origin_account_id = %s"
+            " AND NOT EXISTS ("
+            "   SELECT 1 FROM entity_record e WHERE e.id = b.record_id AND e.is_doppel"
+            " )"
+            " GROUP BY b.record_id ORDER BY max(b.at) DESC LIMIT %s",
+            (account_id, limit),
+        ).fetchall()
+    return tuple(
+        {
+            "record_id": int(row[0]),
+            "floor": int(row[1] or 0),
+            "won": int(row[2]),
+            "lost": int(row[3]),
+            "at": str(row[4]),
+        }
+        for row in rows
+    )
+
+
+def list_doppel_leaderboard(
+    pool: ConnectionPool, core_version: str, limit: int = 50
+) -> tuple[dict, ...]:
+    """둔갑 순위표 — 내 내력이 남의 장에서 몇을 이겼나.
+
+    **누적 경험치 판과 재는 것이 다르다.** 저쪽은 얼마나 멀리 왔는가라 오래 돌린 쪽이
+    이기고, 이쪽은 **내가 없는 동안 내 규칙표가 버틴 횟수**다 — 성장과 무관한 유일한
+    수치다 (2026-09-15).
+
+    **동률이면 적은 판으로 이룬 쪽이 위다.** 같은 열 번을 이겼다면 스무 판 만에 이룬
+    쪽이 쉰 판 만에 이룬 쪽보다 잘 적은 것이다.
+
+    **한 번도 못 이긴 계정은 안 싣는다.** 0 승이 줄줄이 서면 순위표가 참가자 명부가 된다.
+
+    Args:
+        pool: 연결 풀.
+        core_version: 시즌. 규칙이 바뀐 뒤의 승리와 그 전의 승리를 한 줄에 세우지 않는다.
+        limit: 최대 줄 수.
+
+    Returns:
+        순위 순 줄들. `score` 가 이긴 판, `met` 이 만난 판이다.
+    """
+    with pool.connection() as connection:
+        rows = connection.execute(
+            "SELECT a.handle, a.login_id, a.id,"
+            " count(*) FILTER (WHERE b.is_doppel_win) AS won, count(*) AS met"
+            " FROM doppel_bout b JOIN account a ON a.id = b.origin_account_id"
+            # 비활성 계정은 순위표에서 빠진다 — 누적 경험치 판과 같은 규율이다.
+            " WHERE b.core_version = %s AND a.deactivated_at IS NULL"
+            " GROUP BY a.id, a.handle, a.login_id"
+            " HAVING count(*) FILTER (WHERE b.is_doppel_win) > 0"
+            " ORDER BY won DESC, met ASC, a.id ASC LIMIT %s",
+            (core_version, limit),
+        ).fetchall()
+    return tuple(
+        {
+            "rank": index + 1,
+            "handle": str(row[1]) if row[1] else str(row[0]),
+            "score": int(row[3]),
+            "met": int(row[4]),
+            "level": 0,
+            "account_id": int(row[2]),
+        }
+        for index, row in enumerate(rows)
     )

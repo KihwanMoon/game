@@ -2089,6 +2089,23 @@
   font-size: var(--fs-sm);
 }
 
+/* 내 둔갑 패널의 작은 머리. **목록이 셋이라 무엇의 목록인지가 붙어야 한다** — 서 있는
+   것, 물러난 것, 최근 만난 판은 같은 모양의 줄이라 머리가 없으면 한 덩이로 읽힌다. */
+.doppel-mine__head {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+  margin-top: var(--sp-2);
+}
+
+/* 판을 고르는 줄. **탭이 아니라 같은 자리에 두 판이다** — 재는 것이 다를 뿐 둘 다
+   순위표라, 화면을 옮기는 것이 아니라 눈금을 바꾸는 것으로 보여야 한다. */
+.wld__boards {
+  display: flex;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-2);
+}
+
 /* 옵션 한 줄. **값이 왼쪽, 「다시 찍기」가 오른쪽이다** — 단추가 값을 밀어내지 않게
    `space-between` 으로 벌리고, 값이 길면 줄바꿈으로 흘린다. */
 .invd__affix {

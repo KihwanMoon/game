@@ -1059,6 +1059,14 @@ export interface RankEntry {
   readonly score: number
   readonly level: number
   readonly accountId: number
+  /**
+   * 둔갑 판에서만 온다 — 만난 판. 승수만 보면 「몇 판 만에 이룬 것인가」가 안 보인다.
+   *
+   * **-1 이 「이 판에는 없는 값」이다.** `exactOptionalPropertyTypes` 아래서 선택 필드에
+   * undefined 를 넣으려면 타입을 넓혀야 하는데, 그러면 「안 왔다」와 「0 이다」가 호출부
+   * 마다 갈린다.
+   */
+  readonly met: number
 }
 
 /** 순위표. `coreVersion` 이 시즌 이름이다 (결정 #06). */
@@ -1066,6 +1074,9 @@ export interface LeaderboardView {
   readonly coreVersion: string
   readonly entries: readonly RankEntry[]
 }
+
+/** 둔갑 승수 판의 이름. 서버의 `MODE_DOPPEL` 과 같은 값이어야 한다. */
+export const MODE_DOPPEL = 'doppel'
 
 /** 경매 매물 한 건. */
 export interface ListingView {
@@ -1199,14 +1210,25 @@ export function readProgressPayload(raw: Record<string, unknown>): ProgressView 
  * @param token 기기 토큰.
  * @returns 순위표. 서버에 닿지 못했으면 undefined.
  */
-export async function readLeaderboard(token: string): Promise<LeaderboardView | undefined> {
-  const response = await sendRequest('/leaderboard', { headers: { [TOKEN_HEADER]: token } })
+export async function readLeaderboard(
+  token: string,
+  mode?: string,
+): Promise<LeaderboardView | undefined> {
+  const path = mode === undefined ? '/leaderboard' : `/leaderboard?mode=${encodeURIComponent(mode)}`
+  const response = await sendRequest(path, { headers: { [TOKEN_HEADER]: token } })
   if (response === undefined || !response.ok) {
     return undefined
   }
   const body = (await response.json()) as {
     core_version: string
-    entries: { rank: number; handle: string; score: number; level: number; account_id: number }[]
+    entries: {
+      rank: number
+      handle: string
+      score: number
+      level: number
+      account_id: number
+      met?: number
+    }[]
   }
   return {
     coreVersion: body.core_version,
@@ -1216,6 +1238,8 @@ export async function readLeaderboard(token: string): Promise<LeaderboardView | 
       score: item.score,
       level: item.level,
       accountId: item.account_id,
+      // 둔갑 판에서만 온다. 없으면 누적 경험치 판이다.
+      met: item.met ?? -1,
     })),
   }
 }
@@ -1919,6 +1943,20 @@ export interface DoppelBout {
 }
 
 /**
+ * 물러난 내 둔갑 하나.
+ *
+ * **활자는 `won` 과 같은 수다.** 정산이 승수를 그대로 주므로 따로 싣지 않는다 — 두
+ * 필드를 두면 갈릴 자리가 생긴다.
+ */
+export interface DoppelRetirement {
+  readonly recordId: number
+  readonly floor: number
+  readonly won: number
+  readonly lost: number
+  readonly at: string
+}
+
+/**
  * 내 둔갑의 지금과 전적.
  *
  * **성장과 무관한 사실만 담는다.** 이 게임의 축은 거의 다 플레이어를 따라오므로(층
@@ -1930,6 +1968,7 @@ export interface MyDoppelView {
   readonly met: number
   readonly won: number
   readonly recent: readonly DoppelBout[]
+  readonly retired: readonly DoppelRetirement[]
   readonly isOptedIn: boolean
 }
 
@@ -1949,6 +1988,7 @@ export async function readMyDoppels(token: string): Promise<MyDoppelView | undef
     met?: number
     won?: number
     recent?: { floor: number; is_doppel_win: boolean; opponent: string; at: string }[]
+    retired?: { record_id: number; floor: number; won: number; lost: number; at: string }[]
     is_opted_in?: boolean
   }
   return {
@@ -1964,6 +2004,13 @@ export async function readMyDoppels(token: string): Promise<MyDoppelView | undef
       floor: one.floor,
       isDoppelWin: one.is_doppel_win,
       opponent: one.opponent,
+      at: one.at,
+    })),
+    retired: (body.retired ?? []).map((one) => ({
+      recordId: one.record_id,
+      floor: one.floor,
+      won: one.won,
+      lost: one.lost,
       at: one.at,
     })),
     isOptedIn: body.is_opted_in ?? false,

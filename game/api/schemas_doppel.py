@@ -28,6 +28,20 @@ class DoppelBout(BaseModel):
     at: str
 
 
+class DoppelRetirement(BaseModel):
+    """물러난 내 둔갑 하나와 그것이 남긴 활자.
+
+    **활자는 `won` 과 같은 수다.** 따로 안 싣는 이유는 둘이 갈릴 자리를 안 만들기
+    위해서다 — 정산이 승수를 그대로 준다(`letters.apply_doppel_settlement`).
+    """
+
+    record_id: int
+    floor: int
+    won: int
+    lost: int
+    at: str
+
+
 class MyDoppelResponse(BaseModel):
     """내 둔갑의 지금과 전적.
 
@@ -39,4 +53,5 @@ class MyDoppelResponse(BaseModel):
     met: int
     won: int
     recent: list[DoppelBout]
+    retired: list[DoppelRetirement]
     is_opted_in: bool
