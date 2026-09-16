@@ -123,8 +123,11 @@ export function GoogleSignIn(props: GoogleSignInProps): React.JSX.Element | null
         // 남는다 — 실측으로 그랬고 화면에서 흰 상자로 보였다. 폭을 맞추면 남는 것은 단추를
         // 두르는 얇은 테두리뿐이다. 그 테두리는 구글의 여백 규정이라 못 지운다.
         //
-        // 400 은 구글이 받는 상한이고 200 은 글이 안 잘리는 하한이다.
-        const room = Math.min(400, Math.max(200, slot.current.clientWidth))
+        // 400 은 구글이 받는 상한이고 200 은 글이 안 잘리는 하한이다. **넘기는 값은
+        // 단추 폭이고 구글이 거기에 제 여백을 더한다** — 실측으로 20px 이라, 안 빼면
+        // iframe 이 감싸개를 넘어 오른쪽이 잘린다.
+        const GOOGLE_PADDING = 20
+        const room = Math.min(400, Math.max(200, slot.current.clientWidth - GOOGLE_PADDING))
         window.google.accounts.id.renderButton(slot.current, {
           type: 'standard',
           theme: 'filled_black',
@@ -148,7 +151,11 @@ export function GoogleSignIn(props: GoogleSignInProps): React.JSX.Element | null
     return <ValueExpr text={problem} size="sm" dim />
   }
   return (
-    <div className="account__google" hidden={!isReady}>
+    // **`hidden` 을 안 쓴다** (2026-09-16). 감춰 두면 `display:none` 이라 폭이 0 이고,
+    // 구글 단추를 그릴 때 잰 값이 하한으로 떨어져 **폭 채우기가 조용히 무력해졌다** —
+    // 고쳐 놓고 실측해서 잡았다. 그릴 것이 없을 때 이 상자는 빈 div 라 높이도 0 이니
+    // 감출 이유도 없다.
+    <div className="account__google" data-ready={isReady ? 'yes' : 'no'}>
       <div ref={slot} />
     </div>
   )
