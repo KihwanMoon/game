@@ -11,7 +11,9 @@
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from game.api.deps import get_pool, init_state
 from game.api.routes import (
@@ -91,6 +93,42 @@ def create_app() -> FastAPI:
         openapi_url=None,
         lifespan=manage_lifespan,
     )
+
+    @server.exception_handler(RequestValidationError)
+    async def build_validation_response(
+        request: Request, error: RequestValidationError
+    ) -> JSONResponse:
+        """검증 실패를 돌려주되 **보낸 값은 안 되비춘다** (2026-09-16).
+
+        FastAPI 기본 처리기는 틀린 항목마다 `input` 에 **받은 값을 그대로 넣어** 돌려준다.
+        보통은 무해하지만 로그인처럼 비밀이 실려 오는 자리에서는 그 비밀이 응답 본문에
+        그대로 실린다 — 타입이 어긋나기만 하면 된다:
+
+            POST /api/login {"password": 12345678}
+            → {"detail":[{...,"input":12345678}]}
+
+        응답은 요청한 쪽으로만 가지만, 중간에 무엇이 그것을 적고 있는지는 우리가 정하지
+        않는다. **어디가 틀렸는지**만 알리면 고치는 데 충분하므로 `input` 과 `ctx` 를
+        건다(`ctx` 에도 값이 섞인다).
+
+        모양은 기본과 같게 둔다 — 화면이 `detail` 을 읽고 있다.
+
+        Args:
+            request: 들어온 요청. 쓰지 않지만 처리기 규약이다.
+            error: 검증 실패.
+
+        Returns:
+            `input`·`ctx` 를 뺀 422 응답.
+        """
+        # `request` 는 규약상 받아야 한다. 쓰지 않는다는 것을 드러내 둔다.
+        del request
+        stripped = [
+            {key: value for key, value in one.items() if key not in ("input", "ctx")}
+            for one in error.errors()
+        ]
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={"detail": stripped}
+        )
 
     @server.middleware("http")
     async def record_server_errors(request: Request, call_next: Callable) -> Response:
