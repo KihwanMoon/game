@@ -12,6 +12,8 @@ from dataclasses import dataclass
 
 from psycopg_pool import ConnectionPool
 
+from game.app.store.display_name import build_display_name_sql
+
 
 @dataclass(frozen=True)
 class BotRow:
@@ -60,7 +62,8 @@ def list_bot_rows(pool: ConnectionPool) -> tuple[BotRow, ...]:
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT b.account_id, a.handle, b.label, b.ruleset_id, b.cadence_sec,"
+            f"SELECT b.account_id, {build_display_name_sql('a')}, b.label, b.ruleset_id,"
+            " b.cadence_sec,"
             " b.skill_pct, b.is_active,"
             " EXTRACT(EPOCH FROM (b.next_run_at - now()))::int,"
             # 제출은 계정을 직접 안 들고 티켓을 거친다. 티켓이 그 런의 입력 전부를

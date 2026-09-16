@@ -25,6 +25,8 @@ from dataclasses import dataclass
 
 from psycopg_pool import ConnectionPool
 
+from game.app.store.display_name import build_display_name_sql
+
 # 로드맵이 전제하는 테스터 수 (§게이트 G1). **정본이 여기 하나다** — 보고서와 화면이
 # 각자 적어 두면 로드맵을 고쳤을 때 한쪽만 따라가고, 그러면 같은 게이트가 두 기준으로
 # 판정된다. 화면에는 응답에 실어 보낸다 (`MAX_RUNS_PER_HOUR` 과 같은 규약).
@@ -78,7 +80,7 @@ def list_candidates(pool: ConnectionPool, limit: int) -> tuple[TesterRow, ...]:
             "  SELECT t.account_id, count(*) AS n FROM run_submission s"
             "  JOIN run_ticket t ON t.id = s.ticket_id GROUP BY t.account_id"
             ")"
-            " SELECT a.id, a.handle, COALESCE(a.login_id, ''), a.is_tester,"
+            f" SELECT a.id, {build_display_name_sql('a')}, COALESCE(a.login_id, ''), a.is_tester,"
             " COALESCE(tried.n, 0),"
             " COALESCE(to_char(seen.at, 'YYYY-MM-DD HH24:MI'), ''), a.is_bot"
             " FROM account a"

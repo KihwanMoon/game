@@ -18,6 +18,7 @@ from game.app.progression.levels import (
     compute_required_xp,
     count_spent_points,
 )
+from game.app.store.display_name import build_display_name_sql
 
 MODE_PRACTICE = "PRACTICE"
 MODE_DAILY = "DAILY"
@@ -156,7 +157,7 @@ def list_leaderboard(
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT a.handle, a.login_id, l.score, l.level, l.account_id"
+            f"SELECT {build_display_name_sql('a')}, l.score, l.level, l.account_id"
             " FROM leaderboard l JOIN account a ON a.id = l.account_id"
             # 비활성 계정은 순위표에서 빠진다. 검사가 만든 계정이 1위에 있으면 순위표가
             # 말하는 것이 실력이 아니라 내 탐침 횟수가 된다.
@@ -167,10 +168,10 @@ def list_leaderboard(
     return tuple(
         {
             "rank": index + 1,
-            "handle": str(row[1]) if row[1] else str(row[0]),
-            "score": int(row[2]),
-            "level": int(row[3]),
-            "account_id": int(row[4]),
+            "handle": str(row[0]),
+            "score": int(row[1]),
+            "level": int(row[2]),
+            "account_id": int(row[3]),
         }
         for index, row in enumerate(rows)
     )

@@ -16,6 +16,7 @@ import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import type { AccountState } from '../storage'
 
 import { GoogleSignIn } from './GoogleSignIn'
+import { NicknameRow } from './NicknameRow'
 import { checkLinked, describeLink, type LinkState } from './linkState'
 
 export interface AccountPanelProps {
@@ -27,6 +28,8 @@ export interface AccountPanelProps {
   readonly onRegister: (loginId: string, password: string) => Promise<string>
   /** 구글이 준 신원 토큰으로 들어간다. 빈 문자열이면 성공이다. 없으면 버튼을 안 그린다. */
   readonly onGoogle?: (credential: string, nonce: string) => Promise<string>
+  /** 화면에 뜨는 이름을 정한다. 빈 문자열이면 성공이다. 없으면 이름 줄을 안 그린다. */
+  readonly onNickname?: (nickname: string) => Promise<string>
   readonly onLogin: (loginId: string, password: string) => Promise<string>
   /**
    * 이 기기에서 로그아웃한다.
@@ -275,6 +278,12 @@ export function AccountPanel(props: AccountPanelProps): React.JSX.Element {
             </div>
           </form>
         )}
+
+        {/* **이름은 가입과 별개다.** 익명 계정도 이름을 지을 수 있어야 한다 — 내
+            둔갑은 가입 여부와 무관하게 남의 장에 서고, 그때 화면에 뜨는 것이 이 이름이다. */}
+        {props.onNickname !== undefined && isOnline ? (
+          <NicknameRow account={account} onSave={props.onNickname} />
+        ) : null}
 
         {/* **구글은 「또 하나의 가입 방법」이다.** 아이디·비밀번호를 없애지 않는다 —
             구글 계정이 없거나 쓰기 싫은 사람이 못 들어오게 되면, 편의를 더한 것이

@@ -670,3 +670,16 @@ CREATE TABLE IF NOT EXISTS auth_nonce (
 );
 
 CREATE INDEX IF NOT EXISTS auth_nonce_age_idx ON auth_nonce (created_at);
+
+-- 닉네임 (2026-09-16). **화면마다 다른 이름이 뜨고 있었다** — 순위표는 아이디를, 둔갑
+-- 전적과 관리자 화면은 자동 생성 별명(`user_3f9a…`)을 보여 줬다. 그래서 「누가 누구인지」가
+-- 화면을 옮길 때마다 끊겼다.
+--
+-- **자동 별명(`handle`)을 안 건드린다.** 그것은 계정이 태어날 때 받는 내부 이름이고
+-- 유일성이 보장돼야 하는데, 사람이 고르는 이름은 바뀔 수 있어야 한다. 둘은 다른 것이다.
+ALTER TABLE account ADD COLUMN IF NOT EXISTS nickname TEXT;
+
+-- **접어서 유일하다.** 대소문자만 다른 이름을 허용하면 순위표에서 남을 흉내 낼 수 있다 —
+-- 내 둔갑이 남의 장에 서는 게임이라 이름을 빌려 쓰는 것이 실제 피해가 된다.
+CREATE UNIQUE INDEX IF NOT EXISTS account_nickname_idx
+    ON account (lower(nickname)) WHERE nickname IS NOT NULL;

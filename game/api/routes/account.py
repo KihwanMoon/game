@@ -4,14 +4,20 @@
 붙잡을 자산이 없고, 재미가 검증되기 전에 가입을 요구하면 이탈만 는다.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from psycopg_pool import ConnectionPool
 from pydantic import BaseModel
 
 from game.api.deps import CurrentAccount, get_pool
-from game.api.schemas import AccountResponse
+from game.api.schemas import AccountResponse, NicknameRequest
 from game.app.store.accounts import Account, create_account
 from game.app.store.credentials import read_login_id
+from game.app.store.display_name import (
+    apply_nickname,
+    check_nickname,
+    read_display_name,
+    read_nickname,
+)
 from game.app.store.doppels import apply_doppel_opt_in, check_doppel_opt_in
 
 router = APIRouter()
@@ -33,6 +39,8 @@ def build_account_response(pool: ConnectionPool, account: Account) -> AccountRes
         account_id=account.account_id,
         handle=account.handle,
         login_id=read_login_id(pool, account.account_id),
+        nickname=read_nickname(pool, account.account_id),
+        display_name=read_display_name(pool, account.account_id),
         doppel_opt_in=check_doppel_opt_in(pool, account.account_id),
     )
 
@@ -45,7 +53,12 @@ def create_anonymous_account() -> AccountResponse:
         계정과 **평문 토큰**. 토큰은 이 응답에서만 나오고 서버는 해시만 갖는다.
     """
     account, token = create_account(get_pool())
-    return AccountResponse(account_id=account.account_id, handle=account.handle, token=token)
+    return AccountResponse(
+        account_id=account.account_id,
+        handle=account.handle,
+        token=token,
+        display_name=account.handle,
+    )
 
 
 @router.get("/api/account", response_model=AccountResponse)
@@ -86,4 +99,33 @@ def save_doppel_opt_in(request: DoppelOptInRequest, account: CurrentAccount) -> 
     """
     pool = get_pool()
     apply_doppel_opt_in(pool, account.account_id, request.is_on)
+    return build_account_response(pool, account)
+
+
+@router.post("/api/account/nickname", response_model=AccountResponse)
+def create_nickname(request: NicknameRequest, account: CurrentAccount) -> AccountResponse:
+    """화면에 뜨는 이름을 정한다.
+
+    **자동 별명을 안 건드린다.** `handle` 은 계정이 태어날 때 받는 내부 이름이고 유일성이
+    보장돼야 하는데, 사람이 고르는 이름은 바뀔 수 있어야 한다 — 둘은 다른 것이다.
+
+    **접어서 유일하다.** 대소문자만 다른 이름을 허용하면 순위표에서 남을 흉내 낼 수 있고,
+    내 둔갑이 남의 장에 서는 게임이라 이름을 빌려 쓰는 것이 실제 피해가 된다.
+
+    Args:
+        request: 정할 이름.
+        account: 토큰으로 푼 계정.
+
+    Returns:
+        바뀐 계정.
+
+    Raises:
+        HTTPException: 규칙에 어긋나거나 이미 쓰이는 이름인 경우.
+    """
+    pool = get_pool()
+    problem = check_nickname(request.nickname)
+    if problem:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, problem)
+    if not apply_nickname(pool, account.account_id, request.nickname):
+        raise HTTPException(status.HTTP_409_CONFLICT, "이미 쓰이는 이름이다")
     return build_account_response(pool, account)

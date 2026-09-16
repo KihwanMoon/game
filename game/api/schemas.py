@@ -25,9 +25,23 @@ class AccountResponse(BaseModel):
     handle: str
     token: str | None = None
     login_id: str | None = None
+    # 사람이 고른 이름. None 이면 아직 안 정했다.
+    nickname: str | None = None
+    # **화면에 실제로 뜨는 이름** (2026-09-16). 닉네임 → 아이디 → 자동 별명 순으로 고른다.
+    #
+    # 서버가 정해서 보내는 이유는 **정본을 하나로 두기 위해서다**. 화면마다 제 순서를 들면
+    # 순위표는 아이디를, 둔갑 전적은 자동 별명을 보여 주게 되고 — 실제로 그랬다 — 같은
+    # 사람이 화면을 옮길 때마다 다른 이름이 된다.
+    display_name: str = ""
     # 내 빌드가 남의 던전에 그림자로 서도 되는가 (2026-09-06). **기본은 꺼져 있다** —
     # 그림자는 원본의 규칙표로 싸우므로 관전하며 행동을 보면 해답이 어느 정도 역산된다.
     doppel_opt_in: bool = False
+
+
+class NicknameRequest(BaseModel):
+    """닉네임을 정하는 요청."""
+
+    nickname: str
 
 
 class CredentialRequest(BaseModel):
@@ -229,6 +243,8 @@ class ListingView(BaseModel):
     label_ko: str
     price: int
     is_mine: bool = False
+    # **누가 내놓았는가.** 값만 보이면 한 사람이 시세를 쥐고 있어도 화면이 그것을 안 말한다.
+    seller_name: str = ""
     # **사기 전에 알아야 하는 것들.** 이름과 값만 보고 사면 같은 「장궁」이라도 무엇이
     # 붙어 있는지 모르고, 언제 사라질지도 모른다.
     affixes: list[dict] = Field(default_factory=list)

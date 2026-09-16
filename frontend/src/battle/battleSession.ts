@@ -53,6 +53,16 @@ export interface BattleSetup {
    */
   readonly snapshots?: readonly MonsterSnapshot[]
   /**
+   * 그림자의 주인 이름 — **개체 id 로 찾는다** (2026-09-16).
+   *
+   * **코어 스키마에 안 넣는다.** `MonsterSnapshot` 은 서버가 재시뮬할 때 읽는 계약이라
+   * 표시용 값을 끼우면 같은 티켓이 다른 글자로 저장된다 (R5, G3). 이름은 판정에 아무
+   * 영향이 없으므로 응답에만 실려 여기까지 온다.
+   *
+   * 없으면 로그가 「도플갱어①」로 뜬다 — 누구를 만난 것인지 모르는 채로.
+   */
+  readonly ownerNames?: ReadonlyMap<string, string>
+  /**
    * 티켓이 얼려 둔 플레이어 전투 입력 (장비·레벨).
    *
    * **이것이 없으면 화면은 맨몸으로 싸우고 서버는 장비를 낀 채로 재시뮬한다.**

@@ -75,6 +75,7 @@ def build_listing_view(listing: Listing, catalog: dict) -> ListingView:
         label_ko=entry.label_ko,
         price=listing.price,
         is_mine=listing.is_mine,
+        seller_name=listing.seller_name,
         affixes=build_affix_rows(listing),
         expires_in_minutes=listing.expires_in_minutes,
         fee=compute_fee(listing.price),

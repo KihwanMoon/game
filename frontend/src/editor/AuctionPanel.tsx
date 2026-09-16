@@ -81,6 +81,12 @@ export function AuctionDetail(props: {
           />
         )}
         <ValueExpr text={`${String(listing.price)}푼`} size="sm" />
+        {/* **누가 내놓았는가** (2026-09-16). 값만 보이면 같은 물건이 여러 번 도는지, 한
+            사람이 시세를 쥐고 있는지가 안 보인다 — 저잣거리는 사람이 있는 곳이어야 한다.
+            내 것은 이미 다른 표시가 있으므로 이름을 또 적지 않는다. */}
+        {listing.isMine || listing.sellerName === '' ? null : (
+          <ValueExpr text={`판 사람 · ${listing.sellerName}`} size="sm" dim />
+        )}
       </div>
       {listing.affixes.length === 0 ? null : (
         // 저주 접사는 음수다. 모르고 사면 돈을 내고 약해진다 — 옵션 하나에 한 줄이다.

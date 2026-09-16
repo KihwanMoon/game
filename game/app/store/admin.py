@@ -21,6 +21,8 @@ from datetime import datetime
 
 from psycopg_pool import ConnectionPool
 
+from game.app.store.display_name import build_display_name_sql
+
 # 관리자 등급 (설계/9_에이전트_운영 §3.1). **정본이 여기 하나다** — DB 의 CHECK 제약이
 # 같은 목록을 들고 있고, 둘이 어긋나면 세우는 순간 터진다.
 ROLE_OBSERVER = "observer"
@@ -146,7 +148,8 @@ def list_admin_actions(pool: ConnectionPool, limit: int = 50) -> tuple[AdminActi
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT a.id, a.account_id, c.handle, a.action, a.target, a.detail, a.created_at"
+            f"SELECT a.id, a.account_id, {build_display_name_sql('c')},"
+            " a.action, a.target, a.detail, a.created_at"
             " FROM admin_action a JOIN account c ON c.id = a.account_id"
             " ORDER BY a.created_at DESC, a.id DESC LIMIT %s",
             (limit,),

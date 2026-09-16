@@ -75,6 +75,7 @@ function formatOrdinal(index: number, total: number): string {
 export function buildActorNames(
   state: WorldState,
   labels: ReadonlyMap<string, string>,
+  ownerNames?: ReadonlyMap<string, string>,
 ): ReadonlyMap<string, ActorName> {
   const ids = [...state.entities.keys()].sort((left, right) => left.localeCompare(right))
   const counts = new Map<string, number>()
@@ -96,7 +97,15 @@ export function buildActorNames(
     }
     const at = seen.get(entity.kindId) ?? 0
     seen.set(entity.kindId, at + 1)
+    // **그림자는 주인 이름으로 부른다** (2026-09-16). 「도플갱어①」로 뜨면 누구를 만난
+    // 것인지 모르고, 이 기제의 전제인 「거기까지 실제로 내려간 빌드」가 이름을 잃는다 —
+    // 남는 것은 숫자 큰 정예 몹 하나다. 종 이름을 함께 두어 무엇인지도 안 잃는다.
+    const owner = ownerNames?.get(id) ?? ''
     const base = labels.get(entity.kindId) ?? entity.kindId
+    if (owner !== '') {
+      names.set(id, { name: `${owner}의 ${base}`, isMine: false })
+      continue
+    }
     names.set(id, { name: `${base}${formatOrdinal(at, counts.get(entity.kindId) ?? 1)}`, isMine: false })
   }
   names.set(WORLD_ID, { name: WORLD_NAME, isMine: false })

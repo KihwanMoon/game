@@ -21,6 +21,7 @@ from datetime import UTC, datetime, timedelta
 
 from psycopg_pool import ConnectionPool
 
+from game.app.store.display_name import build_display_name_sql
 from game.app.store.equipment import add_currency
 from game.app.store.items import EVENT_DISCARD, find_empty_slot, record_item_event
 
@@ -53,6 +54,9 @@ class Listing:
     price: int
     state: str
     is_mine: bool
+    # **누가 내놓았는가** (2026-09-16). 값만 보고 사면 같은 물건이 여러 번 도는지, 한
+    # 사람이 시세를 쥐고 있는지가 안 보인다 — 저잣거리는 사람이 있는 곳이어야 한다.
+    seller_name: str = ""
     # **사기 전에 알아야 하는 것들.** 이름과 값만 보고 사면 같은 「장궁」이라도 무엇이
     # 붙어 있는지 모르고, 언제 사라질지도 모른다.
     affixes: tuple[dict, ...] = ()
@@ -172,9 +176,10 @@ def list_open(pool: ConnectionPool, account_id: int, limit: int = 50) -> tuple[L
     apply_expiry(pool)
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT l.id, l.item_id, i.catalog_id, l.seller_id, l.price, l.state,"
-            " i.affixes, i.is_broken, coalesce(i.grade, ''),"
-            " greatest(0, extract(epoch FROM (l.expires_at - now()))::bigint / 60)"
+            f"SELECT l.id, l.item_id, i.catalog_id, l.seller_id, l.price, l.state,"
+            f" i.affixes, i.is_broken, coalesce(i.grade, ''),"
+            f" greatest(0, extract(epoch FROM (l.expires_at - now()))::bigint / 60),"
+            f" {build_display_name_sql('s')}"
             " FROM auction_listing l JOIN item_instance i ON i.id = l.item_id"
             " JOIN account s ON s.id = l.seller_id"
             # 비활성 계정의 매물은 안 보인다. 지웠다면 사라졌을 것들이고, 남겨 두면
@@ -196,6 +201,7 @@ def list_open(pool: ConnectionPool, account_id: int, limit: int = 50) -> tuple[L
             is_broken=bool(row[7]),
             grade=str(row[8]),
             expires_in_minutes=int(row[9] or 0),
+            seller_name=str(row[10]),
         )
         for row in rows
     )

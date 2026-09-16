@@ -14,6 +14,8 @@
 
 from psycopg_pool import ConnectionPool
 
+from game.app.store.display_name import build_display_name_sql
+
 # 둔갑 승수 판의 이름. `/api/leaderboard?mode=` 가 이 값으로 갈린다.
 MODE_DOPPEL = "doppel"
 
@@ -104,7 +106,7 @@ def list_bouts(pool: ConnectionPool, account_id: int, limit: int) -> tuple[dict,
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT b.floor, b.is_doppel_win, COALESCE(a.handle, ''), b.at"
+            f"SELECT b.floor, b.is_doppel_win, COALESCE({build_display_name_sql('a')}, ''), b.at"
             " FROM doppel_bout b LEFT JOIN account a ON a.id = b.opponent_account_id"
             " WHERE b.origin_account_id = %s ORDER BY b.at DESC, b.id DESC LIMIT %s",
             (account_id, limit),
@@ -210,12 +212,12 @@ def list_doppel_leaderboard(
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT a.handle, a.login_id, a.id,"
+            f"SELECT {build_display_name_sql('a')}, a.id,"
             " count(*) FILTER (WHERE b.is_doppel_win) AS won, count(*) AS met"
             " FROM doppel_bout b JOIN account a ON a.id = b.origin_account_id"
             # 비활성 계정은 순위표에서 빠진다 — 누적 경험치 판과 같은 규율이다.
             " WHERE b.core_version = %s AND a.deactivated_at IS NULL"
-            " GROUP BY a.id, a.handle, a.login_id"
+            " GROUP BY a.id, a.handle, a.login_id, a.nickname"
             " HAVING count(*) FILTER (WHERE b.is_doppel_win) > 0"
             " ORDER BY won DESC, met ASC, a.id ASC LIMIT %s",
             (core_version, limit),
@@ -223,11 +225,35 @@ def list_doppel_leaderboard(
     return tuple(
         {
             "rank": index + 1,
-            "handle": str(row[1]) if row[1] else str(row[0]),
-            "score": int(row[3]),
-            "met": int(row[4]),
+            "handle": str(row[0]),
+            "score": int(row[2]),
+            "met": int(row[3]),
             "level": 0,
-            "account_id": int(row[2]),
+            "account_id": int(row[1]),
         }
         for index, row in enumerate(rows)
     )
+
+
+def read_doppel_owner_name(pool: ConnectionPool, record_id: int) -> str:
+    """그 그림자가 누구의 것인지, 화면에 뜨는 이름으로.
+
+    **「도플갱어」라고만 뜨면 누구를 만난 것인지 모른다** (2026-09-16). 이 기제의 전제가
+    「거기까지 실제로 내려간 빌드」인데, 그 빌드가 누구 것인지 안 보이면 남는 것은 숫자
+    큰 정예 몹 하나다.
+
+    Args:
+        pool: 연결 풀.
+        record_id: 그림자 개체.
+
+    Returns:
+        주인의 표시 이름. 주인이 없거나 지워졌으면 빈 문자열.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            f"SELECT {build_display_name_sql('a')} FROM entity_record e"
+            " JOIN account a ON a.id = e.origin_account_id"
+            " WHERE e.id = %s AND e.is_doppel",
+            (record_id,),
+        ).fetchone()
+    return str(row[0]) if row else ""

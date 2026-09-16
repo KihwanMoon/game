@@ -144,6 +144,7 @@ import {
   applyLogout,
   createLogin,
   createGoogleSession,
+  saveNickname,
   listenEviction,
   TOKEN_STORAGE_KEY,
   createSaveScheduler,
@@ -410,6 +411,8 @@ export function buildRunSetup(issued: ServerTicket, rulesetId: string): BattleSe
     seed: issued.seed,
     // 지속 몬스터 (docs/설계/6_몬스터 §5).
     snapshots: issued.snapshots,
+    // **로그가 「도플갱어①」이라고만 말하면 누구를 만난 것인지 모른다** (2026-09-16).
+    ownerNames: issued.ownerNames,
     // **서버가 정한 방 목록을 쓴다.** 기기가 정하면 서버는 다른 방들을 재시뮬한다.
     chain: { roomIds: issued.roomIds, index: 0 },
     // **층도 서버가 정한다.** 기기가 정하면 1층으로 적어 보내 쉬운 판으로 검증받을 수
@@ -1114,6 +1117,28 @@ export function App(): React.JSX.Element {
       setSession((live) => adoptAccount(live, next))
     }
     await loadAccountState(outcome.token)
+    return ''
+  }
+
+  /**
+   * 화면에 뜨는 이름을 정한다.
+   *
+   * **계정 상태만 갈아 끼운다.** 이름은 순위표·둔갑·저잣거리에도 뜨지만 그것들은 서버가
+   * 다음 조회에서 새 이름으로 낸다 — 여기서 전부 다시 읽으면 이름 하나 바꾸는 데 조회가
+   * 대여섯 번 돈다.
+   *
+   * @param nickname 정할 이름.
+   * @returns 빈 문자열이면 성공, 아니면 사유.
+   */
+  async function applyNickname(nickname: string): Promise<string> {
+    if (account === undefined) {
+      return '서버에 닿지 못했다'
+    }
+    const outcome = await saveNickname(account, nickname)
+    if (outcome.account === undefined) {
+      return outcome.detail
+    }
+    setProfile(outcome.account)
     return ''
   }
 
@@ -1985,6 +2010,7 @@ export function App(): React.JSX.Element {
                 hasLocalProgress={meta.bestFloor > 0 || meta.bestiary.length > 0}
                 onRegister={applyRegister}
                 onGoogle={applyGoogle}
+                onNickname={applyNickname}
                 onLogin={applyLogin}
                 onLogout={() => {
                   applyLogoutHere()

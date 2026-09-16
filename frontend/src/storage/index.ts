@@ -101,6 +101,7 @@ export {
   readGoogleConfig,
   readGoogleNonce,
   createGoogleSession,
+  saveNickname,
   applyAdminAction,
   applyMonsterLevel,
   readAdminCatalog,

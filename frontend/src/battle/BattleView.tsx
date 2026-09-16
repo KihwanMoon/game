@@ -367,8 +367,9 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
       buildActorNames(
         session.engine.state,
         new Map(session.balance.enemies.map((kind) => [kind.id, kind.label_ko ?? kind.id])),
+        props.setup.ownerNames,
       ),
-    [session.engine.state, session.balance],
+    [session.engine.state, session.balance, props.setup.ownerNames],
   )
   const logRows = session.engine.log.entries.slice(-LOG_TAIL).map((entry) => {
     const actor = actorNames.get(entry.entityId)

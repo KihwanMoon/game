@@ -48,6 +48,16 @@ export interface AccountState {
    * 어느 정도 역산된다.
    */
   readonly doppelOptIn: boolean
+  /** 사람이 고른 이름. 아직 안 정했으면 undefined. */
+  readonly nickname: string | undefined
+  /**
+   * 화면에 실제로 뜨는 이름 — 닉네임 → 아이디 → 자동 별명.
+   *
+   * **서버가 정한다.** 화면마다 제 순서를 들면 순위표는 아이디를, 둔갑 전적은 자동
+   * 별명을 보여 주게 된다 — 실제로 그랬고, 같은 사람이 화면을 옮길 때마다 다른
+   * 이름이 됐다.
+   */
+  readonly displayName: string
 }
 
 /** 가입·로그인 결과. 실패 사유를 그대로 화면에 띄운다. */
@@ -223,12 +233,18 @@ function readAccountState(body: {
   handle: string
   login_id?: string | null
   doppel_opt_in?: boolean
+  nickname?: string | null
+  display_name?: string
 }): AccountState {
   return {
     accountId: body.account_id,
     handle: body.handle,
     loginId: body.login_id ?? undefined,
     doppelOptIn: body.doppel_opt_in ?? false,
+    nickname: body.nickname ?? undefined,
+    // 서버가 안 실어 보낸 경로가 남아 있다. 그때는 자동 별명이 낫다 — 빈 문자열이면
+    // 이름 자리가 통째로 사라진다.
+    displayName: body.display_name === undefined || body.display_name === '' ? body.handle : body.display_name,
   }
 }
 
@@ -406,6 +422,13 @@ export interface ServerTicket {
    */
   readonly snapshots: readonly MonsterSnapshot[]
   /**
+   * 그림자의 주인 이름 — 개체 id 로 찾는다.
+   *
+   * **코어 스키마에 안 넣는다.** `MonsterSnapshot` 은 재시뮬이 읽는 계약이라 표시용 값을
+   * 끼우면 파이썬 쪽과 갈려 G3 가 깨진다 (R5). 그림자가 아닌 개체는 여기 없다.
+   */
+  readonly ownerNames: ReadonlyMap<string, string>
+  /**
    * 장비·레벨이 확정한 전투 입력 (결정 #13).
    *
    * **전투에 반드시 넘겨야 한다.** 서버는 이것으로 재시뮬하므로, 넘기지 않으면 화면은
@@ -457,7 +480,7 @@ export async function requestTicket(
     rooms_per_floor?: number
     mode: string
     core_version: string
-    monster_snapshot?: RawMonsterSnapshot[]
+    monster_snapshot?: (RawMonsterSnapshot & { owner_name?: string })[]
     loadout?: RawPlayerLoadout | null
     room_ids?: string[]
   }
@@ -469,6 +492,13 @@ export async function requestTicket(
     mode: body.mode,
     coreVersion: body.core_version,
     snapshots: sortSnapshots((body.monster_snapshot ?? []).map(parseSnapshot)),
+    // **코어 밖에서 나른다.** 주인 이름은 판정에 안 쓰이므로 `parseSnapshot`(코어 스키마)이
+    // 안 읽는다 — 거기 넣으면 파이썬 쪽과 갈려 G3 가 깨진다.
+    ownerNames: new Map(
+      (body.monster_snapshot ?? [])
+        .filter((raw) => (raw.owner_name ?? '') !== '')
+        .map((raw) => [String(raw.entity_id), String(raw.owner_name)]),
+    ),
     loadout: body.loadout ? parseLoadout(body.loadout) : undefined,
     // 구버전 서버는 목록을 주지 않는다. 그때는 방 하나짜리다 — 없는 것을 길이 3으로
     // 채우면 서버가 계산하지 않은 방을 브라우저가 돈다.
@@ -1087,6 +1117,8 @@ export interface ListingView {
   readonly labelKo: string
   readonly price: number
   readonly isMine: boolean
+  /** 누가 내놓았는가. 한 사람이 시세를 쥐고 있어도 값만 보이면 화면이 그것을 안 말한다. */
+  readonly sellerName: string
   /**
    * 사기 전에 알아야 하는 것들.
    *
@@ -1259,6 +1291,7 @@ function readAuctionBody(raw: {
     label_ko: string
     price: number
     is_mine: boolean
+    seller_name?: string
     affixes?: RawAffix[]
     expires_in_minutes?: number
     fee?: number
@@ -1279,6 +1312,7 @@ function readAuctionBody(raw: {
       expiresInMinutes: item.expires_in_minutes ?? 0,
       fee: item.fee ?? 0,
       isMine: item.is_mine,
+      sellerName: item.seller_name ?? '',
       slot: item.slot ?? '',
       grade: item.grade ?? '',
       attackRange: item.attack_range ?? 0,
@@ -2098,4 +2132,37 @@ export async function createGoogleSession(
     token?: string
   }
   return { account: readAccountState(body), token: body.token, detail: '' }
+}
+
+/**
+ * 화면에 뜨는 이름을 정한다.
+ *
+ * **자동 별명을 안 건드린다.** `handle` 은 계정이 태어날 때 받는 내부 이름이고, 이것은
+ * 사람이 고르는 보여 주기 위한 이름이다 — 둘은 다른 것이다.
+ *
+ * @param token 기기 토큰.
+ * @param nickname 정할 이름.
+ * @returns 바뀐 계정, 또는 실패 사유.
+ */
+export async function saveNickname(token: string, nickname: string): Promise<AuthOutcome> {
+  const response = await sendRequest('/account/nickname', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', [TOKEN_HEADER]: token },
+    body: JSON.stringify({ nickname }),
+  })
+  if (response === undefined) {
+    return { account: undefined, token: undefined, detail: '서버에 닿지 못했다' }
+  }
+  if (!response.ok) {
+    return { account: undefined, token: undefined, detail: await readErrorDetail(response) }
+  }
+  const body = (await response.json()) as {
+    account_id: number
+    handle: string
+    login_id?: string | null
+    nickname?: string | null
+    display_name?: string
+    doppel_opt_in?: boolean
+  }
+  return { account: readAccountState(body), token: undefined, detail: '' }
 }

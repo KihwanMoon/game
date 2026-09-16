@@ -104,3 +104,40 @@ describe('줄의 결', () => {
     expect(readLogTone(buildEntry({ phase: 'UPKEEP' }))).toBe('world')
   })
 })
+
+describe('그림자의 이름', () => {
+  /** 그림자 하나를 세운 상태. 여느 적 하나를 도플갱어로 바꿔 놓는다. */
+  function buildShadowState() {
+    const template = ROOM_TEMPLATES.find((one) => one.templateId === 'open_field')
+    if (template === undefined) {
+      throw new Error('open_field 가 없다')
+    }
+    const engine = buildEngine({ template, balance: BALANCE_DATA, seed: 3 })
+    const found = [...engine.state.entities.entries()].find(([id]) => id !== 'player')
+    if (found === undefined) {
+      throw new Error('적이 없다')
+    }
+    engine.state.entities.set('doppel_12', { ...found[1], kindId: 'doppelganger' })
+    return engine.state
+  }
+
+  it('★ 주인 이름으로 부른다 — 「도플갱어①」이면 누구를 만난 것인지 모른다', () => {
+    const names = buildActorNames(
+      buildShadowState(),
+      new Map([['doppelganger', '도플갱어']]),
+      new Map([['doppel_12', '하윤']]),
+    )
+
+    expect(names.get('doppel_12')?.name).toBe('하윤의 도플갱어')
+  })
+
+  it('★ 주인을 모르면 종 이름으로 돌아간다 — 빈 이름표를 만들지 않는다', () => {
+    const names = buildActorNames(
+      buildShadowState(),
+      new Map([['doppelganger', '도플갱어']]),
+      new Map(),
+    )
+
+    expect(names.get('doppel_12')?.name).toContain('도플갱어')
+  })
+})
