@@ -42,6 +42,15 @@ describe('HTML 주석 걷기', () => {
     expect(stripHtmlComments(html)).toContain('[if IE]')
   })
 
+  it('★ Cloudflare 난독화 해제 지시문도 남긴다 — 방침의 연락처가 여기 걸려 있다', () => {
+    // 지우면 Cloudflare 가 주소를 난독화하고, 그러면 **스크립트가 돌아야만 보이는
+    // 연락처**가 된다. 법이 적으라 한 것을 그렇게 둘 수는 없다.
+    const html = '<p><!--email_off--><a href="mailto:a@b.c">a@b.c</a><!--email_on--></p>'
+    const out = stripHtmlComments(html)
+    expect(out).toContain('<!--email_off-->')
+    expect(out).toContain('<!--email_on-->')
+  })
+
   it('지울 것이 없으면 그대로 둔다', () => {
     expect(stripHtmlComments('<p>가</p>')).toBe('<p>가</p>')
   })
@@ -71,8 +80,10 @@ describe('진짜 산출물', () => {
       if (html === '') {
         continue
       }
-      expect(html, `${name} 에 HTML 주석이 남았다`).not.toContain('<!--')
-      expect(html, `${name} 에 CSS 주석이 남았다`).not.toContain('/*')
+      // 지시문 둘은 주석이 아니다 — 지우면 뜻이 바뀐다. 그것만 걷고 나서 센다.
+      const bare = html.replaceAll('<!--email_off-->', '').replaceAll('<!--email_on-->', '')
+      expect(bare, `${name} 에 HTML 주석이 남았다`).not.toContain('<!--')
+      expect(bare, `${name} 에 CSS 주석이 남았다`).not.toContain('/*')
     }
   })
 
