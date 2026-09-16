@@ -80,6 +80,28 @@ describe('이름이 한 이름이다', () => {
     expect(MANIFEST['short_name']).toBe(APP_NAME)
   })
 
+  it('★ 이름 칸에 「비각 祕閣」이 안 선다 — 뜻풀이지 이름이 아니다', () => {
+    // 인증이 통과한 뒤 세계 이름을 되살렸는데, **되살린 자리가 어디인지가 전부다.**
+    // 이름 칸에 두 이름이 서면 동의 화면(`Sealed Stacks`)과의 대조가 다시 어긋나고,
+    // 구글은 인증된 브랜드를 주기적으로 재확인한다. 한자는 설명과 바닥 글에서만 산다.
+    const nameFields = [
+      `<title>${APP_NAME}</title>`,
+      `property="og:site_name" content="${APP_NAME}"`,
+      `property="og:title" content="${APP_NAME}"`,
+    ]
+    for (const field of nameFields) {
+      expect(INDEX).toContain(field)
+    }
+    expect(MANIFEST['name']).not.toMatch(/[비각祕閣]/)
+    expect(MANIFEST['short_name']).not.toMatch(/[비각祕閣]/)
+  })
+
+  it('★ 뜻풀이는 설명과 바닥 글에 있다 — 되살린 자리가 여기다', () => {
+    expect(INDEX).toContain('비각 祕閣')
+    expect(MANIFEST['description']).toContain('비각 祕閣')
+    expect(MARKUP).toContain('비각 祕閣')
+  })
+
   it('★ 머리줄 각인의 alt 가 같다 — 그림이 곧 이름이라 여기가 접근성 이름이 된다', () => {
     const shell = readText('./RuleEditMobile.tsx')
     const alts = [...shell.matchAll(/className="edit-m__mark"[\s\S]{0,200}?alt="([^"]*)"/g)].map(

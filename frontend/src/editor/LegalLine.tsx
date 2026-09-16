@@ -15,6 +15,19 @@ import React from 'react'
 /** 동의 화면·매니페스트·`<title>` 과 같은 이름이어야 한다. 어긋나면 인증이 반려된다. */
 const APP_NAME = 'Sealed Stacks'
 
+/**
+ * 세계의 이름과 그 뜻.
+ *
+ * **이름이 아니라 뜻풀이다.** 인증이 보는 이름 칸(`<title>`·og·매니페스트·각인 alt)은
+ * `Sealed Stacks` 하나로 두고, 한자는 이 줄에서만 산다 — 이름 칸에 두 이름이 서면
+ * 동의 화면과의 대조가 어긋나고, 그것이 세 번 반려된 바로 그 검사다.
+ *
+ * 祕閣 은 임금의 서고다. 碑閣(비석을 덮은 집)이 아닌데 현대 한국어에서는 그쪽으로
+ * 읽히므로 한자를 안 붙이면 다른 뜻이 된다. `stacks` 는 도서관의 서가이고
+ * `closed stacks` 가 열람 제한 서고다 — 祕(잠근)+閣(서가)을 그대로 옮긴 말이다.
+ */
+const WORLD_NAME = '비각 祕閣 — 잠근 서가'
+
 /** 약관 문서들. 같은 도메인에 있어야 한다 — 구글이 그것도 본다. */
 const DOCS: readonly { readonly href: string; readonly text: string }[] = [
   { href: '/privacy.html', text: '개인정보처리방침' },
@@ -41,6 +54,7 @@ export function LegalLine(): React.JSX.Element {
           </a>
         </React.Fragment>
       ))}
+      <span className="legal__world">{WORLD_NAME}</span>
     </footer>
   )
 }

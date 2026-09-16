@@ -584,6 +584,13 @@ body {
   color: var(--line);
 }
 
+/* **제 줄을 쓴다.** 이름 옆에 붙으면 「Sealed Stacks 비각 祕閣」 한 덩어리로 읽히고,
+   그것이 구글이 보는 앱 이름과 어긋난다 — 줄을 갈라 두면 이름 줄은 이름만 남는다. */
+.legal__world {
+  flex-basis: 100%;
+  text-align: center;
+}
+
 /* 밑줄을 둔다. 흐린 글자끼리는 색만으로 링크와 아닌 것이 안 갈린다. */
 .legal__link {
   color: var(--text-dim);
