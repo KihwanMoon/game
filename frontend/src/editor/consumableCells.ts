@@ -11,6 +11,7 @@
  *
  * 순수 값이다. 렌더 검사가 훅 없이 셀 배치를 볼 수 있어야 한다.
  */
+import { findItemArt } from '../content/itemArt'
 import {
   SLOT_LABELS,
   USE_TAG_CODES as TAG_CODES,
@@ -83,6 +84,7 @@ export function buildConsumableSlotCells(
     key: `cslot:${slot.useTag}:${String(slot.slotIndex)}`,
     code: formatSlotCode(slot.useTag, slot.slotIndex),
     label: slot.catalogId === '' ? '' : clipCellLabel(slot.labelKo),
+    art: findItemArt(slot.catalogId, '', slot.useTag),
     grade: slot.grade,
     // 다 쓴 칸. **파손된 장비와 같은 것이 아니다** — 다 쓴 물약 칸은 여전히 그 물약을
     // 차고 있고 부가 옵션도 그대로 붙는다 (`list_loaded_consumables`). 못 하는 것은
@@ -114,6 +116,7 @@ export function buildConsumableStockCells(
     key: `cstock:${option.catalogId}`,
     code: TAG_CODES.get(option.useTag) ?? 'CS',
     label: clipCellLabel(option.labelKo),
+    art: findItemArt(option.catalogId, '', option.useTag),
     grade: option.grade,
     marks: [],
     countText: `x${String(option.stock)}`,

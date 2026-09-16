@@ -7,6 +7,7 @@
  *
  * 순수 값이다. 렌더 검사가 훅 없이 셀 배치를 볼 수 있어야 한다.
  */
+import { findItemArt } from '../content/itemArt'
 import type { AffixView, InventoryView, ItemView, SlotView } from '../storage'
 
 import type { CellFace } from './gridCell'
@@ -173,6 +174,7 @@ export function buildEquipCells(inventory: InventoryView | undefined): readonly 
       key: `equip:${slot}`,
       code: EQUIP_CELL_CODES.get(slot) ?? slot,
       label: entry?.item ? clipCellLabel(entry.item.labelKo) : '',
+      art: entry?.item ? findItemArt(entry.item.catalogId, entry.item.hands ?? '') : undefined,
       grade: entry?.item?.grade ?? '',
       marks: entry === undefined ? [] : listCellMarks(entry),
       countText: '',
@@ -203,6 +205,7 @@ export function buildBagCells(inventory: InventoryView | undefined): readonly Gr
         // 보여야 한다 — 번호는 아무것도 말해 주지 않는다(실제 요청).
         code: EQUIP_CELL_CODES.get(entry.item.slot ?? '') ?? 'IT',
         label: clipCellLabel(entry.item.labelKo),
+        art: findItemArt(entry.item.catalogId, entry.item.hands ?? ''),
         grade: entry.item.grade,
         marks: listCellMarks(entry),
         countText: '',
@@ -217,6 +220,7 @@ export function buildBagCells(inventory: InventoryView | undefined): readonly Gr
         // 소모품은 부위가 없다 — 쓰임새 그대로 CS 다.
         code: 'CS',
         label: clipCellLabel(entry.stackLabelKo === '' ? entry.stackCatalogId : entry.stackLabelKo),
+        art: findItemArt(entry.stackCatalogId ?? '', '', entry.stackUseTag),
         grade: entry.stackGrade,
         marks: [],
         countText: `x${String(entry.stackCount)}`,

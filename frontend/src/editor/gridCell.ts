@@ -19,6 +19,17 @@ export interface CellFace {
   readonly code: string
   /** 칸 가운데 글자. 비었으면 빈 문자열이다. */
   readonly label: string
+  /**
+   * 칸 가운데 그림의 주소 (2026-09-16). 없으면 글자로 그린다.
+   *
+   * **겉면은 여전히 알맹이를 모른다.** 어느 그림인지는 화면마다의 어댑터가 정하고
+   * (`content/itemArt`), 여기 오는 것은 주소 하나다 — 겉면이 카탈로그를 알기 시작하면
+   * 가방 칸과 경매 칸이 다시 갈린다.
+   *
+   * **글자를 안 지운다.** 그림이 아직 없는 형태가 섞여 있고, 그림만 남기면 그 칸이
+   * 빈 칸으로 보인다. 이름은 그림 아래에 작게 남는다.
+   */
+  readonly art?: string | undefined
   readonly grade: string
   /** 칸의 상태 글리프들 (파손 ◈, 봉인 ◇n, 귀속 ▨, 양손 점유 ▨). */
   readonly marks: readonly string[]

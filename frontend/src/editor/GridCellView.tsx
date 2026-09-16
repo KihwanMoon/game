@@ -48,7 +48,21 @@ export function renderCell<T extends CellFace>(
       ) : cell.label === '' ? (
         <span className="invg__empty">·</span>
       ) : (
-        <span className={`invg__label${formatGradeClass(cell.grade)}`}>{cell.label}</span>
+        <>
+          {/* **그림이 있으면 얹고 이름은 남긴다** (2026-09-16). 그림만 남기면 아직 안
+              그린 형태가 빈 칸으로 보이고, 같은 형태를 나눠 쓰는 넷(비수·환도·사인검)이
+              구별되지 않는다 — 형태는 그림이 말하고 어느 것인지는 이름이 말한다. */}
+          {cell.art === undefined ? null : (
+            <img className="invg__art" src={cell.art} alt="" width="48" height="48" />
+          )}
+          <span
+            className={`invg__label${formatGradeClass(cell.grade)}${
+              cell.art === undefined ? '' : ' invg__label--under'
+            }`}
+          >
+            {cell.label}
+          </span>
+        </>
       )}
       {/* **무엇을 해 주는가 한 줄.** 이것이 없으면 격자를 봐서는 어느 게 더 좋은지
           알 수 없어 칸을 하나씩 눌러야 한다. 54px 안에 들려고 한 글자 표기를 쓴다. */}

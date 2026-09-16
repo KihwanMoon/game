@@ -8,6 +8,7 @@
  *
  * 순수 값이다. 렌더 검사가 훅 없이 셀 배치를 볼 수 있어야 한다.
  */
+import { findItemArt } from '../content/itemArt'
 import type { AuctionView, ListingView } from '../storage'
 
 import type { CellFace } from './gridCell'
@@ -42,6 +43,7 @@ export function buildListingCells(auction: AuctionView | undefined): readonly Li
     // 가방 칸이 부위 코드를 다는 것과 같은 규칙이며, 자리를 모르는 매물은 `IT` 다.
     code: EQUIP_CELL_CODES.get(listing.slot) ?? 'IT',
     label: clipCellLabel(listing.labelKo),
+    art: findItemArt(listing.catalogId, listing.hands),
     grade: listing.grade,
     marks: listing.isMine ? [MINE_MARK] : [],
     countText: '',

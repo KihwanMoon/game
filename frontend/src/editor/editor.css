@@ -1923,6 +1923,26 @@
   grid-template-columns: repeat(auto-fill, minmax(var(--slot-min), 1fr));
 }
 
+/* 칸 가운데의 도트.
+ *
+ * **`pixelated` 가 필요 없다.** 도트를 SVG 로 구웠고(`shape-rendering="crispEdges"`)
+ * 사각형의 모서리가 격자에 맞아 있어, 어느 배율에서도 흐려지지 않는다.
+ *
+ * 치수는 `<img>` 속성이 든다 — 이 파일은 생 px 를 안 쓴다.
+ */
+.invg__art {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* 그림이 있는 칸의 이름. **작고 흐리게** — 형태는 그림이 말했으므로 이름은 「어느
+   것인가」만 보태면 된다. 그림이 없을 때는 이 줄이 유일한 정보라 원래 크기로 둔다. */
+.invg__label--under {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
 .invg__cell {
   position: relative;
   display: flex;

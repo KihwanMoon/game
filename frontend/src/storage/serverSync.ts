@@ -1138,6 +1138,10 @@ export interface ListingView {
   readonly slot: string
   /** 급. 가방 격자가 이름을 등급색으로 칠하는데 매물만 그 색을 못 쓰고 있었다. */
   readonly grade: string
+  /** 카탈로그 id. 도트를 고르는 열쇠다 — 접두사가 형태를 말한다 (`content/itemArt`). */
+  readonly catalogId: string
+  /** 한 손인가 양손인가. 같은 `sword` 라도 양손이면 협도라 그림이 다르다. */
+  readonly hands: string
   /**
    * 무기가 정하는 사거리 (§2.2). 0 은 「안 정한다」다.
    *
@@ -1292,6 +1296,8 @@ function readAuctionBody(raw: {
     price: number
     is_mine: boolean
     seller_name?: string
+    catalog_id?: string
+    hands?: string
     affixes?: RawAffix[]
     expires_in_minutes?: number
     fee?: number
@@ -1313,6 +1319,8 @@ function readAuctionBody(raw: {
       fee: item.fee ?? 0,
       isMine: item.is_mine,
       sellerName: item.seller_name ?? '',
+      catalogId: item.catalog_id ?? '',
+      hands: item.hands ?? '',
       slot: item.slot ?? '',
       grade: item.grade ?? '',
       attackRange: item.attack_range ?? 0,
