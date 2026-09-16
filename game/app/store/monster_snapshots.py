@@ -17,7 +17,7 @@ from psycopg_pool import ConnectionPool
 
 from game.app.bots.doppel import check_is_doppel
 from game.app.monsters.affixes import compute_affixed_stat, list_monster_affixes
-from game.app.monsters.growth import build_growth
+from game.app.monsters.growth import build_growth, resolve_effective_level
 from game.app.monsters.tiers import MonsterTier, compute_tier_stat
 from game.app.store.monsters import MonsterRecord
 from game.app.store.spoils import compute_spoiled_stat
@@ -52,7 +52,10 @@ def resolve_frozen_stat(frozen: dict, name: str, computed: int) -> int:
 
 
 def build_monster_snapshot(
-    record: MonsterRecord, base: dict, spoils: dict[str, tuple[int, int]] | None = None
+    record: MonsterRecord,
+    base: dict,
+    spoils: dict[str, tuple[int, int]] | None = None,
+    visitor_level: int | None = None,
 ) -> MonsterSnapshot:
     """레코드와 카탈로그 값으로 스냅샷 한 줄을 만든다.
 
@@ -64,13 +67,19 @@ def build_monster_snapshot(
         base: balance.json 의 그 적 절.
         spoils: 뺏어 든 장비의 보정. 없으면 안 건다 — 도감처럼 전투가 아닌 자리는
             굳이 조회하지 않는다.
+        visitor_level: 이번 판을 도는 사람의 레벨. 주면 1장 몬스터를 그 근처로 눌러
+            만난다 (`resolve_effective_level`). 도감처럼 **세계를 있는 그대로 적는
+            자리는 안 준다** — 거기 적히는 것은 그 개체의 진짜 레벨이다.
 
     Returns:
-        만들어진 스냅샷.
+        만들어진 스냅샷. `level` 은 **이번 판에 실제로 선 레벨**이다.
     """
     tier = MonsterTier(record.tier)
     taken = spoils or {}
-    growth = build_growth(record.level)
+    # **눌린 레벨로 스탯을 짓고 그 레벨을 그대로 싣는다.** 스냅샷이 저장 레벨을 적고
+    # 스탯만 눌리면 화면이 「레벨 5 인데 왜 약한가」로 읽히고, 재시뮬도 두 값을 견줘야 한다.
+    level = resolve_effective_level(record.level, int(record.zone_floor or 0), visitor_level)
+    growth = build_growth(level)
     # **얼려 둔 빌드가 있으면 그것이 이 개체다** (도플갱어). 안 읽던 시절에는 카탈로그
     # (hp 100)로만 세워져 **그림자가 원본 봇보다 약했다** — 7층 그림자가 공격 24 대 70,
     # 방어 7 대 42 였다. 빌드를 얼려 두고 안 쓰면 이름뿐인 말이 된다.
@@ -85,7 +94,7 @@ def build_monster_snapshot(
         record_id=record.record_id,
         kind_id=record.catalog_id,
         tier=record.tier,
-        level=record.level,
+        level=level,
         # **뺏은 장비를 맨 뒤에 건다.** 등급 → 레벨 → 정예 접사 → 뺏은 것 순이다.
         # 가장 나중이어야 「그 장비 덕에 이만큼 더 단단하다」가 그대로 읽힌다.
         hp_max=resolve_frozen_stat(

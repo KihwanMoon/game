@@ -21,7 +21,7 @@ from game.app.services.build_chain import build_descent
 from game.app.store.accounts import find_player_entity
 from game.app.store.doppel_bouts import read_doppel_owner_name
 from game.app.store.monster_snapshots import build_monster_snapshot, save_snapshots
-from game.app.store.progress import read_reached_floor
+from game.app.store.progress import read_progress, read_reached_floor
 from game.app.store.spoils import list_spoil_deltas
 from game.app.store.tickets import CHAIN_LENGTH, create_ticket
 from game.schemas.monster_snapshot import (
@@ -102,6 +102,8 @@ def create_run_ticket(request: TicketRequest, account: CurrentAccount) -> Ticket
             floor + step,
         )
     balance_by_id = {kind["id"]: kind for kind in context.balance["enemies"]}
+    # 1장 몬스터를 이 사람 근처로 눌러 만나게 한다 (`resolve_effective_level`).
+    visitor_level = read_progress(pool, entity_id).level
     snapshots = sort_snapshots(
         tuple(
             # **전투로 가는 스냅샷만 뺏은 장비를 판다.** 도감은 「무엇을 들고 있다」만
@@ -110,6 +112,10 @@ def create_run_ticket(request: TicketRequest, account: CurrentAccount) -> Ticket
                 record,
                 balance_by_id[record.catalog_id],
                 list_spoil_deltas(pool, record.record_id),
+                # **레벨은 서버가 읽는다.** 클라이언트가 제 레벨을 말하게 두면 「나는
+                # 레벨 1이다」로 1장 적이 약해진다 (설계/7 §4). 티켓에 스탯이 그대로
+                # 박히므로 재시뮬도 같은 적을 본다.
+                visitor_level,
             )
             # **방마다 그림자 하나만 세운다** (2026-09-06). 빈 자리가 있는 만큼 서던
             # 때는 4층에 열한 마리가 있었고, 자리 이름이 방을 안 담아 셋이 한 방에 섰다.

@@ -30,6 +30,13 @@ MIN_LEVEL = 1
 # 처치되면 내려가는 레벨 수. 0 이면 플레이어의 승리가 세계에 아무 흔적을 안 남긴다.
 DEFEAT_LEVEL_LOSS = 1
 
+# 신규가 들어오는 층. 여기서만 방문자 레벨에 맞춰 눌러 만난다.
+NEWCOMER_FLOOR = 1
+
+# 방문자보다 몇 레벨까지 앞서게 둘 것인가. **0 이면 세계가 안 자란 것처럼 보이고**,
+# 크면 신규가 들어갈 자리가 없다 — 반 걸음 앞이 「이길 수 있는 상대」다.
+NEWCOMER_LEVEL_HEADROOM = 1
+
 # 레벨이 올리는 것. 스탯이 아니라 **표현력**이다 — 도감이 그 변화를 읽게 해 준다.
 LEVELS_PER_RULE_SLOT = 4
 LEVELS_PER_CPU = 2
@@ -168,3 +175,31 @@ def compute_defeat_xp(total_xp: int, level: int, floor: int) -> int:
         return max(0, total_xp - remaining)
     lost = sum(compute_required_xp(item) for item in range(target, level))
     return max(0, total_xp - lost)
+
+
+def resolve_effective_level(stored_level: int, floor: int, visitor_level: int | None) -> int:
+    """이 방문자가 실제로 만날 레벨 (결정 #35 의 네 번째 축, 2026-09-16).
+
+    **저장된 레벨은 안 건드린다.** 몬스터는 제 레벨을 그대로 갖고 도감도 그것을 적는다 —
+    여기서 정하는 것은 「이번 판에 얼마로 서는가」뿐이다. 그래서 성장·처치 감쇠·도감이
+    전부 하던 대로 돈다.
+
+    **왜 1장만인가.** 지속 몬스터는 플레이어를 이기면 레벨이 오른다. 신규가 1장에서
+    죽을수록 1장이 더 세지는 되먹임이라, 시간이 갈수록 신규가 못 들어온다 — 이 파일
+    머리글이 「신규 진입 자리가 구조적으로 보장된다」고 적어 둔 바로 그 자리다. 층 상한
+    하나로는 그 보장이 안 됐다: 1장 상한 5 는 레벨 1 플레이어에게 스탯 +24% 에 규칙칸
+    +1, cpu +2 인 상대다.
+
+    깊은 층은 안 누른다. 거기는 **준비하고 오는 곳**이라는 뜻이 그대로 남아야 한다.
+
+    Args:
+        stored_level: 몬스터가 실제로 가진 레벨.
+        floor: 그 몬스터가 사는 층.
+        visitor_level: 이번 판을 도는 사람의 레벨. 모르면 None — 그때는 안 누른다.
+
+    Returns:
+        이번 판에 쓸 레벨. 누를 일이 없으면 저장된 레벨 그대로.
+    """
+    if floor != NEWCOMER_FLOOR or visitor_level is None:
+        return stored_level
+    return max(MIN_LEVEL, min(stored_level, visitor_level + NEWCOMER_LEVEL_HEADROOM))
