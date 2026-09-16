@@ -64,7 +64,7 @@ import { readMyDoppels } from './storage'
 import type { MyDoppelView } from './storage'
 import type { RuleSet } from './core/schemas'
 import { findRoomTitle } from './core/schemas/room'
-import { SHADOW, findChapter } from './content/story'
+import { SHADOW, buildCardId, findChapter } from './content/story'
 import { DOPPEL_KIND_ID } from './battle/actorKind'
 import { ReplayView } from './admin/ReplayView'
 import type { ReplayInput, RunHistoryRow } from './storage'
@@ -145,6 +145,8 @@ import {
   createLogin,
   createGoogleSession,
   saveNickname,
+  readStorySeen,
+  saveStorySeen,
   listenEviction,
   TOKEN_STORAGE_KEY,
   createSaveScheduler,
@@ -601,9 +603,13 @@ export function App(): React.JSX.Element {
   // 있고, 둘을 겹쳐 띄우면 뒤엣것이 앞엣것을 가린다.
   const [cards, setCards] = useState<readonly ChapterCardProps[]>([])
   // 이미 띄운 것. **다시 안 띄운다** — 되풀이 관전에서 매번 걸리면 글이 방해물이 된다.
+  //
+  // **계정에 붙는다** (2026-09-16). 세션 안에서만 기억하던 때는 새로고침하거나 다른
+  // 기기로 옮기면 1장 카드가 다시 떴다. 서버가 정본이고 이 ref 는 그 사본이다 — 못
+  // 닿으면 이번 세션 동안만 기억하고, 다음 접속에 한 번 더 뜬다.
+  //
   // 상태가 아니라 ref 인 이유는 이 값이 바뀌어도 화면이 다시 그려질 이유가 없어서다.
-  const seenFloors = useRef<Set<number>>(new Set())
-  const seenShadow = useRef(false)
+  const seenCards = useRef<Set<string>>(new Set())
   // **이번 방에서만 멈춘다.** 설정을 끄는 것과 다르다 — 한 번 멈추려고 기능을 끄게 하면
   // 다음 방부터도 안 넘어간다.
   const [isAutoStopped, setAutoStopped] = useState(false)
@@ -1040,6 +1046,9 @@ export function App(): React.JSX.Element {
     setDiscovery(await readDiscovery(token))
     setProgress(await readProgress(token))
     setMyDoppels(await readMyDoppels(token))
+    // **이미 읽은 이야기는 다시 안 띄운다.** 계정에 붙어 있으므로 기기를 옮겨도
+    // 1장 카드가 다시 뜨지 않는다 (2026-09-16).
+    seenCards.current = new Set(await readStorySeen(token))
     setLeaderboard(await readLeaderboard(token))
     setDoppelBoard(await readLeaderboard(token, MODE_DOPPEL))
     setAuction(await readAuction(token))
@@ -1335,6 +1344,22 @@ export function App(): React.JSX.Element {
     setCards((open) => open.slice(1))
   }
 
+  /**
+   * 카드를 봤다고 적어 둔다 — 이 기기에 먼저, 그다음 서버에.
+   *
+   * **기기에 먼저 적는다.** 서버 응답을 기다리면 그 사이에 같은 카드가 한 번 더 걸릴 수
+   * 있고, 못 닿는 날에는 아예 안 적힌다.
+   *
+   * @param cardId 카드 id.
+   */
+  function markCardSeen(cardId: string): void {
+    seenCards.current.add(cardId)
+    if (account !== undefined) {
+      // **실패를 삼킨다.** 이야기는 판정이 아니라, 못 남겨도 다음 접속에 한 번 더 뜰 뿐이다.
+      void saveStorySeen(account, cardId)
+    }
+  }
+
   function goToNextRoom(): void {
     if (run === undefined) {
       return
@@ -1382,12 +1407,12 @@ export function App(): React.JSX.Element {
       ? findChapter(floor)
       : undefined
     const added: ChapterCardProps[] = []
-    if (hasShadow && !seenShadow.current) {
-      seenShadow.current = true
+    if (hasShadow && !seenCards.current.has(buildCardId(0))) {
+      markCardSeen(buildCardId(0))
       added.push({ title: SHADOW.titleKo, note: SHADOW.noteKo, ordinal: '', onClose: dropCard })
     }
-    if (chapter !== undefined && !seenFloors.current.has(chapter.floor)) {
-      seenFloors.current.add(chapter.floor)
+    if (chapter !== undefined && !seenCards.current.has(buildCardId(chapter.floor))) {
+      markCardSeen(buildCardId(chapter.floor))
       added.push({
         title: chapter.titleKo,
         note: chapter.noteKo,

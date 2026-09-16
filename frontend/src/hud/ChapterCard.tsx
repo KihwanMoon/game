@@ -8,10 +8,24 @@
  * 바꾸지 않는다. 카드가 판정에 닿는 순간 글이 기계가 된다.
  *
  * 읽기는 **한 번 뜬다.** 같은 장을 다시 띄우면 되풀이 관전에서 매번 걸리적거린다 — 다시
- * 읽을 자리는 「권」 탭이다.
+ * 읽을 자리는 「기록」 탭이다. 「한 번」의 범위는 **계정이다**(2026-09-16) — 세션 안에서만
+ * 기억하던 때는 새로고침하거나 다른 기기로 옮기면 1장 카드가 다시 떴다.
  */
-import { Button } from '../ds'
+import { useEffect, useRef, useState } from 'react'
+
 import { StoryNote } from '../content/StoryNote'
+import { Button } from '../ds'
+
+/**
+ * 저절로 닫히기까지의 초 (2026-09-16 요청).
+ *
+ * 카드가 떠 있는 동안 판이 멈추므로, 자리를 비운 사이에 뜨면 돌아올 때까지 판이 서 있다.
+ * 열이면 수첩 한 장을 읽기에 넉넉하고, 안 읽는 사람을 오래 붙들지도 않는다.
+ */
+export const AUTO_CLOSE_SECONDS = 10
+
+/** 초를 세는 간격. */
+const ONE_SECOND_MS = 1000
 
 export interface ChapterCardProps {
   /** 장 이름. */
@@ -30,6 +44,34 @@ export interface ChapterCardProps {
  * @returns 카드 요소.
  */
 export function ChapterCard(props: ChapterCardProps): React.JSX.Element {
+  // **저절로 닫힌다** (2026-09-16 요청). 카드가 떠 있는 동안 판이 멈추므로, 자리를 비운
+  // 사이에 뜨면 돌아올 때까지 판이 서 있다. 그렇다고 곧장 지우면 못 읽는다.
+  //
+  // **남은 초를 적는다.** 소리 없이 사라지면 「내가 뭘 눌렀나」가 되고, 그 다음부터는
+  // 읽는 대신 사라지기 전에 닫게 된다 — 값을 병기하는 이 게임의 규율과 같은 자리다.
+  const [left, setLeft] = useState(AUTO_CLOSE_SECONDS)
+  // **최신 처리기를 참조로 든다.** 의존성에 넣으면 부모가 다시 그릴 때마다 초가 되감긴다.
+  const onClose = useRef(props.onClose)
+  onClose.current = props.onClose
+
+  useEffect(() => {
+    // **`Date.now` 를 안 읽는다.** 코어의 규율(R5)이 여기까지 오지는 않지만, 시계를 안
+    // 보고도 되는 일에 시계를 끌어들일 이유가 없다 — 세는 것으로 족하다.
+    const timer = setInterval(() => {
+      setLeft((now) => {
+        if (now <= 1) {
+          clearInterval(timer)
+          onClose.current()
+          return 0
+        }
+        return now - 1
+      })
+    }, ONE_SECOND_MS)
+    return () => {
+      clearInterval(timer)
+    }
+  }, [])
+
   return (
     <div className="story-card" role="dialog" aria-label={`${props.ordinal} ${props.title}`}>
       <div className="story-card__sheet">
@@ -40,7 +82,7 @@ export function ChapterCard(props: ChapterCardProps): React.JSX.Element {
         <StoryNote note={props.note} />
         <div className="story-card__foot">
           <Button size="sm" variant="secondary" glyph="→" onClick={props.onClose}>
-            다음 장으로
+            {left > 0 ? `다음 장으로 (${String(left)})` : '다음 장으로'}
           </Button>
         </div>
       </div>

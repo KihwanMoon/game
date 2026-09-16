@@ -2166,3 +2166,39 @@ export async function saveNickname(token: string, nickname: string): Promise<Aut
   }
   return { account: readAccountState(body), token: undefined, detail: '' }
 }
+
+/**
+ * 이미 본 장 카드들을 읽는다.
+ *
+ * **계정에 붙는다.** 세션 안에서만 기억하던 때는 새로고침하거나 다른 기기로 옮기면 1장
+ * 카드가 다시 떴다 — 이야기는 한 번 읽는 것이라 두 번째부터는 방해다.
+ *
+ * @param token 기기 토큰.
+ * @returns 카드 id 들. 못 닿으면 빈 배열이다 — 그때는 이번 판에 한 번 더 뜰 뿐이다.
+ */
+export async function readStorySeen(token: string): Promise<readonly string[]> {
+  const response = await sendRequest('/story/seen', { headers: { [TOKEN_HEADER]: token } })
+  if (response === undefined || !response.ok) {
+    return []
+  }
+  const body = (await response.json()) as { seen?: string[] }
+  return body.seen ?? []
+}
+
+/**
+ * 카드 하나를 봤다고 남긴다.
+ *
+ * **실패를 삼킨다.** 카드가 뜨는 것은 이야기일 뿐 판정이 아니므로, 못 남겨도 게임은
+ * 돈다 — 다음 접속에 한 번 더 뜰 뿐이다. 여기서 화면에 오류를 띄우면 잃는 것보다
+ * 방해가 크다.
+ *
+ * @param token 기기 토큰.
+ * @param cardId 본 카드.
+ */
+export async function saveStorySeen(token: string, cardId: string): Promise<void> {
+  await sendRequest('/story/seen', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', [TOKEN_HEADER]: token },
+    body: JSON.stringify({ card_id: cardId }),
+  })
+}

@@ -683,3 +683,16 @@ ALTER TABLE account ADD COLUMN IF NOT EXISTS nickname TEXT;
 -- 내 둔갑이 남의 장에 서는 게임이라 이름을 빌려 쓰는 것이 실제 피해가 된다.
 CREATE UNIQUE INDEX IF NOT EXISTS account_nickname_idx
     ON account (lower(nickname)) WHERE nickname IS NOT NULL;
+
+-- 장 카드를 본 적 있는가 (2026-09-16). **기기가 아니라 계정에 붙는다** — 세션 안에서만
+-- 기억하던 때는 새로고침하거나 다른 기기로 옮기면 1장 카드가 다시 떴다. 이야기는 한 번
+-- 읽는 것이라, 두 번째부터는 방해다.
+--
+-- **표를 따로 둔다.** `meta_save` 는 클라이언트가 적어 보내는 것이고(설계/7_변조방지 §4),
+-- 이것은 서버가 정하는 사실이다. 섞으면 빈 초안이 덮는 것과 같은 사고가 여기서도 난다.
+CREATE TABLE IF NOT EXISTS story_seen (
+    account_id BIGINT      NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    card_id    TEXT        NOT NULL,
+    at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (account_id, card_id)
+);

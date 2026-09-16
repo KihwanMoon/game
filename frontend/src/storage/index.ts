@@ -102,6 +102,8 @@ export {
   readGoogleNonce,
   createGoogleSession,
   saveNickname,
+  readStorySeen,
+  saveStorySeen,
   applyAdminAction,
   applyMonsterLevel,
   readAdminCatalog,

@@ -73,6 +73,19 @@ export const SHADOW: StoryCard = {
   noteKo: STORY.shadow.note_ko,
 }
 
+/**
+ * 카드 하나를 가리키는 id — **서버에 「봤다」고 남길 때 쓰는 이름**이다 (2026-09-16).
+ *
+ * **정본이 여기다.** 서버는 이야기의 목록을 안 들고 있고 이 문자열만 담는다 — 서버가
+ * 목록까지 알면 이야기를 하나 더할 때마다 양쪽을 고쳐야 한다.
+ *
+ * @param floor 장 번호. 0 이면 그림자 카드다.
+ * @returns 카드 id.
+ */
+export function buildCardId(floor: number): string {
+  return floor <= 0 ? 'shadow' : `floor:${String(floor)}`
+}
+
 /** 낱말표. */
 export const GLOSSARY: readonly GlossaryEntry[] = STORY.glossary.map((one) => ({
   termKo: one.term_ko,

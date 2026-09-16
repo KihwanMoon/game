@@ -12,9 +12,9 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { CHAPTERS, SHADOW, splitEmphasis, splitParagraphs } from '../content/story'
+import { CHAPTERS, SHADOW, buildCardId, splitEmphasis, splitParagraphs } from '../content/story'
 import { StoryNote } from '../content/StoryNote'
-import { ChapterCard } from '../hud/ChapterCard'
+import { AUTO_CLOSE_SECONDS, ChapterCard } from '../hud/ChapterCard'
 import { VolumePanel, checkChapterOpen } from './VolumePanel'
 
 const noop = () => undefined
@@ -107,5 +107,31 @@ describe('수첩 글', () => {
     for (const chapter of CHAPTERS) {
       expect(splitParagraphs(chapter.noteKo).length, `${chapter.titleKo}`).toBeGreaterThan(1)
     }
+  })
+})
+
+describe('장 카드는 저절로 닫힌다 (2026-09-16)', () => {
+  it('★ 남은 초가 단추에 적힌다 — 소리 없이 사라지면 「내가 뭘 눌렀나」가 된다', () => {
+    const markup = renderToStaticMarkup(
+      <ChapterCard title="첫 장" note="수첩" ordinal="1장" onClose={noop} />,
+    )
+
+    expect(markup).toContain(`다음 장으로 (${String(AUTO_CLOSE_SECONDS)})`)
+  })
+
+  it('★ 열 초다 — 수첩 한 장을 읽기엔 넉넉하고 안 읽는 사람을 오래 안 붙든다', () => {
+    expect(AUTO_CLOSE_SECONDS).toBe(10)
+  })
+})
+
+describe('카드 id (2026-09-16)', () => {
+  it('★ 장마다 다른 id 다 — 같으면 한 장을 읽고 전부 읽은 것이 된다', () => {
+    expect(buildCardId(1)).toBe('floor:1')
+    expect(buildCardId(9)).toBe('floor:9')
+    expect(buildCardId(1)).not.toBe(buildCardId(9))
+  })
+
+  it('★ 그림자 카드는 장이 아니다 — 0 이 그 자리다', () => {
+    expect(buildCardId(0)).toBe('shadow')
   })
 })

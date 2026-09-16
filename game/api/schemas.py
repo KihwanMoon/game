@@ -38,6 +38,22 @@ class AccountResponse(BaseModel):
     doppel_opt_in: bool = False
 
 
+class StorySeenRequest(BaseModel):
+    """장 카드 하나를 봤다고 남기는 요청.
+
+    **카드 id 의 정본은 화면이다** — 서버는 이야기의 목록을 안 들고 있다. 담기는 것은
+    판정에 아무 영향이 없는 문자열 하나다.
+    """
+
+    card_id: str
+
+
+class StorySeenResponse(BaseModel):
+    """이미 본 카드들."""
+
+    seen: list[str] = Field(default_factory=list)
+
+
 class NicknameRequest(BaseModel):
     """닉네임을 정하는 요청."""
 
