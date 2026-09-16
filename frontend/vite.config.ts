@@ -3,6 +3,8 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
+import { stripHtmlComments } from './src/build/htmlComments'
+
 const repoRoot = fileURLToPath(new URL('..', import.meta.url))
 const designDir = fileURLToPath(new URL('../design', import.meta.url))
 const resourcesDir = fileURLToPath(new URL('../game/resources', import.meta.url))
@@ -11,16 +13,28 @@ const resourcesDir = fileURLToPath(new URL('../game/resources', import.meta.url)
 // 들어오기 때문이다 (deploy/README.md).
 const DEV_PORT = 8090
 
-// 디자인 토큰(../design)과 밸런스 JSON(../game/resources)을 **복사하지 않고** 별칭으로
-// 참조한다. 심볼릭 링크도 쓰지 않는다.
-//   - 복사하면 사본이 둘이 되고, 파이썬 코어가 읽는 원본과 조용히 갈라진다. 그 순간
-//     게이트 G3(두 코어 동일 결과)가 검증하는 대상이 서로 다른 데이터가 된다.
-//   - design/ 은 이미 Claude Design 프로젝트의 사본이다(CLAUDE.md). 여기서 또 복사하면
-//     정본에서 두 단계 떨어진 사본이 생긴다.
-//   - 별칭은 빌드 시점에 해소되므로 산출물에는 값이 인라인되고, 런타임 경로 의존이 없다.
-// 저장소 밖이 아니라 저장소 안의 상위 디렉터리이므로 server.fs.allow 에 루트를 열어 준다.
+/**
+ * 빌드에서만 도는 주석 제거 플러그인.
+ *
+ * 규칙 자체는 `src/build/htmlComments` 에 있다 — 검사가 닿는 자리다.
+ *
+ * @returns vite 플러그인.
+ */
+function buildHtmlCommentStripper() {
+  return {
+    name: 'strip-html-comments',
+    // 개발 서버에서는 안 돈다. 소스를 보며 고치는 사람에게는 주석이 있어야 한다.
+    apply: 'build' as const,
+    transformIndexHtml: {
+      // 다른 플러그인이 태그를 다 넣은 뒤에 마지막으로 훑는다.
+      order: 'post' as const,
+      handler: stripHtmlComments,
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), buildHtmlCommentStripper()],
   resolve: {
     alias: {
       '@design': designDir,
