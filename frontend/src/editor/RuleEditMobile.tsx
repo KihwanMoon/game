@@ -173,19 +173,18 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
               머리줄은 패널색(`--surface-panel`)이라 사각 테가 보였을 자리다. */}
           <div className="edit-m__brand">
             <h1 className="edit-m__site">
+              {/* **각인 자체가 이름이다** (2026-09-16). 판목에 `Sealed Stacks` 가
+                  새겨져 있으므로 alt 가 곧 그 이름이고, 그것이 h1 의 접근성 이름이 된다.
+                  한동안 alt 를 비우고 `ds-sr` 줄로 이름을 졌었는데, 낭독기 전용 글자는
+                  **눈에 보이는 이름이 아니다** — 보이는 이름은 이 그림과 바닥 글이
+                  진다(`LegalLine`). */}
               <img
                 className="edit-m__mark"
                 src="/brand/mark-head.webp"
                 width="160"
                 height="80"
-                alt=""
+                alt="Sealed Stacks"
               />
-              {/* **제목에 글자가 있어야 한다** (2026-09-16). 그림만 들어 있으면 h1 의
-                  `textContent` 가 빈 문자열이라, 글자만 훑는 수집기에게는 대표 제목이
-                  없는 것과 같다 — 구글 브랜드 인증이 홈페이지의 앱 이름을 못 찾았다.
-                  그림은 alt 를 비워 장식으로 두고 이름은 이 줄이 진다(낭독기가 두 번
-                  읽지 않는다). */}
-              <span className="ds-sr">Sealed Stacks</span>
             </h1>
             <h2 className="edit-m__title">{openTab.label}</h2>
           </div>
@@ -222,15 +221,14 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
             머리줄은 패널색(`--surface-panel`)이라 사각 테가 보였을 자리다. */}
         <div className="edit-m__brand">
           <h1 className="edit-m__site">
+            {/* 위와 같은 이유다 — 판목이 곧 이름이다. */}
             <img
               className="edit-m__mark"
               src="/brand/mark-head.webp"
               width="160"
               height="80"
-              alt=""
+              alt="Sealed Stacks"
             />
-            {/* 위와 같은 이유다 — 그림만 든 제목은 글자가 비어 있다. */}
-            <span className="ds-sr">Sealed Stacks</span>
           </h1>
           <h2 className="edit-m__title">{LIST_TITLE}</h2>
         </div>

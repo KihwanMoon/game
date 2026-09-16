@@ -80,6 +80,7 @@ import {
   DiscoveryPanel,
   EvictionNotice,
   GrowthPanel,
+  LegalLine,
   AUTO_ADVANCE_SECONDS,
   AutoAdvanceNotice,
   buildRoomGroups,
@@ -1828,6 +1829,10 @@ export function App(): React.JSX.Element {
                 ),
               })}
         />
+        {/* **앱 이름과 약관은 앱이 그려야 산다** (2026-09-16). `index.html` 의 첫 화면에
+            둔 것은 React 가 붙는 순간 갈아 끼워지고, 수집기가 보는 것은 그 뒤다 —
+            실측해 보니 렌더된 홈페이지에 링크가 한 개도 없었다. 사유는 `LegalLine`. */}
+        <LegalLine />
       </div>
     )
   }
