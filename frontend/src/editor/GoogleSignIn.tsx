@@ -118,12 +118,22 @@ export function GoogleSignIn(props: GoogleSignInProps): React.JSX.Element | null
         return
       }
       if (slot.current !== null) {
+        // **폭을 채운다** (2026-09-16). 구글은 단추를 제 iframe 안에 그리는데 **그 안쪽
+        // 바탕이 흰색**이라, 단추가 iframe 보다 좁으면 오른쪽에 죽은 흰 여백이 100px 가까이
+        // 남는다 — 실측으로 그랬고 화면에서 흰 상자로 보였다. 폭을 맞추면 남는 것은 단추를
+        // 두르는 얇은 테두리뿐이다. 그 테두리는 구글의 여백 규정이라 못 지운다.
+        //
+        // 400 은 구글이 받는 상한이고 200 은 글이 안 잘리는 하한이다.
+        const room = Math.min(400, Math.max(200, slot.current.clientWidth))
         window.google.accounts.id.renderButton(slot.current, {
           type: 'standard',
           theme: 'filled_black',
-          size: 'medium',
+          // 폭을 채우면 `medium` 은 글자만 작고 상자는 커서 비어 보인다.
+          size: 'large',
           text: 'continue_with',
+          // 알약이 아니라 각진 것으로 둔다. 이 화면의 모서리는 2px 하나다.
           shape: 'rectangular',
+          width: room,
           locale: 'ko',
         })
       }
