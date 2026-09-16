@@ -93,3 +93,11 @@ th { background: var(--plate); color: var(--chalk-dim); font-weight: 600; }
   color: var(--chalk-dim);
   font-size: 13px;
 }
+
+/* 저작권 줄. **바닥 괘선 위에 선다** — 아래에 두면 「돌아가기」 링크와 한 덩어리로
+   읽혀서, 권리 표시가 아니라 길잡이로 보인다. */
+.legal__copy {
+  margin-top: 32px;
+  color: var(--chalk-dim);
+  font-size: 13px;
+}

@@ -80,6 +80,33 @@ describe('바닥 글', () => {
   })
 })
 
+describe('권리자가 한 사람이다', () => {
+  // **이름이 갈리면 주장이 약해진다.** 약관·방침·바닥 글·LICENSE 넷이 권리자를 적는데,
+  // 한 곳만 고치면 「어느 쪽이 맞는가」에 답할 수 없다 — 앱 이름에서 겪은 것과 같은 병이다.
+  const OWNER = 'Kihwan Moon'
+
+  it('★ 약관이 게임의 권리가 누구에게 있는지 적는다', () => {
+    const terms = readText('../../public/terms.html')
+    expect(terms).toContain('이 게임의 권리')
+    expect(terms).toContain(OWNER)
+  })
+
+  it('★ 방침이 운영자를 적는다 — 개인정보 보호책임자가 누구인지가 요건이다', () => {
+    expect(readText('../../public/privacy.html')).toContain(OWNER)
+  })
+
+  it('★ 바닥 글에 권리 표시가 있다', () => {
+    expect(MARKUP).toContain(OWNER)
+    expect(MARKUP).toContain('©')
+  })
+
+  it('★ 저장소에도 라이선스가 있다 — 안 붙이면 「무단 사용 가능」으로 오해된다', () => {
+    const license = readText('../../../LICENSE')
+    expect(license).toContain(OWNER)
+    expect(license).toContain('All rights reserved')
+  })
+})
+
 describe('이름이 한 이름이다', () => {
   // 이름이 적힌 자리가 넷이고, **한 곳만 고치면 반려된다**. 2번 반려가 정확히 그랬다 —
   // `<title>` 은 고쳤는데 각인 alt 가 두 판 전 이름이었다.

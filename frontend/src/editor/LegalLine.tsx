@@ -32,6 +32,15 @@ const APP_NAME = 'Sealed Stacks'
  */
 const WORLD_NAME = '비각 祕閣'
 
+/**
+ * 권리 표시.
+ *
+ * **저작권은 만든 순간 생기지만 표시는 별개다.** 적어 두면 「누구 것인지 몰랐다」는
+ * 말을 막고, 분쟁이 생겼을 때 언제부터 누구의 것이었는지를 가리키는 자리가 된다.
+ * 약관 §6·§11 과 같은 이름이어야 한다 — 어긋나면 어느 쪽이 맞는지 알 수 없다.
+ */
+const COPYRIGHT = '© 2026 Kihwan Moon'
+
 /** 약관 문서들. 같은 도메인에 있어야 한다 — 구글이 그것도 본다. */
 const DOCS: readonly { readonly href: string; readonly text: string }[] = [
   { href: '/privacy.html', text: '개인정보처리방침' },
@@ -58,7 +67,13 @@ export function LegalLine(): React.JSX.Element {
           </a>
         </React.Fragment>
       ))}
-      <span className="legal__world">{WORLD_NAME}</span>
+      <span className="legal__world">
+        {WORLD_NAME}
+        <span className="legal__sep" aria-hidden="true">
+          {' · '}
+        </span>
+        {COPYRIGHT}
+      </span>
     </footer>
   )
 }
