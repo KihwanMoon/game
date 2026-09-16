@@ -17,6 +17,8 @@
  * 믿어야 할지 알 수 없다.
  */
 import { COMPARATORS, formatValue, renderTerm, type MeasuredValue } from '../core/rules/ruleVm'
+
+import { formatParamLabel, formatParamText } from './blockOptions'
 import { OP_OR, isStatRef, type BlockCatalog, type Rule, type Term } from '../core/schemas'
 import type { GlyphStateKind } from '../ds'
 
@@ -109,10 +111,11 @@ export function formatMeasuredTerm(
   const lhsValue = readLhsMeasure(term, readings)
   const rhsValue = readRhsMeasure(term, readings)
   if (lhsValue !== undefined && rhsValue !== undefined) {
-    return renderTerm(term, lhsValue, catalog, rhsValue)
+    // **코어가 만든 문자열을 덧칠만 한다.** 코어에서 바꾸면 파이썬과 갈려 G3 가 깨진다.
+    return formatParamText(renderTerm(term, lhsValue, catalog, rhsValue))
   }
   const base = catalog.perceptions.get(term.lhs)?.labelKo ?? term.lhs
-  const label = term.lhsParam === null ? base : `${base}[${term.lhsParam}]`
+  const label = term.lhsParam === null ? base : `${base}[${formatParamLabel(term.lhsParam)}]`
   const right = isStatRef(term.rhs)
     ? `${catalog.rhsStats.get(term.rhs.stat)?.labelKo ?? term.rhs.stat}(${formatMeasure(rhsValue)})`
     : formatValue(term.rhs)

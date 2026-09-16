@@ -229,7 +229,11 @@ export function ConditionCard(props: ConditionCardProps): React.JSX.Element {
                   wide
                   label={`${name} ${block.param.name} 인자`}
                   value={term.lhsParam ?? ''}
-                  options={block.param.values.map((value) => ({ value, label: value }))}
+                  // 보내는 것은 id, 보이는 것은 한글이다. 행동 인자 고르개와 같은 규율이다.
+                  options={block.param.values.map((value) => ({
+                    value,
+                    label: formatParamLabel(value),
+                  }))}
                   onChange={(value) => {
                     actions.changeTerm(index, termIndex, { lhsParam: value })
                   }}

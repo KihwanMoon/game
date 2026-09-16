@@ -118,13 +118,14 @@ export function LogRow(props: LogRowProps): React.JSX.Element {
         {TONE_GLYPHS[tone] ?? (fired ? FIRED_GLYPH : IDLE_GLYPH)}
       </span>
       <span className="ds-sr">{TONE_WORDS[tone] ?? (fired ? '발동' : '미발동')}</span>
-      {props.actor === undefined ? null : (
-        <span
-          className={`ds-log-row__actor${props.isMine === true ? ' ds-log-row__actor--mine' : ''}`}
-        >
-          {props.actor}
-        </span>
-      )}
+      {/* **없어도 칸은 그린다** (2026-09-16). 안 그리면 항목 수가 줄마다 달라지고,
+          격자는 개수로 칸을 채우므로 **나머지가 한 칸씩 당겨진다** — 행위자가 붙은 줄만
+          증감이 둘째 줄로 밀려 줄 높이가 두 배가 됐던 자리다. 빈 칸은 폭 0 이다. */}
+      <span
+        className={`ds-log-row__actor${props.isMine === true ? ' ds-log-row__actor--mine' : ''}`}
+      >
+        {props.actor ?? ''}
+      </span>
       <span className="ds-log-row__rule">{rule === null ? '' : `[${String(rule)}]`}</span>
       <span className="ds-log-row__body">
         <ValueExpr text={props.expr} size="sm" dim={!fired} />

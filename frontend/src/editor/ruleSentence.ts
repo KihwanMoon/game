@@ -57,7 +57,7 @@ export function formatTermWord(term: Term, catalog: BlockCatalog): string {
   const block = catalog.perceptions.get(term.lhs)
   const name = block?.labelKo ?? term.lhs
   // 인자가 붙는 인지(`enemy_type_present[SUMMONER]`)는 인자가 곧 뜻의 절반이다.
-  const full = term.lhsParam === null ? name : `${name}(${term.lhsParam})`
+  const full = term.lhsParam === null ? name : `${name}(${formatParamLabel(term.lhsParam)})`
   const word = COMPARISON_WORDS.get(term.comparison) ?? term.comparison
   return `${full} 가 ${formatRhsWord(term.rhs, catalog)} ${word}`
 }

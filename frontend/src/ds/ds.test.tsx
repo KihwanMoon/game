@@ -638,6 +638,23 @@ describe('실행 로그 한 줄 — 누가·무엇을·얼마나 (2026-09-15)', 
     expect(wasted).toContain('헛돎')
   })
 
+  it('★ 로그 줄의 격자 칸 수가 항목 수와 맞는다 — 어긋나면 줄이 접힌다', () => {
+    // **실제로 어긋나 있었다** (2026-09-16 신고: 「누가 한 건지 명확하지 않아졌다」).
+    // 행위자 칸을 더할 때 칸 수를 안 늘려서, 이름이 붙은 줄은 항목이 하나 넘쳐 **증감이
+    // 둘째 줄로 밀리고 줄 높이가 두 배**가 됐다. 이름이 안 보인 것이 아니라 줄이 깨졌다.
+    //
+    // 틱 · 글리프 · 행위자 · 규칙 · 본문 · 증감 여섯이다. `ds-sr` 은 절대 배치라 안 센다.
+    const css = readFileSync(fileURLToPath(new URL('./ds.css', import.meta.url)), 'utf8')
+    const block = /\.ds-log-row \{([\s\S]*?)\}/.exec(css)?.[1] ?? ''
+    expect(block).toContain('grid-template-columns: auto auto auto auto minmax(0, 1fr) auto')
+  })
+
+  it('★ 행위자가 없어도 그 칸은 그린다 — 안 그리면 나머지가 한 칸씩 당겨진다', () => {
+    // 격자는 개수로 칸을 채운다. 줄마다 항목 수가 다르면 같은 것이 줄마다 다른 칸에 선다.
+    const bare = renderToStaticMarkup(<LogRow tick={1} expr="" outcome="" />)
+    expect(bare).toContain('ds-log-row__actor')
+  })
+
   it('내 줄과 남의 줄이 갈린다 — 색이 그것을 가른다', () => {
     const mine = renderToStaticMarkup(<LogRow tick={1} expr="" outcome="" actor="나" isMine />)
     const other = renderToStaticMarkup(<LogRow tick={1} expr="" outcome="" actor="몽둥이 도깨비 ①" />)

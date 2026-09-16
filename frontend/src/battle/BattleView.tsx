@@ -34,6 +34,8 @@ import type { ReactNode } from 'react'
 
 import { useViewportMode, watchViewport } from '../ds'
 import { BLOCK_CATALOG } from '../core/resources'
+import { formatParamText } from '../editor/blockOptions'
+
 import { buildActorNames, readLogTone, replaceIds, translateActions } from './logNames'
 import { readCooldownLabel } from './vitalRows'
 import { PLAYER_ENTITY_ID } from '../core/services/runBattle'
@@ -376,8 +378,12 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
     return {
       tick: entry.tick,
       rule: entry.rule,
-      expr: replaceIds(entry.expr, actorNames),
-      outcome: translateActions(replaceIds(entry.outcome, actorNames), BLOCK_CATALOG),
+      // 인자도 한글로 덧칠한다 (2026-09-16 요청). 블록 이름만 한글이고 인자가 영문이면
+      // 그 한 칸만 다른 언어가 된다 — 로그가 가장 많이 읽히는 자리다.
+      expr: formatParamText(replaceIds(entry.expr, actorNames)),
+      outcome: formatParamText(
+        translateActions(replaceIds(entry.outcome, actorNames), BLOCK_CATALOG),
+      ),
       delta: entry.delta,
       fired: entry.fired,
       actor: actor?.name ?? entry.entityId,

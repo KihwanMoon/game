@@ -235,7 +235,35 @@ const PARAM_LABELS: ReadonlyMap<string, string> = new Map([
   ['SLOW', '둔화'],
   ['STUN', '기절'],
   ['GUARD', '방어 태세'],
+  ['CASTING', '시전 중'],
+  ['ALLY_WOUNDED', '아군 부상'],
+  // **고르개 값이 가장 자주 보인다.** 규칙 한 줄마다 대상이 붙으므로, 이것이 영문이면
+  // 화면에서 가장 많이 눈에 띄는 영문이 된다 (2026-09-16 요청).
+  ['NEAREST', '가장 가까운'],
+  ['LOWEST_HP', '가장 약한'],
+  ['HIGHEST_THREAT', '가장 위협적인'],
+  ['TYPE_RANGED', '사격형'],
+  ['TYPE_SUMMONER', '소환형'],
+  ['TYPE_HEALER', '치유형'],
+  // `_FIRST` 는 「그 유형을 먼저, 없으면 아무나」다. 뜻이 값의 절반이라 이름에 담는다.
+  ['TYPE_RANGED_FIRST', '사격형 우선'],
+  ['TYPE_SUMMONER_FIRST', '소환형 우선'],
+  ['TYPE_HEALER_FIRST', '치유형 우선'],
+  // 적 유형. `enemy_type_present` 가 묻는 값들이다.
+  ['MELEE', '근접형'],
+  ['RANGED', '사격형'],
+  ['SUMMONER', '소환형'],
+  ['BOMBER', '자폭형'],
+  ['HEALER', '치유형'],
+  ['BOSS', '우두머리'],
+  // 지형. `nearest_tile_distance` 가 묻는다.
+  ['DOOR', '문'],
+  ['STAIRS', '계단'],
+  ['SPRING', '샘'],
 ])
+
+/** 대괄호 안의 인자 하나. `대상 거리[NEAREST]` 의 `NEAREST` 를 집는다. */
+const BRACKETED = /\[([A-Z][A-Z0-9_]*)\]/g
 
 /**
  * 행동 인자 값을 사람이 읽는 말로 바꾼다.
@@ -245,4 +273,22 @@ const PARAM_LABELS: ReadonlyMap<string, string> = new Map([
  */
 export function formatParamLabel(value: string): string {
   return PARAM_LABELS.get(value) ?? value
+}
+
+/**
+ * 이미 만들어진 문구 안의 인자들을 한글로 바꾼다.
+ *
+ * **코어를 안 고치는 이유가 있다.** 항 문구는 `core/rules/ruleVm` 의 `renderTerm` 이
+ * 만들고, 그 문자열은 파이썬 코어가 내는 것과 **비트 단위로 같아야 한다**(게이트 G3).
+ * 거기서 한글로 바꾸면 두 코어가 갈리고 골든 리플레이가 전부 무효가 된다 — 그래서
+ * 표시 계층에서 덧칠한다. `battle/logNames` 의 `translateActions` 와 같은 규율이다.
+ *
+ * @param text 인자가 대괄호로 든 문구.
+ * @returns 인자만 한글로 바뀐 문구. 모르는 값은 그대로 둔다.
+ */
+export function formatParamText(text: string): string {
+  return text.replace(BRACKETED, (whole, value: string) => {
+    const label = PARAM_LABELS.get(value)
+    return label === undefined ? whole : `[${label}]`
+  })
 }
