@@ -343,7 +343,9 @@ export async function registerAccount(
 /**
  * 로그인해서 이 기기용 토큰을 받는다.
  *
- * **기존 기기는 튕기지 않는다.** 서버가 토큰을 지우지 않고 새로 하나 더 붙인다.
+ * **기존 기기는 튕긴다** (개정 2026-09-01). 한 계정은 한 기기다 — 서버가 그 계정의 다른
+ * 기기 토큰을 지운다. 예전에는 반대였고, 같은 계정의 상태가 두 벌 돌면서 **나중에 저장한
+ * 쪽이 앞의 것을 덮었다.** 쓰는 사람에게 그것은 「규칙이 사라졌다」로 보였다.
  *
  * @param loginId 아이디.
  * @param password 비밀번호.
@@ -2015,4 +2017,85 @@ export async function readMyDoppels(token: string): Promise<MyDoppelView | undef
     })),
     isOptedIn: body.is_opted_in ?? false,
   }
+}
+
+/** 구글 로그인이 켜져 있는가. `clientId` 는 공개값이라 그대로 화면에 실린다. */
+export interface GoogleConfig {
+  readonly isEnabled: boolean
+  readonly clientId: string
+}
+
+/**
+ * 구글 로그인 설정을 읽는다.
+ *
+ * **화면이 클라이언트 id 를 박아 두지 않는다.** 서버가 그 값으로 토큰의 `aud` 를
+ * 검증하므로, 둘이 갈리면 버튼은 멀쩡한데 로그인만 조용히 실패한다 — 정본을 하나로 둔다.
+ *
+ * @returns 설정. 못 닿거나 꺼져 있으면 `isEnabled` 가 거짓이다.
+ */
+export async function readGoogleConfig(): Promise<GoogleConfig> {
+  const response = await sendRequest('/auth/google/config', {})
+  if (response === undefined || !response.ok) {
+    return { isEnabled: false, clientId: '' }
+  }
+  const body = (await response.json()) as { is_enabled?: boolean; client_id?: string }
+  return { isEnabled: body.is_enabled === true, clientId: body.client_id ?? '' }
+}
+
+/**
+ * 일회용 논스를 받는다.
+ *
+ * **버튼을 그릴 때 받는다.** 구글에 넘겨야 하는 값이라 로그인 시작 시점에 있어야 하고,
+ * 화면이 뜰 때마다 받으면 표가 목적 없이 자란다.
+ *
+ * @returns 논스. 못 받았으면 빈 문자열이다.
+ */
+export async function readGoogleNonce(): Promise<string> {
+  const response = await sendRequest('/auth/google/nonce', {})
+  if (response === undefined || !response.ok) {
+    return ''
+  }
+  const body = (await response.json()) as { nonce?: string }
+  return body.nonce ?? ''
+}
+
+/**
+ * 구글이 준 신원 토큰으로 들어간다.
+ *
+ * **기기 토큰을 들고 가면 그 익명 계정이 승격된다** — 계정 id 가 그대로라 지금까지의
+ * 진행이 전부 따라온다. 없으면 새 계정이 생기거나, 이미 그 구글 계정이 붙어 있던 계정으로
+ * 로그인된다.
+ *
+ * @param credential 구글이 준 ID 토큰.
+ * @param nonce 서버가 발급했던 논스.
+ * @param token 지금 쓰는 기기 토큰.
+ * @returns 계정과 토큰, 또는 실패 사유.
+ */
+export async function createGoogleSession(
+  credential: string,
+  nonce: string,
+  token: string | undefined,
+): Promise<AuthOutcome> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token !== undefined) {
+    headers[TOKEN_HEADER] = token
+  }
+  const response = await sendRequest('/auth/google', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ credential, nonce }),
+  })
+  if (response === undefined) {
+    return { account: undefined, token: undefined, detail: '서버에 닿지 못했다' }
+  }
+  if (!response.ok) {
+    return { account: undefined, token: undefined, detail: await readErrorDetail(response) }
+  }
+  const body = (await response.json()) as {
+    account_id: number
+    handle: string
+    login_id?: string | null
+    token?: string
+  }
+  return { account: readAccountState(body), token: body.token, detail: '' }
 }

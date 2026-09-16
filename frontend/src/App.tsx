@@ -143,6 +143,7 @@ import {
 import {
   applyLogout,
   createLogin,
+  createGoogleSession,
   listenEviction,
   TOKEN_STORAGE_KEY,
   createSaveScheduler,
@@ -1080,6 +1081,43 @@ export function App(): React.JSX.Element {
   }
 
   /**
+   * 구글이 준 신원 토큰으로 들어간다.
+   *
+   * **승격과 로그인이 한 문으로 들어온다.** 서버는 그 구글 계정이 처음이면 지금 기기의
+   * 익명 계정을 승격시키고, 이미 붙어 있던 계정이 있으면 그쪽으로 로그인시킨다. 둘은
+   * **이 기기에 있던 것을 어떻게 할지가 정반대**다.
+   *
+   * - 승격이면 계정 id 가 그대로다 → 이 기기의 초안·슬롯을 **지킨다**.
+   * - 로그인이면 다른 계정이다 → 서버 것으로 **갈아 끼운다** (`applyLogin` 과 같은 규율).
+   *
+   * 어느 쪽인지는 **돌아온 계정 id 로 가른다.** 클라이언트가 스스로 정하면 틀릴 수 있는
+   * 자리라, 서버가 실제로 무엇을 했는지를 보고 따른다.
+   *
+   * @param credential 구글이 준 ID 토큰.
+   * @param nonce 그때 쓴 논스.
+   */
+  async function applyGoogle(credential: string, nonce: string): Promise<string> {
+    const outcome = await createGoogleSession(credential, nonce, account)
+    if (outcome.account === undefined || outcome.token === undefined) {
+      return outcome.detail
+    }
+    const isSameAccount = profile?.accountId === outcome.account.accountId
+    const storage = getLocalStorage()
+    writeToken(storage, outcome.token)
+    setAccount(outcome.token)
+    setProfile(outcome.account)
+    if (!isSameAccount) {
+      const server = await readServerMeta(outcome.token)
+      const next = server.meta ?? createEmptyMeta()
+      writeMeta(storage, next)
+      setMeta(next)
+      setSession((live) => adoptAccount(live, next))
+    }
+    await loadAccountState(outcome.token)
+    return ''
+  }
+
+  /**
    * 이 기기에서 로그아웃한다.
    *
    * **이 기기의 저장을 함께 지우고 화면을 처음 상태로 되돌린다.** 토큰만 지우면 다음
@@ -1946,6 +1984,7 @@ export function App(): React.JSX.Element {
                 link={link}
                 hasLocalProgress={meta.bestFloor > 0 || meta.bestiary.length > 0}
                 onRegister={applyRegister}
+                onGoogle={applyGoogle}
                 onLogin={applyLogin}
                 onLogout={() => {
                   applyLogoutHere()

@@ -20,6 +20,12 @@ api = [
     "fastapi==0.115.6",
     "uvicorn[standard]==0.34.0",
     "psycopg[binary,pool]==3.2.3",
+    # 구글 ID 토큰(RS256) 검증. **서명을 우리가 직접 본다** — 클라이언트가 보낸 이메일을
+    # 믿는 순간 누구든 남의 계정으로 들어온다 (설계/7_변조방지 §4).
+    #
+    # RSA 검증은 표준 라이브러리로 안 되므로 `cryptography` 가 딸려 온다. HTTP 는
+    # 안 늘린다 — JWKS 는 `urllib.request` 로 받고 캐시한다.
+    "pyjwt[crypto]==2.10.1",
 ]
 dev = [
     # §7.1 — 훅·pre-commit·게이트가 같은 ruff 를 봐야 한다. 핀은 §8.5.2 기준.

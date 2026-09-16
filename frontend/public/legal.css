@@ -1,0 +1,89 @@
+/* 방침 문서 두 장이 함께 쓰는 판.
+ *
+ * **앱 토큰을 안 가져온다.** 이 두 장은 `public/` 에 그대로 실려 나가는 정적 파일이라
+ * vite 별칭(`@design`)을 못 쓴다. 값을 손으로 옮겨 적었으므로 토큰이 바뀌면 여기가
+ * 갈린다 — 그래서 바뀔 일이 거의 없는 값만 쓴다(먹·괘선·본문·황동 넷).
+ *
+ * 성격은 앱과 같다: 그림자 없음, 1px 괘선, 4px 모듈, 황동은 최소.
+ */
+:root {
+  color-scheme: dark;
+  --ink: #0e131c;
+  --plate: #161d29;
+  --rule-line: #2c3849;
+  --chalk: #c6cfdc;
+  --chalk-dim: #7c889a;
+  --brass: #c89a4e;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 32px 20px 64px;
+  background: var(--ink);
+  color: var(--chalk);
+  font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo',
+    'Noto Sans KR', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+main { max-width: 68ch; margin: 0 auto; }
+
+/* 머리. **황동은 여기 한 곳뿐이다** — 화면당 3곳 상한을 문서에서도 지킨다. */
+.legal__brand {
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: var(--brass);
+  margin-bottom: 4px;
+}
+
+h1 { font-size: 24px; line-height: 1.4; margin: 0 0 4px; }
+
+.legal__stamp {
+  color: var(--chalk-dim);
+  font-size: 13px;
+  margin: 0 0 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--rule-line);
+}
+
+h2 {
+  font-size: 16px;
+  margin: 32px 0 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule-line);
+}
+
+p, li { color: var(--chalk); }
+ul { padding-left: 20px; }
+li { margin-bottom: 4px; }
+strong { color: #fff; font-weight: 600; }
+a { color: var(--brass); }
+
+/* 무엇을 어디에 왜 두는가. **표가 본문보다 정확하다** — 문장으로 풀면 빠진 항목이 안 보인다. */
+table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 8px;
+  border: 1px solid var(--rule-line);
+}
+th { background: var(--plate); color: var(--chalk-dim); font-weight: 600; }
+
+.legal__note {
+  background: var(--plate);
+  border: 1px solid var(--rule-line);
+  border-left: 2px solid var(--brass);
+  padding: 12px 16px;
+  margin: 16px 0;
+}
+
+.legal__foot {
+  margin-top: 48px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule-line);
+  color: var(--chalk-dim);
+  font-size: 13px;
+}

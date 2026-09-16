@@ -2089,6 +2089,30 @@
   font-size: var(--fs-sm);
 }
 
+/* 구글 버튼 자리. **구글이 그리는 것이라 우리 토큰을 안 입힌다** — 자리와 여백만 준다.
+   브랜드 규정이 모양·색·문구를 정해 두어서, 흉내 내 그리면 심사에서 되돌아온다. */
+.account__oauth {
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-2);
+  border-top: var(--border);
+}
+
+/* 계정 패널 바닥의 방침 링크. **작고 흐리게** — 늘 보이되 읽을 것을 가리지 않는다. */
+.account__legal {
+  display: flex;
+  gap: var(--sp-1);
+  align-items: center;
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-2);
+  border-top: var(--border);
+  font-size: var(--fs-xs);
+  color: var(--ink-dim);
+}
+
+.account__legal a {
+  color: var(--ink-dim);
+}
+
 /* 내 둔갑 패널의 작은 머리. **목록이 셋이라 무엇의 목록인지가 붙어야 한다** — 서 있는
    것, 물러난 것, 최근 만난 판은 같은 모양의 줄이라 머리가 없으면 한 덩이로 읽힌다. */
 .doppel-mine__head {

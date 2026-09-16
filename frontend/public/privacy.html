@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0E131C" />
+    <meta name="robots" content="index, follow" />
+    <title>개인정보처리방침 · 비각 祕閣</title>
+    <link rel="stylesheet" href="/legal.css" />
+  </head>
+  <body>
+    <main>
+      <div class="legal__brand">비각 祕閣 · SEALED STACKS</div>
+      <h1>개인정보처리방침</h1>
+      <p class="legal__stamp">시행일 2026-09-16 · 최종 개정 2026-09-16</p>
+
+      <p>
+        비각은 <strong>규칙표를 적어 두면 그것이 대신 싸우는 게임</strong>입니다. 게임을
+        하는 데 이름도 이메일도 필요하지 않습니다 — 처음 들어오면 서버가 익명 계정을
+        하나 만들고, 그것으로 끝까지 할 수 있습니다.
+      </p>
+      <div class="legal__note">
+        <strong>가입은 선택입니다.</strong> 가입하거나 구글 계정을 연결하는 이유는 하나뿐입니다
+        — <strong>기기를 바꿔도 기록이 따라오게</strong> 하기 위해서입니다. 연결하지 않으면
+        기록은 이 브라우저에만 남습니다.
+      </div>
+
+      <h2>1. 무엇을 모으는가</h2>
+      <table>
+        <tr><th>무엇</th><th>언제</th><th>왜</th></tr>
+        <tr>
+          <td>자동 생성 별명과 계정 번호</td>
+          <td>처음 들어올 때</td>
+          <td>기록을 붙여 둘 자리. 사람을 지목하는 값이 아닙니다</td>
+        </tr>
+        <tr>
+          <td>기기 토큰의 <strong>해시</strong></td>
+          <td>처음 들어올 때</td>
+          <td>이 기기를 알아보기 위해. <strong>원본 토큰은 서버에 저장하지 않습니다</strong> — SHA-256 해시만 남습니다</td>
+        </tr>
+        <tr>
+          <td>아이디, 비밀번호의 <strong>해시와 솔트</strong></td>
+          <td>가입할 때만</td>
+          <td>로그인. <strong>비밀번호 원문은 저장하지 않습니다</strong></td>
+        </tr>
+        <tr>
+          <td>구글 계정 식별자(<code>sub</code>)</td>
+          <td>구글 로그인을 쓸 때만</td>
+          <td>같은 구글 계정을 알아보기 위해. <strong>이메일·이름·프로필 사진은 저장하지 않습니다</strong></td>
+        </tr>
+        <tr>
+          <td>게임 기록 — 규칙표, 진행, 아이템, 판의 제출과 결과, 둔갑 전적, 지갑, 순위</td>
+          <td>게임을 하는 동안</td>
+          <td>게임 자체. 순위와 둔갑은 다른 사람에게도 보입니다(아래 3항)</td>
+        </tr>
+        <tr>
+          <td>로그인 시도 기록 — 아이디, 성공 여부, 시각</td>
+          <td>로그인할 때</td>
+          <td>무차별 대입 차단</td>
+        </tr>
+        <tr>
+          <td>웹 서버 접근 기록 — IP 주소, 요청 경로, 시각</td>
+          <td>모든 요청</td>
+          <td>장애 추적과 남용 차단</td>
+        </tr>
+      </table>
+      <p>
+        <strong>광고 식별자·위치·연락처·기기 목록은 모으지 않습니다.</strong> 광고를 싣지
+        않고, 분석 도구나 추적 픽셀을 붙이지 않습니다.
+      </p>
+
+      <h2>2. 어디에 두는가</h2>
+      <ul>
+        <li>서버의 PostgreSQL 데이터베이스에 둡니다.</li>
+        <li>일부 설정과 초안은 <strong>이 브라우저 안에만</strong> 남습니다(로컬 저장소). 서버로 가지 않습니다.</li>
+        <li>접속은 HTTPS로만 받습니다.</li>
+      </ul>
+
+      <h2>3. 다른 사람에게 보이는 것</h2>
+      <p>
+        이 게임에는 <strong>둔갑</strong>이 있습니다 — 켜 두면 내 규칙표가 다른 사람의 판에
+        상대로 섭니다. 그때 <strong>내가 적은 규칙표와 별명</strong>이 그 사람에게 보입니다.
+      </p>
+      <ul>
+        <li><strong>기본은 꺼져 있습니다.</strong> 계정 화면에서 직접 켜야 합니다.</li>
+        <li>언제든 끌 수 있습니다. 끄면 새 둔갑이 서지 않습니다.</li>
+        <li>순위표에는 별명(또는 아이디)과 점수가 공개됩니다.</li>
+      </ul>
+
+      <h2>4. 누구에게 넘기는가</h2>
+      <p><strong>팔지 않습니다.</strong> 서비스를 돌리는 데 필요한 곳에만 닿습니다.</p>
+      <ul>
+        <li><strong>Google</strong> — 구글 로그인을 쓸 때만. 구글이 서명한 신원 토큰을 서버가 검증합니다.</li>
+        <li><strong>Cloudflare</strong> — 접속이 지나는 터널. 요청이 통과합니다.</li>
+        <li>법령에 따른 요구가 있을 때.</li>
+      </ul>
+
+      <h2>5. 얼마나 두는가</h2>
+      <ul>
+        <li>게임 기록은 계정이 살아 있는 동안 둡니다.</li>
+        <li>지난 판의 다시 보기용 자료는 계정마다 <strong>최근 10판</strong>만 남기고 지웁니다.</li>
+        <li>로그인 시도 기록과 서버 접근 기록은 짧게 두고 지웁니다.</li>
+        <li>삭제를 요청하면 계정을 비활성화합니다 — 순위표와 둔갑 판에서 빠지고 로그인할 수 없게 됩니다.</li>
+      </ul>
+      <div class="legal__note">
+        <strong>지워지지 않는 것이 하나 있습니다.</strong> 내 둔갑이 다른 사람과 싸운
+        <strong>전적</strong>은 상대의 기록이기도 해서, 계정을 지워도 그 줄 자체는 남습니다.
+        다만 <strong>누구의 것인지는 더 이상 표시되지 않습니다.</strong>
+      </div>
+
+      <h2>6. 무엇을 요구할 수 있는가</h2>
+      <p>
+        내 정보를 <strong>보여 달라</strong>, <strong>고쳐 달라</strong>,
+        <strong>지워 달라</strong>, <strong>처리를 멈춰 달라</strong>고 요구할 수 있습니다.
+        아래 주소로 연락하면 처리합니다.
+      </p>
+
+      <h2>7. 어린이</h2>
+      <p>
+        만 14세 미만은 법정대리인의 동의 없이 가입할 수 없습니다. 동의 없이 만들어진 계정을
+        알게 되면 지웁니다.
+      </p>
+
+      <h2>8. 바뀔 때</h2>
+      <p>
+        방침이 바뀌면 이 페이지의 개정일이 바뀝니다. 중요한 변경은 게임 안에서 알립니다.
+      </p>
+
+      <h2>9. 연락</h2>
+      <p>개인정보에 관한 문의와 요청: <a href="mailto:privacy@sealedstacks.com">privacy@sealedstacks.com</a></p>
+
+      <p class="legal__foot">
+        <a href="/">← 비각으로</a> · <a href="/terms.html">이용약관</a>
+      </p>
+    </main>
+  </body>
+</html>

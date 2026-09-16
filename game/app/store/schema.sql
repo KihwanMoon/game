@@ -893,3 +893,26 @@ CREATE INDEX IF NOT EXISTS doppel_bout_season_idx ON doppel_bout (core_version, 
 -- 사거리만 지금 겪고 있는 값(근접 1)으로 못박아 화면이 그것을 말하게 한다.
 UPDATE item_catalog SET attack_range = 1
  WHERE catalog_id = 'sword_great_fine' AND attack_range IS NULL;
+
+-- 구글 로그인 (2026-09-16). **자격증명을 계정 행의 빈 칸에 채운다** — 아이디·비밀번호와
+-- 같은 자리다. 계정 id 가 안 바뀌므로 세이브·티켓·둔갑·활자가 전부 따라온다.
+--
+-- **`sub` 만 담는다.** 구글이 주는 이메일·이름·사진은 저장하지 않는다. 이메일은 바뀌고
+-- 재사용되므로 신원의 열쇠로 쓸 수 없고, 안 담으면 개인정보처리방침이 그만큼 짧아진다.
+ALTER TABLE account ADD COLUMN IF NOT EXISTS google_sub TEXT;
+
+-- 부분 유니크. 한 구글 계정이 두 계정에 붙으면 로그인이 어느 쪽인지 정할 수 없다.
+CREATE UNIQUE INDEX IF NOT EXISTS account_google_sub_idx
+    ON account (google_sub) WHERE google_sub IS NOT NULL;
+
+-- 일회용 논스. **재생 공격을 막는 유일한 자리다** — 남의 ID 토큰을 가로채 그대로 다시
+-- 보내면, 서명은 여전히 맞으므로 논스가 없으면 통과한다.
+--
+-- 표로 두는 이유는 **한 번 쓰면 사라져야** 하기 때문이다. 서명한 문자열로 대신하면
+-- 만료 전까지 몇 번이고 다시 쓸 수 있고, 그것은 「일회용」이 아니다.
+CREATE TABLE IF NOT EXISTS auth_nonce (
+    nonce      TEXT        PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS auth_nonce_age_idx ON auth_nonce (created_at);

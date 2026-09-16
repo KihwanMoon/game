@@ -41,6 +41,36 @@ class CredentialRequest(BaseModel):
     password: str = Field(min_length=1, max_length=256)
 
 
+class GoogleAuthRequest(BaseModel):
+    """구글로 들어오는 요청.
+
+    **결과를 받을 자리가 없다.** 이메일도 이름도 계정 id 도 안 받는다 — 받는 것은 구글이
+    서명한 토큰과 서버가 발급했던 논스뿐이고, 누구인지는 서버가 그 서명에서 읽는다
+    (설계/7_변조방지 §4).
+    """
+
+    credential: str
+    nonce: str
+
+
+class NonceResponse(BaseModel):
+    """일회용 논스."""
+
+    nonce: str
+
+
+class GoogleConfigResponse(BaseModel):
+    """구글 로그인이 켜져 있는가, 그리고 어느 클라이언트 id 인가.
+
+    **클라이언트 id 는 공개값이다** — 구글 버튼이 그것을 그대로 싣는다. 화면이 빌드 시점에
+    박아 두지 않고 서버에서 받는 이유는 **정본을 하나로 두기 위해서다**: 서버가 `aud` 를
+    그 값으로 검증하므로, 둘이 갈리면 화면은 멀쩡한데 로그인만 조용히 실패한다.
+    """
+
+    is_enabled: bool
+    client_id: str
+
+
 class TicketRequest(BaseModel):
     """티켓 발급 요청.
 

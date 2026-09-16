@@ -117,6 +117,14 @@ services:
     environment:
       GAME_DATABASE_URL: >-
         postgresql://${POSTGRES_USER:-game}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-game}
+      # 구글 로그인. **기본값을 빈 문자열로 둔다** — 없으면 그 경로가 503 으로 막힌다.
+      # POSTGRES_PASSWORD 와 달리 스택이 뜨는 것을 막지는 않는다: 구글 없이도 게임은
+      # 돌아야 하고, 아이디·비밀번호 가입이 그대로 남아 있다.
+      #
+      # **공개값이라 커밋해도 위험하지 않다** (구글 버튼이 그대로 싣는다). 그래도 .env 에
+      # 두는 이유는 환경마다 다르기 때문이다 — 서버가 이 값으로 토큰의 `aud` 를 검증하므로
+      # 개발용 id 가 배포에 따라가면 로그인이 조용히 전부 실패한다.
+      GAME_GOOGLE_CLIENT_ID: ${GAME_GOOGLE_CLIENT_ID:-}
     expose:
       - "8000"
     networks:

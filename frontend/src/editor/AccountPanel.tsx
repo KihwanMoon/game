@@ -15,6 +15,7 @@ import { useState } from 'react'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import type { AccountState } from '../storage'
 
+import { GoogleSignIn } from './GoogleSignIn'
 import { checkLinked, describeLink, type LinkState } from './linkState'
 
 export interface AccountPanelProps {
@@ -24,6 +25,8 @@ export interface AccountPanelProps {
   /** 이 기기에 남아 있는 진행. 로그인 경고를 띄울지 판단한다. */
   readonly hasLocalProgress: boolean
   readonly onRegister: (loginId: string, password: string) => Promise<string>
+  /** 구글이 준 신원 토큰으로 들어간다. 빈 문자열이면 성공이다. 없으면 버튼을 안 그린다. */
+  readonly onGoogle?: (credential: string, nonce: string) => Promise<string>
   readonly onLogin: (loginId: string, password: string) => Promise<string>
   /**
    * 이 기기에서 로그아웃한다.
@@ -272,6 +275,44 @@ export function AccountPanel(props: AccountPanelProps): React.JSX.Element {
             </div>
           </form>
         )}
+
+        {/* **구글은 「또 하나의 가입 방법」이다.** 아이디·비밀번호를 없애지 않는다 —
+            구글 계정이 없거나 쓰기 싫은 사람이 못 들어오게 되면, 편의를 더한 것이
+            아니라 문을 하나로 줄인 것이다.
+
+            **이미 가입한 계정에는 안 그린다.** 지금 이 화면의 구글 버튼은 「들어가기」라
+            승격이거나 로그인인데, 이미 아이디가 붙은 계정에서 누르면 **다른 계정으로
+            갈아타는 일**이 된다 — 그 길은 따로 「연결」로 두어야 뜻이 분명하다. */}
+        {props.onGoogle !== undefined && account?.loginId == null ? (
+          <div className="account__oauth">
+            <GoogleSignIn
+              onCredential={(credential, nonce) => {
+                setBusy(true)
+                setDetail('')
+                void props.onGoogle?.(credential, nonce).then((message) => {
+                  setBusy(false)
+                  setDetail(message)
+                })
+              }}
+            />
+          </div>
+        ) : null}
+
+        {/* **방침으로 가는 길이 화면에 있어야 한다.** 구글 로그인 심사가 이 링크를
+            확인하기도 하지만, 그 전에 **가입하는 자리**가 곧 무엇에 동의하는지 읽을
+            자리다 — 문서를 만들어 두고 닿는 길을 안 두면 없는 것과 같다.
+
+            `public/` 의 정적 페이지라 새 창이 아니라 그냥 이동해도 되지만, 가입 폼을
+            채우던 중이면 적은 것이 날아간다. */}
+        <div className="account__legal">
+          <a href="/privacy.html" target="_blank" rel="noreferrer noopener">
+            개인정보처리방침
+          </a>
+          <span aria-hidden="true">·</span>
+          <a href="/terms.html" target="_blank" rel="noreferrer noopener">
+            이용약관
+          </a>
+        </div>
       </div>
     </Panel>
   )
