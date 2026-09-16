@@ -93,6 +93,10 @@ def build_item_rows(catalog: dict) -> list[dict]:
                 "slot": str(entry.slot) if entry.slot else "",
                 "hands": str(entry.hands) if entry.hands else "",
                 "grants_skill": entry.grants_skill or "",
+                # 소모품이 무엇으로 쓰이는가 (§4). **코드가 읽는 태그는 이것 하나다** —
+                # 이것을 안 실으면 화면은 `kind` 로만 갈라, 축지·눈밝이·불의 부적까지
+                # 여섯이 한 그림으로 뜬다. `tags` 는 표시 전용이라 대신 쓸 수 없다.
+                "use_tag": entry.use_tag or "",
                 # 사거리는 무기를 고를 때 첫 번째로 궁금한 값이다 (§2.2). 접사였을 때는
                 # 「먼 사거리 +3」 처럼 보여서 무엇에 더하는 3 인지 알 수 없었다.
                 "attack_range": entry.attack_range or 0,

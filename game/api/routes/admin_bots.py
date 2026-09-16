@@ -310,6 +310,10 @@ class AdminDoppelGearView:
         catalog_id = str(self.gear.get("catalog_id", ""))
         entry = self.catalog.get(catalog_id)
         slot = str(self.gear.get("slot", ""))
+        # **형태를 가르는 값이라 빠뜨리면 그림이 거짓말을 한다.** 화면은 `catalog_id` 의
+        # 접두사로 그림을 고르고 `hands` 로만 양손을 가르므로(`content/itemArt.ts`),
+        # 이것이 없으면 얼려 둔 협도(`sword_great`)가 직검으로 뜬다.
+        hands = getattr(entry, "hands", None)
         return InventorySlotView(
             slot_index=self.index,
             item=ItemView(
@@ -318,6 +322,7 @@ class AdminDoppelGearView:
                 label_ko=getattr(entry, "label_ko", "") or catalog_id,
                 kind="EQUIPMENT",
                 slot=slot,
+                hands=str(hands) if hands else None,
                 equipped_slot=slot,
                 is_broken=bool(self.gear.get("is_broken")),
                 grade=getattr(entry, "grade", "") or "",

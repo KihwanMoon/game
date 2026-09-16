@@ -172,14 +172,22 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
               바탕은 빼 두었다(`mark-alpha`). 앱의 먹과 거의 같은 색이라 안 빼도 녹지만,
               머리줄은 패널색(`--surface-panel`)이라 사각 테가 보였을 자리다. */}
           <div className="edit-m__brand">
-            <img
-              className="edit-m__mark"
-              src="/brand/mark-head.webp"
-              width="160"
-              height="80"
-              alt="비각 祕閣 · Sealed Stacks"
-            />
-            <h1 className="edit-m__title">{openTab.label}</h1>
+            <h1 className="edit-m__site">
+              <img
+                className="edit-m__mark"
+                src="/brand/mark-head.webp"
+                width="160"
+                height="80"
+                alt=""
+              />
+              {/* **제목에 글자가 있어야 한다** (2026-09-16). 그림만 들어 있으면 h1 의
+                  `textContent` 가 빈 문자열이라, 글자만 훑는 수집기에게는 대표 제목이
+                  없는 것과 같다 — 구글 브랜드 인증이 홈페이지의 앱 이름을 못 찾았다.
+                  그림은 alt 를 비워 장식으로 두고 이름은 이 줄이 진다(낭독기가 두 번
+                  읽지 않는다). */}
+              <span className="ds-sr">Sealed Stacks</span>
+            </h1>
+            <h2 className="edit-m__title">{openTab.label}</h2>
           </div>
           <span className="edit-m__meta">{openTab.gauge}</span>
         </header>
@@ -213,14 +221,18 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
             바탕은 빼 두었다(`mark-alpha`). 앱의 먹과 거의 같은 색이라 안 빼도 녹지만,
             머리줄은 패널색(`--surface-panel`)이라 사각 테가 보였을 자리다. */}
         <div className="edit-m__brand">
-          <img
-            className="edit-m__mark"
-            src="/brand/mark-head.webp"
-            width="160"
-            height="80"
-            alt="비각 祕閣 · Sealed Stacks"
-          />
-          <h1 className="edit-m__title">{LIST_TITLE}</h1>
+          <h1 className="edit-m__site">
+            <img
+              className="edit-m__mark"
+              src="/brand/mark-head.webp"
+              width="160"
+              height="80"
+              alt=""
+            />
+            {/* 위와 같은 이유다 — 그림만 든 제목은 글자가 비어 있다. */}
+            <span className="ds-sr">Sealed Stacks</span>
+          </h1>
+          <h2 className="edit-m__title">{LIST_TITLE}</h2>
         </div>
         <span className="edit-m__meta">
           <ValueExpr

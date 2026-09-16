@@ -10,9 +10,10 @@
  *
  * 훅을 안 쓴다. 고를 것이 전부 버튼으로 펴져 있어 상태가 필요 없다.
  */
-import { Button, GlyphState, SegmentedGauge, ValueExpr } from '../ds'
+import { Button, GlyphState, SegmentedGauge, Thumb, ValueExpr } from '../ds'
 import type { ConsumableSlotView, ConsumableView } from '../storage'
 
+import { AffixList } from './AffixList'
 import { CompareBlock } from './CompareRows'
 import {
   compareToSlots,
@@ -51,23 +52,9 @@ export interface ConsumableDetailProps {
  * @returns 줄 목록. 없으면 null.
  */
 function renderAffixes(affixes: readonly string[]): React.JSX.Element | null {
-  if (affixes.length === 0) {
-    return null
-  }
   // **옵션 하나에 한 줄이다.** 가운뎃점으로 이으면 옵션 넷이 문장 하나가 되어, 어디까지가
-  // 한 옵션인지 눈으로 갈라야 한다.
-  return (
-    <div className="invd__role">
-      <span className="invd__role-name">끼면</span>
-      <ul className="invd__affixes">
-        {affixes.map((line) => (
-          <li className="invd__affix" key={line}>
-            <ValueExpr text={line} size="sm" />
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
+  // 한 옵션인지 눈으로 갈라야 한다. 비면 목록째로 안 선다 — `AffixList` 가 그렇게 한다.
+  return <AffixList lines={affixes.map((line) => ({ text: line }))} role="끼면" />
 }
 
 /**
@@ -181,6 +168,18 @@ function renderSlotDetail(
   return (
     <div className="invd">
       <div className="invd__row">
+        {/* **빈 칸에는 안 그린다.** 그릴 것이 없는데 자리만 두면 분류 코드가 서고, 그것이
+            「무언가 끼어 있다」로 읽힌다 — 이 화면에서 빈 칸과 찬 칸의 구분이 전부다.
+            그림 주소는 격자가 실어 보낸 것을 그대로 쓴다: 칸의 계열(`useTag`)이 아니라
+            끼운 것(`itemTag`)을 봐야 주문서 넷이 한 그림으로 안 떨어진다. */}
+        {isEmpty ? null : (
+          <Thumb
+            kind="CONSUMABLE"
+            label={slot.labelKo}
+            grade={slot.grade}
+            {...(props.cell.art === undefined ? {} : { art: props.cell.art })}
+          />
+        )}
         <span className="cns__slot">{formatSlotName(slot)}</span>
         <span className={`inv__name${formatGradeClass(slot.grade)}`}>
           {isEmpty ? '빈 칸' : slot.labelKo}
@@ -262,6 +261,14 @@ export function ConsumableDetail(props: ConsumableDetailProps): React.JSX.Elemen
   return (
     <div className="invd">
       <div className="invd__row">
+        {/* **이름을 안 지운다.** 아직 안 그린 형태가 섞여 있고, 같은 그림을 나눠 쓰는
+            것들은 이름만이 어느 것인지를 말한다. */}
+        <Thumb
+          kind="CONSUMABLE"
+          label={option.labelKo}
+          grade={option.grade}
+          {...(cell.art === undefined ? {} : { art: cell.art })}
+        />
         <span className={`inv__name${formatGradeClass(option.grade)}`}>{option.labelKo}</span>
         {renderGrade(option.grade)}
         <ValueExpr

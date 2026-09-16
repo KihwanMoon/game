@@ -135,15 +135,10 @@ describe('입력 칸 — 반응형', () => {
     expect(block.slice(0, block.indexOf('}'))).toContain('var(--btn-tap-h)')
   })
 
-  it('계정 CSS 에 생 hex 색이 없다', () => {
-    const block = css.slice(css.indexOf('/* ── 계정 패널'))
-    expect(block).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
-  })
-
-  it('계정 CSS 가 자체 미디어쿼리를 두지 않는다', () => {
-    const block = css.slice(css.indexOf('/* ── 계정 패널'))
-    expect(block).not.toContain('@media')
-  })
+  // 생 hex·자체 `@media` 는 여기서 안 본다 — **`editor.css` 전량을 보는 자리가 따로 있다**
+  // (`editorRender.test.tsx`, `mobileEditor.test.tsx`). 예전에는 `/* ── 계정 패널` 표지를
+  // `indexOf` 로 찾아 제 구역만 잘라 봤는데, **표지가 바뀌면 -1 이라 마지막 글자 한 개를
+  // 검사하고 통과했다.** 위의 셋은 `toContain` 이라 같은 일이 나면 빨개진다 — 그래서 남는다.
 })
 
 describe('세이브 기준', () => {

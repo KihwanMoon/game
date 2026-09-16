@@ -19,6 +19,7 @@ from game.app.store.monster_snapshots import build_monster_snapshot
 from game.app.store.monsters import list_monsters
 from game.app.store.trophies import list_trophies
 from game.schemas.meta_save import build_ruleset_payload
+from game.schemas.ruleset import RuleSet, parse_ruleset
 
 router = APIRouter()
 
@@ -26,6 +27,34 @@ router = APIRouter()
 # 이 라우트를 고치지 않아도 된다.
 MIN_FLOOR = 1
 MAX_FLOOR = 5
+
+
+def resolve_ruleset_payload(frozen: dict | None, fallback: RuleSet | None) -> dict | None:
+    """이 개체가 **실제로 싸울 때 쓰는** 규칙표를 고른다.
+
+    전투가 고르는 방법과 같아야 한다 (`services/run_battle.build_enemy_rulesets`,
+    `scripts/run_world_tick.find_monster_ruleset`). 전투는 개체 전용 표가 **비었거나 못
+    읽으면** 조용히 종의 표로 싸우는데, 도감만 `is not None` 으로 보고 그 절을 그대로
+    폈다 — 그래서 규칙표 칸이 빈 절(`{}`)인 그림자는 화면에 「규칙 없음」으로 뜨고
+    실제로는 `ai_veteran` 으로 싸웠다. 도감이 표적 목록이려면 화면과 실제가 같아야 한다.
+
+    Args:
+        frozen: 이 개체 전용 규칙표 절. 없거나 비었으면 종의 표를 쓴다.
+        fallback: 카탈로그가 주는 종의 규칙표.
+
+    Returns:
+        화면에 그대로 펼 절. 낼 것이 없으면 None.
+    """
+    if frozen:
+        try:
+            parse_ruleset(frozen)
+        except (KeyError, ValueError, TypeError):
+            # 못 읽는 절은 전투가 건너뛴다 — 옛 티켓이나 어휘가 바뀐 절이 여기로 온다.
+            pass
+        else:
+            # 읽히면 **그대로** 낸다. 요약하면 카운터를 설계할 수 없다 (GDD §2.3).
+            return frozen
+    return None if fallback is None else build_ruleset_payload(fallback)
 
 
 @router.get("/api/bestiary", response_model=BestiaryResponse)
@@ -74,11 +103,7 @@ def read_bestiary(account: CurrentAccount) -> BestiaryResponse:
                     attack=snapshot.attack,
                     defense=snapshot.defense,
                     # 적의 규칙표를 **그대로** 낸다. 요약하면 카운터를 설계할 수 없다.
-                    ruleset=(
-                        record.ruleset_json
-                        if record.ruleset_json is not None
-                        else (None if ruleset is None else build_ruleset_payload(ruleset))
-                    ),
+                    ruleset=resolve_ruleset_payload(record.ruleset_json, ruleset),
                     trophies=[item["catalog_id"] for item in trophies],
                     holds_mine=any(item["taken_from"] == account.account_id for item in trophies),
                 )

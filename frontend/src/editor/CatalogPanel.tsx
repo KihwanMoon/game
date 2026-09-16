@@ -8,11 +8,20 @@
  *
  * **레벨 곡선은 실제 인원과 겹쳐 그린다.** 곡선만 보면 튜닝할 수 없다 — 사람들이 실제로
  * 어디서 멈추는지가 보여야 "이 구간이 너무 긴가" 를 물을 수 있다.
+ *
+ * **격자는 가방과 같은 것을 쓴다** (2026-09-16). 예전에는 `ds/CellGrid` 였고, 상세가
+ * 두 벌로 적혀 있었다 — 갈라 둔 `ItemDetail`·`EnemyDetail` 이 있는데 패널 안에 같은
+ * 줄들이 또 있었고, 그쪽에는 사거리가 빠져 있었다. 사본은 늘 한쪽만 늙는다.
+ * `ds/CellGrid` 는 **지우지 않는다** — `tests/test_design_contract.py` 가 `ds/*.tsx`
+ * 전량을 정본 계약과 대조하므로 파일이 사라지거나 prop 이 하나 늘면 게이트가 깨진다.
  */
 import { useState } from 'react'
 
-import { Button, CellGrid, Panel, Thumb, ValueExpr } from '../ds'
+import { Button, Panel, ValueExpr } from '../ds'
 import type { AdminCatalog, CatalogEnemyRow, CatalogItemRow } from '../storage'
+
+import { buildCatalogEnemyCells, buildCatalogItemCells } from './catalogCells'
+import { SlotBoard, SlotGrid, usePickedKey } from './SlotBoard'
 
 export interface CatalogPanelProps {
   readonly catalog: AdminCatalog | undefined
@@ -109,15 +118,18 @@ export function EnemyDetail(props: { readonly row: CatalogEnemyRow }): React.JSX
 export function CatalogPanel(props: CatalogPanelProps): React.JSX.Element | null {
   const { catalog } = props
   const [view, setView] = useState<View>('items')
-  // 격자는 이름과 분류까지만 담는다. 상세를 칸마다 펼치면 격자가 다시 목록이 되므로,
-  // 고른 것 하나만 아래에 편다 — 좁은 화면에서 특히 그렇다.
-  const [picked, setPicked] = useState('')
+  // 격자는 이름과 자리까지만 담는다. 상세를 칸마다 펼치면 격자가 다시 목록이 되므로,
+  // 고른 것 하나만 아래에 편다 — 좁은 화면에서 특히 그렇다. 칸 key 에 계열
+  // (`cat:item:`·`cat:enemy:`)이 들어 있어 탭을 옮겨도 엉뚱한 칸이 열리지 않는다.
+  const [pickedKey, togglePick] = usePickedKey()
   // 훅은 조기 반환보다 앞에 와야 한다(React 규칙). 카탈로그가 없으면 뒤에서 null 을 낸다.
   if (catalog === undefined) {
     return null
   }
-  const pickedItem = catalog.items.find((row) => row.catalogId === picked)
-  const pickedEnemy = catalog.enemies.find((row) => row.kindId === picked)
+  const itemCells = buildCatalogItemCells(catalog.items)
+  const enemyCells = buildCatalogEnemyCells(catalog.enemies)
+  const pickedItem = itemCells.find((cell) => cell.key === pickedKey)
+  const pickedEnemy = enemyCells.find((cell) => cell.key === pickedKey)
   const peak = Math.max(0, ...catalog.levelCurve.map((row) => row.players))
 
   return (
@@ -145,69 +157,35 @@ export function CatalogPanel(props: CatalogPanelProps): React.JSX.Element | null
         />
 
         {view === 'items' ? (
-          <>
-            <CellGrid
-              cells={catalog.items.map((row) => ({
-                id: row.catalogId,
-                thumb: (
-                  <Thumb kind={row.slot === '' ? row.kind : row.slot} label={row.labelKo} />
-                ),
-                name: row.labelKo,
-                meta: [row.slot === '' ? row.kind : row.slot],
-                isSelected: row.catalogId === picked,
-              }))}
-              onSelect={setPicked}
+          <SlotBoard
+            hint="칸을 고르면 접사·요구조건·여는 재주가 뜬다"
+            detail={pickedItem === undefined ? undefined : <ItemDetail row={pickedItem.row} />}
+          >
+            <SlotGrid
+              title={`아이템 ${String(itemCells.length)}`}
+              shape="free"
+              cells={itemCells}
+              pickedKey={pickedKey}
+              onPick={togglePick}
               emptyText="등록된 아이템이 없다"
             />
-            {pickedItem === undefined ? null : (
-              <div className="cat__detail">
-                <span className="cat__name">{pickedItem.labelKo}</span>
-                <ValueExpr
-                  text={`${pickedItem.kind}${pickedItem.slot === '' ? '' : ` · ${pickedItem.slot}`}${pickedItem.hands === '' ? '' : ` · ${pickedItem.hands}`}`}
-                  size="sm"
-                  dim
-                />
-                {pickedItem.affixes.length === 0 ? null : (
-                  <ValueExpr text={pickedItem.affixes.join(' · ')} size="sm" />
-                )}
-                {pickedItem.requirements.length === 0 ? null : (
-                  <ValueExpr text={`요구 ${pickedItem.requirements.join(' · ')}`} size="sm" dim />
-                )}
-                {pickedItem.grantsSkill === '' ? null : (
-                  // 장비가 여는 스킬 (결정 #13). 장비 교체가 규칙 재설계로 이어지는 지점.
-                  <ValueExpr text={`스킬 ${pickedItem.grantsSkill}`} size="sm" />
-                )}
-              </div>
-            )}
-          </>
+          </SlotBoard>
         ) : null}
 
         {view === 'enemies' ? (
-          <>
-            <CellGrid
-              cells={catalog.enemies.map((row) => ({
-                id: row.kindId,
-                thumb: <Thumb kind={row.type} label={row.labelKo} />,
-                name: row.labelKo,
-                meta: [`hp ${String(row.hpMax)} · 공 ${String(row.attack)}`],
-                isSelected: row.kindId === picked,
-              }))}
-              onSelect={setPicked}
+          <SlotBoard
+            hint="칸을 고르면 스탯과 내력이 뜬다"
+            detail={pickedEnemy === undefined ? undefined : <EnemyDetail row={pickedEnemy.row} />}
+          >
+            <SlotGrid
+              title={`적 ${String(enemyCells.length)}`}
+              shape="free"
+              cells={enemyCells}
+              pickedKey={pickedKey}
+              onPick={togglePick}
               emptyText="등록된 적이 없다"
             />
-            {pickedEnemy === undefined ? null : (
-              <div className="cat__detail">
-                <span className="cat__name">{pickedEnemy.labelKo}</span>
-                <ValueExpr text={pickedEnemy.type} size="sm" dim />
-                <ValueExpr
-                  text={`hp ${String(pickedEnemy.hpMax)} · 공 ${String(pickedEnemy.attack)} · 방 ${String(pickedEnemy.defense)} · 사거리 ${String(pickedEnemy.attackRange)}`}
-                  size="sm"
-                />
-                {/* 몬스터의 정체는 스탯이 아니라 규칙표다 (설계/6_몬스터 §2). */}
-                <ValueExpr text={`내력 ${pickedEnemy.rulesetId}`} size="sm" dim />
-              </div>
-            )}
-          </>
+          </SlotBoard>
         ) : null}
 
         {view === 'curve' ? (

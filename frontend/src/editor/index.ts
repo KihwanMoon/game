@@ -34,6 +34,10 @@ export { GrowthPanel, formatAttributeEffect, STAT_LABELS } from './GrowthPanel'
 export type { GrowthPanelProps } from './GrowthPanel'
 export { buildRoomGroups, clipPurpose, PURPOSE_CLIP } from './roomChoices'
 export type { RoomChoice, RoomGroup } from './roomChoices'
+// 목록 틀. 줄의 바깥(컨테이너·개수·페이지·거르기·줄 앞 그림)만 진다 —
+// 「불러오는 중」·「못 닿았다」는 화면이 linkState 로 밖에서 가른다.
+export { DataList, describeFilterMiss, formatRowCount, pickSubjectParticle } from './DataList'
+export type { DataListProps, DataListThumb } from './DataList'
 export { LinkNoticeLine } from './LinkNoticeLine'
 export type { LinkNoticeLineProps } from './LinkNoticeLine'
 export {

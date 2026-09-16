@@ -161,3 +161,29 @@ def test_the_bestiary_carries_stats_too(client, token, monster):
         assert row["attack"] > 0
         # 전투가 쓰는 것과 같은 계산이어야 한다 — 따로 세면 화면과 실제가 갈린다.
         assert row["ruleset"] is None or row["ruleset"]["rules"]
+
+
+def test_an_empty_ruleset_falls_back_to_the_species_table(client, token):
+    """★ 화면이 「규칙 없음」이라고 말할 때 실제로는 종의 표로 싸우고 있었다.
+
+    전투는 개체 전용 표가 비었거나 못 읽히면 조용히 종의 표를 쓴다
+    (`services/run_battle.build_enemy_rulesets`). 도감만 `is not None` 으로 봐서
+    빈 절(`{}`)을 그대로 폈고, 그러면 표적 목록이 만나게 될 적을 잘못 그린다.
+    """
+    from game.api.deps import get_pool
+    from game.app.monsters.tiers import MonsterTier
+    from game.app.store.monsters import create_monster, list_monsters
+
+    pool = get_pool()
+    slot = "empty_rules_slot"
+    create_monster(pool, "goblin_rusher", MonsterTier.ELITE, 1, slot, ruleset_json={})
+    record = next(item for item in list_monsters(pool, 1) if item.entity_slot == slot)
+    assert record.ruleset_json == {}, "빈 절이 NULL 로 저장되면 이 검사가 아무것도 안 본다"
+
+    entry = next(
+        e
+        for e in client.get("/api/bestiary", headers=build_headers(token)).json()["entries"]
+        if e["record_id"] == record.record_id
+    )
+    assert entry["ruleset"] is not None
+    assert entry["ruleset"]["rules"], "빈 절을 그대로 폈다 — 종의 표를 내야 한다"

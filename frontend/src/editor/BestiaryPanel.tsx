@@ -11,15 +11,22 @@
  *
  * 등급을 색으로 칠하지 않는다. 의미색 셋이 이미 배정됐고 색은 정보의 유일한 채널이 될
  * 수 없다 — 등급은 글자로, "내 것" 은 글리프로 가른다.
+ *
+ * **격자는 가방과 같은 것을 쓴다** (2026-09-16). 개체마다 이름·스탯·접사·전리품·규칙표
+ * 버튼이 펴져 있어 열 마리면 표적을 고르는 일이 스크롤이었다 — 도면 격자(`SlotBoard`)는
+ * 칸에 상태만 그리고 규칙표는 고른 칸 아래 한 곳에 편다. 접는 버튼이 없어진 이유가
+ * 그것이다: 펴는 자리가 하나면 접을 이유가 없고, 규칙표는 접지 않는 것이 이 화면의 뜻이다.
+ * `ds/CellGrid` 는 지우지 않는다 — `tests/test_design_contract.py` 가 `ds/*.tsx` 전량을
+ * 정본 계약과 대조한다.
  */
-import { useState } from 'react'
-
 import { formatRuleText } from './ruleText'
-import { Button, GlyphState, Panel, Thumb, ValueExpr } from '../ds'
+import { GlyphState, Panel, ValueExpr } from '../ds'
 import type { BestiaryEntry } from '../storage'
 
+import { buildBestiaryCells } from './bestiaryCells'
 import { LinkNoticeLine } from './LinkNoticeLine'
 import { checkLinked, type LinkState } from './linkState'
+import { SlotBoard, SlotGrid, usePickedKey } from './SlotBoard'
 
 export interface BestiaryPanelProps {
   readonly entries: readonly BestiaryEntry[] | undefined
@@ -29,6 +36,9 @@ export interface BestiaryPanelProps {
 /** 못 닿았을 때 무엇을 못 보는가. 앞머리(`서버에 닿지 못했다`)는 linkState 가 든다. */
 const MISSING_HINT = '비각의 몬스터는 서버가 안다'
 const EMPTY_HINT = '아직 비각에 지속 몬스터가 없다'
+
+/** 아무 칸도 안 골랐을 때. 규칙표가 여기서 나온다는 것을 미리 말한다. */
+const PICK_HINT = '칸을 고르면 규칙표가 그대로 뜬다 — 카운터는 거기서 나온다'
 
 /**
  * 그 개체의 규칙표를 사람이 읽는 줄들로 만든다.
@@ -48,6 +58,61 @@ export function listRuleLines(entry: BestiaryEntry): readonly string[] {
 }
 
 /**
+ * 고른 개체 하나의 상세.
+ *
+ * 격자에서 갈라 둔 이유는 검사 때문만이 아니다 — 칸마다 규칙표를 펼치면 격자가 다시
+ * 목록이 되고, 격자로 바꾼 이유가 사라진다.
+ *
+ * @param props 도감 줄 하나.
+ * @returns 렌더 트리.
+ */
+export function BestiaryDetail(props: { readonly entry: BestiaryEntry }): React.JSX.Element {
+  const { entry } = props
+  return (
+    <div className="cat__detail">
+      <span className="cat__name">{entry.labelKo}</span>
+      <ValueExpr
+        text={`${entry.tier} · lv ${String(entry.level)}/${String(entry.levelCap)}`}
+        size="sm"
+      />
+
+      {/* **얼마나 센가.** 규칙표만으로는 어떻게 싸우는지만 알 수 있고,
+          이길 수 있는지는 알 수 없다. */}
+      <ValueExpr
+        text={`${String(entry.zoneFloor)}장 · hp ${String(entry.hpMax)} · 공 ${String(entry.attack)} · 방 ${String(entry.defense)}`}
+        size="sm"
+        dim
+      />
+
+      {entry.affixes.length === 0 ? null : (
+        <ValueExpr text={`접사 ${entry.affixes.join(' · ')}`} size="sm" />
+      )}
+
+      {entry.holdsMine ? (
+        <GlyphState
+          state="armed"
+          size="sm"
+          label={`내 장비 보유 — ${entry.trophies.join(' · ')}`}
+        />
+      ) : null}
+
+      {entry.ruleset === undefined ? null : (
+        <>
+          <ValueExpr text={`규칙표 ${String(entry.ruleset.rules.length)}줄`} size="sm" dim />
+          <ol className="bst__rules">
+            {listRuleLines(entry).map((line) => (
+              <li className="bst__rule" key={line}>
+                <ValueExpr text={line} size="sm" />
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+    </div>
+  )
+}
+
+/**
  * 도감 패널을 그린다.
  *
  * @param props 도감 줄들과 접속 상태.
@@ -55,8 +120,10 @@ export function listRuleLines(entry: BestiaryEntry): readonly string[] {
  */
 export function BestiaryPanel(props: BestiaryPanelProps): React.JSX.Element {
   const { entries, link } = props
-  const [openId, setOpenId] = useState<number | undefined>(undefined)
-  const mine = (entries ?? []).filter((entry) => entry.holdsMine).length
+  const [pickedKey, togglePick] = usePickedKey()
+  const cells = buildBestiaryCells(entries)
+  const picked = cells.find((cell) => cell.key === pickedKey)
+  const mine = cells.filter((cell) => cell.entry.holdsMine).length
 
   return (
     <Panel
@@ -72,67 +139,18 @@ export function BestiaryPanel(props: BestiaryPanelProps): React.JSX.Element {
         ) : entries.length === 0 ? (
           <ValueExpr text={EMPTY_HINT} size="sm" dim />
         ) : (
-          <ul className="bst__list">
-            {entries.map((entry) => (
-              <li className="bst__entry" key={entry.recordId}>
-                <div className="bst__row">
-                  {/* 그림 자리. 지금은 등급 코드가 그려지고, 자산이 들어오면 같은
-                      틀 안에서 그림으로 바뀐다 — 배치가 흔들리지 않는다. */}
-                  <Thumb kind={entry.tier} label={entry.labelKo} size="sm" />
-                  <span className="bst__name">{entry.labelKo}</span>
-                  <ValueExpr
-                    text={`${entry.tier} · lv ${String(entry.level)}/${String(entry.levelCap)}`}
-                    size="sm"
-                  />
-                </div>
-
-                {/* **얼마나 센가.** 규칙표만으로는 어떻게 싸우는지만 알 수 있고,
-                    이길 수 있는지는 알 수 없다. */}
-                <ValueExpr
-                  text={`${String(entry.zoneFloor)}장 · hp ${String(entry.hpMax)} · 공 ${String(entry.attack)} · 방 ${String(entry.defense)}`}
-                  size="sm"
-                  dim
-                />
-
-                {entry.affixes.length === 0 ? null : (
-                  <ValueExpr text={`접사 ${entry.affixes.join(' · ')}`} size="sm" />
-                )}
-
-                {entry.holdsMine ? (
-                  <GlyphState
-                    state="armed"
-                    size="sm"
-                    label={`내 장비 보유 — ${entry.trophies.join(' · ')}`}
-                  />
-                ) : null}
-
-                {entry.ruleset === undefined ? null : (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      glyph={openId === entry.recordId ? '▾' : '▸'}
-                      title="이 적이 어떻게 싸우는지 본다 — 카운터는 여기서 나온다"
-                      onClick={() => {
-                        setOpenId(openId === entry.recordId ? undefined : entry.recordId)
-                      }}
-                    >
-                      규칙표 {String(entry.ruleset.rules.length)}줄
-                    </Button>
-                    {openId === entry.recordId ? (
-                      <ol className="bst__rules">
-                        {listRuleLines(entry).map((line) => (
-                          <li className="bst__rule" key={line}>
-                            <ValueExpr text={line} size="sm" />
-                          </li>
-                        ))}
-                      </ol>
-                    ) : null}
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
+          <SlotBoard
+            hint={PICK_HINT}
+            detail={picked === undefined ? undefined : <BestiaryDetail entry={picked.entry} />}
+          >
+            <SlotGrid
+              title={`비각의 것들 ${String(cells.length)}${mine === 0 ? '' : ` · 내 것 ${String(mine)}`}`}
+              shape="free"
+              cells={cells}
+              pickedKey={pickedKey}
+              onPick={togglePick}
+            />
+          </SlotBoard>
         )}
       </div>
     </Panel>

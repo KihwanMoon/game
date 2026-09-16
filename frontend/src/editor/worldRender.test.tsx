@@ -9,8 +9,6 @@
  *
  * **API 만 있고 화면이 없으면 아무도 못 쓴다** — 도감에서 한 번 겪은 실수다.
  */
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
 
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
@@ -147,18 +145,15 @@ describe('세계 패널 — 서버 없음', () => {
   })
 })
 
-describe('세계 패널 스타일', () => {
-  const css = readFileSync(fileURLToPath(new URL('./editor.css', import.meta.url)), 'utf8')
-  const block = css.slice(css.indexOf('/* ── 세계 패널'))
-
-  it('생 hex 색이 없다', () => {
-    expect(block).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
-  })
-
-  it('자체 미디어쿼리를 두지 않는다', () => {
-    expect(block).not.toContain('@media')
-  })
-})
+/*
+ * 생 hex·자체 `@media` 검사는 여기 없다 — **`editor.css` 전량을 보는 자리가 따로 있다**
+ * (`editorRender.test.tsx` 의 hex·px·그림자, `mobileEditor.test.tsx` 의 `@media`).
+ *
+ * 예전에는 여기서 `css.slice(css.indexOf('/* ── 세계 패널'))` 로 제 구역만 잘라 봤는데, **표지 주석이
+ * 바뀌면 `indexOf` 가 -1 이라 마지막 글자 한 개를 검사하고 통과했다.** 못 잡는 검사는
+ * 없느니만 못하다 — 초록색으로 「봤다」고 말하기 때문이다. 전량 검사가 이 구역을
+ * 포함하므로 지우는 쪽이 맞다.
+ */
 
 describe('세계 패널이 나에 대한 것을 안 그린다', () => {
   const markup = renderToStaticMarkup(

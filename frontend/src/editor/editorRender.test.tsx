@@ -4,10 +4,19 @@
  * jsdom 없이 `renderToStaticMarkup` 으로 마크업 문자열만 본다(`ds/ds.test.tsx` 와 같은
  * 방식). 여기서 확인하는 것은 상호작용이 아니라 **화면에 무엇이 나가는가** 다 —
  * 골격 세 열, 팔레트가 카탈로그 전량을 싣는가, 검증 메시지가 그 규칙 줄에 붙는가,
- * 예산 초과가 편집을 막지 않고 rust 세로바로만 나가는가.
+ * 예산 초과가 편집을 막지 않고 하단 게이지의 rust 로만 나가는가.
  *
  * 토큰 규율 검사가 함께 있는 이유는 생 hex·생 px 가 리뷰에서 잘 안 보이기 때문이다.
  * 한 번 새면 화면마다 다른 값이 자란다.
+ *
+ * **예산 초과 검사가 오래 죽어 있었다** (2026-09-16). `not.toContain('rule-row__bar--over')`
+ * 였는데 그 클래스는 이 저장소에 없다 — ds 쪽 이름은 `ds-rule-row--over` 고, 게다가
+ * 에디터는 세 열을 지울 때부터 ds `RuleRow` 를 안 쓴다. 초과의 rust 채널은 하단
+ * `SegmentedGauge` 로 옮겨 갔다. 없는 글자를 찾는 `not.toContain` 은 화면이 어떻게
+ * 바뀌든 통과하므로, 검사는 통과한 것이 아니라 아무것도 안 보고 있었던 것이다.
+ *
+ * 그래서 **부정 검사는 혼자 두지 않는다.** 같은 글자가 실제로 나오는 렌더를 짝으로
+ * 붙여, 이름이 죽으면 그 짝이 먼저 빨개지게 한다.
  */
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -25,17 +34,28 @@ const CPU_BUDGET = 8
 const RULE_SLOTS = 5
 
 /**
+ * 예산 초과의 rust 채널 셋. 게이지 색 계열 · 읽는 숫자 · 넘긴 눈금이다.
+ *
+ * 문자열 상수인 이름이 진짜인지는 아래 **초과 렌더가 보증한다** — 이름이 썩으면
+ * `toContain` 쪽이 먼저 빨개진다.
+ */
+const OVER_TONE = 'ds-gauge--danger'
+const OVER_READOUT = 'ds-gauge__readout--over'
+const OVER_SEGMENT = 'ds-gauge__seg--over'
+
+/**
  * 에디터를 마크업 문자열로 굽는다.
  *
  * @param ruleset 실을 규칙표.
+ * @param cpuBudget CPU 예산. 생략하면 기본 예산.
  * @returns 정적 마크업.
  */
-function renderEditor(ruleset: RuleSet): string {
+function renderEditor(ruleset: RuleSet, cpuBudget: number = CPU_BUDGET): string {
   return renderToStaticMarkup(
     <RuleEditor
       ruleset={ruleset}
       catalog={BLOCK_CATALOG}
-      cpuBudget={CPU_BUDGET}
+      cpuBudget={cpuBudget}
       ruleSlots={RULE_SLOTS}
       onChange={() => undefined}
     />,
@@ -55,6 +75,12 @@ function readStrippedCss(name: string): string {
 
 const PRESSURE = G0_RULESETS.get('g0_pressure') as RuleSet
 
+/** 예제 규칙표의 누적 CPU. 박지 않고 센다 — 예제가 바뀌어도 초과·비초과가 갈린다. */
+const PRESSURE_CPU = PRESSURE.rules.reduce((sum, rule) => sum + rule.cpuCost, 0)
+
+/** 누적을 예산 밖으로 몰아 줄 예산. 딱 하나만큼 넘긴다. */
+const TIGHT_BUDGET = PRESSURE_CPU - 1
+
 describe('규칙 에디터 렌더', () => {
   it('규칙 줄마다 우선순위와 CPU 비용을 적는다', () => {
     const markup = renderEditor(PRESSURE)
@@ -64,9 +90,24 @@ describe('규칙 에디터 렌더', () => {
     expect(markup).toContain('cpu 2')
   })
 
-  it('CPU 예산 안이면 세로바가 rust 가 아니다', () => {
+  it('★ 예산을 넘기면 rust 로 적되 편집은 계속된다 (GDD §3.6)', () => {
+    // 초과는 오류가 아니라 수치다. 넘긴 상태에서도 규칙 줄과 「규칙 추가」가 그대로
+    // 서 있어야 하고, 얼마나 넘겼는지는 숫자로 읽힌다 — 색은 채널 하나일 뿐이다.
+    const markup = renderEditor(PRESSURE, TIGHT_BUDGET)
+    expect(markup).toContain(OVER_TONE)
+    expect(markup).toContain(OVER_READOUT)
+    expect(markup).toContain(OVER_SEGMENT)
+    expect(markup).toContain(`${String(PRESSURE_CPU)} / ${String(TIGHT_BUDGET)}`)
+    expect(markup).toContain('규칙 추가')
+    expect(markup).not.toContain('disabled')
+  })
+
+  it('CPU 예산 안이면 rust 가 한 채널도 안 뜬다', () => {
     const markup = renderEditor(PRESSURE)
-    expect(markup).not.toContain('rule-row__bar--over')
+    expect(markup).toContain(`${String(PRESSURE_CPU)} / ${String(CPU_BUDGET)}`)
+    expect(markup).not.toContain(OVER_TONE)
+    expect(markup).not.toContain(OVER_READOUT)
+    expect(markup).not.toContain(OVER_SEGMENT)
   })
 
   it('빈 규칙표에서도 화면이 선다', () => {

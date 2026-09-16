@@ -9,7 +9,8 @@
  */
 import { useState } from 'react'
 
-import { Button, GlyphState, ValueExpr } from '../ds'
+import { findItemArt } from '../content/itemArt'
+import { Button, GlyphState, Thumb, ValueExpr } from '../ds'
 import type { ItemView, SlotView } from '../storage'
 
 import { formatGradeClass, renderGrade } from './gradeBadge'
@@ -17,6 +18,7 @@ import { EQUIP_CELL_LABELS, RANGE_SLOT } from './inventoryCells'
 import { CompareBlock } from './CompareRows'
 import { buildRangeRow, compareToWorn } from './compareItems'
 import { formatAffix } from './InventoryPanel'
+import { AffixList, type AffixLine } from './AffixList'
 
 import { checkLinked, type LinkState } from './linkState'
 
@@ -92,29 +94,20 @@ function renderCompare(picked: ItemView, worn: ItemView | undefined): React.JSX.
  * @returns 능력치 줄. 없으면 null.
  */
 function renderAffixes(item: ItemView, recast: RecastOffer): React.JSX.Element | null {
-  const rows: { readonly text: string; readonly index: number }[] = []
+  const lines: AffixLine[] = []
   if (item.attackRange > 0) {
-    // **사거리는 접사가 아니라 필드다.** 첨자 -1 이 「다시 찍을 수 없는 줄」을 뜻한다.
-    rows.push({ text: `사거리 ${String(item.attackRange)}`, index: -1 })
+    // **사거리는 접사가 아니라 필드다.** 다시 찍을 수 없으므로 단추가 안 붙는다 —
+    // 예전에는 첨자 -1 로 갈랐는데, 그 -1 이 접사 첨자와 같은 칸을 타고 다녔다.
+    lines.push({ text: `사거리 ${String(item.attackRange)}` })
   }
   item.affixes.forEach((affix, index) => {
-    rows.push({ text: formatAffix(affix), index })
+    // **단추에 실리는 첨자는 `item.affixes` 안의 자리다.** 화면이 몇 줄을 그렸는지와
+    // 무관해야 서버가 갈 줄을 옳게 찾는다 — 그래서 목록에 거르기·페이지를 안 켠다.
+    lines.push({ text: formatAffix(affix), trail: renderRecastButton(item, index, recast) })
   })
-  if (rows.length === 0) {
-    return null
-  }
   // **옵션 하나에 한 줄이다.** 가운뎃점으로 이으면 옵션 넷이 문장 하나가 되어, 어디까지가
   // 한 옵션인지 눈으로 갈라야 한다(실제 요청).
-  return (
-    <ul className="invd__affixes">
-      {rows.map((row) => (
-        <li className="invd__affix" key={`${String(row.index)}:${row.text}`}>
-          <ValueExpr text={row.text} size="sm" />
-          {renderRecastButton(item, row.index, recast)}
-        </li>
-      ))}
-    </ul>
-  )
+  return <AffixList lines={lines} />
 }
 
 /** 한 줄을 다시 찍는 단추에 필요한 것. */
@@ -135,7 +128,7 @@ interface RecastOffer {
  * 사실은 「지금 활자가 없는 것」이다 — 둘은 사람이 할 일이 다르다 (P1).
  *
  * @param item 아이템.
- * @param index 그 줄의 첨자. -1 이면 접사가 아니다.
+ * @param index `item.affixes` 안의 자리. 그대로 서버에 실린다.
  * @param recast 값과 가진 활자.
  * @returns 단추. 다시 찍을 수 없는 줄이면 null.
  */
@@ -144,7 +137,7 @@ function renderRecastButton(
   index: number,
   recast: RecastOffer,
 ): React.JSX.Element | null {
-  if (index < 0 || index < item.recastFrom) {
+  if (index < item.recastFrom) {
     return null
   }
   const poor = recast.letters < recast.cost
@@ -255,9 +248,18 @@ export function InventoryDetail(props: InventoryDetailProps): React.JSX.Element 
       choice.entry.stackLabelKo === ''
         ? (choice.entry.stackCatalogId ?? '')
         : choice.entry.stackLabelKo
+    // 소모품은 **쓰임새**가 형태를 가른다 — 접두사가 전부 `scroll` 이라 축지·눈밝이·불이
+    // 부적과 한 그림으로 떨어진다 (`content/itemArt`).
+    const stackArt = findItemArt(choice.entry.stackCatalogId ?? '', '', choice.entry.stackUseTag)
     return (
       <div className="invd">
         <div className="invd__row">
+          <Thumb
+            kind="CONSUMABLE"
+            label={label}
+            grade={choice.entry.stackGrade}
+            {...(stackArt === undefined ? {} : { art: stackArt })}
+          />
           <span className={`inv__name${formatGradeClass(choice.entry.stackGrade)}`}>{label}</span>
           {renderGrade(choice.entry.stackGrade)}
           <ValueExpr text={`x${String(choice.entry.stackCount)}`} size="sm" />
@@ -272,9 +274,21 @@ export function InventoryDetail(props: InventoryDetailProps): React.JSX.Element 
   }
 
   const disabled = !checkLinked(props.link)
+  // **그림은 상세가 직접 고른다** (2026-09-16). 격자가 이미 같은 계산을 하지만, 그 값을
+  // `CellChoice` 에 얹어 나르면 무엇을 그릴지 정하는 자리가 둘이 되고 — 한쪽만 고친 날
+  // 격자와 상세가 다른 그림을 띄운다. 드는 값(`catalogId`·`hands`)은 이미 여기 있다.
+  const art = findItemArt(item.catalogId, item.hands ?? '')
   return (
     <div className="invd">
       <div className="invd__row">
+        {/* **이름을 안 지운다.** 아직 안 그린 형태가 섞여 있고, 한 그림을 나눠 쓰는
+            셋(비수·환도·사인검)은 이름만이 어느 것인지를 말한다. */}
+        <Thumb
+          kind={item.slot ?? item.kind}
+          label={item.labelKo}
+          grade={item.grade}
+          {...(art === undefined ? {} : { art })}
+        />
         <span className={`inv__name${formatGradeClass(item.grade)}`}>{item.labelKo}</span>
         {renderGrade(item.grade)}
         {choice.kind === 'equip' ? (

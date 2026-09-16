@@ -84,7 +84,11 @@ export function buildConsumableSlotCells(
     key: `cslot:${slot.useTag}:${String(slot.slotIndex)}`,
     code: formatSlotCode(slot.useTag, slot.slotIndex),
     label: slot.catalogId === '' ? '' : clipCellLabel(slot.labelKo),
-    art: findItemArt(slot.catalogId, '', slot.useTag),
+    // **그림은 끼운 것을 따른다** — `useTag` 가 아니라 `itemTag` 다. 칸의 `useTag` 는
+    // 계열(POTION·SCROLL)이라 주문서 칸 넷이 전부 SCROLL 이고, 그것으로 그림을 고르면
+    // 순간이동·화염·부릅이 전부 부적 그림으로 뜬다. 지금은 그 셋을 안 그려 둬서 결과가
+    // 같지만, 그리는 날 조용히 틀린 그림이 된다.
+    art: findItemArt(slot.catalogId, '', slot.itemTag),
     grade: slot.grade,
     // 다 쓴 칸. **파손된 장비와 같은 것이 아니다** — 다 쓴 물약 칸은 여전히 그 물약을
     // 차고 있고 부가 옵션도 그대로 붙는다 (`list_loaded_consumables`). 못 하는 것은
@@ -116,6 +120,10 @@ export function buildConsumableStockCells(
     key: `cstock:${option.catalogId}`,
     code: TAG_CODES.get(option.useTag) ?? 'CS',
     label: clipCellLabel(option.labelKo),
+    // **여기는 `useTag` 가 맞다.** 칸과 달리 재고에는 계열이 없다 — 재고 한 줄은 아이템
+    // 자신이고, 서버가 싣는 것도 `item.use_tag`(BLINK·FLAME·FOCUS) 그대로다
+    // (`ConsumableOption`). 끼운 칸 쪽이 `itemTag` 를 쓰는 이유가 여기서는 성립하지
+    // 않으므로 같은 이름으로 맞추려고 고치지 않는다.
     art: findItemArt(option.catalogId, '', option.useTag),
     grade: option.grade,
     marks: [],

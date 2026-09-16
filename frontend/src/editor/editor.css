@@ -403,6 +403,21 @@
   overflow: hidden;
 }
 
+/* 각인을 감싼 대표 제목.
+ *
+ * **각인이 h1 이다** (2026-09-16). 탭 이름이 h1 이던 때는 페이지의 대표 제목이
+ * 「내력」·「가방」처럼 그때그때 달랐다 — 구글 브랜드 인증이 홈페이지에서 앱 이름을
+ * 못 찾은 원인 중 하나다. 의미로도 이쪽이 맞다: 사이트 이름이 대표 제목이고 지금 보는
+ * 화면은 그 아래(h2)다.
+ *
+ * 제목 태그의 기본 여백·크기를 지운다 — 그림 하나만 들어 있다.
+ */
+.edit-m__site {
+  margin: var(--sp-0);
+  font-size: inherit;
+  line-height: var(--sp-0);
+}
+
 /* 각인과 제목은 한 덩이다.
  *
  * **머리줄이 `space-between` 이라 그냥 두면 제목이 가운데로 밀린다.** 셋을 벌리는 것이
@@ -2629,4 +2644,59 @@
   min-inline-size: 4ch;
   font-variant-numeric: tabular-nums;
   color: var(--text-dim);
+}
+
+/* ── 목록 틀 (DataList) ─────────────────────────────────────────────────
+   목록 화면이 매번 다시 짓던 바깥쪽 다섯 — 컨테이너·개수·페이지·거르기·줄 앞 그림.
+   줄 안쪽은 화면이 그리므로 여기에는 줄의 모양이 없다. */
+
+.dlist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  /* 안에 든 것이 줄지 않으면 좁은 폭에서 목록이 부모를 밀어낸다. */
+  min-inline-size: var(--sp-0);
+}
+
+/* 개수와 거르기 칸 한 줄. 좁으면 접힌다 — 거르기 칸이 밀려 나가면 못 치운다. */
+.dlist__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  min-inline-size: var(--sp-0);
+}
+
+/* 거르기 칸. 글자 크기는 --fs-input 이다 — 그 아래로 내리면 iOS 가 칸을 누를 때
+   화면을 확대하고, 확대된 화면은 사람이 손으로 되돌려야 한다. */
+.dlist__find {
+  flex: 1 1 auto;
+  min-inline-size: var(--sp-12);
+  min-block-size: var(--btn-tap-sm-h);
+  padding: var(--sp-1) var(--sp-2);
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  color: var(--text-body);
+  font-family: var(--font-mono);
+  font-size: var(--fs-input);
+}
+
+/* **display 를 안 정한다.** 격자로 세는 화면이 있어서(소모품·경매) 여기서 flex 를
+   박으면 그 화면이 이 틀로 못 옮겨 온다. 배치는 화면이 `listClass` 로 준다. */
+.dlist__rows {
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  min-inline-size: var(--sp-0);
+}
+
+.dlist__rows--ul {
+  list-style: none;
+}
+
+/* **번호를 지우지 않는다.** `ol` 을 고른 목록은 번호가 곧 뜻이다(규칙 우선순위처럼).
+   글머리 자리를 왼쪽에 남기는 이유도 같다 — padding 이 0 이면 번호가 잘려 나간다. */
+.dlist__rows--ol {
+  list-style: decimal;
+  padding-inline-start: var(--sp-5);
 }

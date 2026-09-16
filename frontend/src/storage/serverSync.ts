@@ -910,6 +910,13 @@ export async function applyItemAction(
 /** 도감 한 줄. 규칙표를 **요약 없이** 받는다 — 원문이 카운터 설계의 입력이다. */
 export interface BestiaryEntry {
   readonly recordId: number
+  /**
+   * 카탈로그 종류 id (`goblin_rusher` 같은 것). **개체 id(`recordId`) 가 아니다.**
+   *
+   * 이름은 접사가 앞에 붙어 개체마다 다르므로 그림을 붙일 열쇠가 되지 못한다. 서버는
+   * 처음부터 이것을 내고 있었는데 클라이언트가 버리고 있었다.
+   */
+  readonly catalogId: string
   readonly labelKo: string
   readonly tier: string
   readonly level: number
@@ -935,6 +942,8 @@ export interface BestiaryEntry {
 
 interface RawBestiaryEntry {
   record_id: number
+  // 구버전 서버는 이 자리가 비어 있다. 그림을 못 붙일 뿐 나머지 줄은 읽혀야 한다.
+  catalog_id?: string
   label_ko: string
   tier: string
   level: number
@@ -964,6 +973,7 @@ export async function readBestiary(token: string): Promise<readonly BestiaryEntr
   const body = (await response.json()) as { entries: RawBestiaryEntry[] }
   return body.entries.map((raw) => ({
     recordId: raw.record_id,
+    catalogId: raw.catalog_id ?? '',
     labelKo: raw.label_ko,
     tier: raw.tier,
     level: raw.level,
@@ -984,6 +994,10 @@ export async function readBestiary(token: string): Promise<readonly BestiaryEntr
 export interface DiscoveryRow {
   readonly kind: string
   readonly refId: string
+  /** 한 손인가 양손인가. 같은 `sword` 라도 양손이면 협도라 그림이 다르다. */
+  readonly hands: string
+  /** 소모품의 쓰임새. 부적 여섯이 이것으로 갈린다. */
+  readonly useTag: string
   readonly labelKo: string
   readonly category: string
   readonly isFound: boolean
@@ -1006,6 +1020,8 @@ export interface DiscoveryView {
 interface RawDiscoveryRow {
   kind: string
   ref_id: string
+  hands?: string
+  use_tag?: string
   label_ko: string
   category?: string
   is_found?: boolean
@@ -1022,6 +1038,10 @@ function readDiscoveryRow(raw: RawDiscoveryRow): DiscoveryRow {
   return {
     kind: raw.kind,
     refId: raw.ref_id,
+    // **그림을 가르는 값이다.** 같은 `sword` 라도 양손이면 협도고, 부적 여섯은
+    // 쓰임새로 갈린다 (`content/itemArt`). 서버는 싣고 있었는데 여기서 버렸었다.
+    hands: raw.hands ?? '',
+    useTag: raw.use_tag ?? '',
     labelKo: raw.label_ko,
     category: raw.category ?? '',
     isFound: raw.is_found ?? false,

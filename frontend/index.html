@@ -7,12 +7,20 @@
          펀치홀·둥근 모서리·제스처 바 아래로 내용이 들어간다. -->
     <meta name="theme-color" content="#0E131C" />
     <meta name="color-scheme" content="dark" />
-    <!-- 이름 셋이 한 줄에 선다: 한글(비각) · 한자(祕閣) · 뜻을 푼 영문(Sealed Stacks).
+    <!-- **이름은 `Sealed Stacks` 하나다** (2026-09-16). 구글 브랜드 인증이 두 번
+         반려됐다 — 「동의 화면 이름이 홈페이지의 앱 이름과 일치하지 않는다」.
+         첫 판에는 본문이 비어 있었고(SPA), 고친 뒤에도 **렌더된 페이지의 이름**이
+         달랐다(각인 alt·매니페스트). 세 번째로 **한글·한자를 이름에서 뺐다** —
+         괄호와 문자 혼용이 자동 대조에 걸릴 여지를 없앤다.
+
+         한자(祕閣)는 이름이 아니라 세계관의 뜻풀이다. 인증이 통과하면 되살린다.
+
+         이름 셋이 한 줄에 서던 옛 제목: 한글(비각) · 한자(祕閣) · 뜻을 푼 영문(Sealed Stacks).
          祕閣 은 임금의 서고다 — 碑閣(비석을 덮은 집)이 아니다. 현대 한국어에서는
          碑閣 쪽으로 읽히므로 한자를 안 붙이면 다른 뜻이 된다.
          `stacks` 는 도서관의 서가이고 `closed/restricted stacks` 가 열람 제한
          서고다 — 祕(잠근)+閣(서가)을 실제 도서관 영어로 옮긴 말이다. -->
-    <title>비각 祕閣 · Sealed Stacks</title>
+    <title>Sealed Stacks</title>
 
     <!-- 탭·홈 화면 아이콘 (2026-09-16). **판목이 프레임을 채우게 잘라냈다** — 32px 에서
          여백이 넓으면 형태가 안 읽히고, 그 크기에서 읽히는 것은 글자가 아니라 덩어리다. -->
@@ -23,8 +31,8 @@
     <!-- 링크를 보냈을 때 뜨는 카드. 없으면 제목만 뜬다.
          **1200×630 은 규격이다** — 낙관(祕閣)이 우하단이라 위에서 잘라 맞췄다. -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="비각 祕閣" />
-    <meta property="og:title" content="비각 祕閣 · Sealed Stacks" />
+    <meta property="og:site_name" content="Sealed Stacks" />
+    <meta property="og:title" content="Sealed Stacks" />
     <meta property="og:description" content="규칙표를 적어 두면 그것이 대신 싸운다." />
     <!-- **절대 URL 이어야 한다.** 카카오·페이스북 수집기가 상대 경로를 안 푼다.
          그래서 도메인을 옮길 때 이 두 줄이 같이 안 움직이면 **공유 카드만 조용히
@@ -37,9 +45,46 @@
     <meta property="og:locale" content="ko_KR" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="description" content="규칙표를 적어 두면 그것이 대신 싸운다." />
+    <style>
+      /* 첫 화면. **React 가 붙기 전까지만 보인다** — 번들 CSS 가 아직 안 왔으므로
+         여기서만 값을 직접 쓴다(앱의 토큰 규율이 닿지 않는 유일한 자리). */
+      .boot {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 64px 20px;
+        color: #c6cfdc;
+        font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+          'Noto Sans KR', system-ui, sans-serif;
+        text-align: center;
+      }
+      .boot__name { margin: 0; font-size: 20px; font-weight: 600; }
+      .boot__line { margin: 0; color: #7c889a; font-size: 14px; }
+      .boot__load { margin: 0; color: #7c889a; font-size: 13px; }
+      .boot__legal { margin: 0; font-size: 13px; }
+      .boot__legal a { color: #c89a4e; }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- **자바스크립트를 안 돌리는 쪽이 보는 화면이다.** React 가 `createRoot` 로
+           붙으면 통째로 갈린다(`src/main.tsx`).
+
+           비워 두면 안 되는 이유가 둘이다. 하나는 **구글 브랜드 인증이 반려된다** —
+           수집기가 홈페이지에서 앱 이름을 못 찾는다(2026-09-16 실제 반려). 다른 하나는
+           `loadContentPack()` 을 기다리는 동안 **빈 화면이 보인다**. -->
+      <div class="boot">
+        <img class="boot__mark" src="/brand/mark-head.webp" width="160" height="80" alt="" />
+        <h1 class="boot__name">Sealed Stacks</h1>
+        <p class="boot__line">규칙표를 적어 두면 그것이 대신 싸운다.</p>
+        <p class="boot__load">불러오는 중…</p>
+        <p class="boot__legal">
+          <a href="/privacy.html">개인정보처리방침</a> ·
+          <a href="/terms.html">이용약관</a>
+        </p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

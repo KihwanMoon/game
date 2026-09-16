@@ -170,3 +170,40 @@ def test_a_missing_bot_is_a_404(client):
         headers=build_headers(build_admin(client)),
     )
     assert response.status_code == 404
+
+
+def test_the_frozen_gear_carries_its_hands(client):
+    """★ 얼려 둔 양손무기가 **양손으로** 나온다.
+
+    화면은 `catalog_id` 의 접두사로 그림을 고르고 `hands` 로만 양손을 가른다
+    (`frontend/src/content/itemArt.ts`). 이 값이 빠지면 협도가 직검으로 떠서, 「그
+    빌드로 여기까지 왔다」를 보여 주려던 화면이 **다른 빌드**를 그린다.
+    """
+    from game.api.deps import get_item_catalog, get_pool
+    from game.app.store.accounts import find_player_entity
+    from game.app.store.doppels import create_doppel
+    from game.schemas.item import WeaponHands
+
+    pool = get_pool()
+    catalog = get_item_catalog()
+    two_handed = next((key for key in sorted(catalog) if catalog[key].hands is WeaponHands.TWO), "")
+    assert two_handed != "", "카탈로그에 양손무기가 없다"
+    account_id = build_bot(client)
+    entity_id = find_player_entity(pool, account_id)
+    with pool.connection() as connection:
+        row = connection.execute(
+            "INSERT INTO item_instance (catalog_id, owner_entity_id) VALUES (%s, %s) RETURNING id",
+            (two_handed, entity_id),
+        ).fetchone()
+        connection.execute(
+            "INSERT INTO equipment_slot (entity_id, slot, item_id) VALUES (%s, %s, %s)",
+            (entity_id, "WEAPON_MAIN", int(row[0])),
+        )
+    record_id = create_doppel(pool, account_id, 3, "hands_slot", {"hp_max": 120}, {})
+    body = client.get(
+        "/api/admin/doppel/gear",
+        params={"record_id": record_id},
+        headers=build_headers(build_admin(client)),
+    ).json()
+    found = next(row for row in body["equipment"] if row["item"]["catalog_id"] == two_handed)
+    assert found["item"]["hands"] == "TWO"

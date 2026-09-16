@@ -5,7 +5,7 @@
  * 그 구분은 지키고, 그리는 모양은 가방의 도면 격자와 맞춘다 — 예전에는 여기만 카드
  * 목록이었고, 같은 질문(「어느 게 더 좋은가」)에 두 화면이 다른 모양으로 답했다.
  *
- * 여기서 지키는 것은 다섯이다.
+ * 여기서 지키는 것은 일곱이다.
  *
  * 1. **빈 칸도 그린다** — 안 그리면 「칸이 없다」와 「비었다」를 구분할 수 없다.
  * 2. **칸은 상태만, 조작은 상세에.** 칸 안에 버튼이 생기면 되돌아간 것이다.
@@ -13,10 +13,14 @@
  * 4. **런 중에도 안 잠근다** — 잠그면 방 사이에 규칙 고치는 내내 칸을 못 건드린다.
  * 5. **다 써도 옵션은 남는다** — 사라지면 안 마시는 것이 이득이 되고, 그것은 물약의
  *    존재 이유와 정반대다.
+ * 6. **그림은 끼운 것을 따른다** — 칸 계열로 고르면 주문서 넷이 한 그림으로 뜬다.
+ * 7. **상세에도 그림이 서되 이름이 남는다** (2026-09-16). 빈 칸에는 안 세운다 — 코드만
+ *    선 자리는 「뭔가 끼어 있다」로 읽히고, 이 화면은 빈 칸과 찬 칸의 구분이 전부다.
  */
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
+import { readArtName } from '../content/itemArt'
 import type { ConsumableOptionView, ConsumableSlotView, ConsumableView } from '../storage'
 
 import { compareToSlots, pickFromOption, pickFromSlot } from './compareConsumables'
@@ -31,6 +35,27 @@ import {
 } from './consumableCells'
 import { ConsumableDetail } from './ConsumableDetail'
 import { ConsumablePanel } from './ConsumablePanel'
+
+/**
+ * 그림 고르기에 무엇을 넘겼는지 적어 둔다.
+ *
+ * **결과가 아니라 넘긴 값을 본다.** blink·flame·focus 그림이 아직 없어서, 칸 계열을
+ * 넘기든 끼운 것의 태그를 넘기든 오늘은 똑같이 `undefined` 가 나온다 — 결과만 보는
+ * 검사는 그 셋을 그리는 날까지 아무것도 못 잡는다. 실물은 그대로 부르므로 나머지
+ * 검사들이 보는 화면은 바뀌지 않는다.
+ */
+const artCalls = vi.hoisted(() => [] as { catalogId: string; useTag: string }[])
+
+vi.mock('../content/itemArt', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../content/itemArt')>()
+  return {
+    ...real,
+    findItemArt: (catalogId: string | undefined, hands = '', useTag = ''): string | undefined => {
+      artCalls.push({ catalogId: catalogId ?? '', useTag })
+      return real.findItemArt(catalogId, hands, useTag)
+    },
+  }
+})
 
 const noop = () => undefined
 
@@ -172,6 +197,45 @@ describe('소모품 셀 모델', () => {
 
   it('재고에는 빈 칸을 덧대지 않는다 — 없는 자리를 그리면 정해진 칸 수로 읽힌다', () => {
     expect(stockCells).toHaveLength(1)
+  })
+})
+
+describe('★ 그림은 칸 계열이 아니라 끼운 것을 따른다', () => {
+  // 주문서 칸 하나가 넷을 받는다(`SLOT_FAMILY`). 그래서 **칸의 `useTag` 는 늘 SCROLL** 이고,
+  // 그것으로 그림을 고르면 순간이동·화염·부릅이 전부 부적 그림으로 뜬다.
+  const blink = buildSlot({
+    useTag: 'SCROLL',
+    itemTag: 'BLINK',
+    catalogId: 'scroll_blink',
+    labelKo: '순간이동 주문서',
+    charges: 2,
+    chargeMax: 2,
+  })
+
+  it('끼운 칸은 itemTag 로 고른다 — 계열로 고르면 주문서 넷이 한 그림이 된다', () => {
+    artCalls.length = 0
+    buildConsumableSlotCells(buildView({ slots: [blink] }))
+    expect(artCalls).toHaveLength(1)
+    expect(artCalls[0]?.useTag).toBe('BLINK')
+    // 두 태그가 정말 다른 그림을 가리킨다는 것까지 못 박는다 — 안 그러면 이 검사가
+    // 「둘 다 undefined」에 기대 조용히 통과한다.
+    expect(readArtName('scroll_blink', '', 'BLINK')).toBe('blink')
+    expect(readArtName('scroll_blink', '', 'SCROLL')).toBe('scroll')
+  })
+
+  it('재고는 useTag 로 고른다 — 재고 한 줄은 칸이 아니라 아이템 자신이다', () => {
+    artCalls.length = 0
+    buildConsumableStockCells(
+      buildView({
+        options: [
+          buildOption({ catalogId: 'scroll_blink', labelKo: '순간이동 주문서', useTag: 'BLINK' }),
+        ],
+      }),
+    )
+    expect(artCalls).toHaveLength(1)
+    // 서버가 재고에 싣는 것은 `item.use_tag` 라서 이 자리의 `useTag` 가 이미 끼울 것의
+    // 쓰임새다 (`ConsumableOption`). 칸 쪽과 이름을 맞추려고 `itemTag` 로 바꾸면 안 된다.
+    expect(artCalls[0]?.useTag).toBe('BLINK')
   })
 })
 
@@ -464,5 +528,90 @@ describe('소모품 설명 — 끼면 / 쓰면 / 자동 (2026-09-11 요청)', ()
     const html = renderSlot({ useTag: 'SCROLL', itemTag: '', catalogId: '' })
     expect(html).not.toContain('쓰면')
     expect(html).not.toContain('자동')
+  })
+})
+
+/**
+ * 상세에서 그림 주소를 떼어 낸다.
+ *
+ * 작은따옴표가 마크업에서 `&#x27;` 로 나오므로 되돌린다 — 그림이 인라인 SVG 라, 안
+ * 되돌리면 셀 모델이 든 값과 늘 다르게 읽힌다.
+ *
+ * @param markup 상세 마크업.
+ * @returns 그림 주소. 그림 자리가 없으면 빈 문자열이다.
+ */
+function pickArtSrc(markup: string): string {
+  const found = /class="ds-thumb__art" src="([^"]*)"/.exec(markup)?.[1] ?? ''
+  return found.replaceAll('&#x27;', "'")
+}
+
+describe('★ 상세에도 그림이 선다 (2026-09-16)', () => {
+  const view = buildView()
+  const slotCells = buildConsumableSlotCells(view)
+  const stockCells = buildConsumableStockCells(view)
+
+  function renderDetail(cell: (typeof slotCells)[number]): string {
+    return renderToStaticMarkup(
+      <ConsumableDetail
+        cell={cell}
+        view={view}
+        link="online"
+        onClear={noop}
+        onRefill={noop}
+        onSell={noop}
+        onLoadStock={noop}
+      />,
+    )
+  }
+
+  it('★ 끼운 칸이 격자와 같은 그림을 쓴다 — 정본이 둘이면 두 화면이 갈린다', () => {
+    const html = renderDetail(slotCells[0]!)
+    expect(slotCells[0]?.art).not.toBeUndefined()
+    expect(pickArtSrc(html)).toBe(slotCells[0]?.art)
+    // 이름을 안 지운다 — 같은 그림을 나눠 쓰는 것들은 이름만이 어느 것인지를 말한다.
+    expect(html).toContain('회복 물약')
+  })
+
+  it('★ 재고 칸도 마찬가지다 — 「가진 것」과 「들고 갈 것」이 같은 그림으로 보여야 한다', () => {
+    const html = renderDetail(stockCells[0]!)
+    expect(stockCells[0]?.art).not.toBeUndefined()
+    expect(pickArtSrc(html)).toBe(stockCells[0]?.art)
+    expect(html).toContain('영약')
+  })
+
+  it('★ 빈 칸에는 그림 자리를 안 만든다 — 코드만 선 자리는 「뭔가 끼어 있다」로 읽힌다', () => {
+    const html = renderDetail(slotCells[1]!)
+    expect(html).toContain('빈 칸')
+    expect(html).not.toContain('ds-thumb')
+  })
+
+  it('★ 상세도 끼운 것을 따른다 — 칸 계열로 고르면 주문서 넷이 한 그림이 된다', () => {
+    const blink = buildSlot({
+      useTag: 'SCROLL',
+      itemTag: 'BLINK',
+      catalogId: 'scroll_blink',
+      labelKo: '순간이동 주문서',
+      charges: 2,
+      chargeMax: 2,
+    })
+    const src = (itemTag: string): string => {
+      const one = buildView({ slots: [{ ...blink, itemTag }] })
+      return pickArtSrc(
+        renderToStaticMarkup(
+          <ConsumableDetail
+            cell={buildConsumableSlotCells(one)[0]!}
+            view={one}
+            link="online"
+            onClear={noop}
+            onRefill={noop}
+            onSell={noop}
+            onLoadStock={noop}
+          />,
+        ),
+      )
+    }
+    // 둘 다 빈 문자열이면 「다르다」가 거짓으로 통과한다 — 하나가 실제로 그려지는지 먼저 본다.
+    expect(src('BLINK')).not.toBe('')
+    expect(src('BLINK')).not.toBe(src('SCROLL'))
   })
 })

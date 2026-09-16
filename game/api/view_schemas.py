@@ -116,6 +116,12 @@ class DiscoveryRow(BaseModel):
     label_ko: str
     category: str = ""
     is_found: bool = False
+    # **생김새는 가리지 않는다.** 손 수와 쓰임새는 성능이 아니라 그림 자리를 정하는
+    # 값이다 — `category` 는 슬롯이라 같은 `WEAPON_MAIN` 안에서 양손 협도와 한손 환도를
+    # 못 가르고, 부적 여섯도 한 칸으로 뭉친다. 이름과 분류를 안 가리는 것과 같은 이유로
+    # 안 밝힌 줄에도 싣는다 — 가리는 것은 속살뿐이다. 스킬 줄에서는 둘 다 빈 문자열이다.
+    hands: str = ""
+    use_tag: str = ""
     # 밝힌 뒤에만 채운다. 안 밝힌 것의 성능이 다 보이면 도감이 상점이 된다.
     detail: str = ""
 

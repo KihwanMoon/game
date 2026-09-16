@@ -38,6 +38,10 @@ def build_item_discovery(found: frozenset[str]) -> list[DiscoveryRow]:
                 # 분류는 늘 보여준다 — 그림 자리의 코드가 이것으로 정해지고, 무엇을
                 # 찾는지("투구 하나가 비었다")를 아는 데 필요하다.
                 category=row["slot"] or row["kind"],
+                # 분류와 같은 급이다 — 그림 자리를 정하는 값이라 안 밝힌 줄에도 싣는다.
+                # 슬롯만으로는 양손 협도가 한손 검으로, 부적 여섯이 한 그림으로 뜬다.
+                hands=row["hands"],
+                use_tag=row["use_tag"],
                 is_found=is_found,
                 # 속살은 밝힌 뒤에만. 안 밝힌 것의 성능이 다 보이면 도감이 상점이 된다.
                 detail=" · ".join(row["affixes"]) if is_found else "",

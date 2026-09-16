@@ -654,6 +654,12 @@ export function App(): React.JSX.Element {
   // 관리자 현황. **관리자가 아니면 undefined 로 남고 패널이 아무것도 그리지 않는다** —
   // 서버가 404 로 답하므로 그 사실 자체가 화면에 드러나지 않는다.
   const [admin, setAdmin] = useState<AdminOverview | undefined>(undefined)
+  // **관리자였다는 사실은 연결보다 오래 산다.** `readAdminOverview` 는 404 와 통신 실패를
+  // 둘 다 undefined 로 돌려주므로, 새로고침이 끊긴 사이에 일어나면 위 값이 비고 탭 자체가
+  // 사라졌다 — 쓰는 사람에게 그것은 「관리자가 아니다」와 구별되지 않는다. 한 번 관리자로
+  // 확인됐으면 탭은 남기고, 못 닿았다는 말은 패널이 한다(`AdminPanel` 의 `link`).
+  // 튕김·로그아웃은 내가 고른 일이므로 그때는 함께 지운다.
+  const [isAdmin, setIsAdmin] = useState(false)
   const [adminDetail, setAdminDetail] = useState('')
   const [run, setRun] = useState<RunSpec | undefined>(undefined)
   const [outcome, setOutcome] = useState(OUTCOME_ONGOING)
@@ -713,6 +719,7 @@ export function App(): React.JSX.Element {
       setProfile(undefined)
       setLink('offline')
       setAdmin(undefined)
+      setIsAdmin(false)
       try {
         getLocalStorage()?.removeItem(TOKEN_STORAGE_KEY)
       } catch {
@@ -1053,8 +1060,13 @@ export function App(): React.JSX.Element {
     setDoppelBoard(await readLeaderboard(token, MODE_DOPPEL))
     setAuction(await readAuction(token))
     setRuns(await readRunHistory(token))
-    // 관리자가 아니면 undefined 로 남는다 — 서버가 404 로 답한다.
-    setAdmin(await readAdminOverview(token))
+    // 관리자가 아니면 undefined 로 남는다 — 서버가 404 로 답한다. 통신 실패도 같은
+    // 모양이라, 한 번 받아 본 적이 있는지는 따로 기억한다.
+    const overview = await readAdminOverview(token)
+    setAdmin(overview)
+    if (overview !== undefined) {
+      setIsAdmin(true)
+    }
     setUpkeep(await readMaintenance(token))
     setSkillPrefs(await readSkillPrefs(token))
   }
@@ -1175,6 +1187,7 @@ export function App(): React.JSX.Element {
     setProgress(undefined)
     setMyDoppels(undefined)
     setAdmin(undefined)
+    setIsAdmin(false)
     if (held !== undefined) {
       void applyLogout(held, storage)
     }
@@ -1976,6 +1989,8 @@ export function App(): React.JSX.Element {
    * 이름이 설명을 못 하고, 그러면 탭이 있으나 마나다.
    *
    * 관리자 탭은 관리자에게만 생긴다 — 빈 탭이라도 있으면 관리자 경로의 존재가 드러난다.
+   * 다만 **한 번 관리자로 확인된 뒤에는 연결이 끊겨도 남는다**(`isAdmin`). 사라지면
+   * 「못 닿았다」가 「관리자가 아니다」로 읽힌다.
    *
    * @returns 탭 목록. 팔레트도 검증도 없는 본문 하나짜리 탭들이다.
    */
@@ -2233,7 +2248,7 @@ export function App(): React.JSX.Element {
         main: <VolumePanel bestFloor={meta.bestFloor} />,
       },
     ]
-    if (admin !== undefined) {
+    if (admin !== undefined || isAdmin) {
       tabs.push({
         id: 'admin',
         label: '관리',
@@ -2259,6 +2274,7 @@ export function App(): React.JSX.Element {
             <AdminPanel
               overview={admin}
               detail={adminDetail}
+              link={link}
               onIntervene={(path, targetId, reason) => {
                 if (account === undefined) {
                   return

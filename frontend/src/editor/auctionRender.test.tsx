@@ -1,7 +1,7 @@
 /**
  * 경매장 화면 검사 — **가방과 같은 격자, 같은 견줌.**
  *
- * 세계 탭의 줄 목록에서 갈라 나왔다. 여기서 지키는 것은 다섯이다.
+ * 세계 탭의 줄 목록에서 갈라 나왔다. 여기서 지키는 것은 여섯이다.
  *
  * 1. **매물이 격자 칸이다.** 줄 목록이면 매물 열둘에 화면이 넘어간다.
  * 2. **칸은 자리 코드와 대표 접사를 적는다** — 격자를 봐서 어느 게 나은지 짐작이 가야
@@ -10,6 +10,21 @@
  * 4. **사기 전에 내 것과 견준다.** 사면 귀속돼 되돌릴 수 없다 (결정 #07).
  * 5. **못 사는 이유를 실측값과 함께 적는다** — 「구매할 수 없습니다」만으로는 얼마가
  *    모자란지 모른다 (GDD §8.2, P1).
+ * 6. **상세에도 그림이 서되 이름이 남는다** (2026-09-16). 상세는 칸이 든 그림을 그대로
+ *    쓴다 — 따로 고르면 한 매물이 격자와 상세에서 두 그림으로 뜬다.
+ *
+ * **3번이 죽어 있었다** (2026-09-16). 격자를 `slice(markup.indexOf('invg--lot'), …)` 로
+ * 떼어 내고 있었는데, `invg--lot` 은 이 저장소에 없는 이름이다 — 경매 격자는 칸 수가
+ * 정해져 있지 않아 `shape="free"` 를 쓴다(`SlotBoard`). `indexOf` 가 `-1` 을 돌려주고
+ * `slice(-1, -1)` 은 **빈 문자열**이라, 그 위의 `not.toContain` 은 칸 안에 무엇이 들어
+ * 있든 통과했다.
+ *
+ * 그래서 이 파일은 두 가지를 지킨다.
+ *
+ * - **`slice(indexOf(…))` 를 안 쓴다.** 못 찾은 것과 찾았는데 비어 있는 것이 구별되지
+ *   않는 잘라내기다. 떼어 낼 때는 몇 개를 떼었는지 먼저 센다(`sliceCells`).
+ * - **부정 검사를 혼자 두지 않는다.** 찾는 글자가 실제로 나오는 렌더를 짝으로 붙여,
+ *   이름이 썩으면 짝이 먼저 빨개지게 한다.
  */
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
@@ -20,6 +35,30 @@ import { AuctionDetail, AuctionPanel } from './AuctionPanel'
 import { buildListingCells, findBuyBlocker, MINE_MARK } from './auctionCells'
 
 const noop = () => undefined
+
+/**
+ * 상세에만 있어야 하는 조작의 라벨. 한 곳에서 꺼내 쓴다.
+ *
+ * 흩어 놓으면 라벨을 고칠 때 「칸에 없다」 쪽만 옛 글자로 남고, 그 검사는 없는 말을
+ * 찾으며 조용히 통과한다 — 이 파일이 실제로 앓던 병이다.
+ */
+const BUY_TEXT = '구매'
+const PULL_TEXT = '내리기'
+
+/**
+ * 격자 칸 마크업을 칸 단위로 떼어 낸다.
+ *
+ * 칸(`invg__cell`)은 그 자체가 버튼 하나라 닫는 태그까지가 한 칸이다. 안에 또 버튼이
+ * 있으면 그 버튼의 닫는 태그에서 끊기므로, 끊긴 조각에 조작 라벨이 그대로 남는다.
+ *
+ * @param markup 패널 마크업.
+ * @returns 칸 하나당 문자열 하나. 하나도 못 찾으면 빈 배열이다 — 부르는 쪽이 센다.
+ */
+function sliceCells(markup: string): readonly string[] {
+  return [...markup.matchAll(/<button[^>]*class="invg__cell[^"]*"[\s\S]*?<\/button>/g)].map(
+    (found) => found[0],
+  )
+}
 
 const AUCTION: AuctionView = {
   listings: [
@@ -140,10 +179,41 @@ describe('경매 격자', () => {
     expect(markup).toContain('invg__cell')
   })
 
+  it('★ 열 수를 안 박는다 — 매물 수는 정해져 있지 않다', () => {
+    // 가방처럼 열을 박으면 매물이 셋일 때 남는 자리가 「빈 칸」으로 읽힌다. 경매장에는
+    // 빈 자리라는 것이 없다.
+    expect(markup).toContain('invg invg--free')
+  })
+
   it('★ 조작이 칸 안에 없다 — 칸은 상태만 그린다', () => {
-    const grid = markup.slice(markup.indexOf('invg--lot'), markup.indexOf('</div>', markup.indexOf('invg--lot')))
-    expect(grid).not.toContain('구매')
-    expect(grid).not.toContain('내리기')
+    const cells = sliceCells(markup)
+    // **떼어 낸 것이 있는지부터 센다.** 0개면 아래 부정 검사가 전부 공짜로 통과한다.
+    expect(cells).toHaveLength(AUCTION.listings.length)
+    for (const cell of cells) {
+      // 칸 자신이 버튼 하나다. 둘이면 칸 안에 조작이 돋아난 것이다.
+      expect(cell.match(/<button/g)).toHaveLength(1)
+      expect(cell).not.toContain(BUY_TEXT)
+      expect(cell).not.toContain(PULL_TEXT)
+    }
+  })
+
+  it('조작은 상세에 있다 — 위 검사가 없는 말을 찾고 있지 않다는 증거다', () => {
+    // 「칸에 없다」만으로는 검사가 산 것인지 알 수 없다. 같은 글자가 상세에서는 실제로
+    // 나온다는 사실을 여기 붙들어 둔다.
+    const cells = buildListingCells(AUCTION)
+    const detail = (at: number): string =>
+      renderToStaticMarkup(
+        <AuctionDetail
+          cell={cells[at]!}
+          balance={500}
+          worn={WORN}
+          disabled={false}
+          onBuy={noop}
+          onCancel={noop}
+        />,
+      )
+    expect(detail(0)).toContain(BUY_TEXT)
+    expect(detail(1)).toContain(PULL_TEXT)
   })
 
   it('수수료와 잔액을 머리에 적는다 — 걸기 전에 얼마가 나가는지 알아야 한다', () => {
@@ -233,9 +303,9 @@ describe('경매 상세 — 빈 자리와 내 매물', () => {
         onCancel={noop}
       />,
     )
-    expect(markup).toContain('내리기')
+    expect(markup).toContain(PULL_TEXT)
     expect(markup).toContain('수수료 45')
-    expect(markup).not.toContain('구매')
+    expect(markup).not.toContain(BUY_TEXT)
   })
 
   it('★ 잔액이 모자라면 사유가 화면에 선다', () => {
@@ -268,5 +338,64 @@ describe('경매 — 서버 없음', () => {
     )
     expect(markup).toContain('서버에 닿지 못했다')
     expect(markup).toContain('저잣거리는 서버가 안다')
+  })
+})
+
+/**
+ * 상세에서 그림 주소를 떼어 낸다.
+ *
+ * 작은따옴표가 마크업에서 `&#x27;` 로 나오므로 되돌린다 — 그림이 인라인 SVG 라, 안
+ * 되돌리면 셀 모델이 든 값과 늘 다르게 읽힌다.
+ *
+ * @param markup 상세 마크업.
+ * @returns 그림 주소. 그림 자리가 없으면 빈 문자열이다 — 부르는 쪽이 그것까지 본다.
+ */
+function pickArtSrc(markup: string): string {
+  const found = /class="ds-thumb__art" src="([^"]*)"/.exec(markup)?.[1] ?? ''
+  return found.replaceAll('&#x27;', "'")
+}
+
+describe('★ 상세에도 그림이 선다 (2026-09-16)', () => {
+  const cells = buildListingCells(AUCTION)
+  const detail = (at: number): string =>
+    renderToStaticMarkup(
+      <AuctionDetail
+        cell={cells[at]!}
+        balance={500}
+        worn={WORN}
+        disabled={false}
+        onBuy={noop}
+        onCancel={noop}
+      />,
+    )
+
+  it('★ 칸이 든 그림을 그대로 쓴다 — 상세가 따로 고르면 한 매물이 두 그림으로 뜬다', () => {
+    expect(cells[0]?.art).not.toBeUndefined()
+    expect(pickArtSrc(detail(0))).toBe(cells[0]?.art)
+  })
+
+  it('★ 이름이 남는다 — 그림만 두면 한 그림을 나눠 쓰는 셋을 값만 보고 골라야 한다', () => {
+    // 저잣거리에서 잘못 고르면 되돌릴 수 없다 — 사면 귀속된다 (결정 #07).
+    expect(detail(0)).toContain('철 투구')
+  })
+
+  it('안 그린 형태는 분류 코드로 떨어진다 — 자리가 비면 고장 난 것으로 읽힌다', () => {
+    const odd = buildListingCells({
+      ...AUCTION,
+      listings: [{ ...AUCTION.listings[0]!, catalogId: 'flute_bone' }],
+    })
+    const markup = renderToStaticMarkup(
+      <AuctionDetail
+        cell={odd[0]!}
+        balance={500}
+        worn={WORN}
+        disabled={false}
+        onBuy={noop}
+        onCancel={noop}
+      />,
+    )
+    expect(pickArtSrc(markup)).toBe('')
+    // 머리 자리 물건이라는 것은 남는다 — 그림이 없다고 분류까지 사라지면 안 된다.
+    expect(markup).toContain('HD')
   })
 })

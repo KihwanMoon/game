@@ -72,6 +72,33 @@ def test_an_unfound_row_hides_its_numbers(client, token):
     assert all(row["label_ko"] != "" for row in hidden)
 
 
+def test_a_row_carries_what_the_picture_needs(client, token):
+    """★ 손 수와 쓰임새가 빠지면 협도가 한손 검으로, 부적 여섯이 한 그림으로 뜬다.
+
+    둘 다 성능이 아니라 **생김새**라서 안 밝힌 줄에도 실린다 — 이름·분류를 안 가리는
+    것과 같은 이유다. 분류(`category`)는 슬롯이라 같은 `WEAPON_MAIN` 안의 양손·한손을
+    못 가르고, 소모품은 `kind` 가 전부 같아 축지·눈밝이·불의 부적이 보통 부적과 한
+    칸으로 뭉친다.
+    """
+    from game.api.deps import get_item_catalog
+
+    rows = {row["ref_id"]: row for row in read_discovery(client, token)["items"]}
+    for catalog_id, entry in get_item_catalog().items():
+        assert rows[catalog_id]["hands"] == (str(entry.hands) if entry.hands else "")
+        assert rows[catalog_id]["use_tag"] == (entry.use_tag or "")
+    # **값이 늘 비어 있으면 위 대조는 통과하고도 아무것도 안 가른다.** 실제로 갈리는지
+    # 본다 — 두 필드를 빈 문자열로 박아 두는 구현이 위만으로는 안 걸린다.
+    assert len({row["hands"] for row in rows.values()}) > 1
+    assert len({row["use_tag"] for row in rows.values()}) > 1
+
+
+def test_a_skill_row_leaves_the_item_fields_empty(client, token):
+    """★ 스킬에는 손도 쓰임새도 없다 — 채우면 화면이 그것으로 그림을 고른다."""
+    skills = read_discovery(client, token)["skills"]
+    assert skills
+    assert all(row["hands"] == "" and row["use_tag"] == "" for row in skills)
+
+
 def test_getting_an_item_unlocks_it(client, token):
     """★ 얻은 것이 안 밝혀지면 해금이라는 말이 아무 뜻도 없다."""
     from game.api.discovery_service import record_item_discovery

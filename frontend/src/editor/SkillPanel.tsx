@@ -13,6 +13,7 @@ import skillsRaw from '@resources/balance/skills.json'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import type { SkillPrefView } from '../storage'
 
+import { AffixList } from './AffixList'
 import { buildSkillCells } from './skillCells'
 import { SlotGrid, usePickedKey } from './SlotBoard'
 
@@ -125,13 +126,9 @@ export function SkillPanel(props: SkillPanelProps): React.JSX.Element {
               />
             )}
           </div>
-          <ul className="invd__affixes">
-            {listSkillFacts(picked.skillId).map((line) => (
-              <li className="invd__affix" key={line}>
-                <ValueExpr text={line} size="sm" />
-              </li>
-            ))}
-          </ul>
+          {/* 수치·제약을 옵션 줄과 같은 모양으로 적는다 — 접사는 아니지만 읽는 방식이
+              같다. 값이 겹쳐도(계수 100% 가 둘) 줄이 안 지워진다 — 키에 자리가 든다. */}
+          <AffixList lines={listSkillFacts(picked.skillId).map((line) => ({ text: line }))} />
           {picked.isLocked ? null : (
             <div className="invd__row invd__row--tools">
               <Button

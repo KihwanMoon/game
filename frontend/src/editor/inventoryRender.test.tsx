@@ -5,13 +5,15 @@
  * 좁은 화면에서 행 하나가 서너 줄로 꺾였다 — 칸은 상태만 그리고, 조작은 고른 칸의
  * 상세 한 곳에 모은다.
  *
- * 여기서 지키는 것은 다섯이다.
+ * 여기서 지키는 것은 여섯이다.
  *
  * 1. **장비는 늘 여섯 칸, 가방은 늘 스무 칸이다.** 빈 칸이 보여야 남은 자리를 안다.
  * 2. **칸은 등급을 색·글리프 두 채널로 적고, 상세가 이름까지 세 채널을 채운다.**
  * 3. **조작은 상세에만 있다.** 격자 칸 안에 버튼이 생기면 되돌아간 것이다.
  * 4. **소모품 칸에는 조작이 없다** — 끼우기·팔기의 집은 소모품 칸 패널이다 (두 집 금지).
  * 5. **파손·봉인·귀속이 칸에서도 상세에서도 보인다.**
+ * 6. **상세에도 그림이 서되 이름이 남는다** (2026-09-16). 그림은 상세가 직접 고르고,
+ *    격자와 같은 답이 나와야 한다 — 두 곳이 갈리면 한 물건이 두 그림으로 뜬다.
  */
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
@@ -373,5 +375,65 @@ describe('가방이 무엇을 해 주는지 말한다', () => {
       affixes: [{ stat: 'weird_axis', flat: 9, percent: 0, labelKo: '', statLabel: '수수께끼' }],
     }
     expect(pickHeadlineAffix(odd)).toBe('')
+  })
+})
+
+/**
+ * 상세에서 그림 주소를 떼어 낸다.
+ *
+ * **주소를 줄여 보지 않는다.** 그림은 인라인 `data:` 로 들어와 주소가 길지만, 여기서
+ * 묻는 것은 「같은가 다른가」 하나다 — 파일 이름으로 줄여 보면 번들이 주소 모양을 바꾸는
+ * 날 검사가 통째로 죽는다.
+ *
+ * @param markup 상세 마크업.
+ * @returns 그림 주소. 그림 자리가 없으면 빈 문자열이다 — 부르는 쪽이 그것까지 본다.
+ */
+function pickArtSrc(markup: string): string {
+  const found = /class="ds-thumb__art" src="([^"]*)"/.exec(markup)?.[1] ?? ''
+  // 주소 안의 작은따옴표는 마크업에서 `&#x27;` 로 나온다(그림이 인라인 SVG 다). 셀 모델이
+  // 든 값과 견주려면 되돌려야 하고, 안 되돌리면 같은 그림인데도 늘 다르게 읽힌다.
+  return found.replaceAll('&#x27;', "'")
+}
+
+describe('★ 상세에도 그림이 선다 (2026-09-16)', () => {
+  it('그림과 이름이 함께 선다 — 그림만 남기면 한 그림을 나눠 쓰는 셋을 못 가른다', () => {
+    const html = renderDetail('bag', buildSlot({ item: buildItem() }))
+    expect(pickArtSrc(html)).not.toBe('')
+    expect(html).toContain('단검')
+  })
+
+  it('★ 격자와 같은 그림이다 — 정본이 둘이면 한쪽만 고친 날 두 화면이 갈린다', () => {
+    // 상세는 `CellChoice` 가 나른 값이 아니라 `catalogId`·`hands` 로 직접 고른다. 같은
+    // 입력이니 격자와 같은 답이 나와야 하고, 안 나오면 두 화면이 다른 그림을 띄운다.
+    const cell = buildBagCells(INVENTORY)[0]
+    expect(cell?.art).not.toBeUndefined()
+    expect(pickArtSrc(renderDetail('bag', INVENTORY.slots[0]!))).toBe(cell?.art)
+  })
+
+  it('★ 양손 보정이 상세에서도 산다 — 협도를 비수 그림으로 그리면 형태가 거짓말을 한다', () => {
+    const one = renderDetail(
+      'bag',
+      buildSlot({ item: buildItem({ catalogId: 'sword_great', hands: 'ONE' }) }),
+    )
+    const two = renderDetail(
+      'bag',
+      buildSlot({ item: buildItem({ catalogId: 'sword_great', hands: 'TWO' }) }),
+    )
+    // 둘 다 빈 문자열이면 「다르다」가 거짓으로 통과한다 — 하나가 실제로 그려지는지 먼저 본다.
+    expect(pickArtSrc(one)).not.toBe('')
+    expect(pickArtSrc(one)).not.toBe(pickArtSrc(two))
+  })
+
+  it('★ 안 그린 형태는 분류 코드로 떨어진다 — 자리가 비면 고장 난 것으로 읽힌다', () => {
+    const html = renderDetail(
+      'bag',
+      buildSlot({ item: buildItem({ catalogId: 'flute_bone', slot: 'BODY' }) }),
+    )
+    expect(pickArtSrc(html)).toBe('')
+    expect(html).toContain('BD')
+  })
+
+  it('소모품 칸 상세에도 그림이 선다 — 가방의 스택도 물건이다', () => {
+    expect(pickArtSrc(renderDetail('bag', INVENTORY.slots[1]!))).not.toBe('')
   })
 })

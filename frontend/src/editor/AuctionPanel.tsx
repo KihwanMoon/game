@@ -12,9 +12,10 @@
  *
  * 훅은 고른 칸 하나뿐이다 — 가방과 같다.
  */
-import { Button, GlyphState, Panel, ValueExpr } from '../ds'
+import { Button, GlyphState, Panel, Thumb, ValueExpr } from '../ds'
 import type { AuctionView, ItemView } from '../storage'
 
+import { AffixList } from './AffixList'
 import { buildListingCells, findBuyBlocker, type ListingCell } from './auctionCells'
 import { CompareBlock } from './CompareRows'
 import { buildRangeRow, compareToWorn } from './compareItems'
@@ -71,6 +72,19 @@ export function AuctionDetail(props: {
   return (
     <div className="invd">
       <div className="invd__row">
+        {/* **이름을 안 지운다.** 아직 안 그린 형태가 섞여 있고, 한 그림을 나눠 쓰는
+            셋(비수·환도·사인검)은 이름만이 어느 것인지를 말한다 — 여기서 잘못 고르면
+            되돌릴 수 없다 (사면 귀속된다, 결정 #07).
+
+            그림이 없을 때 그릴 코드는 **자리**에서 나온다. 자리가 없는 물건은 서버가 빈
+            문자열로 보내고 그때는 `··` 다 — 소모품이라고 단정하지 않는다(의뢰품도 자리가
+            없다). */}
+        <Thumb
+          kind={listing.slot}
+          label={listing.labelKo}
+          grade={listing.grade}
+          {...(props.cell.art === undefined ? {} : { art: props.cell.art })}
+        />
         <span className={`inv__name${formatGradeClass(listing.grade)}`}>{listing.labelKo}</span>
         {renderGrade(listing.grade)}
         {listing.slot === '' ? null : (
@@ -88,16 +102,9 @@ export function AuctionDetail(props: {
           <ValueExpr text={`판 사람 · ${listing.sellerName}`} size="sm" dim />
         )}
       </div>
-      {listing.affixes.length === 0 ? null : (
-        // 저주 접사는 음수다. 모르고 사면 돈을 내고 약해진다 — 옵션 하나에 한 줄이다.
-        <ul className="invd__affixes">
-          {listing.affixes.map((affix) => (
-            <li className="invd__affix" key={`${affix.stat}-${String(affix.flat)}-${String(affix.percent)}`}>
-              <ValueExpr text={formatAffix(affix)} size="sm" />
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* 저주 접사는 음수다. 모르고 사면 돈을 내고 약해진다 — 옵션 하나에 한 줄이다.
+          접사가 없는 매물은 목록째로 안 선다. */}
+      <AffixList lines={listing.affixes.map((affix) => ({ text: formatAffix(affix) }))} />
       {/* **사기 전에 「내 것보다 나은가」에 답한다.** 접사만 보여 주면 그 판단을 사람이
           머리로 해야 하고, 산 뒤에는 되돌릴 수 없다 (귀속된다 — 결정 #07). 가방의 견줌과
           같은 규칙으로 낸다: 점수 하나가 아니라 스탯별 차이까지만. */}

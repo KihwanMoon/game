@@ -274,6 +274,23 @@ def test_the_catalog_shows_what_the_game_reads(client):
     assert len(body["enemies"]) == len(get_context().balance["enemies"])
 
 
+def test_the_catalog_says_what_a_consumable_is_for(client):
+    """★ 쓰임새가 빠지면 부적 여섯이 한 그림으로 뜬다.
+
+    `USE_ITEM` 이 읽는 태그는 `use_tag` 하나이고 (§4), `tags` 는 표시 전용이라 대신
+    쓸 수 없다. 관리자 편집 줄에는 처음부터 있었는데 이 읽기 전용 카탈로그에만 없어서,
+    **같은 세계를 보는 두 화면이 서로 다른 것을 보고 있었다.**
+    """
+    from game.api.deps import get_item_catalog
+
+    body = client.get("/api/admin/catalog", headers=build_headers(build_admin(client))).json()
+    rows = {row["catalog_id"]: row for row in body["items"]}
+    for catalog_id, entry in get_item_catalog().items():
+        assert rows[catalog_id]["use_tag"] == (entry.use_tag or "")
+    # 늘 빈 문자열이어도 위 대조는 통과한다 — 실제로 갈리는지 본다.
+    assert len({row["use_tag"] for row in rows.values()}) > 1
+
+
 def test_only_the_item_catalog_is_writable(client):
     """★ 브라우저 코어가 읽는 자산에는 런타임 쓰기 경로가 없다 (개정 2026-08-31).
 
