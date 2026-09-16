@@ -31,12 +31,18 @@ body {
 
 main { max-width: 68ch; margin: 0 auto; }
 
-/* 머리. **황동은 여기 한 곳뿐이다** — 화면당 3곳 상한을 문서에서도 지킨다. */
-.legal__brand {
-  font-size: 13px;
-  letter-spacing: 0.1em;
-  color: var(--brass);
-  margin-bottom: 4px;
+/* 머리의 각인.
+ *
+ * **바탕을 안 깎아 낸다.** 이미지의 바탕이 #0F1316 즈음이라 이 문서의 먹(#0E131C)과
+ * 거의 같다 — 투명 처리를 하면 가장자리에 테가 생기고, 그대로 두면 판이 바탕에 녹는다.
+ *
+ * 두 배 해상도(480px)를 240px 로 그린다. 레티나에서 각인이 뭉개지지 않게.
+ */
+.legal__mark {
+  display: block;
+  width: 240px;
+  height: auto;
+  margin-bottom: 8px;
 }
 
 h1 { font-size: 24px; line-height: 1.4; margin: 0 0 4px; }

@@ -13,6 +13,28 @@
          `stacks` 는 도서관의 서가이고 `closed/restricted stacks` 가 열람 제한
          서고다 — 祕(잠근)+閣(서가)을 실제 도서관 영어로 옮긴 말이다. -->
     <title>비각 祕閣 · Sealed Stacks</title>
+
+    <!-- 탭·홈 화면 아이콘 (2026-09-16). **판목이 프레임을 채우게 잘라냈다** — 32px 에서
+         여백이 넓으면 형태가 안 읽히고, 그 크기에서 읽히는 것은 글자가 아니라 덩어리다. -->
+    <link rel="icon" href="/brand/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="apple-touch-icon" href="/brand/icon-180.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- 링크를 보냈을 때 뜨는 카드. 없으면 제목만 뜬다.
+         **1200×630 은 규격이다** — 낙관(祕閣)이 우하단이라 위에서 잘라 맞췄다. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="비각 祕閣" />
+    <meta property="og:title" content="비각 祕閣 · Sealed Stacks" />
+    <meta property="og:description" content="규칙표를 적어 두면 그것이 대신 싸운다." />
+    <!-- **절대 URL 이어야 한다.** 카카오·페이스북 수집기가 상대 경로를 안 푼다.
+         ⚠️ 도메인을 옮기면 이 줄도 함께 고쳐야 한다 (sealedstacks.com). -->
+    <meta property="og:url" content="https://stock.nullmovie.com/" />
+    <meta property="og:image" content="https://stock.nullmovie.com/brand/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="description" content="규칙표를 적어 두면 그것이 대신 싸운다." />
   </head>
   <body>
     <div id="root"></div>

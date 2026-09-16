@@ -1,0 +1,17 @@
+{
+  "name": "비각 祕閣 · Sealed Stacks",
+  "short_name": "비각",
+  "description": "규칙표를 적어 두면 그것이 대신 싸운다.",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0E131C",
+  "theme_color": "#0E131C",
+  "icons": [
+    { "src": "/brand/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/brand/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/brand/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
