@@ -8,7 +8,7 @@
  * **칸은 상태만 그리고 조작은 밖에 산다.** 칸마다 버튼을 펴면 좁은 화면에서 칸 하나가
  * 서너 줄로 꺾인다 — 고른 칸의 상세를 부르는 쪽이 붙인다.
  */
-import { formatGradeClass } from './gradeBadge'
+import { GRADE_GLYPHS, GRADE_LABELS, formatGradeClass } from './gradeBadge'
 import type { CellFace } from './gridCell'
 
 /**
@@ -35,7 +35,13 @@ export function renderCell<T extends CellFace>(
       // 유일한 채널이다 — 참/거짓을 3중으로 적는 것과 같은 규칙이다.
       aria-pressed={isPicked}
       // 자리 코드가 없는 칸(스킬)도 있다. 그냥 이어 붙이면 앞에 빈칸이 남는다.
-      aria-label={[cell.code, cell.label === '' ? '빈 칸' : cell.label, cell.isOff === true ? '끔' : '']
+      // **등급도 여기 든다** — 색과 글리프를 못 보는 경로에서는 이것이 유일한 채널이다.
+      aria-label={[
+        cell.code,
+        GRADE_LABELS.get(cell.grade) ?? '',
+        cell.label === '' ? '빈 칸' : cell.label,
+        cell.isOff === true ? '끔' : '',
+      ]
         .filter((part) => part !== '')
         .join(' ')}
       onClick={() => {
@@ -43,6 +49,16 @@ export function renderCell<T extends CellFace>(
       }}
     >
       <span className="invg__code">{cell.code}</span>
+      {/* **등급은 색 하나에 안 맡긴다** (2026-09-16, 실제 신고: 「가방에 아이템 등급
+          색깔이 사라졌어」). 원인은 그림을 붙이면서 이름줄이 `--under` 로 흐려진 것인데,
+          색만 되살리면 같은 일이 또 일어난다 — 색을 못 가르는 사람에게는 애초에 없던
+          채널이기도 하다. 글리프를 왼쪽 아래에 세워 **누르지 않아도 갈리게** 한다.
+          오른쪽 위는 상태 글리프(파손·봉인·귀속)가 쓰고 있어 자리를 나눈다. */}
+      {GRADE_GLYPHS.has(cell.grade) ? (
+        <span className={`invg__grade invg__grade--${cell.grade.toLowerCase()}`} aria-hidden="true">
+          {GRADE_GLYPHS.get(cell.grade)}
+        </span>
+      ) : null}
       {cell.isSealedSlot ? (
         <span className="invg__mark">▨</span>
       ) : cell.label === '' ? (

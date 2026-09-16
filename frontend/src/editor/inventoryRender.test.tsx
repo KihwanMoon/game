@@ -15,6 +15,9 @@
  * 6. **상세에도 그림이 서되 이름이 남는다** (2026-09-16). 그림은 상세가 직접 고르고,
  *    격자와 같은 답이 나와야 한다 — 두 곳이 갈리면 한 물건이 두 그림으로 뜬다.
  */
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
@@ -328,6 +331,41 @@ describe('초점과 고름은 다른 채널이다', () => {
     )
     expect(markup).toContain('aria-pressed="true"')
     expect(markup).toContain('aria-pressed="false"')
+  })
+})
+
+describe('등급이 칸에서 갈린다 — 눌러 보지 않아도', () => {
+  const MARKUP = renderToStaticMarkup(
+    <InventoryGrid inventory={INVENTORY} pickedKey="" onPick={() => undefined} />,
+  )
+
+  it('★ 등급 글리프가 칸에 선다 — 색 하나에 안 맡긴다', () => {
+    // 표본의 0번 자리가 유물, 갑옷이 상급이다.
+    expect(MARKUP).toContain('invg__grade--relic')
+    expect(MARKUP).toContain('invg__grade--fine')
+  })
+
+  it('★ 보조 기술도 등급을 읽는다 — 색도 글리프도 못 보는 경로가 있다', () => {
+    // 칸 이름은 두 글자로 잘리므로(`유물 단검` → `유물`) 「자리 · 등급 · 이름」 순이다.
+    expect(MARKUP).toContain('aria-label="WM 유물 유물"')
+    expect(MARKUP).toContain('aria-label="BD 상급 판금"')
+  })
+
+  it('★ 이름줄에 등급 색 class 가 붙는다', () => {
+    expect(MARKUP).toContain('inv__name--relic')
+  })
+
+  it('★ **그 색이 `--under` 에 안 진다** — 두 클래스로 못 박혀 있다', () => {
+    // 여기가 실제 신고가 난 자리다 (2026-09-16: 「가방에 아이템 등급색깔이 사라졌어」).
+    // 그림을 붙이면서 이름줄에 `invg__label--under` 가 생겼고, 한 클래스짜리 등급 색과
+    // 무게가 같아 **뒤에 오는 쪽이 이겼다.** class 가 붙어 있는지만 보는 검사는 이것을
+    // 못 잡는다 — 붙어 있는데 색이 안 나오는 상태였기 때문이다.
+    const css = readFileSync(fileURLToPath(new URL('./editor.css', import.meta.url)), 'utf8')
+    for (const grade of ['common', 'fine', 'relic']) {
+      expect(css, `${grade} 등급 색이 한 클래스로만 적혀 있다`).toContain(
+        `.invg__label.inv__name--${grade}`,
+      )
+    }
   })
 })
 

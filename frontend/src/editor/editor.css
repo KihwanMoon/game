@@ -2087,6 +2087,43 @@
   font-size: var(--fs-label);
 }
 
+/* 등급 글리프. 왼쪽 아래 — 나머지 세 구석은 자리 코드·상태·개수가 이미 쓴다. */
+.invg__grade {
+  position: absolute;
+  bottom: var(--sp-0);
+  left: var(--sp-1);
+  font-size: var(--fs-label);
+}
+
+.invg__grade--common {
+  color: var(--grade-common);
+}
+
+.invg__grade--fine {
+  color: var(--grade-fine);
+}
+
+.invg__grade--relic {
+  color: var(--grade-relic);
+}
+
+/* **이름줄의 등급 색은 두 클래스로 못 박는다.** 한 클래스로 두면 `--under` 와 무게가
+   같아 **뒤에 오는 쪽이 이긴다** — 그림을 붙이면서 이름줄에 `--under` 가 붙었고, 그
+   순간 가방의 등급 색이 통째로 사라졌다 (2026-09-16 신고). 이 파일 위쪽에 이미 같은
+   덫에 대한 주석이 있었는데도 같은 자리를 다시 밟았으므로, 이번에는 순서가 아니라
+   **우선순위로** 이기게 둔다. */
+.invg__label.inv__name--common {
+  color: var(--grade-common);
+}
+
+.invg__label.inv__name--fine {
+  color: var(--grade-fine);
+}
+
+.invg__label.inv__name--relic {
+  color: var(--grade-relic);
+}
+
 /* ── 고른 칸의 상세 ── */
 .invd {
   display: flex;
