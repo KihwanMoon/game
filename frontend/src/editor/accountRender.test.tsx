@@ -65,6 +65,7 @@ describe('계정 패널 — 로그인됨', () => {
         accountId: 7,
         handle: 'user_x',
         doppelOptIn: false,
+        hasGoogle: false,
         loginId: 'victor',
         nickname: undefined,
         displayName: 'victor',
@@ -106,6 +107,52 @@ describe('계정 패널 — 오프라인', () => {
 
   it('가입·로그인을 잠근다 — 눌러도 되지 않을 것을 열어 두지 않는다', () => {
     expect(markup).toContain('disabled')
+  })
+})
+
+describe('구글로 들어와 있으면 그렇게 말한다', () => {
+  /**
+   * 계정 하나를 그린다.
+   *
+   * @param hasGoogle 구글에 묶여 있는가.
+   * @returns 마크업.
+   */
+  function renderAccount(hasGoogle: boolean): string {
+    return renderToStaticMarkup(
+      <AccountPanel
+        account={{
+          accountId: 7,
+          handle: 'user_x',
+          doppelOptIn: false,
+          hasGoogle,
+          loginId: undefined,
+          nickname: undefined,
+          displayName: 'user_x',
+        }}
+        link="online"
+        hasLocalProgress
+        onRegister={noop}
+        onLogin={noop}
+        onLogout={() => undefined}
+        onGoogle={() => Promise.resolve('')}
+      />,
+    )
+  }
+
+  it('★ 들어와 있으면 그 사실이 화면에 있다 — 성공이 안 보이면 다시 누른다', () => {
+    // **실제로 그랬다** (2026-09-16, 서버 로그): 성공한 로그인(200) 11초 뒤에 같은
+    // 사람이 다시 눌렀고, 그 두 번째가 죽은 논스로 떨어졌다. 구글로 들어온 계정에는
+    // 아이디가 없어서 화면이 익명과 구별하지 못했고, 같은 버튼이 그대로 서 있었다.
+    expect(renderAccount(true)).toContain('구글 계정으로 들어와 있다')
+  })
+
+  it('★ 들어와 있으면 버튼을 다시 안 세운다 — 눌러야 할 것이 없어야 한다', () => {
+    expect(renderAccount(true)).not.toContain('account__oauth')
+  })
+
+  it('★ 안 들어와 있으면 버튼이 선다 — 숨겨 버리면 들어올 길이 사라진다', () => {
+    expect(renderAccount(false)).toContain('account__oauth')
+    expect(renderAccount(false)).not.toContain('구글 계정으로 들어와 있다')
   })
 })
 
@@ -155,6 +202,7 @@ describe('로그아웃과 한 기기 규율 (2026-09-01)', () => {
         accountId: 7,
         handle: 'probe',
         doppelOptIn: false,
+        hasGoogle: false,
         loginId: 'sinindra',
         nickname: undefined,
         displayName: 'sinindra',

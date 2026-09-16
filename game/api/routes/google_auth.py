@@ -120,7 +120,11 @@ def create_google_session(
         account, fresh_token = create_account(pool)
         apply_google_link(pool, account.account_id, subject)
         return AccountResponse(
-            account_id=account.account_id, handle=account.handle, token=fresh_token, login_id=None
+            account_id=account.account_id,
+            handle=account.handle,
+            token=fresh_token,
+            login_id=None,
+            has_google=True,
         )
     if check_account_has_google(pool, existing.account_id):
         raise HTTPException(status.HTTP_409_CONFLICT, LINKED_MESSAGE)
@@ -130,6 +134,7 @@ def create_google_session(
         handle=existing.handle,
         token=token,
         login_id=read_login_id(pool, existing.account_id),
+        has_google=True,
     )
 
 
@@ -159,4 +164,6 @@ def build_session(pool: ConnectionPool, account_id: int) -> AccountResponse:
         handle=account.handle,
         token=fresh_token,
         login_id=read_login_id(pool, account.account_id),
+        # 이 길로 들어왔다는 것이 곧 묶여 있다는 뜻이다.
+        has_google=True,
     )

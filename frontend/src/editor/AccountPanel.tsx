@@ -292,7 +292,15 @@ export function AccountPanel(props: AccountPanelProps): React.JSX.Element {
             **이미 가입한 계정에는 안 그린다.** 지금 이 화면의 구글 버튼은 「들어가기」라
             승격이거나 로그인인데, 이미 아이디가 붙은 계정에서 누르면 **다른 계정으로
             갈아타는 일**이 된다 — 그 길은 따로 「연결」로 두어야 뜻이 분명하다. */}
-        {props.onGoogle !== undefined && account?.loginId == null ? (
+        {/* **들어와 있으면 그렇게 말하고 버튼은 안 세운다** (2026-09-16). 구글로 들어온
+            계정은 아이디가 없어서 화면이 익명과 구별하지 못했고, 그래서 이미 들어와
+            있는데도 같은 버튼이 그대로 서 있었다 — 성공한 로그인 11초 뒤에 같은 사람이
+            다시 눌렀다(서버 로그). **성공이 안 보이면 다시 누른다.** */}
+        {account?.hasGoogle === true ? (
+          <GlyphState state="true" size="sm" label="구글 계정으로 들어와 있다" />
+        ) : null}
+
+        {props.onGoogle !== undefined && account?.loginId == null && account?.hasGoogle !== true ? (
           <div className="account__oauth">
             <GoogleSignIn
               onCredential={(credential, nonce) => {

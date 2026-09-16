@@ -48,6 +48,14 @@ export interface AccountState {
    * 어느 정도 역산된다.
    */
   readonly doppelOptIn: boolean
+  /**
+   * 이 계정이 구글에 묶여 있는가 (2026-09-16).
+   *
+   * **`loginId` 로는 못 가른다.** 구글로 들어온 계정에는 아이디가 없어서 화면이 익명과
+   * 구별하지 못했고, 그래서 이미 들어와 있는데도 구글 버튼이 계속 서 있었다 — 성공한
+   * 로그인 11초 뒤에 같은 사람이 다시 눌렀다(실측). 성공이 안 보이면 다시 누른다.
+   */
+  readonly hasGoogle: boolean
   /** 사람이 고른 이름. 아직 안 정했으면 undefined. */
   readonly nickname: string | undefined
   /**
@@ -228,19 +236,32 @@ export async function writeServerMeta(token: string, meta: MetaSave): Promise<bo
  * @param body 서버가 준 절.
  * @returns 계정 상태.
  */
-function readAccountState(body: {
+/**
+ * 서버가 내는 계정 한 줄, 날 것 그대로.
+ *
+ * **한 곳에만 적는다.** 예전에는 읽는 자리마다 필요한 필드만 좁게 캐스트했는데,
+ * `readAccountState` 의 인자가 전부 선택이라 **빠뜨린 필드가 조용히 기본값이 된다.**
+ * 실제로 `/auth/google` 응답이 그랬다 — 서버가 `has_google` 을 싣기 시작했는데 그 자리의
+ * 캐스트에 없어서 화면은 계속 `false` 로 읽었다.
+ */
+interface RawAccount {
   account_id: number
   handle: string
   login_id?: string | null
   doppel_opt_in?: boolean
+  has_google?: boolean
   nickname?: string | null
   display_name?: string
-}): AccountState {
+  token?: string
+}
+
+function readAccountState(body: RawAccount): AccountState {
   return {
     accountId: body.account_id,
     handle: body.handle,
     loginId: body.login_id ?? undefined,
     doppelOptIn: body.doppel_opt_in ?? false,
+    hasGoogle: body.has_google ?? false,
     nickname: body.nickname ?? undefined,
     // 서버가 안 실어 보낸 경로가 남아 있다. 그때는 자동 별명이 낫다 — 빈 문자열이면
     // 이름 자리가 통째로 사라진다.
@@ -275,12 +296,7 @@ export async function readAccount(token: string): Promise<AccountState | undefin
     return undefined
   }
   return readAccountState(
-    (await response.json()) as {
-      account_id: number
-      handle: string
-      login_id?: string | null
-      doppel_opt_in?: boolean
-    },
+    (await response.json()) as RawAccount,
   )
 }
 
@@ -307,12 +323,7 @@ export async function applyDoppelOptIn(
     return undefined
   }
   return readAccountState(
-    (await response.json()) as {
-      account_id: number
-      handle: string
-      login_id?: string | null
-      doppel_opt_in?: boolean
-    },
+    (await response.json()) as RawAccount,
   )
 }
 
@@ -347,12 +358,7 @@ export async function registerAccount(
   if (!response.ok) {
     return { account: undefined, token: undefined, detail: await readErrorDetail(response) }
   }
-  const body = (await response.json()) as {
-    account_id: number
-    handle: string
-    login_id?: string | null
-    token?: string
-  }
+  const body = (await response.json()) as RawAccount
   return { account: readAccountState(body), token: body.token, detail: '' }
 }
 
@@ -379,12 +385,7 @@ export async function createLogin(loginId: string, password: string): Promise<Au
   if (!response.ok) {
     return { account: undefined, token: undefined, detail: await readErrorDetail(response) }
   }
-  const body = (await response.json()) as {
-    account_id: number
-    handle: string
-    login_id?: string | null
-    token?: string
-  }
+  const body = (await response.json()) as RawAccount
   return { account: readAccountState(body), token: body.token, detail: '' }
 }
 
@@ -2153,12 +2154,7 @@ export async function createGoogleSession(
   if (!response.ok) {
     return { account: undefined, token: undefined, detail: await readErrorDetail(response) }
   }
-  const body = (await response.json()) as {
-    account_id: number
-    handle: string
-    login_id?: string | null
-    token?: string
-  }
+  const body = (await response.json()) as RawAccount
   return { account: readAccountState(body), token: body.token, detail: '' }
 }
 
@@ -2184,14 +2180,7 @@ export async function saveNickname(token: string, nickname: string): Promise<Aut
   if (!response.ok) {
     return { account: undefined, token: undefined, detail: await readErrorDetail(response) }
   }
-  const body = (await response.json()) as {
-    account_id: number
-    handle: string
-    login_id?: string | null
-    nickname?: string | null
-    display_name?: string
-    doppel_opt_in?: boolean
-  }
+  const body = (await response.json()) as RawAccount
   return { account: readAccountState(body), token: undefined, detail: '' }
 }
 

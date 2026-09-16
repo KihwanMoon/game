@@ -19,6 +19,7 @@ from game.app.store.display_name import (
     read_nickname,
 )
 from game.app.store.doppels import apply_doppel_opt_in, check_doppel_opt_in
+from game.app.store.google_link import check_account_has_google
 
 router = APIRouter()
 
@@ -42,6 +43,7 @@ def build_account_response(pool: ConnectionPool, account: Account) -> AccountRes
         nickname=read_nickname(pool, account.account_id),
         display_name=read_display_name(pool, account.account_id),
         doppel_opt_in=check_doppel_opt_in(pool, account.account_id),
+        has_google=check_account_has_google(pool, account.account_id),
     )
 
 
