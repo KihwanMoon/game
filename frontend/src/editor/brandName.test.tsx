@@ -61,6 +61,23 @@ describe('바닥 글', () => {
       expect(readText(`../../public/${name}`).length).toBeGreaterThan(0)
     }
   })
+
+  it('★ 두 문서의 연락처가 같고, 받을 수 있는 주소다', () => {
+    // 한동안 `privacy@sealedstacks.com` 이 적혀 있었는데 **그 주소로는 메일이 안 왔다**
+    // (2026-09-16). 방침에 적힌 유일한 연락처가 닫혀 있으면 이용자의 열람·삭제 요청이
+    // 갈 곳이 없고, 구글도 재심사에서 그 자리를 본다.
+    //
+    // 도메인 주소를 다시 쓰려면 전달(Cloudflare Email Routing)을 **먼저** 붙인다 —
+    // 도메인이 우리 것이라는 사실이 메일함이 있다는 뜻은 아니다.
+    const privacy = readText('../../public/privacy.html')
+    const terms = readText('../../public/terms.html')
+    const found = [...privacy.matchAll(/mailto:([^"]+)"/g)].map((hit) => hit[1])
+    expect(found.length).toBeGreaterThan(0)
+    for (const address of found) {
+      expect(address).not.toContain('@sealedstacks.com')
+      expect(terms, '두 문서의 연락처가 다르다').toContain(address ?? '')
+    }
+  })
 })
 
 describe('이름이 한 이름이다', () => {
