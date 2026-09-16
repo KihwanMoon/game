@@ -88,7 +88,11 @@ export function AccountPanel(props: AccountPanelProps): React.JSX.Element {
   const [detail, setDetail] = useState('')
   const [isBusy, setBusy] = useState(false)
 
-  const isRegistered = account?.loginId !== undefined
+  // **가입이 아이디만은 아니다** (2026-09-16). 구글로 들어온 계정에는 아이디가 없어서,
+  // 아이디 유무로 가르면 **로그인해 놓고도 화면 전체가 익명으로 돈다** — 실제로 그랬다:
+  // 「익명 — 이 기기에만 남는다」가 그대로 뜨고, 가입·로그인 단추가 서 있고, **로그아웃
+  // 단추가 없어서 나갈 길조차 없었다.** 들어와 있다는 사실은 둘 중 하나면 참이다.
+  const isRegistered = account?.loginId !== undefined || account?.hasGoogle === true
   const canSubmit = loginId.trim() !== '' && password !== '' && !isBusy
 
   /**
@@ -128,9 +132,14 @@ export function AccountPanel(props: AccountPanelProps): React.JSX.Element {
   // 곧 배경이 되고, 진짜로 서버가 죽은 날 아무도 안 읽는다.
   const status = !isOnline
     ? describeLink(link, MISSING_HINT)
-    : isRegistered
-      ? { state: 'true' as const, text: `${String(account?.loginId)} 로 로그인됨` }
-      : { state: 'pending' as const, text: ANONYMOUS_TEXT }
+    : account?.loginId !== undefined
+      ? { state: 'true' as const, text: `${account.loginId} 로 로그인됨` }
+      : account?.hasGoogle === true
+        // **어느 구글 계정인지는 안 적는다.** 이메일·이름·사진을 아예 저장하지 않기
+        // 때문이고(개인정보처리방침 §4), 그것이 이 게임이 구글에서 받는 것이 `sub` 하나뿐인
+        // 이유다. 적으려면 먼저 담아야 하고, 담지 않기로 한 것이 앞선 결정이다.
+        ? { state: 'true' as const, text: '구글 계정으로 로그인됨' }
+        : { state: 'pending' as const, text: ANONYMOUS_TEXT }
 
   return (
     <Panel title="계정" meta={isRegistered ? '동기화됨' : '가입하면 지킬 수 있다'} tone="panel" padded>
@@ -292,15 +301,10 @@ export function AccountPanel(props: AccountPanelProps): React.JSX.Element {
             **이미 가입한 계정에는 안 그린다.** 지금 이 화면의 구글 버튼은 「들어가기」라
             승격이거나 로그인인데, 이미 아이디가 붙은 계정에서 누르면 **다른 계정으로
             갈아타는 일**이 된다 — 그 길은 따로 「연결」로 두어야 뜻이 분명하다. */}
-        {/* **들어와 있으면 그렇게 말하고 버튼은 안 세운다** (2026-09-16). 구글로 들어온
-            계정은 아이디가 없어서 화면이 익명과 구별하지 못했고, 그래서 이미 들어와
-            있는데도 같은 버튼이 그대로 서 있었다 — 성공한 로그인 11초 뒤에 같은 사람이
-            다시 눌렀다(서버 로그). **성공이 안 보이면 다시 누른다.** */}
-        {account?.hasGoogle === true ? (
-          <GlyphState state="true" size="sm" label="구글 계정으로 들어와 있다" />
-        ) : null}
-
-        {props.onGoogle !== undefined && account?.loginId == null && account?.hasGoogle !== true ? (
+        {/* **들어와 있으면 버튼을 다시 안 세운다** (2026-09-16). 들어와 있다는 말은 맨 위
+            상태 줄이 진다 — 성공한 로그인 11초 뒤에 같은 사람이 다시 눌렀고(서버 로그),
+            그 두 번째가 죽은 논스로 떨어졌다. **성공이 안 보이면 다시 누른다.** */}
+        {props.onGoogle !== undefined && !isRegistered ? (
           <div className="account__oauth">
             <GoogleSignIn
               onCredential={(credential, nonce) => {

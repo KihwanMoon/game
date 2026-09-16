@@ -139,11 +139,25 @@ describe('구글로 들어와 있으면 그렇게 말한다', () => {
     )
   }
 
-  it('★ 들어와 있으면 그 사실이 화면에 있다 — 성공이 안 보이면 다시 누른다', () => {
+  it('★ 들어와 있으면 그 사실이 맨 위에 있다 — 성공이 안 보이면 다시 누른다', () => {
     // **실제로 그랬다** (2026-09-16, 서버 로그): 성공한 로그인(200) 11초 뒤에 같은
-    // 사람이 다시 눌렀고, 그 두 번째가 죽은 논스로 떨어졌다. 구글로 들어온 계정에는
-    // 아이디가 없어서 화면이 익명과 구별하지 못했고, 같은 버튼이 그대로 서 있었다.
-    expect(renderAccount(true)).toContain('구글 계정으로 들어와 있다')
+    // 사람이 다시 눌렀고, 그 두 번째가 죽은 논스로 떨어졌다.
+    expect(renderAccount(true)).toContain('구글 계정으로 로그인됨')
+  })
+
+  it('★ 들어와 있으면 익명이라고 안 한다 — 확인 줄만 더하면 두 말이 함께 뜬다', () => {
+    // 처음 고칠 때 확인 줄만 붙였더니 **위에는 「익명 — 이 기기에만 남는다」, 아래에는
+    // 「구글 계정으로 들어와 있다」** 가 함께 떴다. 화면이 서로 반대되는 말을 한 셈이다.
+    const markup = renderAccount(true)
+    expect(markup).not.toContain('익명 — 이 기기에만 남는다')
+    expect(markup).not.toContain('가입하면 지킬 수 있다')
+  })
+
+  it('★ 들어와 있으면 나갈 길이 있다 — 로그아웃이 없으면 갇힌다', () => {
+    // 실제 신고: 「이러면 로그아웃도 못 하고」. 로그아웃 단추가 아이디 유무로만 갈려
+    // 구글로 들어온 계정에는 **아예 없었다.**
+    expect(renderAccount(true)).toContain('>로그아웃<')
+    expect(renderAccount(true)).not.toContain('>가입<')
   })
 
   it('★ 들어와 있으면 버튼을 다시 안 세운다 — 눌러야 할 것이 없어야 한다', () => {
@@ -152,7 +166,9 @@ describe('구글로 들어와 있으면 그렇게 말한다', () => {
 
   it('★ 안 들어와 있으면 버튼이 선다 — 숨겨 버리면 들어올 길이 사라진다', () => {
     expect(renderAccount(false)).toContain('account__oauth')
-    expect(renderAccount(false)).not.toContain('구글 계정으로 들어와 있다')
+    expect(renderAccount(false)).toContain('익명')
+    // 「로그아웃」은 경고 문구에도 나온다(「다른 기기에서 로그인하면…」). 단추만 겨눈다.
+    expect(renderAccount(false)).not.toContain('>로그아웃<')
   })
 })
 
