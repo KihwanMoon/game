@@ -403,6 +403,32 @@
   overflow: hidden;
 }
 
+/* 각인과 제목은 한 덩이다.
+ *
+ * **머리줄이 `space-between` 이라 그냥 두면 제목이 가운데로 밀린다.** 셋을 벌리는 것이
+ * 아니라 「왼쪽 덩이 ↔ 오른쪽 계기」 둘로 벌려야 한다.
+ */
+.edit-m__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: var(--sp-0);
+}
+
+/* 머리줄의 각인.
+ *
+ * **치수는 높이만 정한다.** 가로는 비율을 따라간다 — `<img>` 속성에 원본 치수를 적어
+ * 두었으므로 그림이 늦게 와도 줄이 안 밀린다.
+ *
+ * 24px(`--sp-6`)은 모눈 여섯 칸이다. 탭 단추(28~44px)보다 한 단 낮아서, 머리줄에서
+ * 제목과 나란히 서되 단추처럼 눌러 보이지 않는다.
+ */
+.edit-m__mark {
+  flex: none;
+  height: var(--sp-6);
+  width: auto;
+}
+
 .edit-m__bar--top {
   height: var(--bar-top);
   border-bottom: var(--border);
@@ -2087,19 +2113,6 @@
   margin-block: var(--sp-2) var(--sp-1);
   color: var(--text-dim);
   font-size: var(--fs-sm);
-}
-
-/* 계정 패널 머리의 각인.
- *
- * **치수는 `<img>` 속성이 든다.** 이 파일은 생 px 를 쓰지 않는다(모눈이 4px 이고 그
- * 사이 값이 없다) — 그리고 그림의 치수는 여백이 아니라 내용이라, 속성에 적는 편이
- * 맞다. 미리 적어 두면 그림이 늦게 와도 줄이 안 밀린다.
- */
-.account__mark {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  margin-bottom: var(--sp-2);
 }
 
 /* 이름 줄. **이름과 고치는 단추가 한 줄에 선다** — 이름은 읽는 것이고 고치는 것은

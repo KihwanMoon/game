@@ -165,7 +165,22 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
     return (
       <div className={`edit-m edit-m--${props.mode} edit-m--list`}>
         <header className="edit-m__bar edit-m__bar--top">
-          <h1 className="edit-m__title">{openTab.label}</h1>
+          {/* **각인이 서는 유일한 자리다** (2026-09-16). 이 게임의 화면은 기계 도면이고
+              사진이 없다 — 여기저기 얹으면 도면이 아니게 된다. 두 갈래 화면이 모두 이
+              머리줄을 지나므로, 여기 하나면 어느 탭에서나 한 번씩 보인다.
+
+              바탕은 빼 두었다(`mark-alpha`). 앱의 먹과 거의 같은 색이라 안 빼도 녹지만,
+              머리줄은 패널색(`--surface-panel`)이라 사각 테가 보였을 자리다. */}
+          <div className="edit-m__brand">
+            <img
+              className="edit-m__mark"
+              src="/brand/mark-head.webp"
+              width="160"
+              height="80"
+              alt="비각 祕閣 · Sealed Stacks"
+            />
+            <h1 className="edit-m__title">{openTab.label}</h1>
+          </div>
           <span className="edit-m__meta">{openTab.gauge}</span>
         </header>
         <div className="edit-m__body">
@@ -191,7 +206,22 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
   return (
     <div className={`edit-m edit-m--${props.mode} edit-m--list`}>
       <header className="edit-m__bar edit-m__bar--top">
-        <h1 className="edit-m__title">{LIST_TITLE}</h1>
+        {/* **각인이 서는 유일한 자리다** (2026-09-16). 이 게임의 화면은 기계 도면이고
+            사진이 없다 — 여기저기 얹으면 도면이 아니게 된다. 두 갈래 화면이 모두 이
+            머리줄을 지나므로, 여기 하나면 어느 탭에서나 한 번씩 보인다.
+
+            바탕은 빼 두었다(`mark-alpha`). 앱의 먹과 거의 같은 색이라 안 빼도 녹지만,
+            머리줄은 패널색(`--surface-panel`)이라 사각 테가 보였을 자리다. */}
+        <div className="edit-m__brand">
+          <img
+            className="edit-m__mark"
+            src="/brand/mark-head.webp"
+            width="160"
+            height="80"
+            alt="비각 祕閣 · Sealed Stacks"
+          />
+          <h1 className="edit-m__title">{LIST_TITLE}</h1>
+        </div>
         <span className="edit-m__meta">
           <ValueExpr
             text={`규칙 ${String(ruleset.rules.length)} / ${String(props.ruleSlots)}`}

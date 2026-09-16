@@ -135,20 +135,6 @@ export function AccountPanel(props: AccountPanelProps): React.JSX.Element {
   return (
     <Panel title="계정" meta={isRegistered ? '동기화됨' : '가입하면 지킬 수 있다'} tone="panel" padded>
       <div className="account">
-        {/* **앱 안에서 각인이 서는 유일한 자리다** (2026-09-16). 이 게임의 화면은 기계
-            도면이고 사진이 없다 — 여기저기 얹으면 도면이 아니게 된다. 계정 패널은
-            「이 기기가 누구인가」를 말하는 자리라 표지에 가장 가깝고, 서생 탭의 맨
-            위이므로 한 번만 보인다.
-
-            바탕을 안 깎아 냈다. 그림의 바탕이 먹(#0E131C)과 거의 같아 그대로 녹는다 —
-            투명 처리를 하면 가장자리에 테가 생긴다. */}
-        <img
-          className="account__mark"
-          src="/brand/mark.webp"
-          width="200"
-          height="85"
-          alt="비각 祕閣 · Sealed Stacks"
-        />
         <div className="account__status">
           <GlyphState state={status.state} size="sm" label={status.text} />
         </div>
