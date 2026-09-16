@@ -14,7 +14,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
-DOMAIN="${DOMAIN:-stock.nullmovie.com}"
+DOMAIN="${DOMAIN:-sealedstacks.com}"
 ORIGIN="${ORIGIN:-http://localhost:8090/}"
 LOG_DIR="volume/monitor"
 LOG_FILE="${LOG_DIR}/service.log"

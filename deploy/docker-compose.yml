@@ -36,7 +36,7 @@ services:
   # 자동 생성 이름(coding-roguelike-frontend-1)에 기대면 프로젝트명이 바뀌는 순간
   # 프록시가 깨진다. stock 스택이 같은 이유로 같은 규약을 쓴다.
   #
-  # 호스트 8090 을 연다. Cloudflare Tunnel 의 ingress 가 stock.nullmovie.com 을
+  # 호스트 8090 을 연다. Cloudflare Tunnel 의 ingress 가 sealedstacks.com 을
   # host:8090 으로 직접 보내기 때문이다 — edge-proxy(:80)를 거치지 않는다.
   # 기존 stock 스택이 8090 을 열었던 이유도 같다.
 
@@ -45,7 +45,7 @@ services:
   # nginx 가 정적 산출물을 서빙한다.
   #
   # **개발 서버(vite dev)가 아니라 프로덕션 빌드를 서빙한다.** 이 컨테이너가 서는 자리가
-  # 공개 도메인(stock.nullmovie.com)이기 때문이다.
+  # 공개 도메인(sealedstacks.com)이기 때문이다.
   #   - dev 서버는 HMR 웹소켓을 요구하는데 그 경로가 Cloudflare Tunnel 을 건너야 한다.
   #     끊기면 화면이 조용히 낡은 채로 남는다.
   #   - dev 서버는 소스와 소스맵을 그대로 내보내고 타입 오류를 런타임까지 미룬다.

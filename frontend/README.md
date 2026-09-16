@@ -831,7 +831,7 @@ npm run typecheck:e2e  # e2e 는 tsconfig 의 include 밖이라 따로 본다
 
 **포트가 5199 인 이유**는 8090 을 배포 컨테이너(`game-frontend-1`)가 잡고 있고 Cloudflare
 Tunnel 이 거기로 직접 들어오기 때문이다. e2e 를 돌리려고 그것을 내리면 그동안
-`stock.nullmovie.com` 이 죽는다. `playwright.config.ts` 의 `reuseExistingServer` 가 이미 떠
+`sealedstacks.com` 이 죽는다. `playwright.config.ts` 의 `reuseExistingServer` 가 이미 떠
 있는 개발 서버를 그대로 쓴다.
 
 | 파일 | 보는 것 |

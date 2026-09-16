@@ -209,7 +209,7 @@ docker compose run --rm sim      # 헤드리스 실행
 docker compose run --rm dev      # 개발 셸
 ```
 
-`stock.nullmovie.com` 이 이 스택을 가리킨다. 라우팅은 이 저장소가 아니라
+`sealedstacks.com` 이 이 스택을 가리킨다. 라우팅은 이 저장소가 아니라
 `/data/workspace/edge-proxy` 에 있고, vtoon·balpum 도 같은 파일에서 라우팅된다 —
 고칠 때 세 도메인이 함께 걸린다. **`container_name`(`game-frontend-1`·`game-backend-1`)
 과 네트워크명 `game_net` 은 edge-proxy 와의 계약이므로 바꾸지 않는다.**

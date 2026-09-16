@@ -41,12 +41,12 @@ docker compose up -d --build backend frontend bots watchdog
 
 ## 도메인 라우팅
 
-`stock.nullmovie.com` 이 이 스택을 가리킨다. 라우팅은 이 저장소가 아니라
+`sealedstacks.com` 이 이 스택을 가리킨다. 라우팅은 이 저장소가 아니라
 **`/data/workspace/edge-proxy`** 에 있다 — 호스트 80을 점유하는 공용 리버스 프록시이고
 vtoon·balpum 도 같은 파일에서 라우팅된다.
 
 ```
-stock.nullmovie.com ─┬─ /api/ ─→ game-backend-1:8000
+sealedstacks.com ─┬─ /api/ ─→ game-backend-1:8000
                      └─ /     ─→ game-frontend-1:8090
 ```
 
@@ -55,7 +55,7 @@ stock.nullmovie.com ─┬─ /api/ ─→ game-backend-1:8000
 고정돼 있다(`networks.game_net.name`). edge-proxy 가 external 로 조인한다.
 
 입구가 둘이다. **edge-proxy(:80)** 와 **호스트 8090 직결**이며, 후자는 Cloudflare
-Tunnel 의 ingress 가 `stock.nullmovie.com` 전체를 host:8090 으로 보내기 때문에 열어
+Tunnel 의 ingress 가 `sealedstacks.com` 전체를 host:8090 으로 보내기 때문에 열어
 둔다. 터널에는 경로별 분기가 없으므로 `/api/` 를 백엔드로 나누는 일을 프런트 컨테이너의
 nginx 가 함께 한다(`deploy/nginx/frontend.conf`). 두 입구가 같은 결과를 내야 한다.
 
@@ -105,7 +105,7 @@ node:22-alpine ── build ──▶ nginx:alpine ── serve
 
 ### 왜 개발 서버(vite dev)가 아니라 프로덕션 빌드인가
 
-이 컨테이너가 서는 자리가 공개 도메인(`stock.nullmovie.com`)이기 때문이다.
+이 컨테이너가 서는 자리가 공개 도메인(`sealedstacks.com`)이기 때문이다.
 
 - dev 서버는 HMR 웹소켓을 요구하고 그 경로가 Cloudflare Tunnel 을 건너야 한다. 끊기면
   화면이 조용히 낡은 채로 남는다.
