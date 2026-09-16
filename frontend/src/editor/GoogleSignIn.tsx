@@ -9,29 +9,22 @@
  * **꺼져 있으면 아무것도 안 그린다.** 서버에 `GAME_GOOGLE_CLIENT_ID` 가 없으면 설정이
  * 꺼진 것이고, 그때 버튼만 떠 있으면 눌러도 안 되는 것을 눌러 보게 된다.
  *
- * **논스는 버튼을 그릴 때 받는다.** 구글에 넘겨야 하는 값이라 초기화 시점에 있어야 한다.
- * 십 분이 지나 만료되면 서버가 400 으로 「다시 눌러 달라」를 내고, 그때 다시 받는다 —
- * 조용히 실패하지 않는 쪽이 낫다.
+ * **논스는 버튼을 그릴 때 받고, 한 번 쓰면 곧바로 새로 받는다.** 구글에 넘겨야 하는
+ * 값이라 누르기 전에 있어야 하는데, 서버는 **검증 전에** 논스를 소진한다(재생 공격을
+ * 막는 유일한 자리다). 그래서 한 번 시도한 뒤에는 들고 있던 값이 이미 죽어 있다.
+ *
+ * 한동안 새로 안 받았다. 그 결과 **첫 시도가 어떤 이유로든 실패하면 그 뒤로는 무엇을
+ * 눌러도 「로그인 요청이 만료됐다 — 다시 눌러 달라」만 떴다** — 다시 눌러도 같은 죽은
+ * 값을 보내므로 새로고침 전까지 영영 안 된다. 안내가 시키는 일이 되지 않는 상태였다.
+ * 성공했든 실패했든 시도 뒤에는 새 논스로 다시 초기화한다.
  */
 import { useEffect, useRef, useState } from 'react'
 
 import { readGoogleConfig, readGoogleNonce } from '../storage'
 
-import { ValueExpr } from '../ds'
+import { type GoogleIdentity, buildNonceCycle } from './googleSession'
 
-/** 구글이 스크립트로 붙이는 전역. 쓰는 것만 적는다 — 전부 적으면 구글이 고칠 때 갈린다. */
-interface GoogleIdentity {
-  accounts: {
-    id: {
-      initialize: (options: {
-        client_id: string
-        nonce: string
-        callback: (response: { credential?: string }) => void
-      }) => void
-      renderButton: (parent: HTMLElement, options: Record<string, string | number>) => void
-    }
-  }
-}
+import { ValueExpr } from '../ds'
 
 declare global {
   interface Window {
@@ -91,35 +84,39 @@ export function GoogleSignIn(props: GoogleSignInProps): React.JSX.Element | null
   // 처음부터 다시 만들고, 그때마다 논스를 하나씩 더 받는다.
   const onCredential = useRef(props.onCredential)
   onCredential.current = props.onCredential
+  const isLive = useRef(true)
 
   useEffect(() => {
-    let isLive = true
+    isLive.current = true
+
     void (async () => {
       const config = await readGoogleConfig()
-      if (!isLive || !config.isEnabled) {
+      if (!isLive.current || !config.isEnabled) {
         return
       }
-      const [isLoaded, nonce] = await Promise.all([loadScript(), readGoogleNonce()])
-      if (!isLive) {
+      const isLoaded = await loadScript()
+      if (!isLive.current) {
         return
       }
       if (!isLoaded || window.google === undefined) {
         setProblem('구글에 닿지 못했다 — 아이디로 가입할 수 있다')
         return
       }
-      if (nonce === '') {
-        setProblem('서버에 닿지 못했다')
+      const applyNonce = buildNonceCycle({
+        clientId: config.clientId,
+        identity: window.google,
+        readNonce: readGoogleNonce,
+        onCredential: (credential, used) => {
+          onCredential.current(credential, used)
+        },
+        checkLive: () => isLive.current,
+      })
+      if (!(await applyNonce())) {
+        if (isLive.current) {
+          setProblem('서버에 닿지 못했다')
+        }
         return
       }
-      window.google.accounts.id.initialize({
-        client_id: config.clientId,
-        nonce,
-        callback: (response) => {
-          if (response.credential !== undefined && response.credential !== '') {
-            onCredential.current(response.credential, nonce)
-          }
-        },
-      })
       if (slot.current !== null) {
         window.google.accounts.id.renderButton(slot.current, {
           type: 'standard',
@@ -133,7 +130,7 @@ export function GoogleSignIn(props: GoogleSignInProps): React.JSX.Element | null
       setReady(true)
     })()
     return () => {
-      isLive = false
+      isLive.current = false
     }
   }, [])
 
