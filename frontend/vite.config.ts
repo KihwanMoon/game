@@ -41,20 +41,25 @@ export default defineConfig({
       '@resources': resourcesDir,
     },
   },
-  // 진입점이 넷이다. index.html 은 제품 화면, ds.html 은 디자인 시스템 부품
-  // 카탈로그(`src/ds/gallery.tsx`), battle.html 은 전투 화면 확인용 페이지
-  // (`src/battle/BattleCheck.tsx`), hud.html 은 되감기·사후 분석 확인용 페이지
-  // (`src/hud/HudCheck.tsx`)다. 카탈로그를 App.tsx 안에 숨기지 않은 이유는 수명이
-  // 다르기 때문이다 — 부품을 보는 페이지와 부품을 쓰는 화면이 한 파일을 나눠 쓰면
-  // 전투 화면 작업과 계속 충돌한다. 개발 서버는 설정 없이도 두 html 을 모두 서빙하지만,
-  // 빌드는 여기에 적힌 것만 산출물에 넣는다.
+  // **산출물에 넣는 진입점은 둘뿐이다** — 제품 화면(`index.html`)과 관리 화면
+  // (`admin.html`).
+  //
+  // 확인용 페이지 셋(`ds.html` 부품 카탈로그, `battle.html` 전투 렌더러, `hud.html`
+  // 되감기)은 **일부러 뺐다** (2026-09-16). 공개 도메인에 그대로 서빙되고 있었고,
+  // 보안 구멍은 아니지만 부품 이름·렌더러 상태·되감기 조작부까지 내부가 드러난다.
+  // 막는 규칙을 세우는 대신 **안 굽는다** — 규칙은 다음 사람이 풀 수 있지만 없는
+  // 파일은 못 연다.
+  //
+  // **개발에서는 그대로 쓴다.** vite 개발 서버는 설정 없이도 루트의 html 을 서빙하므로
+  // `npm run dev` 에서 셋 다 열린다. 타입 검사도 그대로 돈다(`tsc --noEmit` 은 이
+  // 목록이 아니라 tsconfig 를 본다) — 빠진 것은 굽기뿐이다.
+  //
+  // 카탈로그를 App.tsx 안에 숨기지 않은 이유는 수명이 다르기 때문이다 — 부품을 보는
+  // 페이지와 부품을 쓰는 화면이 한 파일을 나눠 쓰면 전투 화면 작업과 계속 충돌한다.
   build: {
     rollupOptions: {
       input: {
         main: fileURLToPath(new URL('index.html', import.meta.url)),
-        ds: fileURLToPath(new URL('ds.html', import.meta.url)),
-        battle: fileURLToPath(new URL('battle.html', import.meta.url)),
-        hud: fileURLToPath(new URL('hud.html', import.meta.url)),
         admin: fileURLToPath(new URL('admin.html', import.meta.url)),
       },
     },

@@ -63,7 +63,7 @@ describe('진짜 산출물', () => {
     }
   }
 
-  const BUILT = ['index.html', 'admin.html', 'ds.html', 'battle.html', 'hud.html']
+  const BUILT = ['index.html', 'admin.html', 'privacy.html', 'terms.html']
 
   it('★ 구운 HTML 에 주석이 없다 — 규칙이 맞아도 플러그인이 안 꽂히면 그대로 나간다', () => {
     for (const name of BUILT) {
@@ -73,6 +73,23 @@ describe('진짜 산출물', () => {
       }
       expect(html, `${name} 에 HTML 주석이 남았다`).not.toContain('<!--')
       expect(html, `${name} 에 CSS 주석이 남았다`).not.toContain('/*')
+    }
+  })
+
+  it('★ 확인용 페이지는 안 구워진다 — 공개 도메인에 내부가 서 있었다', () => {
+    // `/ds.html`(부품 카탈로그)·`/battle.html`(렌더러)·`/hud.html`(되감기)이 공개
+    // 도메인에 그대로 열려 있었다 (2026-09-16 실측). 보안 구멍은 아니지만 부품 이름과
+    // 렌더러 조작부까지 내부가 드러난다.
+    //
+    // **막는 규칙이 아니라 안 굽는 쪽으로 정했다** — 규칙은 다음 사람이 풀 수 있지만
+    // 없는 파일은 못 연다. 개발 서버에서는 그대로 열린다(vite 가 루트 html 을 서빙).
+    for (const name of ['ds.html', 'battle.html', 'hud.html']) {
+      expect(readBuilt(name), `${name} 이 산출물에 들어 있다`).toBe('')
+    }
+    // 구운 적이 없으면 위가 전부 참이라 통과한다. 제품 화면이 실제로 구워졌는지 함께 본다.
+    const index = readBuilt('index.html')
+    if (index !== '') {
+      expect(index).toContain('<title>')
     }
   })
 

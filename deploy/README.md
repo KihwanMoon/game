@@ -123,9 +123,10 @@ cd frontend && npm run dev          # http://localhost:8090
 docker compose -f deploy/docker-compose.yml up -d frontend
 ```
 
-빌드한 화면을 눈으로 확인하는 지점은 넷이다. `/` 가 제품 화면이고 나머지 셋은 확인용
-페이지다 — `/ds.html` 디자인 시스템 부품 카탈로그, `/battle.html` 전투 렌더러,
-`/hud.html` 되감기·사후 분석.
+**빌드가 내는 화면은 둘이다** — `/` 가 제품 화면이고 `/admin.html` 이 관리 화면이다.
+확인용 페이지 셋(`/ds.html` 부품 카탈로그, `/battle.html` 전투 렌더러, `/hud.html`
+되감기·사후 분석)은 **개발 서버에서만 열린다**: 공개 도메인에 서 있던 것을 2026-09-16 에
+산출물에서 뺐다.
 
 ## 이미지 구성
 
