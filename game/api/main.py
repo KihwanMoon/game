@@ -78,8 +78,18 @@ def create_app() -> FastAPI:
     """
     # 문서 경로를 끄는 이유는 공개 도메인에 붙기 때문이다. 스키마를 열어 두면 아직
     # 안정되지 않은 계약이 그대로 공개된다.
+    #
+    # **`openapi_url` 까지 끈다** (2026-09-16). `docs_url`·`redoc_url` 만 끄면 화면은
+    # 사라지지만 스키마 자체는 `/openapi.json` 으로 계속 나가고, 거기에는 관리자 경로를
+    # 포함한 **모든 경로와 본문 모양이 다 들어 있다.** 지금은 nginx 가 `/api/` 만
+    # 넘겨 주어 밖에서 안 닿지만, 그것은 프록시 규칙 한 줄에 기댄 상태다 — 라우팅이
+    # 바뀌는 날 조용히 열린다. 실제로 컨테이너에 직접 물으면 200 이었다.
     server = FastAPI(
-        title="game 검증 서버", docs_url=None, redoc_url=None, lifespan=manage_lifespan
+        title="game 검증 서버",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+        lifespan=manage_lifespan,
     )
 
     @server.middleware("http")
