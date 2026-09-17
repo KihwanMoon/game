@@ -78,6 +78,8 @@ export interface BattlePortraitProps {
    * 넘치면 그 칸 안에서만 가로로 밀리게 해 두 표기를 밀어내지 않는다.
    */
   readonly controls?: ReactNode
+  /** 틱 옆에 설 것. 조작부가 두 줄이 되지 않게 한 칸을 여기로 옮긴다. */
+  readonly headerAct?: ReactNode
   /** 코어가 낸 OUTCOME_* 값. 상태줄이 이것을 문구로 바꾼다. */
   readonly outcome: string
   /** 지금 걸린 예고 문구. 없으면 위협 칸을 그리지 않는다. */
@@ -118,12 +120,18 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
           함께 올라가면 지금 어디의 몇 틱인지가 화면 밖으로 나간다. */}
       <header className="battle__bar battle__bar--top">
         <h1 className="battle__location">{props.location}</h1>
-        <span className="battle__tick">
-          <span className="battle__tick-glyph" aria-hidden="true">
-            {TICK_GLYPH}
+        {/* **틱과 조작 하나를 한 묶음으로 오른쪽에 붙인다** (2026-09-17 요청).
+            둘을 형제로 두면 `space-between` 이 셋을 고르게 벌려 층·실이 가운데로
+            밀린다 — 제일 먼저 읽을 것이 왼쪽 끝에 있어야 한다. */}
+        <span className="battle__bar-right">
+          <span className="battle__tick">
+            <span className="battle__tick-glyph" aria-hidden="true">
+              {TICK_GLYPH}
+            </span>
+            <span className="ds-sr">{TICK_NAME}</span>
+            {formatTick(props.tick)}
           </span>
-          <span className="ds-sr">{TICK_NAME}</span>
-          {formatTick(props.tick)}
+          {props.headerAct}
         </span>
       </header>
 
@@ -169,8 +177,12 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
       />
       {/* **자리를 먼저 잡는다** (2026-09-17). 나중에 어느 망을 고르든 화면을 다시 안
           짜기 위해서다 — 비워 두면 그때 높이가 바뀌고, 높이가 바뀌면 도면과 로그의
-          배분이 흔들린다. 하단인 이유와 세로 전용인 이유는 `AdSlot` 머리글에 있다. */}
-      <AdSlot />
+          배분이 흔들린다. 하단인 이유와 세로 전용인 이유는 `AdSlot` 머리글에 있다.
+
+          **광고 탭에서는 물러난다.** 탭이 이미 광고 면이라, 같은 자리가 탭 안과 바닥에
+          겹쳐 서면 같은 배너가 두 번 보인다 — 지금은 고장으로 읽히고, 망을 붙인 뒤에는
+          한 화면에 같은 자리를 두 번 세는 일이 된다. */}
+      {props.tab === 'ads' ? null : <AdSlot />}
     </div>
   )
 }

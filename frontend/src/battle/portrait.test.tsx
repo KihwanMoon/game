@@ -129,11 +129,50 @@ function collectElements(node: ReactNode): readonly ReactElement[] {
 }
 
 describe('세로 시트 — 탭과 카운트 (명세 A·D)', () => {
-  it('★ 탭은 넷이다 — 상태가 첫 탭으로 붙었다', () => {
+  it('★ 탭은 다섯이다 — 광고가 첫 탭으로 붙었다', () => {
     // 층 정산이 상단 알림이던 때는 뜰 때마다 도면·규칙표·로그가 전부 밀렸다.
     // 상태(체력·소모품·쿨타임·예산)도 같은 이유로 늘 보이는 줄에서 탭으로 왔다 —
     // 가로로 이으면 스킬이 둘만 돼도 잘린다.
-    expect(SHEET_TABS).toEqual(['vitals', 'rules', 'log', 'reward'])
+    //
+    // 광고는 2026-09-17 요청으로 맨 앞에 붙었다. **순서가 첫째라는 것과 기본으로
+    // 열린다는 것은 다른 말이다** — 아래 검사가 그 구별을 지킨다.
+    expect(SHEET_TABS).toEqual(['ads', 'vitals', 'rules', 'log', 'reward'])
+  })
+
+  it('★ 광고 탭은 저절로 안 열린다 — 열자마자 광고면 그것이 판을 가로막는 배치다', () => {
+    const html = renderToStaticMarkup(<BattlePortrait {...buildProps({})} />)
+    expect(html).toContain('battle__tab')
+    expect(html).not.toContain('battle__ads-note')
+  })
+
+  it('★ 광고 탭을 고르면 자리가 여럿 서고, 정책 여백이 붙어 있다', () => {
+    const html = renderToStaticMarkup(<BattlePortrait {...buildProps({ tab: 'ads' })} />)
+    // 자리가 여럿이다. `battle__ad-link`·`-mark` 도 같은 머리를 쓰므로 변종 이름으로
+    // 센다 — 머리만 세면 자리 하나가 넷으로 잡힌다.
+    expect(html.match(/battle__ad--inline/g)?.length ?? 0).toBe(3)
+    // **바닥 자리는 물러난다** — 탭이 이미 광고 면이라 같은 배너가 두 번 보인다.
+    expect(html).not.toContain('battle__ad"')
+    // 무엇인지 먼저 적는다. 안 적으면 걸린 것이 내용으로 읽힌다.
+    expect(html).toContain('광고 자리다')
+    // 탭 안의 자리는 바닥에 안 붙는다 — 붙이면 셋이 한 자리에 겹친다.
+    expect(html).toContain('battle__ad--inline')
+  })
+
+  it('★ 다른 탭에서는 바닥 자리가 그대로 선다 — 물러나는 것은 광고 탭에서뿐이다', () => {
+    const html = renderToStaticMarkup(<BattlePortrait {...buildProps({ tab: 'log' })} />)
+    expect(html).toContain('battle__ad"')
+    expect(html).not.toContain('battle__ad--inline')
+  })
+
+  it('★ 자리 사이 여백이 구글이 요구하는 150px 이상이다', () => {
+    // `--sp-12`(48) × 3 + `--sp-2`(8) = 152. 생 px 로 적지 않는 이유는 그것이 이
+    // 저장소의 눈금이 아니라 남의 규격이기 때문이다.
+    const ads = cutRule('.battle__ads')
+    expect(ads).toContain('calc(var(--sp-12) * 3 + var(--sp-2))')
+    expect(ads).toContain('gap: var(--ad-gap)')
+    // 위는 머리말이 채우고, 아래만 여백이다 — 위아래를 똑같이 두면 탭이 빈 화면으로
+    // 열린다 (실측).
+    expect(ads).toContain('padding-block: var(--sp-4) var(--ad-gap)')
   })
 
   it('탭 라벨에 카운트를 함께 적는다', () => {
@@ -188,11 +227,11 @@ describe('세로 시트 — 탭과 카운트 (명세 A·D)', () => {
     const tabs = elements.filter(
       (element) => (element.props as { role?: string }).role === 'tab',
     )
-    expect(tabs).toHaveLength(4)
+    expect(tabs).toHaveLength(5)
     for (const tab of tabs) {
       ;(tab.props as { onClick: () => void }).onClick()
     }
-    expect(picked).toEqual(['vitals', 'rules', 'log', 'reward'])
+    expect(picked).toEqual(['ads', 'vitals', 'rules', 'log', 'reward'])
   })
 
   it('지금 탭만 눌린 상태로 나간다', () => {
@@ -620,5 +659,32 @@ describe('상태 탭이 규칙표가 읽는 값을 보여 준다 (2026-09-09)', 
     // 44px 을 쓰던 동안 다섯 줄이 220px 을 먹었고, 그 44 는 빈 자리로 나가고 있었다.
     expect(cutRule('.battle__vital')).toContain('min-height: var(--vital-h)')
     expect(readToken('--vital-h')).toBeLessThan(readToken('--tap-min'))
+  })
+})
+
+describe('상단 바로 옮긴 조작 (2026-09-17 요청)', () => {
+  // **조작부가 두 줄이었다.** 고정 높이 52px 짜리 상자에 글자 달린 「내력」이 들어가면
+  // 줄이 넘치고, 넘친 줄은 그 상자 안에서 잘린다 — 잘린 것이 하필 이 게임의 유일한
+  // 동사로 가는 입구였다 (GDD §2.1). 상단 바 오른쪽이 비어 있어 거기로 옮겼다.
+  const ACT = <button type="button" className="probe-act">내력</button>
+
+  it('★ 옮긴 것이 상단 바 안에 선다 — 조작부에 남아 있으면 옮긴 것이 아니다', () => {
+    const html = renderToStaticMarkup(<BattlePortrait {...buildProps({ headerAct: ACT })} />)
+    const bar = html.slice(html.indexOf('battle__bar--top'), html.indexOf('battle__controls'))
+    expect(bar).toContain('probe-act')
+  })
+
+  it('★ 틱과 한 묶음으로 오른쪽에 붙는다 — 형제가 셋이면 층·실이 가운데로 밀린다', () => {
+    const html = renderToStaticMarkup(<BattlePortrait {...buildProps({ headerAct: ACT })} />)
+    const right = html.slice(html.indexOf('battle__bar-right'))
+    expect(right.slice(0, right.indexOf('</span></span>'))).toContain('battle__tick')
+    const rule = cutRule('.battle__bar-right')
+    expect(rule).toContain('flex: 0 0 auto')
+  })
+
+  it('안 넘겨도 상단 바는 그대로 선다 — 확인용 화면들은 이것을 안 쓴다', () => {
+    const html = renderToStaticMarkup(<BattlePortrait {...buildProps({})} />)
+    expect(html).toContain('battle__bar--top')
+    expect(html).toContain('battle__tick')
   })
 })

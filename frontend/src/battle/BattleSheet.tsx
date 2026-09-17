@@ -21,6 +21,7 @@ import type { ReactNode, Ref } from 'react'
 
 import { Button, LogPanel, RuleRow, RuleTable, SegmentedGauge } from '../ds'
 import type { LogRowProps } from '../ds'
+import { AdPanel } from './AdSlot'
 import { SHEET_TABS, SHEET_TAB_LABELS, formatRuleCondition, type SheetTab } from './portraitSheet'
 import type { VitalRow } from './vitalRows'
 import type { FloorSettlement } from './settlement'
@@ -234,7 +235,9 @@ export function BattleSheet(props: BattleSheetProps): React.JSX.Element {
       )}
       <SheetTabs active={props.tab} counts={props.counts} onChange={props.onTabChange} />
       <div className="battle__sheet-body" ref={props.bodyRef}>
-        {props.tab === 'vitals' ? (
+        {props.tab === 'ads' ? (
+          <AdPanel />
+        ) : props.tab === 'vitals' ? (
           // **정보 하나에 한 줄** (실제 요청). 정산 탭이 같은 이유로 세로로 쌓는다 —
           // 가로로 이으면 무엇이 들어 있는지 훑을 수 없다.
           <ul className="battle__vitals">

@@ -915,3 +915,58 @@
   block-size: calc(var(--ad-h) - var(--sp-4));
   inline-size: auto;
 }
+
+/* 광고 탭 (2026-09-17 요청: 「첫 번째 탭으로, 정책 여백을 두고 여러 개」).
+
+   **여백이 이 블록의 전부다.** 구글 정책은 광고와 게임 가장자리 사이에 최소 150px 을
+   요구한다 — 잘못 누르게 하는 배치를 막는 조항이고, 자리를 여럿 세우면 자리끼리도
+   같은 이유로 떨어져야 한다. 4px 눈금으로 올려 맞춘 값이 152 다.
+
+   생 px 를 안 쓰는 이유는 늘 같다. 여기 `150px` 라고 적으면 그것이 이 저장소의 눈금이
+   아니라 남의 규격인데, 다음 사람은 그 구별을 못 한다. */
+.battle__ads {
+  --ad-gap: calc(var(--sp-12) * 3 + var(--sp-2));
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ad-gap);
+  /* **위는 여백이 아니라 글로 채운다** (실측 뒤 고침). 위아래를 똑같이 152 로 두었더니
+     탭을 연 사람이 **빈 화면부터** 봤다 — 첫 자리가 화면 밖이라 스크롤해야 나왔고,
+     그 사이의 152px 은 고장으로 읽힌다. 머리말을 맨 위로 올리면 그 거리를 글이 메우고,
+     첫 자리까지의 거리(머리말 + 152)는 오히려 더 멀어진다. */
+  padding-block: var(--sp-4) var(--ad-gap);
+}
+
+/* 탭이 무엇인지 먼저 적는다. 안 적으면 걸린 것이 내용으로 읽히고, 그것이 정책이
+   금지하는 「광고를 광고로 안 보이게 하는 배치」다. */
+.battle__ads-note {
+  margin: var(--sp-0);
+  max-inline-size: var(--ad-w);
+  color: var(--text-dim);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-s);
+  line-height: var(--lh-body);
+  text-align: center;
+}
+
+/* 탭 안에서는 바닥에 안 붙는다 — 붙이면 셋이 한 자리에 겹쳐 쌓인다. 괘선과 바탕도
+   뺀다. 바닥 자리의 괘선은 「여기부터는 판이 아니다」를 긋는 것인데, 탭 안은 이미
+   전부 광고 자리라 그을 경계가 없다. */
+.battle__ad--inline {
+  position: static;
+  padding: var(--sp-0);
+  border-top: none;
+  background: none;
+}
+
+/* 틱과 옮겨 온 조작 하나. **묶어야 오른쪽에 붙는다** — 상단 바는 `space-between` 이라
+   형제가 셋이면 가운데가 벌어지고, 그러면 제일 먼저 읽을 층·실이 왼쪽 끝에서 밀린다.
+   (2026-09-17 요청: 조작부를 한 줄로.) */
+.battle__bar-right {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: var(--sp-0);
+}

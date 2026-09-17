@@ -99,6 +99,15 @@ export interface BattleViewProps {
   /** 상단 바 오른쪽에 덧붙일 조작부. 확인용 페이지가 방 선택을 여기에 끼운다. */
   readonly controls?: ReactNode
   /**
+   * 상단 바 오른쪽, 틱 옆에 설 것.
+   *
+   * **조작부에서 한 칸을 덜어 내는 자리다** (2026-09-17 요청). 조작부는 고정 높이
+   * 52px 인데 글자 달린 버튼 하나가 더해지면 두 줄이 되고, 두 줄째는 그 상자 안에서
+   * 잘려 안 보인다 — 「내력」은 이 게임의 유일한 동사라 잘리면 안 되는 쪽이었다.
+   * 상단 바는 층·실과 틱만 쓰고 오른쪽이 비어 있으므로 거기에 세운다.
+   */
+  readonly headerAct?: ReactNode
+  /**
    * 판정이 바뀔 때마다 부른다. 마운트 직후 한 번(진행 중)과 판이 끝날 때 한 번 온다.
    *
    * 화면 밖에서 "판이 끝났다" 를 알아야 하는 쪽이 있기 때문이다 — 앱은 이 신호를 받아
@@ -422,6 +431,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         onStep={runStep}
         onRestart={runRestart}
         controls={props.controls}
+        headerAct={props.headerAct}
         outcome={outcome}
         threat={threatText}
         plan={plan}
@@ -460,6 +470,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
     <BattlePortrait
       location={props.location}
       controls={props.controls}
+      headerAct={props.headerAct}
       tick={scene.tick}
       speed={speed}
       onSpeedChange={setSpeed}

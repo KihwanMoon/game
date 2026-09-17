@@ -2456,14 +2456,19 @@ export function App(): React.JSX.Element {
       >
         <span className="ds-sr">자동 진행 {isAutoOn ? '켬' : '끔'}</span>
       </Button>
-      {/* **늘 보여야 하고, 이름도 보여야 한다** (2026-09-09, 실제 신고). 조작부가 고정
-          높이라 라벨이 길면 이것이 세 번째 줄로 밀려 통째로 잘렸다 — 「고쳐서 다시
-          도전한다」가 이 게임의 유일한 동사인데(GDD §2.1) 그 입구가 안 보였다.
-          그래서 다른 넷은 글리프만 남기고 **이것과 「다음 n/m」만 글자를 지킨다.** */}
-      <Button size="sm" variant="ghost" glyph="↰" title="내력을 고치러 간다" onClick={goToEditor}>
-        내력
-      </Button>
     </div>
+  )
+
+  // **조작부에서 상단 바로 옮겼다** (2026-09-17 요청). 「늘 보여야 하고 이름도 보여야
+  // 한다」는 것은 2026-09-09 에 이미 정한 것인데, 조작부 안에서는 그 두 가지를 같이
+  // 지킬 수 없었다 — 고정 높이 52px 에 글자 달린 버튼이 들어가면 줄이 넘치고, 넘친
+  // 줄은 상자 안에서 잘린다. 상단 바는 층·실과 틱만 쓰고 오른쪽이 비어 있으므로
+  // 거기서는 글자를 단 채로 한 줄에 산다. 「고쳐서 다시 도전한다」가 이 게임의 유일한
+  // 동사다 (GDD §2.1).
+  const battleHistoryAct = (
+    <Button size="sm" variant="ghost" glyph="↰" title="내력을 고치러 간다" onClick={goToEditor}>
+      내력
+    </Button>
   )
 
   // 저절로 뜨는 것은 **이기지 못했을 때**다. 이긴 판까지 덮어 버리면 승리 화면을 볼 수
@@ -2486,6 +2491,7 @@ export function App(): React.JSX.Element {
           rulesets={run.rulesets}
           location={formatLocation(roomFloor, findRoomTitle(ROOM_TEMPLATES, run.setup.roomId))}
           controls={battleControls}
+          headerAct={battleHistoryAct}
           settlements={settlements}
           weaponCatalogId={mainWeapon}
           onOutcome={setOutcome}

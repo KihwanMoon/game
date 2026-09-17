@@ -60,6 +60,8 @@ export interface BattleLandscapeProps {
   readonly onRestart: () => void
   /** 앱이 끼워 넣는 조작부(사후 분석·규칙 고치기). 없으면 그리지 않는다. */
   readonly controls?: ReactNode
+  /** 세로에서 상단 바로 옮긴 조작. 가로는 원래 조작부가 상단 바에 있어 그 옆에 붙인다. */
+  readonly headerAct?: ReactNode
   /** 도면. 토큰을 아직 읽지 못했으면 비운다. */
   readonly plan?: ReactNode
   readonly tab: SheetTab
@@ -119,6 +121,9 @@ export function BattleLandscape(props: BattleLandscapeProps): React.JSX.Element 
         {props.controls === undefined ? null : (
           <span className="battle-ls__controls">{props.controls}</span>
         )}
+        {/* 세로에서 상단 바로 옮긴 것(`headerAct`)이 가로에서 사라지면 안 된다 —
+            가로는 조작부가 이미 상단 바에 있으므로 그 옆이 제자리다. */}
+        {props.headerAct}
         <SpeedBox
           value={props.speed}
           onChange={props.onSpeedChange}

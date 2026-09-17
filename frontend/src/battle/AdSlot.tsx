@@ -23,17 +23,58 @@ const CONTACT = 'mkihwan.dev@gmail.com'
 const LABEL = '광고문의'
 
 /**
+ * 광고 탭에 세우는 자리 수.
+ *
+ * **셋이다.** 하나면 탭을 따로 열 이유가 없고, 자리마다 152px 을 띄우므로 넷이면
+ * 한 화면에 첫 자리밖에 안 들어온다 — 스크롤해야 보이는 배너는 없는 것과 같다.
+ */
+const PANEL_SLOTS = 3
+
+/** 탭 머리에 적는 말. **이 탭이 무엇인지 먼저 말한다** — 안 적으면 내용으로 읽힌다. */
+const PANEL_NOTE = '이 자리는 광고 자리다. 아래 문의로 연락하면 여기에 걸 수 있다.'
+
+/**
  * 배너 자리를 그린다.
  *
+ * @param props 어디에 서는가. `inline` 이면 탭 안에 그냥 선다 — 바닥에 안 붙는다.
  * @returns 자리 요소.
  */
-export function AdSlot(): React.JSX.Element {
+export function AdSlot(props: { readonly inline?: boolean } = {}): React.JSX.Element {
   return (
-    <aside className="battle__ad" aria-label={LABEL}>
+    <aside
+      className={`battle__ad${props.inline === true ? ' battle__ad--inline' : ''}`}
+      aria-label={LABEL}
+    >
       <a className="battle__ad-link" href={`mailto:${CONTACT}?subject=${LABEL}`}>
         <img className="battle__ad-mark" src="/brand/mark-head.webp" alt="" width="160" height="80" />
         <span className="battle__ad-text">{LABEL}</span>
       </a>
     </aside>
+  )
+}
+
+/**
+ * 광고 탭 본문 — 자리 여럿을 정책 여백만큼 띄워 세운다.
+ *
+ * **왜 탭인가** (2026-09-17 요청). 바닥 한 자리는 화면에서 빼 오는 높이라 하나가 한계다.
+ * 탭은 **사람이 눌러서 오는 자리**라 여러 개를 세워도 판을 가리지 않는다 — 구글이 막는
+ * 것은 「내용을 가로막는 배치」이지 광고가 여럿인 것이 아니다.
+ *
+ * **기본 탭이 아니다.** 순서는 맨 앞이지만 판이 열릴 때 뜨는 것은 상태 탭이다
+ * (`portraitSheet.INITIAL_TAB`). 열자마자 광고가 펴지면 그것이 곧 가로막는 배치다.
+ *
+ * 여백은 자리끼리도, 위아래 가장자리에도 152px 이다 — 구글이 요구하는 150px 을 이
+ * 저장소의 4px 눈금으로 올려 맞춘 값이다.
+ *
+ * @returns 탭 본문 요소.
+ */
+export function AdPanel(): React.JSX.Element {
+  return (
+    <div className="battle__ads">
+      <p className="battle__ads-note">{PANEL_NOTE}</p>
+      {Array.from({ length: PANEL_SLOTS }, (_unused, at) => (
+        <AdSlot key={at} inline />
+      ))}
+    </div>
   )
 }

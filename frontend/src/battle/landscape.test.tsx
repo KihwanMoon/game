@@ -420,8 +420,11 @@ describe('시트 — 탭과 규칙 토글은 세로와 같은 부품이다', () 
       const props = one.props as { readonly role?: string }
       return props.role === 'tab'
     })
-    expect(tabs).toHaveLength(4)
-    ;(tabs[2]?.props as { readonly onClick?: () => void }).onClick?.()
+    // 광고 탭이 맨 앞에 붙어 다섯이 됐다 (2026-09-17).
+    expect(tabs).toHaveLength(5)
+    // 광고·상태·내력·로그 순이라 로그는 넷째다. 자리로 세는 검사라 순서가 바뀌면
+    // 여기가 먼저 빨개져야 한다 — 그것이 이 검사가 잡는 것이다.
+    ;(tabs[3]?.props as { readonly onClick?: () => void }).onClick?.()
     expect(onTabChange).toHaveBeenCalledWith('log')
   })
 

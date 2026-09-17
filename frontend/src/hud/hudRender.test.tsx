@@ -265,6 +265,13 @@ describe('PostMortem', () => {
     // 상태가 시트의 첫 탭이다. 사후 분석은 전에 체력도 소모품도 하나도 안 그렸다.
     expect(html).toContain('>상태<')
   })
+
+  it('★ 읽는 화면에도 배너 자리가 선다 — 판이 끝나고 잠깐 멈추는 자리다', () => {
+    // 여기는 게임 창이 아니라 읽는 화면이라 구글의 150px 규칙이 안 걸린다.
+    expect(html).toContain('battle__ad')
+    // 광고 탭이 아니므로 바닥 자리가 그대로 선다. 겹쳐 서는 것은 광고 탭에서만 막는다.
+    expect(html).not.toContain('battle__ad--inline')
+  })
 })
 
 describe('HudScreen', () => {
