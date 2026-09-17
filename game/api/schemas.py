@@ -45,6 +45,20 @@ class AccountResponse(BaseModel):
     has_google: bool = False
 
 
+class WorldPulseResponse(BaseModel):
+    """세계에 사람이 얼마나 오는가 (2026-09-17).
+
+    **로그인 없이도 본다.** 「여기 사람이 사는가」는 들어오기 전에 가장 궁금한 것이고,
+    그 답을 계정을 만든 뒤에만 주면 늦다.
+    """
+
+    visitors: int = 0
+    joined: int = 0
+    fresh_today: int = 0
+    fresh_week: int = 0
+    runs: int = 0
+
+
 class StorySeenRequest(BaseModel):
     """장 카드 하나를 봤다고 남기는 요청.
 

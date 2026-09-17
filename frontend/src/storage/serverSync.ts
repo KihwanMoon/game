@@ -1865,6 +1865,47 @@ export async function readAdminItems(token: string): Promise<CatalogAdminView | 
 }
 
 
+/**
+ * 세계에 사람이 얼마나 오는가 (2026-09-17).
+ *
+ * **제3자 계측이 아니라 우리가 이미 가진 수다.** 처음 들어오면 익명 계정이 생기므로
+ * 계정 수가 곧 「앱을 연 사람 수」에 가깝다 — 광고망이나 분석 스크립트를 들이지 않고도
+ * 셀 수 있는 것이 있었다.
+ */
+export interface WorldPulse {
+  readonly visitors: number
+  readonly joined: number
+  readonly freshToday: number
+  readonly freshWeek: number
+  readonly runs: number
+}
+
+/**
+ * 세계의 접속 현황을 읽는다. **토큰이 필요 없다.**
+ *
+ * @returns 현황. 못 닿으면 undefined — 화면이 그 줄을 안 그린다.
+ */
+export async function readWorldPulse(): Promise<WorldPulse | undefined> {
+  const response = await sendRequest('/world/pulse', {})
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  const body = (await response.json()) as {
+    visitors: number
+    joined: number
+    fresh_today: number
+    fresh_week: number
+    runs: number
+  }
+  return {
+    visitors: body.visitors,
+    joined: body.joined,
+    freshToday: body.fresh_today,
+    freshWeek: body.fresh_week,
+    runs: body.runs,
+  }
+}
+
 /** 콘텐츠 카탈로그. 읽기 전용이다. */
 export interface AdminCatalog {
   readonly coreVersion: string

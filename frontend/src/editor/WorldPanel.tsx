@@ -24,7 +24,7 @@ import { useState } from 'react'
 
 import { Button, GlyphState, Panel, ValueExpr } from "../ds";
 
-import type { LeaderboardView, ProgressView } from "../storage";
+import type { LeaderboardView, ProgressView, WorldPulse } from "../storage";
 
 import { LinkNoticeLine } from './LinkNoticeLine'
 import { checkLinked, type LinkState } from './linkState'
@@ -40,6 +40,14 @@ export interface WorldPanelProps {
    * 횟수**다 — 이 게임에서 성장과 무관한 유일한 수치다 (2026-09-15).
    */
   readonly doppelBoard: LeaderboardView | undefined;
+  /**
+   * 세계에 사람이 얼마나 오는가 (2026-09-17).
+   *
+   * **제3자 계측이 아니라 우리가 이미 가진 수다.** 처음 들어오면 익명 계정이 생기므로
+   * 계정 수가 곧 「앱을 연 사람 수」에 가깝다 — 분석 스크립트를 들이지 않고도 셀 수
+   * 있는 것이 있었다. 못 받으면 그 줄을 안 그린다.
+   */
+  readonly pulse?: WorldPulse | undefined;
   readonly accountId: number | undefined;
   readonly link: LinkState;
   readonly detail: string;
@@ -105,6 +113,16 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
       scroll
     >
       <div className="wld">
+        {/* **여기 사람이 사는가.** 순위표만 있으면 이름 몇 줄이 전부라, 판이 도는
+            세계인지 멈춘 세계인지가 안 보인다. 「오늘」을 함께 적는 이유도 그것이다 —
+            누계만 적으면 옛날에 붐볐던 곳과 구별되지 않는다. */}
+        {props.pulse === undefined ? null : (
+          <ValueExpr
+            text={`다녀간 사람 ${String(props.pulse.visitors)} · 오늘 ${String(props.pulse.freshToday)} · 이번 주 ${String(props.pulse.freshWeek)} · 돌아간 판 ${String(props.pulse.runs)}`}
+            size="sm"
+            dim
+          />
+        )}
         {!checkLinked(link) || progress === undefined ? (
           <LinkNoticeLine link={link} missing={MISSING_HINT} />
         ) : (

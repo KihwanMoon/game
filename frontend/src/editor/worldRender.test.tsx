@@ -238,3 +238,41 @@ describe('둔갑 판', () => {
     expect(html).toContain('점수는 누적 경험치다')
   })
 })
+
+describe('세계 접속 현황', () => {
+  // **제3자 계측이 아니라 우리가 이미 가진 수다** (2026-09-17). 처음 들어오면 익명
+  // 계정이 생기므로 계정 수가 곧 「앱을 연 사람 수」에 가깝다.
+  const PULSE = { visitors: 316, joined: 7, freshToday: 12, freshWeek: 120, runs: 5250 }
+
+  /**
+   * 명부를 그린다.
+   *
+   * @param pulse 접속 현황. 없으면 안 넘긴다.
+   * @returns 마크업.
+   */
+  function drawWorld(pulse?: typeof PULSE): string {
+    return renderToStaticMarkup(
+      <WorldPanel
+        progress={PROGRESS}
+        leaderboard={LEADERBOARD}
+        doppelBoard={undefined}
+        accountId={7}
+        link="online"
+        detail=""
+        onDaily={noop}
+        {...(pulse === undefined ? {} : { pulse })}
+      />,
+    )
+  }
+
+  it('★ 다녀간 사람과 오늘을 함께 적는다 — 누계만 적으면 멈춘 세계와 구별이 안 된다', () => {
+    const markup = drawWorld(PULSE)
+    expect(markup).toContain('316')
+    expect(markup).toContain('12')
+    expect(markup).toContain('5250')
+  })
+
+  it('★ 못 받으면 그 줄을 안 그린다 — 0 을 적으면 「아무도 없다」가 된다', () => {
+    expect(drawWorld()).not.toContain('다녀간 사람')
+  })
+})

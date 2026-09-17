@@ -190,3 +190,50 @@ def count_levels(pool: ConnectionPool) -> tuple[tuple[int, int], ...]:
             " GROUP BY e.level ORDER BY e.level ASC"
         ).fetchall()
     return tuple((int(row[0]), int(row[1])) for row in rows)
+
+
+@dataclass(frozen=True)
+class WorldPulse:
+    """세계에 사람이 얼마나 오는가 (2026-09-17).
+
+    **제3자 계측이 아니라 우리가 이미 가진 수다.** 이 게임은 처음 들어오면 익명 계정이
+    생기므로 `account` 수가 곧 「앱을 연 사람 수」에 가깝다 — 광고망이나 분석 스크립트를
+    들이지 않고도 셀 수 있는 것이 있었다.
+    """
+
+    visitors: int
+    joined: int
+    fresh_today: int
+    fresh_week: int
+    runs: int
+
+
+def read_world_pulse(pool: ConnectionPool) -> WorldPulse:
+    """세계의 접속 현황을 읽는다.
+
+    **한 문장으로 센다.** 다섯 번 왕복하면 화면 한 줄에 조회가 다섯 번 붙는다.
+
+    Args:
+        pool: 연결 풀.
+
+    Returns:
+        방문자·가입·오늘·이번 주 신규와 돌아간 판 수.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT count(*),"
+            " count(*) FILTER (WHERE login_id IS NOT NULL),"
+            " count(*) FILTER (WHERE created_at::date = current_date),"
+            " count(*) FILTER (WHERE created_at > now() - interval '7 days'),"
+            " (SELECT count(*) FROM run_submission)"
+            " FROM account WHERE deactivated_at IS NULL"
+        ).fetchone()
+    if row is None:
+        return WorldPulse(visitors=0, joined=0, fresh_today=0, fresh_week=0, runs=0)
+    return WorldPulse(
+        visitors=int(row[0]),
+        joined=int(row[1]),
+        fresh_today=int(row[2]),
+        fresh_week=int(row[3]),
+        runs=int(row[4]),
+    )

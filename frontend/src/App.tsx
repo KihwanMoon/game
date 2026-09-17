@@ -67,7 +67,7 @@ import { findRoomTitle } from './core/schemas/room'
 import { SHADOW, buildCardId, findChapter } from './content/story'
 import { DOPPEL_KIND_ID } from './battle/actorKind'
 import { ReplayView } from './admin/ReplayView'
-import type { ReplayInput, RunHistoryRow } from './storage'
+import type { ReplayInput, RunHistoryRow, WorldPulse } from './storage'
 import { OUTCOME_ONGOING, OUTCOME_PLAYER_WIN } from './core/sim/phases'
 import { Button, GlyphState, Panel, ValueExpr } from './ds'
 import {
@@ -162,6 +162,7 @@ import {
   readBestiary,
   readDiscovery,
   readLeaderboard,
+  readWorldPulse,
   MODE_DOPPEL,
   applyAdminAction,
   applyMonsterLevel,
@@ -654,6 +655,9 @@ export function App(): React.JSX.Element {
   const [auctionDetail, setAuctionDetail] = useState('')
   // 관리자 현황. **관리자가 아니면 undefined 로 남고 패널이 아무것도 그리지 않는다** —
   // 서버가 404 로 답하므로 그 사실 자체가 화면에 드러나지 않는다.
+  // 세계에 사람이 얼마나 오는가. **로그인 없이도 읽는다** — 「여기 사람이 사는가」는
+  // 들어오기 전에 가장 궁금한 것이고, 계정을 만든 뒤에만 답하면 늦다.
+  const [pulse, setPulse] = useState<WorldPulse | undefined>(undefined)
   const [admin, setAdmin] = useState<AdminOverview | undefined>(undefined)
   // **관리자였다는 사실은 연결보다 오래 산다.** `readAdminOverview` 는 404 와 통신 실패를
   // 둘 다 undefined 로 돌려주므로, 새로고침이 끊긴 사이에 일어나면 위 값이 비고 탭 자체가
@@ -1058,6 +1062,9 @@ export function App(): React.JSX.Element {
     // 1장 카드가 다시 뜨지 않는다 (2026-09-16).
     seenCards.current = new Set(await readStorySeen(token))
     setLeaderboard(await readLeaderboard(token))
+    // **토큰이 필요 없다.** 그래도 여기서 함께 읽는 이유는 화면이 새로 그려질 때
+    // 수치도 같이 따라오게 하기 위해서다 — 따로 두면 한쪽만 낡는다.
+    setPulse(await readWorldPulse())
     setDoppelBoard(await readLeaderboard(token, MODE_DOPPEL))
     setAuction(await readAuction(token))
     setRuns(await readRunHistory(token))
@@ -2232,6 +2239,7 @@ export function App(): React.JSX.Element {
         main: (
           <>
               <WorldPanel
+                {...(pulse === undefined ? {} : { pulse })}
                 progress={progress}
                 leaderboard={leaderboard}
                 doppelBoard={doppelBoard}

@@ -25,6 +25,7 @@ from game.api.schemas import (
     LeaderboardResponse,
     ProgressResponse,
     TicketResponse,
+    WorldPulseResponse,
 )
 from game.api.schemas_doppel import (
     DoppelBout,
@@ -61,6 +62,7 @@ from game.app.store.progress import (
     save_allocation,
 )
 from game.app.store.tickets import create_ticket
+from game.app.store.world_view import read_world_pulse
 from game.schemas.monster_snapshot import build_snapshot_payload, sort_snapshots
 from game.schemas.run_ticket import MAX_SEED, RunMode
 
@@ -163,6 +165,20 @@ def save_player_stats(request: AllocationRequest, account: CurrentAccount) -> Pr
             ) from error
     save_allocation(pool, entity_id, request.stats)
     return read_player_progress(account)
+
+
+@router.get("/api/world/pulse", response_model=WorldPulseResponse)
+def read_world_pulse_view() -> WorldPulseResponse:
+    """세계의 접속 현황을 낸다 — **로그인 없이 보는 자리**다.
+
+    **제3자 계측을 안 들인다.** 이 게임은 처음 들어오면 익명 계정이 생기므로 계정 수가
+    곧 「앱을 연 사람 수」에 가깝다 — 광고망이나 분석 스크립트 없이 셀 수 있는 것이
+    이미 있었다 (2026-09-17).
+
+    Returns:
+        방문자·가입·오늘·이번 주 신규와 돌아간 판 수.
+    """
+    return WorldPulseResponse(**vars(read_world_pulse(get_pool())))
 
 
 @router.get("/api/leaderboard", response_model=LeaderboardResponse)
