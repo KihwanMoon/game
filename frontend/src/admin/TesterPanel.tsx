@@ -16,6 +16,7 @@
  * 갈라 적는다 — 하나로 합치면 화면은 5명을 채웠다고 하는데 게이트는 안 채워진 상태가
  * 되고, 그 어긋남은 판정할 때에야 드러난다.
  */
+import { DataList } from '../editor/DataList'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import type { TesterList, TesterView } from '../storage/testerAdmin'
 
@@ -164,7 +165,16 @@ export function TesterPanel(props: TesterPanelProps): React.JSX.Element {
               <span className="adminrow__cell">마지막 접속</span>
               <span className="adminrow__cell" />
             </div>
-            <div className="bots__grid">{rows.map((row) => renderRow(row, props.onMark))}</div>
+            <DataList
+              items={rows}
+              rowKey={(row) => String(row.accountId)}
+              listClass="bots__grid"
+              emptyText="아직 표시한 계정이 없다"
+              filterText={(row) => row.handle}
+              filterLabel="이름으로 찾기"
+              unit="명"
+              renderRow={(row) => renderRow(row, props.onMark)}
+            />
           </>
         )}
       </Panel>

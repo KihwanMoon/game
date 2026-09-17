@@ -17,6 +17,7 @@
 import { useState } from 'react'
 
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
+import { DataList } from '../editor/DataList'
 import {
   CharacterPanel,
   ConsumableGrid,
@@ -142,13 +143,15 @@ export function BotRuns(props: {
   /** 줄을 누르면 그 판을 다시 돌린다. 없으면 줄이 버튼이 아니다. */
   readonly onPlay?: (submissionId: number) => void
 }): React.JSX.Element {
-  if (props.runs.length === 0) {
-    return <ValueExpr text="아직 돈 판이 없다" size="sm" dim />
-  }
   return (
-    <ul className="botd__runs">
-      {props.runs.map((run) => (
-        <li className="botd__run" key={run.submissionId}>
+    <DataList
+      items={props.runs}
+      rowKey={(run) => String(run.submissionId)}
+      listClass="botd__runs"
+      rowClass="botd__run"
+      emptyText="아직 돈 판이 없다"
+      renderRow={(run) => (
+        <>
           {props.onPlay === undefined ? null : (
             <Button
               size="sm"
@@ -178,9 +181,9 @@ export function BotRuns(props: {
             size="sm"
             label={run.verdict === '' ? '검증 전' : run.verdict === 'verified' ? '검증됨' : run.verdict}
           />
-        </li>
-      ))}
-    </ul>
+        </>
+      )}
+    />
   )
 }
 
@@ -195,15 +198,20 @@ function BotUpkeep(props: { readonly rows: BotDetail['maintenance']['rows'] }): 
     return <ValueExpr text="벼림 내력이 없다 — 이 봇은 판 뒤에 아무것도 안 한다" size="sm" dim />
   }
   return (
-    <ul className="mnt__list">
-      {props.rows.map((row, index) => (
-        // 행에 고유 id 가 없다 — 순서가 곧 정체성이라 자리 번호가 key 다.
-        <li className="mnt__row" key={`upkeep-${String(index)}`}>
+    <DataList
+      items={props.rows}
+      // 행에 고유 id 가 없다 — 순서가 곧 정체성이라 자리 번호가 key 다.
+      rowKey={(_row, index) => `upkeep-${String(index)}`}
+      listClass="mnt__list"
+      rowClass="mnt__row"
+      emptyText="정비 규칙이 없다"
+      renderRow={(row, index) => (
+        <>
           <span className="mnt__when">{`${String(index + 1)}.`}</span>
           <span className="mnt__what">{formatMaintenanceSentence(row)}</span>
-        </li>
-      ))}
-    </ul>
+        </>
+      )}
+    />
   )
 }
 
@@ -305,18 +313,19 @@ export function BotDetailPanel(props: BotDetailProps): React.JSX.Element {
       id: 'skill',
       label: '스킬',
       body:
-        detail.skills.rows.length === 0 ? (
-          <ValueExpr text="장비가 연 스킬이 없다" size="sm" dim />
-        ) : (
-          <ul className="botd__skills">
-            {detail.skills.rows.map((row) => (
-              <li className="botd__skill" key={row.skillId}>
-                <GlyphState state={row.isOn ? 'true' : 'false'} size="sm" label={row.skillId} />
-                {row.isLocked ? <ValueExpr text="못 끈다" size="sm" dim /> : null}
-              </li>
-            ))}
-          </ul>
-        ),
+        <DataList
+          items={detail.skills.rows}
+          rowKey={(row) => row.skillId}
+          listClass="botd__skills"
+          rowClass="botd__skill"
+          emptyText="장비가 연 스킬이 없다"
+          renderRow={(row) => (
+            <>
+              <GlyphState state={row.isOn ? 'true' : 'false'} size="sm" label={row.skillId} />
+              {row.isLocked ? <ValueExpr text="못 끈다" size="sm" dim /> : null}
+            </>
+          )}
+        />,
     },
     {
       id: 'replay',
@@ -379,18 +388,19 @@ export function DoppelDetailPanel(props: DoppelDetailProps): React.JSX.Element {
       id: 'combat',
       label: '전투 규칙',
       body:
-        rules.length === 0 ? (
-          <ValueExpr text="얼려 둔 내력이 비었다" size="sm" dim />
-        ) : (
-          <ul className="mnt__list">
-            {rules.map((rule, index) => (
-              <li className="mnt__row" key={`rule-${String(index)}`}>
-                <span className="mnt__when">{`[${String(rule.priority ?? index + 1)}]`}</span>
-                <span className="mnt__what">{String(rule.action ?? '')}</span>
-              </li>
-            ))}
-          </ul>
-        ),
+        <DataList
+          items={rules}
+          rowKey={(_rule, index) => `rule-${String(index)}`}
+          listClass="mnt__list"
+          rowClass="mnt__row"
+          emptyText="얼려 둔 내력이 비었다"
+          renderRow={(rule, index) => (
+            <>
+              <span className="mnt__when">{`[${String(rule.priority ?? index + 1)}]`}</span>
+              <span className="mnt__what">{String(rule.action ?? '')}</span>
+            </>
+          )}
+        />,
     },
     {
       id: 'me',

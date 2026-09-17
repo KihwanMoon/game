@@ -15,6 +15,7 @@ import { useState } from 'react'
 
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import type { BotOverview, BotView } from '../storage/botAdmin'
+import { DataList } from '../editor/DataList'
 import { InventoryGrid } from '../editor/InventoryGrid'
 import type { InventoryView } from '../storage'
 
@@ -189,17 +190,21 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
               <span className="botrow__cell">다음</span>
               <span className="botrow__cell">벌이</span>
             </div>
-            <div className="bots__grid">
-              {bots.map((bot) =>
+            <DataList
+              items={bots}
+              rowKey={(bot) => String(bot.accountId)}
+              listClass="bots__grid"
+              emptyText={EMPTY_BOTS}
+              renderRow={(bot) =>
                 renderRow(bot, bot.accountId === pickedId, (target) => {
                   const next = pickedId === target.accountId ? 0 : target.accountId
                   setPickedId(next)
                   if (next !== 0) {
                     props.onPickBot?.(next)
                   }
-                }),
-              )}
-            </div>
+                })
+              }
+            />
             {picked === undefined ? (
               <ValueExpr text="줄을 고르면 여기에서 고치고, 아래에서 그 봇을 연다" size="sm" dim />
             ) : (

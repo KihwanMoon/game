@@ -15,6 +15,7 @@
  * **게이트를 여기서 안 돌린다.** 화면이 `pytest`·`npm` 을 띄울 길을 만들면 그것이 임의
  * 실행 통로가 된다 — 복사할 명령만 보여 준다.
  */
+import { DataList } from '../editor/DataList'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import type { GlyphStateKind } from '../ds'
 import type { WatchEvent, WatchRow, WatchView } from '../storage/watchAdmin'
@@ -154,7 +155,18 @@ export function WatchPanel(props: WatchPanelProps): React.JSX.Element {
               <span className="adminrow__cell">실측</span>
               <span className="adminrow__cell">언제부터 / 마지막</span>
             </div>
-            <div className="bots__grid">{rows.map(renderRow)}</div>
+            {/* **쉰두 줄이 깔린다** (2026-09-17 실측). 지표 이름·등급·소견으로 걸린다 —
+                「무엇이 빨간가」가 이 표의 질문이고, 그것을 눈으로 훑고 있었다. */}
+            <DataList
+              items={rows}
+              rowKey={(row) => row.key}
+              listClass="bots__grid"
+              emptyText="아직 본 것이 없다"
+              filterText={(row) => `${row.key} ${row.level} ${row.text}`}
+              filterLabel="지표·등급으로 찾기"
+              unit="줄"
+              renderRow={(row) => renderRow(row)}
+            />
           </>
         )}
         <Button

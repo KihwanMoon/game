@@ -11,6 +11,7 @@
  */
 import { useState } from 'react'
 
+import { DataList } from '../editor/DataList'
 import { GlyphState, Panel, ValueExpr } from '../ds'
 import type { BotOverview } from '../storage/botAdmin'
 import type { DoppelDetail, InventoryView } from '../storage'
@@ -42,11 +43,12 @@ export function DoppelPanel(props: DoppelPanelProps): React.JSX.Element {
   return (
     <div className="bots">
       <Panel title="둔갑" meta={`${String(rows.length)}`} tone="panel" padded>
-        {rows.length === 0 ? (
-          <ValueExpr text={EMPTY_DOPPELS} size="sm" dim />
-        ) : (
-          <div className="bots__grid">
-            {rows.map((item) => (
+        <DataList
+          items={rows}
+          rowKey={(item) => String(item.recordId)}
+          listClass="bots__grid"
+          emptyText={EMPTY_DOPPELS}
+          renderRow={(item) => (
               <button
                 type="button"
                 className={`botrow${item.recordId === pickedId ? ' botrow--picked' : ''}`}
@@ -76,9 +78,8 @@ export function DoppelPanel(props: DoppelPanelProps): React.JSX.Element {
                   {item.originHandle === '' ? '주인 없음' : `${item.originHandle} 의 둔갑`}
                 </span>
               </button>
-            ))}
-          </div>
-        )}
+          )}
+        />
         {rows.length === 0 ? null : (
           <ValueExpr text="줄을 고르면 아래에서 그 개체를 연다" size="sm" dim />
         )}
