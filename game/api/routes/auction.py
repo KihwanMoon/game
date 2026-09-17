@@ -77,6 +77,7 @@ def build_listing_view(listing: Listing, catalog: dict) -> ListingView:
         is_mine=listing.is_mine,
         seller_name=listing.seller_name,
         affixes=build_affix_rows(listing),
+        grants_skill=str(entry.grants_skill or ""),
         expires_in_minutes=listing.expires_in_minutes,
         fee=compute_fee(listing.price),
         # 카탈로그가 이미 들고 있던 것이다. 안 보내면 화면이 견줄 상대를 못 찾는다.

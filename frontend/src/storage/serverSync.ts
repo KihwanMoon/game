@@ -1157,6 +1157,12 @@ export interface ListingView {
    */
   readonly affixes: readonly AffixView[]
   /** 남은 시간(분). 절대 시각이 아니라 남은 양이라 기기 시계가 어긋나도 같다. */
+  /**
+   * 이 장비가 여는 재주 (2026-09-17). 없으면 빈 문자열.
+   *
+   * **사기 전에 알아야 하는 것 중 가장 큰 것이다** — 같은 값이면 재주가 붙은 쪽을 산다.
+   */
+  readonly grantsSkill: string
   readonly expiresInMinutes: number
   readonly fee: number
   /**
@@ -1333,6 +1339,7 @@ function readAuctionBody(raw: {
     catalog_id?: string
     hands?: string
     affixes?: RawAffix[]
+    grants_skill?: string
     expires_in_minutes?: number
     fee?: number
     slot?: string
@@ -1349,6 +1356,7 @@ function readAuctionBody(raw: {
       labelKo: item.label_ko,
       price: item.price,
       affixes: readAffixRows(item.affixes),
+      grantsSkill: item.grants_skill ?? '',
       expiresInMinutes: item.expires_in_minutes ?? 0,
       fee: item.fee ?? 0,
       isMine: item.is_mine,

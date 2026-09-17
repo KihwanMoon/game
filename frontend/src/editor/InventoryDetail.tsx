@@ -13,6 +13,7 @@ import { findItemArt } from '../content/itemArt'
 import { Button, GlyphState, Thumb, ValueExpr } from '../ds'
 import type { ItemView, SlotView } from '../storage'
 
+import { formatParamLabel } from './blockOptions'
 import { formatGradeClass, renderGrade } from './gradeBadge'
 import { EQUIP_CELL_LABELS, RANGE_SLOT } from './inventoryCells'
 import { CompareBlock } from './CompareRows'
@@ -299,6 +300,19 @@ export function InventoryDetail(props: InventoryDetailProps): React.JSX.Element 
           />
         ) : item.slot === null ? null : (
           <ValueExpr text={`부위 · ${EQUIP_CELL_LABELS.get(item.slot) ?? item.slot}`} size="sm" dim />
+        )}
+        {/* **무엇을 열어 주는지 적는다** (2026-09-17 요청). 스킬을 다는 장비가 그
+            사실을 어디에도 안 적고 있었다 — 카탈로그 화면은 적는데 정작 **가진 사람이
+            보는 자리**가 비어 있었다. 그 장비를 껴야 규칙표에 그 재주를 쓸 수 있으니,
+            「무엇을 해 주는가」 중에 가장 큰 것이 이것이다.
+            이름은 규칙 편집기와 같은 말을 쓴다 — 여기만 `SKILL_1` 로 적으면 두 화면이
+            같은 것을 다르게 부른다. */}
+        {item.grantsSkill === '' ? null : (
+          <GlyphState
+            state="armed"
+            size="sm"
+            label={`재주 · ${formatParamLabel(item.grantsSkill)}`}
+          />
         )}
         {item.isBroken ? <GlyphState state="danger" size="sm" label="파손 · 효과 없음" /> : null}
         {item.sealedSlots > 0 ? (

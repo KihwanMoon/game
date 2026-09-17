@@ -12,6 +12,7 @@
  *
  * 훅은 고른 칸 하나뿐이다 — 가방과 같다.
  */
+import { formatParamLabel } from './blockOptions'
 import { Button, GlyphState, Panel, Thumb, ValueExpr } from '../ds'
 import type { AuctionView, ItemView } from '../storage'
 
@@ -100,6 +101,16 @@ export function AuctionDetail(props: {
             내 것은 이미 다른 표시가 있으므로 이름을 또 적지 않는다. */}
         {listing.isMine || listing.sellerName === '' ? null : (
           <ValueExpr text={`판 사람 · ${listing.sellerName}`} size="sm" dim />
+        )}
+        {/* **사기 전에 알아야 하는 것 중 가장 큰 것이다** (2026-09-17 요청). 같은 값이면
+            재주가 붙은 쪽을 산다. 서버는 카탈로그에서 이미 알고 있었는데 안 보내고
+            있었다 — 사거리에서 겪은 것과 같은 자리다. */}
+        {listing.grantsSkill === '' ? null : (
+          <GlyphState
+            state="armed"
+            size="sm"
+            label={`재주 · ${formatParamLabel(listing.grantsSkill)}`}
+          />
         )}
       </div>
       {/* 저주 접사는 음수다. 모르고 사면 돈을 내고 약해진다 — 옵션 하나에 한 줄이다.

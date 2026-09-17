@@ -489,3 +489,30 @@ describe('고정 길이 격자에는 찾기 칸이 없다', () => {
     expect(markup).not.toContain('찾기')
   })
 })
+
+describe('스킬을 여는 장비는 그렇게 적는다', () => {
+  // **가진 사람이 보는 자리가 비어 있었다** (2026-09-17 요청). 카탈로그 화면은 적는데
+  // 가방 상세는 안 적었다 — 그 장비를 껴야 규칙표에 그 재주를 쓸 수 있으니, 「무엇을 해
+  // 주는가」 중에 가장 큰 것이 이것이다.
+  const ARMED = {
+    ...(INVENTORY.equipment[0]?.item as ItemView),
+    grantsSkill: 'SKILL_1',
+  }
+
+  it('★ 재주를 적는다', () => {
+    const html = renderDetail('equip', { ...(INVENTORY.equipment[0] as SlotView), item: ARMED })
+    expect(html).toContain('재주')
+  })
+
+  it('★ 규칙 편집기와 같은 말로 적는다 — 여기만 영문이면 두 화면이 다르게 부른다', () => {
+    const html = renderDetail('equip', { ...(INVENTORY.equipment[0] as SlotView), item: ARMED })
+    expect(html).toContain('일격')
+    expect(html).not.toContain('SKILL_1')
+  })
+
+  it('★ 안 여는 장비에는 안 적는다 — 빈 줄이 서면 무엇이 없는지가 흐려진다', () => {
+    const plain = { ...ARMED, grantsSkill: '' }
+    const html = renderDetail('equip', { ...(INVENTORY.equipment[0] as SlotView), item: plain })
+    expect(html).not.toContain('재주 ·')
+  })
+})
