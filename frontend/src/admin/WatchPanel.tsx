@@ -78,9 +78,14 @@ function renderRow(row: WatchRow): React.JSX.Element {
  * @param index 목록 안 자리. 같은 지표가 같은 시각에 두 번 바뀔 수 있어 키에 함께 쓴다.
  * @returns 줄 요소.
  */
+/** 사건을 한 번에 보일 줄 수. 쉰두 건이 한 번에 깔리면 최근 것을 찾기 어렵다. */
+const PAGE_SIZE = 15
+
 function renderEvent(event: WatchEvent, index: number): React.JSX.Element {
+  // 키는 틀이 붙인다 — 여기서 또 붙이면 두 곳이 정하는 값이 된다.
+  void index
   return (
-    <div className="adminrow" key={`${event.key}-${event.happenedAt}-${String(index)}`}>
+    <div className="adminrow">
       <span className="adminrow__name">{event.happenedAt}</span>
       <GlyphState state={resolveLevelState(event.level)} size="sm" label={event.level} />
       <span className="adminrow__cell">{event.key}</span>
@@ -199,20 +204,28 @@ export function WatchPanel(props: WatchPanelProps): React.JSX.Element {
         tone="panel"
         padded
       >
-        {events.length === 0 ? (
-          <ValueExpr text="아직 바뀐 적이 없다" size="sm" dim />
-        ) : (
-          <>
-            <div className="adminrow adminrow--head" aria-hidden="true">
-              <span className="adminrow__name">때</span>
-              <span className="adminrow__cell">등급</span>
-              <span className="adminrow__cell">지표</span>
-              <span className="adminrow__cell">소견</span>
-              <span className="adminrow__cell">실측</span>
-            </div>
-            <div className="bots__grid">{events.map(renderEvent)}</div>
-          </>
+        {events.length === 0 ? null : (
+          <div className="adminrow adminrow--head" aria-hidden="true">
+            <span className="adminrow__name">때</span>
+            <span className="adminrow__cell">등급</span>
+            <span className="adminrow__cell">지표</span>
+            <span className="adminrow__cell">소견</span>
+            <span className="adminrow__cell">실측</span>
+          </div>
         )}
+        {/* **이 판이 쉰두 줄이다** (2026-09-17 실측). 지표 표와 사건 표가 한 화면에
+            둘인데 처음엔 앞엣것만 옮겨, 정작 긴 쪽이 손으로 남아 있었다. */}
+        <DataList
+          items={events}
+          rowKey={(event, index) => `${event.key}-${event.happenedAt}-${String(index)}`}
+          listClass="bots__grid"
+          emptyText="아직 바뀐 적이 없다"
+          pageSize={PAGE_SIZE}
+          filterText={(event) => `${event.key} ${event.level} ${event.text}`}
+          filterLabel="지표·등급으로 찾기"
+          unit="건"
+          renderRow={(event, index) => renderEvent(event, index)}
+        />
       </Panel>
     </div>
   )

@@ -11,6 +11,7 @@
  */
 import { useState } from 'react'
 
+import { DataList } from '../editor/DataList'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 
 export interface SkillTableProps {
@@ -85,8 +86,16 @@ export function SkillTable(props: SkillTableProps): React.JSX.Element {
               <span key={field}>{field}</span>
             ))}
           </div>
-          {rows.map((row) => (
-            <div className="skl__row" key={String(row.id)}>
+          {/* 아홉 줄짜리 편집 표다 — **찾기도 페이지도 안 켠다.** 켜면 「뒤에 더 있다」가
+              되고, 고치는 표에서 줄이 감춰지면 무엇을 고쳤는지 놓친다. 틀을 쓰는 이유는
+              빈 경우를 화면마다 따로 적지 않기 위해서다. */}
+          <DataList
+            items={rows}
+            rowKey={(row) => String(row.id)}
+            rowClass="skl__row"
+            emptyText="고칠 스킬이 없다"
+            renderRow={(row) => (
+              <>
               <span className="cat__name">{String(row.id)}</span>
               {/* 잠근 값은 흐리게 — 못 고친다는 것이 눈에 보여야 한다. */}
               <ValueExpr text={String(row.family ?? '')} size="sm" dim />
@@ -104,8 +113,9 @@ export function SkillTable(props: SkillTableProps): React.JSX.Element {
                   }}
                 />
               ))}
-            </div>
-          ))}
+              </>
+            )}
+          />
         </div>
 
         <label className="cat__field">

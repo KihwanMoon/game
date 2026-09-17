@@ -33,14 +33,21 @@ function listScreens(): readonly (readonly [string, string])[] {
 /**
  * 목록을 손으로 짠 자리들.
  *
- * `<ul>` 안에서 `.map(` 을 도는 모양을 찾는다 — 그것이 곧 「줄을 손으로 편다」다.
- * 고정 배치(`<ul>` 안에 `<li>` 를 손으로 몇 개 적은 것)는 목록이 아니므로 안 센다.
+ * **`ul` 만 보면 안 된다.** 처음엔 `<ul>` 안의 `.map(` 만 찾았는데, 관리 표는 줄을
+ * `<div className="bots__grid">` 안에 편다 — 그래서 지킴이 **사건 52건**이 손으로 남아
+ * 있는데도 검사가 초록이었다 (2026-09-17). 줄 스택 클래스를 함께 본다.
+ *
+ * 고정 배치(`<ul>` 안에 `<li>` 를 손으로 몇 개 적은 것)와 탭 줄·방 타일·트리는 목록이
+ * 아니므로 안 센다 — 그것들은 `.map` 을 돌아도 「줄이 늘 수 있다」는 뜻이 아니다.
  *
  * @param source 파일 내용.
  * @returns 걸린 자리 수.
  */
 function countHandRolled(source: string): number {
-  return [...source.matchAll(/<ul[^>]*>\s*\n\s*\{[^}]*\.map\(/g)].length
+  const inList = [...source.matchAll(/<ul[^>]*>\s*\n\s*\{[^}]*\.map\(/g)].length
+  // 줄 스택 안에서 바로 도는 모양: `<div className="bots__grid">{rows.map(...)`
+  const inStack = [...source.matchAll(/className="bots__grid"[^>]*>\s*\{[^}]*\.map\(/g)].length
+  return inList + inStack
 }
 
 describe('관리 페이지 목록', () => {
