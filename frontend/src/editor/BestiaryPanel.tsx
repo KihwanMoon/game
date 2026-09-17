@@ -149,6 +149,11 @@ export function BestiaryPanel(props: BestiaryPanelProps): React.JSX.Element {
               cells={cells}
               pickedKey={pickedKey}
               onPick={togglePick}
+              // 서른여덟이 한 번에 깔린다 (2026-09-17 실측). 접사가 앞에 붙어 이름이
+              // 길어지므로 종류(`catalogId`)로도 걸리게 둔다.
+              filterText={(cell) => `${cell.entry.labelKo} ${cell.entry.catalogId}`}
+              filterLabel="이름·종류로 찾기"
+              unit="마리"
             />
           </SlotBoard>
         )}

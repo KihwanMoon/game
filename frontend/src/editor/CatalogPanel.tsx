@@ -168,6 +168,9 @@ export function CatalogPanel(props: CatalogPanelProps): React.JSX.Element | null
               pickedKey={pickedKey}
               onPick={togglePick}
               emptyText="등록된 아이템이 없다"
+              filterText={(cell) => `${cell.row.labelKo} ${cell.row.catalogId}`}
+              filterLabel="이름·id 로 찾기"
+              unit="개"
             />
           </SlotBoard>
         ) : null}

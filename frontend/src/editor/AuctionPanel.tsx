@@ -221,6 +221,9 @@ export function AuctionPanel(props: AuctionPanelProps): React.JSX.Element {
                 pickedKey={pickedKey}
                 onPick={togglePick}
                 emptyText="걸린 매물이 없다"
+                filterText={(cell) => `${cell.listing.labelKo} ${cell.listing.grade}`}
+                filterLabel="이름·등급으로 찾기"
+                unit="매물"
               />
             </SlotBoard>
             <ValueExpr text="거는 것은 가방에서 한다 — 걸 물건을 고르는 자리가 거기다" size="sm" dim />

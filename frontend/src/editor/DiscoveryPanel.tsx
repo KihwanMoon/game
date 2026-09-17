@@ -138,6 +138,11 @@ export function DiscoveryPanel(props: DiscoveryPanelProps): React.JSX.Element {
             pickedKey={pickedKey}
             onPick={togglePick}
             emptyText="비각에 아직 아무것도 없다"
+            // **쉰 칸이 한 번에 깔린다** (2026-09-17 실측). 칸 이름은 두 글자로 잘려
+            // 있으므로 찾기는 **원래 이름**으로 한다 — 자른 글자로 찾으면 못 찾는다.
+            filterText={(cell) => `${cell.row.labelKo} ${cell.row.category}`}
+            filterLabel="이름·분류로 찾기"
+            unit="칸"
           />
         </SlotBoard>
       </div>

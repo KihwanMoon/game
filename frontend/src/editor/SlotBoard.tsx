@@ -16,6 +16,7 @@ import type { ReactNode } from 'react'
 
 import { ValueExpr } from '../ds'
 
+import { describeFilterMiss, formatRowCount } from './DataList'
 import { renderCell } from './GridCellView'
 import type { CellFace } from './gridCell'
 
@@ -45,7 +46,27 @@ export interface SlotGridProps<T extends CellFace> {
    * 그린다 — 가방처럼 칸 수가 고정이라 빈 칸이 곧 뜻인 자리가 그 경우다.
    */
   readonly emptyText?: string
+  /**
+   * 거를 때 볼 글자 (2026-09-17). **주면 찾기 칸이 서고, 안 주면 칸도 없다.**
+   *
+   * 길이가 변하는 격자에만 준다. 가방 스무 칸처럼 **고정 길이에 찾기 칸이 서면**
+   * 「여기 더 있다」는 거짓말이 되고, 빈 칸이 곧 뜻인 자리에서 빈 칸이 사라진다.
+   *
+   * 실측으로 필요한 자리가 갈렸다 (2026-09-17): 도감 50 · 명부 38 은 눈으로 훑어야
+   * 했고, 가방 20 · 소모품 칸은 고정이라 필요가 없다.
+   */
+  readonly filterText?: (cell: T) => string
+  /** 찾기 칸의 이름. 자리글씨와 보조 기술 이름으로 함께 나간다. */
+  readonly filterLabel?: string
+  /** 세는 단위. 개수와 0건 문구가 함께 쓴다. */
+  readonly unit?: string
 }
+
+/** 찾기 칸의 기본 이름. */
+const DEFAULT_FILTER_LABEL = '찾기'
+
+/** 격자가 세는 기본 단위. */
+const DEFAULT_UNIT = '칸'
 
 /**
  * 제목 한 줄과 칸 격자를 그린다.
@@ -54,15 +75,50 @@ export interface SlotGridProps<T extends CellFace> {
  * @returns 격자 요소.
  */
 export function SlotGrid<T extends CellFace>(props: SlotGridProps<T>): React.JSX.Element {
+  const [query, setQuery] = useState('')
+  const { filterText } = props
+  const unit = props.unit ?? DEFAULT_UNIT
+  const needle = query.trim().toLowerCase()
+  const matched =
+    filterText === undefined || needle === ''
+      ? props.cells
+      : props.cells.filter((cell) => filterText(cell).toLowerCase().includes(needle))
   const isEmpty = props.cells.length === 0 && props.emptyText !== undefined
   return (
     <>
-      <div className="inv__head">{props.title}</div>
+      <div className="inv__head">
+        {props.title}
+        {/* **찾기 칸은 문구도 스타일도 `DataList` 것을 그대로 쓴다.** 두 벌이 되면 같은
+            질문에 두 모양의 답이 나온다 — 이 저장소가 이미 여러 번 겪은 병이다
+            (`gridCell` 머리말의 「봇 가방이 유저 가방과 다른 목록」). */}
+        {filterText === undefined || props.cells.length === 0 ? null : (
+          <input
+            className="dlist__find"
+            type="search"
+            value={query}
+            placeholder={props.filterLabel ?? DEFAULT_FILTER_LABEL}
+            aria-label={props.filterLabel ?? DEFAULT_FILTER_LABEL}
+            onChange={(event) => {
+              setQuery(event.target.value)
+            }}
+          />
+        )}
+      </div>
+      {filterText === undefined || needle === '' ? null : (
+        <ValueExpr text={formatRowCount(matched.length, props.cells.length, unit)} size="sm" dim />
+      )}
       {isEmpty ? (
         <ValueExpr text={props.emptyText ?? ''} size="sm" dim />
+      ) : filterText !== undefined && needle !== '' && matched.length === 0 ? (
+        // **0건은 빈 격자와 다르다.** 빈 격자만 두면 「아직 아무것도 없다」로 읽힌다.
+        //
+        // **거르기가 켜져 있고 질의가 있을 때만이다.** 이 조건을 안 달았더니 빈 가방이
+        // 「「」에 걸리는 칸이 없다」로 떴다 — 빈 칸이 곧 뜻인 자리에서 격자가 통째로
+        // 사라진 것이고, 기존 검사가 그것을 잡았다.
+        <ValueExpr text={describeFilterMiss(query.trim(), props.cells.length, unit)} size="sm" dim />
       ) : (
         <div className={`invg invg--${props.shape}`}>
-          {props.cells.map((cell) => renderCell(cell, cell.key === props.pickedKey, props.onPick))}
+          {matched.map((cell) => renderCell(cell, cell.key === props.pickedKey, props.onPick))}
         </div>
       )}
     </>

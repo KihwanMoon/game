@@ -475,3 +475,17 @@ describe('★ 상세에도 그림이 선다 (2026-09-16)', () => {
     expect(pickArtSrc(renderDetail('bag', INVENTORY.slots[1]!))).not.toBe('')
   })
 })
+
+describe('고정 길이 격자에는 찾기 칸이 없다', () => {
+  // **가방은 스무 칸 고정이다.** 찾기 칸이 서면 「여기 더 있다」는 거짓말이 되고, 빈 칸이
+  // 곧 뜻인 자리에서 빈 칸이 사라진다 (`SlotGrid.filterText` 머리말).
+  //
+  // 길이가 변하는 격자(도감 50 · 명부 38 · 저잣거리)에만 켠다 — 2026-09-17 실측으로 갈랐다.
+  it('★ 가방 격자에 찾기 칸이 안 선다', () => {
+    const markup = renderToStaticMarkup(
+      <InventoryGrid inventory={INVENTORY} pickedKey="" onPick={() => undefined} />,
+    )
+    expect(markup).not.toContain('dlist__find')
+    expect(markup).not.toContain('찾기')
+  })
+})

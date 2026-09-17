@@ -168,3 +168,38 @@ describe('도감', () => {
     expect(items[0]?.key).not.toBe(skills[0]?.key)
   })
 })
+
+describe('도감 찾기', () => {
+  // **쉰 칸이 한 번에 깔린다** (2026-09-17 실측). 격자로 옮기면서 그림과 「무엇을 해
+  // 주는가」는 얻었는데 찾기가 없어, 원하는 것을 눈으로 훑어야 했다.
+  const MANY: DiscoveryView = {
+    ...DISCOVERY,
+    items: [
+      ...DISCOVERY.items,
+      { kind: 'ITEM', refId: 'boots_swift', labelKo: '날랜 신발', category: 'FEET', isFound: true, detail: '', hands: '', useTag: '' },
+    ],
+  }
+
+  /**
+   * 도감을 그린다.
+   *
+   * @param view 도감.
+   * @returns 마크업.
+   */
+  function drawDiscovery(view: DiscoveryView): string {
+    return renderToStaticMarkup(<DiscoveryPanel discovery={view} link="online" />)
+  }
+
+  it('★ 찾기 칸이 선다 — 길이가 변하는 격자다', () => {
+    expect(drawDiscovery(MANY)).toContain('이름·분류로 찾기')
+  })
+
+  it('★ 잘린 이름이 아니라 원래 이름으로 건다', () => {
+    // 칸에 뜨는 글자는 두 글자로 잘려 있다(`날랜`). 그것으로만 걸면 「신발」이 안 걸린다.
+    const cells = buildDiscoveryCells(MANY.items)
+    const names = cells.map((cell) => cell.label)
+    expect(names).not.toContain('날랜 신발')
+    const row = MANY.items.find((one) => one.refId === 'boots_swift')
+    expect(row?.labelKo).toContain('신발')
+  })
+})
