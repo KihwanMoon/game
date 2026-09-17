@@ -82,7 +82,18 @@ export function renderCell<T extends CellFace>(
       )}
       {/* **무엇을 해 주는가 한 줄.** 이것이 없으면 격자를 봐서는 어느 게 더 좋은지
           알 수 없어 칸을 하나씩 눌러야 한다. 54px 안에 들려고 한 글자 표기를 쓴다. */}
-      {cell.fact === '' ? null : <span className="invg__fact">{cell.fact}</span>}
+      {cell.fact === '' ? null : (
+        // **아래 구석을 쓰는 것이 있으면 그만큼 비킨다** (2026-09-17, 실제 스크린샷).
+        // 등급 글리프와 개수는 absolute 라 흐름에서 자리를 안 차지하고, 그래서 이 줄
+        // 위에 그대로 겹쳐 찍혔다 — 비각 칸의 `NORMAL` 위에 `lv2` 가 그것이었다.
+        <span
+          className={`invg__fact${GRADE_GLYPHS.has(cell.grade) ? ' invg__fact--left' : ''}${
+            cell.countText === '' ? '' : ' invg__fact--right'
+          }`}
+        >
+          {cell.fact}
+        </span>
+      )}
       {cell.countText === '' ? null : <span className="invg__count">{cell.countText}</span>}
       {cell.marks.length === 0 ? null : (
         <span className="invg__marks">{cell.marks.join(' ')}</span>

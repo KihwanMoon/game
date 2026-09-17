@@ -14,7 +14,7 @@
 import { useCallback, useState } from 'react'
 import type { ReactNode } from 'react'
 
-import { ValueExpr } from '../ds'
+import { Button, ValueExpr } from '../ds'
 
 import { describeFilterMiss, formatRowCount } from './DataList'
 import { renderCell } from './GridCellView'
@@ -60,7 +60,25 @@ export interface SlotGridProps<T extends CellFace> {
   readonly filterLabel?: string
   /** 세는 단위. 개수와 0건 문구가 함께 쓴다. */
   readonly unit?: string
+  /**
+   * 한 번에 깔 칸 수 (2026-09-17 실제 신고: 「몬스터 목록 페이지네이션 필요해 보이는데」).
+   *
+   * **안 주면 「더 보기」가 서지 않는다** — 길이가 고정인 격자(가방 스무 칸)에 그것이
+   * 서면 「뒤에 더 있다」는 거짓말이 된다. `DataList` 의 `pageSize` 와 같은 규약이다.
+   *
+   * 길이가 변하는 격자에만 준다. 비각 18마리가 한 화면을 채우는데 도감은 50, 저잣거리는
+   * 열둘씩 는다 — 전부 깔면 고른 칸의 상세가 화면 밖으로 밀린다.
+   */
+  readonly pageSize?: number
 }
+
+/**
+ * 격자 한 장에 까는 칸 수.
+ *
+ * **4열의 여섯 줄이다.** 열 수에 맞추지 않으면 마지막 줄이 늘 어중간하게 끊겨, 「더
+ * 보기」가 남은 것을 가리는 것이 아니라 줄을 자른 것처럼 보인다.
+ */
+export const GRID_PAGE = 24
 
 /** 찾기 칸의 기본 이름. */
 const DEFAULT_FILTER_LABEL = '찾기'
@@ -76,13 +94,17 @@ const DEFAULT_UNIT = '칸'
  */
 export function SlotGrid<T extends CellFace>(props: SlotGridProps<T>): React.JSX.Element {
   const [query, setQuery] = useState('')
-  const { filterText } = props
+  const { filterText, pageSize } = props
+  const [shown, setShown] = useState(pageSize ?? 0)
   const unit = props.unit ?? DEFAULT_UNIT
   const needle = query.trim().toLowerCase()
   const matched =
     filterText === undefined || needle === ''
       ? props.cells
       : props.cells.filter((cell) => filterText(cell).toLowerCase().includes(needle))
+  // 페이지를 안 쓰면 전부 깐다. 「더 보기」도 그때는 서지 않는다.
+  const visible = pageSize === undefined ? matched : matched.slice(0, shown)
+  const rest = matched.length - visible.length
   const isEmpty = props.cells.length === 0 && props.emptyText !== undefined
   return (
     <>
@@ -100,6 +122,10 @@ export function SlotGrid<T extends CellFace>(props: SlotGridProps<T>): React.JSX
             aria-label={props.filterLabel ?? DEFAULT_FILTER_LABEL}
             onChange={(event) => {
               setQuery(event.target.value)
+              // **깔아 둔 칸 수를 되돌린다.** 스물넷까지 펼쳐 둔 채로 질의를 치면 새
+              // 결과가 스물넷으로 튀어나오고, 「더 보기」로 한 장씩 보던 약속이 깨진다 —
+              // 질의는 다른 목록이지 같은 목록의 다음 장이 아니다 (`DataList` 와 같다).
+              setShown(pageSize ?? 0)
             }}
           />
         )}
@@ -117,9 +143,23 @@ export function SlotGrid<T extends CellFace>(props: SlotGridProps<T>): React.JSX
         // 사라진 것이고, 기존 검사가 그것을 잡았다.
         <ValueExpr text={describeFilterMiss(query.trim(), props.cells.length, unit)} size="sm" dim />
       ) : (
-        <div className={`invg invg--${props.shape}`}>
-          {matched.map((cell) => renderCell(cell, cell.key === props.pickedKey, props.onPick))}
-        </div>
+        <>
+          <div className={`invg invg--${props.shape}`}>
+            {visible.map((cell) => renderCell(cell, cell.key === props.pickedKey, props.onPick))}
+          </div>
+          {pageSize === undefined || rest <= 0 ? null : (
+            <Button
+              size="sm"
+              variant="ghost"
+              glyph="▾"
+              onClick={() => {
+                setShown(shown + pageSize)
+              }}
+            >
+              {`더 보기 · 남은 ${String(rest)}${unit}`}
+            </Button>
+          )}
+        </>
       )}
     </>
   )

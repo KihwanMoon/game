@@ -26,7 +26,7 @@ import type { BestiaryEntry } from '../storage'
 import { buildBestiaryCells } from './bestiaryCells'
 import { LinkNoticeLine } from './LinkNoticeLine'
 import { checkLinked, type LinkState } from './linkState'
-import { SlotBoard, SlotGrid, usePickedKey } from './SlotBoard'
+import { GRID_PAGE, SlotBoard, SlotGrid, usePickedKey } from './SlotBoard'
 
 export interface BestiaryPanelProps {
   readonly entries: readonly BestiaryEntry[] | undefined
@@ -154,6 +154,8 @@ export function BestiaryPanel(props: BestiaryPanelProps): React.JSX.Element {
               filterText={(cell) => `${cell.entry.labelKo} ${cell.entry.catalogId}`}
               filterLabel="이름·종류로 찾기"
               unit="마리"
+              // **한 장씩 깐다** (2026-09-17 실제 신고). 비각은 층을 내려갈수록 는다 — 18마리가 이미 한 화면이다.
+              pageSize={GRID_PAGE}
             />
           </SlotBoard>
         )}

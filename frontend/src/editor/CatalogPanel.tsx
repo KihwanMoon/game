@@ -21,7 +21,7 @@ import { Button, Panel, ValueExpr } from '../ds'
 import type { AdminCatalog, CatalogEnemyRow, CatalogItemRow } from '../storage'
 
 import { buildCatalogEnemyCells, buildCatalogItemCells } from './catalogCells'
-import { SlotBoard, SlotGrid, usePickedKey } from './SlotBoard'
+import { GRID_PAGE, SlotBoard, SlotGrid, usePickedKey } from './SlotBoard'
 
 export interface CatalogPanelProps {
   readonly catalog: AdminCatalog | undefined
@@ -171,6 +171,8 @@ export function CatalogPanel(props: CatalogPanelProps): React.JSX.Element | null
               filterText={(cell) => `${cell.row.labelKo} ${cell.row.catalogId}`}
               filterLabel="이름·id 로 찾기"
               unit="개"
+              // **한 장씩 깐다** (2026-09-17 실제 신고). 카탈로그는 백 줄을 넘는다.
+              pageSize={GRID_PAGE}
             />
           </SlotBoard>
         ) : null}

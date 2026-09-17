@@ -20,7 +20,7 @@ import { AffixList } from './AffixList'
 import { buildListingCells, findBuyBlocker, type ListingCell } from './auctionCells'
 import { CompareBlock } from './CompareRows'
 import { buildRangeRow, compareToWorn } from './compareItems'
-import { SlotBoard, SlotGrid, usePickedKey } from './SlotBoard'
+import { GRID_PAGE, SlotBoard, SlotGrid, usePickedKey } from './SlotBoard'
 import { formatGradeClass, renderGrade } from './gradeBadge'
 import { formatAffix } from './InventoryPanel'
 import { EQUIP_CELL_LABELS, RANGE_SLOT } from './inventoryCells'
@@ -235,6 +235,8 @@ export function AuctionPanel(props: AuctionPanelProps): React.JSX.Element {
                 filterText={(cell) => `${cell.listing.labelKo} ${cell.listing.grade}`}
                 filterLabel="이름·등급으로 찾기"
                 unit="매물"
+                // **한 장씩 깐다** (2026-09-17 실제 신고). 매물은 열둘씩 들어온다.
+                pageSize={GRID_PAGE}
               />
             </SlotBoard>
             <ValueExpr text="거는 것은 가방에서 한다 — 걸 물건을 고르는 자리가 거기다" size="sm" dim />

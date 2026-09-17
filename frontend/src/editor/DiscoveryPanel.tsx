@@ -26,7 +26,7 @@ import type { DiscoveryRow, DiscoveryView } from '../storage'
 import { buildDiscoveryCells } from './discoveryCells'
 import { LinkNoticeLine } from './LinkNoticeLine'
 import { checkLinked, type LinkState } from './linkState'
-import { SlotBoard, SlotGrid, usePickedKey } from './SlotBoard'
+import { GRID_PAGE, SlotBoard, SlotGrid, usePickedKey } from './SlotBoard'
 
 // `editor/index` 가 이 이름을 이 파일에서 내보내고 있다. 어댑터로 옮겼지만 자리는
 // 남긴다 — 배럴은 다른 손이 같이 쥔 파일이라 이 단계에서 안 건드린다.
@@ -143,6 +143,8 @@ export function DiscoveryPanel(props: DiscoveryPanelProps): React.JSX.Element {
             filterText={(cell) => `${cell.row.labelKo} ${cell.row.category}`}
             filterLabel="이름·분류로 찾기"
             unit="칸"
+            // **한 장씩 깐다** (2026-09-17 실제 신고). 도감은 50칸까지 찬다 — 전부 깔면 고른 칸의 상세가 화면 밖이다.
+            pageSize={GRID_PAGE}
           />
         </SlotBoard>
       </div>

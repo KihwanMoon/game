@@ -1057,6 +1057,16 @@
 }
 
 .inv__head {
+  /* **제목과 찾기 칸이 붙어 있었다** (2026-09-17, 실제 스크린샷). 블록이라 찾기 칸이
+     글 옆으로 흘러 「비각의 것들 18」의 8 에 상자 모서리가 닿았다 — `DataList` 의
+     머리줄(`.dlist__head`)은 처음부터 줄이었는데 이쪽만 안 따라왔다.
+
+     제목이 먼저 줄어들고(`1 1 auto` + `min-inline-size: 0`), 찾기 칸은 자기 폭을
+     지킨다. 좁으면 접힌다 — 겹쳐 찍히느니 두 줄이 낫다. */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
   margin-top: var(--sp-2);
   padding-top: var(--sp-2);
   border-top: var(--line-1) solid var(--line);
@@ -2057,6 +2067,13 @@
 
    좋고 나쁨을 여기서 칠하지 않는다. 저주 접사가 가장 큰 접사일 수 있고, 그때 그것이
    그 물건에 대해 말할 가장 중요한 사실이다 — 판단은 상세의 견줌이 한다. */
+/* 칸 아래 띠의 가운데 글. **양 끝은 구석이 쓴다** — 왼쪽 아래는 등급 글리프, 오른쪽
+   아래는 개수다(`.invg__grade` · `.invg__count`, 둘 다 absolute). 비켜서지 않으면 같은
+   띠에 겹쳐 찍힌다: 비각 칸에서 `NORMAL` 위에 `lv2` 가 찍혀 있었다 (2026-09-17, 실제
+   스크린샷). 아이템 칸은 `fact` 가 짧아 안 드러났을 뿐 같은 결함이다.
+
+   구석이 없는 칸까지 좁히지 않으려고 **있을 때만** 비킨다 — 70px 칸에서 32px 을 늘
+   내주면 두 글자밖에 안 남는다. */
 .invg__fact {
   max-inline-size: 100%;
   color: var(--text-dim);
@@ -2065,6 +2082,14 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.invg__fact--left {
+  padding-inline-start: var(--sp-3);
+}
+
+.invg__fact--right {
+  padding-inline-end: var(--sp-6);
 }
 
 .invg__count {

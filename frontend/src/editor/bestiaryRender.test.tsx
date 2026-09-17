@@ -8,6 +8,9 @@
  * 한 곳에 편다 — 그래서 **칸에서 볼 것**과 **상세에서 볼 것**을 갈라 본다.
  */
 
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -86,6 +89,64 @@ describe('도감 격자', () => {
 
   it('★ 아무것도 안 골랐으면 규칙표가 어디서 나오는지 말한다', () => {
     expect(markup).toContain('칸을 고르면 규칙표가 그대로 뜬다')
+  })
+})
+
+describe('한 장씩 깐다 (2026-09-17 실제 신고)', () => {
+  // **18마리가 이미 한 화면이었다.** 비각은 층을 내려갈수록 늘고, 전부 깔면 고른 칸의
+  // 상세가 화면 밖으로 밀린다 — 격자를 쓰는 뜻이 그 자리에서 사라진다.
+
+  /**
+   * 같은 개체를 여러 마리로 늘린다.
+   *
+   * @param count 몇 마리.
+   * @returns 도감 줄들.
+   */
+  function buildMany(count: number): readonly BestiaryEntry[] {
+    return Array.from({ length: count }, (_unused, at) => ({
+      ...ENTRY,
+      recordId: at + 1,
+      labelKo: `개체${String(at + 1)}`,
+      zoneFloor: at + 1,
+    }))
+  }
+
+  it('★ 첫 장은 스물넷이고, 남은 수를 「더 보기」가 적는다', () => {
+    // 이름이 아니라 **층 코드**로 센다 — 칸 이름은 두 글자로 잘리므로(`clipCellLabel`)
+    // 「개체1」과 「개체24」가 화면에서는 똑같이 「개체」다.
+    const markup = renderToStaticMarkup(<BestiaryPanel entries={buildMany(30)} link="online" />)
+    expect((markup.match(/invg__cell/g) ?? []).length).toBe(24)
+    expect(markup).toContain('>1장<')
+    expect(markup).toContain('>24장<')
+    expect(markup).not.toContain('>25장<')
+    // **남은 수를 적는다.** 「더 보기」만 있으면 한 번 더 누를 것인지 열 번 더 누를
+    // 것인지를 모른 채 누르게 된다.
+    expect(markup).toContain('더 보기 · 남은 6마리')
+  })
+
+  it('★ 다 들어가면 「더 보기」가 안 선다 — 뒤에 더 있다는 거짓말이 된다', () => {
+    const markup = renderToStaticMarkup(<BestiaryPanel entries={buildMany(24)} link="online" />)
+    expect(markup).toContain('>24장<')
+    expect(markup).not.toContain('더 보기')
+  })
+
+  it('★ 칸 아래 글이 구석을 비킨다 — `NORMAL` 위에 `lv2` 가 찍혀 있었다', () => {
+    // 등급 글리프와 개수는 absolute 라 흐름에서 자리를 안 차지한다. 비키지 않으면
+    // 같은 띠에 겹쳐 찍힌다 (2026-09-17, 실제 스크린샷).
+    const markup = renderToStaticMarkup(<BestiaryPanel entries={ENTRIES} link="online" />)
+    expect(markup).toContain('invg__fact--right')
+    const css = readFileSync(fileURLToPath(new URL('./editor.css', import.meta.url)), 'utf8')
+    expect(css).toContain('.invg__fact--right')
+    expect(css).toContain('.invg__fact--left')
+  })
+
+  it('★ 머리줄이 줄이다 — 제목과 찾기 칸이 붙으면 글자에 상자가 닿는다', () => {
+    // 실제 스크린샷에서 「비각의 것들 18」의 8 에 찾기 상자 모서리가 닿아 있었다.
+    // `DataList` 의 머리줄은 처음부터 줄이었는데 이쪽만 안 따라왔다.
+    const css = readFileSync(fileURLToPath(new URL('./editor.css', import.meta.url)), 'utf8')
+    const head = css.slice(css.indexOf('.inv__head {'), css.indexOf('}', css.indexOf('.inv__head {')))
+    expect(head).toContain('display: flex')
+    expect(head).toContain('gap:')
   })
 })
 
