@@ -1,5 +1,5 @@
 {
-  "room_list_version": 5,
+  "room_list_version": 6,
   "_comment": [
     "손으로 그린 룸 템플릿 (로드맵 Phase 0). 순수 랜덤 그리드를 쓰지 않는 이유는",
     "TDD §7.2 에 있다 — 전술적으로 무의미한 공간을 대량 생산하기 때문이다.",
@@ -126,7 +126,7 @@
       "id": "pillars",
       "label_ko": "기둥 숲",
       "purpose": "엄폐물이 LOS 를 끊는다. 사격형 상대로 MOVE_TO_COVER 가 성립하는 방.",
-      "min_floor": 1,
+      "min_floor": 2,
       "rows": [
         "############",
         "#..........#",
@@ -466,7 +466,7 @@
       "id": "narrow_cross",
       "label_ko": "네거리",
       "purpose": "십자 통로. 교차점을 먼저 차지하면 셋을 하나씩 상대할 수 있다.",
-      "min_floor": 1,
+      "min_floor": 2,
       "rows": [
         "############",
         "####....####",

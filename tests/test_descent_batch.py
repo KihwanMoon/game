@@ -68,12 +68,15 @@ def test_a_deep_room_never_opens_the_descent():
         assert all(ROOMS[name].min_floor <= 1 for name in first_floor), first_floor
 
 
-def run_probe(runs=2, ruleset=None):
+def run_probe(runs=2, ruleset=None, start_floor=1):
     """하강을 조금 돌린다.
 
     Args:
         runs: 반복 횟수.
         ruleset: 플레이어 규칙표. None 이면 폴백.
+        start_floor: 시작 층. 「층 중간에 죽는다」를 재는 검사가 깊은 층에서 잰다 —
+            1장은 신규가 들어오는 층이라 일부러 쉽고, 거기서는 죽는 판을 만들기가
+            어렵다 (2026-09-16).
 
     Returns:
         통계.
@@ -86,7 +89,7 @@ def run_probe(runs=2, ruleset=None):
         ruleset,
         load_rulesets(ENEMY_RULESETS_PATH),
         runs,
-        1,
+        start_floor,
         "open_field",
         PER_FLOOR,
         "boss_hall",
@@ -113,9 +116,12 @@ def test_a_run_that_dies_mid_floor_does_not_clear_it():
     from game.config import BENCHMARK_RULESETS_PATH
 
     partial = load_rulesets(BENCHMARK_RULESETS_PATH)["focus_threat_guard"]
-    stats = run_probe(runs=3, ruleset=partial)
-    # 실측 (난이도 개편: 층당 5방·스킬 v3): 시드 1~3 이 2·2·1방에서 죽는다 — 셋 다
-    # **층 중간**이라, 올림으로 세는 순간 1층 합계가 3 이 되어 어긋난다.
+    # **2장에서 잰다** (2026-09-16). 1장은 신규가 들어오는 층이라 일부러 쉽게 두었고
+    # (기둥 숲·네거리를 2장으로 올렸다), 그 뒤로 세 판 중 하나가 1장을 **깨 버려서**
+    # 이 검사가 빨개졌다. 재는 것은 「층 중간에 죽으면 안 센다」이지 1장의 난이도가
+    # 아니므로, 죽는 판이 안정적으로 나오는 층으로 옮긴다 — 1장이 더 쉬워져도 안 깨진다.
+    stats = run_probe(runs=3, ruleset=partial, start_floor=2)
+    # 실측: 세 판 모두 **층 중간**에서 죽는다 — 올림으로 세는 순간 합계가 3 이 되어 어긋난다.
     assert stats.cleared_by_floor[:3] == (0, 0, 0), stats
     assert stats.deepest_floor == 0
     assert stats.finished == 0

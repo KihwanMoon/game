@@ -101,6 +101,24 @@ pytestmark_db = pytest.mark.skipif(
 )
 
 
+def templates_for_floor(floor):
+    """그 층에 설 수 있는 방 템플릿들.
+
+    Args:
+        floor: 층.
+
+    Returns:
+        템플릿 딕셔너리들. 보스 방은 뺀다 — 그 자리는 따로 정해진다.
+    """
+    import json
+
+    from game.config import ROOM_TEMPLATES_PATH
+
+    raw = json.loads(ROOM_TEMPLATES_PATH.read_text(encoding="utf-8"))
+    rooms = raw.get("templates") or raw.get("rooms") or []
+    return [one for one in rooms if one.get("min_floor", 1) <= floor and one["id"] != "boss_hall"]
+
+
 @pytestmark_db
 def test_the_ticket_carries_a_varied_chain():
     """★ 티켓이 같은 방 세 개를 주면 화면도 같은 방을 세 번 돈다.
@@ -121,8 +139,19 @@ def test_the_ticket_carries_a_varied_chain():
     assert len(issued["room_ids"]) == per_floor * 10
     # 겹치지 않는 것은 **한 층 안에서**다. 층이 다르면 같은 방이 다시 나와도 된다 —
     # 층마다 적이 세지므로 같은 지형이 다른 판이 된다.
+    #
+    # **후보가 방 수보다 적으면 하나는 되풀이된다.** `build_room_chain` 이 처음부터 그렇게
+    # 적어 두었다 — 「후보가 모자라면 그때만 되풀이하되 바로 앞 방과는 다르게 둔다」.
+    # 1장을 신규에게 열어 주려고 후보를 넷으로 줄이면서(기둥 숲·네거리를 2장으로) 그
+    # 경우가 실제로 생겼고, 이 검사가 **코드의 계약보다 엄해서** 빨개졌다. 계약대로 본다:
+    # 후보가 넉넉하면 전부 다르고, 모자라면 **적어도 연달아 같지는 않다.**
     first = issued["room_ids"][:per_floor]
-    assert len(set(first)) == len(first)
+    floor_one_rooms = {room["id"] for room in templates_for_floor(1)}
+    if len(floor_one_rooms) >= per_floor:
+        assert len(set(first)) == len(first)
+    else:
+        assert len(set(first)) == len(floor_one_rooms), first
+    assert all(first[i] != first[i + 1] for i in range(len(first) - 1)), first
     # 마지막은 보스 방이다.
     assert issued["room_ids"][-1] == "boss_hall"
 
