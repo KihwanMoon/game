@@ -39,6 +39,32 @@ STAT_POINTS_PER_LEVEL = 3
 # 배분할 수 있는 능력치. 무엇을 여는지는 `progression/attributes.py` 가 정한다.
 STAT_KEYS: tuple[str, ...] = ("str", "dex", "int")
 
+# 여기부터는 능력치 **되돌리기**다 (2026-09-17).
+#
+# **무르기는 원래 공짜였다.** 라우트 독스트링은 「되돌릴 수 없다」고 적어 두었는데
+# `check_allocation` 은 「쓴 점 ≤ 가진 점」만 봤고 저장은 배분표를 통째로 덮어썼다 —
+# 화면이 더하기만 시켜서 안 드러났을 뿐, API 로는 언제든 갈아치울 수 있었다. 문서와
+# 코드가 반대였던 자리다.
+#
+# 규칙을 정한다: **1장을 깨기 전에는 공짜, 그 뒤로는 푼을 낸다.**
+#
+# 무료 구간을 두는 이유는 **지능이 CPU 를 열기 때문이다.** 처음 오는 사람은 그 사실을
+# 모른 채 찍고, 힘에 몰아넣으면 규칙을 몇 줄 못 돌리는 몸이 된다 — 이 게임이 파는 것이
+# 규칙 설계 공간인데 거기서 잠기면 남는 것이 없다 (P3).
+#
+# **1장 클리어는 서버가 안다** (`entity_record.reached_floor`). 세이브의 `best_floor` 는
+# 클라이언트가 들고 있어서 「아직 못 깼다」로 영원히 공짜가 된다.
+RESPEC_FREE_BEFORE_FLOOR = 2
+
+# 유료 구간의 값. **비선형이다** — 레벨마다 배율을 곱하고 층마다 정수 내림으로 접는다
+# (`monsters/scaling` 과 같은 방식, R5). 깊이 간 사람일수록 무르기가 무겁고, 그래서
+# 「무르는 것도 선택」이 된다. 푼을 쓰면 장비를 못 산다.
+#
+# 활자로 안 받는 이유가 있다: 활자는 **내 둔갑이 남의 장에서 버틴 횟수**라 남이 안 오면
+# 못 버는 돈이다. 내 실수를 무르는 데 남의 방문을 요구할 수는 없다.
+RESPEC_BASE_COST = 120
+RESPEC_GROWTH_PERCENT = 160
+
 # 검증된 런이 주는 경험치. 이기는 것이 확실히 낫지만 진 판도 빈손은 아니다 —
 # "실패한 런조차 자산을 남긴다"(GDD §2.3)를 경험치에도 얇게 건다.
 # 난이도 개편과 함께 올렸다 — 층이 5/3배 길어졌다.
@@ -156,3 +182,49 @@ def add_run_xp(is_cleared: bool) -> int:
         줄 경험치.
     """
     return XP_WIN if is_cleared else XP_LOSS
+
+
+def compute_respec_cost(level: int) -> int:
+    """능력치를 무르는 데 드는 푼.
+
+    **레벨마다 접는다.** 한 번에 거듭제곱을 계산하면 큰 수에서 파이썬과 TS 의 결과가
+    갈릴 수 있다 — 이 값은 시뮬레이션에 안 들어가지만 같은 규율을 지킨다 (R5).
+
+    Args:
+        level: 지금 레벨.
+
+    Returns:
+        드는 푼. 레벨 1 이면 기준값이다.
+    """
+    cost = RESPEC_BASE_COST
+    for _step in range(max(MIN_LEVEL, level) - MIN_LEVEL):
+        cost = cost * RESPEC_GROWTH_PERCENT // PERCENT_BASE
+    return cost
+
+
+def check_is_respec(stats: dict[str, int], current: dict[str, int]) -> bool:
+    """이 배분이 **무르기**인가.
+
+    한 축이라도 **줄면** 무르기다. 늘리기만 하는 것은 그냥 배분이라 값을 안 받는다 —
+    안 쓴 포인트를 쓰는 데 돈을 받으면 레벨업이 벌이 된다.
+
+    Args:
+        stats: 새 배분표.
+        current: 지금 저장된 배분표.
+
+    Returns:
+        무르기면 참.
+    """
+    return any(int(stats.get(key, 0)) < int(current.get(key, 0) or 0) for key in STAT_KEYS)
+
+
+def check_respec_is_free(reached_floor: int) -> bool:
+    """이 사람은 아직 공짜로 무를 수 있는가.
+
+    Args:
+        reached_floor: 서버가 아는 도달 층. 1 장을 깨면 2 가 된다.
+
+    Returns:
+        공짜면 참.
+    """
+    return int(reached_floor or MIN_LEVEL) < RESPEC_FREE_BEFORE_FLOOR

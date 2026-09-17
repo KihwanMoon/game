@@ -24,6 +24,8 @@ const PROGRESS: ProgressView = {
   statKeys: ['str', 'dex', 'int'],
   statPoints: 15,
   spentPoints: 6,
+  respecCost: 0,
+  respecIsFree: true,
   bonusRuleSlots: 1,
   bonusCpu: 1,
   reachedFloor: 1,
@@ -118,5 +120,27 @@ describe('층 깊이 (설계/6_몬스터 §3)', () => {
 
   it('★ 끝까지 왔으면 그렇게 말한다 — 더 갈 곳이 있는 것처럼 보이면 안 된다', () => {
     expect(drawDepth(10, 10)).toContain('끝까지 왔다')
+  })
+})
+
+describe('능력치 무르기', () => {
+  // **예전에는 아무 조건 없이 공짜였다** (2026-09-17). 라우트 독스트링은 「되돌릴 수
+  // 없다」고 적어 두었는데 검증은 「쓴 점 ≤ 가진 점」만 봤고 저장은 배분표를 통째로
+  // 덮어썼다 — 화면이 더하기만 시켜서 안 드러났을 뿐이다.
+
+  it('★ 한 점도 안 찍었으면 되돌릴 단추를 안 세운다 — 눌러도 아무 일이 안 난다', () => {
+    expect(draw({ ...PROGRESS, spentPoints: 0 })).not.toContain('되돌리기')
+  })
+
+  it('★ 1장 전에는 공짜라고 적는다 — 처음 오는 사람이 잠기면 안 된다', () => {
+    const markup = draw({ ...PROGRESS, respecIsFree: true, respecCost: 0 })
+    expect(markup).toContain('되돌리기 (공짜)')
+  })
+
+  it('★ 값이 붙으면 **누르기 전에** 얼마인지 적는다', () => {
+    // 누르고 나서 거절당하면 「왜 안 되지」가 되고, 값을 모르면 낼지 말지를 고를 수 없다.
+    const markup = draw({ ...PROGRESS, respecIsFree: false, respecCost: 785 })
+    expect(markup).toContain('되돌리기 (785 푼)')
+    expect(markup).not.toContain('공짜')
   })
 })

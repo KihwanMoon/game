@@ -2085,7 +2085,17 @@ export function App(): React.JSX.Element {
                     method: 'PUT',
                     headers: { 'X-Game-Token': account, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ stats }),
-                  }).then(() => {
+                    // **거절을 삼키면 안 된다** (2026-09-17). 무르기에 값이 붙으면서
+                    // 이 요청이 실패할 수 있게 됐는데, 예전에는 결과를 안 보고 새로
+                    // 읽기만 해서 **아무 일도 안 난 것처럼** 보였다 — 푼이 모자라면
+                    // 화면이 조용히 원래 값으로 돌아갈 뿐이었다.
+                  }).then(async (answer) => {
+                    if (!answer.ok) {
+                      const body = (await answer.json().catch(() => ({}))) as {
+                        detail?: string
+                      }
+                      setWorldDetail(body.detail ?? '능력치를 저장하지 못했다')
+                    }
                     refreshWorld()
                   })
                 }}

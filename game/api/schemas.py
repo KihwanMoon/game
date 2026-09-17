@@ -231,6 +231,11 @@ class ProgressResponse(BaseModel):
     bonus_flags: int = 0
     stat_points: int = 0
     spent_points: int = 0
+    # 능력치를 무르는 값 (2026-09-17). **화면이 미리 알아야 한다** — 누르고 나서 400 을
+    # 받으면 「왜 안 되지」가 되고, 값을 모르면 낼지 말지를 고를 수가 없다.
+    respec_cost: int = 0
+    # 1장을 깨기 전인가. 그 전까지는 무르기가 공짜다 (`progression/levels`).
+    respec_is_free: bool = True
     # **여기까지 내려가 봤다** (설계/6_몬스터 §3). 서버만 올린다.
     reached_floor: int = 1
     # 마지막 층. 화면이 「7 / 10」 을 그리려면 끝을 알아야 한다.

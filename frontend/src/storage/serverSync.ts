@@ -1085,6 +1085,15 @@ export interface ProgressView {
   readonly statKeys: readonly string[]
   readonly statPoints: number
   readonly spentPoints: number
+  /**
+   * 능력치를 무르는 값 (2026-09-17).
+   *
+   * **화면이 미리 알아야 한다** — 누르고 나서 400 을 받으면 「왜 안 되지」가 되고,
+   * 값을 모르면 낼지 말지를 고를 수가 없다. 공짜 구간이면 0 이다.
+   */
+  readonly respecCost: number
+  /** 1장을 깨기 전인가. 그 전까지는 무르기가 공짜다. */
+  readonly respecIsFree: boolean
   readonly bonusRuleSlots: number
   readonly bonusCpu: number
   /**
@@ -1227,6 +1236,8 @@ interface RawProgress {
   stat_keys: string[]
   stat_points: number
   spent_points: number
+  respec_cost?: number
+  respec_is_free?: boolean
   bonus_rule_slots: number
   bonus_cpu: number
   reached_floor?: number
@@ -1255,6 +1266,8 @@ export function readProgressPayload(raw: Record<string, unknown>): ProgressView 
     statKeys: body.stat_keys,
     statPoints: body.stat_points,
     spentPoints: body.spent_points,
+    respecCost: body.respec_cost ?? 0,
+    respecIsFree: body.respec_is_free ?? true,
     bonusRuleSlots: body.bonus_rule_slots,
     bonusCpu: body.bonus_cpu,
     reachedFloor: body.reached_floor ?? 1,

@@ -300,6 +300,8 @@ describe('규칙 한도 (결정 #51, #13)', () => {
     statKeys: [],
     statPoints: 0,
     spentPoints: 0,
+    respecCost: 0,
+    respecIsFree: true,
     bonusRuleSlots: 1,
     bonusCpu: 3,
     reachedFloor: 1,

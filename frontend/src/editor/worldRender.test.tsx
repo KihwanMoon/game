@@ -27,6 +27,8 @@ const PROGRESS: ProgressView = {
   statKeys: ['str', 'dex', 'int'],
   statPoints: 15,
   spentPoints: 6,
+  respecCost: 0,
+  respecIsFree: true,
   bonusRuleSlots: 1,
   bonusCpu: 1,
   reachedFloor: 1,

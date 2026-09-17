@@ -200,6 +200,34 @@ export function GrowthPanel(props: GrowthPanelProps): React.JSX.Element {
                 </Button>
               </div>
             )}
+            {/* **무르기는 찍은 뒤에만 뜻이 있다** (2026-09-17). 한 점도 안 찍었으면
+                되돌릴 것이 없고, 단추만 서 있으면 눌러도 아무 일이 안 난다.
+
+                값을 **누르기 전에** 적는다. 누르고 나서 거절당하면 「왜 안 되지」가 되고,
+                값을 모르면 낼지 말지를 고를 수가 없다. 1장을 깨기 전에는 공짜다 —
+                지능이 CPU 를 연다는 것을 처음 오는 사람은 모르고 찍기 때문이다. */}
+            {progress.spentPoints === 0 ? null : (
+              <div className="wld__actions">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  glyph="↶"
+                  title={
+                    progress.respecIsFree
+                      ? '찍은 것을 전부 되돌린다 — 1장을 깨기 전까지는 공짜다'
+                      : `찍은 것을 전부 되돌린다 — ${String(progress.respecCost)} 푼이 든다`
+                  }
+                  onClick={() => {
+                    setPending({})
+                    props.onAllocate(Object.fromEntries(progress.statKeys.map((key) => [key, 0])))
+                  }}
+                >
+                  {progress.respecIsFree
+                    ? '되돌리기 (공짜)'
+                    : `되돌리기 (${String(progress.respecCost)} 푼)`}
+                </Button>
+              </div>
+            )}
           </>
         )}
       </div>

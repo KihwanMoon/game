@@ -33,7 +33,13 @@ from game.api.schemas_doppel import (
     MyDoppelResponse,
 )
 from game.app.progression.floors import read_floor_cap
-from game.app.progression.levels import STAT_KEYS, check_allocation
+from game.app.progression.levels import (
+    STAT_KEYS,
+    check_allocation,
+    check_is_respec,
+    check_respec_is_free,
+    compute_respec_cost,
+)
 from game.app.store.accounts import find_player_entity
 from game.app.store.doppel_bouts import (
     MODE_DOPPEL,
@@ -44,6 +50,7 @@ from game.app.store.doppel_bouts import (
     list_retired_doppels,
 )
 from game.app.store.doppels import check_doppel_opt_in
+from game.app.store.equipment import add_currency
 from game.app.store.monster_snapshots import build_monster_snapshot, save_snapshots
 from game.app.store.monsters import list_monsters
 from game.app.store.progress import (
@@ -96,10 +103,15 @@ def read_player_progress(account: CurrentAccount) -> ProgressResponse:
     """
     pool = get_pool()
     progress = read_progress(pool, find_player_entity(pool, account.account_id))
+    reached_floor = read_reached_floor(pool, progress.entity_id)
+    is_free = check_respec_is_free(reached_floor)
     return ProgressResponse(
         **vars(progress),
         stat_keys=list(STAT_KEYS),
-        reached_floor=read_reached_floor(pool, progress.entity_id),
+        # 공짜 구간에서는 0 을 싣는다 — 화면이 값을 적을 자리에 「공짜」를 적는다.
+        respec_cost=0 if is_free else compute_respec_cost(progress.level),
+        respec_is_free=is_free,
+        reached_floor=reached_floor,
         floor_cap=read_floor_cap(get_context().balance),
         loadout=build_ticket_loadout(account.account_id),
     )
@@ -107,10 +119,18 @@ def read_player_progress(account: CurrentAccount) -> ProgressResponse:
 
 @router.put("/api/progress/stats", response_model=ProgressResponse)
 def save_player_stats(request: AllocationRequest, account: CurrentAccount) -> ProgressResponse:
-    """능력치를 배분한다.
+    """능력치를 배분한다. **무르기는 1장을 깨기 전까지만 공짜다** (2026-09-17).
 
-    **되돌릴 수 없다.** 무엇을 여는지는 `progression/attributes.py` 가 정하며 (결정 #51),
-    다음 런의 티켓 로드아웃에 반영된다 — 이미 발급한 티켓은 바뀌지 않는다.
+    한 축이라도 줄이면 무르기다. 늘리기만 하는 것은 그냥 배분이라 값을 안 받는다 —
+    안 쓴 포인트를 쓰는 데 돈을 받으면 레벨업이 벌이 된다.
+
+    **예전에는 아무 조건 없이 공짜였다.** 이 독스트링이 「되돌릴 수 없다」고 적어 두었는데
+    `check_allocation` 은 「쓴 점 ≤ 가진 점」만 봤고 저장은 배분표를 통째로 덮어썼다.
+    화면이 더하기만 시켜서 안 드러났을 뿐, API 로는 언제든 갈아치울 수 있었다.
+
+    무료 구간을 두는 이유는 **지능이 CPU 를 연다**는 사실을 처음 오는 사람이 모르기
+    때문이다. 힘에 몰아넣으면 규칙을 몇 줄 못 돌리는 몸이 되고, 이 게임이 파는 것이
+    규칙 설계 공간인데 거기서 잠기면 남는 것이 없다 (P3).
 
     Args:
         request: 배분표.
@@ -120,7 +140,7 @@ def save_player_stats(request: AllocationRequest, account: CurrentAccount) -> Pr
         갱신된 성장 상태.
 
     Raises:
-        HTTPException: 포인트가 모자라거나 모르는 능력치인 경우.
+        HTTPException: 포인트가 모자라거나, 모르는 능력치이거나, 무르기 값을 못 내는 경우.
     """
     pool = get_pool()
     entity_id = find_player_entity(pool, account.account_id)
@@ -128,6 +148,19 @@ def save_player_stats(request: AllocationRequest, account: CurrentAccount) -> Pr
     problem = check_allocation(request.stats, progress.level)
     if problem:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, problem)
+    # **도달 층은 서버가 읽는다.** 세이브의 `best_floor` 는 클라이언트가 들고 있어서
+    # 「아직 1장을 못 깼다」로 영원히 공짜가 된다.
+    is_paid = check_is_respec(request.stats, progress.stats) and not check_respec_is_free(
+        read_reached_floor(pool, entity_id)
+    )
+    if is_paid:
+        cost = compute_respec_cost(progress.level)
+        try:
+            add_currency(pool, account.account_id, -cost)
+        except ValueError as error:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, f"무르는 데 {cost} 푼이 든다"
+            ) from error
     save_allocation(pool, entity_id, request.stats)
     return read_player_progress(account)
 
