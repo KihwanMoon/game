@@ -64,6 +64,7 @@
           "POISON",
           "SLOW",
           "STUN",
+          "ROOT",
           "GUARD",
           "FOCUS"
         ]

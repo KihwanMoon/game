@@ -492,6 +492,59 @@ export function buildThreatNotice(
 }
 
 /**
+ * 겨눈 대상에서 시작해 가까운 적을 타고 튀는 칸들 — 파이썬 `build_chain_tiles` 와 같다.
+ *
+ * **`LINE` 이 묻던 것과 다른 것을 묻는다.** 직선은 「누가 뒤에 서 있는가」를 물었고
+ * 그것은 적이 일렬로 설 때만 값을 했다. 이것은 「누가 서로 가까이 있는가」를 묻는다 —
+ * 뭉친 적을 벌하고 흩어진 적에게는 한 명만 맞는다.
+ *
+ * **고르는 규칙이 결정적이어야 한다** (R5). 같은 거리에 둘이 있으면 좌표 순으로 앞선
+ * 쪽이다. 한 번 지난 자리로는 안 돌아간다 — 안 막으면 둘이 서로를 가리키며 번갈아 튄다.
+ *
+ * @param origin 시전자 좌표. `toward` 와 같으면 겨눈 것이 없다는 뜻이다.
+ * @param toward 첫 대상 좌표.
+ * @param hop 한 번에 튀는 맨해튼 거리.
+ * @param hops 첫 대상 뒤로 몇 번 더 튀는가.
+ * @param enemies 시전자에게 적대적인 살아 있는 개체들의 좌표. 정렬돼 들어온다.
+ * @returns 정렬된 좌표들. 겨눈 것이 없으면 빈 값이다 (R5).
+ */
+export function buildChainTiles(
+  origin: Position,
+  toward: Position,
+  hop: number,
+  hops: number,
+  enemies: readonly Position[],
+): readonly Position[] {
+  if (toward.x === origin.x && toward.y === origin.y) {
+    return []
+  }
+  const chain: Position[] = [toward]
+  const seen = new Set<string>([formatPositionKey(toward)])
+  for (let step = 0; step < Math.max(0, hops); step += 1) {
+    const here = chain[chain.length - 1] as Position
+    const nearby = enemies
+      .filter(
+        (one) =>
+          !seen.has(formatPositionKey(one)) && getManhattanDistance(here, one) <= hop,
+      )
+      // 거리 → x → y. 파이썬의 `sorted((거리, 좌표))` 와 같은 순서다.
+      .sort(
+        (left, right) =>
+          getManhattanDistance(here, left) - getManhattanDistance(here, right) ||
+          left.x - right.x ||
+          left.y - right.y,
+      )
+    const next = nearby[0]
+    if (next === undefined) {
+      break
+    }
+    chain.push(next)
+    seen.add(formatPositionKey(next))
+  }
+  return sortUniquePositions(chain)
+}
+
+/**
  * 시전자에서 대상 쪽으로 뻗는 직선 칸들 — 파이썬 `build_line_tiles` 와 같다.
  *
  * **`LINE` 이 P2 를 증명하는 자리다.** 적을 일렬로 세우게 만들고, 그것은 1차원에서

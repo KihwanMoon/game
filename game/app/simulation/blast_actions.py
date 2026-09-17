@@ -10,7 +10,7 @@
 """
 
 from game.app.grid.geometry import get_manhattan_distance
-from game.app.simulation import abilities
+from game.app.simulation import telegraph_cast
 from game.app.simulation.plan import EngineConfig, PlannedAction
 from game.app.simulation.state import Entity, WorldState
 from game.app.simulation.telegraph import MIN_LEAD_TICKS, TelegraphBoard
@@ -127,6 +127,8 @@ class BlastActionMixin:
             "shape": skill.shape.kind,
             "radius": skill.shape.radius + entity.blast_radius,
             "length": skill.shape.length,
+            # `CHAIN` 이 몇 번 튀는가. 다른 형태는 안 읽는다.
+            "hops": skill.shape.hops,
             # `LINE` 은 방향이 필요하다. 이 게임에 바라보는 방향이 없으므로 대상 쪽으로
             # 잡는다 — 대상이 없으면 방향도 없어 칸이 0 개가 되고, 그때는 예고가
             # 「빈 칸」으로 서서 아무도 안 맞는다. 그 사실은 로그에 남는다.
@@ -153,6 +155,6 @@ class BlastActionMixin:
             plan: 실행 중인 계획.
             telegraph: balance.json 의 그 종류 telegraph 절.
         """
-        outcome = abilities.register_blast(self.state, self.telegraphs, entity, telegraph)
+        outcome = telegraph_cast.register_blast(self.state, self.telegraphs, entity, telegraph)
         self._apply_cooldown(entity, plan.action_id)
         self._record(entity.entity_id, plan, outcome, None)

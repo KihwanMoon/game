@@ -21,6 +21,10 @@ SHAPE_SINGLE = "SINGLE"
 SHAPE_AREA = "AREA"
 SHAPE_LINE = "LINE"
 SHAPE_SELF = "SELF"
+# **적을 타고 튄다** (2026-09-17 요청). `LINE` 이 「누가 뒤에 서 있는가」를 물었다면
+# 이것은 「누가 서로 가까이 있는가」를 묻는다 — 줄을 세울 필요가 없어 1층 배치에서도
+# 성립한다. `radius` 가 한 번에 튀는 거리, `hops` 가 몇 번 튀는가다.
+SHAPE_CHAIN = "CHAIN"
 
 # 효과의 갈래. 지금은 상태 부여 하나다 — 피해·회복은 평면 필드가 이미 든다.
 EFFECT_STATUS = "STATUS"
@@ -38,15 +42,19 @@ class SkillShape:
     """이 스킬이 무엇을 덮는가.
 
     `radius` 와 `length` 를 함께 두는 이유는 형태마다 쓰는 것이 다르기 때문이다 —
-    `AREA` 는 반경을, `LINE` 은 길이를 본다. 갈래마다 클래스를 나누면 읽는 쪽이
-    isinstance 로 갈라야 하고, 그것은 데이터로 형태를 늘린다는 이 설계의 반대다.
+    `AREA` 는 반경을, `LINE` 은 길이를, `CHAIN` 은 반경과 `hops` 를 함께 본다. 갈래마다
+    클래스를 나누면 읽는 쪽이 isinstance 로 갈라야 하고, 그것은 데이터로 형태를 늘린다는
+    이 설계의 반대다.
     """
 
     kind: str = DEFAULT_SHAPE_KIND
-    # 맨해튼 반경. `AREA` 만 쓴다. 0 이면 중심 한 칸이다.
+    # 맨해튼 반경. `AREA` 가 덮는 범위, `CHAIN` 이 한 번에 튀는 거리다. 0 이면 중심
+    # 한 칸이다.
     radius: int = 0
     # 직선 길이. `LINE` 만 쓴다.
     length: int = 0
+    # 첫 대상 뒤로 몇 번 더 튀는가. `CHAIN` 만 쓴다. 0 이면 한 명만 맞는다.
+    hops: int = 0
 
 
 @dataclass(frozen=True)
@@ -115,6 +123,7 @@ def build_shape(raw: dict | None) -> SkillShape:
         kind=str(raw.get("kind") or DEFAULT_SHAPE_KIND),
         radius=int(raw.get("radius", 0)),
         length=int(raw.get("length", 0)),
+        hops=int(raw.get("hops", 0)),
     )
 
 

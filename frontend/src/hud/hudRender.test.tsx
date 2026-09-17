@@ -266,11 +266,13 @@ describe('PostMortem', () => {
     expect(html).toContain('>상태<')
   })
 
-  it('★ 읽는 화면에도 배너 자리가 선다 — 판이 끝나고 잠깐 멈추는 자리다', () => {
-    // 여기는 게임 창이 아니라 읽는 화면이라 구글의 150px 규칙이 안 걸린다.
-    expect(html).toContain('battle__ad')
-    // 광고 탭이 아니므로 바닥 자리가 그대로 선다. 겹쳐 서는 것은 광고 탭에서만 막는다.
-    expect(html).not.toContain('battle__ad--inline')
+  it('★ 읽는 화면은 **상단**에 배너를 세운다 — 게임 창이 아니다', () => {
+    // 전투 화면이 상단을 못 쓰는 이유는 도면까지 52px 뿐이라 구글의 「게임 가장자리에서
+    // 150px」에 걸리기 때문인데, 여기는 판이 끝난 뒤의 읽는 화면이라 그 규칙이 재는
+    // 대상 자체가 아니다 (2026-09-17 확인).
+    expect(html).toContain('hud-post__ad')
+    expect(html).toContain('battle__ad--inline')
+    expect(html.indexOf('hud-post__ad')).toBeLessThan(html.indexOf('hud-post__body'))
   })
 })
 

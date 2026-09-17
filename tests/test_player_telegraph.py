@@ -221,34 +221,65 @@ def test_meteor_stands_for_three_ticks(balance, templates):
     assert player.position not in one.tiles, "제 발밑에서 터지면 마법이 자해가 된다"
 
 
-def test_chain_bolt_reaches_toward_the_target(balance, templates):
-    """★ **`LINE` 이 P2 를 증명하는 자리다** — 적을 일렬로 세우게 만든다."""
-    engine, _player, target = build_real(balance, templates)
+def test_chain_bolt_hops_between_nearby_enemies(balance, templates):
+    """★ **직선이 아니라 연쇄다** (2026-09-17 요청).
+
+    예전에는 겨눈 대상 **뒤로** 뻗는 직선이라, 적이 일렬로 설 때만 두 명을 맞혔다 —
+    1층 배치에서 그 줄이 잘 안 서서 전도 막대를 끼고도 35% 였다 (§10.6 실측).
+    이제는 겨눈 대상에서 가까운 적으로 튄다: **뭉친 적을 벌한다.**
+    """
+    # **적이 셋인 방을 고른다.** `open_field` 는 둘뿐이라 「튄 자리에서 또 튄다」를
+    # 잴 수 없다 — 그 한 칸이 이 형태의 전부다.
+    engine = build_engine(templates["chapel"], balance, seed=3)
+    player = engine.state.entities["player"]
+    target, *others = engine.state.list_hostiles(player)
+    assert len(others) >= 2, "연쇄를 재려면 적이 셋은 있어야 한다"
+    # 두 칸씩 떨어뜨리되 **꺾어서** 놓는다. 일직선이면 예전 `LINE` 도 통과한다.
+    base_x, base_y = target.position
+    others[0].position = (base_x + 2, base_y)
+    others[1].position = (base_x + 2, base_y + 2)
     engine.apply_actions((cast_plan("CHAIN_BOLT", target.entity_id),))
     one = engine.telegraphs.list_active()[0]
-    assert 0 < len(one.tiles) <= 4
     assert one.remaining_ticks == 1
+    assert target.position in one.tiles
+    assert others[0].position in one.tiles, "두 칸 안의 적으로 튀어야 한다"
+    assert others[1].position in one.tiles, "튄 자리에서 또 튀어야 한다"
+
+
+def test_chain_bolt_stops_where_the_enemies_stop(balance, templates):
+    """★ **닿을 적이 없으면 거기서 끝난다** — 빈 칸을 칠하지 않는다.
+
+    직선은 적이 없어도 네 칸을 칠했다. 연쇄는 적이 있는 칸만 칠하므로, 흩어진
+    배치에서는 한 명만 맞는다 — 그것이 이 형태가 파는 거래다.
+    """
+    engine, player, target = build_real(balance, templates)
+    # 나머지를 전부 멀리 치운다. 튈 곳이 없다.
+    others = [one for one in engine.state.list_hostiles(player) if one is not target]
+    for index, other in enumerate(others):
+        other.position = (1, 1 + index)
+    target.position = (player.position[0] + 4, player.position[1])
+    engine.apply_actions((cast_plan("CHAIN_BOLT", target.entity_id),))
+    assert engine.telegraphs.list_active()[0].tiles == (target.position,)
 
 
 def test_chain_bolt_without_a_target_hits_nobody(balance, templates):
-    """★ 방향이 없으면 안 뻗는다. 자기 발밑을 지지지 않는다."""
+    """★ 겨눈 것이 없으면 안 튄다. 자기 발밑을 지지지 않는다."""
     engine, _player, _target = build_real(balance, templates)
     engine.apply_actions((cast_plan("CHAIN_BOLT", ""),))
     assert engine.telegraphs.list_active()[0].tiles == ()
 
 
-def test_frost_field_slows_and_now_also_bites(balance, templates):
-    """★ **피해 0 이었다 — 실측이 그것을 접었다** (§10.10).
+def test_frost_field_roots_instead_of_slowing(balance, templates):
+    """★ **장판 대신 공격이고, 둔화 대신 이동불가다** (2026-09-17 요청).
 
-    설계는 「피해 0 인 스킬이 성립하는가」를 물으려고 이 스킬을 넣었고 `effects` 가
-    그래서 생겼다. 그런데 활 카이팅 기준선 84% 위에서 한 줄만 서리 장판으로 바꾸니
-    61% 였고, 예고를 1틱으로 줄여도 76% · 둔화를 5틱으로 늘려도 74% 였다 — 기준선을
-    넘는 유일한 변형이 「피해 60%」였다. `SLOW` 가 이동만 늦춰서(사격형에게는 효과가
-    없다) 2틱을 내고 사기에는 값이 안 맞았던 것이다.
+    예전에는 반경 2 에 둔화 3틱이었다. 둔화는 「얼마나 느려지는가」를 물었고, 그 답이
+    사격형에게는 아무것도 아니었다 — 안 움직여도 때리기 때문이다 (§10.10). 그래서
+    행동 전체를 늦추게 고쳤는데, 그러면 이번에는 기절과 다를 바가 없어졌다.
 
-    **여전히 화력 스킬이 아니다.** 메테오의 220% 에 견주면 3분의 1 이고, 이 표가 파는
-    것은 그대로 「도망칠 길을 막을 것인가」다. 자기 오사도 그대로라 내가 밟으면 나도
-    느려지고, 이제는 맞기도 한다.
+    이제 묻는 것은 「어디에 묶이는가」다. 이동만 막으므로 **도망치려는 쪽**에만 걸리고,
+    붙어서 때리는 쪽은 그대로 때린다. 한 틱뿐이라 값이 싸고, 넓어서 여럿에게 걸린다.
+
+    자기 오사는 그대로다 — 내가 밟으면 나도 묶인다.
     """
     engine, player, target = build_real(balance, templates)
     target.position = (player.position[0] + 1, player.position[1])
@@ -260,8 +291,21 @@ def test_frost_field_slows_and_now_also_bites(balance, templates):
         engine.state.tick = tick
         engine.run_telegraph()
     assert target.hp == before - frozen
-    assert target.statuses["SLOW"] == 3
-    assert player.statuses["SLOW"] == 3
+    assert target.statuses["ROOT"] == 1
+    assert player.statuses["ROOT"] == 1
+    assert "SLOW" not in target.statuses, "둔화는 더 이상 이 스킬의 것이 아니다"
+
+
+def test_frost_field_now_covers_a_wider_ring(balance, templates):
+    """★ **넓어졌다** (요청: 「넓은 범위에」). 반경 2 에서 3 으로 간다.
+
+    한 틱짜리 이동불가는 넓지 않으면 값을 못 한다 — 좁으면 그 한 틱에 묶을 수 있는
+    적이 한둘이고, 그 둘은 이미 내 앞에 붙어 있어 묶어도 도망치지 않는다.
+    """
+    engine, _player, target = build_real(balance, templates)
+    engine.apply_actions((cast_plan("FROST_FIELD", target.entity_id),))
+    # 반경 3 의 맨해튼 원은 25칸이다. 벽·방 밖은 걸러지므로 그 이하로 나온다.
+    assert 0 < len(engine.telegraphs.list_active()[0].tiles) <= 25
 
 
 def test_slow_halves_movement(balance, templates):
@@ -281,6 +325,36 @@ def test_slow_halves_movement(balance, templates):
         )
         moved += player.position != before
     assert moved == 3
+
+
+def test_root_stops_the_feet_but_not_the_hands(balance, templates):
+    """★ **이동불가는 기절이 아니다** (2026-09-17).
+
+    둔화는 행동 전체를 반으로 늦추고 기절은 전부 막는다. 이것은 **이동만** 막는다 —
+    그래서 도망치려는 쪽에만 걸리고, 붙어서 때리는 쪽은 그대로 때린다. 두 상태를
+    가르는 이유가 이 한 줄이다: 이것이 참이 아니면 `ROOT` 는 `STUN` 의 다른 이름이다.
+    """
+    engine, player, target = build_real(balance, templates)
+    target.position = (player.position[0] + 1, player.position[1])
+    player.statuses["ROOT"] = 1
+    before_position = player.position
+    engine.apply_actions(
+        (PlannedAction(entity_id="player", action_id="APPROACH", target_id=target.entity_id),)
+    )
+    assert player.position == before_position, "묶였는데 움직였다"
+    before_hp = target.hp
+    engine.apply_actions(
+        (PlannedAction(entity_id="player", action_id="ATTACK", target_id=target.entity_id),)
+    )
+    assert target.hp < before_hp, "묶였다고 손까지 묶으면 그것은 기절이다"
+
+
+def test_root_lasts_exactly_one_tick(balance, templates):
+    """★ **한 틱이다.** 유지 단계가 한 번 돌면 풀린다 — 값이 싼 대신 짧다."""
+    engine, player, _target = build_real(balance, templates)
+    player.statuses["ROOT"] = 1
+    engine.run_upkeep()
+    assert player.statuses["ROOT"] == 0
 
 
 def test_a_longer_slow_is_not_overwritten(balance, templates):

@@ -70,7 +70,9 @@ const COOLDOWN_SKILLS: readonly string[] = [
  * 파라미터와 같아야 한다 — 갈리면 키째로 안 만들어지고 화면에 「없음」이 뜬다
  * (2026-09-10 에 스킬 목록으로 실제로 겪은 자리다).
  */
-const STATUS_NAMES: readonly string[] = ['POISON', 'SLOW', 'STUN', 'GUARD', 'FOCUS']
+// **ROOT 는 2026-09-17 에 들어왔다.** 묶였는지를 못 물으면 「묶였으면 물러서지 말고
+// 때린다」를 규칙표로 지을 수 없고, 그러면 묶인 틱이 통째로 「길 막힘」이 된다.
+const STATUS_NAMES: readonly string[] = ['POISON', 'SLOW', 'STUN', 'ROOT', 'GUARD', 'FOCUS']
 
 /** 규칙표가 쓰는 플래그 4종. */
 const FLAG_NAMES: readonly string[] = ['A', 'B', 'C', 'D']

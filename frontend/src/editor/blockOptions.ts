@@ -234,6 +234,9 @@ const PARAM_LABELS: ReadonlyMap<string, string> = new Map([
   ['POISON', '중독'],
   ['SLOW', '둔화'],
   ['STUN', '기절'],
+  // **둔화와 다른 축이다** — 둔화는 느려지는 것이고 이것은 발이 묶이는 것이다.
+  // 때리는 것은 그대로 되므로 「묶였으면 물러서지 말고 때린다」가 규칙표로 지어진다.
+  ['ROOT', '이동불가'],
   ['GUARD', '방어 태세'],
   ['CASTING', '시전 중'],
   ['ALLY_WOUNDED', '아군 부상'],

@@ -56,6 +56,24 @@ describe('스킬 세팅', () => {
     expect(listSkillFacts('NOPE')[0]).toContain('정본에 없는')
   })
 
+  it('★ 연쇄는 반경으로 안 적는다 — 「반경 2」면 한 번에 덮는 것으로 읽힌다', async () => {
+    // 갈래마다 읽는 수가 다르다 (2026-09-17). 연쇄는 **튀는 거리와 횟수**가 둘 다
+    // 있어야 무엇을 맞히는지가 정해진다.
+    const { listSkillFacts } = await import('./SkillPanel')
+    const facts = listSkillFacts('CHAIN_BOLT').join(' ')
+    expect(facts).toContain('연쇄')
+    expect(facts).toContain('2칸 안으로 3회 튄다')
+    expect(facts).not.toContain('반경')
+  })
+
+  it('★ 얹는 상태를 적는다 — 없으면 서리 장판이 그냥 약한 광역기로 읽힌다', async () => {
+    const { listSkillFacts } = await import('./SkillPanel')
+    const facts = listSkillFacts('FROST_FIELD').join(' ')
+    // 피해가 60% 뿐이라, 묶는다는 사실이 이 줄에 없으면 고를 이유가 안 보인다.
+    expect(facts).toContain('이동불가 1틱')
+    expect(facts).toContain('반경 3')
+  })
+
   it('★ 서버에 못 닿으면 그 사실을 적는다', () => {
     expect(render(undefined)).toContain('스킬을 못 읽는다')
   })

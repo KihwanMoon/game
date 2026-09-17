@@ -95,3 +95,53 @@ def _resolve_sign(delta: int) -> int:
     if delta > 0:
         return 1
     return -1 if delta < 0 else 0
+
+
+def build_chain_tiles(
+    origin: tuple[int, int],
+    toward: tuple[int, int],
+    hop: int,
+    hops: int,
+    enemies: tuple[tuple[int, int], ...],
+) -> tuple[tuple[int, int], ...]:
+    """겨눈 대상에서 시작해 가까운 적을 타고 튀는 칸들 (2026-09-17 요청).
+
+    **`LINE` 이 묻던 것과 다른 것을 묻는다.** 직선은 「누가 뒤에 서 있는가」를 물었고
+    그것은 적이 일렬로 설 때만 값을 했다 — 1층 배치에서 그 줄이 잘 안 서서 전도 막대를
+    끼고도 35% 였다 (설계/5_스킬 §10.6 실측). 이것은 「누가 서로 가까이 있는가」를
+    묻는다. 뭉친 적을 벌하고 흩어진 적에게는 한 명만 맞는다.
+
+    **고르는 규칙이 결정적이어야 한다** (R5). 같은 거리에 둘이 있으면 좌표 순으로
+    앞선 쪽이다 — 딕셔너리 순회나 「처음 찾은 것」으로 고르면 두 코어가 갈린다.
+
+    **한 번 지난 자리로 안 돌아간다.** 안 막으면 둘이 서로를 가리키며 번갈아 튀어,
+    `hops` 만큼 튀고도 두 칸밖에 안 덮는다.
+
+    Args:
+        origin: 시전자 좌표. `toward` 와 같으면 겨눈 것이 없다는 뜻이다.
+        toward: 첫 대상 좌표.
+        hop: 한 번에 튀는 맨해튼 거리.
+        hops: 첫 대상 뒤로 몇 번 더 튀는가.
+        enemies: 시전자에게 적대적인 살아 있는 개체들의 좌표. 정렬돼 들어온다.
+
+    Returns:
+        정렬된 좌표들. 겨눈 것이 없으면 빈 값이다 — 직선과 같은 규율이며, 그때 예고는
+        「빈 칸」으로 서고 그 사실이 로그에 남는다.
+    """
+    if toward == origin:
+        return ()
+    chain = [toward]
+    seen = {toward}
+    for _unused in range(max(0, hops)):
+        here = chain[-1]
+        nearby = sorted(
+            (get_manhattan_distance(here, one), one)
+            for one in enemies
+            if one not in seen and get_manhattan_distance(here, one) <= hop
+        )
+        if not nearby:
+            break
+        step = nearby[0][1]
+        chain.append(step)
+        seen.add(step)
+    return tuple(sorted(chain))

@@ -1,9 +1,14 @@
-"""데이터가 정하는 능력 — 소환·예고·회복 (GDD §4.2·§5).
+"""데이터가 정하는 능력 — 소환·회복·주문서 (GDD §4.2·§5).
 
-규칙표는 `SUMMON` · `AREA_ATTACK` · `HEAL` 을 부를 뿐이고, 무엇을 몇 마리까지
-부르는지·예고를 몇 틱 앞세우는지·얼마나 회복하는지는 balance.json 이 정한다. 그 둘을
-잇는 자리다. 행동 실행기(actions.ActionExecutor)에 두지 않은 것은 모듈 400줄 규약
-때문이며, 여기 있는 것은 결과와 로그 문자열만 돌려주고 기록은 실행기가 한다.
+규칙표는 `SUMMON` · `HEAL` 을 부를 뿐이고, 무엇을 몇 마리까지 부르는지·얼마나
+회복하는지는 balance.json 이 정한다. 그 둘을 잇는 자리다.
+
+**예고를 올리는 일은 `telegraph_cast.py` 로 갈라 나갔다** (2026-09-17). 400줄 상한이
+계기였지만 가르는 선은 책임이다 (§4) — 저쪽은 형태를 골라 판에 올리는 일만 알고,
+여기 남은 소환·회복·주문서는 예고를 안 쓴다.
+
+행동 실행기(actions.ActionExecutor)에 두지 않은 것도 같은 규약 때문이며, 여기 있는 것은
+결과와 로그 문자열만 돌려주고 기록은 실행기가 한다.
 
 ## 회복
 
@@ -30,9 +35,7 @@ from game.app.simulation import scrolls
 from game.app.simulation.plan import STATUS_GUARD, EngineConfig, PlannedAction
 from game.app.simulation.scaling import get_scaled_enemy_stats
 from game.app.simulation.state import Entity, WorldState
-from game.app.simulation.telegraph import TelegraphBoard
-from game.app.simulation.telegraph_shape import build_blast_tiles, build_line_tiles
-from game.app.skills.catalog import SHAPE_LINE, find_skill
+from game.app.skills.catalog import find_skill
 from game.schemas.room import WALKABLE_TILES
 
 # 소환 쿨타임을 다는 키. 인지 변수 self_cooldown_ready[SUMMON] 가 이것을 읽는다.
@@ -158,72 +161,6 @@ def resolve_summon(
         return None, "놓을 자리 없음 — 틱 낭비"
     minion = create_minion(state, config, summoner, rule["spawns"], position)
     return minion, f"{minion.entity_id} 등장 {position}"
-
-
-def build_cast_tiles(caster: Entity, telegraph: dict) -> tuple[tuple[int, int], ...]:
-    """이 예고가 덮는 칸들. 형태가 고른다 (설계/5_스킬 §2).
-
-    **몬스터 절에는 형태가 없다.** 없으면 반경으로 읽는다 — 지금 콘텐츠가 전부 그쪽이고,
-    형태를 필수로 만들면 옛 절이 통째로 안 읽힌다.
-
-    Args:
-        caster: 시전자.
-        telegraph: 예고 절.
-
-    Returns:
-        벽 거르기 전의 좌표들.
-    """
-    toward = tuple(telegraph.get("toward") or caster.position)
-    if telegraph.get("shape") == SHAPE_LINE:
-        return build_line_tiles(caster.position, toward, int(telegraph.get("length", 0)))
-    # **중심은 겨눈 곳이다.** 자폭형에서 물려받은 자리라 발밑에 고정돼 있었고, 그래서
-    # 플레이어가 10칸 밖의 적에게 던진 메테오가 제 발밑에서 터졌다 — 1층 60런 실측
-    # 승률 1% 의 진짜 이유이며, 로그에 `예고 발동 → player HP 74/100 (-26)` 로
-    # 찍혀 있었다. 겨눌 곳이 없으면 발밑이고, 몬스터 절에는 `toward` 가 없어 그쪽은
-    # 예전 그대로 자기 자리에서 터진다.
-    return build_blast_tiles(toward, telegraph["radius"])
-
-
-def register_blast(
-    state: WorldState, board: TelegraphBoard, caster: Entity, telegraph: dict
-) -> str:
-    """즉발 광역기 대신 예고를 건다 (GDD §4.2).
-
-    반경의 정본은 이 예고 설정이다 — actions.AREA_ATTACK_RADIUS 는 예고를 쓰지 않는
-    즉발 광역기의 값이며 둘은 다른 능력이다.
-
-    벽과 방 밖은 걸러 낸다. 거르지 않으면 닿지도 않는 칸이 붉게 칠해져, 플레이어가
-    피할 필요가 없는 곳을 피하려 든다.
-
-    Args:
-        state: 세계 상태.
-        board: 예고를 담을 판.
-        caster: 시전자.
-        telegraph: balance.json 의 그 종류 telegraph 절.
-
-    Returns:
-        로그에 남길 결과 문자열.
-    """
-    tiles = tuple(
-        position
-        for position in build_cast_tiles(caster, telegraph)
-        if state.get_tile(*position) in WALKABLE_TILES
-    )
-    board.register(
-        caster_id=caster.entity_id,
-        skill_id=telegraph["skill"],
-        tiles=tiles,
-        damage=telegraph["damage"],
-        lead_ticks=telegraph["lead_ticks"],
-        visible_ticks=telegraph["visible_ticks"],
-        cancel_on_death=telegraph["cancel_on_death"],
-        # 몬스터 절에는 없다 — 없으면 안 켠다. 켜는 것은 스킬 데이터다 (§10.3).
-        cancel_on_act=bool(telegraph.get("cancel_on_act", False)),
-        cancel_on_hit=bool(telegraph.get("cancel_on_hit", False)),
-        # 몬스터 절에는 없다. 스킬이 정한 것만 실린다.
-        effects=tuple(telegraph.get("effects", ())),
-    )
-    return f"예고 {len(tiles)}칸 — {telegraph['lead_ticks']}틱 뒤 발동"
 
 
 def resolve_blink(state: WorldState, entity: Entity) -> tuple[int | None, str]:

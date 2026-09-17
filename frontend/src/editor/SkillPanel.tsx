@@ -30,12 +30,13 @@ export interface SkillPanelProps {
 
 interface RawSkill {
   id: string
-  shape?: { kind?: string; radius?: number }
+  shape?: { kind?: string; radius?: number; hops?: number }
   target_faction?: string
   coef_pct?: number
   cooldown?: number
   range?: number | null
   telegraph?: number
+  effects?: readonly { status?: string; duration?: number }[]
 }
 
 const SKILL_TABLE: ReadonlyMap<string, RawSkill> = new Map(
@@ -47,7 +48,36 @@ const SHAPE_LABELS: ReadonlyMap<string, string> = new Map([
   ['AREA', '반경 범위'],
   ['SELF', '자기 자신'],
   ['SUMMON', '소환'],
+  // **둘이 빠져 있었다.** 없으면 화면이 `LINE` 이라고 영문으로 적는다 — 이 저장소가
+  // 고르개 값에서 이미 겪은 자리다 (2026-09-16 요청).
+  ['LINE', '직선'],
+  ['CHAIN', '연쇄'],
 ])
+
+/** 상태이상 이름표. 규칙표가 `self_has_status` 로 묻는 것과 같은 말을 쓴다. */
+const STATUS_LABELS: ReadonlyMap<string, string> = new Map([
+  ['POISON', '중독'],
+  ['SLOW', '둔화'],
+  ['STUN', '기절'],
+  ['ROOT', '이동불가'],
+])
+
+/**
+ * 형태 한 줄을 만든다.
+ *
+ * **갈래마다 읽는 수가 다르다.** `AREA` 는 반경을, `CHAIN` 은 튀는 거리와 횟수를 본다 —
+ * 연쇄에 「반경 2」라고만 적으면 반경 2 를 한 번에 덮는 것으로 읽힌다.
+ *
+ * @param shape 형태 절.
+ * @returns 화면에 적을 형태 문구.
+ */
+function formatShape(shape: RawSkill['shape']): string {
+  const label = SHAPE_LABELS.get(shape?.kind ?? '') ?? (shape?.kind ?? '')
+  if (shape?.kind === 'CHAIN') {
+    return `${label} (${String(shape.radius ?? 0)}칸 안으로 ${String(shape.hops ?? 0)}회 튄다)`
+  }
+  return `${label}${shape?.radius === undefined ? '' : ` (반경 ${String(shape.radius)})`}`
+}
 
 /**
  * 스킬 하나의 수치·제약을 줄들로 편다.
@@ -63,11 +93,7 @@ export function listSkillFacts(skillId: string): readonly string[] {
     return ['정본에 없는 스킬이다 — 밸런스 데이터가 앞서 나갔다']
   }
   const lines: string[] = []
-  const shape = SHAPE_LABELS.get(skill.shape?.kind ?? '') ?? (skill.shape?.kind ?? '')
-  lines.push(
-    `${shape}${skill.shape?.radius === undefined ? '' : ` (반경 ${String(skill.shape.radius)})`}` +
-      ` · 위력 계수 ${String(skill.coef_pct ?? 100)}%`,
-  )
+  lines.push(`${formatShape(skill.shape)} · 위력 계수 ${String(skill.coef_pct ?? 100)}%`)
   lines.push(
     `쿨타임 ${String(skill.cooldown ?? 0)}틱 · 사거리 ${
       skill.range === null || skill.range === undefined ? '무기를 따른다' : String(skill.range)
@@ -75,6 +101,14 @@ export function listSkillFacts(skillId: string): readonly string[] {
   )
   if ((skill.telegraph ?? 0) > 0) {
     lines.push(`예고 ${String(skill.telegraph)}틱 뒤에 터진다 — 그동안 적이 피할 수 있다`)
+  }
+  // **얹는 것을 안 적으면 그 스킬을 고를 이유가 안 보인다** (2026-09-17). 서리 장판은
+  // 피해가 60% 뿐이라, 묶는다는 사실이 이 줄에 없으면 그냥 약한 광역기로 읽힌다.
+  for (const effect of skill.effects ?? []) {
+    const name = STATUS_LABELS.get(effect.status ?? '') ?? effect.status ?? ''
+    if (name !== '') {
+      lines.push(`맞은 대상에게 ${name} ${String(effect.duration ?? 0)}틱`)
+    }
   }
   return lines
 }

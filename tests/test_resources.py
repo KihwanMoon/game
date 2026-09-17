@@ -344,7 +344,8 @@ def test_every_skill_declares_family_and_shape():
     스킬마다 사람이 다시 판정해야 한다.
     """
     families = {"ATTACK", "MOVE", "GUARD", "STATUS", "UTILITY"}
-    shapes = {"SINGLE", "LINE", "AREA", "CONE", "SELF"}
+    # `CHAIN` 은 2026-09-17 에 들어왔다 — 적을 타고 튄다. `CONE` 은 아직 쓰는 스킬이 없다.
+    shapes = {"SINGLE", "LINE", "AREA", "CONE", "SELF", "CHAIN"}
     for skill in load_balance(BALANCE_PATH)["skills"]:
         assert skill["family"] in families, skill["id"]
         assert skill["shape"]["kind"] in shapes, skill["id"]

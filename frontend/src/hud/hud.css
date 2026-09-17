@@ -370,7 +370,10 @@
   margin-inline: auto;
   z-index: 10;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  /* 머리 · 배너 · 본문. **배너 줄은 늘 있다** — 광고 탭에서 비더라도 칸을 지운다면
+     본문이 `1fr` 이 아닌 줄로 밀려 화면이 통째로 어긋난다 (`hud-post__ad` 는 비면
+     높이가 0 이다). */
+  grid-template-rows: auto auto minmax(0, 1fr);
   background: var(--surface-base);
   /* 안쪽이 넘쳐도 문서를 늘리지 않는다 — 패널은 화면을 덮는 것이지 잇는 것이 아니다. */
   overflow: hidden;
@@ -520,4 +523,15 @@
 .story-note__strong {
   font-weight: 600;
   color: var(--text-display);
+}
+
+/* 사후 분석의 배너 줄 (2026-09-17). **여기는 상단이 된다** — 게임 창이 아니라 읽는
+   화면이라 구글의 「게임 가장자리에서 150px」이 안 걸린다. 바닥에 두면 세 열을 다
+   지나야 닿는데, 스크롤해야 보이는 배너는 없는 것과 같다.
+
+   비어 있을 때 아무 자국도 안 남겨야 한다 — 그래서 괘선과 여백이 `:not(:empty)` 에만
+   붙는다. 빈 칸에 괘선이 서면 그것이 「내용이 잘렸다」로 읽힌다. */
+.hud-post__ad:not(:empty) {
+  padding-block: var(--sp-2);
+  border-bottom: var(--border);
 }

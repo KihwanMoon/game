@@ -713,6 +713,10 @@
           false
         ],
         [
+          "self_has_status[ROOT]",
+          false
+        ],
+        [
           "self_has_status[GUARD]",
           false
         ],
@@ -980,6 +984,10 @@
         ],
         [
           "self_has_status[STUN]",
+          false
+        ],
+        [
+          "self_has_status[ROOT]",
           false
         ],
         [
@@ -1253,6 +1261,10 @@
           false
         ],
         [
+          "self_has_status[ROOT]",
+          false
+        ],
+        [
           "self_has_status[GUARD]",
           false
         ],
@@ -1520,6 +1532,10 @@
         ],
         [
           "self_has_status[STUN]",
+          false
+        ],
+        [
+          "self_has_status[ROOT]",
           false
         ],
         [
@@ -1793,6 +1809,10 @@
           false
         ],
         [
+          "self_has_status[ROOT]",
+          false
+        ],
+        [
           "self_has_status[GUARD]",
           false
         ],
@@ -2060,6 +2080,10 @@
         ],
         [
           "self_has_status[STUN]",
+          false
+        ],
+        [
+          "self_has_status[ROOT]",
           false
         ],
         [

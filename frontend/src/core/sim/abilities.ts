@@ -20,6 +20,7 @@ import {
   formatPositionKey,
   getManhattanDistance,
   iterSteps,
+  sortUniquePositions,
 } from '../grid/geometry'
 import { WALKABLE_TILES } from '../schemas'
 import { divideFloor } from '../combat/damage'
@@ -37,8 +38,13 @@ import {
   findBlinkSpot,
   readReach,
 } from './scrolls'
-import { type TelegraphBoard, buildBlastTiles, buildLineTiles } from './telegraph'
-import { SHAPE_LINE } from '../skills/catalog'
+import {
+  type TelegraphBoard,
+  buildBlastTiles,
+  buildChainTiles,
+  buildLineTiles,
+} from './telegraph'
+import { SHAPE_CHAIN, SHAPE_LINE } from '../skills/catalog'
 
 /** 소환 쿨타임을 다는 키. 인지 변수 self_cooldown_ready[SUMMON] 가 이것을 읽는다. */
 export const SUMMON_ACTION = 'SUMMON'
@@ -210,10 +216,21 @@ export function registerBlast(
   // 10칸 밖의 적에게 던진 메테오가 제 발밑에서 터졌다. 몬스터 절에는 `toward` 가
   // 없어 그쪽은 예전 그대로다 (파이썬 `build_cast_tiles` 와 같다).
   const toward = telegraph.toward ?? caster.position
+  // **`CHAIN` 만 세계를 본다.** 칸이 기하가 아니라 누가 어디 섰는지로 정해지기
+  // 때문이다. 시전 시점의 자리로 굳으므로 튀는 사이에 비켜선 적은 안 맞는다.
+  const enemies = sortUniquePositions(state.listHostiles(caster).map((one) => one.position))
   const shaped =
-    telegraph.shape === SHAPE_LINE
-      ? buildLineTiles(caster.position, toward, telegraph.length ?? 0)
-      : buildBlastTiles(toward, telegraph.radius)
+    telegraph.shape === SHAPE_CHAIN
+      ? buildChainTiles(
+          caster.position,
+          toward,
+          telegraph.radius,
+          telegraph.hops ?? 0,
+          enemies,
+        )
+      : telegraph.shape === SHAPE_LINE
+        ? buildLineTiles(caster.position, toward, telegraph.length ?? 0)
+        : buildBlastTiles(toward, telegraph.radius)
   const tiles = shaped.filter((position) =>
     WALKABLE_TILES.has(state.getTile(position.x, position.y)),
   )

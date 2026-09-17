@@ -44,6 +44,7 @@ import {
   GUARD_SKILL_ID,
   MELEE_REACH,
   SLOW_EVERY,
+  STATUS_ROOT,
   STATUS_SLOW,
 } from './plan'
 import type { EngineConfig, PlannedAction, RawTelegraphSetting } from './plan'
@@ -174,7 +175,20 @@ export class ActionExecutor {
     return true
   }
 
+  /**
+   * 이동 계열 행동을 실행한다.
+   *
+   * **묶였으면 여기서 끝난다** (2026-09-17). 이동 계열이 한 문으로 들어오므로 막는
+   * 자리도 하나다. 이동만 막고 공격·시전은 안 막는 것이 둔화와 갈리는 지점이다.
+   *
+   * @param entity 이동할 엔티티.
+   * @param plan 실행할 계획.
+   */
   applyMove(entity: Entity, plan: PlannedAction): void {
+    if ((entity.statuses.get(STATUS_ROOT) ?? 0) > 0) {
+      this.recordResult(entity.entityId, plan, '이동불가 — 발이 얼어붙었다', null)
+      return
+    }
     if (DEFERRED_ACTIONS.has(plan.actionId)) {
       this.recordDeferred(entity, plan)
       return
@@ -282,6 +296,8 @@ export class ActionExecutor {
       shape: skill.shape.kind,
       radius: skill.shape.radius + entity.blastRadius,
       length: skill.shape.length,
+      // `CHAIN` 이 몇 번 튀는가. 다른 형태는 안 읽는다.
+      hops: skill.shape.hops,
       // `LINE` 은 방향이 필요하다. 대상이 없으면 같은 칸을 가리켜 칸이 0 개가 되고,
       // 그때는 예고가 빈 칸으로 서서 아무도 안 맞는다 — 그 사실은 로그에 남는다.
       toward: target?.position ?? entity.position,

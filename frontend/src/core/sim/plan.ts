@@ -85,6 +85,16 @@ export const STATUS_SLOW = 'SLOW'
 /** 둔화 중 몇 틱마다 한 칸 움직이는가. 2 면 절반 속도다. */
 export const SLOW_EVERY = 2 
 
+/**
+ * 이동불가. **둔화와 다른 축이다** — 둔화는 행동 전체를 반으로 늦추고 이것은 이동만
+ * 통째로 막는다. 때리는 것도 시전도 그대로 된다.
+ *
+ * 둔화는 「얼마나 느려지는가」를 묻고 이것은 「어디에 묶이는가」를 묻는다 — 이동만
+ * 막으면 **도망치려는 쪽**에만 걸린다. 순간이동 주문서는 안 막는다: 묶였을 때
+ * 빠져나갈 길이 하나는 있어야 「묶는다」가 처형이 아니라 수가 된다.
+ */
+export const STATUS_ROOT = 'ROOT'
+
 /** 조건은 참이었으나 실행할 수단이 없어 건너뛴 규칙 하나. */
 export interface BlockedRule {
   readonly ruleIndex: number
@@ -214,6 +224,8 @@ export interface RawTelegraphSetting {
   /** 형태. 없으면 반경으로 읽는다 (몬스터 절에는 없다). */
   readonly shape?: string
   readonly length?: number
+  /** `CHAIN` 이 몇 번 튀는가. 다른 형태는 안 읽는다. */
+  readonly hops?: number
   readonly toward?: { readonly x: number; readonly y: number }
   readonly effects?: readonly SkillEffect[]
   readonly self_destruct?: boolean

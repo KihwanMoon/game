@@ -142,7 +142,9 @@ def _add_vision_values(
 #
 # **GUARD·FOCUS 는 2026-09-11 에 들어왔다.** 둘 다 내가 스스로 거는 것이라, 물을 수
 # 없으면 「이미 걸렸으면 딴 걸 한다」를 규칙표로 지을 방법이 없다.
-STATUS_NAMES: tuple[str, ...] = ("POISON", "SLOW", "STUN", "GUARD", "FOCUS")
+# **ROOT 는 2026-09-17 에 들어왔다.** 묶였는지를 못 물으면 「묶였으면 물러서지 말고
+# 때린다」를 규칙표로 지을 수 없고, 그러면 묶인 틱이 통째로 「길 막힘 — 틱 낭비」가 된다.
+STATUS_NAMES: tuple[str, ...] = ("POISON", "SLOW", "STUN", "ROOT", "GUARD", "FOCUS")
 
 SKILL_IDS: tuple[str, ...] = (
     "SKILL_1",

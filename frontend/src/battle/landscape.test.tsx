@@ -533,13 +533,17 @@ describe('배너 자리', () => {
     expect(block, '뒤가 비치면 로그 글자와 겹쳐 둘 다 안 읽힌다').toContain('background:')
   })
 
-  it('★ 자리가 둘이다 — 전투 하단과 사후 분석', () => {
+  it('★ 자리가 둘이다 — 전투 하단과 사후 분석 **상단**', () => {
     // 사후 분석은 **읽는 화면**이라 게임 창이 아니고, 구글의 150px 규칙이 안 걸린다.
+    // 그래서 여기만 상단을 쓸 수 있다 (2026-09-17 확인). 바닥에 두면 세 열을 다 지나야
+    // 닿는데, 스크롤해야 보이는 배너는 없는 것과 같다.
     const post = readFileSync(
       fileURLToPath(new URL('../hud/PostMortem.tsx', import.meta.url)),
       'utf8',
     )
-    expect(post).toContain('<AdSlot />')
+    expect(post).toContain('<AdSlot inline />')
+    // 머리 바로 다음이다 — 본문(`hud-post__body`) 앞에 서야 상단이다.
+    expect(post.indexOf('hud-post__ad')).toBeLessThan(post.indexOf('hud-post__body'))
   })
 
   it('★ 빈 상자를 안 둔다 — 비어 있으면 고장으로 읽힌다', () => {

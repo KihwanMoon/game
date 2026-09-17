@@ -16,6 +16,12 @@ export const SHAPE_SINGLE = 'SINGLE'
 export const SHAPE_AREA = 'AREA'
 export const SHAPE_LINE = 'LINE'
 export const SHAPE_SELF = 'SELF'
+/**
+ * **적을 타고 튄다** (2026-09-17 요청). `LINE` 이 「누가 뒤에 서 있는가」를 물었다면
+ * 이것은 「누가 서로 가까이 있는가」를 묻는다 — 줄을 세울 필요가 없어 1층 배치에서도
+ * 성립한다. `radius` 가 한 번에 튀는 거리, `hops` 가 몇 번 튀는가다.
+ */
+export const SHAPE_CHAIN = 'CHAIN'
 
 /** 형태를 안 적은 스킬의 기본. 한 명을 때리는 것이 가장 덜 놀라운 해석이다. */
 export const DEFAULT_SHAPE_KIND = SHAPE_SINGLE
@@ -36,10 +42,12 @@ export interface SkillEffect {
 /** 이 스킬이 무엇을 덮는가. */
 export interface SkillShape {
   readonly kind: string
-  /** 맨해튼 반경. `AREA` 만 쓴다. */
+  /** 맨해튼 반경. `AREA` 가 덮는 범위, `CHAIN` 이 한 번에 튀는 거리다. */
   readonly radius: number
   /** 직선 길이. `LINE` 만 쓴다. */
   readonly length: number
+  /** 첫 대상 뒤로 몇 번 더 튀는가. `CHAIN` 만 쓴다. */
+  readonly hops: number
 }
 
 /** 스킬 하나. `skills.json` 의 한 줄이 이것이 된다. */
@@ -70,7 +78,12 @@ export interface SkillDef {
 export interface RawSkill {
   readonly id: string
   readonly family?: string
-  readonly shape?: { readonly kind?: string; readonly radius?: number; readonly length?: number }
+  readonly shape?: {
+    readonly kind?: string
+    readonly radius?: number
+    readonly length?: number
+    readonly hops?: number
+  }
   readonly target_faction?: string
   readonly coef_pct?: number
   readonly cooldown?: number
@@ -96,6 +109,7 @@ export function buildShape(raw: RawSkill['shape']): SkillShape {
     kind: raw?.kind ?? DEFAULT_SHAPE_KIND,
     radius: raw?.radius ?? 0,
     length: raw?.length ?? 0,
+    hops: raw?.hops ?? 0,
   }
 }
 

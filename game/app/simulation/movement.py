@@ -14,6 +14,7 @@ from game.app.grid.vision import VisionGrid, find_cover_positions
 from game.app.pathfinding.distance_field import build_distance_field, find_next_step
 from game.app.simulation.plan import (
     DEFERRED_ACTIONS,
+    STATUS_ROOT,
     EngineConfig,
     PlannedAction,
 )
@@ -133,10 +134,21 @@ class MoveActionMixin:
     def apply_move(self, entity: Entity, plan: PlannedAction) -> None:
         """이동 계열 행동을 실행한다.
 
+        **묶였으면 여기서 끝난다** (2026-09-17). 이동 계열이 한 문으로 들어오므로
+        막는 자리도 하나다 — 갈래마다 검사를 두면 나중에 생기는 이동이 조용히 새어
+        나간다. 이동만 막고 공격·시전은 안 막는 것이 둔화와 갈리는 지점이다
+        (`plan.STATUS_ROOT`).
+
+        **로그에 남긴다.** 묶여서 못 간 틱과 길이 막혀 못 간 틱은 규칙표를 고치는
+        사람에게 다른 사실이다 — 앞엣것은 상대가 한 일이고 뒤엣것은 내가 선 자리다.
+
         Args:
             entity: 이동할 엔티티.
             plan: 실행할 계획.
         """
+        if entity.statuses.get(STATUS_ROOT, 0) > 0:
+            self._record(entity.entity_id, plan, "이동불가 — 발이 얼어붙었다", None)
+            return
         if plan.action_id in DEFERRED_ACTIONS:
             self.record_deferred(entity, plan)
             return

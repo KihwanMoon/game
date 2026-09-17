@@ -120,11 +120,11 @@ describe('스킬 예고 이식', () => {
 })
 
 describe('마법 셋 이식', () => {
-  function buildReal() {
+  function buildReal(templateId = 'open_field') {
     const balance = parseBalance(BALANCE)
-    const template = ROOM_TEMPLATES.find((one) => one.templateId === 'open_field')
+    const template = ROOM_TEMPLATES.find((one) => one.templateId === templateId)
     if (template === undefined) {
-      throw new Error('open_field 템플릿이 없다')
+      throw new Error(`${templateId} 템플릿이 없다`)
     }
     const engine = buildEngine({ template, balance, seed: 3 })
     const player = engine.state.entities.get(PLAYER_ENTITY_ID)
@@ -161,20 +161,42 @@ describe('마법 셋 이식', () => {
     expect(onSelf, '제 발밑에서 터지면 마법이 자해가 된다').toBe(false)
   })
 
-  it('연쇄 번개는 대상 쪽으로 뻗는 직선이다', () => {
-    const { engine, target } = buildReal()
+  it('★ 연쇄 번개는 적을 타고 튄다 — 직선이 아니다 (2026-09-17)', () => {
+    // 예전에는 겨눈 대상 **뒤로** 뻗는 직선이라 적이 일렬로 설 때만 둘을 맞혔다.
+    // 이제는 겨눈 대상에서 가까운 적으로 튄다 — 뭉친 적을 벌한다. 파이썬
+    // `test_chain_bolt_hops_between_nearby_enemies` 와 같은 배치다.
+    const { engine, player, target } = buildReal('chapel')
+    const others = engine.state.listHostiles(player).filter((one) => one !== target)
+    expect(others.length, '연쇄를 재려면 적이 셋은 있어야 한다').toBeGreaterThanOrEqual(2)
+    const base = target.position
+    // 두 칸씩 떨어뜨리되 **꺾어서** 놓는다. 일직선이면 예전 `LINE` 도 통과한다.
+    ;(others[0] as { position: { x: number; y: number } }).position = {
+      x: base.x + 2,
+      y: base.y,
+    }
+    ;(others[1] as { position: { x: number; y: number } }).position = {
+      x: base.x + 2,
+      y: base.y + 2,
+    }
     engine.applyActions([cast('CHAIN_BOLT', target.entityId)])
-    const one = engine.telegraphs.listActive()[0]
-    expect(one?.tiles.length).toBeGreaterThan(0)
-    expect(one?.tiles.length).toBeLessThanOrEqual(4)
-    expect(one?.remainingTicks).toBe(1)
+    const tiles = engine.telegraphs.listActive()[0]?.tiles ?? []
+    const covers = (spot: { x: number; y: number }): boolean =>
+      tiles.some((tile) => tile.x === spot.x && tile.y === spot.y)
+    expect(covers(base)).toBe(true)
+    expect(covers({ x: base.x + 2, y: base.y }), '두 칸 안의 적으로 튄다').toBe(true)
+    expect(covers({ x: base.x + 2, y: base.y + 2 }), '튄 자리에서 또 튄다').toBe(true)
   })
 
-  it('서리 장판은 SLOW 를 걸고 이제 물기도 한다 — 자기 오사 포함', () => {
-    // **피해 0 이었다 (§10.10).** 활 카이팅 기준선 84% 위에서 한 줄만 서리 장판으로
-    // 바꾸면 61% 였고, 기준선을 넘는 유일한 변형이 「피해 60%」였다. SLOW 가 이동만
-    // 늦춰서 사격형에게 효과가 없었기 때문이다. 화력 스킬은 여전히 아니다 —
-    // 메테오의 220% 에 견주면 3분의 1 이다.
+  it('★ 겨눈 것이 없으면 안 튄다 — 자기 발밑을 지지지 않는다', () => {
+    const { engine } = buildReal()
+    engine.applyActions([cast('CHAIN_BOLT', '')])
+    expect(engine.telegraphs.listActive()[0]?.tiles).toEqual([])
+  })
+
+  it('★ 서리 장판은 묶는다 — 둔화가 아니라 1틱 이동불가다 (2026-09-17)', () => {
+    // 둔화는 「얼마나 느려지는가」를 물었고 그 답이 사격형에게는 아무것도 아니었다
+    // (§10.10). 이제 묻는 것은 「어디에 묶이는가」다 — 이동만 막으므로 도망치려는
+    // 쪽에만 걸린다. 자기 오사는 그대로다: 내가 밟으면 나도 묶인다.
     const { engine, player, target } = buildReal()
     target.position = { x: player.position.x + 1, y: player.position.y }
     engine.applyActions([cast('FROST_FIELD', target.entityId)])
@@ -186,8 +208,33 @@ describe('마법 셋 이식', () => {
       engine.runTelegraph()
     }
     expect(target.hp).toBe(beforeHp - frozen)
-    expect(target.statuses.get('SLOW')).toBe(3)
-    expect(player.statuses.get('SLOW')).toBe(3)
+    expect(target.statuses.get('ROOT')).toBe(1)
+    expect(player.statuses.get('ROOT')).toBe(1)
+    expect(target.statuses.get('SLOW'), '둔화는 더 이상 이 스킬의 것이 아니다').toBeUndefined()
+  })
+
+  it('★ 이동불가는 발만 묶는다 — 손은 그대로다 (기절과 갈리는 자리)', () => {
+    const { engine, player, target } = buildReal()
+    target.position = { x: player.position.x + 1, y: player.position.y }
+    player.statuses.set('ROOT', 1)
+    const beforeSpot = { ...player.position }
+    engine.applyActions([
+      createPlannedAction({
+        entityId: PLAYER_ENTITY_ID,
+        actionId: 'APPROACH',
+        targetId: target.entityId,
+      }),
+    ])
+    expect(player.position, '묶였는데 움직였다').toEqual(beforeSpot)
+    const beforeHp = target.hp
+    engine.applyActions([
+      createPlannedAction({
+        entityId: PLAYER_ENTITY_ID,
+        actionId: 'ATTACK',
+        targetId: target.entityId,
+      }),
+    ])
+    expect(target.hp, '묶였다고 손까지 묶으면 그것은 기절이다').toBeLessThan(beforeHp)
   })
 
   it('둔화는 두 틱에 한 칸이다 (GDD §211)', () => {
