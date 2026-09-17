@@ -13,6 +13,7 @@
  */
 import { useState } from 'react'
 
+import { findItemArt } from '../content/itemArt'
 import { Button, CellGrid, GlyphState, Panel, Thumb, ValueExpr } from '../ds'
 import type { CatalogAdminRow, CatalogAdminView, CatalogAffixSpec } from '../storage'
 
@@ -684,6 +685,17 @@ export function CatalogAdminPanel(props: CatalogAdminPanelProps): React.JSX.Elem
                 label={item.labelKo}
                 grade={item.grade}
                 state={item.isRetired ? 'locked' : 'known'}
+                // **여기만 그림이 없었다** (2026-09-17 신고). 부품은 `art` 를 받는데
+                // 안 넘겨서 자리 코드(`BD`)만 그려지고 있었다 — 쓰는 사람에게는
+                // 「관리 페이지에는 그림이 없다」로 보인다.
+                //
+                // 줄이 `catalogId`·`hands`·`useTag` 를 이미 들고 있다. 셋을 함께
+                // 넘기는 이유는 접두사만으로 안 갈리는 둘 때문이다: 양손 협도와
+                // 부적 여섯 (`content/itemArt`).
+                {...(() => {
+                  const art = findItemArt(item.catalogId, item.hands, item.useTag)
+                  return art === undefined ? {} : { art }
+                })()}
               />
             ),
             name: item.labelKo,
