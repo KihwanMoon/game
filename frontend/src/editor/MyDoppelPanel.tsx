@@ -18,6 +18,7 @@
 import { GlyphState, Panel, ValueExpr } from '../ds'
 import type { MyDoppelView } from '../storage'
 
+import { DataList } from './DataList'
 import { LinkNoticeLine } from './LinkNoticeLine'
 import { checkLinked, type LinkState } from './linkState'
 
@@ -40,6 +41,9 @@ const LETTER_HINT = '이긴 판은 그 둔갑이 물러날 때 활자가 되어 
 
 /** 아직 아무것도 안 끝났을 때. **「없다」가 아니라 「아직」이다.** */
 const NO_RETIRED_HINT = '아직 물러난 둔갑이 없다 — 목숨 셋을 다 쓰면 그때 셈이 끝난다'
+
+/** 전적을 한 번에 보일 줄 수. 예전에 서버가 주던 만큼이라 첫 화면이 안 바뀐다. */
+const PAGE_SIZE = 10
 
 /**
  * 물러난 둔갑 한 줄을 사람이 읽는 말로.
@@ -99,54 +103,74 @@ export function MyDoppelPanel(props: MyDoppelPanelProps): React.JSX.Element {
             size="sm"
           />
           <ValueExpr text={LETTER_HINT} size="sm" dim />
-          {view.standing.length === 0 ? (
-            <ValueExpr text="지금 서 있는 둔갑이 없다 — 깊은 장에서 죽으면 선다" size="sm" dim />
-          ) : (
-            <ul className="doppel-mine__list">
-              {view.standing.map((one) => (
-                <li className="doppel-mine__row" key={one.recordId}>
-                  <span className="doppel-mine__floor">{String(one.floor)}장</span>
-                  <ValueExpr
-                    text={`lv ${String(one.level)} · 목숨 ${String(one.lives)}`}
-                    size="sm"
-                    dim
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
+          {/* **세 목록이 같은 틀을 쓴다** (2026-09-17). 손으로 짠 `ul` 이 셋이었고, 빈
+              경우를 저마다 바깥에서 갈라 적고 있었다 — 한 곳을 고쳐도 나머지 둘은 옛
+              모양으로 남는 자리다.
+
+              **서 있는 둔갑에는 찾기를 안 켠다.** 둘까지다(`DOPPELS_PER_SOURCE`) —
+              두 줄짜리에 찾기 칸이 서면 뒤에 뭔가 더 있다는 거짓말이 된다.
+
+              **전적에는 켠다.** 한 계정이 236판을 치른 것을 재고(2026-09-17) 서버 상한을
+              10 → 100 으로 올렸다. 그 전에는 열 줄만 와서 나머지가 아예 안 보였다 —
+              찾기를 붙여도 볼 것이 없었던 셈이다. 기본 한 장은 여전히 열 줄이다. */}
+          <DataList
+            items={view.standing}
+            rowKey={(one) => String(one.recordId)}
+            listClass="doppel-mine__list"
+            rowClass="doppel-mine__row"
+            emptyText="지금 서 있는 둔갑이 없다 — 깊은 장에서 죽으면 선다"
+            renderRow={(one) => (
+              <>
+                <span className="doppel-mine__floor">{String(one.floor)}장</span>
+                <ValueExpr
+                  text={`lv ${String(one.level)} · 목숨 ${String(one.lives)}`}
+                  size="sm"
+                  dim
+                />
+              </>
+            )}
+          />
           <div className="doppel-mine__head">물러난 둔갑</div>
-          {view.retired.length === 0 ? (
-            <ValueExpr text={NO_RETIRED_HINT} size="sm" dim />
-          ) : (
-            <ul className="doppel-mine__list">
-              {view.retired.map((one) => (
-                <li className="doppel-mine__row" key={one.recordId}>
-                  <GlyphState
-                    state={one.won > 0 ? 'armed' : 'false'}
-                    size="sm"
-                    label={formatRetired(one)}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
+          <DataList
+            items={view.retired}
+            rowKey={(one) => String(one.recordId)}
+            listClass="doppel-mine__list"
+            rowClass="doppel-mine__row"
+            emptyText={NO_RETIRED_HINT}
+            pageSize={PAGE_SIZE}
+            filterText={(one) => formatRetired(one)}
+            filterLabel="장·전적으로 찾기"
+            unit="줄"
+            renderRow={(one) => (
+              <GlyphState
+                state={one.won > 0 ? 'armed' : 'false'}
+                size="sm"
+                label={formatRetired(one)}
+              />
+            )}
+          />
           <div className="doppel-mine__head">최근 만난 판</div>
-          {view.recent.length === 0 ? (
-            <ValueExpr text={EMPTY_HINT} size="sm" dim />
-          ) : (
-            <ul className="doppel-mine__list">
-              {view.recent.map((bout, at) => (
-                <li className="doppel-mine__row" key={`${bout.at}-${String(at)}`}>
-                  <GlyphState
-                    state={bout.isDoppelWin ? 'true' : 'false'}
-                    size="sm"
-                    label={formatBout(bout)}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
+          <DataList
+            items={view.recent}
+            // **값이 겹칠 수 있어 자리를 함께 쓴다.** 같은 시각에 두 판이 끝나면 키가
+            // 같아지고, React 가 같은 줄로 보고 하나를 지운다.
+            rowKey={(bout, at) => `${bout.at}-${String(at)}`}
+            listClass="doppel-mine__list"
+            rowClass="doppel-mine__row"
+            emptyText={EMPTY_HINT}
+            pageSize={PAGE_SIZE}
+            // 상대 이름과 층이 한 줄에 있다 — 「누구에게 졌더라」가 이 목록의 질문이다.
+            filterText={(bout) => formatBout(bout)}
+            filterLabel="상대·장으로 찾기"
+            unit="판"
+            renderRow={(bout) => (
+              <GlyphState
+                state={bout.isDoppelWin ? 'true' : 'false'}
+                size="sm"
+                label={formatBout(bout)}
+              />
+            )}
+          />
         </div>
       )}
     </Panel>
