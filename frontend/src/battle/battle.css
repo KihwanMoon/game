@@ -847,3 +847,59 @@
   /* 항목 하나가 길어도 줄이 끊기지 않게 둔다 — 잘리면 무엇을 받았는지 사라진다. */
   overflow-wrap: anywhere;
 }
+
+/* ── 배너 자리 ─────────────────────────────────────────────────────────
+   **치수는 우리 취향이 아니라 외부 규격이다.** 320×50 은 모바일 배너의 표준 크기이고
+   (구글·EthicalAds 가 같은 값을 쓴다), 나중에 어느 망을 붙이든 이 상자에 그대로
+   들어가야 한다. 그래서 여기서만 날 수를 적고 한 곳에 모아 둔다 — 토큰으로 올리지
+   않는 이유는 이것이 이 저장소의 눈금이 아니라 **남의 규격**이기 때문이다.
+
+   지금 서 있는 것은 우리 각인과 「광고문의」다. 빈 상자를 두면 고장으로 읽힌다.
+
+   **황동을 안 쓴다.** 화면당 3곳 예산인데 전투 화면은 이미 출격·경고·활성 규칙이
+   쓰고 있다. 자리를 알리는 데는 1px 괘선이면 족하다. */
+.battle__ad {
+  /* **320×50 을 토큰 산술로 만든다.** 이 저장소는 생 px 를 안 쓴다 — 눈금은 토큰 한
+     곳이 정하고, 여기 날 수를 적으면 다음 사람이 그 규율을 풀어도 된다고 읽는다.
+     `--sp-8`(32) × 10 = 320, `--sp-12`(48) + 괘선 두 줄 = 50 이다. */
+  --ad-w: calc(var(--sp-8) * 10);
+  --ad-h: calc(var(--sp-12) + var(--bw) * 2);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  inline-size: 100%;
+  padding: var(--sp-2) var(--sp-0);
+  border-top: var(--bw) solid var(--line);
+}
+
+.battle__ad-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  inline-size: var(--ad-w);
+  max-inline-size: 100%;
+  block-size: var(--ad-h);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-panel);
+  color: var(--text-dim);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-s);
+  /* 바닥 글의 링크와 같은 규율 — 흐린 글자끼리는 색만으로 링크가 안 갈린다. */
+  text-decoration: none;
+}
+
+.battle__ad-link:hover,
+.battle__ad-link:focus-visible {
+  color: var(--text-body);
+  border-color: var(--line-strong);
+}
+
+/* 각인은 상자 높이에 맞춘다. 원본은 160×80 이라 비율대로 줄인다. */
+.battle__ad-mark {
+  block-size: calc(var(--ad-h) - var(--sp-4));
+  inline-size: auto;
+}

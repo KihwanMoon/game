@@ -27,6 +27,7 @@ import type { ReactNode, Ref } from 'react'
 
 import { Button } from '../ds'
 import type { LogRowProps } from '../ds'
+import { AdSlot } from './AdSlot'
 import { BattleFrame } from './BattleFrame'
 import type { FloorSettlement } from './settlement'
 import { formatTick, type SheetTab } from './portraitSheet'
@@ -166,6 +167,10 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
           </div>
         }
       />
+      {/* **자리를 먼저 잡는다** (2026-09-17). 나중에 어느 망을 고르든 화면을 다시 안
+          짜기 위해서다 — 비워 두면 그때 높이가 바뀌고, 높이가 바뀌면 도면과 로그의
+          배분이 흔들린다. 하단인 이유와 세로 전용인 이유는 `AdSlot` 머리글에 있다. */}
+      <AdSlot />
     </div>
   )
 }

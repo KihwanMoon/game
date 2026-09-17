@@ -486,3 +486,55 @@ describe('세로 배치의 상단 (층·틱은 헤더, 조작은 아래 줄)', (
     expect(block?.[1] ?? '').toContain('overflow: visible')
   })
 })
+
+describe('배너 자리', () => {
+  // **자리를 먼저 잡는 이유**는 나중에 어느 망을 고르든 화면을 다시 안 짜기 위해서다.
+  // 비워 두면 그때 높이가 바뀌고, 높이가 바뀌면 도면과 로그의 배분이 흔들린다.
+  const CSS = readStrippedCss('battle.css')
+
+  it('★ 가로 배치에는 안 선다 — 내줄 높이가 없다', () => {
+    // 가로는 높이가 559px 이하라 158px 여유가 없다. 세로 전용 화면 안에 있어서
+    // 그 조건이 저절로 지켜진다 — `BattleLandscape` 가 이 부품을 안 들여온다.
+    const landscape = readFileSync(
+      fileURLToPath(new URL('./BattleLandscape.tsx', import.meta.url)),
+      'utf8',
+    )
+    expect(landscape).not.toContain('AdSlot')
+  })
+
+  it('★ 세로 배치의 **맨 아래**에 선다 — 상단은 구글을 영영 못 쓰는 자리다', () => {
+    // 구글 정책이 「게임 창 가장자리에서 최소 150px」을 요구한다. 실측으로 상단은
+    // 도면까지 52px 뿐이고 하단은 268px 이다.
+    const portrait = readFileSync(
+      fileURLToPath(new URL('./BattlePortrait.tsx', import.meta.url)),
+      'utf8',
+    )
+    const frameAt = portrait.indexOf('<BattleFrame')
+    const slotAt = portrait.indexOf('<AdSlot')
+    expect(slotAt).toBeGreaterThan(frameAt)
+  })
+
+  it('★ 표준 배너 치수를 지킨다 — 망을 붙일 때 이 상자에 그대로 들어가야 한다', () => {
+    // 생 px 를 안 쓰므로 토큰 산술로 적혀 있다 — `--sp-8`(32)×10=320, `--sp-12`(48)+2=50.
+    expect(CSS).toContain('--ad-w: calc(var(--sp-8) * 10)')
+    expect(CSS).toContain('--ad-h: calc(var(--sp-12) + var(--bw) * 2)')
+  })
+
+  it('★ 빈 상자를 안 둔다 — 비어 있으면 고장으로 읽힌다', () => {
+    const slot = readFileSync(fileURLToPath(new URL('./AdSlot.tsx', import.meta.url)), 'utf8')
+    expect(slot).toContain('광고문의')
+    expect(slot).toContain('mark-head.webp')
+  })
+
+  it('★ 문의처가 약관·방침과 같다 — 두 곳이 갈리면 어느 쪽이 맞는지 모른다', () => {
+    const slot = readFileSync(fileURLToPath(new URL('./AdSlot.tsx', import.meta.url)), 'utf8')
+    const terms = readFileSync(
+      fileURLToPath(new URL('../../public/terms.html', import.meta.url)),
+      'utf8',
+    )
+    // 소스를 읽으므로 `mailto:${CONTACT}` 의 자리표시자가 아니라 **상수**를 겨냥한다.
+    const mail = /const CONTACT = '([^']+)'/.exec(slot)?.[1] ?? ''
+    expect(mail).not.toBe('')
+    expect(terms).toContain(mail)
+  })
+})

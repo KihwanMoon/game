@@ -1235,7 +1235,10 @@ export function App(): React.JSX.Element {
     }
     setAccount(token)
     setLink('online')
-    await loadAccountState(token)
+    // **기다리지 않는다.** 이것은 가방·순위표·도감을 순차로 열세 번 읽는 함수이고,
+    // 티켓은 그 값들과 아무 상관이 없다 — 기다리게 뒀더니 출격이 몇 초씩 멈췄다
+    // (2026-09-17, 내가 만든 회귀다). 화면은 값이 오는 대로 채워진다.
+    void loadAccountState(token)
     return token
   }
 
