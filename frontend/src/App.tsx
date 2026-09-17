@@ -777,14 +777,26 @@ export function App(): React.JSX.Element {
       // **저장이 있었는지를 먼저 본다.** 새 기기는 저장이 없고, 그때만 서버의 초안을
       // 받는다 — 이미 짜던 것이 있으면 덮어쓰지 않는다.
       const hasSave = readSave(storage) !== undefined
-      const token = await ensureToken(storage)
-      if (!isCurrent) {
+      // **여는 것만으로 계정을 만들지 않는다** (2026-09-17). 예전에는 여기서 바로
+      // 만들었고, 그래서 크롤러·미리보기·잘못 연 탭까지 계정이 하나씩 생겼다 —
+      // 실측으로 활성 128 중 **판을 한 번이라도 받은 것이 19개**였고, 나머지 189개는
+      // 두 번에 걸쳐 손으로 걷어낸 흔적이 남아 있었다.
+      //
+      // 첫 화면에 서버가 필요 없다는 것은 이미 이 저장소의 원칙이다 — 「서버가 없어도
+      // 게임은 돈다」(CLAUDE.md). 계정은 **서버가 처음 필요해질 때** 만든다(`requireAccount`).
+      const token = readToken(storage)
+      if (token === undefined || token === '') {
+        // 계정이 없어도 **서버가 살아 있는지는 알아야 한다.** 토큰이 필요 없는 조회로
+        // 묻는다 — 안 물으면 화면이 「확인 중」에 영원히 멈춘다.
+        const alive = await readWorldPulse()
+        if (!isCurrent) {
+          return
+        }
+        setLink(alive === undefined ? 'offline' : 'online')
+        setPulse(alive)
         return
       }
-      // **물어본 결과를 반드시 적는다.** 여기서 그냥 돌아가면 상태가 「확인 중」에
-      // 영원히 멈춰, 서버가 죽었다는 사실을 화면이 끝내 말하지 못한다.
-      if (token === undefined) {
-        setLink('offline')
+      if (!isCurrent) {
         return
       }
       setAccount(token)
@@ -1204,6 +1216,29 @@ export function App(): React.JSX.Element {
   /**
    * 지금 규칙표로 판을 시작한다. 방·시드·규칙표를 이 순간의 값으로 얼린다.
    */
+  /**
+   * 서버가 필요한 순간에 계정을 확보한다.
+   *
+   * **여는 것만으로는 안 만든다.** 이 함수를 부르는 자리가 곧 「서버가 처음 필요해진
+   * 자리」이며, 지금은 출격 하나다 — 판을 남기려면 서버 티켓이 있어야 한다.
+   *
+   * @returns 토큰. 못 만들었으면 undefined — 부르는 쪽이 로컬로 떨어진다.
+   */
+  async function requireAccount(): Promise<string | undefined> {
+    if (account !== undefined) {
+      return account
+    }
+    const token = await ensureToken(getLocalStorage())
+    if (token === undefined) {
+      setLink('offline')
+      return undefined
+    }
+    setAccount(token)
+    setLink('online')
+    await loadAccountState(token)
+    return token
+  }
+
   function startRun(): void {
     // **서버 티켓을 기다렸다 건다.** 예전에는 로컬 티켓으로 판을 먼저 걸고 서버 티켓이
     // 오면 갈아 끼웠는데, 그 순간 방과 시드가 바뀌어 **첫 방이 스킵된 것처럼** 보였다 —
@@ -1213,16 +1248,20 @@ export function App(): React.JSX.Element {
     setPostState('auto')
     setEditing(false)
     setSettlements([])
-    if (account === undefined) {
-      applyLocalRun()
-      return
-    }
     setLaunching(true)
     // **시드를 제안하지 않는 것이 기본이다.** 서버가 굴린다 — 그래야 판마다 다른
     // 던전이 나오고, 「유리한 시드」를 골라 담을 자리도 없다 (T2). 고정을 켠 때만
     // 이 기기의 수를 제안하고, 서버는 그것을 연습 모드에서만 받아들인다.
     const wanted = session.isSeedPinned ? session.seed : undefined
-    void requestTicket(account, session.roomId, wanted).then((issued) => {
+    // **여기가 계정이 처음 생기는 자리다.** 출격은 판을 세계에 남기겠다는 뜻이고,
+    // 그때부터 서버에 자리가 필요하다.
+    void requireAccount().then(async (token) => {
+      if (token === undefined) {
+        setLaunching(false)
+        applyLocalRun()
+        return
+      }
+      const issued = await requestTicket(token, session.roomId, wanted)
       setLaunching(false)
       if (issued === undefined) {
         // **서버가 없다고 게임이 멈추지 않는다.** 다만 로컬로 돈 판은 서버에 안 남으므로

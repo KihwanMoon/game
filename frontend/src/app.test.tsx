@@ -564,3 +564,36 @@ describe('층 단위 보상 (로드맵 W14)', () => {
     expect(checkFloorCleared(2, 0)).toBe(false)
   })
 })
+
+describe('여는 것만으로 계정을 만들지 않는다', () => {
+  // **실측이 문제를 말해 줬다** (2026-09-17): 활성 계정 128 중 판을 한 번이라도 받은 것이
+  // 19개(15%)였고, 나머지 189개는 두 번에 걸쳐 손으로 걷어낸 흔적이 있었다. 크롤러·
+  // 미리보기·잘못 연 탭까지 계정이 하나씩 생기고 있었다.
+  //
+  // 첫 화면에 서버가 필요 없다는 것은 이미 이 저장소의 원칙이다 — 「서버가 없어도 게임은
+  // 돈다」(CLAUDE.md). 그래서 계정은 **서버가 처음 필요해질 때** 만든다.
+  const SOURCE = readFileSync(fileURLToPath(new URL('./App.tsx', import.meta.url)), 'utf8')
+
+  it('★ 부팅 효과가 계정을 안 만든다', () => {
+    // 부팅 효과는 저장된 토큰을 **읽기만** 한다. 만드는 것은 `requireAccount` 하나다.
+    const boot = SOURCE.slice(SOURCE.indexOf('const hasSave = readSave(storage)'))
+    const untilNextFn = boot.slice(0, boot.indexOf('\n  /**'))
+    expect(untilNextFn).toContain('readToken(storage)')
+    expect(untilNextFn, '부팅에서 계정을 만들고 있다').not.toContain('ensureToken')
+  })
+
+  it('★ 계정을 만드는 자리가 하나다 — 여럿이면 어디서 생겼는지 못 짚는다', () => {
+    expect([...SOURCE.matchAll(/\bensureToken\(/g)]).toHaveLength(1)
+  })
+
+  it('★ 그 자리는 출격이 부른다 — 서버가 처음 필요해지는 곳이다', () => {
+    expect(SOURCE).toContain('async function requireAccount()')
+    const launch = SOURCE.slice(SOURCE.indexOf('function startRun()'))
+    expect(launch.slice(0, launch.indexOf('\n  }'))).toContain('requireAccount()')
+  })
+
+  it('★ 계정이 없어도 서버가 사는지는 묻는다 — 안 물으면 「확인 중」에 멈춘다', () => {
+    const boot = SOURCE.slice(SOURCE.indexOf('const hasSave = readSave(storage)'))
+    expect(boot.slice(0, boot.indexOf('\n  /**'))).toContain('readWorldPulse()')
+  })
+})
