@@ -37,6 +37,7 @@ import {
   ATTACK_ACTIONS,
   GUARD_SKILL_ID,
   OUTCOME_BLOCKED,
+  STATUS_POISON,
   USE_ITEM_ACTION,
   resolveSkillPlan,
 } from './plan'
@@ -47,6 +48,12 @@ import { CANCEL_BY_ACT, TelegraphBoard, type Telegraph } from './telegraph'
 
 /** 용암 위에 선 엔티티가 매 틱 받는 고정 피해. */
 export const LAVA_DAMAGE = 3
+
+/**
+ * 독 한 틱의 피해. 용암과 같은 값이되 **걸어 나올 수가 없다** — 용암은 한 칸 비키면
+ * 끝나고 독은 틱이 다 갈 때까지 따라온다. 그래서 값을 더 올리지 않았다.
+ */
+export const POISON_DAMAGE = 3
 
 /** 생명의 샘이 매 틱 내주는 회복량. 잔여량이 모자라면 남은 만큼만 나온다. */
 export const SPRING_REGEN_PER_TICK = 2
@@ -178,8 +185,15 @@ export class TickEngine {
       for (const [skill, remaining] of entity.cooldowns) {
         entity.cooldowns.set(skill, Math.max(0, remaining - 1))
       }
+      // **깎기 전 값으로 본다.** 깎은 뒤를 보면 `duration` 이 5 인데 네 틱만 아프다.
+      const poisoned = entity.statuses.get(STATUS_POISON) ?? 0
       for (const [status, remaining] of entity.statuses) {
         entity.statuses.set(status, Math.max(0, remaining - 1))
+      }
+      if (poisoned > 0) {
+        // 주체가 자기 자신이다 — 누가 걸었는지를 상태가 안 들고 있다 (용암과 같다).
+        // 맞는 것이므로 시전이 끊긴다: 독을 맞은 채로는 큰 굿을 못 부린다.
+        executor.applyDamage(entity, POISON_DAMAGE, PHASE_UPKEEP, '독', entity.entityId)
       }
       if (this.state.getTile(entity.position.x, entity.position.y) === TILE_LAVA) {
         executor.applyDamage(entity, LAVA_DAMAGE, PHASE_UPKEEP, '용암 위', entity.entityId)

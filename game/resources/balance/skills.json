@@ -1,7 +1,142 @@
 {
   "_comment": "스킬 정의. balance.json 에서 갈라 나왔다 — 스킬은 종류가 늘어나는 것이고 밸런스 수치는 조정되는 것이라 수명이 다르다 (docs/설계/5_스킬 §9). family·shape·target_faction·telegraph·tags 는 아직 아무도 읽지 않는 서술 필드이며, 블록 v5 의 USE_SKILL[skill_id] 와 계열별 실행기가 이것을 읽는다. coef_pct·cooldown·range·heal_pct 는 값이 그대로이므로 골든 리플레이가 바뀌지 않는다. v2: GUARD 계열을 더했다(결정 #16) — 방패를 들었는데 막는 행동이 없으면 방패는 그냥 방어력 숫자이고 '양손무기 vs 한손+방패' 선택이 성립하지 않는다 (P3).",
-  "skill_list_version": 8,
+  "skill_list_version": 9,
   "skills": [
+    {
+      "id": "HEX_FIRE",
+      "label_ko": "불 굿",
+      "family": "ATTACK",
+      "actor": "enemy",
+      "shape": {
+        "kind": "AREA",
+        "radius": 3
+      },
+      "target_faction": "enemy",
+      "coef_pct": 190,
+      "cooldown": 12,
+      "range": 6,
+      "telegraph": 3,
+      "cancel_on_act": false,
+      "cancel_on_hit": true,
+      "tags": [
+        "MAGIC",
+        "CAST",
+        "AOE"
+      ],
+      "_note": "**`cancel_on_act` 를 안 켰다** — 다섯 전부 그렇다. 적 예산은 CPU 4 · 3줄 고정인데, 켜면 모든 주술형이 「시전 중에는 버틴다」 한 줄을 써야 하고 3줄에서 그 한 줄이 표를 전부 같은 모양으로 만든다. 1틱짜리는 어차피 상관이 없다(예고가 다음 틱 TELEGRAPH 에서 터지고, 그것은 DECIDE 보다 앞이다). **적이 쓰는 메테오다.** 플레이어의 메테오와 같은 거래를 반대편에서 판다 — 3틱 붉게 서 있고 그동안 비켜설 수 있다. 다른 점은 카운터가 둘이라는 것이다: 비켜서거나, **붙어서 때려 끊는다**(`cancel_on_hit`). 원거리 표는 앞엣것을, 근접 표는 뒤엣것을 쓴다. 계수 190 은 플레이어 메테오(220)보다 낮다 — 적은 여럿이고 플레이어는 하나라, 같은 수를 주면 한 방에 끝난다."
+    },
+    {
+      "id": "HEX_BOLT",
+      "label_ko": "벼락 줄",
+      "family": "ATTACK",
+      "actor": "enemy",
+      "shape": {
+        "kind": "LINE",
+        "length": 6
+      },
+      "target_faction": "enemy",
+      "coef_pct": 150,
+      "cooldown": 6,
+      "range": 6,
+      "telegraph": 1,
+      "cancel_on_act": false,
+      "cancel_on_hit": false,
+      "tags": [
+        "MAGIC",
+        "CAST"
+      ],
+      "_note": "**`LINE` 이 비어 있던 자리를 다시 쓴다.** 연쇄 번개가 2026-09-17 에 `CHAIN` 으로 옮겨 가면서 직선을 쓰는 스킬이 하나도 안 남았다 — 설계/5_스킬 §2 가 P2 를 증명하는 자리로 둔 형태가 아무도 안 쓰는 채로 남는 것이다. 적이 쓰면 뜻이 더 맞는다: 직선은 **쏘는 쪽이 자리를 만든다**. 시전자에서 나를 향해 뻗으므로 카운터가 하나로 정해진다 — **옆으로 한 칸.** 앞뒤로 움직이면 여전히 줄 위다. 맞아도 안 끊긴다: 1틱짜리를 피격으로 끊으면 사실상 못 쓴다."
+    },
+    {
+      "id": "HEX_FROST",
+      "label_ko": "서리 굿",
+      "family": "STATUS",
+      "actor": "enemy",
+      "shape": {
+        "kind": "AREA",
+        "radius": 2
+      },
+      "target_faction": "enemy",
+      "coef_pct": 40,
+      "cooldown": 7,
+      "range": 5,
+      "telegraph": 1,
+      "cancel_on_act": false,
+      "cancel_on_hit": false,
+      "effects": [
+        {
+          "kind": "STATUS",
+          "status": "ROOT",
+          "duration": 1
+        }
+      ],
+      "tags": [
+        "MAGIC",
+        "CAST",
+        "CONTROL"
+      ],
+      "_note": "적이 쓰는 서리 장판. 피해는 곁가지고 **묶는 것이 본론이다.** 이동만 막으므로 도망치려는 쪽에만 걸린다 — 붙어서 때리는 표는 이것을 맞고도 하던 일을 한다. 그래서 이 적 하나만으로는 위협이 안 되고, **뒤에 뭐가 오는지가 위협이다.** 한 틱뿐인 이유가 그것이다."
+    },
+    {
+      "id": "HEX_PLAGUE",
+      "label_ko": "옴 굿",
+      "family": "STATUS",
+      "actor": "enemy",
+      "shape": {
+        "kind": "AREA",
+        "radius": 2
+      },
+      "target_faction": "enemy",
+      "coef_pct": 20,
+      "cooldown": 10,
+      "range": 5,
+      "telegraph": 2,
+      "cancel_on_act": false,
+      "cancel_on_hit": false,
+      "effects": [
+        {
+          "kind": "STATUS",
+          "status": "POISON",
+          "duration": 5
+        }
+      ],
+      "tags": [
+        "MAGIC",
+        "CAST",
+        "CONTROL"
+      ],
+      "_note": "**독을 거는 첫 자리다** (2026-09-17). `POISON` 은 인지 변수 목록에 처음부터 있었는데 거는 것이 세계에 없어서, 규칙표가 「내 상태이상[중독]」을 물으면 답이 영영 거짓이었다. 이제 참이 된다. 다섯 틱 × 3 = 15 는 한 방으로는 작은 수인데, **따라온다**는 것이 값이다 — 용암은 한 칸 비키면 끝나고 이것은 안 끝난다. 덤이 하나 더 있다: 독은 맞는 것이라 **시전을 끊는다**(`apply_damage`). 독을 맞은 채로는 피격 취소를 켠 큰 굿을 못 부린다. 방벽은 절반으로 줄인다."
+    },
+    {
+      "id": "HEX_SNARE",
+      "label_ko": "덫 굿",
+      "family": "STATUS",
+      "actor": "enemy",
+      "shape": {
+        "kind": "AREA",
+        "radius": 0
+      },
+      "target_faction": "enemy",
+      "coef_pct": 0,
+      "cooldown": 6,
+      "range": 6,
+      "telegraph": 1,
+      "cancel_on_act": false,
+      "cancel_on_hit": false,
+      "effects": [
+        {
+          "kind": "STATUS",
+          "status": "ROOT",
+          "duration": 2
+        }
+      ],
+      "tags": [
+        "MAGIC",
+        "CAST",
+        "CONTROL"
+      ],
+      "_note": "**피해가 0 이고 한 칸뿐이다.** 밟고 선 칸에만 떨어지므로 카운터가 순수하게 하나다 — **아무 데로든 한 칸.** 그 한 칸을 안 움직이면 두 틱을 묶인다. 혼자서는 아무것도 못 하는 스킬이고, 그래서 이것을 쓰는 적은 **혼자 세우면 안 된다**: 묶어 두는 동안 다른 것이 친다. 설계/5_스킬 §10.6 이 마법 셋에 물은 「어느 대가를 낼 것인가」를 적 쪽에서 되묻는 자리다."
+    },
     {
       "id": "ATTACK",
       "family": "ATTACK",

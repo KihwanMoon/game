@@ -159,6 +159,18 @@ SKILL_IDS: tuple[str, ...] = (
     "METEOR",
     "CHAIN_BOLT",
     "FROST_FIELD",
+    # **적만 쓰는 다섯** (2026-09-17). 인지 목록에 드는 이유는 쿨타임 때문이다 — 적
+    # 규칙표가 `쿨타임 완료[불 굿]` 을 못 물으면 매 틱 다시 시전해 예고가 영영 안 터진다
+    # (쿨타임은 「불가」로 안 잡힌다 — `rule_vm` 은 미장착·소모품·시야만 본다).
+    #
+    # 팔레트에는 안 뜬다. 거르는 자리는 `blockOptions` 이고 기준은 `skills.json` 의
+    # `actor` 다 — 목록을 여기서 가르면 이 검사(`test_the_skill_perception_list_matches`)가
+    # 잡는 「두 목록이 갈렸다」가 도로 생긴다.
+    "HEX_FIRE",
+    "HEX_BOLT",
+    "HEX_FROST",
+    "HEX_PLAGUE",
+    "HEX_SNARE",
 )
 
 
@@ -230,7 +242,9 @@ def build_snapshot(
 
     present_types = {kind_types.get(other.kind_id, "") for other in hostiles}
     # HEALER 는 v4 에서 들어왔다. 없으면 치유형을 유형으로 지목할 방법이 DSL 에 없다.
-    for enemy_type in ("MELEE", "RANGED", "SUMMONER", "BOMBER", "HEALER"):
+    # **CASTER 는 2026-09-17 이다.** 마법 쓰는 적이 들어오는데 「주술형 먼저 친다」를
+    # 규칙표로 못 적으면, 그 적들에게 카운터가 하나도 없다 — 유형을 여는 이유가 그것이다.
+    for enemy_type in ("MELEE", "RANGED", "SUMMONER", "BOMBER", "HEALER", "CASTER"):
         values[f"enemy_type_present[{enemy_type}]"] = enemy_type in present_types
     # SUMMON 이 여기 끼는 것은 v3, HEAL 은 v4 부터다. 주기를 규칙표가 물을 수 있어야
     # `쿨타임[SUMMON] 완료 → 소환`·`쿨타임[HEAL] 완료 → 회복` 이 성립한다 (GDD §5).

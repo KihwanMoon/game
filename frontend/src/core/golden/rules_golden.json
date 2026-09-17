@@ -549,6 +549,14 @@
           2
         ],
         [
+          "target_distance[TYPE_CASTER]",
+          -1
+        ],
+        [
+          "target_distance[TYPE_CASTER_FIRST]",
+          2
+        ],
+        [
           "nearest_tile_distance[DOOR]",
           1
         ],
@@ -578,6 +586,10 @@
         ],
         [
           "enemy_type_present[HEALER]",
+          false
+        ],
+        [
+          "enemy_type_present[CASTER]",
           false
         ],
         [
@@ -698,6 +710,66 @@
         ],
         [
           "self_skill_ready[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_FROST]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_FROST]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_FROST]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_SNARE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_SNARE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_SNARE]",
           true
         ],
         [
@@ -823,6 +895,14 @@
           1
         ],
         [
+          "target_distance[TYPE_CASTER]",
+          -1
+        ],
+        [
+          "target_distance[TYPE_CASTER_FIRST]",
+          1
+        ],
+        [
           "nearest_tile_distance[DOOR]",
           1
         ],
@@ -852,6 +932,10 @@
         ],
         [
           "enemy_type_present[HEALER]",
+          false
+        ],
+        [
+          "enemy_type_present[CASTER]",
           false
         ],
         [
@@ -972,6 +1056,66 @@
         ],
         [
           "self_skill_ready[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_FROST]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_FROST]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_FROST]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_SNARE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_SNARE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_SNARE]",
           true
         ],
         [
@@ -1097,6 +1241,14 @@
           5
         ],
         [
+          "target_distance[TYPE_CASTER]",
+          -1
+        ],
+        [
+          "target_distance[TYPE_CASTER_FIRST]",
+          5
+        ],
+        [
           "nearest_tile_distance[DOOR]",
           5
         ],
@@ -1126,6 +1278,10 @@
         ],
         [
           "enemy_type_present[HEALER]",
+          false
+        ],
+        [
+          "enemy_type_present[CASTER]",
           false
         ],
         [
@@ -1246,6 +1402,66 @@
         ],
         [
           "self_skill_ready[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_FROST]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_FROST]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_FROST]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_SNARE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_SNARE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_SNARE]",
           true
         ],
         [
@@ -1371,6 +1587,14 @@
           -1
         ],
         [
+          "target_distance[TYPE_CASTER]",
+          -1
+        ],
+        [
+          "target_distance[TYPE_CASTER_FIRST]",
+          -1
+        ],
+        [
           "nearest_tile_distance[DOOR]",
           1
         ],
@@ -1400,6 +1624,10 @@
         ],
         [
           "enemy_type_present[HEALER]",
+          false
+        ],
+        [
+          "enemy_type_present[CASTER]",
           false
         ],
         [
@@ -1520,6 +1748,66 @@
         ],
         [
           "self_skill_ready[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_FROST]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_FROST]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_FROST]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_SNARE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_SNARE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_SNARE]",
           true
         ],
         [
@@ -1645,6 +1933,14 @@
           3
         ],
         [
+          "target_distance[TYPE_CASTER]",
+          -1
+        ],
+        [
+          "target_distance[TYPE_CASTER_FIRST]",
+          3
+        ],
+        [
           "nearest_tile_distance[DOOR]",
           1
         ],
@@ -1674,6 +1970,10 @@
         ],
         [
           "enemy_type_present[HEALER]",
+          false
+        ],
+        [
+          "enemy_type_present[CASTER]",
           false
         ],
         [
@@ -1794,6 +2094,66 @@
         ],
         [
           "self_skill_ready[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_FROST]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_FROST]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_FROST]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_SNARE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_SNARE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_SNARE]",
           true
         ],
         [
@@ -1919,6 +2279,14 @@
           7
         ],
         [
+          "target_distance[TYPE_CASTER]",
+          -1
+        ],
+        [
+          "target_distance[TYPE_CASTER_FIRST]",
+          2
+        ],
+        [
           "nearest_tile_distance[DOOR]",
           1
         ],
@@ -1949,6 +2317,10 @@
         [
           "enemy_type_present[HEALER]",
           true
+        ],
+        [
+          "enemy_type_present[CASTER]",
+          false
         ],
         [
           "self_cooldown_ready[SKILL_1]",
@@ -2068,6 +2440,66 @@
         ],
         [
           "self_skill_ready[FROST_FIELD]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_FIRE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_BOLT]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_FROST]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_FROST]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_FROST]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_PLAGUE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_SNARE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_SNARE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_SNARE]",
           true
         ],
         [
@@ -2193,6 +2625,18 @@
       "picked_id": "e_alpha"
     },
     {
+      "world_id": "field_mixed",
+      "actor_id": "player",
+      "selector": "TYPE_CASTER",
+      "picked_id": null
+    },
+    {
+      "world_id": "field_mixed",
+      "actor_id": "player",
+      "selector": "TYPE_CASTER_FIRST",
+      "picked_id": "e_alpha"
+    },
+    {
       "world_id": "throne",
       "actor_id": "player",
       "selector": "NEAREST",
@@ -2271,6 +2715,18 @@
       "picked_id": "e_minion"
     },
     {
+      "world_id": "throne",
+      "actor_id": "player",
+      "selector": "TYPE_CASTER",
+      "picked_id": null
+    },
+    {
+      "world_id": "throne",
+      "actor_id": "player",
+      "selector": "TYPE_CASTER_FIRST",
+      "picked_id": "e_minion"
+    },
+    {
       "world_id": "spring",
       "actor_id": "player",
       "selector": "NEAREST",
@@ -2349,6 +2805,18 @@
       "picked_id": "e_archer"
     },
     {
+      "world_id": "spring",
+      "actor_id": "player",
+      "selector": "TYPE_CASTER",
+      "picked_id": null
+    },
+    {
+      "world_id": "spring",
+      "actor_id": "player",
+      "selector": "TYPE_CASTER_FIRST",
+      "picked_id": "e_archer"
+    },
+    {
       "world_id": "solitude",
       "actor_id": "player",
       "selector": "NEAREST",
@@ -2427,6 +2895,18 @@
       "picked_id": null
     },
     {
+      "world_id": "solitude",
+      "actor_id": "player",
+      "selector": "TYPE_CASTER",
+      "picked_id": null
+    },
+    {
+      "world_id": "solitude",
+      "actor_id": "player",
+      "selector": "TYPE_CASTER_FIRST",
+      "picked_id": null
+    },
+    {
       "world_id": "wounded",
       "actor_id": "player",
       "selector": "NEAREST",
@@ -2502,6 +2982,18 @@
       "world_id": "wounded",
       "actor_id": "player",
       "selector": "TYPE_HEALER_FIRST",
+      "picked_id": "e_alpha"
+    },
+    {
+      "world_id": "wounded",
+      "actor_id": "player",
+      "selector": "TYPE_CASTER",
+      "picked_id": null
+    },
+    {
+      "world_id": "wounded",
+      "actor_id": "player",
+      "selector": "TYPE_CASTER_FIRST",
       "picked_id": "e_alpha"
     },
     {
@@ -2584,6 +3076,18 @@
     },
     {
       "world_id": "ward",
+      "actor_id": "player",
+      "selector": "TYPE_CASTER",
+      "picked_id": null
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "player",
+      "selector": "TYPE_CASTER_FIRST",
+      "picked_id": "e_grunt"
+    },
+    {
+      "world_id": "ward",
       "actor_id": "e_mender",
       "selector": "NEAREST",
       "picked_id": "a_scout"
@@ -2658,6 +3162,18 @@
       "world_id": "ward",
       "actor_id": "e_mender",
       "selector": "TYPE_HEALER_FIRST",
+      "picked_id": "a_scout"
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "e_mender",
+      "selector": "TYPE_CASTER",
+      "picked_id": null
+    },
+    {
+      "world_id": "ward",
+      "actor_id": "e_mender",
+      "selector": "TYPE_CASTER_FIRST",
       "picked_id": "a_scout"
     }
   ],

@@ -35,6 +35,7 @@ import {
   listPerceptionGroups,
   listRhsStats,
   formatParamLabel,
+  listParamOptions,
   listSelectorsForAction,
 } from './blockOptions'
 import { buildDefaultRhs } from './draft'
@@ -332,11 +333,11 @@ export function ActionCard(props: ActionCardProps): React.JSX.Element {
         {action?.param == null ? null : (
           <EditField
             label={`${label} ${action.param.name === 'item' ? '소모품' : '재주'}`}
-            value={rule.actionParam ?? action.param.values[0] ?? ''}
-            options={action.param.values.map((value) => ({
-              value,
-              label: formatParamLabel(value),
-            }))}
+            value={rule.actionParam ?? listParamOptions(action)[0]?.value ?? ''}
+            // **적만 쓰는 재주는 안 보인다** (2026-09-17). 카탈로그에는 들어 있어야
+            // 하고(적 규칙표가 쿨타임을 묻는다) 고르개에는 있으면 안 된다 — 골라 놓고
+            // 「불가」가 뜨는 줄이 다섯 개 생긴다.
+            options={listParamOptions(action)}
             onChange={(actionParam) => {
               actions.changeParam(index, actionParam)
             }}

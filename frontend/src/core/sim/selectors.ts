@@ -39,6 +39,13 @@ export const SELECTOR_TYPE_RANGED_FIRST = 'TYPE_RANGED_FIRST'
 export const SELECTOR_TYPE_SUMMONER_FIRST = 'TYPE_SUMMONER_FIRST'
 export const SELECTOR_TYPE_HEALER_FIRST = 'TYPE_HEALER_FIRST'
 
+/**
+ * 주술형 (2026-09-17). **마법 쓰는 적의 유일한 카운터가 이것이다.** 예고는 비켜서면
+ * 되지만 비켜서는 동안 아무것도 못 하고, 방이 주술형 둘이면 비켜설 칸이 없다.
+ */
+export const SELECTOR_TYPE_CASTER = 'TYPE_CASTER'
+export const SELECTOR_TYPE_CASTER_FIRST = 'TYPE_CASTER_FIRST'
+
 /** 셀렉터 13종. 순서는 blocks.json 과 같고, 인지 스냅샷이 이 순서로 거리를 푼다. */
 export const ALL_SELECTORS: readonly string[] = [
   SELECTOR_NEAREST,
@@ -54,6 +61,10 @@ export const ALL_SELECTORS: readonly string[] = [
   SELECTOR_TYPE_RANGED_FIRST,
   SELECTOR_TYPE_SUMMONER_FIRST,
   SELECTOR_TYPE_HEALER_FIRST,
+  // **뒤에 붙인다.** 이 순서가 곧 인지 스냅샷의 키 순서라, 가운데 끼우면 저장된
+  // 리플레이가 다른 거리를 읽는다.
+  SELECTOR_TYPE_CASTER,
+  SELECTOR_TYPE_CASTER_FIRST,
 ]
 
 /** 적 유형을 직접 가리키는 셀렉터들. BOSS 도 유형 하나이므로 같은 표에 둔다. */
@@ -65,6 +76,8 @@ const TYPE_BY_SELECTOR: ReadonlyMap<string, string> = new Map([
   [SELECTOR_TYPE_RANGED_FIRST, 'RANGED'],
   [SELECTOR_TYPE_SUMMONER_FIRST, 'SUMMONER'],
   [SELECTOR_TYPE_HEALER_FIRST, 'HEALER'],
+  [SELECTOR_TYPE_CASTER, 'CASTER'],
+  [SELECTOR_TYPE_CASTER_FIRST, 'CASTER'],
 ])
 
 /** 후보가 없을 때 가장 가까운 적으로 떨어지는 셀렉터들 (블록 v15). */
@@ -72,6 +85,7 @@ const FALLBACK_SELECTORS: ReadonlySet<string> = new Set([
   SELECTOR_TYPE_RANGED_FIRST,
   SELECTOR_TYPE_SUMMONER_FIRST,
   SELECTOR_TYPE_HEALER_FIRST,
+  SELECTOR_TYPE_CASTER_FIRST,
 ])
 
 /** HP 가 가장 낮은 쪽을 고르는 셀렉터들. 적대·아군 양쪽에 하나씩이다. */

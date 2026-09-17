@@ -19,6 +19,7 @@
 import secrets
 from collections.abc import Callable
 
+from game.app.progression.floors import find_boss_room
 from game.schemas.room import RoomTemplate
 
 # 후보 하나를 고르는 것. 상한을 받아 `[0, 상한)` 을 돌려준다.
@@ -31,15 +32,17 @@ PickBelow = Callable[[int], int]
 
 
 def list_floor_rooms(
-    rooms: dict[str, RoomTemplate], floor: int, boss_room_id: str = ""
+    rooms: dict[str, RoomTemplate], floor: int, boss_rooms: frozenset[str] = frozenset()
 ) -> tuple[str, ...]:
     """그 층에서 **일반 전투로** 나올 수 있는 방을 모은다.
 
     Args:
         rooms: 방 id 에서 템플릿으로의 대응표.
         floor: 지금 층.
-        boss_room_id: 보스 방. 일반 후보에서 뺀다 — 섞이면 보스를 두 번 만나거나,
-            보스 층이 아닌 자리에서 만나게 된다.
+        boss_rooms: 보스 방 전부. 일반 후보에서 뺀다 — 섞이면 보스를 두 번 만나거나,
+            보스 층이 아닌 자리에서 만나게 된다. **하나가 아니라 집합인 것은 막이
+            둘이기 때문이다** (2026-09-17): 15장 보스만 빼면 10장 장승이 11~15장의
+            일반 방으로 계속 나온다.
 
     Returns:
         id 순으로 정렬된 방 id 들. **정렬해서 돌려준다** — 딕셔너리 순회 순서에 기대면
@@ -47,7 +50,7 @@ def list_floor_rooms(
     """
     return tuple(
         sorted(
-            key for key, room in rooms.items() if room.min_floor <= floor and key != boss_room_id
+            key for key, room in rooms.items() if room.min_floor <= floor and key not in boss_rooms
         )
     )
 
@@ -57,8 +60,7 @@ def build_room_chain(
     floor: int,
     first_room_id: str,
     length: int,
-    boss_room_id: str = "",
-    boss_floor: int = 0,
+    bosses: tuple[tuple[int, str], ...] = (),
     pick: PickBelow = secrets.randbelow,
 ) -> tuple[str, ...]:
     """이 런이 돌 방 목록을 만든다.
@@ -78,17 +80,21 @@ def build_room_chain(
         floor: 지금 층. `min_floor` 가 이보다 높은 방은 안 나온다.
         first_room_id: 고른 방.
         length: 이을 방 수.
-        boss_room_id: 보스 방. 보스 층의 마지막 자리에 선다.
-        boss_floor: 보스가 서는 층. 0 이면 보스를 안 둔다.
+        bosses: (층, 보스 방) 쌍들. 그 층의 마지막 자리에 선다. 비어 있으면 보스를
+            안 둔다. **여럿인 것은 막이 둘이기 때문이다** (2026-09-17) — 장승은 10장에
+            그대로 있고 판각 귀신이 15장에 선다.
         pick: 후보를 고르는 것. 기본은 `secrets` 이고, 밸런스 배치가 재현 가능한 것으로
             갈아 끼운다.
 
     Returns:
         방 id 들. 길이는 `length` 이며, 후보가 하나도 없으면 고른 방을 그대로 잇는다.
     """
-    is_boss_run = bool(boss_room_id) and boss_room_id in rooms and floor == boss_floor
+    boss_room_id = find_boss_room(bosses, floor)
+    is_boss_run = bool(boss_room_id) and boss_room_id in rooms
     normal_length = max(1, length - 1) if is_boss_run else length
-    candidates = list_floor_rooms(rooms, floor, boss_room_id)
+    # **보스 방 전부를 일반 후보에서 뺀다.** 이 층 것만 빼면 다른 막의 보스가 잡몹 방으로
+    # 나온다 — 11장에서 장승을 만나는 일이 그것이다.
+    candidates = list_floor_rooms(rooms, floor, frozenset(room for _floor, room in bosses))
     if not candidates:
         return tuple(first_room_id for _step in range(max(1, length)))
     picked = [first_room_id if first_room_id in candidates else candidates[pick(len(candidates))]]
@@ -106,8 +112,8 @@ def build_descent(
     start_floor: int,
     first_room_id: str,
     rooms_per_floor: int,
-    boss_room_id: str = "",
-    boss_floor: int = 0,
+    last_floor: int = 0,
+    bosses: tuple[tuple[int, str], ...] = (),
     pick: PickBelow = secrets.randbelow,
 ) -> tuple[str, ...]:
     """시작 층부터 마지막 층까지의 방을 한 줄로 잇는다.
@@ -121,22 +127,20 @@ def build_descent(
         start_floor: 시작 층.
         first_room_id: 고른 방. 첫 층의 첫 방으로 선다.
         rooms_per_floor: 층 하나에 드는 방 수.
-        boss_room_id: 보스 방.
-        boss_floor: 보스가 서는 층. 여기가 하강의 끝이다.
+        last_floor: 하강이 끝나는 층. 0 이면 시작 층 하나만 돈다.
+        bosses: (층, 보스 방) 쌍들. 해당 층의 마지막 자리에 선다.
         pick: 후보를 고르는 것. 기본은 `secrets` 다.
 
     Returns:
         방 id 들. 길이는 `(끝 층 - 시작 층 + 1) * rooms_per_floor` 다.
     """
-    last_floor = max(start_floor, boss_floor)
+    end_floor = max(start_floor, last_floor)
     picked: list[str] = []
-    for floor in range(start_floor, last_floor + 1):
+    for floor in range(start_floor, end_floor + 1):
         # 첫 층만 고른 방으로 연다. 이후 층은 서버가 전부 고른다 — 고른 방이 층마다
         # 되풀이되면 하강이 같은 방의 반복이 된다.
         opener = first_room_id if floor == start_floor else ""
-        picked.extend(
-            build_room_chain(rooms, floor, opener, rooms_per_floor, boss_room_id, boss_floor, pick)
-        )
+        picked.extend(build_room_chain(rooms, floor, opener, rooms_per_floor, bosses, pick))
     return tuple(picked)
 
 

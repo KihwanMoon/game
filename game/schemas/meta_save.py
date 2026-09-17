@@ -164,7 +164,7 @@ def build_rule_payload(rule: Rule) -> dict:
     Returns:
         parse_ruleset 이 다시 읽을 수 있는 딕셔너리.
     """
-    return {
+    payload: dict = {
         "priority": rule.priority,
         "cpu_cost": rule.cpu_cost,
         "action": rule.action,
@@ -175,6 +175,18 @@ def build_rule_payload(rule: Rule) -> dict:
             "terms": [build_term_payload(term) for term in rule.conditions.terms],
         },
     }
+    # **인자를 버리고 있었다** (2026-09-17). `USE_SKILL[메테오]` 를 프리셋으로 저장하거나
+    # 공유 코드로 내보내면 **재주가 빠진 채** 돌아왔다 — `action` 만 남아 「무슨 재주를
+    # 쓰라는 건지」가 사라진 규칙이 된다. 소모품(`USE_ITEM[주문서]`)도 같다.
+    #
+    # TS 쪽(`storage/presetPayload.ts`)은 처음부터 싣고 있었다. 두 코어가 갈린 자리이고,
+    # 브라우저에서 만든 코드를 서버가 다시 내보내면 그때 인자가 증발했다.
+    #
+    # **없으면 키를 안 만든다** — TS 와 같은 규약이라 같은 바이트가 나오고, 그래야 같은
+    # 규칙표가 같은 공유 코드를 낸다 (R5).
+    if rule.action_param is not None:
+        payload["action_param"] = rule.action_param
+    return payload
 
 
 def build_ruleset_payload(ruleset: RuleSet) -> dict:

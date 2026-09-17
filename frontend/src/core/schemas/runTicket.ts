@@ -24,7 +24,9 @@ import type { RuleSet } from './ruleset'
 // e13: 마법 둘이 하는 일이 바뀌었다 — 연쇄 번개는 **적을 타고 튀고**(`CHAIN`), 서리
 //      장판은 둔화 3틱 대신 **1틱 이동불가**(`ROOT`)를 넓게 건다. 이 둘을 안 쓰는
 //      규칙표도 갈린다: `self_has_status` 의 목록이 늘어 인지 변수 개수가 바뀌었다.
-export const ENGINE_VERSION = 13
+// e14: **독이 일을 하고, 인지 변수가 늘었다** — `POISON` 이 매 틱 깎기 시작했고,
+//      주술형 유형·셀렉터 둘·적 전용 마법 다섯이 인지 스냅샷의 키 개수를 바꿨다.
+export const ENGINE_VERSION = 14
 
 /**
  * 시드 상한. `Number.MAX_SAFE_INTEGER` 이며, 이것은 밸런스가 아니라 **이식 제약**이다.

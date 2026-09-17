@@ -33,10 +33,10 @@ from game.schemas.room import (
     load_room_templates,
 )
 
-ROOM_TEMPLATE_COUNT = 31
+ROOM_TEMPLATE_COUNT = 40  # +9 주술형 방과 2막 (2026-09-17)
 ROOM_WIDTH = 12
 ROOM_HEIGHT = 9
-ENEMY_KIND_COUNT = 14  # +4 늑대·골렘·저주 사수·역병 사제, +1 도플갱어
+ENEMY_KIND_COUNT = 20  # +4 늑대·골렘·저주 사수·역병 사제, +1 도플갱어, +6 주술형(2026-09-17)
 
 
 @pytest.fixture(scope="module")
@@ -189,6 +189,10 @@ def test_selector_ids_match_gdd(catalog):
         "TYPE_RANGED_FIRST",
         "TYPE_SUMMONER_FIRST",
         "TYPE_HEALER_FIRST",
+        # 주술형 (2026-09-17). 마법 쓰는 적이 들어오면서 열었다 — 「먼저 친다」를
+        # 못 적으면 예고를 비켜서는 동안 아무것도 못 하는 방이 생긴다.
+        "TYPE_CASTER",
+        "TYPE_CASTER_FIRST",
     }
 
 
@@ -274,12 +278,16 @@ def test_w7_ships_eight_enemy_kinds(balance):
 
 def test_enemy_types_cover_the_gdd_roster(balance):
     # GDD §5 의 6유형에서 보스를 뺀 다섯이 전부 있어야 한다.
+    # **CASTER 는 2026-09-17 에 들어왔다** — GDD §5 표에 한 줄을 더했다. 마법 쓰는
+    # 적이 요구하는 대응이 나머지 다섯과 다르기 때문이다: 예고 칸에서 비켜서거나
+    # 시전을 끊거나, 아니면 `TYPE_CASTER_FIRST` 로 먼저 친다.
     assert {e["type"] for e in balance["enemies"]} == {
         "MELEE",
         "RANGED",
         "SUMMONER",
         "BOMBER",
         "HEALER",
+        "CASTER",
     }
 
 

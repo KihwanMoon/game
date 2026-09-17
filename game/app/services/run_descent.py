@@ -49,8 +49,8 @@ def build_descent_rooms(
     seed: int,
     first_room_id: str,
     rooms_per_floor: int,
-    boss_room_id: str,
-    boss_floor: int,
+    last_floor: int,
+    bosses: tuple[tuple[int, str], ...],
 ) -> tuple[str, ...]:
     """시드에서 하강 방 목록을 판다.
 
@@ -62,8 +62,8 @@ def build_descent_rooms(
         seed: 이 런의 시드.
         first_room_id: 첫 층의 첫 방.
         rooms_per_floor: 층 하나에 드는 방 수.
-        boss_room_id: 보스 방.
-        boss_floor: 보스가 서는 층.
+        last_floor: 하강이 끝나는 층.
+        bosses: (층, 보스 방) 쌍들.
 
     Returns:
         방 id 들.
@@ -76,8 +76,8 @@ def build_descent_rooms(
         1,
         first_room_id,
         rooms_per_floor,
-        boss_room_id,
-        boss_floor,
+        last_floor,
+        bosses,
         pick=stream.get_below,
     )
 
@@ -93,8 +93,8 @@ def run_descent_batch(
     base_seed: int,
     first_room_id: str,
     rooms_per_floor: int,
-    boss_room_id: str,
-    boss_floor: int,
+    last_floor: int,
+    bosses: tuple[tuple[int, str], ...],
     loadout: PlayerLoadout | None = None,
 ) -> DescentStats:
     """같은 규칙표로 하강을 여러 번 돌려 도달 층 분포를 낸다.
@@ -110,24 +110,22 @@ def run_descent_batch(
         base_seed: 시작 시드. 런마다 1씩 늘린다.
         first_room_id: 첫 층의 첫 방.
         rooms_per_floor: 층 하나에 드는 방 수.
-        boss_room_id: 보스 방.
-        boss_floor: 보스가 서는 층.
+        last_floor: 하강이 끝나는 층.
+        bosses: (층, 보스 방) 쌍들.
         loadout: 낀 장비. None 이면 맨몸이고, 그때는 **모든 스킬이 열려 있다** —
             승률로 규칙표를 줄 세울 때 그 전제를 적어 두어야 한다 (설계/5_스킬 §10.11).
 
     Returns:
         도달 층 분포. 승률 대신 **어디까지 갔는가**를 담는다.
     """
-    cleared_by_floor = [0] * boss_floor
+    cleared_by_floor = [0] * last_floor
     total_floors = 0
     finished = 0
     worst_seed = base_seed
-    worst_floor = boss_floor + 1
+    worst_floor = last_floor + 1
     for index in range(runs):
         seed = base_seed + index
-        chain = build_descent_rooms(
-            rooms, seed, first_room_id, rooms_per_floor, boss_room_id, boss_floor
-        )
+        chain = build_descent_rooms(rooms, seed, first_room_id, rooms_per_floor, last_floor, bosses)
         result = run_room_chain(
             tuple(rooms[name] for name in chain),
             balance,
@@ -141,11 +139,11 @@ def run_descent_batch(
         )
         # **깬 층만 센다.** 층의 마지막 방에서 죽었으면 그 층은 안 깬 것이다 —
         # 층 단위 보상이 같은 셈을 쓰므로 여기서 다르게 세면 표가 거짓말을 한다.
-        depth = min(boss_floor, result.cleared_rooms // rooms_per_floor)
+        depth = min(last_floor, result.cleared_rooms // rooms_per_floor)
         total_floors += depth
         for floor in range(depth):
             cleared_by_floor[floor] += 1
-        if result.outcome == OUTCOME_PLAYER_WIN and depth >= boss_floor:
+        if result.outcome == OUTCOME_PLAYER_WIN and depth >= last_floor:
             finished += 1
         if depth < worst_floor:
             worst_floor = depth

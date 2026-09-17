@@ -22,7 +22,7 @@ from dataclasses import dataclass
 
 from game.app.items.catalog import load_item_catalog
 from game.app.items.loadout import build_player_loadout
-from game.app.progression.floors import BOSS_ROOM_ID, read_boss_floor
+from game.app.progression.floors import read_floor_bosses, read_floor_cap
 from game.app.services.run_batch import BatchStats, run_batch, run_floor_batch
 from game.app.services.run_battle import load_balance
 from game.app.services.run_descent import DescentStats, run_descent_batch
@@ -215,8 +215,8 @@ def run_one_descent(
         arguments.seed,
         DESCENT_FIRST_ROOM,
         arguments.rooms_per_floor,
-        BOSS_ROOM_ID,
-        read_boss_floor(resources.balance),
+        read_floor_cap(resources.balance),
+        read_floor_bosses(resources.balance),
         build_gear_loadout(resources.balance, arguments.gear),
     )
 
@@ -325,7 +325,7 @@ def main() -> int:
         ]
         elapsed = time.perf_counter() - started
         print(format_scope(arguments))
-        print(format_descent_report(descents, read_boss_floor(resources.balance)))
+        print(format_descent_report(descents, read_floor_cap(resources.balance)))
         rows = []
     else:
         rows = [

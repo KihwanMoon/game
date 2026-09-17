@@ -438,7 +438,7 @@ export const CHAIN_LENGTH = 5
  * **서버가 정본이다.** 이 값은 티켓을 못 받았을 때만 쓴다 — `balance.json` 의
  * `floor_scale.max_floor` 와 같아야 하며, 갈리면 오프라인 판만 다른 깊이를 돈다.
  */
-export const LOCAL_FLOOR_CAP = 10
+export const LOCAL_FLOOR_CAP = 15
 
 /**
  * 이 판으로 런이 끝났는가.

@@ -20,7 +20,7 @@ import type {
   StatBlock,
 } from '../core/schemas'
 import { resolveWantedFaction } from '../core/rules/validator'
-import { readSkillName } from '../core/resources'
+import { ENEMY_ONLY_SKILL_IDS, readSkillName } from '../core/resources'
 
 /** 카테고리 하나로 묶인 블록들. 팔레트가 이 단위로 접히고 펼쳐진다. */
 export interface BlockGroup<BlockT> {
@@ -229,6 +229,14 @@ const PARAM_LABELS: ReadonlyMap<string, string> = new Map([
   ['METEOR', '메테오'],
   ['CHAIN_BOLT', '연쇄 번개'],
   ['FROST_FIELD', '서리 장판'],
+  // **적만 쓰는 다섯** (2026-09-17). 팔레트에서는 빠지지만(`listParamOptions`) 이름은
+  // 있어야 한다 — 이문록이 적의 규칙표를 그대로 펴서 보여 주고, 거기 영문 id 가 뜨면
+  // 카운터를 읽으라고 내놓은 표가 그 줄에서 끊긴다.
+  ['HEX_FIRE', '불 굿'],
+  ['HEX_BOLT', '벼락 줄'],
+  ['HEX_FROST', '서리 굿'],
+  ['HEX_PLAGUE', '옴 굿'],
+  ['HEX_SNARE', '덫 굿'],
   // `self_has_status` 가 묻는 상태들. GUARD·FOCUS 는 **스스로 거는 것**이라 규칙표가
   // 겹쳐 쓰기를 피하는 데 쓴다 — 이름이 없으면 「내 상태이상[GUARD]」로 적힌다.
   ['POISON', '중독'],
@@ -252,6 +260,10 @@ const PARAM_LABELS: ReadonlyMap<string, string> = new Map([
   ['TYPE_RANGED_FIRST', '사격형 우선'],
   ['TYPE_SUMMONER_FIRST', '소환형 우선'],
   ['TYPE_HEALER_FIRST', '치유형 우선'],
+  // 주술형 (2026-09-17). 마법 쓰는 적의 카운터라 이름이 화면에 자주 뜬다.
+  ['TYPE_CASTER', '주술형'],
+  ['TYPE_CASTER_FIRST', '주술형 우선'],
+  ['CASTER', '주술형'],
   // 적 유형. `enemy_type_present` 가 묻는 값들이다.
   ['MELEE', '근접형'],
   ['RANGED', '사격형'],
@@ -294,4 +306,25 @@ export function formatParamText(text: string): string {
     const label = PARAM_LABELS.get(value)
     return label === undefined ? whole : `[${label}]`
   })
+}
+
+/**
+ * 그 행동의 인자 고르개에 세울 것들.
+ *
+ * **적만 쓰는 재주를 뺀다** (2026-09-17). 카탈로그에는 들어 있어야 한다 — 적 규칙표가
+ * 「쿨타임 완료[불 굿]」을 물어야 하고, 인지 목록과 카탈로그가 갈리면 그 값이 키째로
+ * 안 만들어진다. 그러니 거르는 자리는 목록이 아니라 **화면**이다.
+ *
+ * 안 거르면 플레이어에게 열릴 길이 없는 칸이 다섯 개 생긴다 — 골라 놓고 「불가」만 뜨는
+ * 줄이고, 「이건 언제 쓰나」에 답이 없다.
+ *
+ * @param action 고른 행동. 인자가 없으면 빈 목록이다.
+ * @returns 값과 한글 이름 쌍들. 카탈로그 순서를 지킨다.
+ */
+export function listParamOptions(
+  action: ActionBlock | undefined,
+): readonly { readonly value: string; readonly label: string }[] {
+  return (action?.param?.values ?? [])
+    .filter((value) => !ENEMY_ONLY_SKILL_IDS.has(value))
+    .map((value) => ({ value, label: formatParamLabel(value) }))
 }

@@ -28,6 +28,11 @@ export const KIND_BY_ENEMY_TYPE: ReadonlyMap<string, PlanActorKind> = new Map([
   ['SUMMONER', 'summon'],
   ['BOMBER', 'charge'],
   ['HEALER', 'summon'],
+  // **주술형은 사격형과 같은 글리프다** (2026-09-17). 글리프를 하나 더 만들지 않는
+  // 이유는 도면이 네 모양으로 끝나야 64px 칸에서 읽히기 때문이고, 겹치는 자리를
+  // 가르는 것은 **두 글자 표기**라고 이 표가 이미 정해 두었다 (아래 `SHORT_LABEL`).
+  // 실제로도 사격형과 같은 자리에서 같은 거리로 온다 — 다른 것은 오는 것의 정체다.
+  ['CASTER', 'shoot'],
 ])
 
 /**
@@ -74,6 +79,22 @@ export const SHORT_LABEL_BY_KIND_ID: ReadonlyMap<string, string> = new Map([
   // 그냥 정예 하나로 남는다. 앞 두 글자를 자르는 기본값이면 「도플」인데, 그것은
   // 「돌진」과 한 글자 차이라 64px 칸에서 헷갈린다.
   [DOPPEL_KIND_ID, '분신'],
+  // **다섯이 영문으로 서 있었다** (2026-09-17에 확인). 표에 없으면 id 앞 두 글자를
+  // 자르므로 도면에 `di`·`sh`·`he`·`pl`·`st` 가 떴다 — 한글 화면에 영문 조각이 뜨는
+  // 것은 고르개 값에서 이미 한 번 고친 병이고(2026-09-16 요청), 무엇보다 `plague_mender`
+  // 와 `plague_shaman` 이 둘 다 `pl` 이라 **서로 구별되지 않았다.**
+  ['dire_wolf', '주린'],
+  ['shield_golem', '돌미'],
+  ['hex_archer', '저주'],
+  ['plague_mender', '역귀'],
+  ['stone_gatekeeper', '장승'],
+  // 주술형 여섯 (2026-09-17). 글리프가 사격형과 같으므로 **여기가 유일한 구별 채널이다.**
+  ['bolt_shaman', '벼락'],
+  ['frost_maiden', '서리'],
+  ['snare_boy', '덫굿'],
+  ['ember_shaman', '불티'],
+  ['plague_shaman', '옴굿'],
+  ['plate_wraith', '판각'],
 ])
 
 /** 표에 없는 종류에서 잘라 쓸 글자 수. */

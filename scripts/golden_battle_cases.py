@@ -125,6 +125,18 @@ NEW_ROOM_CASES = (
     # 보스. **방마다 골든을 두는 규칙에 보스도 예외가 아니다** — 사거리 2 와 재생 2 가
     # 두 코어에서 같은 답을 내는지 여기서 고정된다.
     ("g0_kite", "boss_hall", 5840, 10),
+    # **주술형 방 여덟과 2막 보스** (2026-09-17). 마법 쓰는 적은 예고를 걸고 상태를
+    # 얹으므로 두 코어가 갈릴 자리가 평타보다 많다 — 예고 칸 계산(`CHAIN`·`LINE`·반경 0),
+    # 상태 지속(`ROOT`·`POISON`), 그리고 독이 매 틱 깎는 정수 나눗셈이 전부 여기서 고정된다.
+    ("g0_pressure", "bolt_row", 5877, 6),
+    ("g0_kite", "frost_hall", 5914, 8),
+    ("g0_cover", "shrine_yard", 5951, 11),
+    ("g0_pressure", "snare_grove", 5988, 11),
+    ("g0_kite", "plague_well", 6025, 12),
+    ("g0_cover", "twin_shaman", 6062, 12),
+    ("g0_pressure", "ember_ridge", 6099, 13),
+    ("g0_kite", "caster_gauntlet", 6136, 14),
+    ("g0_cover", "wraith_hall", 6173, 15),
 )
 
 # 덧붙일 적이 없는 조합이 쓰는 빈 목록.

@@ -81,6 +81,47 @@ def read_boss_floor(balance: dict) -> int:
     return int(balance.get("floor_scale", {}).get("boss_floor", read_floor_cap(balance)))
 
 
+def read_floor_bosses(balance: dict) -> tuple[tuple[int, str], ...]:
+    """층마다 어느 보스 방이 서는가 (2026-09-17, 2막).
+
+    **막이 늘면 보스도 는다.** 예전에는 `boss_floor` 하나에 `BOSS_ROOM_ID` 하나였고,
+    그 구조에서 2막을 열면 장승이 10장에서 15장으로 **옮겨 간다** — 1막의 끝이 사라진다.
+
+    **정렬된 쌍으로 돌려준다.** 딕셔너리를 그대로 돌려주면 부르는 쪽이 순회하게 되고,
+    그 순서가 방 배치에 닿는 순간 같은 시드가 다른 판을 낸다 (R5).
+
+    적혀 있지 않으면 **예전 모양으로 떨어진다** — `boss_floor` 에 `BOSS_ROOM_ID` 하나다.
+    발행된 옛 콘텐츠 팩이 이 키를 안 들고 있기 때문이고, 없다고 보스를 안 세우면 그
+    팩으로는 런이 끝나지 않는다.
+
+    Args:
+        balance: balance.json 을 읽은 딕셔너리.
+
+    Returns:
+        (층, 방 id) 쌍들. 층 오름차순이다.
+    """
+    raw = balance.get("floor_scale", {}).get("floor_bosses")
+    if not raw:
+        return ((read_boss_floor(balance), BOSS_ROOM_ID),)
+    return tuple(sorted((int(floor), str(room)) for floor, room in raw.items()))
+
+
+def find_boss_room(bosses: tuple[tuple[int, str], ...], floor: int) -> str:
+    """그 층에 설 보스 방.
+
+    Args:
+        bosses: `read_floor_bosses` 가 낸 쌍들.
+        floor: 볼 층.
+
+    Returns:
+        방 id. 그 층에 보스가 없으면 빈 문자열.
+    """
+    for at, room in bosses:
+        if at == floor:
+            return room
+    return ""
+
+
 def read_floor_heal_pct(balance: dict) -> int:
     """층을 깰 때 돌려주는 최대체력의 퍼센트를 읽는다.
 

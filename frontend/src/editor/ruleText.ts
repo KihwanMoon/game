@@ -51,9 +51,16 @@ const RULE_PATTERN = /^(?:\[(\d+)\]\s*)?IF\s+(.+?)\s+THEN\s+(.+)$/
 /** `lhs[param] cmp rhs`. 인자는 대괄호 안에 온다. */
 const TERM_PATTERN = /^([A-Za-z_][A-Za-z0-9_]*)(?:\[([A-Za-z0-9_]+)\])?\s*(<=|>=|==|!=|<|>)\s*(.+)$/
 
-/** `ACTION [TARGET SEL] [SET 플래그]`. */
+/**
+ * `ACTION[인자] [TARGET SEL] [SET 플래그]`.
+ *
+ * **인자를 통째로 버리고 있었다** (2026-09-17). `USE_SKILL` 과 `USE_ITEM` 은 무엇을
+ * 쓰는지가 인자에 있는데 텍스트 뷰가 그것을 안 적었고, 파서는 늘 `null` 을 넣었다 —
+ * 텍스트로 한 바퀴 돌린 규칙표에서 **재주가 사라졌다.** 조건 항은 처음부터 `lhs[param]`
+ * 으로 적고 있었으므로(`TERM_PATTERN`) 행동만 규약이 달랐던 셈이다.
+ */
 const ACTION_PATTERN =
-  /^([A-Za-z_][A-Za-z0-9_]*)(?:\s+TARGET\s+([A-Za-z_][A-Za-z0-9_]*))?(?:\s+SET\s+(\S+))?\s*$/
+  /^([A-Za-z_][A-Za-z0-9_]*)(?:\[([A-Za-z0-9_]+)\])?(?:\s+TARGET\s+([A-Za-z_][A-Za-z0-9_]*))?(?:\s+SET\s+(\S+))?\s*$/
 
 /** 조건식을 항과 연산자로 가르는 구분자. 괄호가 없는 문법이라 한 겹으로 끝난다. */
 const CONDITION_SPLIT = /\s+(AND|OR)\s+/
@@ -104,7 +111,9 @@ export function formatTermText(term: Term): string {
 export function formatRuleLine(rule: Rule): string {
   const joiner = rule.conditions.op === OP_SINGLE ? ` ${OP_AND} ` : ` ${rule.conditions.op} `
   const condition = rule.conditions.terms.map(formatTermText).join(joiner)
-  const parts = [`[${String(rule.priority)}]`, 'IF', condition, 'THEN', rule.action]
+  // 인자는 조건 항과 같은 규약으로 적는다 — `USE_SKILL[메테오]`. 없으면 안 적는다.
+  const action = rule.actionParam === null ? rule.action : `${rule.action}[${rule.actionParam}]`
+  const parts = [`[${String(rule.priority)}]`, 'IF', condition, 'THEN', action]
   if (rule.target !== null) {
     parts.push('TARGET', rule.target)
   }
@@ -257,7 +266,7 @@ function parseRuleLine(
     problems.push(`${label} THEN 뒤를 읽을 수 없다: ${actionText.trim()}`)
     return undefined
   }
-  const [, action, target, setFlag] = actionMatched
+  const [, action, actionParam, target, setFlag] = actionMatched
   if (action === undefined) {
     problems.push(`${label} THEN 뒤를 읽을 수 없다: ${actionText.trim()}`)
     return undefined
@@ -268,7 +277,7 @@ function parseRuleLine(
     conditions: condition,
     action,
     target: target ?? null,
-    actionParam: null,
+    actionParam: actionParam ?? null,
     setFlag: setFlag ?? null,
     cpuCost: calculateCpuCost(condition.terms.length),
   }

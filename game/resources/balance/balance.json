@@ -21,7 +21,7 @@
     "정보는 룸 템플릿의 min_floor 로 옮겼다 — 어느 층에 나오는가는 방 배치가 정한다",
     "(docs/04 P-2)."
   ],
-  "balance_version": 10,
+  "balance_version": 11,
   "damage_formula": {
     "_note": "TDD §8 을 정수 연산으로 옮긴 것. // 는 내림 나눗셈이다.",
     "defense_denominator": "defense + soft_cap_base + soft_cap_per_floor * floor",
@@ -52,6 +52,108 @@
     "initiative": 50
   },
   "enemies": [
+    {
+      "id": "bolt_shaman",
+      "type": "CASTER",
+      "label_ko": "벼락 무당",
+      "hp_max": 30,
+      "attack": 11,
+      "defense": 1,
+      "attack_range": 6,
+      "move_cost": 1,
+      "regen_base": 0,
+      "initiative": 48,
+      "cpu_budget": 4,
+      "rule_slots": 3,
+      "ruleset_id": "ai_bolt_shaman",
+      "tier": "NORMAL",
+      "_note": "**주술형의 입문이다.** 벼락 줄은 1틱 예고에 쿨 6 이라 자주 오는데, 카운터가 하나로 정해져 있다 — **옆으로 한 칸.** 앞뒤로 움직이면 여전히 줄 위이므로, 이 적 하나가 「물러선다」와 「비켜선다」가 다른 말임을 가르친다. 종잇장이라 붙으면 빨리 죽는다."
+    },
+    {
+      "id": "frost_maiden",
+      "type": "CASTER",
+      "label_ko": "서리 각시",
+      "hp_max": 34,
+      "attack": 9,
+      "defense": 1,
+      "attack_range": 5,
+      "move_cost": 1,
+      "regen_base": 0,
+      "initiative": 52,
+      "cpu_budget": 4,
+      "rule_slots": 3,
+      "ruleset_id": "ai_frost_maiden",
+      "tier": "NORMAL",
+      "_note": "**혼자 세우면 아무것도 아니다.** 서리 굿은 한 틱 묶을 뿐이고 피해는 곁가지라, 이 적만 있는 방은 그냥 약한 사격형 방이다. 뒤에 돌격형이 붙는 순간 값이 생긴다 — 묶인 한 틱이 그것들이 붙는 한 틱이다. 방을 짤 때 **혼자 두지 않는다**."
+    },
+    {
+      "id": "snare_boy",
+      "type": "CASTER",
+      "label_ko": "덫 동자",
+      "hp_max": 26,
+      "attack": 6,
+      "defense": 0,
+      "attack_range": 6,
+      "move_cost": 1,
+      "regen_base": 0,
+      "initiative": 60,
+      "cpu_budget": 4,
+      "rule_slots": 3,
+      "ruleset_id": "ai_snare_boy",
+      "tier": "NORMAL",
+      "_note": "**피해를 안 준다.** 덫 굿은 계수 0 이고 한 칸뿐이라, 이 적이 혼자 있는 방은 이길 수밖에 없다. 값은 전부 조합에서 나온다 — 두 틱 묶어 두는 동안 불티 무당의 3틱 예고가 완성된다. 선공 60 은 판에서 제일 빠른 축인데 그것도 같은 이유다: **먼저 묶어야 뒤가 산다.**"
+    },
+    {
+      "id": "ember_shaman",
+      "type": "CASTER",
+      "label_ko": "불티 무당",
+      "hp_max": 40,
+      "attack": 16,
+      "defense": 2,
+      "attack_range": 6,
+      "move_cost": 1,
+      "regen_base": 0,
+      "initiative": 44,
+      "cpu_budget": 4,
+      "rule_slots": 3,
+      "ruleset_id": "ai_ember_shaman",
+      "tier": "ELITE",
+      "_note": "**플레이어의 메테오를 반대편에서 돌려준다.** 3틱 붉게 서 있고 그동안 비켜설 수 있으며, 붙어서 때리면 끊긴다(`cancel_on_hit`). 카운터가 둘이라 표가 갈린다 — 원거리 표는 비켜서고 근접 표는 끊는다. 선공 44 는 일부러 느리게 뒀다: 먼저 움직일 수 있으면 예고를 보고도 손쓸 틈이 없다."
+    },
+    {
+      "id": "plague_shaman",
+      "type": "CASTER",
+      "label_ko": "옴 무당",
+      "hp_max": 46,
+      "attack": 12,
+      "defense": 2,
+      "attack_range": 5,
+      "move_cost": 1,
+      "regen_base": 0,
+      "initiative": 46,
+      "cpu_budget": 4,
+      "rule_slots": 3,
+      "ruleset_id": "ai_plague_shaman",
+      "tier": "ELITE",
+      "_note": "**이 판에서 독을 거는 유일한 적이다.** 다섯 틱 × 3 은 한 방으로는 작은데 따라온다는 것이 값이고, 덤이 하나 더 있다 — 독은 맞는 것이라 **시전을 끊는다.** 메테오 표는 독을 맞은 채로 큰 굿을 못 부린다. 마법 빌드의 카운터이므로 마법 방에 섞어 둔다."
+    },
+    {
+      "id": "plate_wraith",
+      "type": "CASTER",
+      "label_ko": "판각 귀신",
+      "hp_max": 260,
+      "attack": 22,
+      "defense": 6,
+      "attack_range": 6,
+      "move_cost": 1,
+      "regen_base": 0,
+      "initiative": 50,
+      "cpu_budget": 4,
+      "rule_slots": 3,
+      "ruleset_id": "ai_plate_wraith",
+      "tier": "BOSS",
+      "_note": "**2막의 끝** (2026-09-17). 유형이 `CASTER` 이고 등급이 `BOSS` 인 것은 장승과 같은 규약이다 — 유형은 **무엇을 하는가**이고 등급은 **어느 자리인가**다. (참고: `TYPE_BOSS` 셀렉터는 유형이 `BOSS` 인 개체를 찾는데 그런 개체가 하나도 없어 지금 죽은 셀렉터다. 장승도 `MELEE` 라 그렇다 — 여기서 고치면 10장 배치가 조용히 달라지므로 안 건드린다.) 장승(1막)은 때리는 보스였고 이쪽은 **부리는 보스**다 — 묶고(덫 굿) 태운다(불 굿). 그 둘의 순서가 곧 이 보스의 전부다: 묶인 두 틱이 3틱 예고를 완성하는 시간이다. 그래서 답이 둘이다 — 묶이기 전에 붙어서 불 굿을 끊거나, 묶였을 때 물러설 생각을 버리고 때리거나. 체력 260 은 장승(1막 보스)보다 높되 방어는 낮다: 오래 버티지만 한 대씩은 들어간다."
+    },
     {
       "id": "goblin_rusher",
       "type": "MELEE",
@@ -312,11 +414,15 @@
     }
   ],
   "floor_scale": {
-    "_note": "층 깊이 스케일. **복리다** — 한 층 내려갈 때마다 HP·공격력에 mult/100 을 곱하고 층마다 정수 내림으로 접는다 (R5, e3). 예전의 합산(pct*(층-1))은 깊은 층에서 기울기가 일정해 체감이 죽었다 — 120 이면 10층 적이 1층의 약 5.1배다 (150 은 38배라 가팔라서 하향). 적용 지점은 개체를 만드는 세 자리 전부다: 방 배치·소환물·추격자 (game/app/simulation/scaling.py). anti_abuse 의 층 체류 스케일과는 다른 축이며 둘은 곱해진다. **끝이 있다** — max_floor 가 마지막 층이고 boss_floor 에 보스가 선다.",
-    "max_floor": 10,
-    "boss_floor": 10,
+    "_note": "층 깊이 스케일. **복리다** — 한 층 내려갈 때마다 HP·공격력에 mult/100 을 곱하고 층마다 정수 내림으로 접는다 (R5, e3). 예전의 합산(pct*(층-1))은 깊은 층에서 기울기가 일정해 체감이 죽었다 — 120 이면 10층 적이 1층의 약 5.1배다 (150 은 38배라 가팔라서 하향). 적용 지점은 개체를 만드는 세 자리 전부다: 방 배치·소환물·추격자 (game/app/simulation/scaling.py). anti_abuse 의 층 체류 스케일과는 다른 축이며 둘은 곱해진다. **끝이 있다** — max_floor 가 마지막 층이고 boss_floor 에 보스가 선다. **2막이 열리면서 15장까지 늘었다 (2026-09-17).** `floor_bosses` 가 층마다 어느 보스가 서는지를 정하며, 장승은 10장에 그대로 있고 판각 귀신이 15장에 선다 — 예전처럼 `boss_floor` 하나면 2막을 여는 순간 장승이 15장으로 옮겨 가 1막의 끝이 사라진다. 복리 120% 는 안 건드렸다: 15장 적은 1장의 약 12.8배이고, 그 곡선을 여기서 손대면 1~10장이 통째로 다시 재야 한다.",
+    "max_floor": 15,
+    "boss_floor": 15,
     "floor_heal_pct": 30,
-    "enemy_mult_pct_per_floor": 120
+    "enemy_mult_pct_per_floor": 120,
+    "floor_bosses": {
+      "10": "boss_hall",
+      "15": "wraith_hall"
+    }
   },
   "anti_abuse": {
     "_note": "GDD §7. v1 수식의 최적해가 '회복 타일 위 무한 대기' 였던 것을 막는다. 등장 시점 40 -> 20 은 W6 통합의 조정이다. 40 틱은 방 하나가 대개 끝나는 시간이라 추격자가 한 번도 나오지 않았고, 그래서 시간을 끄는 규칙표(spring_camp 135틱)가 아무 대가도 치르지 않았다. 20 에서 그 전략이 처음 무너진다 (실측 docs/05 의 등장 시점 표).",

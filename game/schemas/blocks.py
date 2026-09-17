@@ -25,7 +25,7 @@ from pathlib import Path
 # 콘텐츠 범위. 동결 대상이므로 상수로 박아 로드 때마다 대조한다.
 PERCEPTION_COUNT = 23  # v12 에서 target_initiative 가 들어왔다 (선공을 규칙표가 읽는다)
 ACTION_COUNT = 16  # v6 에서 USE_ITEM 이 들어왔다 (#54)
-SELECTOR_COUNT = 13  # v15 에서 「우선」 셋이 들어왔다 (없으면 가장 가까운 것으로)
+SELECTOR_COUNT = 15  # v17 에서 주술형 둘이 들어왔다 (마법 쓰는 적의 카운터)
 RHS_STAT_COUNT = 8  # v12 에서 initiative 가 들어왔다 — 대상 선공과 짝
 
 # 셀렉터가 고르는 진영. 행동의 target_faction 도 이 둘 중 하나다.

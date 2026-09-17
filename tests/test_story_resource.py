@@ -13,8 +13,19 @@ import json
 
 from game.config import BALANCE_PATH
 
-STORY_PATH = BALANCE_PATH.parent.parent / "story" / "act1.json"
-STORY = json.loads(STORY_PATH.read_text(encoding="utf-8"))
+STORY_DIR = BALANCE_PATH.parent.parent / "story"
+# **막이 둘이 됐다** (2026-09-17). 파일을 훑어 읽는 이유는 3막이 들어올 때 이 시험을
+# 고칠 필요가 없게 하려는 것이고, 무엇보다 **한 파일만 보면 다른 막이 빈 채로 통과한다.**
+ACTS = [
+    json.loads(path.read_text(encoding="utf-8")) for path in sorted(STORY_DIR.glob("act*.json"))
+]
+STORY = {
+    "chapters": [one for act in ACTS for one in act["chapters"]],
+    "shadow": ACTS[0]["shadow"],
+    "glossary": [one for act in ACTS for one in act["glossary"]],
+    "people": [one for act in ACTS for one in act["people"]],
+    "taboos": [one for act in ACTS for one in act["taboos"]],
+}
 MAX_FLOOR = int(json.loads(BALANCE_PATH.read_text(encoding="utf-8"))["floor_scale"]["max_floor"])
 
 
@@ -34,7 +45,7 @@ def test_no_chapter_is_empty():
 def test_emphasis_marks_are_paired():
     """★ 여는 표시가 홀수면 화면이 가르기를 포기하고 `**` 가 글자로 보인다."""
     notes = [one["note_ko"] for one in STORY["chapters"]]
-    notes.append(STORY["shadow"]["note_ko"])
+    notes.extend(act["shadow"]["note_ko"] for act in ACTS)
     for note in notes:
         assert note.count("**") % 2 == 0, note[:30]
 

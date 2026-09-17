@@ -194,6 +194,22 @@ export const ALL_SKILL_IDS: readonly string[] = SKILLS.skills
   .sort()
 
 /**
+ * **적만 쓰는 재주들** (2026-09-17). `skills.json` 의 `actor: "enemy"` 가 정본이다.
+ *
+ * 이것들도 블록 카탈로그와 인지 목록에는 들어 있다 — 적 규칙표가 쿨타임을 물어야 하고,
+ * 그 두 목록이 갈리면 인지값이 키째로 안 만들어진다(`test_the_skill_perception_list_matches`).
+ * 그래서 **거르는 자리는 목록이 아니라 화면이다**: 팔레트만 뺀다.
+ *
+ * 빼는 이유는 소음이다. 플레이어에게 열릴 길이 없는 재주를 고르개에 두면, 골라 놓고
+ * 「불가」가 뜨는 줄이 다섯 개 생긴다 — 「이건 언제 쓰나」에 답이 없는 칸이다.
+ */
+export const ENEMY_ONLY_SKILL_IDS: ReadonlySet<string> = new Set(
+  SKILLS.skills
+    .filter((skill) => (skill as { readonly actor?: string }).actor === 'enemy')
+    .map((skill) => (skill as { readonly id: string }).id),
+)
+
+/**
  * 재주 id 에서 한글 이름으로. **정본은 `skills.json` 의 `label_ko` 하나다.**
  *
  * 예전에는 화면 넷이 각자 `['SKILL_1', '재주 1']` 을 손으로 들고 있었다 — 쿨타임 줄,

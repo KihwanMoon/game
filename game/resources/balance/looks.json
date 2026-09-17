@@ -1,5 +1,5 @@
 {
-  "_note": "겉모습 표 — 무엇이 어떻게 휘둘러지는가 (설계/10_외형과_모션). 버전 키를 두지 않는다: 두면 core_version 의 축이 되어 칼 모양 하나에 순위표 시즌이 갈린다 (계약 C2). 코어는 이 파일을 안 읽는다 — 화면만 읽는다 (계약 C1).",
+  "_note": "겉모습 표 — 무엇이 어떻게 휘둘러지는가 (설계/10_외형과_모션). 버전 키를 두지 않는다: 두면 core_version 의 축이 되어 칼 모양 하나에 순위표 시즌이 갈린다 (계약 C2). 코어는 이 파일을 안 읽는다 — 화면만 읽는다 (계약 C1). **주술형 여섯이 2026-09-17 에 들어왔다.** 전부 `bolt`·`fly` 다 — 사거리 5~6 이라 훑는 자국(`chop`)이면 자국이 사거리를 거짓말하고, 그 규칙은 이 표의 검사가 이미 지키고 있다 (`사거리 3 이상은 하나도 훑지 않는다`).",
   "default": {
     "shape": "straight",
     "motion": "chop"
@@ -92,6 +92,30 @@
       "motion": "fly"
     },
     "plague_mender": {
+      "shape": "bolt",
+      "motion": "fly"
+    },
+    "bolt_shaman": {
+      "shape": "bolt",
+      "motion": "fly"
+    },
+    "frost_maiden": {
+      "shape": "bolt",
+      "motion": "fly"
+    },
+    "snare_boy": {
+      "shape": "bolt",
+      "motion": "fly"
+    },
+    "ember_shaman": {
+      "shape": "bolt",
+      "motion": "fly"
+    },
+    "plague_shaman": {
+      "shape": "bolt",
+      "motion": "fly"
+    },
+    "plate_wraith": {
       "shape": "bolt",
       "motion": "fly"
     }

@@ -16,7 +16,7 @@ from game.api.maintenance_service import apply_maintenance
 from game.api.schemas import TicketRequest, TicketResponse
 from game.api.world_seed import apply_floor_seed, list_floor_range_monsters
 from game.app.bots.doppel import check_is_doppel
-from game.app.progression.floors import BOSS_ROOM_ID, read_boss_floor, resolve_floor
+from game.app.progression.floors import read_floor_bosses, read_floor_cap, resolve_floor
 from game.app.services.build_chain import build_descent
 from game.app.store.accounts import find_player_entity
 from game.app.store.doppel_bouts import read_doppel_owner_name
@@ -80,8 +80,8 @@ def create_run_ticket(request: TicketRequest, account: CurrentAccount) -> Ticket
             floor,
             request.room_id,
             CHAIN_LENGTH,
-            BOSS_ROOM_ID,
-            read_boss_floor(context.balance),
+            read_floor_cap(context.balance),
+            read_floor_bosses(context.balance),
         ),
         wanted_seed=request.seed,
         # 장비·레벨을 얼려 넣는다. 없으면 화면과 서버가 다른 캐릭터로 싸운다 (결정 #13).

@@ -213,6 +213,32 @@ describe('마법 셋 이식', () => {
     expect(target.statuses.get('SLOW'), '둔화는 더 이상 이 스킬의 것이 아니다').toBeUndefined()
   })
 
+  it('★ 독이 적어 둔 틱 수만큼 정확히 문다 (2026-09-17)', () => {
+    // `POISON` 은 인지 변수 목록에 처음부터 있었는데 거는 것도 깎는 것도 없었다 —
+    // 물어볼 수는 있고 답은 영영 거짓인 항이었다. 파이썬
+    // `test_poison_bites_every_tick_for_exactly_its_duration` 과 같은 배치다.
+    const { engine, player } = buildReal()
+    player.statuses.set('POISON', 3)
+    const before = player.hp
+    for (let tick = 1; tick <= 5; tick += 1) {
+      engine.state.tick = tick
+      engine.runUpkeep()
+    }
+    expect(before - player.hp).toBe(9)
+    expect(player.statuses.get('POISON')).toBe(0)
+  })
+
+  it('★ 독은 방어력을 안 거치고 방벽은 거친다 — 용암과 같은 문이다', () => {
+    const { engine, player } = buildReal()
+    player.statuses.set('POISON', 1)
+    player.statuses.set('GUARD', 5)
+    const before = player.hp
+    engine.state.tick = 1
+    engine.runUpkeep()
+    // 방벽 50% — 3 이 1 이 된다 (정수 내림, R5).
+    expect(before - player.hp).toBe(1)
+  })
+
   it('★ 이동불가는 발만 묶는다 — 손은 그대로다 (기절과 갈리는 자리)', () => {
     const { engine, player, target } = buildReal()
     target.position = { x: player.position.x + 1, y: player.position.y }

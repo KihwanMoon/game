@@ -10,19 +10,19 @@
  * 잠금 기준은 `meta.bestFloor` 다. 이 판의 층이 아니라 **지금까지 닿은 가장 깊은 층**이다
  * — 되풀이 관전에서 읽은 장이 다시 잠기면 그것은 진행이 아니라 벌이다.
  */
-import { useState } from 'react'
+import { useState } from "react";
 
-import { ACT, CHAPTERS, GLOSSARY, PEOPLE, TABOOS } from '../content/story'
-import { StoryNote } from '../content/StoryNote'
-import { Button, Panel, ValueExpr } from '../ds'
+import { ACTS_KO, GLOSSARY, PEOPLE, TABOOS } from "../content/story";
+import { StoryNote } from "../content/StoryNote";
+import { Button, Panel, ValueExpr } from "../ds";
 
 export interface VolumePanelProps {
   /** 지금까지 닿은 가장 깊은 층. 0 이면 아직 한 장도 안 찍었다. */
-  readonly bestFloor: number
+  readonly bestFloor: number;
 }
 
 /** 아직 안 찍은 장에 적는 말. **빈 칸을 두지 않는다** — 빈 칸은 결함처럼 보인다. */
-const LOCKED_HINT = '아직 안 찍은 장이다'
+const LOCKED_HINT = "아직 안 찍은 장이다";
 
 /**
  * 그 장을 읽을 수 있는가.
@@ -32,7 +32,7 @@ const LOCKED_HINT = '아직 안 찍은 장이다'
  * @returns 읽을 수 있으면 true.
  */
 export function checkChapterOpen(floor: number, bestFloor: number): boolean {
-  return floor <= bestFloor
+  return floor <= bestFloor;
 }
 
 /**
@@ -42,37 +42,48 @@ export function checkChapterOpen(floor: number, bestFloor: number): boolean {
  * @returns 패널들.
  */
 export function VolumePanel(props: VolumePanelProps): React.JSX.Element {
-  const [openFloor, setOpenFloor] = useState<number | undefined>(undefined)
-  const read = CHAPTERS.filter((one) => checkChapterOpen(one.floor, props.bestFloor)).length
-
+  const [openFloor, setOpenFloor] = useState<number | undefined>(undefined);
   return (
     <>
-      <Panel title={ACT.labelKo} meta={`${String(read)} / ${String(CHAPTERS.length)}장`}>
-        <p className="story-lede">{ACT.lineKo}</p>
-        <ul className="story-list">
-          {CHAPTERS.map((chapter) => {
-            const isOpen = checkChapterOpen(chapter.floor, props.bestFloor)
-            const isShown = isOpen && openFloor === chapter.floor
-            return (
-              <li className="story-list__item" key={chapter.floor}>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={!isOpen}
-                  aria-expanded={isShown}
-                  onClick={() => {
-                    setOpenFloor(isShown ? undefined : chapter.floor)
-                  }}
-                >
-                  <span className="story-list__ord">{String(chapter.floor)}장</span>
-                  <span className="story-list__name">{isOpen ? chapter.titleKo : LOCKED_HINT}</span>
-                </Button>
-                {isShown ? <StoryNote note={chapter.noteKo} /> : null}
-              </li>
-            )
-          })}
-        </ul>
-      </Panel>
+      {/* **막마다 한 판이다** (2026-09-17, 2막). 열다섯 장을 한 목록에 이으면 어디서
+          1막이 끝났는지가 안 보이고, 「빈 표지」가 그냥 열째 줄이 된다 — 그 장이 막을
+          닫는 장이라는 사실이 글의 절반이다. */}
+      {ACTS_KO.map((act) => (
+        <Panel
+          key={act.id}
+          title={act.labelKo}
+          meta={`${String(act.chapters.filter((one) => checkChapterOpen(one.floor, props.bestFloor)).length)} / ${String(act.chapters.length)}장`}
+        >
+          <p className="story-lede">{act.lineKo}</p>
+          <ul className="story-list">
+            {act.chapters.map((chapter) => {
+              const isOpen = checkChapterOpen(chapter.floor, props.bestFloor);
+              const isShown = isOpen && openFloor === chapter.floor;
+              return (
+                <li className="story-list__item" key={chapter.floor}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={!isOpen}
+                    aria-expanded={isShown}
+                    onClick={() => {
+                      setOpenFloor(isShown ? undefined : chapter.floor);
+                    }}
+                  >
+                    <span className="story-list__ord">
+                      {String(chapter.floor)}장
+                    </span>
+                    <span className="story-list__name">
+                      {isOpen ? chapter.titleKo : LOCKED_HINT}
+                    </span>
+                  </Button>
+                  {isShown ? <StoryNote note={chapter.noteKo} /> : null}
+                </li>
+              );
+            })}
+          </ul>
+        </Panel>
+      ))}
       <Panel title="이 권의 낱말">
         <dl className="story-terms">
           {GLOSSARY.map((entry) => (
@@ -104,5 +115,5 @@ export function VolumePanel(props: VolumePanelProps): React.JSX.Element {
         </ul>
       </Panel>
     </>
-  )
+  );
 }

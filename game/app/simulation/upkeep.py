@@ -8,13 +8,17 @@
 
 from game.app.simulation.actions import ActionExecutor
 from game.app.simulation.phases import PHASE_UPKEEP
-from game.app.simulation.plan import EngineConfig
+from game.app.simulation.plan import STATUS_POISON, EngineConfig
 from game.app.simulation.springs import apply_spring_drain
 from game.app.simulation.state import Entity, WorldState
 from game.schemas.room import TILE_LAVA, TILE_SPRING
 
 # 용암 한 틱의 피해. 지형이 주는 것이라 방어를 안 본다.
 LAVA_DAMAGE = 3
+
+# 독 한 틱의 피해. 용암과 같은 값이되 **걸어 나올 수가 없다** — 용암은 한 칸 비키면
+# 끝나고 독은 틱이 다 갈 때까지 따라온다. 그래서 값을 더 올리지 않았다.
+POISON_DAMAGE = 3
 
 # 샘이 한 틱에 내주는 회복량. 잔여량이 있는 동안만 나온다.
 SPRING_REGEN_PER_TICK = 2
@@ -46,8 +50,18 @@ def apply_entity_upkeep(
     """
     for skill, remaining in entity.cooldowns.items():
         entity.cooldowns[skill] = max(0, remaining - 1)
+    # **깎기 전 값으로 본다.** 깎은 뒤를 보면 `duration` 이 5 인데 네 틱만 아프다 —
+    # 데이터에 적은 수와 실제로 아픈 틱 수가 갈리면 밸런스를 잴 수가 없다.
+    poisoned = entity.statuses.get(STATUS_POISON, 0)
     for status, remaining in entity.statuses.items():
         entity.statuses[status] = max(0, remaining - 1)
+    if poisoned > 0:
+        # **주체가 자기 자신이다.** 누가 걸었는지를 상태가 안 들고 있고, 들게 하면 그
+        # 값이 세계 상태가 되어 두 코어가 함께 얼려야 한다 (R5). 용암과 같은 처리다.
+        #
+        # 맞는 것이므로 **시전이 끊긴다** (`apply_damage`). 독을 맞은 채로는 큰 굿을
+        # 못 부린다는 뜻이고, 그것이 옴 무당이 파는 거래다.
+        executor.apply_damage(entity, POISON_DAMAGE, PHASE_UPKEEP, "독", actor_id=entity.entity_id)
     if state.get_tile(*entity.position) == TILE_LAVA:
         executor.apply_damage(
             entity, LAVA_DAMAGE, PHASE_UPKEEP, "용암 위", actor_id=entity.entity_id

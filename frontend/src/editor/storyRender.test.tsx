@@ -30,7 +30,10 @@ describe('권 탭', () => {
   })
 
   it('★ 내려간 장은 목록에 이름이 선다', () => {
-    const markup = renderToStaticMarkup(<VolumePanel bestFloor={10} />)
+    // **도달 층을 장 수에서 뽑는다** (2026-09-17, 2막). 10 으로 박아 두었더니 11~15장이
+    // 잠긴 채로 통과를 기대해서, 막이 늘자 이 검사가 「없다」고 말했다 — 검사가 옳았다.
+    const deepest = Math.max(...CHAPTERS.map((one) => one.floor))
+    const markup = renderToStaticMarkup(<VolumePanel bestFloor={deepest} />)
     for (const chapter of CHAPTERS) {
       expect(markup, `${String(chapter.floor)}장이 없다`).toContain(chapter.titleKo)
     }

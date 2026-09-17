@@ -11,7 +11,8 @@
  * 미리 못 정한다 (`game/app/bots/doppel.py` — 지금 프로덕션은 스무 마리가 전부 9층이다).
  * 층에 묶어 두면 「5장에서 만난다」가 대개 거짓이 된다.
  */
-import raw from '@resources/story/act1.json'
+import rawAct1 from '@resources/story/act1.json'
+import rawAct2 from '@resources/story/act2.json'
 
 /** 장 하나 — 층 하나에 대응한다. */
 export interface Chapter {
@@ -53,9 +54,40 @@ interface RawStory {
   readonly taboos: readonly { line_ko: string; gloss_ko: string }[]
 }
 
-const STORY = raw as unknown as RawStory
+/**
+ * 권 전부. **막이 늘면 여기 한 줄이 는다** (2026-09-17, 2막).
+ *
+ * `import.meta.glob` 같은 것으로 훑지 않는 이유는 순서다 — 훑으면 파일 이름 순서에
+ * 기대게 되고, 3막이 `act03.json` 으로 들어오는 날 목록이 조용히 뒤바뀐다. 손으로 적으면
+ * 그 순서가 곧 읽는 순서다.
+ */
+const ACTS: readonly RawStory[] = [rawAct1 as unknown as RawStory, rawAct2 as unknown as RawStory]
 
-/** 이 권의 이름과 한 줄. */
+/** 첫 막. 낱말·인물·금기는 전 막을 이어 붙이되, 이 한 막이 화면의 기본 자리다. */
+const STORY = ACTS[0] as RawStory
+
+/** 막 하나 — 이름과 한 줄과 그 막의 장들. */
+export interface Act {
+  readonly id: string
+  readonly labelKo: string
+  readonly lineKo: string
+  readonly chapters: readonly Chapter[]
+}
+
+/**
+ * 막 전부. **화면은 막마다 한 판을 편다** — 열다섯 장을 한 목록에 이으면 어디서
+ * 1막이 끝났는지가 안 보이고, 「빈 표지」가 그냥 열째 줄이 된다.
+ */
+export const ACTS_KO: readonly Act[] = ACTS.map((act) => ({
+  id: act.act.id,
+  labelKo: act.act.label_ko,
+  lineKo: act.act.line_ko,
+  chapters: [...act.chapters]
+    .sort((left, right) => left.floor - right.floor)
+    .map((one) => ({ floor: one.floor, titleKo: one.title_ko, noteKo: one.note_ko })),
+}))
+
+/** 첫 막의 이름과 한 줄. 막이 하나뿐이던 때부터 쓰던 자리다. */
 export const ACT = {
   id: STORY.act.id,
   labelKo: STORY.act.label_ko,
@@ -63,9 +95,7 @@ export const ACT = {
 }
 
 /** 장 전량. **층 순서로 선다** — 파일 순서에 기대면 장을 더할 때 목록이 조용히 뒤바뀐다. */
-export const CHAPTERS: readonly Chapter[] = [...STORY.chapters]
-  .sort((left, right) => left.floor - right.floor)
-  .map((one) => ({ floor: one.floor, titleKo: one.title_ko, noteKo: one.note_ko }))
+export const CHAPTERS: readonly Chapter[] = ACTS_KO.flatMap((act) => act.chapters)
 
 /** 둔갑을 만난 날의 카드. */
 export const SHADOW: StoryCard = {
@@ -87,19 +117,19 @@ export function buildCardId(floor: number): string {
 }
 
 /** 낱말표. */
-export const GLOSSARY: readonly GlossaryEntry[] = STORY.glossary.map((one) => ({
+export const GLOSSARY: readonly GlossaryEntry[] = ACTS.flatMap((act) => act.glossary).map((one) => ({
   termKo: one.term_ko,
   glossKo: one.gloss_ko,
 }))
 
 /** 인물. */
-export const PEOPLE: readonly PersonEntry[] = STORY.people.map((one) => ({
+export const PEOPLE: readonly PersonEntry[] = ACTS.flatMap((act) => act.people).map((one) => ({
   nameKo: one.name_ko,
   lineKo: one.line_ko,
 }))
 
 /** 금기 셋. */
-export const TABOOS: readonly TabooEntry[] = STORY.taboos.map((one) => ({
+export const TABOOS: readonly TabooEntry[] = ACTS.flatMap((act) => act.taboos).map((one) => ({
   lineKo: one.line_ko,
   glossKo: one.gloss_ko,
 }))

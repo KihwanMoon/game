@@ -156,6 +156,10 @@ def test_the_ticket_carries_a_varied_chain():
     assert issued["room_ids"][-1] == "boss_hall"
 
 
+# 층마다 어느 보스가 서는가 (2026-09-17). 하나가 아니라 쌍들인 것은 막이 둘이기 때문이다.
+BOSSES = ((10, "boss_hall"),)
+
+
 def build_boss_rooms():
     """보스 방까지 있는 검사용 대응표.
 
@@ -168,7 +172,7 @@ def build_boss_rooms():
 def test_the_boss_room_comes_last_on_the_boss_floor():
     """★ 보스가 중간에 있으면 잡고도 잡몹 방이 남아 「깼다」가 마지막 사건이 아니게 된다."""
     for _try in range(20):
-        picked = build_room_chain(build_boss_rooms(), 10, "a", 3, "boss_hall", 10)
+        picked = build_room_chain(build_boss_rooms(), 10, "a", 3, BOSSES)
         assert len(picked) == 3
         assert picked[-1] == "boss_hall", picked
         assert "boss_hall" not in picked[:-1]
@@ -178,19 +182,17 @@ def test_the_boss_room_never_appears_on_other_floors():
     """★ 보스 층이 아닌 데서 만나면 「10층에 보스」가 거짓이 된다."""
     for floor in (1, 5, 9):
         for _try in range(10):
-            assert "boss_hall" not in build_room_chain(
-                build_boss_rooms(), floor, "a", 3, "boss_hall", 10
-            )
+            assert "boss_hall" not in build_room_chain(build_boss_rooms(), floor, "a", 3, BOSSES)
 
 
 def test_the_boss_room_is_not_a_normal_candidate():
     """★ 일반 후보에 섞이면 한 판에 보스를 두 번 만난다."""
-    assert "boss_hall" not in list_floor_rooms(build_boss_rooms(), 10, "boss_hall")
+    assert "boss_hall" not in list_floor_rooms(build_boss_rooms(), 10, frozenset({"boss_hall"}))
 
 
 def test_a_chain_without_a_boss_stays_the_same_length():
     """★ 보스를 안 두는 층에서 길이가 줄면 방 하나가 통째로 사라진다."""
-    picked = build_room_chain(build_boss_rooms(), 3, "a", 3, "boss_hall", 10)
+    picked = build_room_chain(build_boss_rooms(), 3, "a", 3, BOSSES)
     assert len(picked) == 3
 
 
@@ -198,7 +200,7 @@ def test_a_descent_covers_every_floor_to_the_boss():
     """★ 하강이 중간에 끊기면 「10층에 보스」에 닿을 길이 없다."""
     from game.app.services.build_chain import build_descent
 
-    picked = build_descent(build_boss_rooms(), 1, "a", 3, "boss_hall", 10)
+    picked = build_descent(build_boss_rooms(), 1, "a", 3, 10, BOSSES)
     assert len(picked) == 3 * 10
     assert picked[-1] == "boss_hall"
     assert picked.count("boss_hall") == 1
@@ -208,20 +210,19 @@ def test_a_descent_from_a_deeper_floor_is_shorter():
     """★ 5층에서 시작하면 5~10층만 돈다 — 지나온 층을 다시 돌면 하강이 아니다."""
     from game.app.services.build_chain import build_descent
 
-    assert len(build_descent(build_boss_rooms(), 5, "a", 3, "boss_hall", 10)) == 3 * 6
+    assert len(build_descent(build_boss_rooms(), 5, "a", 3, 10, BOSSES)) == 3 * 6
 
 
 def test_the_chosen_room_opens_only_the_first_floor():
     """★ 고른 방이 층마다 되풀이되면 하강이 같은 방의 반복이 된다."""
     from game.app.services.build_chain import build_descent
 
-    picked = build_descent(build_boss_rooms(), 1, "a", 3, "boss_hall", 10)
+    picked = build_descent(build_boss_rooms(), 1, "a", 3, 10, BOSSES)
     assert picked[0] == "a"
     # 2층의 첫 방까지 "a" 로 고정되면 안 된다. 서른 방 중 하나뿐일 리는 없으므로
     # 여러 번 돌려 한 번이라도 달라지는지 본다.
     assert any(
-        build_descent(build_boss_rooms(), 1, "a", 3, "boss_hall", 10)[3] != "a"
-        for _try in range(20)
+        build_descent(build_boss_rooms(), 1, "a", 3, 10, BOSSES)[3] != "a" for _try in range(20)
     )
 
 

@@ -25,6 +25,8 @@ from game.schemas.ruleset import load_rulesets
 
 ROOMS = {template.template_id: template for template in load_room_templates(ROOM_TEMPLATES_PATH)}
 BOSS_FLOOR = 10
+# 층마다 어느 보스가 서는가 (2026-09-17). 막이 둘이라 하나가 아니라 쌍들이다.
+BOSSES = ((BOSS_FLOOR, "boss_hall"),)
 PER_FLOOR = 3
 
 
@@ -37,7 +39,7 @@ def build_chain(seed):
     Returns:
         방 id 들.
     """
-    return build_descent_rooms(ROOMS, seed, "open_field", PER_FLOOR, "boss_hall", BOSS_FLOOR)
+    return build_descent_rooms(ROOMS, seed, "open_field", PER_FLOOR, BOSS_FLOOR, BOSSES)
 
 
 def test_the_same_seed_builds_the_same_descent():
@@ -92,8 +94,8 @@ def run_probe(runs=2, ruleset=None, start_floor=1):
         start_floor,
         "open_field",
         PER_FLOOR,
-        "boss_hall",
         BOSS_FLOOR,
+        BOSSES,
     )
 
 

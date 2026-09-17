@@ -35,7 +35,16 @@ const TILE_BY_NAME: readonly (readonly [string, number])[] = [
 ]
 
 /** 인지 변수 enemy_type_present 가 묻는 적 유형들. HEALER 는 v4 에서 들어왔다. */
-const ENEMY_TYPES: readonly string[] = ['MELEE', 'RANGED', 'SUMMONER', 'BOMBER', 'HEALER']
+// **CASTER 는 2026-09-17 이다.** 마법 쓰는 적이 들어오는데 「주술형 먼저 친다」를
+// 규칙표로 못 적으면, 그 적들에게 카운터가 하나도 없다.
+const ENEMY_TYPES: readonly string[] = [
+  'MELEE',
+  'RANGED',
+  'SUMMONER',
+  'BOMBER',
+  'HEALER',
+  'CASTER',
+]
 
 /**
  * 인지 변수 self_cooldown_ready·self_skill_ready 가 묻는 스킬들.
@@ -63,6 +72,14 @@ const COOLDOWN_SKILLS: readonly string[] = [
   'METEOR',
   'CHAIN_BOLT',
   'FROST_FIELD',
+  // **적만 쓰는 다섯** (2026-09-17). 인지 목록에 드는 이유는 쿨타임 때문이다 — 적
+  // 규칙표가 「쿨타임 완료」를 못 물으면 매 틱 다시 시전해 예고가 영영 안 터진다.
+  // 팔레트에는 안 뜬다: 거르는 자리는 `blockOptions` 이고 기준은 `skills.json` 의 `actor` 다.
+  'HEX_FIRE',
+  'HEX_BOLT',
+  'HEX_FROST',
+  'HEX_PLAGUE',
+  'HEX_SNARE',
 ]
 
 /**
