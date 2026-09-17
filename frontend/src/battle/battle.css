@@ -872,6 +872,18 @@
   inline-size: 100%;
   padding: var(--sp-2) var(--sp-0);
   border-top: var(--bw) solid var(--line);
+
+  /* **바닥에 붙는다** (2026-09-17 요청). 세로 배치는 격자가 아니라 문서 흐름이라
+     (`battle--portrait`), 화면이 길어지면 이 자리가 스크롤 밖으로 나간다 — 광고가
+     스크롤해야 보이면 없는 것과 같다.
+
+     `sticky` 를 쓰는 이유는 **흐름에서 자리를 지키기 때문**이다. `fixed` 로 띄우면
+     흐름에서 빠져 도면과 로그가 그 뒤로 깔린다 — 마지막 줄이 영영 안 읽힌다. */
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 1;
+  /* 뒤가 비쳐 보이면 로그 글자와 겹쳐 둘 다 안 읽힌다. */
+  background: var(--surface-base);
 }
 
 .battle__ad-link {

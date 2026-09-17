@@ -520,6 +520,25 @@ describe('배너 자리', () => {
     expect(CSS).toContain('--ad-h: calc(var(--sp-12) + var(--bw) * 2)')
   })
 
+  it('★ 하단에 붙는다 — 스크롤해야 보이면 없는 것과 같다', () => {
+    // 세로 배치는 격자가 아니라 문서 흐름이라, 화면이 길어지면 자리가 스크롤 밖으로
+    // 나간다. `fixed` 가 아니라 `sticky` 인 이유는 **흐름에서 자리를 지키기 때문**이다 —
+    // 띄우면 도면과 로그가 그 뒤로 깔려 마지막 줄이 영영 안 읽힌다.
+    const block = /\.battle__ad \{([\s\S]*?)\n\}/.exec(CSS)?.[1] ?? ''
+    expect(block).toContain('position: sticky')
+    expect(block).toContain('inset-block-end: 0')
+    expect(block, '뒤가 비치면 로그 글자와 겹쳐 둘 다 안 읽힌다').toContain('background:')
+  })
+
+  it('★ 자리가 둘이다 — 전투 하단과 사후 분석', () => {
+    // 사후 분석은 **읽는 화면**이라 게임 창이 아니고, 구글의 150px 규칙이 안 걸린다.
+    const post = readFileSync(
+      fileURLToPath(new URL('../hud/PostMortem.tsx', import.meta.url)),
+      'utf8',
+    )
+    expect(post).toContain('<AdSlot />')
+  })
+
   it('★ 빈 상자를 안 둔다 — 비어 있으면 고장으로 읽힌다', () => {
     const slot = readFileSync(fileURLToPath(new URL('./AdSlot.tsx', import.meta.url)), 'utf8')
     expect(slot).toContain('광고문의')

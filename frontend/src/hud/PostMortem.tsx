@@ -29,6 +29,7 @@ import { DEATH_REPLAY_TICKS, useLogAnchor } from './logWindow'
 import { buildVitalRows } from '../battle'
 import { buildReplayTrace, buildSheetRows, findDecision } from './replayTrace'
 import { RuleStatsTable } from './RuleStatsTable'
+import { AdSlot } from '../battle/AdSlot'
 import { TickScrubber } from './TickScrubber'
 
 /** PostMortem 이 받는 props. */
@@ -176,6 +177,13 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
           </Panel>
         </div>
       </div>
+      {/* **두 번째 자리다** (2026-09-17). 여기는 **읽는 화면**이라 전투 화면과 다르다 —
+          게임 창이 아니므로 구글의 150px 규칙이 안 걸리고, 판이 끝나고 잠깐 멈추는
+          자연스러운 휴지다.
+
+          전투 진입 화면은 안 골랐다. 티켓을 기다리는 1.3초뿐이라 광고 자리로는 약하고,
+          그 1.3초를 위해 화면을 하나 더 만들어 유지해야 한다. */}
+      <AdSlot />
     </div>
   )
 }
