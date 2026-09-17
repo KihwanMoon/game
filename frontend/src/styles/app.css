@@ -110,6 +110,20 @@ body {
   border-inline-start: 1px solid var(--line);
 }
 
+/* **글자가 바뀌어도 폭이 안 바뀐다** (2026-09-17 신고: 「전투가 끝나는 순간 깜빡거린다」).
+   이 단추의 글자는 방을 깨는 순간 `멈춤` → `5초` → `4초` … 로 바뀌는데, 글자 폭이 달라지면
+   조작 줄 전체가 다시 배치된다 — 줄이 접혔다 펴지면 그만큼 도면이 움직이고, 그것이
+   눈에는 깜빡임으로 보인다.
+
+   자리를 지키고 말만 바꾸는 규율은 이미 `formatAutoAdvanceNote` 가 적어 두었다. 그 규율이
+   **글자 수까지는 지켰는데 폭은 안 지켰다** — 세 글자분을 비워 둔다. */
+.launch__auto > .ds-button {
+  min-inline-size: calc(var(--sp-12) + var(--sp-4));
+  justify-content: flex-start;
+  /* 초가 한 자리에서 두 자리로 바뀔 때도 안 흔들린다. */
+  font-variant-numeric: tabular-nums;
+}
+
 .launch__label {
   font-family: var(--font-body);
   font-size: var(--fs-body-s);

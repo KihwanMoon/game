@@ -8,6 +8,9 @@
  * 3. **멈출 수 있고, 멈추기가 안내 옆에 있다.** 설정 화면에 있으면 지금 멈출 수 없다.
  * 4. **어디로 가는지 적는다.** 「곧 넘어감」만 적으면 멈출지를 정할 근거가 없다.
  */
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
@@ -136,5 +139,32 @@ describe('안내', () => {
 
   it('★ 곧장 넘기지 않는다 — 방 사이는 규칙을 고치는 유일한 창이다', () => {
     expect(AUTO_ADVANCE_SECONDS).toBeGreaterThan(0)
+  })
+})
+
+describe('라벨이 바뀌어도 자리가 안 움직인다', () => {
+  // **실제 신고** (2026-09-17): 「전투가 끝나는 순간 깜빡거린다」. 방을 깨면 이 단추의
+  // 글자가 `멈춤` → `5초` → `4초` … 로 바뀌는데, 글자 폭이 달라지면 조작 줄 전체가 다시
+  // 배치된다 — 줄이 접혔다 펴지면 그만큼 도면이 움직이고 눈에는 깜빡임으로 보인다.
+  //
+  // `formatAutoAdvanceNote` 는 **글자 수**를 지키는 규율을 이미 적어 뒀는데, 폭은 CSS 가
+  // 지켜야 한다.
+  const CSS = readFileSync(
+    fileURLToPath(new URL('../styles/app.css', import.meta.url)),
+    'utf8',
+  )
+
+  it('★ 자동 진행 단추에 최소 폭이 박혀 있다', () => {
+    const block = /\.launch__auto > \.ds-button \{([\s\S]*?)\}/.exec(CSS)?.[1] ?? ''
+    expect(block, '최소 폭이 없으면 글자 폭이 그대로 줄 폭이 된다').toContain('min-inline-size')
+  })
+
+  it('★ 초가 두 자리가 돼도 안 흔들린다', () => {
+    const block = /\.launch__auto > \.ds-button \{([\s\S]*?)\}/.exec(CSS)?.[1] ?? ''
+    expect(block).toContain('tabular-nums')
+  })
+
+  it('★ 도는 중이 아니어도 자리를 지킨다 — 없애면 그만큼 줄이 움직인다', () => {
+    expect(formatAutoAdvanceNote(-1)).not.toBe('')
   })
 })
