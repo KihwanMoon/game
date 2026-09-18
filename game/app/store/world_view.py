@@ -12,6 +12,9 @@ from dataclasses import dataclass
 
 from psycopg_pool import ConnectionPool
 
+from game.app.store.accounts import BOT_HANDLE_PREFIX
+from game.app.store.traffic import compute_conversion_pct, read_traffic_window
+
 
 @dataclass(frozen=True)
 class WorldSummary:
@@ -194,11 +197,23 @@ def count_levels(pool: ConnectionPool) -> tuple[tuple[int, int], ...]:
 
 @dataclass(frozen=True)
 class WorldPulse:
-    """세계에 사람이 얼마나 오는가 (2026-09-17).
+    """세계에 사람이 얼마나 오는가 (2026-09-17, 2026-09-18 개정).
 
-    **제3자 계측이 아니라 우리가 이미 가진 수다.** 이 게임은 처음 들어오면 익명 계정이
-    생기므로 `account` 수가 곧 「앱을 연 사람 수」에 가깝다 — 광고망이나 분석 스크립트를
-    들이지 않고도 셀 수 있는 것이 있었다.
+    **두 수가 다른 것을 센다.** `players` 는 **출격을 누른 사람**이다 — `App.tsx` 의
+    `requireAccount` 가 "여는 것만으로는 안 만든다" 고 못박고 있어서, 계정 행은 앱을 연
+    순간이 아니라 판을 남기려는 순간에 생긴다. `window_visits` 는 **열어 본 사람**이고
+    Cloudflare 가 엣지에서 센 것을 `traffic_day` 로 받아 적은 값이다.
+
+    **옛 주석이 틀렸었다.** 여기에는 "처음 들어오면 익명 계정이 생기므로 account 수가 곧
+    「앱을 연 사람 수」에 가깝다" 고 적혀 있었는데, 그 전제가 코드와 어긋났다. 그래서
+    「다녀간 사람」이라는 이름으로 판을 낸 사람을 세고 있었고, 진짜 방문자는 아무도 재지
+    않고 있었다.
+
+    **봇을 뺀다.** 봇 계정도 `account` 행이라 그동안 「다녀간 사람」에 섞여 있었다
+    (10/138 = 7%). 이름 접두어로 가른다 — 봇을 이름에 싣기로 한 것과 같은 규율이다.
+
+    **누적과 창을 함께 든다.** 누적 절대값은 계측을 갈아 끼우는 순간 점프해 예전 값과
+    이어 붙일 수 없으므로, 화면이 기간을 밝힐 수 있어야 한다.
     """
 
     visitors: int
@@ -206,18 +221,26 @@ class WorldPulse:
     fresh_today: int
     fresh_week: int
     runs: int
+    window_days: int = 0
+    window_visits: int = 0
+    window_played: int = 0
+    conversion_pct: int = 0
+    traffic_source: str = ""
 
 
-def read_world_pulse(pool: ConnectionPool) -> WorldPulse:
+def read_world_pulse(pool: ConnectionPool, window_days: int = 7) -> WorldPulse:
     """세계의 접속 현황을 읽는다.
 
     **한 문장으로 센다.** 다섯 번 왕복하면 화면 한 줄에 조회가 다섯 번 붙는다.
+    트래픽은 다른 표에 있어 한 번 더 간다.
 
     Args:
         pool: 연결 풀.
+        window_days: 들름·전환을 볼 창(일). 오늘을 포함한다.
 
     Returns:
-        방문자·가입·오늘·이번 주 신규와 돌아간 판 수.
+        누적 수치와 창 안의 깔때기. 계측을 아직 안 받아 왔으면 창 값이 0 이며,
+        그것과 「아무도 안 왔다」는 `window_visits` 로 구별한다.
     """
     with pool.connection() as connection:
         row = connection.execute(
@@ -225,15 +248,25 @@ def read_world_pulse(pool: ConnectionPool) -> WorldPulse:
             " count(*) FILTER (WHERE login_id IS NOT NULL),"
             " count(*) FILTER (WHERE created_at::date = current_date),"
             " count(*) FILTER (WHERE created_at > now() - interval '7 days'),"
-            " (SELECT count(*) FROM run_submission)"
-            " FROM account WHERE deactivated_at IS NULL"
+            " (SELECT count(*) FROM run_submission),"
+            " count(*) FILTER (WHERE created_at > now() - make_interval(days => %s))"
+            " FROM account"
+            " WHERE deactivated_at IS NULL AND handle NOT LIKE %s",
+            (window_days, f"{BOT_HANDLE_PREFIX}%"),
         ).fetchone()
     if row is None:
         return WorldPulse(visitors=0, joined=0, fresh_today=0, fresh_week=0, runs=0)
+    window = read_traffic_window(pool, window_days)
+    played = int(row[5])
     return WorldPulse(
         visitors=int(row[0]),
         joined=int(row[1]),
         fresh_today=int(row[2]),
         fresh_week=int(row[3]),
         runs=int(row[4]),
+        window_days=window_days,
+        window_visits=window.visits,
+        window_played=played,
+        conversion_pct=compute_conversion_pct(window.visits, played),
+        traffic_source=window.source,
     )

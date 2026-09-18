@@ -282,6 +282,38 @@ services:
     networks:
       - game_net
 
+  # Cloudflare 가 엣지에서 센 트래픽을 받아 적는다 (U2).
+  #
+  # **지킴이에 안 태웠다.** 그 파일 머리말이 "쓰기 질의를 한 줄도 안 둔다 — 그것이 이
+  # 프로세스의 경계다" 라고 못박고 있고, 여기는 표에 쓰는 데다 바깥 그물까지 탄다.
+  # 섞으면 CF 가 안 뜨는 날 지킴이가 함께 흔들린다 — 지킴이는 그때 가장 필요하다.
+  #
+  # **자격이 없으면 그냥 멈춘다**(종료 코드 2). 스택 전체를 막지 않는다 — 트래픽 수치는
+  # 없어도 게임이 도는 값이고, `restart: unless-stopped` 가 계속 다시 세우지만 그
+  # 로그가 곧 "토큰을 안 넣었다" 는 신호다.
+  traffic:
+    logging: *logging
+    build:
+      <<: *build
+      target: api
+    container_name: game-traffic-1
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # 지킴이와 같은 이유다 — 표를 만드는 것은 백엔드 기동(`apply_schema`)뿐이다.
+      backend:
+        condition: service_healthy
+    environment:
+      GAME_DATABASE_URL: >-
+        postgresql://${POSTGRES_USER:-game}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-game}
+      # 읽기 전용 Analytics 토큰이다. 값은 `deploy/.env` 에 있고 커밋되지 않는다.
+      CF_ZONE_ID: ${CF_ZONE_ID}
+      CF_API_TOKEN: ${CF_API_TOKEN}
+    command: ["python", "-m", "scripts.pull_traffic", "--loop"]
+    networks:
+      - game_net
+
   # 개발 셸. uv·Python 3.11 을 호스트에 설치하지 않고 동일 환경을 쓴다.
   dev:
     logging: *logging

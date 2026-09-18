@@ -171,12 +171,16 @@ def save_player_stats(request: AllocationRequest, account: CurrentAccount) -> Pr
 def read_world_pulse_view() -> WorldPulseResponse:
     """세계의 접속 현황을 낸다 — **로그인 없이 보는 자리**다.
 
-    **제3자 계측을 안 들인다.** 이 게임은 처음 들어오면 익명 계정이 생기므로 계정 수가
-    곧 「앱을 연 사람 수」에 가깝다 — 광고망이나 분석 스크립트 없이 셀 수 있는 것이
-    이미 있었다 (2026-09-17).
+    **두 수가 다른 것을 센다** (2026-09-18 개정). 여기 적혀 있던 "계정 수가 곧 「앱을
+    연 사람 수」에 가깝다" 는 틀렸다 — `requireAccount` 가 여는 것만으로는 계정을 안
+    만들고 출격에서만 만든다. 그래서 계정 수는 **판을 낸 사람**이고, 열어 본 사람은
+    Cloudflare 가 엣지에서 센 것을 `traffic_day` 로 받아 적는다.
+
+    **브라우저에 계측을 안 심는다.** JS beacon 은 광고 차단기가 막고, 클라이언트가
+    적어 보내는 수는 조작 대상이다 (`설계/7_변조방지`). 엣지 집계는 둘 다 아니다.
 
     Returns:
-        방문자·가입·오늘·이번 주 신규와 돌아간 판 수.
+        누적 수치와 창 안의 깔때기(들름 → 판, 전환율, 출처).
     """
     return WorldPulseResponse(**vars(read_world_pulse(get_pool())))
 

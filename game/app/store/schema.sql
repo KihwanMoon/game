@@ -942,3 +942,26 @@ CREATE TABLE IF NOT EXISTS story_seen (
     at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (account_id, card_id)
 );
+
+-- 하루치 트래픽 (2026-09-18). **우리가 센 수가 아니라 받아 적은 수다.**
+--
+-- 스택이 Cloudflare Tunnel 뒤라 모든 요청이 엣지를 지나고, CF 가 이미 세고 있다.
+-- JS beacon 을 심지 않으므로 광고 차단기와 무관하고 클라이언트가 조작할 수 없다 —
+-- `설계/7_변조방지` 의 전제(클라이언트는 적대적이다)와 같은 자리다.
+--
+-- **`source` 가 기본키에 들어간다.** 언젠가 계측을 다른 것으로 갈아 끼울 때, 같은 날에
+-- 두 출처의 값이 나란히 남아야 한다. 덮어써 버리면 갈아 끼운 날을 기점으로 선이 점프하고
+-- 그 이유를 아무도 모르게 된다 — 이 표는 대외 지표의 원장이라 그 사고가 비싸다.
+--
+-- **계정 수와 다른 것을 센다.** `account` 는 출격을 누른 사람이고(`App.tsx` 의
+-- `requireAccount` — "여는 것만으로는 안 만든다"), 이 표는 **열어 본 사람**이다.
+-- 둘을 나란히 놓아야 「오는데 안 한다」와 「아예 안 온다」가 갈린다.
+CREATE TABLE IF NOT EXISTS traffic_day (
+    day      DATE        NOT NULL,
+    source   TEXT        NOT NULL,
+    visits   INTEGER     NOT NULL,
+    views    INTEGER     NOT NULL,
+    requests INTEGER     NOT NULL,
+    at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (day, source)
+);
