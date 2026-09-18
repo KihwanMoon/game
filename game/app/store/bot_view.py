@@ -45,6 +45,9 @@ class DoppelRow:
     level: int
     alive: bool
     entity_slot: str
+    # 종의 id (`goblin_rusher`). **화면에 그대로 적지 않는다** — 라우트가 카탈로그에서
+    # 한글 이름을 찾아 싣는다. 도감이 같은 자리에서 같은 일을 한다.
+    catalog_id: str
     # 누구의 그림자인가. 봇이 지워졌으면 빈 문자열이다.
     origin_handle: str
     # 남은 목숨. 다 쓰면 세계에서 지워지므로 **여기 보이는 것은 늘 1 이상**이다.
@@ -118,7 +121,8 @@ def list_doppel_rows(pool: ConnectionPool) -> tuple[DoppelRow, ...]:
             "SELECT e.id, COALESCE(e.zone_floor, 0), e.level, e.alive,"
             # **이름은 정본을 거친다** (`display_name.py`). 손잡이를 그대로 내면
             # 닉네임을 지은 사람이 화면마다 다른 이름으로 보인다 (2026-09-18 신고).
-            f" COALESCE(e.entity_slot, ''), COALESCE({build_display_name_sql('a')}, ''), e.lives"
+            f" COALESCE(e.entity_slot, ''), COALESCE(e.catalog_id, ''),"
+            f" COALESCE({build_display_name_sql('a')}, ''), e.lives"
             " FROM entity_record e LEFT JOIN account a ON a.id = e.origin_account_id"
             " WHERE e.kind = 'MONSTER' AND e.is_doppel"
             " ORDER BY COALESCE(e.zone_floor, 0), e.id"
@@ -130,8 +134,9 @@ def list_doppel_rows(pool: ConnectionPool) -> tuple[DoppelRow, ...]:
             level=int(row[2]),
             alive=bool(row[3]),
             entity_slot=str(row[4]),
-            origin_handle=str(row[5]),
-            lives=int(row[6]),
+            catalog_id=str(row[5]),
+            origin_handle=str(row[6]),
+            lives=int(row[7]),
         )
         for row in rows
     )

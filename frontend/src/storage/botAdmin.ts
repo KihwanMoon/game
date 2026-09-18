@@ -43,6 +43,8 @@ export interface DoppelView {
   readonly level: number
   readonly alive: boolean
   readonly entitySlot: string
+  /** 한글 종 이름. **화면에 적는 것은 이쪽이다** — 자리 id 가 아니다. */
+  readonly labelKo: string
   readonly originHandle: string
   /** 남은 목숨. 잡을 때마다 줄고 다 쓰면 지워지므로 **보이는 것은 늘 1 이상**이다. */
   readonly lives: number
@@ -80,6 +82,7 @@ interface RawDoppel {
   level: number
   alive: boolean
   entity_slot: string
+  label_ko?: string
   origin_handle: string
   /** 목숨을 싣기 전 서버는 안 보낸다. 그때는 1 — 한 번 잡히면 사라진다는 뜻이다. */
   lives?: number
@@ -121,6 +124,8 @@ export function parseBotOverview(raw: {
       level: item.level,
       alive: item.alive,
       entitySlot: item.entity_slot,
+      // 옛 서버는 안 보낸다 — 그때는 자리 id 라도 적는다. 빈 칸보다는 낫다.
+      labelKo: item.label_ko ?? item.entity_slot,
       originHandle: item.origin_handle,
       lives: item.lives ?? 1,
     })),

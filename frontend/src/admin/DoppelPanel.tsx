@@ -73,7 +73,9 @@ export function DoppelPanel(props: DoppelPanelProps): React.JSX.Element {
                     「왜 아직 서 있지」와 「왜 사라졌지」를 둘 다 설명할 수 없다. */}
                 <span className="botrow__cell">{`목숨 ${String(item.lives)}`}</span>
                 <span className="botrow__cell">{`lv ${String(item.level)}`}</span>
-                <span className="botrow__cell">{item.entitySlot}</span>
+                {/* **한글 종 이름을 적는다.** `goblin_rusher_0` 같은 자리 id 를 적으면
+                    도감이 「고블린 돌격병」이라 부르는 같은 개체를 여기만 id 로 부른다. */}
+                <span className="botrow__cell">{item.labelKo}</span>
                 <span className="botrow__cell">
                   {item.originHandle === '' ? '주인 없음' : `${item.originHandle} 의 둔갑`}
                 </span>

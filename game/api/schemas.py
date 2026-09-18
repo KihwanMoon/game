@@ -374,6 +374,10 @@ class AdminDoppelView(BaseModel):
     level: int
     alive: bool
     entity_slot: str
+    # 종의 id. 화면이 쓰는 것은 아래 `label_ko` 다.
+    catalog_id: str = ""
+    # 한글 종 이름. **화면에 적는 것은 이쪽이다** — 도감이 같은 개체를 부르는 말과 같다.
+    label_ko: str = ""
     origin_handle: str
     # 남은 목숨. 잡을 때마다 하나 줄고 다 쓰면 지워지므로 **여기 보이는 것은 늘 1 이상**이다.
     lives: int = 1

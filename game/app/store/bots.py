@@ -17,7 +17,8 @@ from datetime import UTC, datetime, timedelta
 from psycopg_pool import ConnectionPool
 
 from game.app.bots.personas import resolve_cadence
-from game.app.store.accounts import BOT_HANDLE_PREFIX, apply_bot_handle
+from game.app.store.accounts import apply_bot_handle
+from game.app.store.display_name import apply_nickname, check_nickname
 
 # 실력의 하한. 0 이면 규칙표가 통째로 꺼져 폴백만 남고, 그런 봇은 무엇도 배우지 못한다.
 MIN_SKILL_PCT = 20
@@ -226,64 +227,43 @@ def apply_bot_settings(
         )
 
 
-# 관리자가 지어 줄 수 있는 이름의 길이 상한. 순위표·경매·도감이 한 줄에 이름을 적으므로,
-# 길면 그 줄이 밀리거나 잘린다. 스무 자면 「고블린 사냥꾼 셋째」가 들어간다.
-MAX_BOT_NAME = 20
+def rename_bot(pool: ConnectionPool, account_id: int, wanted: str) -> str:
+    """봇에게 이름을 지어 준다 (관리자 개입).
 
+    **사람이 쓰는 길을 그대로 쓴다.** `display_name.apply_nickname` 하나가 규칙(길이·
+    글자·예약 머리말)과 중복 검사를 든다 — 봇 전용 규칙을 따로 만들면 그것이 사본이 되고,
+    한쪽만 고쳐질 자리가 생긴다. 처음에 그렇게 짰다가 되돌렸다 (2026-09-18).
 
-def rename_bot_handle(pool: ConnectionPool, account_id: int, wanted: str) -> str:
-    """봇 이름의 **뒷자리만** 고친다 (관리자 개입).
+    **`handle` 이 아니라 `nickname` 에 적는다.** 표시 이름이
+    `COALESCE(nickname, login_id, handle)` 이므로(`display_name.py`), 닉네임을 주면
+    순위표·경매·도감·둔갑이 전부 그 이름을 쓴다 — 이름이 화면마다 달라지지 않는 유일한
+    방법이다. `handle` 은 계정이 태어날 때 받는 **내부 이름**이라 안 건드린다.
 
-    **접두어는 안 바뀐다.** `bot_` 은 「이것이 봇이다」를 싣는 유일한 채널이다 —
-    순위표·경매·도감이 전부 이름만 적으므로, 떼는 순간 세 화면에서 봇이 사람과
-    구별되지 않는다 (2026-09-11 실제 신고). `apply_bot_handle` 이 「앞만 바꾼다」인 것과
-    같은 이유를 반대 방향으로 지킨다.
-
-    **`nickname` 을 쓰지 않는 이유가 그것이다.** 표시 이름은
-    `COALESCE(nickname, login_id, handle)` 이라(`display_name.py`), 봇에 닉네임을 주면
-    `handle` 이 표시에서 밀려나 접두어가 화면에서 사라진다.
-
-    **이름이 겹치면 거절한다.** `handle` 은 유일해야 하고, 조용히 딴 이름으로 바꿔 주면
-    관리자가 지은 이름과 화면에 뜨는 이름이 갈린다.
+    **「이것이 봇이다」는 이름이 아니라 다른 채널이 싣는다.** 예전에는 `bot_` 접두어가
+    그 일을 했는데, 그러면 봇 이름이 영영 id 처럼 보인다 — 색·글리프·명도 셋으로 적는
+    디자인 규율과도 어긋난다(한 채널에 기대지 않는다). 화면은 `is_bot` 을 받아 표시한다.
 
     Args:
         pool: 연결 풀.
         account_id: 대상 봇.
-        wanted: 접두어를 뺀 이름. 앞뒤 공백은 떼고 쓴다.
+        wanted: 지어 줄 이름.
 
     Returns:
-        바뀐 뒤의 전체 이름 (`bot_…`).
+        저장된 이름.
 
     Raises:
-        ValueError: 봇이 아니거나, 이름이 비었거나 길거나 모양이 아니거나, 이미 쓰는
-            이름인 경우. 사유가 그대로 화면에 뜬다.
+        ValueError: 봇이 아니거나, 이름이 규칙에 어긋나거나, 이미 쓰는 이름인 경우.
+            사유가 그대로 화면에 뜬다.
     """
-    name = wanted.strip()
-    if not name:
-        raise ValueError("이름이 비었다")
-    if len(name) > MAX_BOT_NAME:
-        raise ValueError(f"이름이 {MAX_BOT_NAME}자를 넘는다")
-    # 공백과 제어문자를 막는다 — 한 줄에 적히는 값이라 줄바꿈이 들어가면 표가 깨지고,
-    # 앞뒤가 아닌 가운데 공백은 이름이 둘로 읽힌다.
-    if any(ch.isspace() for ch in name):
-        raise ValueError("이름에 공백을 쓸 수 없다")
-    if name.lower().startswith((BOT_HANDLE_PREFIX, "user_")):
-        # 접두어는 우리가 붙인다. 받아서 또 붙이면 `bot_bot_…` 이 된다.
-        raise ValueError("접두어는 빼고 적는다")
-    renamed = f"{BOT_HANDLE_PREFIX}{name}"
+    said = check_nickname(wanted)
+    if said:
+        raise ValueError(said)
     with pool.connection() as connection:
         row = connection.execute(
-            "SELECT handle FROM account WHERE id = %s", (account_id,)
+            "SELECT is_bot FROM account WHERE id = %s", (account_id,)
         ).fetchone()
-        if row is None or not str(row[0]).startswith(BOT_HANDLE_PREFIX):
-            raise ValueError("봇이 아니다")
-        if str(row[0]) == renamed:
-            return renamed
-        taken = connection.execute(
-            "SELECT 1 FROM account WHERE lower(handle) = lower(%s) AND id <> %s",
-            (renamed, account_id),
-        ).fetchone()
-        if taken is not None:
-            raise ValueError(f"이미 쓰는 이름이다: {renamed}")
-        connection.execute("UPDATE account SET handle = %s WHERE id = %s", (renamed, account_id))
-    return renamed
+    if row is None or not bool(row[0]):
+        raise ValueError("봇이 아니다")
+    if not apply_nickname(pool, account_id, wanted):
+        raise ValueError(f"이미 쓰는 이름이다: {wanted.strip()}")
+    return wanted.strip()

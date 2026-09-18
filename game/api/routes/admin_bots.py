@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from game.api.deps import (
     CurrentAdmin,
     CurrentOperator,
+    get_context,
     get_item_catalog,
     get_pool,
 )
@@ -29,13 +30,13 @@ from game.app.store.accounts import find_player_entity
 from game.app.store.admin import record_admin_action
 from game.app.store.bot_view import list_bot_rows, list_doppel_rows
 from game.app.store.bots import (
-    MAX_BOT_NAME,
     MAX_SKILL_PCT,
     MIN_SKILL_PCT,
     apply_bot_settings,
     check_is_bot,
-    rename_bot_handle,
+    rename_bot,
 )
+from game.app.store.display_name import NICKNAME_MAX, NICKNAME_MIN
 from game.app.store.doppels import read_doppel_gear
 from game.app.store.gifts import apply_bot_coin_gift, apply_bot_gift
 
@@ -61,15 +62,14 @@ class BotGiftRequest(BaseModel):
 
 
 class BotNameRequest(BaseModel):
-    """봇 이름의 뒷자리를 고치는 요청.
+    """봇에게 지어 줄 이름.
 
-    **접두어는 안 받는다.** `bot_` 은 서버가 붙인다 — 받아서 그대로 쓰면 관리자가 그것을
-    지워 봇을 사람처럼 세울 수 있고, 순위표·경매·도감이 이름만 적으므로 그 순간 세 화면
-    에서 봇이 안 보이게 된다.
+    **사람 닉네임과 같은 규칙을 쓴다** (`display_name.check_nickname`). 봇만 다른 규칙을
+    두면 그것이 사본이 되고, 한쪽만 고쳐질 자리가 생긴다.
     """
 
     account_id: int = Field(ge=1)
-    name: str = Field(min_length=1, max_length=MAX_BOT_NAME)
+    name: str = Field(min_length=NICKNAME_MIN, max_length=NICKNAME_MAX)
 
 
 class BotSettingsRequest(BaseModel):
@@ -93,11 +93,20 @@ def build_bot_overview(account: CurrentAdmin) -> AdminBotOverviewResponse:
         현황 응답.
     """
     pool = get_pool()
+    enemies = {kind["id"]: kind for kind in get_context().balance["enemies"]}
     return AdminBotOverviewResponse(
         max_runs_per_hour=MAX_RUNS_PER_HOUR,
         min_cadence_sec=MIN_CADENCE_SEC,
         bots=[AdminBotView(**vars(row)) for row in list_bot_rows(pool)],
-        doppels=[AdminDoppelView(**vars(row)) for row in list_doppel_rows(pool)],
+        # **종 이름을 한글로 싣는다.** 화면이 `goblin_rusher_0` 같은 자리 id 를 적으면
+        # 도감은 「고블린 돌격병」이라 부르는 같은 개체를 둔갑 목록만 id 로 부른다.
+        doppels=[
+            AdminDoppelView(
+                **vars(row),
+                label_ko=str(enemies.get(row.catalog_id, {}).get("label_ko", row.catalog_id)),
+            )
+            for row in list_doppel_rows(pool)
+        ],
     )
 
 
@@ -178,7 +187,7 @@ def save_admin_bot_name(
     if found is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"없는 봇이다: {request.account_id}")
     try:
-        renamed = rename_bot_handle(pool, request.account_id, request.name)
+        renamed = rename_bot(pool, request.account_id, request.name)
     except ValueError as error:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(error)) from error
     # **이름은 하중을 받는다.** 순위표에 적힌 이름이 어느 날 달라지면 「누가 누구였지」가

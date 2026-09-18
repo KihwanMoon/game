@@ -71,26 +71,8 @@ export function formatWinRate(wins: number, runs: number): string {
   return `${String(wins)} / ${String(runs)} (${String(Math.round((wins * 100) / runs))}%)`
 }
 
-/** 봇 이름의 접두어. 서버(`BOT_HANDLE_PREFIX`)와 같은 값이어야 한다. */
-const BOT_PREFIX = 'bot_'
-
-/**
- * 사람이 고칠 수 있는 **뒷자리**만 뽑는다.
- *
- * **접두어는 칸에 안 넣는다.** 넣으면 고칠 수 있게 되고, 고칠 수 있으면 지울 수 있다 —
- * 그 순간 순위표·경매·도감에서 봇이 사람과 구별되지 않는다 (2026-09-11 신고). 칸 옆에
- * 라벨로 붙여 보여만 준다.
- *
- * @param handle 계정의 전체 이름.
- * @returns 접두어를 뗀 뒷자리. 접두어가 없으면(봇이 아닌 이름) 통째로 돌려준다 —
- *   빈 칸을 주면 사람이 무엇을 고치는지 모른다.
- */
-export function readBotNameSuffix(handle: string): string {
-  return handle.startsWith(BOT_PREFIX) ? handle.slice(BOT_PREFIX.length) : handle
-}
-
-/** 이름 뒷자리의 길이 상한. 서버 `MAX_BOT_NAME` 과 같은 값이다. */
-const MAX_BOT_NAME = 20
+/** 이름 칸의 길이 상한. 서버 `NICKNAME_MAX` 와 같은 값이다. */
+const MAX_BOT_NAME = 16
 
 /** BotPanel 이 받는 props. */
 export interface BotPanelProps {
@@ -305,7 +287,7 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
   function sendName(value: string): void {
     const wanted = value.trim()
     // 안 바뀌었으면 안 보낸다 — 칸을 지나기만 해도 감사 기록이 쌓인다.
-    if (wanted === '' || wanted === readBotNameSuffix(bot.handle)) {
+    if (wanted === '' || wanted === bot.handle) {
       return
     }
     props.onName?.(bot.accountId, wanted)
@@ -316,19 +298,19 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
       {/* **접두어는 안 보여 주고 안 받는다.** `bot_` 은 서버가 지키는 것이고, 고칠 수
           있게 보여 주면 지울 수 있게 된다 — 그 순간 순위표·경매·도감에서 봇이 사람과
           구별되지 않는다. 사람이 고치는 것은 뒷자리뿐이다. */}
-      {/* **「이름」이라고 적는다.** 접두어만 붙여 두었더니 그것이 칸의 이름표가 아니라
-          장식으로 읽혔고, 사람이 이름을 고치러 상세 카드의 제목을 눌렀다 (2026-09-18
-          실제 신고). 이웃 칸들(`실력 %`·`간격 초`)이 전부 무엇인지 적고 있는데 이 칸만
-          안 적고 있었다. */}
+      {/* **봇도 사람과 같은 이름을 쓴다** (2026-09-18). 예전에는 `bot_` 접두어를 라벨로
+          세우고 뒷자리만 고치게 했는데, 그러면 봇 이름이 순위표·경매·도감 어디서나
+          id 처럼 보인다. 「이것이 봇이다」는 이름이 아니라 글리프가 싣는다 — 색·글리프·
+          명도 셋으로 적는 규율과 같은 자리다. */}
       <label className="bots__label" htmlFor={`name-${String(bot.accountId)}`}>
-        {`이름 ${BOT_PREFIX}`}
+        이름
       </label>
       <input
         id={`name-${String(bot.accountId)}`}
         className="bots__field bots__field--name"
         type="text"
         maxLength={MAX_BOT_NAME}
-        defaultValue={readBotNameSuffix(bot.handle)}
+        defaultValue={bot.handle}
         aria-label="봇 이름"
         onBlur={(event) => {
           sendName(event.target.value)
