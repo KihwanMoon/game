@@ -9,12 +9,26 @@
 경로까지 전부 들어 있었다 — **프록시 규칙 한 줄에 기댄 상태**였다.
 """
 
+import os
 import re
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from game.api.main import create_app
+from game.app.store.connection import DATABASE_URL_ENV
+
+# **모듈 전체에 걸지 않는다.** 이 파일의 첫 검사(관리자 경로에 문지기가 있는가)는 라우트
+# 표를 훑는 정적 검사라 DB 없이도 값을 한다 — 모듈에 걸면 그것까지 함께 꺼진다.
+#
+# 나머지는 `create_app()` 을 띄우고 실제로 요청을 보내므로 연결 문자열이 필요하고, 표시가
+# 없던 동안 **건너뛰는 대신 터졌다.** 그래서 DB 없이 돌리면 이 파일 하나 때문에 전량이
+# 빨개졌고, 그것이 게이트에 pytest 를 못 넣던 이유 중 하나였다.
+needs_db = pytest.mark.skipif(
+    not os.environ.get(DATABASE_URL_ENV, "").strip(),
+    reason=f"{DATABASE_URL_ENV} 가 없다 — 컨테이너 게이트에서 돈다",
+)
 
 ROUTES_DIR = Path(__file__).resolve().parent.parent / "game" / "api" / "routes"
 
@@ -66,6 +80,7 @@ def test_every_admin_route_has_a_gate() -> None:
     assert naked == [], f"문지기 없는 관리자 경로: {naked}"
 
 
+@needs_db
 def test_validation_errors_do_not_echo_the_input() -> None:
     """검증 실패가 받은 값을 안 되비춘다 — 비밀번호가 실려 오는 자리가 있다.
 

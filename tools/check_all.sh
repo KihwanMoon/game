@@ -93,6 +93,29 @@ if ! git ls-files '*.py' \
     FAILED="${FAILED} check_module_length"
 fi
 
+# 검사가 도는지 본다 (2026-09-18 추가).
+#
+# **넣은 이유.** 2막이 층 상한을 10 → 15 로 올렸는데 `test_room_chain` 이 옛 층수를 박은
+# 채 남아, 커밋 여럿을 지나도록 빨갛게 서 있었다. 게이트가 ruff·mypy·네이밍·모듈 길이·
+# 구조만 보고 pytest 를 안 돌려서 아무도 못 봤다 — 검사되지 않는 것은 지켜지고 있다고
+# 착각하게 만든다(§7.1)는 이 파일의 원칙이 pytest 자신에게는 안 걸려 있었다.
+#
+# **DB 를 요구하지 않는다.** 연결 문자열이 없으면 DB 검사들이 스스로 건너뛰므로
+# (각 파일의 `skipif`), 호스트의 pre-push 에서는 500건쯤이 빠지고 50초에 끝난다.
+# `docker compose run --rm check` 도 마찬가지다 — `check` 서비스에는 postgres 도
+# `GAME_DATABASE_URL` 도 안 붙어 있다. **DB 검사 전량은 여기가 아니라
+# `docker compose run --rm test` 가 본다** (compose 가 game_test 를 띄워 준다).
+# 그러니 이 단계가 초록이어도 DB 경로까지 초록인 것은 아니다.
+#
+# **스킵을 실패로 보지 않는다.** 건너뛴 것은 「여기서 잴 수 없다」이지 「깨졌다」가 아니다.
+# 종료 코드로만 판정한다 — 출력 줄을 세면 형식이 바뀌는 날 조용히 0 이 된다.
+printf '
+── pytest
+'
+if ! uv run pytest -q; then
+    FAILED="${FAILED} pytest"
+fi
+
 # 구조 검사는 §8.9 를 도입한 저장소만 둔다. 없으면 이 블록을 지운다.
 if [[ -x tools/check_structure.sh ]]; then
     step "check_structure" ./tools/check_structure.sh
