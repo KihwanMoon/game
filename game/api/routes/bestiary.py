@@ -15,6 +15,7 @@ from game.api.schemas import BestiaryEntry, BestiaryResponse
 from game.app.monsters.affixes import build_affix_label, list_monster_affixes
 from game.app.monsters.growth import get_level_cap
 from game.app.monsters.tiers import MonsterTier
+from game.app.progression.floors import FIRST_FLOOR, read_floor_cap
 from game.app.store.monster_snapshots import build_monster_snapshot
 from game.app.store.monsters import list_monsters
 from game.app.store.trophies import list_trophies
@@ -23,10 +24,12 @@ from game.schemas.ruleset import RuleSet, parse_ruleset
 
 router = APIRouter()
 
-# 도감이 훑는 층 범위. 지금은 층 사슬이 없어 1층뿐이지만, 범위로 두면 층이 늘 때
-# 이 라우트를 고치지 않아도 된다.
-MIN_FLOOR = 1
-MAX_FLOOR = 5
+# 도감이 훑는 층 범위는 **정본에서 읽는다** (`balance.json` 의 `floor_scale.max_floor`).
+#
+# 여기 `MAX_FLOOR = 5` 가 박혀 있었다. 주석은 "범위로 두면 층이 늘 때 이 라우트를 고치지
+# 않아도 된다" 고 적었는데, 정작 정본을 안 읽고 수를 박아서 그 뜻이 안 지켜졌다 — 층이
+# 15 로 늘어난 뒤에도 도감은 5장까지만 훑었고, 6장 아래의 몬스터는 세계에 살아도 목록에
+# 없었다 (2026-09-18 실제 신고). 박아 둔 수는 늘 그 순간에만 맞는다.
 
 
 def resolve_ruleset_payload(frozen: dict | None, fallback: RuleSet | None) -> dict | None:
@@ -71,7 +74,7 @@ def read_bestiary(account: CurrentAccount) -> BestiaryResponse:
     context = get_context()
     by_id = {kind["id"]: kind for kind in context.balance["enemies"]}
     entries: list[BestiaryEntry] = []
-    for floor in range(MIN_FLOOR, MAX_FLOOR + 1):
+    for floor in range(FIRST_FLOOR, read_floor_cap(context.balance) + 1):
         for record in list_monsters(pool, floor):
             base = by_id.get(record.catalog_id)
             if base is None:

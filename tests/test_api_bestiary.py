@@ -187,3 +187,34 @@ def test_an_empty_ruleset_falls_back_to_the_species_table(client, token):
     )
     assert entry["ruleset"] is not None
     assert entry["ruleset"]["rules"], "빈 절을 그대로 폈다 — 종의 표를 내야 한다"
+
+
+def test_the_bestiary_reaches_the_last_floor(client, token):
+    """★ **도감이 마지막 장까지 훑는다.**
+
+    여기 `MAX_FLOOR = 5` 가 박혀 있었다 — 층이 15 로 늘어난 뒤에도 도감은 5장까지만
+    훑어서, 6장 아래에 사는 몬스터는 세계에 있어도 목록에 없었다 (2026-09-18 실제 신고).
+    그 상수의 주석은 "범위로 두면 층이 늘 때 이 라우트를 고치지 않아도 된다" 고 적었는데,
+    정작 정본을 안 읽고 수를 박아서 그 뜻이 안 지켜졌다.
+
+    **층수를 여기에도 박지 않는다.** 정본(`balance.json` 의 `floor_scale.max_floor`)에서
+    읽어 마지막 장에 놓고 찾는다 — 3막이 열려도 같은 것을 계속 지킨다.
+    """
+    from game.api.deps import get_context, get_pool
+    from game.app.monsters.tiers import MonsterTier
+    from game.app.progression.floors import read_floor_cap
+    from game.app.store.monsters import create_monster, list_monsters
+
+    last = read_floor_cap(get_context().balance)
+    pool = get_pool()
+    deep_slot = f"{SLOT}-깊은장검사"
+    create_monster(pool, "goblin_rusher", MonsterTier.ELITE, last, deep_slot)
+    placed = next(item for item in list_monsters(pool, last) if item.entity_slot == deep_slot)
+    try:
+        body = client.get("/api/bestiary", headers=build_headers(token)).json()
+        found = [row for row in body["entries"] if row["record_id"] == placed.record_id]
+        assert found, f"{last}장의 개체가 도감에 없다 — 훑는 범위가 정본보다 짧다"
+        assert found[0]["zone_floor"] == last
+    finally:
+        with pool.connection() as connection:
+            connection.execute("DELETE FROM entity_record WHERE id = %s", (placed.record_id,))
