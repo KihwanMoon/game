@@ -17,7 +17,7 @@ import { PublishBar } from './PublishBar'
 import { readActivePack } from '../content/pack'
 import { readReplay } from '../storage/replaySync'
 import { ALL_ITEM_TAGS, ALL_SKILL_IDS } from '../core/resources'
-import { BENCHMARK_RULESETS, G0_RULESETS } from '../core/resources'
+import { BENCHMARK_RULESETS, G0_RULESETS, RULE_TEMPLATES } from '../core/resources'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import { BotDetailPanel } from './BotDetail'
 import { DoppelPanel } from './DoppelPanel'
@@ -129,6 +129,17 @@ const RULESET_IDS: readonly string[] = [
   ...BENCHMARK_RULESETS.keys(),
   ...G0_RULESETS.keys(),
 ].sort()
+
+/**
+ * 내력 id 에서 **한글 이름**으로. 정본은 규칙표 자산의 `label_ko` 다.
+ *
+ * **화면은 id 를 안 적는다** (2026-09-18). `sniper`·`door_hold` 는 파일 안의 열쇠이고,
+ * 같은 규칙표를 사람은 「겨눔」·「문지기」라 부른다 — 이름이 이미 자산에 있는데 화면만
+ * 열쇠를 적고 있었다.
+ */
+const RULESET_NAMES: ReadonlyMap<string, string> = new Map(
+  RULE_TEMPLATES.map((template) => [template.templateId, template.labelKo || template.templateId]),
+)
 
 /**
  * 연 자산의 절을 꺼낸다.
@@ -385,6 +396,7 @@ export function AdminScreen(): React.JSX.Element {
           <BotPanel
             overview={bots}
             rulesetIds={RULESET_IDS}
+            rulesetNames={RULESET_NAMES}
             myBag={myBag}
             onPickBot={(accountId) => {
               setBotBag(undefined)
@@ -447,6 +459,7 @@ export function AdminScreen(): React.JSX.Element {
                 baseStats={PLAYER_BASE}
                 allSkills={ALL_SKILL_IDS}
                 allItems={ALL_ITEM_TAGS}
+                rulesetNames={RULESET_NAMES}
                 onPlay={(submissionId) => {
                   setReplay(undefined)
                   void readReplay(token, submissionId).then(setReplay)

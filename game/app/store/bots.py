@@ -88,6 +88,13 @@ def create_bot(
     # 태어나므로 이름이 `user_` 로 시작하는데, 순위표·경매·도감이 전부 이 이름만 적는다 —
     # 그러면 어디에서도 봇인지 알 수 없다. 앞만 바꾸므로 계정 id 도 뒷자리도 그대로다.
     apply_bot_handle(pool, account_id)
+    # **이름을 닉네임에도 박는다** (2026-09-18). 표시 이름이
+    # `COALESCE(nickname, login_id, handle)` 이므로, 여기 안 적으면 순위표·경매·도감이
+    # 자동 별명(`bot_…`)을 적는다 — 사람에게 그것은 이름이 아니라 id 로 읽힌다.
+    #
+    # **실패해도 계속 간다.** 이름이 겹치면 봇이 안 서는 것보다 자동 별명으로라도 서는
+    # 편이 낫다. 관리 화면에서 언제든 지어 줄 수 있다.
+    apply_nickname(pool, account_id, label)
     with pool.connection() as connection:
         connection.execute("UPDATE account SET is_bot = TRUE WHERE id = %s", (account_id,))
         connection.execute(

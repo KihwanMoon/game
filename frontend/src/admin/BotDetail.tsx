@@ -87,6 +87,11 @@ export interface BotDetailProps {
   readonly baseStats: Record<string, number>
   readonly allSkills: readonly string[]
   readonly allItems: readonly string[]
+  /**
+   * 내력 id 에서 한글 이름으로. **화면은 id 를 안 적는다** — `sniper` 는 파일 안의
+   * 열쇠이고 사람은 같은 것을 「겨눔」이라 부른다.
+   */
+  readonly rulesetNames?: ReadonlyMap<string, string>
   /** 가방 칸을 골랐을 때. 관리 화면은 넘기기를 건다 — 착용은 걸지 않는다. */
   readonly onPickCell?: (itemId: number) => void
   /** 리플레이 줄의 재생을 눌렀을 때. 그 판을 다시 돌리라는 신호다. */
@@ -207,6 +212,8 @@ function BotUpkeep(props: { readonly rows: BotDetail['maintenance']['rows'] }): 
  * @returns 렌더 트리.
  */
 export function BotDetailPanel(props: BotDetailProps): React.JSX.Element {
+  // 이름표가 없으면 id 라도 적는다 — 빈 칸보다는 낫다.
+  const readRulesetName = (id: string): string => props.rulesetNames?.get(id) ?? id
   const { detail } = props
   if (detail === undefined) {
     return (
@@ -223,7 +230,7 @@ export function BotDetailPanel(props: BotDetailProps): React.JSX.Element {
         <>
           {/* **절이 아니라 id 다.** 봇의 전투 규칙표는 우리가 고른 견본이고, 그 내용은
               사람 화면의 견본 목록에 이미 있다 — 여기 베끼면 두 곳이 갈린다. */}
-          <ValueExpr text={`전투 내력 · ${detail.rulesetId}`} size="sm" />
+          <ValueExpr text={`전투 내력 · ${readRulesetName(detail.rulesetId)}`} size="sm" />
           <ValueExpr
             text="견본 하나를 그대로 돌린다 — 고치려면 위의 봇 표에서 내력을 바꾼다"
             size="sm"
@@ -332,7 +339,13 @@ export function BotDetailPanel(props: BotDetailProps): React.JSX.Element {
       ),
     },
   ]
-  return <DetailShell title={`봇 · ${detail.handle}`} meta={detail.rulesetId} tabs={tabs} />
+  return (
+    <DetailShell
+      title={`봇 · ${detail.handle}`}
+      meta={readRulesetName(detail.rulesetId)}
+      tabs={tabs}
+    />
+  )
 }
 
 /** 도플갱어에 없는 것들. **빈 탭으로 두지 않고 왜 없는지를 적는다.** */

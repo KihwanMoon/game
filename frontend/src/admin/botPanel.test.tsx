@@ -67,9 +67,16 @@ describe('표기', () => {
   })
 })
 
+// 내력 id 에서 한글 이름으로. 화면이 id 를 적으면 아래 ★ 검사가 잡는다.
+const RULESET_NAMES: ReadonlyMap<string, string> = new Map([
+  ['sniper', '겨눔'],
+  ['g0_kite', '겁쟁이'],
+])
+
 describe('봇 패널', () => {
   const html = renderToStaticMarkup(
-    <BotPanel overview={OVERVIEW} rulesetIds={['sniper', 'g0_kite']} onSave={() => undefined} />,
+    <BotPanel overview={OVERVIEW} rulesetIds={['sniper', 'g0_kite']} onSave={() => undefined}
+        rulesetNames={RULESET_NAMES} />,
   )
 
   it('★ 판·승·최고층이 줄에 있다 — 성격보다 결과가 먼저다', () => {
@@ -94,7 +101,8 @@ describe('봇 패널', () => {
       bots: OVERVIEW.bots.map((bot) => ({ ...bot, wins: 0 })),
     }
     const shown = renderToStaticMarkup(
-      <BotPanel overview={none} rulesetIds={[]} onSave={() => undefined} />,
+      <BotPanel overview={none} rulesetIds={[]} onSave={() => undefined}
+        rulesetNames={RULESET_NAMES} />,
     )
     expect(shown).toContain('아직 아무 봇도 못 이겼다')
   })
@@ -116,6 +124,7 @@ describe('봇 패널', () => {
         overview={OVERVIEW}
         rulesetIds={[]}
         onSave={() => undefined}
+        rulesetNames={RULESET_NAMES}
         onGift={() => undefined}
       />,
     )
@@ -123,9 +132,25 @@ describe('봇 패널', () => {
     expect(shown).not.toContain('넘기면 귀속된다')
   })
 
+  it('★ **내력을 id 가 아니라 한글 이름으로 적는다**', () => {
+    // `sniper` 는 파일 안의 열쇠이고 사람은 같은 것을 「겨눔」이라 부른다. 이름이 이미
+    // 규칙표 자산의 `label_ko` 에 있는데 화면만 열쇠를 적고 있었다 (2026-09-18 신고).
+    const shown = renderToStaticMarkup(
+      <BotPanel
+        overview={OVERVIEW}
+        rulesetIds={['sniper', 'g0_kite']}
+        rulesetNames={RULESET_NAMES}
+        onSave={() => undefined}
+      />,
+    )
+    expect(shown).toContain('겨눔')
+    expect(shown).not.toContain('sniper')
+  })
+
   it('현황이 없어도 안 터진다 — 서버에 못 닿는 것은 흔한 일이다', () => {
     const shown = renderToStaticMarkup(
-      <BotPanel overview={undefined} rulesetIds={[]} onSave={() => undefined} />,
+      <BotPanel overview={undefined} rulesetIds={[]} onSave={() => undefined}
+        rulesetNames={RULESET_NAMES} />,
     )
     expect(shown).toContain('봇이 없다')
   })
@@ -156,6 +181,7 @@ describe('봇 인벤토리는 유저 화면과 같은 격자다', () => {
       overview={OVERVIEW}
       rulesetIds={[]}
       onSave={() => undefined}
+        rulesetNames={RULESET_NAMES}
       myBag={BAG}
       onGift={() => undefined}
     />,

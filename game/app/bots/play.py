@@ -85,13 +85,21 @@ def resolve_claim_floors(
 def list_persona_specs() -> tuple[tuple[str, str, int, int], ...]:
     """봇 열의 (이름, 규칙표, 리듬, 실력) 을 낸다.
 
-    이름을 성격에서 떼어 낸 이유는 **화면에서 봇임을 알아보는 것이 먼저**이기 때문이다
-    (T11). 성격 이름(「겁쟁이」)은 사람 이름처럼 보여서 그 목적과 어긋난다.
+    **성격 이름을 그대로 쓴다** (2026-09-18 개정). 예전에는 여기서 이름을 버리고
+    `bot1`·`bot2` 를 썼고, 사유는 "화면에서 봇임을 알아보는 것이 먼저다(T11) — 성격
+    이름은 사람 이름처럼 보인다" 였다.
+
+    **그 판단을 뒤집었다.** 봇도 사람과 같은 이름으로 부른다 — 「겨눔」·「문지기」는
+    무엇을 하는 봇인지까지 말해 주는데 `bot1` 은 아무것도 말하지 않는다. 「이것이
+    봇이다」는 이름이 아니라 `is_bot` 이 싣는다: 한 채널에 기대지 않는 것이 이 저장소의
+    규율이고(색·글리프·명도 3중 표기), 이름 하나에 실었던 것이 그 규율을 어긴 자리였다.
+
+    자동 별명(`handle`)은 여전히 `bot_…` 이라 내부에서는 그대로 가려진다.
 
     Returns:
         순번 순의 명세들.
     """
     return tuple(
-        (build_bot_handle(index), persona.ruleset_id, persona.cadence_sec, persona.skill_pct)
-        for index, persona in enumerate(BOT_PERSONAS)
+        (persona.label, persona.ruleset_id, persona.cadence_sec, persona.skill_pct)
+        for persona in BOT_PERSONAS
     )

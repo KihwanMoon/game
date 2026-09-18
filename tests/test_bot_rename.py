@@ -134,3 +134,29 @@ def test_people_are_not_bots(pool):
     finally:
         with pool.connection() as connection:
             connection.execute("DELETE FROM account WHERE id = %s", (account.account_id,))
+
+
+@needs_db
+def test_a_new_bot_gets_its_persona_name(pool):
+    """★ **새로 서는 봇도 이름을 갖는다.**
+
+    성격 이름이 코드에는 있었는데(`BOT_PERSONAS`) 화면까지 오지 않았다 —
+    `list_persona_specs` 가 그것을 버리고 `bot1` 을 쓰고 있었다. 되돌린 뒤로는
+    `create_bot` 이 닉네임에 적으므로 순위표·경매·도감이 전부 그 이름을 쓴다.
+    """
+    from game.app.bots.play import list_persona_specs
+    from game.app.store.accounts import create_account
+    from game.app.store.bots import create_bot
+    from game.app.store.display_name import read_display_name
+
+    label, ruleset_id, cadence, skill = list_persona_specs()[0]
+    # 명세가 내는 이름이 이미 한글이어야 한다 — 여기가 `bot1` 로 돌아가면 그때 걸린다.
+    assert not label.startswith("bot")
+
+    account, _ = create_account(pool)
+    try:
+        create_bot(pool, account.account_id, label, ruleset_id, cadence, skill)
+        assert read_display_name(pool, account.account_id) == label
+    finally:
+        with pool.connection() as connection:
+            connection.execute("DELETE FROM account WHERE id = %s", (account.account_id,))

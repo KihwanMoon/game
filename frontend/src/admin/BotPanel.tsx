@@ -78,6 +78,11 @@ const MAX_BOT_NAME = 16
 export interface BotPanelProps {
   readonly overview: BotOverview | undefined
   readonly rulesetIds: readonly string[]
+  /**
+   * 내력 id 에서 한글 이름으로. **화면은 id 를 안 적는다** — `sniper` 는 파일 안의
+   * 열쇠이고 사람은 같은 것을 「겨눔」이라 부른다.
+   */
+  readonly rulesetNames: ReadonlyMap<string, string>
   readonly onSave: (bot: {
     accountId: number
     rulesetId: string
@@ -121,12 +126,14 @@ export interface BotPanelProps {
  * @param bot 그릴 봇.
  * @param isPicked 지금 고른 줄인가.
  * @param onPick 줄을 고른다.
+ * @param rulesetNames 내력 id 에서 한글 이름으로.
  * @returns 줄 요소.
  */
 function renderRow(
   bot: BotView,
   isPicked: boolean,
   onPick: (bot: BotView) => void,
+  rulesetNames: BotPanelProps['rulesetNames'],
 ): React.JSX.Element {
   return (
     <button
@@ -145,7 +152,7 @@ function renderRow(
       />
       <span className="botrow__cell">{formatWinRate(bot.wins, bot.runs)}</span>
       <span className="botrow__cell">{`${String(bot.bestFloor)}장`}</span>
-      <span className="botrow__cell">{bot.rulesetId}</span>
+      <span className="botrow__cell">{rulesetNames.get(bot.rulesetId) ?? bot.rulesetId}</span>
       <span className="botrow__cell">{`실력 ${String(bot.skillPct)}%`}</span>
       <span className="botrow__cell">{formatCadence(bot.cadenceSec)}</span>
       <span className="botrow__cell">{bot.isActive ? formatDue(bot.dueInSec) : '—'}</span>
@@ -206,13 +213,18 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
               listClass="bots__grid"
               emptyText={EMPTY_BOTS}
               renderRow={(bot) =>
-                renderRow(bot, bot.accountId === pickedId, (target) => {
-                  const next = pickedId === target.accountId ? 0 : target.accountId
-                  setPickedId(next)
-                  if (next !== 0) {
-                    props.onPickBot?.(next)
-                  }
-                })
+                renderRow(
+                  bot,
+                  bot.accountId === pickedId,
+                  (target) => {
+                    const next = pickedId === target.accountId ? 0 : target.accountId
+                    setPickedId(next)
+                    if (next !== 0) {
+                      props.onPickBot?.(next)
+                    }
+                  },
+                  props.rulesetNames,
+                )
               }
             />
             {picked === undefined ? (
@@ -227,6 +239,7 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
                 key={picked.accountId}
                 bot={picked}
                 rulesetIds={props.rulesetIds}
+                rulesetNames={props.rulesetNames}
                 minCadenceSec={props.overview?.minCadenceSec ?? 0}
                 onSave={props.onSave}
                 {...(props.onName === undefined ? {} : { onName: props.onName })}
@@ -252,6 +265,7 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
 interface BotEditorProps {
   readonly bot: BotView
   readonly rulesetIds: readonly string[]
+  readonly rulesetNames: BotPanelProps['rulesetNames']
   readonly minCadenceSec: number
   readonly onSave: BotPanelProps['onSave']
   readonly onName?: BotPanelProps['onName']
@@ -337,7 +351,7 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
       >
         {props.rulesetIds.map((id) => (
           <option value={id} key={id}>
-            {id}
+            {props.rulesetNames.get(id) ?? id}
           </option>
         ))}
       </select>

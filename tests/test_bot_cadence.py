@@ -15,16 +15,28 @@ from game.app.bots.personas import (
 )
 
 
-def test_the_names_are_bot1_through_bot10():
-    """★ 이름이 `bot1`~`bot10` 이다 — 화면에서 봇임을 바로 알아봐야 한다 (T11).
+def test_the_names_are_the_persona_names():
+    """★ **봇도 사람처럼 이름으로 불린다** (2026-09-18 개정).
 
-    성격 이름(「겁쟁이」)은 사람 이름처럼 보여서 그 목적과 어긋난다. 성격은 남기되
-    계정 이름은 따로 짓는다.
+    여기 있던 검사는 이름이 `bot1`~`bot10` 이어야 한다고 못박았고, 사유는 "화면에서
+    봇임을 바로 알아봐야 한다(T11) — 성격 이름은 사람 이름처럼 보인다" 였다.
+
+    **그 목적을 이름이 지지 않는다.** 「이것이 봇이다」는 `is_bot` 이 싣는다 — 한 채널에
+    기대지 않는 것이 이 저장소의 규율이고(색·글리프·명도 3중 표기), 이름 하나에 실었던
+    것이 그 규율을 어긴 자리였다. 게다가 `bot1` 은 사람에게 이름이 아니라 id 로 읽혔다
+    (실제 신고).
+
+    성격 이름은 **무엇을 하는 봇인지까지** 말한다 — 「겨눔」·「문지기」. `bot1` 은
+    아무것도 말하지 않는다.
     """
+    from game.app.bots.personas import BOT_PERSONAS
     from game.app.bots.play import list_persona_specs
 
     names = [spec[0] for spec in list_persona_specs()]
-    assert names == [f"bot{number}" for number in range(1, 11)]
+    assert names == [persona.label for persona in BOT_PERSONAS]
+    # 되돌아가면 여기서 걸린다. 자동 별명(`handle`)은 여전히 `bot_…` 이라 내부에서는
+    # 가려지지만, 화면에 적히는 이름은 사람의 말이어야 한다.
+    assert not any(name.startswith("bot") for name in names)
 
 
 def test_the_cap_is_two_runs_an_hour():
