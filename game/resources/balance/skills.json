@@ -1,6 +1,6 @@
 {
   "_comment": "스킬 정의. balance.json 에서 갈라 나왔다 — 스킬은 종류가 늘어나는 것이고 밸런스 수치는 조정되는 것이라 수명이 다르다 (docs/설계/5_스킬 §9). family·shape·target_faction·telegraph·tags 는 아직 아무도 읽지 않는 서술 필드이며, 블록 v5 의 USE_SKILL[skill_id] 와 계열별 실행기가 이것을 읽는다. coef_pct·cooldown·range·heal_pct 는 값이 그대로이므로 골든 리플레이가 바뀌지 않는다. v2: GUARD 계열을 더했다(결정 #16) — 방패를 들었는데 막는 행동이 없으면 방패는 그냥 방어력 숫자이고 '양손무기 vs 한손+방패' 선택이 성립하지 않는다 (P3).",
-  "skill_list_version": 9,
+  "skill_list_version": 10,
   "skills": [
     {
       "id": "HEX_FIRE",
@@ -136,6 +136,59 @@
         "CONTROL"
       ],
       "_note": "**피해가 0 이고 한 칸뿐이다.** 밟고 선 칸에만 떨어지므로 카운터가 순수하게 하나다 — **아무 데로든 한 칸.** 그 한 칸을 안 움직이면 두 틱을 묶인다. 혼자서는 아무것도 못 하는 스킬이고, 그래서 이것을 쓰는 적은 **혼자 세우면 안 된다**: 묶어 두는 동안 다른 것이 친다. 설계/5_스킬 §10.6 이 마법 셋에 물은 「어느 대가를 낼 것인가」를 적 쪽에서 되묻는 자리다."
+    },
+    {
+      "id": "HEX_DIRGE",
+      "label_ko": "넋두리",
+      "family": "STATUS",
+      "actor": "enemy",
+      "shape": {
+        "kind": "AREA",
+        "radius": 2
+      },
+      "target_faction": "enemy",
+      "coef_pct": 40,
+      "cooldown": 8,
+      "range": 5,
+      "telegraph": 2,
+      "cancel_on_act": false,
+      "cancel_on_hit": true,
+      "effects": [
+        {
+          "kind": "STATUS",
+          "status": "SLOW",
+          "duration": 4
+        }
+      ],
+      "tags": [
+        "MAGIC",
+        "CAST",
+        "CONTROL"
+      ],
+      "_note": "**`SLOW` 를 거는 첫 적 스킬이다** (2026-09-18, 2막 후반). 상태는 2026-09-10 부터 행동 전체를 반으로 늦췄는데(`simulation/slow.py`) 그것을 거는 길이 세계에 없었다 — `내 상태이상[둔화]` 를 물을 수는 있고 답은 영영 거짓인 항이었다. 옴(`POISON`)이 2026-09-17 까지 그 상태였던 것과 같은 자리다.\n\n**11장의 답을 값으로 막는다.** 붉은 칸의 카운터는 「비켜선다」 하나인데, 느려지면 한 칸 비켜서는 데 두 틱이 든다 — 3틱 예고 안에 두 칸을 못 움직인다. 답이 사라지는 것이 아니라 **값이 두 배가 되는** 것이라 푸는 길이 남는다: 걸리기 전에 끊는다(`cancel_on_hit`). 그래서 예고를 2틱으로 둔다 — 1틱이면 끊을 틈이 없고, 3틱이면 그냥 걸어 나간다."
+    },
+    {
+      "id": "HEX_KNELL",
+      "label_ko": "조종",
+      "family": "ATTACK",
+      "actor": "enemy",
+      "shape": {
+        "kind": "AREA",
+        "radius": 3
+      },
+      "target_faction": "enemy",
+      "coef_pct": 200,
+      "cooldown": 14,
+      "range": 6,
+      "telegraph": 3,
+      "cancel_on_act": false,
+      "cancel_on_hit": false,
+      "tags": [
+        "MAGIC",
+        "CAST",
+        "AOE"
+      ],
+      "_note": "**끊기지 않는 유일한 굿이다** (2026-09-18). 적 마법 중 오래 부리는 것은 전부 `cancel_on_hit` 이 켜져 있어서, 13장이 가르친 답이 「붙어서 때린다」 하나로 수렴했다 — 그 한 줄이면 주술형 전부가 풀린다.\n\n**답을 없애지 않고 하나를 뺀다.** 이것도 붉은 칸이므로 비켜서기는 그대로 통한다. 반경 3 에 예고 3틱이라 세 칸을 걸으면 벗어나고, 그것이 이 굿의 카운터다. 넋두리와 함께 서는 자리에서만 두 답이 같이 막히며(느려지면 세 칸을 못 간다), 그래서 **둘을 함께 쓰는 것은 보스뿐이다.** 조종 무당은 이것만 쓴다 — 한 층 먼저 혼자 세워서 「때려도 안 끊긴다」 를 보스 앞에서 배우게 한다."
     },
     {
       "id": "ATTACK",

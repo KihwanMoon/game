@@ -45,7 +45,7 @@ export function VolumePanel(props: VolumePanelProps): React.JSX.Element {
   const [openFloor, setOpenFloor] = useState<number | undefined>(undefined);
   return (
     <>
-      {/* **막마다 한 판이다** (2026-09-17, 2막). 열다섯 장을 한 목록에 이으면 어디서
+      {/* **막마다 한 판이다** (2026-09-17, 2막). 스무 장을 한 목록에 이으면 어디서
           1막이 끝났는지가 안 보이고, 「빈 표지」가 그냥 열째 줄이 된다 — 그 장이 막을
           닫는 장이라는 사실이 글의 절반이다. */}
       {ACTS_KO.map((act) => (

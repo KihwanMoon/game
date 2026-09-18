@@ -118,6 +118,18 @@
     "plate_wraith": {
       "shape": "bolt",
       "motion": "fly"
+    },
+    "dirge_shaman": {
+      "shape": "bolt",
+      "motion": "fly"
+    },
+    "knell_shaman": {
+      "shape": "bolt",
+      "motion": "fly"
+    },
+    "mimic_wraith": {
+      "shape": "bolt",
+      "motion": "fly"
     }
   }
 }

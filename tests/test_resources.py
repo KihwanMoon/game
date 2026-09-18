@@ -33,10 +33,10 @@ from game.schemas.room import (
     load_room_templates,
 )
 
-ROOM_TEMPLATE_COUNT = 40  # +9 주술형 방과 2막 (2026-09-17)
+ROOM_TEMPLATE_COUNT = 45  # +5 2막 후반 16~20장 (2026-09-18)
 ROOM_WIDTH = 12
 ROOM_HEIGHT = 9
-ENEMY_KIND_COUNT = 20  # +4 늑대·골렘·저주 사수·역병 사제, +1 도플갱어, +6 주술형(2026-09-17)
+ENEMY_KIND_COUNT = 23  # +3 넋 무당·조종 무당·입내 귀신 (2026-09-18, 2막 후반)
 
 
 @pytest.fixture(scope="module")

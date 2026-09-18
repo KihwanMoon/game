@@ -1,5 +1,5 @@
 {
-  "enemy_list_version": 2,
+  "enemy_list_version": 3,
   "_comment": [
     "적 규칙표 (로드맵 Phase 1 W3). GDD §5 — 몬스터도 플레이어와 완전히 동일한 DSL 로",
     "기술한다. 도감이 이 규칙표를 그대로 보여주므로, 플레이어는 적의 논리를 읽고",
@@ -953,6 +953,222 @@
               }
             ]
           }
+        }
+      ]
+    },
+    {
+      "ruleset_id": "ai_dirge_shaman",
+      "version": 1,
+      "label_ko": "넋 무당",
+      "cpu_total": 4,
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_SKILL",
+          "target": "NEAREST",
+          "set_flag": null,
+          "action_param": "HEX_DIRGE",
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_cooldown_ready",
+                "lhs_param": "HEX_DIRGE",
+                "cmp": "==",
+                "rhs": true
+              },
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": {
+                  "stat": "attack_range"
+                }
+              }
+            ]
+          },
+          "_note": "**늦추는 것이 먼저다.** 불티 무당 표와 같은 모양이고 거는 것만 다르다 — 굿·물러서기·때리기로 4 CPU 가 끝난다. 붙은 채로 걸면 맞는 즉시 끊기므로(`cancel_on_hit`), 거리는 아래 물러서기 줄이 만든다."
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 1,
+          "action": "RETREAT",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": 2
+              }
+            ]
+          },
+          "_note": "임계가 2 다 — 넋두리 사거리가 5 라 두 칸까지 붙으면 물러서고도 건다."
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": {
+                  "stat": "attack_range"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "ruleset_id": "ai_knell_shaman",
+      "version": 1,
+      "label_ko": "조종 무당",
+      "cpu_total": 4,
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_SKILL",
+          "target": "NEAREST",
+          "set_flag": null,
+          "action_param": "HEX_KNELL",
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_cooldown_ready",
+                "lhs_param": "HEX_KNELL",
+                "cmp": "==",
+                "rhs": true
+              },
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": {
+                  "stat": "attack_range"
+                }
+              }
+            ]
+          },
+          "_note": "**안 끊기는 굿이라 물러설 이유가 없다.** 다른 주술형이 전부 물러서기 한 줄을 드는 것은 `cancel_on_hit` 때문인데 조종은 그것이 꺼져 있다 — 그래서 그 자리를 접근으로 바꿨다. 버티고 서는 것이 이 적의 교훈이다: 붙어서 때려도 굿은 그대로 떨어진다."
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": {
+                  "stat": "attack_range"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 1,
+          "action": "APPROACH",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": ">",
+                "rhs": {
+                  "stat": "attack_range"
+                }
+              }
+            ]
+          },
+          "_note": "물러서기 대신 접근이다. 사거리 6 이라 이 줄이 도는 일은 드물지만, 없으면 문 뒤에 선 상대를 향해 굿도 못 걸고 서 있게 된다."
+        }
+      ]
+    },
+    {
+      "ruleset_id": "ai_mimic_wraith",
+      "version": 1,
+      "label_ko": "입내 귀신",
+      "cpu_total": 4,
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 2,
+          "action": "USE_SKILL",
+          "target": "NEAREST",
+          "set_flag": null,
+          "action_param": "HEX_DIRGE",
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_cooldown_ready",
+                "lhs_param": "HEX_DIRGE",
+                "cmp": "==",
+                "rhs": true
+              },
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": {
+                  "stat": "attack_range"
+                }
+              }
+            ]
+          },
+          "_note": "**늦추는 것이 먼저다.** 느려진 상대는 조종의 반경 3 을 3틱 안에 못 벗어난다 — 순서가 뒤집히면 그냥 걸어 나간다. 판각 귀신이 「묶고 태운다」였다면 이것은 「늦추고 덮는다」이고, 두 보스의 차이가 곧 답의 차이다: 저쪽은 묶이기 전에 붙어야 하고 이쪽은 **넋두리를 예고 중에 끊어야** 한다."
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "USE_SKILL",
+          "target": "NEAREST",
+          "set_flag": null,
+          "action_param": "HEX_KNELL",
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_cooldown_ready",
+                "lhs_param": "HEX_KNELL",
+                "cmp": "==",
+                "rhs": true
+              },
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": {
+                  "stat": "attack_range"
+                }
+              }
+            ]
+          },
+          "_note": "**두 줄로 예산을 다 쓴다.** 판각 귀신 표와 같은 규율이다 — 때리기·접근이 없는 것은 잊어서가 아니라 CPU 4 가 여기서 끝나기 때문이고, 둘 다 쿨타임이면 DEFAULT 가 받는다. 보스의 무게는 규칙 수가 아니라 수치와 이 두 굿의 순서에 있다."
         }
       ]
     }

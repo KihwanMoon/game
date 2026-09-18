@@ -21,7 +21,7 @@ from game.config import BLOCKS_PATH
 from game.schemas.blocks import ACTION_COUNT, PERCEPTION_COUNT, load_block_catalog
 from game.schemas.ruleset import parse_ruleset
 
-BLOCK_LIST_VERSION = 17  # v17: 주술형 유형·셀렉터와 적 전용 마법 다섯 (2026-09-17)
+BLOCK_LIST_VERSION = 18  # v18: 2막 후반의 적 전용 마법 둘 — 넋두리·조종 (2026-09-18)
 LEGACY_ACTIONS = ("SKILL_1", "SKILL_2", "AREA_ATTACK", "HEAL", "SUMMON")
 
 

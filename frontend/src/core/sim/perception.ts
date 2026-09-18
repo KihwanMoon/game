@@ -80,6 +80,10 @@ const COOLDOWN_SKILLS: readonly string[] = [
   'HEX_FROST',
   'HEX_PLAGUE',
   'HEX_SNARE',
+  // **2막 후반이 둘을 더했다** (2026-09-18). 넋두리는 SLOW 를 거는 첫 적 스킬이고,
+  // 조종은 cancel_on_hit 이 꺼진 유일한 굿이다.
+  'HEX_DIRGE',
+  'HEX_KNELL',
 ]
 
 /**

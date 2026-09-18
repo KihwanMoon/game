@@ -54,12 +54,14 @@ def test_an_unknown_cap_stays_at_one():
     assert read_floor_cap({}) == 1
 
 
-def test_the_shipped_balance_declares_fifteen_floors():
-    """★ 실제로 쓰는 밸런스가 15층을 말한다 — 수식만 있고 값이 없으면 층이 안 오른다.
+def test_the_shipped_balance_declares_twenty_floors():
+    """★ 실제로 쓰는 밸런스가 20층을 말한다 — 수식만 있고 값이 없으면 층이 안 오른다.
 
-    **2막이 열리면서 10 에서 15 가 됐다** (2026-09-17). 장승은 10장에 그대로 있다 —
-    `floor_bosses` 가 층마다 어느 보스가 서는지를 따로 정하기 때문이며, 예전처럼
-    `boss_floor` 하나면 2막을 여는 순간 1막의 끝이 15장으로 옮겨 간다.
+    **2막이 열리면서 10 에서 15 가 됐고(2026-09-17), 2막 후반이 20 으로 늘렸다
+    (2026-09-18).** 앞 보스들이 제자리에 있는지를 함께 본다 — `floor_bosses` 가 층마다
+    어느 보스가 서는지를 따로 정하기 때문이며, 예전처럼 `boss_floor` 하나면 막을 여는
+    순간 앞 막의 끝이 마지막 층으로 옮겨 간다. 장승이 10장을, 판각 귀신이 15장을 떠나면
+    1막과 2막 전반의 끝이 함께 사라진다.
     """
     import json
     from pathlib import Path
@@ -67,11 +69,12 @@ def test_the_shipped_balance_declares_fifteen_floors():
     from game.app.progression.floors import find_boss_room, read_floor_bosses
 
     balance = json.loads(Path("game/resources/balance/balance.json").read_text(encoding="utf-8"))
-    assert read_floor_cap(balance) == 15
-    assert read_boss_floor(balance) == 15
+    assert read_floor_cap(balance) == 20
+    assert read_boss_floor(balance) == 20
     bosses = read_floor_bosses(balance)
     assert find_boss_room(bosses, 10) == "boss_hall", "장승이 10장을 떠나면 1막의 끝이 사라진다"
-    assert find_boss_room(bosses, 15) == "wraith_hall"
+    assert find_boss_room(bosses, 15) == "wraith_hall", "판각 귀신이 15장을 떠나면 고비가 사라진다"
+    assert find_boss_room(bosses, 20) == "voice_hall"
     assert find_boss_room(bosses, 12) == "", "보스가 없는 층에 보스를 세우면 안 된다"
 
 

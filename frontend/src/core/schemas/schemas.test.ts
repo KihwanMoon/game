@@ -37,10 +37,10 @@ import {
 } from './index'
 import type { RawBlockCatalog, RawRoomFile } from './index'
 
-const ROOM_TEMPLATE_COUNT = 40 // +9 주술형 방과 2막 (2026-09-17)
+const ROOM_TEMPLATE_COUNT = 45 // +5 2막 후반 16~20장 (2026-09-18)
 const ROOM_WIDTH = 12
 const ROOM_HEIGHT = 9
-const ENEMY_KIND_COUNT = 14 // +6 주술형 (2026-09-17)
+const ENEMY_KIND_COUNT = 17 // +3 넋 무당·조종 무당·입내 귀신 (2026-09-18)
 
 describe('블록 카탈로그', () => {
   it('개수가 동결값과 같다', () => {
@@ -115,7 +115,7 @@ describe('블록 카탈로그', () => {
 })
 
 describe('룸 템플릿', () => {
-  it('12x9 템플릿 마흔 개를 읽는다', () => {
+  it('12x9 템플릿 마흔다섯 개를 읽는다', () => {
     expect(ROOM_TEMPLATES).toHaveLength(ROOM_TEMPLATE_COUNT)
     for (const template of ROOM_TEMPLATES) {
       expect([template.width, template.height]).toEqual([ROOM_WIDTH, ROOM_HEIGHT])
@@ -225,7 +225,7 @@ describe('규칙표', () => {
     expect([...G0_RULESETS.keys()]).toEqual(['g0_pressure', 'g0_kite', 'g0_cover'])
   })
 
-  it('적 규칙표가 열넷이다', () => {
+  it('적 규칙표가 열일곱이다', () => {
     expect(ENEMY_RULESETS.size).toBe(ENEMY_KIND_COUNT)
   })
 

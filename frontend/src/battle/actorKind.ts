@@ -95,6 +95,10 @@ export const SHORT_LABEL_BY_KIND_ID: ReadonlyMap<string, string> = new Map([
   ['ember_shaman', '불티'],
   ['plague_shaman', '옴굿'],
   ['plate_wraith', '판각'],
+  // 2막 후반 셋 (2026-09-18). 무당이 셋 더 늘어 「무당」으로는 못 가른다.
+  ['dirge_shaman', '넋굿'],
+  ['knell_shaman', '조종'],
+  ['mimic_wraith', '입내'],
 ])
 
 /** 표에 없는 종류에서 잘라 쓸 글자 수. */

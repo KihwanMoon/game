@@ -773,6 +773,30 @@
           true
         ],
         [
+          "self_cooldown_ready[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_KNELL]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_KNELL]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_KNELL]",
+          true
+        ],
+        [
           "self_has_status[POISON]",
           false
         ],
@@ -1116,6 +1140,30 @@
         ],
         [
           "self_skill_ready[HEX_SNARE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_KNELL]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_KNELL]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_KNELL]",
           true
         ],
         [
@@ -1465,6 +1513,30 @@
           true
         ],
         [
+          "self_cooldown_ready[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_KNELL]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_KNELL]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_KNELL]",
+          true
+        ],
+        [
           "self_has_status[POISON]",
           false
         ],
@@ -1808,6 +1880,30 @@
         ],
         [
           "self_skill_ready[HEX_SNARE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_KNELL]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_KNELL]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_KNELL]",
           true
         ],
         [
@@ -2157,6 +2253,30 @@
           true
         ],
         [
+          "self_cooldown_ready[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_KNELL]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_KNELL]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_KNELL]",
+          true
+        ],
+        [
           "self_has_status[POISON]",
           false
         ],
@@ -2500,6 +2620,30 @@
         ],
         [
           "self_skill_ready[HEX_SNARE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_DIRGE]",
+          true
+        ],
+        [
+          "self_cooldown_ready[HEX_KNELL]",
+          true
+        ],
+        [
+          "self_has_skill[HEX_KNELL]",
+          true
+        ],
+        [
+          "self_skill_ready[HEX_KNELL]",
           true
         ],
         [
