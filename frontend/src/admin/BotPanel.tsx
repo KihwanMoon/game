@@ -71,6 +71,27 @@ export function formatWinRate(wins: number, runs: number): string {
   return `${String(wins)} / ${String(runs)} (${String(Math.round((wins * 100) / runs))}%)`
 }
 
+/** 봇 이름의 접두어. 서버(`BOT_HANDLE_PREFIX`)와 같은 값이어야 한다. */
+const BOT_PREFIX = 'bot_'
+
+/**
+ * 사람이 고칠 수 있는 **뒷자리**만 뽑는다.
+ *
+ * **접두어는 칸에 안 넣는다.** 넣으면 고칠 수 있게 되고, 고칠 수 있으면 지울 수 있다 —
+ * 그 순간 순위표·경매·도감에서 봇이 사람과 구별되지 않는다 (2026-09-11 신고). 칸 옆에
+ * 라벨로 붙여 보여만 준다.
+ *
+ * @param handle 계정의 전체 이름.
+ * @returns 접두어를 뗀 뒷자리. 접두어가 없으면(봇이 아닌 이름) 통째로 돌려준다 —
+ *   빈 칸을 주면 사람이 무엇을 고치는지 모른다.
+ */
+export function readBotNameSuffix(handle: string): string {
+  return handle.startsWith(BOT_PREFIX) ? handle.slice(BOT_PREFIX.length) : handle
+}
+
+/** 이름 뒷자리의 길이 상한. 서버 `MAX_BOT_NAME` 과 같은 값이다. */
+const MAX_BOT_NAME = 20
+
 /** BotPanel 이 받는 props. */
 export interface BotPanelProps {
   readonly overview: BotOverview | undefined
@@ -82,6 +103,13 @@ export interface BotPanelProps {
     cadenceSec: number
     isActive: boolean
   }) => void
+  /**
+   * 봇 이름의 **뒷자리**를 고친다 (U3).
+   *
+   * **접두어는 안 보낸다.** `bot_` 은 서버가 붙이고 지킨다 — 그것이 「이것이 봇이다」를
+   * 싣는 유일한 채널이고, 순위표·경매·도감이 전부 이름만 적는다 (2026-09-11 신고).
+   */
+  readonly onName?: (accountId: number, name: string) => void
   /** 내 가방의 아이템 하나를 이 봇에게 넘긴다. **한 방향이다** — 돌아오는 길은 없다. */
   readonly onGift?: (accountId: number, itemId: number) => void
   /**
@@ -219,6 +247,7 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
                 rulesetIds={props.rulesetIds}
                 minCadenceSec={props.overview?.minCadenceSec ?? 0}
                 onSave={props.onSave}
+                {...(props.onName === undefined ? {} : { onName: props.onName })}
                 onGift={props.onGift}
                 onCoin={props.onCoin}
                 myBag={props.myBag}
@@ -243,6 +272,7 @@ interface BotEditorProps {
   readonly rulesetIds: readonly string[]
   readonly minCadenceSec: number
   readonly onSave: BotPanelProps['onSave']
+  readonly onName?: BotPanelProps['onName']
   readonly onGift?: BotPanelProps['onGift']
   readonly onCoin?: BotPanelProps['onCoin']
   /** 내 가방. 여기서 골라 넘긴다 — id 를 손으로 적게 하지 않는다. */
@@ -267,7 +297,30 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
   const [coin, setCoin] = useState('')
   return (
     <div className="bots__edit">
-      <span className="bots__edit-name">{`${bot.handle} · ${bot.label}`}</span>
+      {/* **접두어는 안 보여 주고 안 받는다.** `bot_` 은 서버가 지키는 것이고, 고칠 수
+          있게 보여 주면 지울 수 있게 된다 — 그 순간 순위표·경매·도감에서 봇이 사람과
+          구별되지 않는다. 사람이 고치는 것은 뒷자리뿐이다. */}
+      <label className="bots__label" htmlFor={`name-${String(bot.accountId)}`}>
+        {BOT_PREFIX}
+      </label>
+      <input
+        id={`name-${String(bot.accountId)}`}
+        className="bots__field"
+        type="text"
+        maxLength={MAX_BOT_NAME}
+        defaultValue={readBotNameSuffix(bot.handle)}
+        aria-label="봇 이름"
+        onBlur={(event) => {
+          const wanted = event.target.value.trim()
+          const now = readBotNameSuffix(bot.handle)
+          // 안 바뀌었으면 안 보낸다 — 칸을 지나기만 해도 감사 기록이 쌓인다.
+          if (wanted === '' || wanted === now) {
+            return
+          }
+          props.onName?.(bot.accountId, wanted)
+        }}
+      />
+      <span className="bots__edit-name">{bot.label}</span>
       <select
         className="bots__field"
         aria-label="내력"

@@ -29,6 +29,7 @@ import { readInventory, type InventoryView } from '../storage'
 import {
   applyBotCoin,
   applyBotGift,
+  applyBotName,
   applyBotSettings,
   readBotAdmin,
   readBotBag,
@@ -389,6 +390,18 @@ export function AdminScreen(): React.JSX.Element {
                 }
                 setBots(updated)
                 showDetail(`${String(amount)}푼을 넘겼다 — 돌아오지 않는다`, 'header')
+              })
+            }}
+            onName={(accountId, name) => {
+              void applyBotName(token, accountId, name).then((result) => {
+                if (result.overview === undefined) {
+                  // 사유를 그대로 싣는다 — 「이미 쓰는 이름이다」와 「공백을 쓸 수
+                  // 없다」는 고치는 방법이 다르다.
+                  showDetail(result.said, 'header')
+                  return
+                }
+                setBots(result.overview)
+                showDetail('이름을 바꿨다 — 순위표·경매·도감이 이 이름을 쓴다', 'header')
               })
             }}
             onGift={(accountId, itemId) => {

@@ -8,7 +8,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { BotPanel, formatCadence, formatDue, formatWinRate } from './BotPanel'
+import { BotPanel, formatCadence, formatDue, formatWinRate, readBotNameSuffix } from './BotPanel'
 import type { BotOverview } from '../storage/botAdmin'
 
 const OVERVIEW: BotOverview = {
@@ -64,6 +64,19 @@ describe('표기', () => {
   it('차례가 지났으면 「차례」라고 적는다 — 음수 초는 아무것도 안 말한다', () => {
     expect(formatDue(-10)).toBe('차례')
     expect(formatDue(300)).toBe('5분 뒤')
+  })
+})
+
+describe('봇 이름', () => {
+  it('★ **접두어는 칸에 안 들어간다** — 고칠 수 있으면 지울 수 있다', () => {
+    // `bot_` 이 「이것이 봇이다」를 싣는 유일한 채널이다. 순위표·경매·도감이 전부
+    // 이름만 적으므로, 사람이 그것을 지우면 세 화면에서 봇이 사람이 된다 (2026-09-11).
+    expect(readBotNameSuffix('bot_3f9a')).toBe('3f9a')
+    expect(readBotNameSuffix('bot_고블린사냥꾼')).toBe('고블린사냥꾼')
+  })
+
+  it('접두어가 없는 이름은 통째로 준다 — 빈 칸이면 무엇을 고치는지 모른다', () => {
+    expect(readBotNameSuffix('user_7c21')).toBe('user_7c21')
   })
 })
 

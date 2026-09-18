@@ -7,6 +7,7 @@
  */
 import {
   TOKEN_HEADER,
+  readErrorDetail,
   readInventoryPayload,
   readProgressPayload,
   sendRequest,
@@ -230,6 +231,41 @@ export async function applyBotCoin(
     return undefined
   }
   return parseBotOverview((await response.json()) as Parameters<typeof parseBotOverview>[0])
+}
+
+/**
+ * 봇 이름의 **뒷자리**를 고친다 (U3).
+ *
+ * **접두어는 안 보낸다.** `bot_` 은 서버가 붙이고 지킨다 — 그것이 「이것이 봇이다」를
+ * 싣는 유일한 채널이라, 화면이 보낸 것을 그대로 쓰면 접두어를 지워 봇을 사람처럼
+ * 세울 수 있다. 순위표·경매·도감이 전부 이름만 적는다 (2026-09-11 신고).
+ *
+ * **사유를 함께 돌려준다.** 「이미 쓰는 이름이다」와 「공백을 쓸 수 없다」는 고치는
+ * 방법이 다른데, 둘을 「못 바꿨다」 하나로 접으면 사람이 무엇을 고쳐야 할지 모른다.
+ *
+ * @param token 기기 토큰.
+ * @param accountId 대상 봇.
+ * @param name 접두어를 뺀 이름.
+ * @returns 고친 뒤의 현황과 사유. 실패하면 `overview` 가 undefined 이고 `said` 가 찬다.
+ */
+export async function applyBotName(
+  token: string,
+  accountId: number,
+  name: string,
+): Promise<{ overview: BotOverview | undefined; said: string }> {
+  const response = await sendRequest('/admin/bot/name', {
+    method: 'POST',
+    headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ account_id: accountId, name }),
+  })
+  if (response === undefined) {
+    return { overview: undefined, said: '서버에 닿지 못했다' }
+  }
+  if (!response.ok) {
+    return { overview: undefined, said: await readErrorDetail(response) }
+  }
+  const parsed = parseBotOverview((await response.json()) as Parameters<typeof parseBotOverview>[0])
+  return { overview: parsed, said: '' }
 }
 
 /**
