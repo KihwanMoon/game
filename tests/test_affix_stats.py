@@ -208,7 +208,7 @@ def test_the_label_says_which_stat_it_lifts():
     from game.api.catalog_view import format_affix
     from game.schemas.item import Affix
 
-    assert format_affix(Affix(stat="hp_max", flat=8, label_ko="튼튼함")) == "튼튼함 · 최대체력 +8"
+    assert format_affix(Affix(stat="hp_max", flat=8, label_ko="튼튼함")) == "튼튼함 · 최대 체력 +8"
     assert (
         format_affix(Affix(stat="cpu_budget", percent=-25, label_ko="굼뜬 제어"))
         == "굼뜬 제어 · CPU -25%"

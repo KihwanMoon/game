@@ -19,6 +19,10 @@ class RequirementView(BaseModel):
     """
 
     stat: str
+    # **이름을 서버가 싣는다.** 접사는 이미 `stat_label` 을 실어 보내는데 요구조건만 안
+    # 보내서, 화면이 `STAT_LABELS` 의 사본을 따로 들고 있었다 — 정본이 바뀌면 그 사본만
+    # 옛 이름으로 남는다. 실제로 「최대체력」과 「최대 체력」으로 갈렸다 (2026-09-18).
+    stat_label: str = ""
     actual: int
     minimum: int
     is_met: bool

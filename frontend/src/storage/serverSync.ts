@@ -575,6 +575,16 @@ export async function submitRun(
 /** 요구조건 한 줄. 실측값을 함께 받는다 — 무엇이 얼마나 모자란지가 화면에 있어야 한다. */
 export interface RequirementView {
   readonly stat: string
+  /**
+   * 능력치의 한글 이름. **서버가 싣는다** — 정본은 `game/schemas/item.py` 의
+   * `STAT_LABELS` 이고, 접사(`statLabel`)가 이미 같은 길로 온다.
+   *
+   * 예전에는 화면이 제 사본을 들고 있었고, 정본이 「최대체력」에서 「최대 체력」으로
+   * 바뀌던 날 그 사본만 옛 이름으로 남았다 (2026-09-18).
+   *
+   * 옛 서버는 안 실어 보내므로 빈 문자열일 수 있다 — 그때는 부르는 쪽이 `stat` 을 적는다.
+   */
+  readonly statLabel: string
   readonly actual: number
   readonly minimum: number
   readonly isMet: boolean
@@ -699,6 +709,8 @@ export interface InventoryView {
 
 interface RawRequirement {
   stat: string
+  /** 한글 이름. 옛 서버는 안 보내므로 없을 수 있다. */
+  stat_label?: string
   actual: number
   minimum: number
   is_met: boolean
@@ -810,6 +822,7 @@ function readSlot(raw: RawSlot): SlotView {
             grantsSkill: raw.item.grants_skill ?? '',
             requirements: raw.item.requirements.map((item) => ({
               stat: item.stat,
+              statLabel: item.stat_label ?? '',
               actual: item.actual,
               minimum: item.minimum,
               isMet: item.is_met,

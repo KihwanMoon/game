@@ -100,6 +100,10 @@ WANTED = {
     "/api/admin/auction/cancel": "resolve_operator",
     "/api/admin/item/recall": "resolve_operator",
     "/api/admin/bot": "resolve_operator",
+    # 이름 고치기도 개입이다 (U3). 콘텐츠 등급에 두지 않는 이유는 `bot_` 접두어가
+    # 「이것이 봇이다」를 싣는 유일한 채널이고, 순위표·경매·도감이 이름만 적기
+    # 때문이다 — 이름을 바꾸는 손은 세계에 보이는 것을 바꾼다.
+    "/api/admin/bot/name": "resolve_operator",
     "/api/admin/bot/gift": "resolve_operator",
     "/api/admin/bot/coin": "resolve_operator",
     "/api/admin/testers/mark": "resolve_operator",

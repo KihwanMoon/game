@@ -113,7 +113,7 @@ COMBAT_STATS: tuple[str, ...] = (
 # 접사 표기가 이것을 병기한다. 「튼튼함 +8」 만 적으면 8 이 체력인지 방어력인지 화면
 # 어디에도 없다 — 조건문에 실측값을 병기하는 것과 같은 규칙이다 (GDD §8.2).
 STAT_LABELS: dict[str, str] = {
-    "hp_max": "최대체력",
+    "hp_max": "최대 체력",
     "attack": "공격력",
     "defense": "방어력",
     "attack_range": "사거리",

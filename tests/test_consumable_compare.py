@@ -32,7 +32,7 @@ def build_slot(use_tag="POTION", slot_index=0, catalog_id=None, charges=0):
 def test_the_screen_can_compare_two_consumables():
     """★ 접사를 구운 문자열로만 보내면 화면이 두 소모품을 견줄 수 없다.
 
-    `affixes` 는 「튼튼함 · 최대체력 +8」 처럼 적어 둔 것이라 **능력치 축이 안 담긴다.**
+    `affixes` 는 「튼튼함 · 최대 체력 +8」 처럼 적어 둔 것이라 **능력치 축이 안 담긴다.**
     그것만 보내면 화면은 문자열 두 벌을 나란히 놓는 것이 전부이고, 판단은 통째로 사람에게
     넘어간다 — 가방은 이미 구조화된 절로 스탯별 차이를 낸다. 같은 질문에 두 화면이 다른
     방식으로 답하면 어느 쪽을 믿을지가 또 하나의 문제가 된다.
@@ -53,13 +53,13 @@ def test_the_screen_can_compare_two_consumables():
     view = build_slot_view(build_slot(catalog_id="potion_heal", charges=1), {"potion_heal": entry})
 
     # 사람이 읽는 줄은 그대로 남는다 — 견줌을 더한 것이지 바꾼 것이 아니다.
-    assert view.affixes == ["튼튼함 · 최대체력 +8"]
+    assert view.affixes == ["튼튼함 · 최대 체력 +8"]
     # 견줌이 읽을 절에는 **축과 값이 따로** 있다.
     row = view.affix_rows[0]
     assert row["stat"] == "hp_max"
     assert row["flat"] == 8
     # 한글 이름을 서버가 붙인다 — 화면이 제 목록을 들면 정본이 둘이 된다.
-    assert row["stat_label"] == "최대체력"
+    assert row["stat_label"] == "최대 체력"
 
 
 def test_bag_stock_carries_the_same_rows():
@@ -79,7 +79,7 @@ def test_bag_stock_carries_the_same_rows():
         charges=7,
         stock=2,
         sell_price=630,
-        affixes=["튼튼함 · 최대체력 +25"],
-        affix_rows=[{"stat": "hp_max", "flat": 25, "percent": 0, "stat_label": "최대체력"}],
+        affixes=["튼튼함 · 최대 체력 +25"],
+        affix_rows=[{"stat": "hp_max", "flat": 25, "percent": 0, "stat_label": "최대 체력"}],
     )
     assert option.affix_rows[0]["stat"] == "hp_max"

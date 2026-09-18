@@ -40,7 +40,7 @@ from game.app.store.equipment import (
 from game.app.store.items import StoredItem, find_item, list_equipment, list_inventory
 from game.app.store.letters import read_letters
 from game.app.store.progress import read_progress
-from game.schemas.item import GRADE_SEALED_SLOTS, EquipSlot, ItemKind
+from game.schemas.item import GRADE_SEALED_SLOTS, STAT_LABELS, EquipSlot, ItemKind
 
 router = APIRouter()
 
@@ -136,7 +136,13 @@ def build_item_view(
         # 실어 보내기로 한 것과 같은 자리다 (§9).
         affixes=[build_affix_view(a) for a in stored.affixes],
         requirements=[
-            RequirementView(stat=c.stat, actual=c.actual, minimum=c.minimum, is_met=c.is_met)
+            RequirementView(
+                stat=c.stat,
+                stat_label=STAT_LABELS.get(c.stat, c.stat),
+                actual=c.actual,
+                minimum=c.minimum,
+                is_met=c.is_met,
+            )
             for c in checks
         ],
         can_equip=all(c.is_met for c in checks) and not stored.is_broken,

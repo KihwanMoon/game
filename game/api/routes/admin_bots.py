@@ -29,10 +29,12 @@ from game.app.store.accounts import find_player_entity
 from game.app.store.admin import record_admin_action
 from game.app.store.bot_view import list_bot_rows, list_doppel_rows
 from game.app.store.bots import (
+    MAX_BOT_NAME,
     MAX_SKILL_PCT,
     MIN_SKILL_PCT,
     apply_bot_settings,
     check_is_bot,
+    rename_bot_handle,
 )
 from game.app.store.doppels import read_doppel_gear
 from game.app.store.gifts import apply_bot_coin_gift, apply_bot_gift
@@ -56,6 +58,18 @@ class BotGiftRequest(BaseModel):
 
     account_id: int = Field(ge=1)
     item_id: int = Field(ge=1)
+
+
+class BotNameRequest(BaseModel):
+    """봇 이름의 뒷자리를 고치는 요청.
+
+    **접두어는 안 받는다.** `bot_` 은 서버가 붙인다 — 받아서 그대로 쓰면 관리자가 그것을
+    지워 봇을 사람처럼 세울 수 있고, 순위표·경매·도감이 이름만 적으므로 그 순간 세 화면
+    에서 봇이 안 보이게 된다.
+    """
+
+    account_id: int = Field(ge=1)
+    name: str = Field(min_length=1, max_length=MAX_BOT_NAME)
 
 
 class BotSettingsRequest(BaseModel):
@@ -136,6 +150,45 @@ def apply_admin_bot(
         f"#{request.account_id} {found.handle}",
         f"{found.ruleset_id}/{found.skill_pct}% → {request.ruleset_id}/{request.skill_pct}%"
         f" · {'돌림' if request.is_active else '멈춤'}",
+    )
+    return build_bot_overview(account)
+
+
+@router.post("/api/admin/bot/name", response_model=AdminBotOverviewResponse)
+def save_admin_bot_name(
+    request: BotNameRequest, account: CurrentOperator
+) -> AdminBotOverviewResponse:
+    """봇 이름의 뒷자리를 고친다.
+
+    **손잡이가 화면에 없어서 서버 셸을 열어야 했다** (U3). `scripts/rename_bot_handles.py`
+    는 한 번 돌리고 끝나는 소급 스크립트지 봇 하나를 골라 고치는 자리가 아니다.
+
+    Args:
+        request: 대상 봇과 새 이름.
+        account: 관리자 계정.
+
+    Returns:
+        고친 뒤의 현황.
+
+    Raises:
+        HTTPException: 없는 봇이면 404, 이름이 안 되면 400 — 사유를 그대로 싣는다.
+    """
+    pool = get_pool()
+    found = next((row for row in list_bot_rows(pool) if row.account_id == request.account_id), None)
+    if found is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"없는 봇이다: {request.account_id}")
+    try:
+        renamed = rename_bot_handle(pool, request.account_id, request.name)
+    except ValueError as error:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(error)) from error
+    # **이름은 하중을 받는다.** 순위표에 적힌 이름이 어느 날 달라지면 「누가 누구였지」가
+    # 되므로, 누가 언제 무엇을 무엇으로 바꿨는지가 남아야 한다.
+    record_admin_action(
+        pool,
+        account.account_id,
+        "bot.name",
+        f"#{request.account_id} {found.handle}",
+        f"{found.handle} → {renamed}",
     )
     return build_bot_overview(account)
 
