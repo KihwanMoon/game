@@ -135,8 +135,21 @@ def test_the_ticket_carries_a_varied_chain():
         ).json()
     per_floor = int(issued["rooms_per_floor"])
     assert issued["room_ids"][0] == "open_field"
-    # **하강 전체가 실린다.** 1층에서 10층까지 층당 방 셋이다.
-    assert len(issued["room_ids"]) == per_floor * 10
+    # **하강 전체가 실린다.** 1층에서 마지막 층까지, 층당 같은 수의 방이다.
+    #
+    # **층수를 박지 않는다.** 여기 `10` 이 박혀 있던 동안 2막이 `max_floor` 를 15 로
+    # 올렸고(`6c1658c 층이 실제로 오른다`), 이 단언만 옛 막에 남아 빨갛게 서 있었다 —
+    # `tools/check_all.sh` 가 pytest 를 안 돌려서 게이트도 못 봤다. 정본에서 읽으면
+    # 3막이 열려도 같은 것을 계속 지킨다.
+    from game.api.deps import get_context
+    from game.app.progression.floors import (
+        FIRST_FLOOR,
+        read_floor_bosses,
+        read_floor_cap,
+    )
+
+    floors = read_floor_cap(get_context().balance) - FIRST_FLOOR + 1
+    assert len(issued["room_ids"]) == per_floor * floors
     # 겹치지 않는 것은 **한 층 안에서**다. 층이 다르면 같은 방이 다시 나와도 된다 —
     # 층마다 적이 세지므로 같은 지형이 다른 판이 된다.
     #
@@ -152,8 +165,23 @@ def test_the_ticket_carries_a_varied_chain():
     else:
         assert len(set(first)) == len(floor_one_rooms), first
     assert all(first[i] != first[i + 1] for i in range(len(first) - 1)), first
-    # 마지막은 보스 방이다.
-    assert issued["room_ids"][-1] == "boss_hall"
+    # 마지막은 **마지막 막의** 보스 방이다.
+    #
+    # 여기 `boss_hall` 이 박혀 있었는데, 2막이 열리며 `floor_bosses` 가 둘이 되어
+    # (10장 장승 · 15장 원귀) 하강의 끝이 `wraith_hall` 로 바뀌었다. `read_floor_bosses`
+    # 의 독스트링이 예고한 그대로다 — "막이 늘면 보스도 는다".
+    #
+    # **1막의 끝이 남아 있는지도 함께 본다.** 그 독스트링이 막으려던 사고가 "2막을 열면
+    # 장승이 10장에서 15장으로 옮겨 가 1막의 끝이 사라진다" 였다. 끝만 보면 그 사고가
+    # 나도 이 검사는 초록이다.
+    bosses = read_floor_bosses(get_context().balance)
+    last_floor, last_boss = bosses[-1]
+    assert issued["room_ids"][-1] == last_boss
+    for floor, room in bosses:
+        # 그 층의 마지막 자리에 선다 (`build_room_chain`).
+        index = (floor - FIRST_FLOOR + 1) * per_floor - 1
+        assert issued["room_ids"][index] == room, (floor, room, issued["room_ids"][index])
+    assert last_floor == read_floor_cap(get_context().balance)
 
 
 # 층마다 어느 보스가 서는가 (2026-09-17). 하나가 아니라 쌍들인 것은 막이 둘이기 때문이다.
