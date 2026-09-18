@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 from psycopg_pool import ConnectionPool
 
+from game.app.store.display_name import build_display_name_sql
 from game.app.store.traffic import compute_conversion_pct, read_traffic_window
 
 
@@ -148,7 +149,9 @@ def list_held_items(pool: ConnectionPool, limit: int = 200) -> tuple[HeldItemRow
     with pool.connection() as connection:
         rows = connection.execute(
             "SELECT i.id, e.id, e.catalog_id, i.catalog_id,"
-            " coalesce(a.handle, ''), i.is_broken, i.is_bound"
+            # **이름은 정본을 거친다** (`display_name.py`). 손잡이를 그대로 내면
+            # 닉네임을 지은 사람이 화면마다 다른 이름으로 보인다 (2026-09-18 신고).
+            f" coalesce({build_display_name_sql('a')}, ''), i.is_broken, i.is_bound"
             " FROM item_instance i"
             " JOIN entity_record e ON e.id = i.owner_entity_id"
             " LEFT JOIN account a ON a.id = i.taken_from"

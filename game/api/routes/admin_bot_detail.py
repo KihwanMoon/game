@@ -32,6 +32,7 @@ from game.app.progression.floors import read_floor_cap
 from game.app.progression.levels import STAT_KEYS
 from game.app.store.accounts import find_player_entity
 from game.app.store.bots import check_is_bot
+from game.app.store.display_name import build_display_name_sql
 from game.app.store.doppels import read_doppel_ruleset
 from game.app.store.maintenance import read_maintenance
 from game.app.store.monster_snapshots import load_snapshots
@@ -150,7 +151,9 @@ def check_bot_row(account_id: int) -> tuple[str, str]:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"없는 봇이다: {account_id}")
     with pool.connection() as connection:
         found = connection.execute(
-            "SELECT a.handle, COALESCE(b.ruleset_id, '')"
+            # **이름은 정본을 거친다** (`display_name.py`). 손잡이를 그대로 내면
+            # 닉네임을 지은 사람이 화면마다 다른 이름으로 보인다 (2026-09-18 신고).
+            f"SELECT {build_display_name_sql('a')}, COALESCE(b.ruleset_id, '')"
             " FROM account a LEFT JOIN bot_profile b ON b.account_id = a.id"
             " WHERE a.id = %s",
             (account_id,),
@@ -200,7 +203,7 @@ def read_doppel_detail(record_id: int, account: CurrentAdmin) -> DoppelDetailRes
     with pool.connection() as connection:
         found = connection.execute(
             "SELECT e.id, e.zone_floor, e.level, e.alive, e.entity_slot,"
-            " COALESCE(a.handle, '')"
+            f" COALESCE({build_display_name_sql('a')}, '')"
             " FROM entity_record e LEFT JOIN account a ON a.id = e.origin_account_id"
             " WHERE e.id = %s AND e.is_doppel",
             (record_id,),

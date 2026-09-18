@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
+from game.app.store.display_name import build_display_name_sql
+
 # 초안이 담을 수 있는 조작. **정본이 여기 하나다** — DB 의 CHECK 제약이 같은 목록을 들고
 # 있고, 둘이 어긋나면 초안을 올리는 순간 터진다.
 ACTION_ITEM = "item"
@@ -94,7 +96,10 @@ def list_catalog_drafts(pool: ConnectionPool) -> tuple[CatalogDraft, ...]:
     with pool.connection() as connection:
         rows = connection.execute(
             "SELECT d.catalog_id, d.action, d.payload, d.reason,"
-            " COALESCE(a.handle, ''), to_char(d.updated_at, 'YYYY-MM-DD HH24:MI')"
+            # **이름은 정본을 거친다** (`display_name.py`). 손잡이를 그대로 내면
+            # 닉네임을 지은 사람이 화면마다 다른 이름으로 보인다 (2026-09-18 신고).
+            f" COALESCE({build_display_name_sql('a')}, ''),"
+            " to_char(d.updated_at, 'YYYY-MM-DD HH24:MI')"
             " FROM catalog_draft d"
             " LEFT JOIN account a ON a.id = d.updated_by"
             " ORDER BY d.updated_at, d.catalog_id"

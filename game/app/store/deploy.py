@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from psycopg_pool import ConnectionPool
 
 from game.app.store.content_pack import read_pack_generation
+from game.app.store.display_name import build_display_name_sql
 from game.app.store.item_catalog import read_generation
 
 
@@ -63,7 +64,9 @@ def list_content_drafts(pool: ConnectionPool) -> tuple[DraftRow, ...]:
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT d.asset, d.note, COALESCE(a.handle, '')"
+            # **이름은 정본을 거친다** (`display_name.py`). 손잡이를 그대로 내면
+            # 닉네임을 지은 사람이 화면마다 다른 이름으로 보인다 (2026-09-18 신고).
+            f"SELECT d.asset, d.note, COALESCE({build_display_name_sql('a')}, '')"
             " FROM content_draft d LEFT JOIN account a ON a.id = d.updated_by"
             " ORDER BY d.asset"
         ).fetchall()
@@ -87,7 +90,7 @@ def list_catalog_drafts_for_deploy(pool: ConnectionPool) -> tuple[DraftRow, ...]
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT d.catalog_id, d.action, d.reason, COALESCE(a.handle, '')"
+            f"SELECT d.catalog_id, d.action, d.reason, COALESCE({build_display_name_sql('a')}, '')"
             " FROM catalog_draft d LEFT JOIN account a ON a.id = d.updated_by"
             " ORDER BY d.updated_at, d.catalog_id"
         ).fetchall()

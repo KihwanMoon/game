@@ -116,7 +116,9 @@ def list_doppel_rows(pool: ConnectionPool) -> tuple[DoppelRow, ...]:
     with pool.connection() as connection:
         rows = connection.execute(
             "SELECT e.id, COALESCE(e.zone_floor, 0), e.level, e.alive,"
-            " COALESCE(e.entity_slot, ''), COALESCE(a.handle, ''), e.lives"
+            # **이름은 정본을 거친다** (`display_name.py`). 손잡이를 그대로 내면
+            # 닉네임을 지은 사람이 화면마다 다른 이름으로 보인다 (2026-09-18 신고).
+            f" COALESCE(e.entity_slot, ''), COALESCE({build_display_name_sql('a')}, ''), e.lives"
             " FROM entity_record e LEFT JOIN account a ON a.id = e.origin_account_id"
             " WHERE e.kind = 'MONSTER' AND e.is_doppel"
             " ORDER BY COALESCE(e.zone_floor, 0), e.id"
