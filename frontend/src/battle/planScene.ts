@@ -22,7 +22,8 @@ import { PHASE_ACT } from '../core/sim/phases'
 
 import { GUARD_STATUS } from '../core/sim/abilities'
 import { checkDoppel, resolveActorKind, resolveActorLabel } from './actorKind'
-import { readSkillName } from '../core/resources'
+import { BLOCK_CATALOG, readSkillName } from '../core/resources'
+import { USE_TAG_LABELS } from '../content/consumableTags'
 
 /** 도면에 그릴 말 하나. */
 export interface PlanActorView {
@@ -230,6 +231,27 @@ function collectHazards(engine: TickEngine, foresightTicks: number): readonly Pl
 }
 
 /**
+ * 행동 id 에서 화면에 적을 이름으로.
+ *
+ * **재주 이름을 먼저 본다.** 도면의 이펙트는 「무엇을 썼는가」를 적는 자리이고, 같은
+ * 재주의 쿨타임 줄(`battle/vitalRows`)도 `skills.json` 을 읽는다 — 두 자리가 한 화면에
+ * 나란히 서므로 같은 표에서 나와야 한다. 정본에 `label_ko` 가 없는 행동
+ * (`AREA_ATTACK`·`SUMMON`·`USE_ITEM`)만 블록 카탈로그로 떨어지며, 그쪽은 로그가 읽는
+ * 표라 로그와 같은 말이 된다 (`battle/logNames`).
+ *
+ * @param actionId 실행된 행동 id. `USE_SKILL` 은 실행 전에 재주 id 로 갈린다.
+ * @returns 한글 이름. 어느 정본에도 없으면 id 그대로 — 지어내면 화면이 정본에 없는
+ *   말을 하게 된다.
+ */
+function readActionLabel(actionId: string): string {
+  const skillName = readSkillName(actionId)
+  if (skillName !== actionId) {
+    return skillName
+  }
+  return BLOCK_CATALOG.actions.get(actionId)?.labelKo ?? actionId
+}
+
+/**
  * 지금 이 순간의 도면을 만든다.
  *
  * @param engine 돌고 있는 엔진. 읽기만 한다.
@@ -238,19 +260,20 @@ function collectHazards(engine: TickEngine, foresightTicks: number): readonly Pl
 /**
  * 행동 id 에서 이펙트 이름표로. 여기 없는 행동은 수치만 적는다.
  *
- * **재주 이름은 여기 안 적는다** — 정본은 `skills.json` 이고 아래에서 덮어 채운다.
- * 손으로 적어 두면 이름을 고칠 때 도면만 옛 이름으로 남는다 (2026-09-15).
+ * **이름은 여기 안 적는다** — 손으로 적어 두었더니 같은 행동을 도면은 「치유」,
+ * 상태 탭은 「수복」, 로그는 「아군 회복」이라 불렀다 (2026-09-18). 이름은 전부
+ * `readActionLabel` 이 정본에서 읽는다.
  */
-const PULSE_LABELS: ReadonlyMap<string, string> = new Map([
+const PULSE_LABELS: ReadonlyMap<string, string> = new Map<string, string>([
+  // **기본 공격만 이름이 없다.** 매 틱 나는 것이라 이름표를 달면 도면이 글씨로 덮이고,
+  // 수치 `-7` 하나가 이미 무슨 일인지 말한다.
   ['ATTACK', ''],
-  ['SKILL_1', readSkillName('SKILL_1')],
-  ['SKILL_2', readSkillName('SKILL_2')],
-  ['AREA_ATTACK', '광역'],
-  ['HEAL', '치유'],
-  ['GUARD_BRACE', '방어'],
-  ['SUMMON', '소환'],
-  ['USE_ITEM', '소모품'],
-  ['USE_POTION', '물약'],
+  ...['SKILL_1', 'SKILL_2', 'AREA_ATTACK', 'HEAL', 'GUARD_BRACE', 'SUMMON', 'USE_ITEM'].map(
+    (actionId): [string, string] => [actionId, readActionLabel(actionId)],
+  ),
+  // **소모품 이름의 정본은 `content/consumableTags` 다.** 블록 카탈로그의 「포션 사용」은
+  // 세계관이 「탕약」으로 개명하기 전의 이름이라, 그쪽을 읽으면 잔량 줄과 갈린다.
+  ['USE_POTION', USE_TAG_LABELS.get('POTION') ?? 'POTION'],
 ])
 
 /**

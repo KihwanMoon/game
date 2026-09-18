@@ -222,7 +222,7 @@ function runRepair(state: PreviewState): RowOutcome {
   }
   const tail = left > 0 ? ` · 잔액이 말라 ${String(left)}개는 남는다` : ''
   return {
-    text: `지금이면 ${String(affordable)}개 복구 (-${String(paid)})${tail}`,
+    text: `지금이면 ${String(affordable)}개 복구 (−${String(paid)})${tail}`,
     money: -paid,
     isActive: true,
   }
@@ -264,7 +264,7 @@ function runRefill(state: PreviewState): RowOutcome {
   }
   const tail = skipped > 0 ? ` · 잔액이 말라 ${String(skipped)}칸은 건너뛴다` : ''
   return {
-    text: `지금이면 ${String(filled)}충전 보충 (-${String(paid)})${tail}`,
+    text: `지금이면 ${String(filled)}충전 보충 (−${String(paid)})${tail}`,
     money: -paid,
     isActive: true,
   }
@@ -380,20 +380,11 @@ export function checkPreviewIdle(preview: MaintenancePreview): boolean {
  * 잔액 변화를 부호와 함께 적는다.
  *
  * @param delta 잔액 변화.
- * @returns `-70` · `+120` · `0`.
+ * @returns `−70` · `+120` · `0`. 부호는 U+2212 다 — 행 문구와 같은 글자를 쓴다.
  */
 export function formatMoneyDelta(delta: number): string {
   if (delta === 0) {
     return '0'
   }
   return `${delta > 0 ? '+' : '−'}${String(Math.abs(delta))}`
-}
-
-/** 정비 행이 안 실린 미리보기가 있어야 할 자리. 부르는 쪽이 이것을 쓴다. */
-export const EMPTY_PREVIEW: MaintenancePreview = {
-  rows: [],
-  moneyDelta: 0,
-  balance: 0,
-  balanceAfter: 0,
-  isShort: false,
 }

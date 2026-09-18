@@ -9,6 +9,7 @@
  * **그때의 결과를 함께 적는다.** 재생이 같은 답을 내는지 사람이 눈으로 대조할 수 있어야
  * 한다 — 어긋나면 그것은 재생의 버그가 아니라 **두 코어가 갈렸다는 신호**다.
  */
+import { formatOutcome } from '../battle/outcomeText'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import type { RunHistoryRow } from '../storage'
 
@@ -33,22 +34,21 @@ export interface RunHistoryPanelProps {
 /**
  * 결과를 사람이 읽는 말로.
  *
- * **판정 전과 패배를 가른다** — 서버가 밀렸을 뿐인데 진 것으로 읽히면 안 된다.
+ * **말은 전투·사후 분석과 같은 표에서 가져온다** (`battle/outcomeText`). 여기에 표를 한 벌
+ * 더 두면 같은 `PLAYER_LOSS` 가 이 목록에서는 「패배」, 전투 화면에서는 「쓰러짐」으로
+ * 보인다 — `outcomeText.ts` 가 라벨표 두 벌을 한 곳으로 모으며 막으려던 바로 그 결함이다.
  *
- * @param outcome 서버가 확정한 결과.
+ * **판정 전만 여기서 덧붙인다.** 코어는 빈 판정을 내지 않는다 — 빈 값은 「서버가 아직
+ * 안 봤다」는 이 화면만의 상태이고, 그것이 진 것으로 읽히면 안 된다.
+ *
+ * @param outcome 서버가 확정한 결과. 아직 판정 전이면 빈 문자열.
  * @returns 화면에 적을 말.
  */
 export function formatRunOutcome(outcome: string): string {
-  if (outcome === 'PLAYER_WIN') {
-    return '승리'
-  }
   if (outcome === '') {
     return '판정 전'
   }
-  if (outcome === 'TIMEOUT') {
-    return '시간 초과'
-  }
-  return '패배'
+  return formatOutcome(outcome)
 }
 
 /**

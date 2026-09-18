@@ -55,7 +55,9 @@ const DOCS: readonly { readonly href: string; readonly text: string }[] = [
 export function LegalLine(): React.JSX.Element {
   return (
     <footer className="legal">
-      <span className="legal__name">{APP_NAME}</span>
+      {/* 이름은 바닥 글의 흐린 한 줄을 그대로 받는다 — 제 규칙이 없으므로 클래스도
+          안 붙인다. 눈에 띄게 해야 한다면 자리는 `app.css` 의 바닥 글 절이다. */}
+      <span>{APP_NAME}</span>
       {DOCS.map((doc) => (
         <React.Fragment key={doc.href}>
           {/* 가름표는 글이 아니다. 낭독기에게는 이름과 링크만 이어서 들리면 된다. */}

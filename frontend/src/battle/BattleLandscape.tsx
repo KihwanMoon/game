@@ -37,11 +37,6 @@ import { SpeedBox } from './SpeedBox'
 /** 하단 바의 체력 막대 폭(px). 명세 B 가 정한 값이며 토큰이 아니라 prop 이다. */
 const HP_BAR_WIDTH = 150
 
-/** 물약 칸의 글리프. ds `StatusBar` 와 같은 도형을 쓴다. */
-
-
-/** 물약 칸의 라벨. */
-
 /** 틱 표기 앞의 도형. 색은 --chalk-dim 이며 황동 예산에 들지 않는다. */
 const TICK_GLYPH = '◆'
 
@@ -81,6 +76,15 @@ export interface BattleLandscapeProps {
   readonly potionsMax: number
   /** 물약·보호 주문서 밖의 소모품 줄들 (2026-09-11). 없으면 안 그린다. */
   readonly extras?: readonly VitalRow[] | undefined
+  /**
+   * 상태 탭에 세울 줄들. 세로와 **같은** `buildVitalRows(...)` 결과를 받는다 —
+   * 여기서 다시 만들면 두 배치의 상태 탭이 다른 값을 적게 된다.
+   *
+   * 탭 줄은 세로와 공유하므로 가로에도 `상태` 탭이 서 있고, 이 값을 안 받으면 그 탭이
+   * **빈 목록으로 열린다**. 없을 때 탭을 숨기지 않는 이유는 탭 다섯이 명세 B 의 계약이기
+   * 때문이다.
+   */
+  readonly vitals?: readonly VitalRow[] | undefined
   /** 남은 주문서와 실은 수. 물약과 같은 자리다 — 소모품 현황이 플레이 중에 보여야 한다. */
   readonly scrolls: number
   readonly scrollsMax: number
@@ -148,6 +152,7 @@ export function BattleLandscape(props: BattleLandscapeProps): React.JSX.Element 
             potions={props.potions}
             potionsMax={props.potionsMax}
             extras={props.extras}
+            vitals={props.vitals ?? []}
             scrolls={props.scrolls}
             scrollsMax={props.scrollsMax}
             bodyRef={props.bodyRef}

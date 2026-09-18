@@ -146,16 +146,6 @@ export function formatArgName(action: MaintenanceAction | undefined, value: stri
 }
 
 /**
- * 등급의 한글 이름. 버리기 행이 쓴다.
- *
- * @param grade 등급 id.
- * @returns 한글 이름.
- */
-export function formatGradeName(grade: string): string {
-  return DISCARD_GRADES.find(([value]) => value === grade)?.[1] ?? grade
-}
-
-/**
  * 행 하나를 사람이 읽는 문장으로 만든다.
  *
  * **문장이다.** 예전에는 이 자리가 드롭다운 둘이었고, 그래서 목록을 훑을 때 「무엇이

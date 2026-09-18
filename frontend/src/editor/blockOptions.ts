@@ -20,7 +20,8 @@ import type {
   StatBlock,
 } from '../core/schemas'
 import { resolveWantedFaction } from '../core/rules/validator'
-import { ENEMY_ONLY_SKILL_IDS, readSkillName } from '../core/resources'
+import { ENEMY_ONLY_SKILL_IDS, SKILL_NAMES } from '../core/resources'
+import { readActivePack } from '../content/pack'
 
 /** 카테고리 하나로 묶인 블록들. 팔레트가 이 단위로 접히고 펼쳐진다. */
 export interface BlockGroup<BlockT> {
@@ -213,30 +214,32 @@ export function formatActionLabel(rule: Rule, catalog: BlockCatalog): string {
  * 인자만 영문 id 로 남으면 그 한 칸만 다른 언어가 된다.
  *
  * 여기 없는 값은 id 를 그대로 쓴다 — 데이터가 앞서 나갔을 때 빈칸이 되는 것보다 낫다.
+ *
+ * **이름이 정본에 있으면 여기 안 적는다.** 재주는 `skills.json`, 고르개는 `blocks.json`,
+ * 소모품 태그는 `content/consumableTags` 가 정본이고, 사본을 두면 같은 id 가 화면마다
+ * 다른 이름으로 불린다. 여기 남는 것은 **정본이 없는 값들**뿐이다 — 상태이상·적 유형·
+ * 지형, 그리고 정본에 `label_ko` 가 없는 재주 셋.
  */
 const PARAM_LABELS: ReadonlyMap<string, string> = new Map([
   // 소모품 태그는 `content/consumableTags` 가 정본이다. 사본을 두면 새 주문서가 규칙
   // 편집기에서만 영문 id 로 뜬다 — 화면마다 다른 이름으로 불리는 것이 더 나쁘다.
   ...USE_TAG_LABELS,
-  // 재주 이름의 정본은 `skills.json` 이다 — 소모품 태그와 같은 규율이다.
-  ['SKILL_1', readSkillName('SKILL_1')],
-  ['SKILL_2', readSkillName('SKILL_2')],
+  // 재주 이름의 정본은 `skills.json` 이다 — 소모품 태그와 같은 규율이다. 손으로 적으면
+  // **이 화면만 옛 이름으로 말한다**: `GUARD_BRACE` 가 여기서는 「방어 태세」였는데
+  // 전투 화면의 쿨타임 줄(`battle/vitalRows`)은 정본을 읽어 「방벽」이라고 적었고,
+  // `HEAL` 은 화면 셋에서 세 이름이었다 (2026-09-18).
+  //
+  // **적만 쓰는 다섯도 여기 딸려 온다** (2026-09-17). 팔레트에서는 빠지지만
+  // (`listParamOptions`) 이름은 있어야 한다 — 이문록이 적의 규칙표를 그대로 펴서 보여
+  // 주고, 거기 영문 id 가 뜨면 카운터를 읽으라고 내놓은 표가 그 줄에서 끊긴다.
+  ...SKILL_NAMES,
+  // **정본에 이름이 없는 셋.** `ATTACK`·`AREA_ATTACK` 은 `skills.json` 에 `label_ko` 가
+  // 없고 `SUMMON` 은 행 자체가 없다 — 그때 `SKILL_NAMES` 는 id 를 그대로 들고 있으므로
+  // 여기서 덮지 않으면 그 칸만 영문이 된다. `battle/vitalRows` 의 `COOLDOWN_EXTRA` 와
+  // 같은 자리이며, 정본에 `label_ko` 가 생기면 이 셋을 지운다.
+  ['ATTACK', '공격'],
   ['AREA_ATTACK', '광역 공격'],
   ['SUMMON', '소환'],
-  ['HEAL', '치유'],
-  ['ATTACK', '공격'],
-  ['GUARD_BRACE', '방어 태세'],
-  ['METEOR', '메테오'],
-  ['CHAIN_BOLT', '연쇄 번개'],
-  ['FROST_FIELD', '서리 장판'],
-  // **적만 쓰는 다섯** (2026-09-17). 팔레트에서는 빠지지만(`listParamOptions`) 이름은
-  // 있어야 한다 — 이문록이 적의 규칙표를 그대로 펴서 보여 주고, 거기 영문 id 가 뜨면
-  // 카운터를 읽으라고 내놓은 표가 그 줄에서 끊긴다.
-  ['HEX_FIRE', '불 굿'],
-  ['HEX_BOLT', '벼락 줄'],
-  ['HEX_FROST', '서리 굿'],
-  ['HEX_PLAGUE', '옴 굿'],
-  ['HEX_SNARE', '덫 굿'],
   // `self_has_status` 가 묻는 상태들. GUARD·FOCUS 는 **스스로 거는 것**이라 규칙표가
   // 겹쳐 쓰기를 피하는 데 쓴다 — 이름이 없으면 「내 상태이상[GUARD]」로 적힌다.
   ['POISON', '중독'],
@@ -246,36 +249,41 @@ const PARAM_LABELS: ReadonlyMap<string, string> = new Map([
   // 때리는 것은 그대로 되므로 「묶였으면 물러서지 말고 때린다」가 규칙표로 지어진다.
   ['ROOT', '이동불가'],
   ['GUARD', '방어 태세'],
-  ['CASTING', '시전 중'],
-  ['ALLY_WOUNDED', '아군 부상'],
-  // **고르개 값이 가장 자주 보인다.** 규칙 한 줄마다 대상이 붙으므로, 이것이 영문이면
-  // 화면에서 가장 많이 눈에 띄는 영문이 된다 (2026-09-16 요청).
-  ['NEAREST', '가장 가까운'],
-  ['LOWEST_HP', '가장 약한'],
-  ['HIGHEST_THREAT', '가장 위협적인'],
-  ['TYPE_RANGED', '사격형'],
-  ['TYPE_SUMMONER', '소환형'],
-  ['TYPE_HEALER', '치유형'],
-  // `_FIRST` 는 「그 유형을 먼저, 없으면 아무나」다. 뜻이 값의 절반이라 이름에 담는다.
-  ['TYPE_RANGED_FIRST', '사격형 우선'],
-  ['TYPE_SUMMONER_FIRST', '소환형 우선'],
-  ['TYPE_HEALER_FIRST', '치유형 우선'],
-  // 주술형 (2026-09-17). 마법 쓰는 적의 카운터라 이름이 화면에 자주 뜬다.
-  ['TYPE_CASTER', '주술형'],
-  ['TYPE_CASTER_FIRST', '주술형 우선'],
-  ['CASTER', '주술형'],
-  // 적 유형. `enemy_type_present` 가 묻는 값들이다.
+  // **고르개 이름은 여기 안 적는다.** 정본은 `blocks.json` 의 `selectors[].label_ko`
+  // 이고 `readSelectorLabel` 이 읽는다 — 사본을 두었더니 규칙 한 줄을 편집하는 동안
+  // 조건 칸에는 「사격형」, 행동 칸에는 「원거리 유형」이 동시에 떠 있었다 (2026-09-18).
+  // `CASTING`·`ALLY_WOUNDED`·`BOSS` 도 고르개 값이라 함께 나갔다.
+  //
+  // 적 유형. `enemy_type_present` 가 묻는 값들이며 고르개 id 와는 다른 축이다 —
+  // `RANGED` 는 유형이고 `TYPE_RANGED` 는 그 유형을 고르는 고르개다.
   ['MELEE', '근접형'],
   ['RANGED', '사격형'],
   ['SUMMONER', '소환형'],
   ['BOMBER', '자폭형'],
   ['HEALER', '치유형'],
-  ['BOSS', '우두머리'],
+  ['CASTER', '주술형'],
   // 지형. `nearest_tile_distance` 가 묻는다.
   ['DOOR', '문'],
   ['STAIRS', '계단'],
   ['SPRING', '샘'],
 ])
+
+/**
+ * 고르개 id 의 한글 이름. **정본은 `blocks.json` 하나다.**
+ *
+ * 같은 id 를 두 표로 그리면 한 화면에 두 이름이 뜬다 — 조건 칸의 인자 고르개는 이
+ * 파일의 표로, 행동 칸의 대상 고르개와 규칙 줄의 행동절(`formatActionLabel`)은
+ * 카탈로그로 그려서 「사격형」과 「원거리 유형」이 같은 줄에 나란히 서 있었다.
+ *
+ * **번들이 아니라 도는 팩을 읽는다.** 서버가 콘텐츠 팩을 보내면 카탈로그가 갈아 끼워
+ * 지므로(`content/pack`), 빌드에 박힌 것을 읽으면 이 칸만 옛 이름으로 남는다.
+ *
+ * @param value 인자 값 id.
+ * @returns 고르개면 그 이름, 아니면 undefined.
+ */
+function readSelectorLabel(value: string): string | undefined {
+  return readActivePack().catalog.selectors.get(value)?.labelKo
+}
 
 /** 대괄호 안의 인자 하나. `대상 거리[NEAREST]` 의 `NEAREST` 를 집는다. */
 const BRACKETED = /\[([A-Z][A-Z0-9_]*)\]/g
@@ -287,7 +295,7 @@ const BRACKETED = /\[([A-Z][A-Z0-9_]*)\]/g
  * @returns 한글 이름. 모르는 값이면 id 그대로.
  */
 export function formatParamLabel(value: string): string {
-  return PARAM_LABELS.get(value) ?? value
+  return readSelectorLabel(value) ?? PARAM_LABELS.get(value) ?? value
 }
 
 /**
@@ -303,7 +311,7 @@ export function formatParamLabel(value: string): string {
  */
 export function formatParamText(text: string): string {
   return text.replace(BRACKETED, (whole, value: string) => {
-    const label = PARAM_LABELS.get(value)
+    const label = readSelectorLabel(value) ?? PARAM_LABELS.get(value)
     return label === undefined ? whole : `[${label}]`
   })
 }

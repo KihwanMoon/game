@@ -184,16 +184,19 @@ describe('RuleStatsTable', () => {
     'player',
   )
 
-  it('규칙·발동·성공·헛돔·진단 다섯 열을 낸다', () => {
+  it('규칙·발동·성공·헛돎·진단 다섯 열을 낸다', () => {
     const html = renderToStaticMarkup(<RuleStatsTable stats={stats} />)
-    for (const column of ['규칙', '발동', '성공', '헛돔', '진단']) {
+    for (const column of ['규칙', '발동', '성공', '헛돎', '진단']) {
       expect(html).toContain(column)
     }
     expect(html).toContain('[3]')
   })
 
   it('헛도는 규칙에 진단 문구를 붙인다', () => {
-    expect(renderToStaticMarkup(<RuleStatsTable stats={stats} />)).toContain('헛돎')
+    // 표 머리도 「헛돎」이므로 머리말이 아니라 진단 문장 전체를 본다.
+    expect(renderToStaticMarkup(<RuleStatsTable stats={stats} />)).toContain(
+      '가 헛돎 — 조건을 의심할 것',
+    )
   })
 
   it('기록이 없으면 빈 표 대신 그렇게 적는다', () => {

@@ -21,23 +21,6 @@
   background: var(--surface-base);
 }
 
-.battle__top {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  padding: var(--sp-0) var(--sp-4) var(--sp-0) var(--sp-0);
-  background: var(--surface-panel);
-  border-bottom: var(--border);
-}
-
-/* 상단 바 자체는 자기 테두리를 쓰지 않는다. 열 사이 괘선은 바깥이 한 번만 긋는다. */
-.battle__top > .ds-topbar {
-  flex: 1;
-  min-width: var(--sp-0);
-  border-bottom: none;
-}
-
-
 .battle__col {
   display: flex;
   min-width: var(--sp-0);
@@ -92,18 +75,6 @@
 
 .battle-plan__canvas--swap {
   animation: battle-plan-swap var(--dur-tick) var(--ease);
-}
-
-.battle__plan-foot {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
-}
-
-.battle__outcome {
-  font-family: var(--font-display);
-  font-size: var(--fs-display-s);
-  color: var(--text-body);
 }
 
 /* 지시선 — 발동한 규칙 줄에서 도면 위 그 말까지. 화면의 황동 예산 셋 중 하나다. */
@@ -264,20 +235,6 @@
   border-bottom: var(--border);
 }
 
-.battle__bar--bottom {
-  min-height: var(--bar-bottom);
-  height: auto;
-  /* 체력·물약·주문서가 한 줄에 안 들어가면 **줄을 바꾼다.** 폭을 쥐어짜면 「물약」이
-     세로 한 글자씩 부서졌다(실제 스크린샷). */
-  flex-wrap: wrap;
-  padding-block: var(--sp-1);
-  border-top: var(--border);
-}
-
-.battle__bar--bottom .ds-resource {
-  white-space: nowrap;
-}
-
 /* 층·실은 줄바꿈하지 않는다. 44px 바에서 두 줄이 되면 바 높이가 무너지고, 무너진 바는
    아래 다섯 줄을 전부 밀어 도면을 화면 밖으로 내보낸다. 자리가 모자라면 말줄임한다 —
    방 이름은 상단 바 말고도 사후 분석과 로그가 다시 적어 준다. */
@@ -336,16 +293,6 @@
 .battle__controls .ds-button {
   flex: 0 0 auto;
   white-space: nowrap;
-}
-
-/* 배속바 — 44px 줄 안에 32px 테두리 박스. 칸 사이 1px 괘선은 배경색과 gap 으로 낸다.
-   각 칸에 border 를 주면 양끝에서 2px 이 겹친다. */
-.battle__speed-bar {
-  display: flex;
-  align-items: center;
-  padding: var(--sp-0) var(--plan-pad);
-  background: var(--surface-panel);
-  border-bottom: var(--border);
 }
 
 /* 배속 박스(`SpeedBox`) — 세로·가로가 함께 쓴다. 낱개 버튼이 아니라 계기의 눈금이라
@@ -409,19 +356,6 @@
   gap: var(--sp-2);
   padding: var(--sp-1) var(--sp-2);
   pointer-events: none;
-}
-
-.battle__status {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  height: var(--bar-status);
-  padding: var(--sp-0) var(--plan-pad);
-  overflow: hidden;
-  background: var(--surface-panel);
-  border-top: var(--border);
-  border-bottom: var(--border);
 }
 
 .battle__verdict {
@@ -778,13 +712,6 @@
    (`--bar-hint`). 시드는 열여섯 자리라 줄 하나를 통째로 먹는데, 전투 중에 읽을 일이
    없다 — 사후 분석과 재생이 그 값을 따로 적는다. */
 .battle--portrait .battle__controls .launch > .ds-expr {
-  display: none;
-}
-
-
-/* 세로에서 자원 눈금(핍)을 숨긴다 — 숫자가 이미 말한다. 핍까지 그리면 하단 바가 세
-   줄로 자라 시트를 민다 (실제 스크린샷). */
-.battle--portrait .battle__bar--bottom .ds-resource__pips {
   display: none;
 }
 

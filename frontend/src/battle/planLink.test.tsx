@@ -614,12 +614,14 @@ describe('수치 이펙트 (간단한 표시)', () => {
       },
       // **회복은 무기를 안 든다.** 칼을 휘두르면 무슨 일이 있었는지가 뒤집혀 읽힌다.
       // 쓴 것이 적이라 그 자리가 (4,3) 이다.
+      // 이름표는 손으로 적지 않고 블록 카탈로그에서 읽는다 — 로그도 같은 표를 읽으므로
+      // 도면과 로그가 한 화면에서 같은 말을 한다 (`USE_ITEM` → 「소모품 사용」, 2026-09-18).
       {
         x: 4,
         y: 3,
         isGain: true,
         delta: 12,
-        label: '소모품',
+        label: '소모품 사용',
         from: { x: 4, y: 3 },
         byKindId: 'goblin_rusher',
         byEntityId: 'goblin_0',
@@ -669,13 +671,15 @@ describe('장비줄 자리', () => {
     }))
     const pulses = buildPulsesFromLog(buildFakeEngine(log, 3) as never, [PLAYER, FOE])
     expect(pulses).toEqual([
-      // 방어는 제자리다 — 때린 자리와 맞은 자리가 같고, 무기도 안 든다.
+      // 방벽은 제자리다 — 때린 자리와 맞은 자리가 같고, 무기도 안 든다.
+      // 이름표의 정본은 `skills.json` 의 `label_ko` 다 — 손으로 적던 「방어」가 캐릭터
+      // 시트·로그의 「방벽」과 갈려 있었다 (2026-09-18).
       {
         x: 1,
         y: 1,
         isGain: true,
         delta: null,
-        label: '방어',
+        label: '방벽',
         from: { x: 1, y: 1 },
         byKindId: 'player',
         byEntityId: 'player',

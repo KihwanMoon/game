@@ -10,10 +10,10 @@
  * 1. **빈 칸도 그린다** — 안 그리면 「칸이 없다」와 「비었다」를 구분할 수 없다.
  * 2. **칸은 상태만, 조작은 상세에.** 칸 안에 버튼이 생기면 되돌아간 것이다.
  * 3. **견줌이 맞는 칸 전부와 붙는다** — 칸 수가 고정이 아니다(접사가 칸을 늘린다).
- * 4. **런 중에도 안 잠근다** — 잠그면 방 사이에 규칙 고치는 내내 칸을 못 건드린다.
- * 5. **다 써도 옵션은 남는다** — 사라지면 안 마시는 것이 이득이 되고, 그것은 물약의
+ * 4. **판이 도는 중에도 안 잠근다** — 잠그면 방 사이에 규칙 고치는 내내 칸을 못 건드린다.
+ * 5. **다 써도 옵션은 남는다** — 사라지면 안 마시는 것이 이득이 되고, 그것은 탕약의
  *    존재 이유와 정반대다.
- * 6. **그림은 끼운 것을 따른다** — 칸 계열로 고르면 주문서 넷이 한 그림으로 뜬다.
+ * 6. **그림은 끼운 것을 따른다** — 칸 계열로 고르면 부적 넷이 한 그림으로 뜬다.
  * 7. **상세에도 그림이 서되 이름이 남는다** (2026-09-16). 빈 칸에는 안 세운다 — 코드만
  *    선 자리는 「뭔가 끼어 있다」로 읽히고, 이 화면은 빈 칸과 찬 칸의 구분이 전부다.
  */
@@ -92,7 +92,7 @@ function buildOption(over: Partial<ConsumableOptionView> = {}): ConsumableOption
   }
 }
 
-/** 0번 칸에 회복 물약이 차 있고, 1번 물약 칸과 주문서 칸이 비어 있다. */
+/** 0번 칸에 회복 물약이 차 있고, 1번 탕약 칸과 부적 칸이 비어 있다. */
 function buildView(over: Partial<ConsumableView> = {}): ConsumableView {
   return {
     slots: [
@@ -135,8 +135,11 @@ function renderPanel(view: ConsumableView | undefined, detail = '', link = 'onli
 
 describe('소모품 칸의 말', () => {
   it('★ 칸 이름을 1부터 센다 — 0번 칸이라고 적으면 사람이 세는 방식과 어긋난다', () => {
-    expect(formatSlotName(buildSlot({ slotIndex: 1 }))).toBe('물약 2')
-    expect(formatSlotName(buildSlot({ useTag: 'SCROLL' }))).toBe('주문서 1')
+    // **여기서 지키는 것은 번호이지 계열 이름이 아니다.** 이름의 정본은
+    // `content/consumableTags` 의 `SLOT_LABELS` 이고, 세계관이 「물약·주문서」를
+    // 「탕약·부적」으로 개명했다(기획/4_세계관 §5.5 — 열쇠 `POTION`·`SCROLL` 은 그대로).
+    expect(formatSlotName(buildSlot({ slotIndex: 1 }))).toBe('탕약 2')
+    expect(formatSlotName(buildSlot({ useTag: 'SCROLL' }))).toBe('부적 1')
   })
 
   it('★ 칸 코드에 번호가 붙는다 — 칸 수가 늘면 PO 하나로는 두 칸을 못 가른다', () => {
@@ -201,7 +204,7 @@ describe('소모품 셀 모델', () => {
 })
 
 describe('★ 그림은 칸 계열이 아니라 끼운 것을 따른다', () => {
-  // 주문서 칸 하나가 넷을 받는다(`SLOT_FAMILY`). 그래서 **칸의 `useTag` 는 늘 SCROLL** 이고,
+  // 부적 칸 하나가 넷을 받는다(`SLOT_FAMILY`). 그래서 **칸의 `useTag` 는 늘 SCROLL** 이고,
   // 그것으로 그림을 고르면 순간이동·화염·부릅이 전부 부적 그림으로 뜬다.
   const blink = buildSlot({
     useTag: 'SCROLL',
@@ -212,7 +215,7 @@ describe('★ 그림은 칸 계열이 아니라 끼운 것을 따른다', () => 
     chargeMax: 2,
   })
 
-  it('끼운 칸은 itemTag 로 고른다 — 계열로 고르면 주문서 넷이 한 그림이 된다', () => {
+  it('끼운 칸은 itemTag 로 고른다 — 계열로 고르면 부적 넷이 한 그림이 된다', () => {
     artCalls.length = 0
     buildConsumableSlotCells(buildView({ slots: [blink] }))
     expect(artCalls).toHaveLength(1)
@@ -240,7 +243,7 @@ describe('★ 그림은 칸 계열이 아니라 끼운 것을 따른다', () => 
 })
 
 describe('★ 견줌이 맞는 칸 전부와 붙는다', () => {
-  // **칸 수가 고정이 아니다.** 접사(`potion_slots`)가 물약 칸을 늘리므로, 하나만 골라
+  // **칸 수가 고정이 아니다.** 접사(`potion_slots`)가 탕약 칸을 늘리므로, 하나만 골라
   // 견주면 사람이 갈아 끼우려던 칸이 견줌에서 빠진다.
   const view = buildView({
     slots: [
@@ -259,14 +262,14 @@ describe('★ 견줌이 맞는 칸 전부와 붙는다', () => {
     ],
   })
 
-  it('물약 칸 둘 다와 견준다 — 하나만 견주면 나머지 칸은 화면에서 사라진다', () => {
+  it('탕약 칸 둘 다와 견준다 — 하나만 견주면 나머지 칸은 화면에서 사라진다', () => {
     const compares = compareToSlots(pickFromOption(buildOption()), view.slots)
     expect(compares).toHaveLength(2)
     expect(compares[0]?.slot.slotIndex).toBe(0)
     expect(compares[1]?.slot.slotIndex).toBe(1)
   })
 
-  it('★ 쓰임새가 다른 칸은 안 견준다 — 물약을 주문서 칸에 못 끼운다', () => {
+  it('★ 쓰임새가 다른 칸은 안 견준다 — 탕약을 부적 칸에 못 끼운다', () => {
     const compares = compareToSlots(pickFromOption(buildOption()), view.slots)
     expect(compares.every((one) => one.slot.useTag === 'POTION')).toBe(true)
   })
@@ -324,10 +327,11 @@ describe('소모품 격자', () => {
     expect(html).toContain('칸 1 / 3')
   })
 
-  it('★ 런 중에도 잠그지 않는다 — 잠그면 방 사이에 규칙 고치는 내내 칸을 못 건드린다', () => {
+  it('★ 판이 도는 중에도 잠그지 않는다 — 잠그면 방 사이에 규칙 고치는 내내 칸을 못 건드린다', () => {
     const running = renderPanel(buildView({ isRunOpen: true }))
-    // 지금 채운 것이 이번 런에 안 실린다는 것은 **말한다.** 막지 않을 뿐이다.
-    expect(running).toContain('다음 런부터 실린다')
+    // 지금 채운 것이 이번 판에 안 실린다는 것은 **말한다.** 막지 않을 뿐이다.
+    // 화면이 한 판을 부르는 말은 「판」 하나다 — 「런」은 같은 것의 세 번째 이름이었다.
+    expect(running).toContain('다음 판부터 실린다')
     expect(running).not.toContain('disabled')
   })
 
@@ -385,10 +389,10 @@ describe('소모품 상세 — 재고 칸', () => {
   })
 
   it('★ 맞는 칸 전부와 견준다', () => {
-    expect(html).toContain('물약 1 · 회복 물약 와 견줌')
-    expect(html).toContain('물약 2 · 빈 칸 와 견줌')
-    // 주문서 칸과는 안 견준다.
-    expect(html).not.toContain('주문서 1 ·')
+    expect(html).toContain('탕약 1 · 회복 물약 와 견줌')
+    expect(html).toContain('탕약 2 · 빈 칸 와 견줌')
+    // 부적 칸과는 안 견준다.
+    expect(html).not.toContain('부적 1 ·')
   })
 })
 
@@ -471,7 +475,7 @@ describe('가방에서 칸으로', () => {
     expect(picked?.slotIndex).toBe(1)
   })
 
-  it('★ 쓰임새가 맞는 칸만 고른다 — 물약이 주문서 칸에 들어가면 규칙표가 엉뚱한 것을 쓴다', () => {
+  it('★ 쓰임새가 맞는 칸만 고른다 — 탕약이 부적 칸에 들어가면 규칙표가 엉뚱한 것을 쓴다', () => {
     const scrollOnly = buildView({ slots: [buildSlot({ useTag: 'SCROLL' })] })
     expect(findFreeConsumableSlot(scrollOnly, 'potion_elixir')).toBeUndefined()
   })
@@ -511,7 +515,7 @@ describe('소모품 설명 — 끼면 / 쓰면 / 자동 (2026-09-11 요청)', ()
     expect(html).toContain('인접한 적이 2 이상')
   })
 
-  it('★ 물약은 자동 발동이 없다는 것을 적는다 — 빈 자리는 「안 정해졌나」로 읽힌다', () => {
+  it('★ 탕약은 자동 발동이 없다는 것을 적는다 — 빈 자리는 「안 정해졌나」로 읽힌다', () => {
     const html = renderSlot({
       useTag: 'POTION',
       itemTag: 'POTION',
@@ -585,7 +589,7 @@ describe('★ 상세에도 그림이 선다 (2026-09-16)', () => {
     expect(html).not.toContain('ds-thumb')
   })
 
-  it('★ 상세도 끼운 것을 따른다 — 칸 계열로 고르면 주문서 넷이 한 그림이 된다', () => {
+  it('★ 상세도 끼운 것을 따른다 — 칸 계열로 고르면 부적 넷이 한 그림이 된다', () => {
     const blink = buildSlot({
       useTag: 'SCROLL',
       itemTag: 'BLINK',

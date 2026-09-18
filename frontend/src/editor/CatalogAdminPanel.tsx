@@ -6,7 +6,7 @@
  *
  * **접사·등급·분류는 여기서 못 고친다.** 고치면 이미 나온 아이템이 소급해 바뀐다 —
  * 인스턴스가 굴린 접사가 없으면 카탈로그 기본값을 쓰기 때문이다. 서버가 409 로 거절하고,
- * 화면은 그 사유를 그대로 적는다. 고칠 수 있는 것은 이름과 최소 층뿐이다.
+ * 화면은 그 사유를 그대로 적는다. 고칠 수 있는 것은 이름과 최소 장뿐이다.
  *
  * **세대를 머리에 적는다.** 아이템을 고치는 것은 순위표 시즌을 가르는 일이고, 그
  * 사실이 조작 전에 눈에 있어야 한다.
@@ -21,7 +21,7 @@ export interface CatalogAdminPanelProps {
   readonly catalog: CatalogAdminView | undefined
   readonly detail: string
   readonly onRetire: (catalogId: string, isRetired: boolean, reason: string) => void
-  /** 이름과 최소 층을 고친다. 나머지는 서버가 저장된 값을 그대로 쓴다 (§15.7). */
+  /** 이름과 최소 장을 고친다. 나머지는 서버가 저장된 값을 그대로 쓴다 (§15.7). */
   readonly onEdit: (catalogId: string, patch: Record<string, unknown>, reason: string) => void
   /** 새 종류를 등록한다. 절은 서버의 파서가 검사한다 — 화면이 문법을 따로 알 필요가 없다. */
   readonly onCreate: (payload: Record<string, unknown>, reason: string) => void
@@ -216,7 +216,7 @@ export function CatalogForm(props: CatalogFormProps): React.JSX.Element {
         ))}
       </div>
       <label className="cat__field">
-        <span>최소 층</span>
+        <span>최소 장</span>
         <input
           className="cat__input"
           inputMode="numeric"
@@ -377,7 +377,7 @@ export interface CatalogDetailProps {
 /**
  * 고른 아이템의 상세와 편집 칸을 그린다.
  *
- * 패널에서 갈라 둔 이유는 검사 때문만이 아니다 — 고른 것 하나에만 걸리는 상태(이름·층·
+ * 패널에서 갈라 둔 이유는 검사 때문만이 아니다 — 고른 것 하나에만 걸리는 상태(이름·장·
  * 사유)를 패널이 들고 있으면, 다른 아이템을 골랐을 때 앞의 입력이 남는다.
  *
  * @param props 아이템 한 줄과 콜백.
@@ -400,7 +400,7 @@ export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
     <div className="cat__detail">
       <span className="cat__name">{row.catalogId}</span>
       <ValueExpr
-        text={`${row.kind}${row.slot === '' ? '' : ` · ${row.slot}`} · ${row.grade} · ${String(row.minFloor)}층~${row.attackRange === 0 ? '' : ` · 사거리 ${String(row.attackRange)}`}`}
+        text={`${row.kind}${row.slot === '' ? '' : ` · ${row.slot}`} · ${row.grade} · ${String(row.minFloor)}장~${row.attackRange === 0 ? '' : ` · 사거리 ${String(row.attackRange)}`}`}
         size="sm"
         dim
       />
@@ -431,7 +431,7 @@ export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
         />
       </label>
 
-      {/* **이름 칸이 없었다.** 「최소 층 +1」 버튼만 있어서 이름은 고칠 방법이
+      {/* **이름 칸이 없었다.** 「최소 장 +1」 버튼만 있어서 이름은 고칠 방법이
         아예 없었고, 그것이 "편집이 안 된다" 의 절반이었다. */}
       <label className="cat__field">
         <span>이름</span>
@@ -446,13 +446,13 @@ export function CatalogDetail(props: CatalogDetailProps): React.JSX.Element {
         />
       </label>
       <label className="cat__field">
-        <span>최소 층</span>
+        <span>최소 장</span>
         <input
           className="cat__input"
           inputMode="numeric"
           value={floor}
           placeholder={String(row.minFloor)}
-          aria-label="최소 층"
+          aria-label="최소 장"
           onChange={(event) => {
             setFloor(event.target.value)
           }}
@@ -700,7 +700,7 @@ export function CatalogAdminPanel(props: CatalogAdminPanelProps): React.JSX.Elem
             ),
             name: item.labelKo,
             meta: [
-              `${item.grade} · ${String(item.minFloor)}층~`,
+              `${item.grade} · ${String(item.minFloor)}장~`,
               item.isRetired ? '폐기' : `가중치 ${String(item.dropWeight)}`,
             ],
             isSelected: item.catalogId === picked,
@@ -719,6 +719,11 @@ export function CatalogAdminPanel(props: CatalogAdminPanelProps): React.JSX.Elem
 
         {row === undefined ? null : (
           <CatalogDetail
+            // **고른 것이 바뀌면 상세를 새로 세운다.** 상태(이름·장·사유·접사)를 상세가
+            // 들고 있으므로, key 가 없으면 React 가 같은 인스턴스를 재사용해 A 에서 채운
+            // 접사가 B 에 그대로 남는다 — 그 상태로 「고치기」를 누르면 A 의 접사가 B 에
+            // 저장된다. `CatalogDetail` 을 갈라 둔 이유가 key 없이는 서지 않는다.
+            key={row.catalogId}
             row={row}
             grades={catalog.grades}
             stats={catalog.stats}

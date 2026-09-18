@@ -107,7 +107,6 @@ export {
   DISCARD_GRADES,
   duplicateRow,
   findAction,
-  formatGradeName,
   formatMaintenanceSentence,
   MAINTENANCE_ACTIONS,
   MAX_MAINTENANCE_ROWS,
@@ -115,12 +114,7 @@ export {
   replaceRow,
 } from './maintenanceRules'
 export type { MaintenanceAction, MaintenanceProblem } from './maintenanceRules'
-export {
-  buildMaintenancePreview,
-  checkPreviewIdle,
-  EMPTY_PREVIEW,
-  formatMoneyDelta,
-} from './maintenancePreview'
+export { buildMaintenancePreview, checkPreviewIdle, formatMoneyDelta } from './maintenancePreview'
 export type { MaintenancePreview, PreviewRow } from './maintenancePreview'
 export { SkillPanel } from './SkillPanel'
 export type { InventoryPanelProps } from './InventoryPanel'

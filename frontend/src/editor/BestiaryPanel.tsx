@@ -34,8 +34,8 @@ export interface BestiaryPanelProps {
 }
 
 /** 못 닿았을 때 무엇을 못 보는가. 앞머리(`서버에 닿지 못했다`)는 linkState 가 든다. */
-const MISSING_HINT = '비각의 몬스터는 서버가 안다'
-const EMPTY_HINT = '아직 비각에 지속 몬스터가 없다'
+const MISSING_HINT = '비각의 것들은 서버가 안다'
+const EMPTY_HINT = '아직 비각에 사는 것이 없다'
 
 /** 아무 칸도 안 골랐을 때. 규칙표가 여기서 나온다는 것을 미리 말한다. */
 const PICK_HINT = '칸을 고르면 규칙표가 그대로 뜬다 — 카운터는 거기서 나온다'
@@ -79,7 +79,7 @@ export function BestiaryDetail(props: { readonly entry: BestiaryEntry }): React.
       {/* **얼마나 센가.** 규칙표만으로는 어떻게 싸우는지만 알 수 있고,
           이길 수 있는지는 알 수 없다. */}
       <ValueExpr
-        text={`${String(entry.zoneFloor)}장 · hp ${String(entry.hpMax)} · 공 ${String(entry.attack)} · 방 ${String(entry.defense)}`}
+        text={`${String(entry.zoneFloor)}장 · 체 ${String(entry.hpMax)} · 공 ${String(entry.attack)} · 방 ${String(entry.defense)}`}
         size="sm"
         dim
       />
@@ -154,7 +154,7 @@ export function BestiaryPanel(props: BestiaryPanelProps): React.JSX.Element {
               filterText={(cell) => `${cell.entry.labelKo} ${cell.entry.catalogId}`}
               filterLabel="이름·종류로 찾기"
               unit="마리"
-              // **한 장씩 깐다** (2026-09-17 실제 신고). 비각은 층을 내려갈수록 는다 — 18마리가 이미 한 화면이다.
+              // **한 장씩 깐다** (2026-09-17 실제 신고). 비각은 장을 내려갈수록 는다 — 18마리가 이미 한 화면이다.
               pageSize={GRID_PAGE}
             />
           </SlotBoard>

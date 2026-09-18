@@ -203,6 +203,18 @@ describe('가로는 2열이다 (명세 B)', () => {
     expect(log).not.toContain('ds-rule-table')
   })
 
+  it('상태 탭은 받은 줄을 세운다 — 탭이 서 있는데 목록이 비면 안 된다', () => {
+    // 탭 줄은 세로와 공유하므로 가로에도 `상태` 탭이 서 있다. 줄을 안 받으면 그 탭이
+    // 빈 목록으로 열리므로, 세로와 **같은** `buildVitalRows(...)` 결과를 받아 넘긴다.
+    const html = renderToStaticMarkup(
+      <BattleLandscape
+        {...buildProps({ tab: 'vitals', vitals: [{ label: '체력', value: '40 / 100' }] })}
+      />,
+    )
+    expect(html).toContain('battle__vitals')
+    expect(html).toContain('40 / 100')
+  })
+
   it('세로의 상태 줄은 가로에 없다 — 그 자리는 상단 바와 하단 바가 겸한다', () => {
     // `--bar-speed`·`--bar-status` 는 2026-09-08 에 기본값이 0 이 됐다. 세로에서도
     // 전용 줄이 사라졌기 때문이며, 가로가 재정의할 것은 상태 줄 하나만 남았다.

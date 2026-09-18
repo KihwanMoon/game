@@ -1,5 +1,5 @@
 /**
- * RuleStatsTable — 규칙별 발동·성공·헛돔 (GDD §8.3).
+ * RuleStatsTable — 규칙별 발동·성공·헛돎 (GDD §8.3).
  *
  * `sniper` 가 "후퇴 36회 · 사격 2회" 로 졌다는 한 줄이면 로그를 처음부터 읽지 않아도
  * 고칠 곳이 특정된다. 그것이 P1(실패는 정보다)이 요구하는 것이고 이 표가 있는 이유다.
@@ -39,7 +39,7 @@ export function RuleStatsTable(props: RuleStatsTableProps): React.JSX.Element {
           <th scope="col">규칙</th>
           <th scope="col">발동</th>
           <th scope="col">성공</th>
-          <th scope="col">헛돔</th>
+          <th scope="col">헛돎</th>
           <th scope="col">진단</th>
         </tr>
       </thead>

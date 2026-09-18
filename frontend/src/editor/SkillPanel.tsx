@@ -1,12 +1,17 @@
 /**
- * 스킬 세팅 패널 (결정 #13 확장).
+ * 재주 세팅 패널 (결정 #13 확장).
  *
- * **장비창과 같은 격자다.** 칸은 상태(이름·켬끔)만 그리고, 누르면 아래 상세에 그 스킬의
+ * **장비창과 같은 격자다.** 칸은 상태(이름·켬끔)만 그리고, 누르면 아래 상세에 그 재주의
  * 수치(계수·쿨타임·사거리·모양)와 제약, 켬·끔이 모인다 — 수치는 밸런스 정본
  * (`@resources/balance/skills.json`)에서 직접 읽는다. 사본을 두면 두 코어가 다른
  * 데이터로 돈다.
  *
- * **빼기만 한다.** 스킬은 장비가 열고, 여기서는 연 것 중 안 들고 갈 것을 끈다.
+ * **빼기만 한다.** 재주는 장비가 열고, 여기서는 연 것 중 안 들고 갈 것을 끈다.
+ *
+ * **화면에 적는 말은 「재주」다** (2026-09-18). 탭·패널 제목·이문록·캐릭터가 전부 「재주」인데
+ * 이 패널만 본문에서 「스킬」이라 불러, 같은 것이 한 화면에서 두 이름으로 보였다. 코드
+ * 식별자(`skillId`·`SkillPanel`)와 정본 파일명(`skills.json`)은 그대로 둔다 — 데이터의
+ * 키이지 사람이 읽는 말이 아니다.
  */
 import skillsRaw from '@resources/balance/skills.json'
 
@@ -80,17 +85,17 @@ function formatShape(shape: RawSkill['shape']): string {
 }
 
 /**
- * 스킬 하나의 수치·제약을 줄들로 편다.
+ * 재주 하나의 수치·제약을 줄들로 편다.
  *
  * **실측값을 병기한다** (P1). 「강하다」가 아니라 「계수 140% · 쿨타임 3틱」이다.
  *
- * @param skillId 스킬 id.
- * @returns 화면에 적을 줄들. 정본에 없는 스킬이면 그 사실 한 줄.
+ * @param skillId 재주 id.
+ * @returns 화면에 적을 줄들. 정본에 없는 재주면 그 사실 한 줄.
  */
 export function listSkillFacts(skillId: string): readonly string[] {
   const skill = SKILL_TABLE.get(skillId)
   if (skill === undefined) {
-    return ['정본에 없는 스킬이다 — 밸런스 데이터가 앞서 나갔다']
+    return ['정본에 없는 재주다 — 밸런스 데이터가 앞서 나갔다']
   }
   const lines: string[] = []
   lines.push(`${formatShape(skill.shape)} · 위력 계수 ${String(skill.coef_pct ?? 100)}%`)
@@ -102,7 +107,7 @@ export function listSkillFacts(skillId: string): readonly string[] {
   if ((skill.telegraph ?? 0) > 0) {
     lines.push(`예고 ${String(skill.telegraph)}틱 뒤에 터진다 — 그동안 적이 피할 수 있다`)
   }
-  // **얹는 것을 안 적으면 그 스킬을 고를 이유가 안 보인다** (2026-09-17). 서리 장판은
+  // **얹는 것을 안 적으면 그 재주를 고를 이유가 안 보인다** (2026-09-17). 서리 장판은
   // 피해가 60% 뿐이라, 묶는다는 사실이 이 줄에 없으면 그냥 약한 광역기로 읽힌다.
   for (const effect of skill.effects ?? []) {
     const name = STATUS_LABELS.get(effect.status ?? '') ?? effect.status ?? ''
@@ -114,7 +119,7 @@ export function listSkillFacts(skillId: string): readonly string[] {
 }
 
 /**
- * 스킬 세팅을 그린다.
+ * 재주 세팅을 그린다.
  *
  * @param props 세팅과 처리기.
  * @returns 렌더 트리.
@@ -125,7 +130,7 @@ export function SkillPanel(props: SkillPanelProps): React.JSX.Element {
   if (view === undefined) {
     return (
       <Panel title="재주 세팅">
-        <ValueExpr text="서버에 닿지 못했다 — 스킬을 못 읽는다" size="sm" dim />
+        <ValueExpr text="서버에 닿지 못했다 — 재주를 못 읽는다" size="sm" dim />
       </Panel>
     )
   }
@@ -133,12 +138,12 @@ export function SkillPanel(props: SkillPanelProps): React.JSX.Element {
   return (
     <Panel title="재주 세팅">
       <ValueExpr
-        text="장비가 연 스킬만 보인다 — 칸을 누르면 수치와 제약이 뜬다"
+        text="장비가 연 재주만 보인다 — 칸을 누르면 수치와 제약이 뜬다"
         size="sm"
         dim
       />
       <SlotGrid
-        title={`연 스킬 ${String(view.rows.length)}`}
+        title={`연 재주 ${String(view.rows.length)}`}
         shape="equip"
         cells={buildSkillCells(view, formatParamLabel)}
         pickedKey={pickedId}

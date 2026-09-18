@@ -17,6 +17,7 @@ import { buildAttributeBonus } from '../core/progression/attributes'
 import { GlyphState, Panel, ValueExpr } from '../ds'
 import type { ProgressView } from '../storage'
 
+import { formatParamLabel } from './blockOptions'
 import { LinkNoticeLine } from './LinkNoticeLine'
 import { checkLinked, type LinkState } from './linkState'
 
@@ -150,7 +151,7 @@ export function CharacterPanel(props: CharacterPanelProps): React.JSX.Element {
             <div className="chr__head">규칙 예산</div>
             <ul className="chr__list">
               <li className="chr__row">
-                <span className="chr__label">CPU</span>
+                <span className="chr__label">cpu</span>
                 <ValueExpr
                   text={`${String(baseStats.cpu_budget ?? 0)} ${formatDelta(progress.bonusCpu)} ${formatDelta(bonus.cpuBudget)}`}
                   size="sm"
@@ -178,6 +179,9 @@ export function CharacterPanel(props: CharacterPanelProps): React.JSX.Element {
               </li>
             </ul>
 
+            {/* **이름은 정본에서 온다.** 태그 id 를 그대로 적으면 한글 화면에 `SCROLL` 이
+                서고, 그 한 칸만 다른 언어가 된다 — 규칙 편집기의 인자와 같은 규율이다
+                (`formatParamLabel`). 재주 줄도 같다. */}
             <div className="chr__head">소모품 · 들고 있어야 규칙에 쓸 수 있다</div>
             <ul className="chr__list">
               {allItems.map((kind) => {
@@ -187,7 +191,7 @@ export function CharacterPanel(props: CharacterPanelProps): React.JSX.Element {
                     <GlyphState
                       state={held > 0 ? 'true' : 'blocked'}
                       size="sm"
-                      label={kind}
+                      label={formatParamLabel(kind)}
                     />
                     <ValueExpr
                       text={held > 0 ? String(held) : '주우면 열린다'}
@@ -206,7 +210,7 @@ export function CharacterPanel(props: CharacterPanelProps): React.JSX.Element {
                   <GlyphState
                     state={equipped.has(skill) ? 'true' : 'blocked'}
                     size="sm"
-                    label={skill}
+                    label={formatParamLabel(skill)}
                   />
                   {equipped.has(skill) ? null : (
                     <ValueExpr text="이 재주를 여는 장비를 끼면 열린다" size="sm" dim />

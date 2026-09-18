@@ -299,7 +299,11 @@ describe('상세와 도구줄', () => {
         }),
       }),
     )
-    expect(html).toContain('attack(8) &gt;= 요구(12)')
+    // 스탯 이름은 한글이다 — 정본은 `game/schemas/item.py` 의 `STAT_LABELS` 이고,
+    // 접사는 「공격력」인데 요구조건만 `attack` 으로 나가면 한 카드 안에서 같은 스탯이
+    // 두 이름을 갖는다. 이 테스트가 지키는 것은 이름 표기가 아니라 실측값 병기(8·12)다.
+    expect(html).toContain('공격력(8) &gt;= 요구(12)')
+    expect(html).not.toContain('attack(8)')
   })
 
   it('★ 소모품 칸 상세에는 조작이 없고 집을 가리킨다 — 두 집에 살면 어느 쪽이 진짜인지 모른다', () => {

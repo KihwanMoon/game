@@ -199,7 +199,7 @@ describe('세계 현황', () => {
 
   it('레벨 분포가 보인다 — 평균만 보면 한 사람이 멀리 간 것과 구분이 안 된다', () => {
     const html = render(OVERVIEW)
-    expect(html).toContain('레벨 1')
+    expect(html).toContain('lv 1')
     expect(html).toContain('30명')
   })
 
@@ -297,7 +297,7 @@ describe('긴 목록', () => {
 
   it('★ 거르기는 긴 목록 둘에만 선다 — 고정 길이 목록에 내밀면 거를 것이 없다', () => {
     const html = render(OVERVIEW)
-    expect(html).toContain('이름·층으로 거르기')
+    expect(html).toContain('이름·장으로 거르기')
     expect(html).toContain('이름·원주인으로 거르기')
     // 지속 몬스터와 보유 장비, 둘뿐이다.
     expect(html.match(/type="search"/g)?.length).toBe(2)

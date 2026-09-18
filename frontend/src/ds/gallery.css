@@ -37,13 +37,6 @@
   align-items: center;
 }
 
-.gal__cell {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  min-width: var(--cell-min);
-}
-
 .gal__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--cell-min), 1fr));

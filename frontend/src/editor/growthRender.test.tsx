@@ -90,7 +90,9 @@ describe('능력치 미리보기 (결정 #51)', () => {
 
   it('★ 지능의 CPU 상한이 화면에도 보인다', () => {
     // 상한을 화면이 숨기면 유저는 안 오르는 축에 계속 찍는다.
-    expect(formatAttributeEffect('int', 40)).toBe('CPU +8 · 스킬위력 180%')
+    // 이름은 캐릭터 시트와 같은 「재주 위력」이다 — 화면마다 다른 말로 부르면 같은
+    // 스탯이 둘로 보인다.
+    expect(formatAttributeEffect('int', 40)).toBe('CPU +8 · 재주 위력 180%')
   })
 
   it('0점이면 아무것도 적지 않는다 — 빈 줄이 세 개 늘면 목록이 읽히지 않는다', () => {
@@ -115,7 +117,12 @@ describe('층 깊이 (설계/6_몬스터 §3)', () => {
   })
 
   it('★ 층이 무엇을 바꾸는지 말한다 — 깊이 가는 이유와 대가가 같은 줄에 있어야 한다', () => {
-    expect(drawDepth(4, 10)).toContain('HP +25%')
+    // **숫자는 `balance.json` 에서 온다.** 예전에는 화면이 「HP +25% · 공격 +20%」를
+    // 손으로 적었는데 정본에는 `enemy_mult_pct_per_floor: 120` 하나뿐이고 그것이
+    // HP·공격에 똑같이 걸린다 — HP 쪽 25 는 어디에도 없는 숫자였다.
+    expect(drawDepth(4, 10)).toContain('HP·공격 +20%')
+    // 합이 아니라 곱이라는 사실까지 말해야 깊은 장의 벽을 낮게 읽지 않는다.
+    expect(drawDepth(4, 10)).toContain('복리')
   })
 
   it('★ 끝까지 왔으면 그렇게 말한다 — 더 갈 곳이 있는 것처럼 보이면 안 된다', () => {
@@ -140,7 +147,7 @@ describe('능력치 무르기', () => {
   it('★ 값이 붙으면 **누르기 전에** 얼마인지 적는다', () => {
     // 누르고 나서 거절당하면 「왜 안 되지」가 되고, 값을 모르면 낼지 말지를 고를 수 없다.
     const markup = draw({ ...PROGRESS, respecIsFree: false, respecCost: 785 })
-    expect(markup).toContain('되돌리기 (785 푼)')
+    expect(markup).toContain('되돌리기 (785푼)')
     expect(markup).not.toContain('공짜')
   })
 })

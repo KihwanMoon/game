@@ -143,7 +143,7 @@ describe('아이템 카탈로그', () => {
     expect(cells.map((cell) => cell.countText)).toEqual(['사4', ''])
   })
 
-  it('★ 고르면 접사·요구조건·여는 스킬이 함께 보인다', () => {
+  it('★ 고르면 접사·요구조건·여는 재주가 함께 보인다', () => {
     // 격자는 이름과 자리까지만 담고 상세는 아래 한 곳에 편다. 정보가 사라진 것이
     // 아니라 자리를 옮긴 것이며, **옮긴 자리에 다 있는지**가 여기서 볼 것이다.
     const row = CATALOG.items.find((entry) => entry.labelKo === '장궁')
@@ -153,7 +153,9 @@ describe('아이템 카탈로그', () => {
     const html = renderToStaticMarkup(<ItemDetail row={row} />)
     expect(html).toContain('날카로움 +3')
     expect(html).toContain('attack &gt;= 10')
-    expect(html).toContain('AREA_ATTACK')
+    // 격자 칸(`재주 {id}`)과 같은 말로 적는다 — 한 화면이 「스킬」과 「재주」를 함께
+    // 쓰면 같은 것이 둘로 읽힌다.
+    expect(html).toContain('재주 AREA_ATTACK')
     // 사거리는 상세에만 전체 이름으로 적힌다 — 예전에는 패널 안에 상세가 한 벌 더
     // 적혀 있었고, 그 사본에서 이 줄이 빠져 있었다.
     expect(html).toContain('사거리 4')

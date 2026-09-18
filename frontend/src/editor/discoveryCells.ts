@@ -28,13 +28,13 @@ import { clipCellLabel, EQUIP_CELL_CODES } from './inventoryCells'
  * 아이템 그림표에 넣으면 언젠가 같은 접두사를 가진 아이템이 생긴 날 재주 칸에 칼이
  * 그려진다 — 지금 안 맞는다는 것은 우연이지 규칙이 아니다.
  */
-export const KIND_ITEM = 'ITEM'
+const KIND_ITEM = 'ITEM'
 
 /** 안 밝힌 칸. `ds/Thumb` 의 미해금 해칭과 같은 글리프다 — 뜻이 같으면 표기도 같다. */
-export const LOCKED_MARK = '⧅'
+const LOCKED_MARK = '⧅'
 
 /** 안 밝힌 칸의 한 줄. 칸이 70px 라 짧게 적고, 「얻으면 밝혀진다」는 상세가 낸다. */
-export const LOCKED_FACT = '못 얻음'
+const LOCKED_FACT = '못 얻음'
 
 /** 이문록 격자 칸 하나. */
 export interface DiscoveryCell extends CellFace {

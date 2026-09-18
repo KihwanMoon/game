@@ -20,7 +20,7 @@ export type ThumbState = 'known' | 'locked'
  * 넣을 자리가 없으므로, 세 번째 채널을 보조 기술이 읽는 이름으로 둔다. 칸의 글리프
  * 표기는 바깥(`editor/gradeBadge`)이 이미 그린다.
  */
-export const THUMB_GRADE_LABELS: ReadonlyMap<string, string> = new Map([
+const THUMB_GRADE_LABELS: ReadonlyMap<string, string> = new Map([
   ['COMMON', '보통'],
   ['FINE', '상급'],
   ['RELIC', '유물'],

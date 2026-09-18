@@ -779,8 +779,8 @@ describe('판정 라벨은 한 벌이다', () => {
 
   it('쓰러짐을 쓴다 — 명세의 판정 표시가 정본이다', () => {
     expect(formatOutcome('PLAYER_LOSS')).toBe('쓰러짐')
-    expect(formatOutcome('PLAYER_WIN')).toBe('승리')
-    expect(formatOutcome('TIMEOUT')).toBe('시간 초과')
+    expect(formatOutcome('PLAYER_WIN')).toBe('방을 깼다')
+    expect(formatOutcome('TIMEOUT')).toBe('추격자 도착')
     expect(formatOutcome('ONGOING')).toBe('진행 중')
   })
 
@@ -791,7 +791,7 @@ describe('판정 라벨은 한 벌이다', () => {
 
   it('판정 한 줄은 글리프와 다음에 할 일을 함께 적는다', () => {
     expect(formatOutcomeNotice('PLAYER_LOSS')).toBe('✕ 쓰러짐 · 내력을 고쳐 다시')
-    expect(formatOutcomeNotice('PLAYER_WIN')).toBe('✓ 방 클리어 · 다음 실로')
+    expect(formatOutcomeNotice('PLAYER_WIN')).toBe('✓ 방을 깼다 · 다음 방으로')
     expect(formatOutcomeNotice('ONGOING')).toBe('◆ 전투 중')
     expect(formatOutcomeNotice('TIMEOUT')).toBe('◈ 추격자 도착')
   })

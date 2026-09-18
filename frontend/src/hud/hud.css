@@ -60,43 +60,8 @@
    다르고 그리는 것은 하나라, 제 3열 골격을 들고 있던 시절에는 데스크톱 토큰이 사라진 날
    `100% 1px 1fr 1px 100%` 짜리 격자가 됐다. 골격은 `battle.css` 한 곳에 있다. */
 
-.hud-tile {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--plan-cell);
-  height: var(--plan-cell);
-}
-
-.hud-tile__glyph {
-  font-family: var(--font-mono);
-  font-size: var(--fs-body);
-  line-height: var(--lh-tight);
-  color: var(--text-dim);
-}
-
-/* 벽은 45도 해칭이다. 기계 도면에서 벽 단면을 그리는 방식이며 장식이 아니다. */
-.hud-tile--wall {
-  background: var(--hatch-45);
-  border: var(--border);
-}
-
-.hud-tile--hazard .hud-tile__glyph {
-  color: var(--plan-hazard);
-}
-
-.hud-tile--heal .hud-tile__glyph {
-  color: var(--state-heal);
-}
-
-.hud-tile--way .hud-tile__glyph {
-  color: var(--plan-door);
-}
-
-.hud-tile--cover .hud-tile__glyph {
-  color: var(--text-body);
-}
+/* **타일 규칙도 없다** (2026-09-18). 칸은 `battle/planRenderer.ts` 가 캔버스에 그린다 —
+   DOM 타일을 얹던 시절의 `.hud-tile*` 일곱 규칙은 받는 마크업이 없어 지웠다. */
 
 /* ── 로그 열 ────────────────────────────────────────────────────────── */
 

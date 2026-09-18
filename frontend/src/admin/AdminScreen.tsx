@@ -83,7 +83,7 @@ const TABS: readonly { readonly id: Tab; readonly label: string }[] = [
   { id: 'balance', label: '밸런스' },
   { id: 'enemies', label: '적 내력' },
   { id: 'skills', label: '재주' },
-  { id: 'rooms', label: '룸' },
+  { id: 'rooms', label: '방' },
   { id: 'catalog', label: '아이템' },
   // 봇은 우리가 들인 것이라 우리가 봐야 한다 (T11). 표시만 하고 보는 자리가 없으면
   // 「몇 마리가 무엇을 하고 있는지」를 DB 로만 알 수 있고, 그러면 아무도 안 본다.

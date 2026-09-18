@@ -90,7 +90,7 @@ export function RoomGrid(props: RoomGridProps): React.JSX.Element {
   const rows = (room?.rows ?? []) as string[]
 
   return (
-    <Panel title="룸" meta={`${String(templates.length)}개`} tone="panel" padded scroll>
+    <Panel title="방" meta={`${String(templates.length)}개`} tone="panel" padded scroll>
       <div className="cat">
         <ValueExpr
           text="칸을 눌러 지형을 바꾼다 — 줄 길이가 안 바뀌므로 격자가 어긋날 수 없다"

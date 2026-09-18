@@ -172,7 +172,7 @@ describe('고른 개체의 상세', () => {
   })
 
   it('★ 얼마나 센지도 적는다 — 규칙표만으로는 이길 수 있는지 알 수 없다', () => {
-    expect(detail).toContain('hp 74')
+    expect(detail).toContain('체 74')
     expect(detail).toContain('공 14')
   })
 
@@ -192,7 +192,7 @@ describe('도감 패널 — 빈 경우', () => {
     const offline = renderToStaticMarkup(<BestiaryPanel entries={undefined} link="offline" />)
     const empty = renderToStaticMarkup(<BestiaryPanel entries={[]} link="online" />)
     expect(offline).toContain('서버에 닿지 못했다')
-    expect(empty).toContain('아직 비각에 지속 몬스터가 없다')
+    expect(empty).toContain('아직 비각에 사는 것이 없다')
   })
 })
 

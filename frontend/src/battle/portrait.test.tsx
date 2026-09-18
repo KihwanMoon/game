@@ -398,7 +398,7 @@ describe('상태줄 — 판정 네 가지 (명세 D)', () => {
     const win = renderToStaticMarkup(
       <BattlePortrait {...buildProps({ outcome: OUTCOME_PLAYER_WIN })} />,
     )
-    expect(win).toContain('✓ 방 클리어 · 다음 실로')
+    expect(win).toContain('✓ 방을 깼다 · 다음 방으로')
     expect(win).toContain('battle__verdict--true')
 
     const loss = renderToStaticMarkup(
@@ -625,16 +625,19 @@ describe('상태 탭이 규칙표가 읽는 값을 보여 준다 (2026-09-09)', 
 
   it('★ 싸우는 값 넷을 적는다 — `적거리 <= 사거리` 를 눈으로 확인할 수 있어야 한다', () => {
     const rows = buildVitalRows({ ...base, attack: 12, defense: 7, attackRange: 4, initiative: 55 })
+    // 라벨은 캐릭터 시트(`editor/CharacterPanel` 의 COMBAT_ROWS)와 **같은 말**이다.
+    // 같은 축을 한쪽은 「공격」, 다른 쪽은 「공격력」이라 부르면 같은 값인지 확인하러 두
+    // 화면을 오가게 된다 (2026-09-18).
     const find = (label: string) => rows.find((row) => row.label === label)?.value
-    expect(find('공격')).toBe('12')
-    expect(find('방어')).toBe('7')
+    expect(find('공격력')).toBe('12')
+    expect(find('방어력')).toBe('7')
     expect(find('사거리')).toBe('4')
-    expect(find('선공')).toBe('55')
+    expect(find('선공권')).toBe('55')
   })
 
   it('★ **모르는 것을 0 으로 적지 않는다** — 재생 프레임은 이 값을 안 들고 있다', () => {
     const rows = buildVitalRows(base)
-    expect(rows.some((row) => row.label === '공격')).toBe(false)
+    expect(rows.some((row) => row.label === '공격력')).toBe(false)
     expect(rows.some((row) => row.label === '사거리')).toBe(false)
   })
 

@@ -39,8 +39,10 @@ export interface DiscoveryPanelProps {
 
 type View = 'items' | 'skills'
 
+// 탭 이름은 **패널 제목·절 제목과 같은 말**이다. 「아이템」으로 두었더니 누른 탭과 그
+// 아래 절 제목(「물건」)이 한 화면에서 달랐다 — 옆 탭은 '재주' 로 이미 같았다.
 const VIEWS: readonly { readonly id: View; readonly label: string }[] = [
-  { id: 'items', label: '아이템' },
+  { id: 'items', label: '물건' },
   { id: 'skills', label: '재주' },
 ]
 

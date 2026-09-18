@@ -232,7 +232,7 @@ describe('접사 입력 (JSON 을 손으로 치지 않는다)', () => {
   })
 })
 
-describe('이름·최소 층 고치기', () => {
+describe('이름·최소 장 고치기', () => {
   const first = VIEW.items[0]
   if (first === undefined) {
     throw new Error('픽스처가 비었다')
@@ -251,10 +251,10 @@ describe('이름·최소 층 고치기', () => {
     expect(picked).toContain('aria-label="아이템 이름"')
   })
 
-  it('★ 최소 층 칸이 있다 — 「+1」 버튼만으로는 되돌릴 수도 없었다', () => {
-    // **입력 칸을 직접 본다.** 그냥 "최소 층" 을 찾으면 버튼의 title 이 그 말을 담고 있어
+  it('★ 최소 장 칸이 있다 — 「+1」 버튼만으로는 되돌릴 수도 없었다', () => {
+    // **입력 칸을 직접 본다.** 그냥 "최소 장" 을 찾으면 버튼의 title 이 그 말을 담고 있어
     // 칸을 지워도 검사가 통과한다 — 실제로 그렇게 통과했다.
-    expect(picked).toContain('aria-label="최소 층"')
+    expect(picked).toContain('aria-label="최소 장"')
   })
 
   it('★ 고치기 버튼이 있다', () => {

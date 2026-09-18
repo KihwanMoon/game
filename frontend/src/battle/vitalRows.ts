@@ -11,7 +11,7 @@
  * 순수 함수다. 화면 상태를 안 건드리므로 테스트가 값만 보고 판정할 수 있다.
  */
 
-import { USE_TAG_LABELS } from '../content/consumableTags'
+import { SLOT_LABELS, USE_TAG_LABELS } from '../content/consumableTags'
 import { readSkillName } from '../core/resources'
 
 /** 상태 한 줄. 이름과 값, 그리고 눈에 띄어야 하는지. */
@@ -61,12 +61,24 @@ export const STATUS_LABELS: ReadonlyMap<string, string> = new Map([
   ['ROOT', '이동불가'],
   // 둘은 **내가 스스로 건 것**이다 (2026-09-11). 규칙표가 `self_has_status` 로 묻는
   // 목록과 같아야 한다 — 여기 없으면 걸어 놓고도 화면에서 확인할 수 없다.
-  ['GUARD', '방어'],
+  //
+  // GUARD 는 **스탯 줄의 「방어력」과 다른 것**이라 그 말을 피한다. 둘이 한 목록에
+  // 나란히 서므로, 같은 낱말이면 「방어 12」와 「방어 2틱」이 같은 것을 가리키는 것처럼
+  // 읽힌다 — 팔레트(`editor/blockOptions`)가 쓰는 말을 그대로 가져왔다 (2026-09-18).
+  ['GUARD', '방어 태세'],
   ['FOCUS', '부릅'],
 ])
 
 /** 깃발 이름들. 규칙표가 세우고 읽는 넷이다 (`flag_state[A]`). */
 export const FLAG_NAMES: readonly string[] = ['A', 'B', 'C', 'D']
+
+/**
+ * 칸 두 줄의 이름. **정본은 `content/consumableTags` 다** — 손으로 적어 두었더니
+ * 세계관이 「물약·주문서」를 「탕약·부적」으로 개명한 뒤 이 줄만 옛말로 남았다
+ * (2026-09-18). 나머지 소모품 줄은 이미 그 표를 읽는다.
+ */
+const POTION_LABEL = SLOT_LABELS.get('POTION') ?? 'POTION'
+const SCROLL_LABEL = SLOT_LABELS.get('SCROLL') ?? 'SCROLL'
 
 /** 체력이 이 비율 아래면 눈에 띄게 한다. 규칙표의 흔한 문턱(25~30%)과 같은 자리다. */
 const LOW_HP_PERCENT = 30
@@ -101,8 +113,8 @@ export interface VitalInput {
    * 주문서 넷이 갈린 뒤로 필요해진 둘 (2026-09-11). `carried` 는 들고 들어온 수,
    * `held` 는 지금 남은 수이며 둘 다 **태그**로 센다.
    *
-   * **물약·주문서 줄로는 안 보인다.** 순간이동을 끼우고 들어오면 그 판의 소모품은
-   * `BLINK` 인데 화면에는 「주문서 0 / 0」만 떠서, 들고 온 것이 없는 것처럼 보인다 —
+   * **탕약·부적 줄로는 안 보인다.** 순간이동을 끼우고 들어오면 그 판의 소모품은
+   * `BLINK` 인데 화면에는 「부적 0 / 0」만 떠서, 들고 온 것이 없는 것처럼 보인다 —
    * 이 저장소가 여러 번 다친 「안 보이면 없는 것」의 자리다.
    */
   readonly carried?: ReadonlyMap<string, number> | undefined
@@ -145,20 +157,23 @@ export function listCooldownRows(input: VitalInput): readonly VitalRow[] {
  * @param input 상태 값들.
  * @returns 네 줄. 값을 안 받았으면 빈 배열이다 — 재생 프레임이 그 경우다.
  */
-export function listCombatRows(input: VitalInput): readonly VitalRow[] {
+function listCombatRows(input: VitalInput): readonly VitalRow[] {
   if (input.attack === undefined) {
     return []
   }
+  // **캐릭터 시트와 같은 말을 쓴다** (`editor/CharacterPanel` 의 COMBAT_ROWS).
+  // 같은 값을 한쪽은 「공격」, 다른 쪽은 「공격력」이라 부르면 같은 축인지 확인하러
+  // 두 화면을 오가게 된다 (2026-09-18).
   return [
-    { label: '공격', value: String(input.attack) },
-    { label: '방어', value: String(input.defense ?? 0) },
+    { label: '공격력', value: String(input.attack) },
+    { label: '방어력', value: String(input.defense ?? 0) },
     { label: '사거리', value: String(input.attackRange ?? 0) },
-    { label: '선공', value: String(input.initiative ?? 0) },
+    { label: '선공권', value: String(input.initiative ?? 0) },
   ]
 }
 
 /**
- * 물약·보호 주문서 밖의 소모품 줄들 (2026-09-11).
+ * 탕약·보호 부적 밖의 소모품 줄들 (2026-09-11).
  *
  * **들고 온 것만 적는다.** 태그 다섯을 늘 적으면 안 들고 온 넷이 「0 / 0」으로 서서 줄만
  * 넉 줄 는다 — 이 화면에서 가장 비싼 것이 세로 공간이다.
@@ -195,7 +210,7 @@ export function listExtraConsumableRows(input: VitalInput): readonly VitalRow[] 
  * @param input 상태 값들.
  * @returns 상태이상 한 줄.
  */
-export function formatStatusRow(input: VitalInput): VitalRow {
+function formatStatusRow(input: VitalInput): VitalRow {
   const parts = [...STATUS_LABELS]
     .map(([id, label]) => [label, input.statuses?.get(id) ?? 0] as const)
     .filter(([, left]) => left > 0)
@@ -213,7 +228,7 @@ export function formatStatusRow(input: VitalInput): VitalRow {
  * @param input 상태 값들.
  * @returns 깃발 한 줄.
  */
-export function formatFlagRow(input: VitalInput): VitalRow {
+function formatFlagRow(input: VitalInput): VitalRow {
   const on = FLAG_NAMES.filter((name) => input.flags?.get(name) === true)
   return { label: '깃발', value: on.length === 0 ? '없음' : on.join(' · ') }
 }
@@ -226,7 +241,7 @@ export function formatFlagRow(input: VitalInput): VitalRow {
  *
  * **빈 자리를 값으로 채운 것이다** (2026-09-09, 실제 신고: 「탭 안쪽 정보 출력부도
  * 봐 달라」). 다섯 줄만 서 있어서 시트의 185px 이 비어 있었는데, 그 사이 규칙표가
- * 읽는 축 여섯(공격·방어·사거리·선공·상태이상·깃발)은 화면 어디에도 없었다.
+ * 읽는 축 여섯(공격력·방어력·사거리·선공권·상태이상·깃발)은 화면 어디에도 없었다.
  *
  * @param input 상태 값들.
  * @returns 한 줄에 하나씩 쌓을 줄들.
@@ -236,8 +251,8 @@ export function buildVitalRows(input: VitalInput): readonly VitalRow[] {
     input.hpMax > 0 && (input.hp * PERCENT_BASE) / input.hpMax < LOW_HP_PERCENT
   return [
     { label: '체력', value: `${String(input.hp)} / ${String(input.hpMax)}`, isWarning: isLow },
-    { label: '물약', value: `${String(input.potions)} / ${String(input.potionsMax)}` },
-    { label: '주문서', value: `${String(input.scrolls)} / ${String(input.scrollsMax)}` },
+    { label: POTION_LABEL, value: `${String(input.potions)} / ${String(input.potionsMax)}` },
+    { label: SCROLL_LABEL, value: `${String(input.scrolls)} / ${String(input.scrollsMax)}` },
     ...listExtraConsumableRows(input),
     ...listCombatRows(input),
     ...listCooldownRows(input),

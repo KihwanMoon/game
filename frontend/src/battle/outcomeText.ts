@@ -10,6 +10,12 @@
  * 디자인 정본이고, 그 문구가 P1(실패는 정보다)에 맞기 때문이다 — `패배`·`사망` 은 판이
  * 끝났다는 통보에서 멈추지만 `쓰러짐 · 규칙을 고쳐 다시` 는 다음에 할 일을 가리킨다.
  *
+ * **표 둘이 같은 낱말을 쓴다** (2026-09-18). 라벨표(`OUTCOME_LABELS`)와 한 줄 문구
+ * (`OUTCOME_NOTICES`)가 같은 판정을 `승리` 대 `방 클리어`, `시간 초과` 대 `추격자 도착`
+ * 으로 갈라 적고 있었다 — 이 파일이 두 벌의 표를 합치며 막으려던 결함 그대로다. 낱말은
+ * 나머지 화면이 쓰는 것으로 맞췄다: 전투 단위는 `방` 이고(`방 2/6`·`없는 방 id 다`),
+ * 깨는 행위는 `깬다` 다(`방을 깨면 열린다`). `클리어`·`실` 은 이 한 줄에만 있던 말이다.
+ *
  * 이 파일이 `battle/` 에 있는 이유는 의존 방향 때문이다. `hud/` 는 이미 `battle/` 을
  * 가져다 쓰므로(PostMortem 이 PlanCanvas 를 그린다) 반대 방향으로 두면 순환이 된다.
  * 코어(`core/sim/phases.ts`)는 파이썬 정본의 이식이라 화면 문구가 들어갈 자리가 아니다.
@@ -24,9 +30,9 @@ import {
 /** 판정 표기. 코어의 OUTCOME_* 를 화면 문구로 바꾼다. */
 export const OUTCOME_LABELS: ReadonlyMap<string, string> = new Map([
   [OUTCOME_ONGOING, '진행 중'],
-  [OUTCOME_PLAYER_WIN, '승리'],
+  [OUTCOME_PLAYER_WIN, '방을 깼다'],
   [OUTCOME_PLAYER_LOSS, '쓰러짐'],
-  [OUTCOME_TIMEOUT, '시간 초과'],
+  [OUTCOME_TIMEOUT, '추격자 도착'],
 ])
 
 /**
@@ -46,7 +52,7 @@ export const OUTCOME_GLYPHS: ReadonlyMap<string, string> = new Map([
  */
 export const OUTCOME_NOTICES: ReadonlyMap<string, string> = new Map([
   [OUTCOME_ONGOING, '전투 중'],
-  [OUTCOME_PLAYER_WIN, '방 클리어 · 다음 실로'],
+  [OUTCOME_PLAYER_WIN, '방을 깼다 · 다음 방으로'],
   [OUTCOME_PLAYER_LOSS, '쓰러짐 · 내력을 고쳐 다시'],
   [OUTCOME_TIMEOUT, '추격자 도착'],
 ])

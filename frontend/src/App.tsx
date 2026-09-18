@@ -2380,7 +2380,7 @@ export function App(): React.JSX.Element {
         text={`${String(roomFloor)}장 · 방 ${String((run.setup.chain?.index ?? 0) % Math.max(1, run.setup.roomsPerFloor ?? CHAIN_LENGTH) + 1)}/${String(run.setup.roomsPerFloor ?? CHAIN_LENGTH)}`}
         size="sm"
       />
-      <ValueExpr text={`seed ${String(run.setup.seed)}`} size="sm" dim />
+      <ValueExpr text={`시드 ${String(run.setup.seed)}`} size="sm" dim />
       {/* **버튼은 없다가 생기지 않는다** (2026-09-08, 실제 요청). 끝나야 쓸 수 있는
           것들이 그때 나타나면 줄 수가 바뀌고 화면이 통째로 움직인다 — 늘 그려 두고
           쓸 수 없을 때는 꺼 둔다. 있는데 꺼진 것과 아예 없는 것은 다른 말이고, 앞엣것이

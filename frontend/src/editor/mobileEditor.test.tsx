@@ -391,12 +391,13 @@ describe('실측 줄 — 값이 없으면 pending, 있으면 병기한다', () =
       ['target_distance[NEAREST]', 2],
       ['$attack_range', 3],
     ])
-    // 인자는 좌변의 일부다 — `대상 거리[가장 가까운]` 과 `대상 거리[가장 약한]` 은 다른 항이다.
+    // 인자는 좌변의 일부다 — `대상 거리[가장 가까운 적]` 과 `대상 거리[HP 가 가장 낮은 적]` 은
+    // 다른 항이다.
     //
     // **인자도 한글로 적는다** (2026-09-16 요청). 코어가 만든 문자열을 표시 계층에서
     // 덧칠한 결과다 — 코어에서 바꾸면 파이썬과 갈려 G3 가 깨진다.
     expect(formatMeasuredTerm(statTerm, BLOCK_CATALOG, readings)).toBe(
-      '대상 거리[가장 가까운](2) <= 사거리(3)',
+      '대상 거리[가장 가까운 적](2) <= 사거리(3)',
     )
     expect(resolveMeasureState(statTerm, readings)).toBe('true')
   })

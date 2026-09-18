@@ -24,8 +24,13 @@ import type { ThumbState } from '../ds'
 /** 세는 단위의 기본값. 「5줄」 · 「걸리는 줄이 없다」. */
 const DEFAULT_UNIT = '줄'
 
-/** 거르기 칸에 적을 기본 이름. 보조 기술이 읽는 이름이기도 하다. */
-const DEFAULT_FILTER_LABEL = '거르기'
+/**
+ * 찾기 칸에 적을 기본 이름. 보조 기술이 읽는 이름이기도 하다.
+ *
+ * **`SlotBoard` 의 기본값과 같은 말이어야 한다.** 두 틀이 서로 다른 말을 들고 있으면
+ * 라벨을 안 넘긴 화면에서 「찾기」와 「거르기」가 한 화면에 함께 뜬다.
+ */
+const DEFAULT_FILTER_LABEL = '찾기'
 
 /**
  * 줄 앞 그림 한 칸.
@@ -84,9 +89,9 @@ export interface DataListProps<T> {
    * (자리 다섯, 접사 셋)에 「더 보기」가 서면 뒤에 뭔가 더 있다는 거짓말이 된다.
    */
   readonly pageSize?: number
-  /** 거를 때 볼 글자. 주면 거르기 칸이 선다. 안 주면 칸도 없다. */
+  /** 거를 때 볼 글자. 주면 찾기 칸이 선다. 안 주면 칸도 없다. */
   readonly filterText?: (item: T) => string
-  /** 거르기 칸의 이름. 자리글씨와 보조 기술 이름으로 함께 나간다. */
+  /** 찾기 칸의 이름. 자리글씨와 보조 기술 이름으로 함께 나간다. */
   readonly filterLabel?: string
   /**
    * 첫 질의. 화면이 탭을 되돌아올 때 쓰던 질의를 되살리는 자리이며, DOM 없이 도는
@@ -206,7 +211,7 @@ export function DataList<T>(props: DataListProps<T>): React.JSX.Element {
     .filter((name) => name !== '')
     .join(' ')
 
-  // 하나도 없으면 머리도 없다. 「0줄」과 거르기 칸은 `emptyText` 위에서 소음이고,
+  // 하나도 없으면 머리도 없다. 「0줄」과 찾기 칸은 `emptyText` 위에서 소음이고,
   // 아직 아무것도 못 넣은 사람에게 거를 것을 내미는 꼴이 된다.
   const showHead = items.length > 0 && (props.showCount === true || filterText !== undefined)
 

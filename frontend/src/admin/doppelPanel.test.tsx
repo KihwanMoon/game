@@ -84,8 +84,8 @@ describe('도플갱어 상세 — 봇과 같은 UI, 다른 탭 수', () => {
     expect(html).toContain('botd__tabs')
   })
 
-  it('★ 있는 탭은 셋이다 — 전투 규칙 · 캐릭터 · 장비', () => {
-    for (const label of ['전투 규칙', '캐릭터', '장비']) {
+  it('★ 있는 탭은 셋이다 — 전투 내력 · 캐릭터 · 장비', () => {
+    for (const label of ['전투 내력', '캐릭터', '장비']) {
       expect(html).toContain(label)
     }
   })
@@ -222,7 +222,7 @@ describe('★ 재생이 적는 층은 「지금 있는 층」이다', () => {
     const html = renderToStaticMarkup(
       <ReplayView replay={buildReplay()} onClose={() => undefined} />,
     )
-    expect(html).toContain('1층 · 방 1 / 12')
+    expect(html).toContain('1장 · 방 1 / 12')
   })
 
   it('코어가 적을 세울 때 쓰는 식과 같은 함수를 쓴다', async () => {

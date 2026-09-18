@@ -28,12 +28,6 @@ export interface TemplatePanelProps {
   readonly onLoad: (ruleset: RuleSet) => void
 }
 
-/**
- * 추천 규칙표 목록을 그린다.
- *
- * @param props 템플릿들과 예산, 불러오기 콜백.
- * @returns 패널 요소.
- */
 /** 목록 한 줄이 받는 props. */
 export interface TemplateRowProps {
   readonly template: RuleTemplate

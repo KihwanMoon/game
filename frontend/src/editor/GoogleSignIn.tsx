@@ -79,7 +79,6 @@ export interface GoogleSignInProps {
 export function GoogleSignIn(props: GoogleSignInProps): React.JSX.Element | null {
   const slot = useRef<HTMLDivElement | null>(null)
   const [problem, setProblem] = useState('')
-  const [isReady, setReady] = useState(false)
   // **최신 콜백을 참조로 든다.** 의존성에 넣으면 부모가 다시 그릴 때마다 구글 버튼을
   // 처음부터 다시 만들고, 그때마다 논스를 하나씩 더 받는다.
   const onCredential = useRef(props.onCredential)
@@ -140,7 +139,6 @@ export function GoogleSignIn(props: GoogleSignInProps): React.JSX.Element | null
           locale: 'ko',
         })
       }
-      setReady(true)
     })()
     return () => {
       isLive.current = false
@@ -155,8 +153,9 @@ export function GoogleSignIn(props: GoogleSignInProps): React.JSX.Element | null
     // 구글 단추를 그릴 때 잰 값이 하한으로 떨어져 **폭 채우기가 조용히 무력해졌다** —
     // 고쳐 놓고 실측해서 잡았다. 그릴 것이 없을 때 이 상자는 빈 div 라 높이도 0 이니
     // 감출 이유도 없다.
-    <div className="account__google" data-ready={isReady ? 'yes' : 'no'}>
-      <div ref={slot} />
-    </div>
+    //
+    // 클래스도 표시도 안 붙인다. `account__google` 에는 CSS 규칙이 없었고 `data-ready`
+    // 는 아무도 안 읽었다 — 그 속성 하나를 먹이려고 `isReady` 상태가 살아 있었다.
+    <div ref={slot} />
   )
 }

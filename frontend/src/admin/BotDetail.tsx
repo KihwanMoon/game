@@ -194,9 +194,9 @@ export function BotRuns(props: {
  * @returns 렌더 트리.
  */
 function BotUpkeep(props: { readonly rows: BotDetail['maintenance']['rows'] }): React.JSX.Element {
-  if (props.rows.length === 0) {
-    return <ValueExpr text="벼림 내력이 없다 — 이 봇은 판 뒤에 아무것도 안 한다" size="sm" dim />
-  }
+  // **빈 가리개를 따로 두지 않는다.** `DataList` 가 이미 0건을 `emptyText` 로 적으므로
+  // 바깥에서 한 번 더 가르면 그 안쪽 문구는 영영 안 그려지고, 안 그려지는 문구는
+  // 살아 있는 쪽과 말이 갈려도 아무도 모른다 — 실제로 「정비 규칙」과 「벼림」으로 갈렸다.
   return (
     <DataList
       items={props.rows}
@@ -204,7 +204,7 @@ function BotUpkeep(props: { readonly rows: BotDetail['maintenance']['rows'] }): 
       rowKey={(_row, index) => `upkeep-${String(index)}`}
       listClass="mnt__list"
       rowClass="mnt__row"
-      emptyText="정비 규칙이 없다"
+      emptyText="벼림 내력이 없다 — 이 봇은 판 뒤에 아무것도 안 한다"
       renderRow={(row, index) => (
         <>
           <span className="mnt__when">{`${String(index + 1)}.`}</span>
@@ -233,7 +233,7 @@ export function BotDetailPanel(props: BotDetailProps): React.JSX.Element {
   const tabs: readonly DetailTab[] = [
     {
       id: 'combat',
-      label: '전투 규칙',
+      label: '전투 내력',
       body: (
         <>
           {/* **절이 아니라 id 다.** 봇의 전투 규칙표는 우리가 고른 견본이고, 그 내용은
@@ -311,14 +311,14 @@ export function BotDetailPanel(props: BotDetailProps): React.JSX.Element {
     },
     {
       id: 'skill',
-      label: '스킬',
+      label: '재주',
       body:
         <DataList
           items={detail.skills.rows}
           rowKey={(row) => row.skillId}
           listClass="botd__skills"
           rowClass="botd__skill"
-          emptyText="장비가 연 스킬이 없다"
+          emptyText="장비가 연 재주가 없다"
           renderRow={(row) => (
             <>
               <GlyphState state={row.isOn ? 'true' : 'false'} size="sm" label={row.skillId} />
@@ -386,7 +386,7 @@ export function DoppelDetailPanel(props: DoppelDetailProps): React.JSX.Element {
   const tabs: readonly DetailTab[] = [
     {
       id: 'combat',
-      label: '전투 규칙',
+      label: '전투 내력',
       body:
         <DataList
           items={rules}

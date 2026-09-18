@@ -77,7 +77,7 @@ export function AuctionDetail(props: {
             셋(비수·환도·사인검)은 이름만이 어느 것인지를 말한다 — 여기서 잘못 고르면
             되돌릴 수 없다 (사면 귀속된다, 결정 #07).
 
-            그림이 없을 때 그릴 코드는 **자리**에서 나온다. 자리가 없는 물건은 서버가 빈
+            그림이 없을 때 그릴 코드는 **자리**에서 나온다. 자리가 없는 아이템은 서버가 빈
             문자열로 보내고 그때는 `··` 다 — 소모품이라고 단정하지 않는다(의뢰품도 자리가
             없다). */}
         <Thumb
@@ -96,7 +96,7 @@ export function AuctionDetail(props: {
           />
         )}
         <ValueExpr text={`${String(listing.price)}푼`} size="sm" />
-        {/* **누가 내놓았는가** (2026-09-16). 값만 보이면 같은 물건이 여러 번 도는지, 한
+        {/* **누가 내놓았는가** (2026-09-16). 값만 보이면 같은 아이템이 여러 번 도는지, 한
             사람이 시세를 쥐고 있는지가 안 보인다 — 저잣거리는 사람이 있는 곳이어야 한다.
             내 것은 이미 다른 표시가 있으므로 이름을 또 적지 않는다. */}
         {listing.isMine || listing.sellerName === '' ? null : (
@@ -120,7 +120,7 @@ export function AuctionDetail(props: {
           머리로 해야 하고, 산 뒤에는 되돌릴 수 없다 (귀속된다 — 결정 #07). 가방의 견줌과
           같은 규칙으로 낸다: 점수 하나가 아니라 스탯별 차이까지만. */}
       {listing.slot === '' ? (
-        <ValueExpr text="자리가 없는 물건이라 견줄 상대가 없다" size="sm" dim />
+        <ValueExpr text="자리가 없는 아이템이라 견줄 상대가 없다" size="sm" dim />
       ) : (
         <CompareBlock
           heading={held === undefined ? '빈 자리와 견줌' : `${held.labelKo} 와 견줌`}
@@ -208,7 +208,7 @@ export function AuctionPanel(props: AuctionPanelProps): React.JSX.Element {
           <LinkNoticeLine link={link} missing={MISSING_HINT} />
         ) : (
           <>
-            {/* **거는 것은 가방에서 한다.** 걸 물건을 고르는 일은 가방을 뒤지는 일이라
+            {/* **거는 것은 가방에서 한다.** 걸 아이템을 고르는 일은 가방을 뒤지는 일이라
                 거기 있어야 하고, 두 집에 두면 어느 쪽이 진짜인지 알 수 없다. */}
             <SlotBoard
               hint="칸을 고르면 여기에 상세와 견줌이 뜬다"
@@ -239,7 +239,7 @@ export function AuctionPanel(props: AuctionPanelProps): React.JSX.Element {
                 pageSize={GRID_PAGE}
               />
             </SlotBoard>
-            <ValueExpr text="거는 것은 가방에서 한다 — 걸 물건을 고르는 자리가 거기다" size="sm" dim />
+            <ValueExpr text="거는 것은 가방에서 한다 — 걸 아이템을 고르는 자리가 거기다" size="sm" dim />
             {props.detail === '' ? null : (
               <div className="wld__warn">
                 <GlyphState state="danger" size="sm" label={props.detail} />

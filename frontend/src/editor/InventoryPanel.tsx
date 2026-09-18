@@ -14,7 +14,6 @@
 import { Panel, ValueExpr } from '../ds'
 import type { AffixView, InventoryView, ItemView } from '../storage'
 
-import { formatGradeClass, renderGrade } from './gradeBadge'
 import { buildBagCells, buildEquipCells } from './inventoryCells'
 import { InventoryGrid } from './InventoryGrid'
 import { SlotBoard, usePickedKey } from './SlotBoard'
@@ -22,8 +21,6 @@ import { InventoryDetail, type CellChoice } from './InventoryDetail'
 
 import { LinkNoticeLine } from './LinkNoticeLine'
 import { checkLinked, type LinkState } from './linkState'
-
-export { formatGradeClass, renderGrade }
 
 export interface InventoryPanelProps {
   readonly inventory: InventoryView | undefined

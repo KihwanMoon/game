@@ -1,7 +1,7 @@
 /**
- * 스킬 세팅 패널 검사 (결정 #13 확장).
+ * 재주 세팅 패널 검사 (결정 #13 확장).
  *
- * **빼기만 한다.** 스킬은 장비가 열고, 여기서는 연 것 중 안 들고 갈 것을 끈다.
+ * **빼기만 한다.** 재주는 장비가 열고, 여기서는 연 것 중 안 들고 갈 것을 끈다.
  */
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
@@ -26,24 +26,26 @@ const VIEW: SkillPrefView = {
   ],
 }
 
-describe('스킬 세팅', () => {
+describe('재주 세팅', () => {
   it('★ 한글 이름으로 적는다 — id 를 그대로 두면 그 줄만 다른 언어가 된다', () => {
     const html = render(VIEW)
     expect(html).toContain('공격')
     expect(html).toContain('일격')
-    expect(html).toContain('치유')
+    // `skills.json` 의 `label_ko` 가 정본이다 — HEAL 은 「수복」이고, 손으로 적은
+    // 사본을 지워 규칙 편집기·쿨타임 줄과 같은 말을 쓰게 했다 (2026-09-18).
+    expect(html).toContain('수복')
   })
 
   it('★ 꺼진 칸이 격자에서 갈린다 — 색만이 아니라 「끔」 글자로도', () => {
     const html = render(VIEW)
     // **막힌 자리가 아니라 끈 것이다.** 막힌 자리(`--sealed`)는 그릴 이름이 없어 `▨` 가
-    // 대신 서는데, 끈 스킬은 이름이 남아야 무엇을 다시 켤지 고를 수 있다.
+    // 대신 서는데, 끈 재주는 이름이 남아야 무엇을 다시 켤지 고를 수 있다.
     expect(html).toContain('invg__cell--off')
     expect(html).not.toContain('invg__cell--sealed')
     expect(html).toContain('끔')
   })
 
-  it('★ 끈 스킬도 이름이 남는다 — 이름이 사라지면 다시 켤 것을 못 고른다', () => {
+  it('★ 끈 재주도 이름이 남는다 — 이름이 사라지면 다시 켤 것을 못 고른다', () => {
     expect(render(VIEW)).toContain('invg__label')
   })
 
@@ -52,7 +54,7 @@ describe('스킬 세팅', () => {
     const facts = listSkillFacts('AREA_ATTACK')
     expect(facts.join(' ')).toContain('계수')
     expect(facts.join(' ')).toContain('쿨타임')
-    // 정본에 없는 스킬은 그 사실을 말한다 — 조용한 빈칸이 아니다.
+    // 정본에 없는 재주는 그 사실을 말한다 — 조용한 빈칸이 아니다.
     expect(listSkillFacts('NOPE')[0]).toContain('정본에 없는')
   })
 
@@ -75,6 +77,8 @@ describe('스킬 세팅', () => {
   })
 
   it('★ 서버에 못 닿으면 그 사실을 적는다', () => {
-    expect(render(undefined)).toContain('스킬을 못 읽는다')
+    // 화면에 나가는 말은 「재주」다 — 탭·제목과 같은 낱말이어야 한 화면에서 두 이름이
+    // 되지 않는다 (2026-09-18).
+    expect(render(undefined)).toContain('재주를 못 읽는다')
   })
 })

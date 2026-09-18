@@ -209,6 +209,12 @@ export function BotPanel(props: BotPanelProps): React.JSX.Element {
               <ValueExpr text="줄을 고르면 여기에서 고치고, 아래에서 그 봇을 연다" size="sm" dim />
             ) : (
               <BotEditor
+                // **봇마다 새로 마운트한다.** 두 숫자 칸이 비제어(`defaultValue`)라
+                // 마운트 때 값만 읽는데, 같은 자리에 그려지는 이 조각은 봇을 바꿔 골라도
+                // 리마운트되지 않았다 — B 를 연 화면이 A 의 실력·간격을 보이고, 그 칸에서
+                // blur 하면 저장 대상은 B 라 **A 의 값이 B 에 저장됐다.** 고른 칸·넘길
+                // 아이템·푼도 같은 이유로 앞 봇 것이 남아 있었다.
+                key={picked.accountId}
                 bot={picked}
                 rulesetIds={props.rulesetIds}
                 minCadenceSec={props.overview?.minCadenceSec ?? 0}

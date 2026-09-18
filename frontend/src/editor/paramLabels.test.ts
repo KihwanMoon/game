@@ -63,7 +63,7 @@ describe('규칙 인자 표기', () => {
   })
 
   it('★ 이미 만들어진 문구 안의 인자도 바뀐다 — 코어가 만든 줄이 그렇다', () => {
-    expect(formatParamText('대상 거리[NEAREST](2) <= 3')).toBe('대상 거리[가장 가까운](2) <= 3')
+    expect(formatParamText('대상 거리[NEAREST](2) <= 3')).toBe('대상 거리[가장 가까운 적](2) <= 3')
     expect(formatParamText('내 상태이상[POISON] == 참')).toBe('내 상태이상[중독] == 참')
   })
 

@@ -14,6 +14,8 @@
 import { useState } from 'react'
 
 import { buildAttributeBonus } from '../core/progression/attributes'
+import { BALANCE } from '../core/resources'
+import { buildFloorScale, type RawFloorScale } from '../core/sim/scaling'
 import { Button, Panel, ValueExpr } from '../ds'
 import type { ProgressView } from '../storage'
 
@@ -30,11 +32,21 @@ export interface GrowthPanelProps {
 const MISSING_HINT = '레벨과 능력치는 서버가 안다'
 
 /**
- * 층이 적을 얼마나 세게 만드는지. **`balance.json` 의 `floor_scale` 과 같아야 한다** —
- * 화면이 다른 숫자를 말하면 사람은 그 숫자로 계획을 세운다.
+ * 층이 적을 얼마나 세게 만드는지. **정본을 직접 읽는다** — 화면이 다른 숫자를 말하면
+ * 사람은 그 숫자로 계획을 세운다.
+ *
+ * 예전에는 「HP 25% · 공격 20%」를 손으로 적어 두었는데, `balance.json` 의 `floor_scale`
+ * 에는 `enemy_mult_pct_per_floor` 하나뿐이고 그것이 HP·공격에 **똑같이** 걸린다
+ * (`core/sim/scaling`) — HP 쪽 25 는 어디에도 없는 숫자였다.
+ *
+ * **합이 아니라 곱이다.** 층마다 곱하고 내림으로 접으므로(e3), 더하기로 읽으면 깊은
+ * 장의 벽을 실제보다 훨씬 낮게 잡는다.
  */
-const FLOOR_HP_PCT = 25
-const FLOOR_ATTACK_PCT = 20
+const FLOOR_MULT_PCT = buildFloorScale(BALANCE['floor_scale'] as RawFloorScale | undefined)
+  .multPctPerFloor
+
+/** 퍼센트의 기준값. 120 은 「+20%」다. */
+const PERCENT_BASE = 100
 
 /** 능력치의 한글 이름. */
 export const STAT_LABELS: ReadonlyMap<string, string> = new Map([
@@ -65,7 +77,9 @@ export function formatAttributeEffect(key: string, points: number): string {
     return `선공 +${String(bonus.initiative)} · 방어 +${String(bonus.defense)}`
   }
   if (key === 'int') {
-    return `CPU +${String(bonus.cpuBudget)} · 스킬위력 ${String(bonus.skillPowerPct)}%`
+    // 이름은 캐릭터 시트와 같은 말을 쓴다 (`CharacterPanel` 의 「재주 위력」). 화면을
+    // 옮길 때마다 같은 스탯이 다른 이름으로 뜨면 그것이 또 모호함이다.
+    return `CPU +${String(bonus.cpuBudget)} · 재주 위력 ${String(bonus.skillPowerPct)}%`
   }
   return ''
 }
@@ -129,7 +143,7 @@ export function GrowthPanel(props: GrowthPanelProps): React.JSX.Element {
                 text={
                   progress.reachedFloor >= progress.floorCap
                     ? '끝까지 왔다'
-                    : `장마다 적이 HP +${String(FLOOR_HP_PCT)}% · 공격 +${String(FLOOR_ATTACK_PCT)}% 로 세진다`
+                    : `장마다 적이 HP·공격 +${String(FLOOR_MULT_PCT - PERCENT_BASE)}% 로 세진다 — 층마다 곱해지는 복리다`
                 }
                 size="sm"
                 dim
@@ -215,7 +229,7 @@ export function GrowthPanel(props: GrowthPanelProps): React.JSX.Element {
                   title={
                     progress.respecIsFree
                       ? '찍은 것을 전부 되돌린다 — 1장을 깨기 전까지는 공짜다'
-                      : `찍은 것을 전부 되돌린다 — ${String(progress.respecCost)} 푼이 든다`
+                      : `찍은 것을 전부 되돌린다 — ${String(progress.respecCost)}푼이 든다`
                   }
                   onClick={() => {
                     setPending({})
@@ -224,7 +238,7 @@ export function GrowthPanel(props: GrowthPanelProps): React.JSX.Element {
                 >
                   {progress.respecIsFree
                     ? '되돌리기 (공짜)'
-                    : `되돌리기 (${String(progress.respecCost)} 푼)`}
+                    : `되돌리기 (${String(progress.respecCost)}푼)`}
                 </Button>
               </div>
             )}

@@ -39,7 +39,11 @@ export function formatDraftText(value: unknown): string {
 }
 
 /**
- * 콘텐츠 편집 화면을 그린다.
+ * 원문 편집 화면을 그린다.
+ *
+ * **제목은 탭 이름과 같은 말이다.** 관리 화면의 탭은 「원문」인데(`admin/AdminScreen`)
+ * 열린 패널이 「콘텐츠 편집」이라고 적으면, 누른 이름과 열린 이름이 달라 「내가 맞게
+ * 눌렀나」를 한 번 더 확인하게 된다.
  *
  * @param props 초안 목록·연 자산·콜백.
  * @returns 패널 요소.
@@ -52,7 +56,7 @@ export function ContentAdminPanel(props: ContentAdminPanelProps): React.JSX.Elem
 
   if (content === undefined) {
     return (
-      <Panel title="콘텐츠 편집" tone="panel" padded>
+      <Panel title="원문" tone="panel" padded>
         <ValueExpr text={OFFLINE_HINT} size="sm" dim />
       </Panel>
     )
@@ -60,7 +64,7 @@ export function ContentAdminPanel(props: ContentAdminPanelProps): React.JSX.Elem
 
   return (
     <Panel
-      title="콘텐츠 편집"
+      title="원문"
       meta={`초안 ${String(content.drafts.length)}건`}
       tone="panel"
       padded

@@ -12,6 +12,7 @@
  * 견줌의 규칙은 가방과 같다 (`compareItems`) — **점수 하나로 접지 않고** 스탯별 차이까지만
  * 낸다. 같은 질문에 두 화면이 다른 방식으로 답하면 어느 쪽을 믿을지가 또 문제가 된다.
  */
+import { checkSlotFit } from '../content/consumableTags'
 import type { AffixView, ConsumableOptionView, ConsumableSlotView } from '../storage'
 
 import { compareToWorn, type CompareRow } from './compareItems'
@@ -123,8 +124,12 @@ export function buildChargeRow(pickedMax: number, wornMax: number): CompareRow |
 /**
  * 고른 소모품을 맞는 칸 전부와 견준다.
  *
- * **쓰임새가 맞는 칸만 본다.** 물약을 주문서 칸에 끼울 수 없으므로, 그 칸과의 차이는
- * 답이 아니라 소음이다.
+ * **쓰임새가 맞는 칸만 본다.** 물약을 부적 칸에 끼울 수 없으므로, 그 칸과의 차이는
+ * 답이 아니라 소음이다. 다만 **등호로는 못 가린다** — 칸의 `useTag` 는 계열(`SCROLL`)이고
+ * 재고의 `useTag` 는 물건 태그(`BLINK`·`FLAME`·`FOCUS`)라, 등호로 거르면 부적 재고가
+ * 맞는 칸을 하나도 못 잡고 화면이 「견줄 칸이 없다」를 적는다. 바로 위 격자에 그 칸이
+ * 있고 끼우기는 되는데 견줌만 사라지는 자기 모순이었다 (2026-09-18). 끼우기가 쓰는
+ * 판정(`checkSlotFit`)을 그대로 쓴다.
  *
  * **차이가 없는 칸도 낸다.** 「이 칸과는 같다」가 답인 경우가 있고, 그 칸이 목록에서
  * 통째로 사라지면 「그 칸은 왜 안 나오지」가 된다 — 빈 자리와 구별이 안 된다.
@@ -142,7 +147,9 @@ export function compareToSlots(
   slots: readonly ConsumableSlotView[],
 ): readonly SlotCompare[] {
   return slots
-    .filter((slot) => slot.useTag === picked.useTag && buildSlotKey(slot) !== picked.selfKey)
+    .filter(
+      (slot) => checkSlotFit(picked.useTag, slot.useTag) && buildSlotKey(slot) !== picked.selfKey,
+    )
     .map((slot) => {
       const isEmpty = slot.catalogId === ''
       const charge = buildChargeRow(picked.chargeMax, isEmpty ? 0 : slot.chargeMax)

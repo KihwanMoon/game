@@ -7,6 +7,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
+import { formatOutcome } from '../battle/outcomeText'
 import type { RunHistoryRow } from '../storage'
 
 import { RunHistoryPanel, formatRunOutcome } from './RunHistoryPanel'
@@ -37,12 +38,17 @@ const RUNS: readonly RunHistoryRow[] = [
 ]
 
 describe('결과 문구', () => {
-  it('★ 판정 전과 패배를 가른다 — 서버가 밀렸을 뿐인데 진 것으로 읽히면 안 된다', () => {
+  it('★ 판정 전과 쓰러짐을 가른다 — 서버가 밀렸을 뿐인데 진 것으로 읽히면 안 된다', () => {
     expect(formatRunOutcome('')).toBe('판정 전')
-    expect(formatRunOutcome('PLAYER_LOSS')).toBe('패배')
-    expect(formatRunOutcome('PLAYER_WIN')).toBe('승리')
-    // 시간 초과는 진 것과 다르다 — 규칙표가 아무것도 안 한 것이지 진 것이 아니다.
-    expect(formatRunOutcome('TIMEOUT')).toBe('시간 초과')
+    expect(formatRunOutcome('')).not.toBe(formatRunOutcome('PLAYER_LOSS'))
+    // 추격자 도착은 진 것과 다르다 — 규칙표가 아무것도 안 한 것이지 진 것이 아니다.
+    expect(formatRunOutcome('TIMEOUT')).not.toBe(formatRunOutcome('PLAYER_LOSS'))
+  })
+
+  it('★ 전투 화면과 같은 말을 쓴다 — 표가 두 벌이면 같은 판정이 두 말로 보인다', () => {
+    for (const outcome of ['PLAYER_WIN', 'PLAYER_LOSS', 'TIMEOUT']) {
+      expect(formatRunOutcome(outcome)).toBe(formatOutcome(outcome))
+    }
   })
 })
 
@@ -63,8 +69,8 @@ describe('지나간 판 목록', () => {
 
   it('그때의 결과를 함께 적는다 — 재생이 같은 답을 내는지 눈으로 대조해야 한다', () => {
     const html = render()
-    expect(html).toContain('승리')
-    expect(html).toContain('패배')
+    expect(html).toContain(formatOutcome('PLAYER_WIN'))
+    expect(html).toContain(formatOutcome('PLAYER_LOSS'))
     expect(html).toContain('57틱')
   })
 

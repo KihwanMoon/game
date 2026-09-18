@@ -71,7 +71,7 @@ export function SkillTable(props: SkillTableProps): React.JSX.Element {
   const rows = (file?.skills ?? []) as Record<string, unknown>[]
 
   return (
-    <Panel title="스킬" meta={`${String(rows.length)}종`} tone="panel" padded scroll>
+    <Panel title="재주" meta={`${String(rows.length)}종`} tone="panel" padded scroll>
       <div className="cat">
         <GlyphState
           state="blocked"

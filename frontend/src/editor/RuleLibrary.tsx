@@ -236,15 +236,3 @@ export function RuleLibrary(props: RuleLibraryProps): React.JSX.Element {
     </Panel>
   )
 }
-
-
-/**
- * 저장한 내력을 훑고 불러온다 — 「배움」 탭이 쓴다.
- *
- * **찾는 곳이 저장하는 곳과 다르다.** 저장은 고치던 자리에서 바로 되는 것이 편하고,
- * 찾기는 편집기를 안 헤집고 되는 것이 편하다 — 예전에는 둘이 한 곳이라 꺼내려면 규칙
- * 줄과 검증을 다 지나 맨 아래까지 내려가야 했다.
- *
- * @param props 슬롯들과 조작.
- * @returns 렌더 트리.
- */

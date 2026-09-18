@@ -150,7 +150,10 @@ function renderRecastButton(
       disabled={recast.disabled || poor}
       title={
         poor
-          ? `활자가 모자란다 — ${String(recast.cost)}개가 필요한데 ${String(recast.letters)}개다`
+          ? // 모자람은 저잣거리·정비와 **같은 꼴**로 적는다 (`auctionCells.findBuyBlocker`).
+            // 같은 「필요·보유」를 화면마다 다른 문형으로 적으면 실측값 병기가 규율이
+            // 아니라 취향으로 보인다.
+            `활자가 모자란다 (${String(recast.cost)} 필요 · ${String(recast.letters)} 있음)`
           : '활자를 내고 이 줄을 다시 찍는다 — 결과는 서버가 정한다'
       }
       onClick={() => {
@@ -161,6 +164,25 @@ function renderRecastButton(
     </Button>
   )
 }
+
+/**
+ * 요구조건에 적을 능력치 한글 이름.
+ *
+ * **정본은 `game/schemas/item.py` 의 `STAT_LABELS` 다.** 접사는 서버가 `statLabel` 을
+ * 실어 보내지만 `RequirementView` 에는 그 칸이 없어, 옮겨 적는 자리가 여기밖에 없다 —
+ * 그래서 한 카드 안에서 접사는 「최대체력」, 요구조건은 `hp_max` 로 갈리고 있었다.
+ *
+ * **표에 없는 키는 원문을 남긴다.** 빈칸으로 두면 값만 뜬 줄이 되어 무엇이 모자란지가
+ * 사라진다 — 파이썬 `format_stat_label` 과 같은 규율이다.
+ */
+const REQUIREMENT_STAT_LABELS: ReadonlyMap<string, string> = new Map([
+  ['hp_max', '최대체력'],
+  ['attack', '공격력'],
+  ['defense', '방어력'],
+  ['attack_range', '사거리'],
+  ['initiative', '선공권'],
+  ['cpu_budget', 'CPU'],
+])
 
 /**
  * 요구조건 줄을 그린다. **실측값을 병기한다** — "장착할 수 없습니다" 만 띄우면 무엇이
@@ -180,7 +202,7 @@ function renderRequirements(item: ItemView): React.JSX.Element | null {
           key={need.stat}
           state={need.isMet ? 'true' : 'false'}
           size="sm"
-          label={`${need.stat}(${String(need.actual)}) >= 요구(${String(need.minimum)})`}
+          label={`${REQUIREMENT_STAT_LABELS.get(need.stat) ?? need.stat}(${String(need.actual)}) >= 요구(${String(need.minimum)})`}
         />
       ))}
     </div>

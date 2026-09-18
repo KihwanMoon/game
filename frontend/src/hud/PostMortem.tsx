@@ -91,6 +91,11 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
   // 강조만 있고 그 줄이 화면 밖이면 강조가 아무것도 못 한다.
   useLogAnchor(sheetRef, tick, tab)
 
+  // **최대치를 함께 적는다.** `체력 0` 만으로는 그 판이 어디서 끝났는지 읽히지 않는다.
+  // 기록에는 판 전체의 최대치 칸이 없고 프레임마다 들고 있으므로, 마지막 프레임에서
+  // 읽는다 — 머리에 적는 현재 값(`recording.playerHp`)과 같은 시점이다.
+  const playerHpMax = recording.frames.at(-1)?.playerHpMax ?? recording.playerHp
+
   const frame: RecordedFrame | undefined = recording.frames[tick]
   const trace = buildReplayTrace(
     recording.ruleset,
@@ -103,8 +108,8 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
       <header className="hud-post__head">
         <h2 className="hud-post__title">사후 분석 — {formatOutcome(recording.outcome)}</h2>
         <span className="hud-post__meta">
-          {readRoomTitle(recording.template)} · {formatTickLabel(recording.ticks)} · HP{' '}
-          {recording.playerHp}
+          {readRoomTitle(recording.template)} · {formatTickLabel(recording.ticks)} · 체력{' '}
+          {recording.playerHp} / {playerHpMax}
         </span>
         <Button size="sm" variant="secondary" glyph="✕" onClick={props.onClose}>
           닫기
@@ -136,7 +141,7 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
           </Panel>
         </div>
 
-        <div className="hud-post__col hud-post__col--wide">
+        <div className="hud-post__col">
           <Panel
             title={`직전 ${DEATH_REPLAY_TICKS}틱 리플레이`}
             meta={formatTickLabel(tick)}

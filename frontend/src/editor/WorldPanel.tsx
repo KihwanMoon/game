@@ -68,7 +68,7 @@ const DOPPEL_EMPTY = '아직 아무 둔갑도 못 이겼다 — 계정에서 둔
 
 
 /** 격차 막대의 칸 수. 여덟이면 한 칸이 12.5%라 눈이 그 단위로 읽는다. */
-export const BAR_SEGMENTS = 8
+const BAR_SEGMENTS = 8
 
 /**
  * 1등 대비 격차를 칸으로 나눈다.
@@ -80,7 +80,7 @@ export const BAR_SEGMENTS = 8
  * @param top 1등의 점수. 0 이면 아무도 점수가 없다.
  * @returns 칸마다 켜짐 여부. 언제나 BAR_SEGMENTS 개다.
  */
-export function buildBarSegments(score: number, top: number): boolean[] {
+function buildBarSegments(score: number, top: number): boolean[] {
   const filled = top <= 0 ? 0 : Math.round((Math.max(0, score) * BAR_SEGMENTS) / top)
   return Array.from({ length: BAR_SEGMENTS }, (_, index) => index < filled)
 }
@@ -118,7 +118,7 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
             누계만 적으면 옛날에 붐볐던 곳과 구별되지 않는다. */}
         {props.pulse === undefined ? null : (
           <ValueExpr
-            text={`다녀간 사람 ${String(props.pulse.visitors)} · 오늘 ${String(props.pulse.freshToday)} · 이번 주 ${String(props.pulse.freshWeek)} · 돌아간 판 ${String(props.pulse.runs)}`}
+            text={`다녀간 사람 ${String(props.pulse.visitors)} · 오늘 ${String(props.pulse.freshToday)} · 이번 주 ${String(props.pulse.freshWeek)} · 돈 판 ${String(props.pulse.runs)}`}
             size="sm"
             dim
           />
@@ -146,7 +146,7 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
                   setPicked('xp')
                 }}
               >
-                깊이
+                경험치
               </Button>
             </div>
             <div className="wld__head">{BOARD_HEADS[board]}</div>

@@ -306,7 +306,7 @@ export function ConsumableDetail(props: ConsumableDetailProps): React.JSX.Elemen
             props.onSell(option.catalogId)
           }}
         >
-          {`팔기 ${String(option.sellPrice)}`}
+          {`팔기 ${String(option.sellPrice)}푼`}
         </Button>
       </div>
     </div>

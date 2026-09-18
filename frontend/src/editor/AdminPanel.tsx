@@ -207,7 +207,7 @@ export function AdminPanel(props: AdminPanelProps): React.JSX.Element | null {
           rowKey={(row) => String(row.level)}
           renderRow={(row) => (
             <>
-              <span className="adm__label">레벨 {row.level}</span>
+              <span className="adm__label">lv {row.level}</span>
               <ValueExpr text={`${String(row.count)}명`} size="sm" />
             </>
           )}
@@ -273,10 +273,10 @@ export function AdminPanel(props: AdminPanelProps): React.JSX.Element | null {
           rowClass="adm__monster"
           pageSize={MONSTER_PAGE}
           showCount
-          // 층과 이름으로 거른다. 「어느 층이 이상한가」가 이 표를 보는 이유이고,
+          // 장과 이름으로 거른다. 「어느 장이 이상한가」가 이 표를 보는 이유이고,
           // 200줄에서 그것을 눈으로 세는 것은 브라우저 찾기와 다르지 않다.
           filterText={(row) => `${row.catalogId} ${String(row.zoneFloor)}장`}
-          filterLabel="이름·층으로 거르기"
+          filterLabel="이름·장으로 거르기"
         />
         <CapNotice shown={overview.monsters.length} cap={MONSTER_CAP} />
 

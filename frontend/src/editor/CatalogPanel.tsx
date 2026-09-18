@@ -80,8 +80,10 @@ export function ItemDetail(props: { readonly row: CatalogItemRow }): React.JSX.E
         <ValueExpr text={`요구 ${row.requirements.join(' · ')}`} size="sm" dim />
       )}
       {row.grantsSkill === '' ? null : (
-        // 장비가 여는 스킬 (결정 #13). 장비 교체가 규칙 재설계로 이어지는 지점.
-        <ValueExpr text={`스킬 ${row.grantsSkill}`} size="sm" />
+        // 장비가 여는 재주 (결정 #13). 장비 교체가 규칙 재설계로 이어지는 지점.
+        // **격자 칸과 같은 말을 쓴다** — 칸은 `재주 {id}`(`catalogCells.pickItemFact`)인데
+        // 눌러서 뜨는 상세만 「스킬」이면 같은 것이 한 화면에서 두 이름으로 불린다.
+        <ValueExpr text={`재주 ${row.grantsSkill}`} size="sm" />
       )}
     </div>
   )
@@ -196,7 +198,7 @@ export function CatalogPanel(props: CatalogPanelProps): React.JSX.Element | null
         {view === 'curve' ? (
           <>
             <ValueExpr
-              text={`표현력 상한 — 슬롯 +${String(catalog.caps.maxBonusRuleSlots)} · CPU +${String(catalog.caps.maxBonusCpu)} · 플래그 +${String(catalog.caps.maxBonusFlags)}`}
+              text={`표현력 상한 — 슬롯 +${String(catalog.caps.maxBonusRuleSlots)} · cpu +${String(catalog.caps.maxBonusCpu)} · 플래그 +${String(catalog.caps.maxBonusFlags)}`}
               size="sm"
               dim
             />
@@ -205,7 +207,7 @@ export function CatalogPanel(props: CatalogPanelProps): React.JSX.Element | null
                 <li className="cat__row" key={row.level}>
                   <span className="cat__name">lv {row.level}</span>
                   <ValueExpr
-                    text={`누적 ${String(row.totalXp)} · 슬롯+${String(row.bonusRuleSlots)} · CPU+${String(row.bonusCpu)} · 포인트 ${String(row.statPoints)}`}
+                    text={`누적 ${String(row.totalXp)} · 슬롯+${String(row.bonusRuleSlots)} · cpu+${String(row.bonusCpu)} · 포인트 ${String(row.statPoints)}`}
                     size="sm"
                     dim
                   />

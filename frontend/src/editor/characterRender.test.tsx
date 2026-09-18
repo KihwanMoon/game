@@ -105,7 +105,10 @@ describe('캐릭터 시트 화면', () => {
     // **글리프까지 본다.** 설명 문구만 검사하면 상태가 「참」으로 잘못 그려져도 통과한다 —
     // 이 게임은 참/거짓을 색·글리프·명도 셋으로 표기하므로 글리프가 곧 정보다.
     const html = render(PROGRESS)
-    expect(html).toContain('GUARD_BRACE')
+    // **이름은 정본(`skills.json`)의 한글이다.** `GUARD_BRACE` 가 그대로 서면 한글
+    // 화면에 그 한 칸만 영문이 된다 — 규칙 편집기의 인자와 같은 규율이다.
+    expect(html).toContain('방벽')
+    expect(html).not.toContain('GUARD_BRACE')
     expect(html).toContain('이 재주를 여는 장비를 끼면 열린다')
     expect(html).toContain(STATE_GLYPHS.get('blocked'))
     expect(html).toContain(STATE_GLYPHS.get('true'))
@@ -150,8 +153,9 @@ describe('소모품 (#54)', () => {
       ...PROGRESS,
       loadout: { ...PROGRESS.loadout, consumables: [['POTION', 2] as const] },
     } as ProgressView)
-    expect(html).toContain('POTION')
-    expect(html).toContain('SCROLL')
+    // 태그 이름도 정본(`content/consumableTags`)의 한글로 선다.
+    expect(html).toContain('탕약')
+    expect(html).toContain('보호 부적')
     expect(html).toContain('주우면 열린다')
   })
 

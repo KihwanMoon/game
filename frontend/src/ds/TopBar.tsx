@@ -25,7 +25,7 @@ export function TopBar(props: TopBarProps): React.JSX.Element {
     <header className="ds-topbar">
       <h1 className="ds-topbar__location">{props.location}</h1>
       <span className="ds-topbar__tick">
-        <span className="ds-label">tick</span>
+        <span className="ds-label">틱</span>
         <span className="ds-topbar__tick-value">{props.tick}</span>
       </span>
       <SpeedControl value={props.speed} onChange={props.onSpeedChange} />

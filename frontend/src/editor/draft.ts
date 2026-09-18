@@ -349,21 +349,6 @@ export function applyLhsChoice(
 }
 
 /**
- * 규칙의 행동을 바꾸고 TARGET 절을 함께 맞춘다.
- *
- * targeted 행동인데 셀렉터가 없으면 `TARGET 셀렉터가 필요하다`, 아닌데 있으면
- * `TARGET 을 받지 않는다` 가 뜬다. 둘 다 사람이 알 필요 없는 규칙이므로 여기서 채운다.
- *
- * 진영도 여기서 맞춘다 (v4). `ATTACK @NEAREST` 를 `HEAL` 로 바꾸면 셀렉터가 적대로 남아
- * 곧바로 위반이 되므로, 새 행동이 요구하는 진영의 첫 셀렉터로 갈아 끼운다.
- *
- * @param ruleset 원래 규칙표.
- * @param catalog 블록 카탈로그.
- * @param ruleIndex 규칙의 자리.
- * @param actionId 새 행동 id.
- * @returns 고쳐진 규칙표.
- */
-/**
  * 그 행동에 쓸 수 있는 셀렉터를 고른다. 쓰던 것이 여전히 쓸 수 있으면 그대로 둔다.
  *
  * @param catalog 블록 카탈로그.
@@ -384,6 +369,12 @@ function pickSelectorForAction(
 
 /**
  * 규칙의 행동을 바꾸고 TARGET 절을 함께 맞춘다.
+ *
+ * targeted 행동인데 셀렉터가 없으면 `TARGET 셀렉터가 필요하다`, 아닌데 있으면
+ * `TARGET 을 받지 않는다` 가 뜬다. 둘 다 사람이 알 필요 없는 규칙이므로 여기서 채운다.
+ *
+ * 진영도 여기서 맞춘다 (v4). `ATTACK @NEAREST` 를 `HEAL` 로 바꾸면 셀렉터가 적대로 남아
+ * 곧바로 위반이 되므로, 새 행동이 요구하는 진영의 첫 셀렉터로 갈아 끼운다.
  *
  * @param ruleset 원래 규칙표.
  * @param catalog 블록 카탈로그.

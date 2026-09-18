@@ -15,6 +15,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { ACTOR_NAMES } from '../ds'
+import { MY_NAME } from './logNames'
 import type { PlanScene } from './planScene'
 import { renderPlan, resizePlanCanvas } from './planRenderer'
 import type { PlanTheme } from './planTheme'
@@ -108,7 +109,9 @@ function checkPrefersStill(): boolean {
 export function describeScene(scene: PlanScene): string {
   const actors = scene.actors
     .map((actor) => {
-      const name = actor.isSelf ? '자신' : (ACTOR_NAMES.get(actor.kind) ?? actor.kind)
+      // **나를 부르는 말은 한 곳에서 온다** (`MY_NAME`). 같은 화면의 로그가 `나` 라고
+      // 적는데 도면만 손으로 `자신` 을 박아 두어, 한 개체가 두 이름으로 불렸다.
+      const name = actor.isSelf ? MY_NAME : (ACTOR_NAMES.get(actor.kind) ?? actor.kind)
       // **캔버스는 읽히지 않는다.** 도면에 붙는 표시는 여기 글로도 남아야 화면을 안 보는
       // 사람에게 남는다 — 색·모양에 이어 세 번째 채널이다.
       const guard = actor.isGuarding ? ' 방어 태세' : ''

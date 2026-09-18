@@ -31,8 +31,12 @@ import type { AffixView, ConsumableView, InventoryView, ItemView } from '../stor
 /** 퍼센트를 값으로 바꾸는 나눗셈 밑. 파이썬 `PERCENT_BASE` 와 같다. */
 const PERCENT_BASE = 100
 
-/** 양손무기가 보조 칸을 봉인하므로 두 칸을 함께 봐야 한다 — 파일이 정한다. */
-/** 양손무기가 걸치는 두 자리와 「양손」의 표기. 파이썬과 같은 파일을 읽는다. */
+/**
+ * 양손무기가 걸치는 두 자리와 「양손」의 표기. 파이썬과 같은 파일을 읽는다.
+ *
+ * 양손무기가 보조 칸을 봉인하므로 두 칸을 함께 봐야 한다 — 어느 자리가 짝인지는
+ * 화면이 아니라 파일이 정한다.
+ */
 const MAIN_SLOT = String(priorityFile.two_handed.main_slot)
 const OFF_SLOT = String(priorityFile.two_handed.off_slot)
 const HANDS_TWO = String(priorityFile.two_handed.hands_two)
@@ -83,18 +87,6 @@ function readWeights(priority: string): Readonly<Record<string, number>> {
   )
 }
 
-/**
- * 장비 하나가 이 저울에서 얼마나 값하는가.
- *
- * **파이썬 `compute_weighted_score` 와 같은 식이다** — 퍼센트를 실제 합산식과 같은
- * 방식으로(`기본값 × % / 100`) 값으로 바꾸고, 곱한 뒤에 나눈다. 정수만 쓴다 (R5).
- *
- * @param affixes 굴린 접사들.
- * @param attackRange 무기가 정하는 사거리. 접사가 아니라 필드다 (§2.2).
- * @param weights 스탯에서 무게로.
- * @param baseStats 퍼센트를 값으로 바꾸는 기준.
- * @returns 점수. 저주 접사가 있으면 음수일 수 있다.
- */
 /** 소모품 칸 축. 파이썬 `SLOT_STATS` 와 같아야 한다. */
 export const SLOT_STATS: readonly string[] = ['potion_slots', 'scroll_slots']
 
@@ -133,6 +125,18 @@ export function countBudgetGift(
   return total
 }
 
+/**
+ * 장비 하나가 이 저울에서 얼마나 값하는가.
+ *
+ * **파이썬 `compute_weighted_score` 와 같은 식이다** — 퍼센트를 실제 합산식과 같은
+ * 방식으로(`기본값 × % / 100`) 값으로 바꾸고, 곱한 뒤에 나눈다. 정수만 쓴다 (R5).
+ *
+ * @param affixes 굴린 접사들.
+ * @param attackRange 무기가 정하는 사거리. 접사가 아니라 필드다 (§2.2).
+ * @param weights 스탯에서 무게로.
+ * @param baseStats 퍼센트를 값으로 바꾸는 기준.
+ * @returns 점수. 저주 접사가 있으면 음수일 수 있다.
+ */
 export function computeGearScore(
   affixes: readonly AffixView[],
   attackRange: number,
@@ -241,11 +245,18 @@ export function runUnseal(sealed: readonly SealedItem[], balance: number): Upgra
 /**
  * 장비 교체를 돌려 본다.
  *
- * **후보만 센다.** 어느 것이 더 나은지는 서버의 저울이 정한다 — 그 무게표를 화면으로
- * 베끼면 밸런스가 두 벌이 되고, 한쪽을 고칠 때 다른 쪽이 조용히 옛 값으로 남는다.
+ * **저울을 서버와 함께 읽는다.** 무게표는 `gear_priority.json` 하나뿐이고 파이썬과
+ * 브라우저가 그것을 각자 직접 읽으므로(사본이 아니다), 여기서 센 수와 서버가 실제로
+ * 바꾸는 수가 같다. 예전에는 **후보만** 셌고, 그래서 「후보 3개」라 적어 놓고 서버는
+ * 하나만 바꾸는 일이 있었다.
+ *
+ * 자리마다 제일 나은 후보 하나만 센다 — 같은 자리에 둘을 끼울 수 없다. 스킬·CPU·칸·
+ * 사거리·시전 축을 잃는 교체는 이득으로 세지 않는다 (파이썬 `check_keeps_*` 와 같은
+ * 규칙이고, 그 사유는 각 줄에 적어 두었다).
  *
  * @param inventory 가방·장비.
- * @param priority 고른 우선순위. 화면에 그대로 적는다.
+ * @param priority 고른 우선순위. 읽을 무게표를 고르고, 화면에 그대로 적는다.
+ * @param baseStats 퍼센트 접사를 값으로 바꾸는 기준. CPU 몫도 여기서 나온다.
  * @returns 무슨 일이 있었는지.
  */
 export function runUpgradeGear(

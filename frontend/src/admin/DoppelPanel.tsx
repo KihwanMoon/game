@@ -42,7 +42,7 @@ export function DoppelPanel(props: DoppelPanelProps): React.JSX.Element {
   const rows = props.overview?.doppels ?? []
   return (
     <div className="bots">
-      <Panel title="둔갑" meta={`${String(rows.length)}`} tone="panel" padded>
+      <Panel title="둔갑" meta={`${String(rows.length)}개`} tone="panel" padded>
         <DataList
           items={rows}
           rowKey={(item) => String(item.recordId)}
@@ -65,7 +65,7 @@ export function DoppelPanel(props: DoppelPanelProps): React.JSX.Element {
                 <GlyphState
                   state={item.alive ? 'true' : 'false'}
                   size="sm"
-                  label={item.alive ? '살아 있다' : '죽었다'}
+                  label={item.alive ? '서 있다' : '쓰러졌다'}
                 />
                 <span className="botrow__cell">{`${String(item.zoneFloor)}장`}</span>
                 {/* **목숨은 셋에서 줄어든다.** 잡을 때마다 하나 쓰고 레벨이 감쇠하므로,
