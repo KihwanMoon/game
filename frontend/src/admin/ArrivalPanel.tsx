@@ -9,10 +9,15 @@
  * (`requireAccount`: "여는 것만으로는 안 만든다"), 이 목록은 **판을 내려 한 사람**이다.
  * 그냥 들렀다 간 사람은 명부의 트래픽 줄이 센다.
  *
- * **`판 0` 이 이 화면에서 가장 중요한 값이다.** 출격을 눌러 계정까지 생겼는데 서버에
- * 아무것도 안 남았다는 뜻이고, 그러면 그 판은 G1 계측에서 통째로 빠진다 —
- * `requestTicket` 이 실패하면 화면이 `applyLocalRun()` 으로 떨어지기 때문이다(App.tsx).
- * 그 줄이 쌓이는 것은 사람이 안 논 것이 아니라 **우리가 못 받은 것**이다.
+ * **`판 0` 이 이 화면에서 가장 볼 것이다.** 다만 **원인을 단언하지 않는다** — 셋 중
+ * 무엇이든 될 수 있다: 출격을 눌렀는데 `requestTicket` 이 실패해 `applyLocalRun()` 으로
+ * 떨어졌거나(그 판은 G1 계측에서 빠진다), 관리 화면만 열었거나, `1227425`
+ * (2026-09-17 11:43, 「페이지를 여는 것만으로 계정이 하나씩 생기고 있었다」) 이전에
+ * 생긴 계정이거나.
+ *
+ * **그 셋이 섞여 있어서 수 하나로는 못 읽는다.** 그 커밋 전에 생긴 계정 118 중 티켓을
+ * 받은 것이 9(8%)이고, 뒤로는 12 중 7(58%)이다 — 앞엣것은 그냥 들렀다 간 사람의
+ * 기록이지 잃어버린 판이 아니다. 화면은 수를 보여 주고 판단은 사람이 한다.
  */
 import { DataList } from '../editor/DataList'
 import { GlyphState, Panel, ValueExpr } from '../ds'
@@ -84,14 +89,17 @@ export function ArrivalPanel(props: ArrivalPanelProps): React.JSX.Element {
     <div className="adm__pane">
       <Panel title="유입" meta={`${String(list.rows.length)}명`} tone="panel" padded scroll>
         <ValueExpr text={formatArrivalSummary(list)} size="sm" dim />
-        {/* **이 줄이 이 화면의 값이다.** 출격을 눌러 계정까지 생겼는데 서버에 판이 없는
-            것은 사람이 안 논 것이 아니라 우리가 못 받은 것이다 — 그 판은 G1 계측에서
-            통째로 빠진다. 0 이면 적지 않는다: 없는 경보를 늘 띄우면 아무도 안 읽는다. */}
+        {/* **사실만 적고 원인은 안 적는다.** 판이 0 인 계정은 티켓을 못 받았을 수도,
+            그냥 들렀다 갔을 수도 있다 — `1227425`(2026-09-17) 전에는 페이지를 여는
+            것만으로 계정이 생겼으므로 그 시절 줄이 여기 그대로 섞인다. 원인을 단언하면
+            아직 안 센 것을 센 것처럼 말하게 된다.
+
+            0 이면 적지 않는다: 없는 경보를 늘 띄우면 아무도 안 읽는다. */}
         {lost === 0 ? null : (
           <GlyphState
-            state="danger"
+            state="pending"
             size="sm"
-            label={`${String(lost)}명은 출격했는데 서버에 판이 안 남았다 — 티켓을 못 받은 것이다`}
+            label={`${String(lost)}명은 서버에 판이 안 남았다 — 티켓을 못 받았거나 그냥 들렀다 갔다`}
           />
         )}
         <DataList
