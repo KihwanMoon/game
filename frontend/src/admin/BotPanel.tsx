@@ -295,6 +295,22 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
   // 묶으면 잘못 누른 칸이 곧 되돌릴 수 없는 이관이 된다.
   const [giftId, setGiftId] = useState(0)
   const [coin, setCoin] = useState('')
+
+  /**
+   * 이름을 보낸다. **blur 와 Enter 가 같은 길을 쓴다** — 두 벌로 적으면 한쪽만
+   * 고쳐질 자리가 생긴다.
+   *
+   * @param value 칸에 적힌 값.
+   */
+  function sendName(value: string): void {
+    const wanted = value.trim()
+    // 안 바뀌었으면 안 보낸다 — 칸을 지나기만 해도 감사 기록이 쌓인다.
+    if (wanted === '' || wanted === readBotNameSuffix(bot.handle)) {
+      return
+    }
+    props.onName?.(bot.accountId, wanted)
+  }
+
   return (
     <div className="bots__edit">
       {/* **접두어는 안 보여 주고 안 받는다.** `bot_` 은 서버가 지키는 것이고, 고칠 수
@@ -305,19 +321,23 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
       </label>
       <input
         id={`name-${String(bot.accountId)}`}
-        className="bots__field"
+        className="bots__field bots__field--name"
         type="text"
         maxLength={MAX_BOT_NAME}
         defaultValue={readBotNameSuffix(bot.handle)}
         aria-label="봇 이름"
         onBlur={(event) => {
-          const wanted = event.target.value.trim()
-          const now = readBotNameSuffix(bot.handle)
-          // 안 바뀌었으면 안 보낸다 — 칸을 지나기만 해도 감사 기록이 쌓인다.
-          if (wanted === '' || wanted === now) {
+          sendName(event.target.value)
+        }}
+        onKeyDown={(event) => {
+          // **Enter 로도 확정된다.** 이웃 칸들은 고르개(즉시)와 숫자(blur 가 관례)라
+          // blur 하나로 충분했는데, 이름 칸은 치고 Enter 를 누르는 것이 몸에 붙은 동작이다
+          // — 그때 아무 일도 안 일어나면 「안 된다」로 보인다 (2026-09-18 실제 신고).
+          if (event.key !== 'Enter') {
             return
           }
-          props.onName?.(bot.accountId, wanted)
+          event.preventDefault()
+          sendName(event.currentTarget.value)
         }}
       />
       <span className="bots__edit-name">{bot.label}</span>
