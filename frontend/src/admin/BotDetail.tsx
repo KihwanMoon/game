@@ -22,6 +22,7 @@ import {
   CharacterPanel,
   ConsumableGrid,
   formatMaintenanceSentence,
+  formatRunOutcome,
   InventoryGrid,
   MAINTENANCE_ACTIONS,
 } from '../editor'
@@ -90,22 +91,6 @@ export interface BotDetailProps {
   readonly onPickCell?: (itemId: number) => void
   /** 리플레이 줄의 재생을 눌렀을 때. 그 판을 다시 돌리라는 신호다. */
   readonly onPlay?: (submissionId: number) => void
-}
-
-/**
- * 판 하나의 결과를 사람이 읽는 말로.
- *
- * @param outcome 코어가 낸 결과 문자열.
- * @returns 화면에 적을 말.
- */
-export function formatRunOutcome(outcome: string): string {
-  if (outcome === 'PLAYER_WIN') {
-    return '승리'
-  }
-  if (outcome === '') {
-    return '아직'
-  }
-  return '패배'
 }
 
 /**

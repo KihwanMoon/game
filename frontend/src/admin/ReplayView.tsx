@@ -17,6 +17,7 @@ import { useMemo, useState } from 'react'
 
 import { BattleView, type BattleSetup } from '../battle'
 import { readActivePack } from '../content/pack'
+import { formatRunOutcome } from '../editor'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import { OUTCOME_PLAYER_WIN } from '../core/sim/phases'
 import { resolveRoomFloor } from '../core/services/runChain'
@@ -34,21 +35,6 @@ export interface ReplayViewProps {
   readonly onClose: () => void
 }
 
-/**
- * 결과를 사람이 읽는 말로.
- *
- * @param outcome 코어가 낸 결과.
- * @returns 화면에 적을 말.
- */
-export function formatOutcomeName(outcome: string): string {
-  if (outcome === 'PLAYER_WIN') {
-    return '승리'
-  }
-  if (outcome === '') {
-    return '판정 전'
-  }
-  return '패배'
-}
 
 /**
  * 재생 화면을 그린다.
@@ -137,7 +123,7 @@ export function ReplayView(props: ReplayViewProps): React.JSX.Element | null {
         <GlyphState
           state={replay.outcome === 'PLAYER_WIN' ? 'true' : 'false'}
           size="sm"
-          label={`그때: ${formatOutcomeName(replay.outcome)} · ${String(replay.ticks)}틱 · HP ${String(replay.playerHp)}`}
+          label={`그때: ${formatRunOutcome(replay.outcome)} · ${String(replay.ticks)}틱 · HP ${String(replay.playerHp)}`}
         />
         <span className="replay__spacer" />
         {/* **다음 방으로 손이 넘긴다.** 타이머로 자동으로 넘기면 보려던 방이 지나가

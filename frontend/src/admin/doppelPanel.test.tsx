@@ -137,11 +137,13 @@ describe('★ 리플레이는 기록을 트는 것이 아니라 다시 돌리는
   })
 
   it('★ 그때의 결과를 함께 적는다 — 재생이 같은 답을 내는지 눈으로 대조해야 한다', async () => {
-    const { formatOutcomeName } = await import('./ReplayView')
-    expect(formatOutcomeName('PLAYER_WIN')).toBe('승리')
-    expect(formatOutcomeName('PLAYER_LOSS')).toBe('패배')
+    const { formatRunOutcome } = await import('../editor')
+    expect(formatRunOutcome('PLAYER_WIN')).toBe('방을 깼다')
+    expect(formatRunOutcome('PLAYER_LOSS')).toBe('쓰러짐')
+    // 시간 초과는 진 것이 아니다 — 규칙표가 아무것도 안 한 것이다.
+    expect(formatRunOutcome('TIMEOUT')).toBe('추격자 도착')
     // 판정 전과 패배를 가른다 — 서버가 밀렸을 뿐인데 진 것으로 읽히면 안 된다.
-    expect(formatOutcomeName('')).toBe('판정 전')
+    expect(formatRunOutcome('')).toBe('판정 전')
   })
 
   it('재생을 안 열었으면 아무것도 안 그린다', async () => {
