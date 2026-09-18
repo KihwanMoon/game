@@ -188,7 +188,7 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
                       max={recording.ticks}
                       value={tick}
                       onChange={setTick}
-                      label="되감기"
+                      label="틱"
                     />
                   </div>
                 }

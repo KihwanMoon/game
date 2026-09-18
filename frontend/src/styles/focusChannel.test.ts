@@ -17,11 +17,18 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-/** 검사할 스타일시트. 앱이 싣는 것 전부다. */
+/**
+ * 검사할 스타일시트. 앱이 싣는 것 전부다.
+ *
+ * **머리말이 사실이어야 한다** (2026-09-18). `editor/catalog.css` 는 0바이트에 import 도
+ * 0곳인데 목록에 있어, 검사가 빈 문자열을 읽고 언제나 통과했다 — 「검사했다」와
+ * 「검사할 것이 없다」가 구별되지 않는다. 대신 실제로 실리는 `battle/battle.css` 가
+ * 빠져 있었다. 목록을 앱의 import 와 맞췄다.
+ */
 const SHEETS = [
   '../ds/ds.css',
   '../editor/editor.css',
-  '../editor/catalog.css',
+  '../battle/battle.css',
   '../hud/hud.css',
   './app.css',
 ]

@@ -377,9 +377,11 @@
   color: var(--text-dim);
 }
 
-/* 왼쪽은 규칙표 열과 같은 320px 다. 비율(1fr 2fr)로 나누면 오른쪽 리플레이의 로그가
-   눌린다 — 도면이 768px 로 고정이라(design/README.md D-2) 남는 폭이 곧 로그 폭이고,
-   비율로 두면 그 폭이 화면 크기에 따라 0 까지 줄어 로그가 가로로 넘친다. */
+/* **한 열이다.** `--post-cols` 는 세로·가로 배치 모두 `minmax(0, 1fr)` 한 칸이다
+   (design/tokens/spacing.css:159·220). 예전에는 왼쪽을 규칙표 열과 같은 320px 로 잡은
+   두 열이었는데, 도면이 768px 로 고정이라(design/README.md D-2) 남는 폭이 곧 리플레이
+   폭이고 — 320px 을 떼든 비율(1fr 2fr)로 나누든 좁은 화면에서 그 폭이 0 까지 줄어
+   가로로 넘쳤다. 그래서 나누지 않고 쌓는다. */
 .hud-post__body {
   display: grid;
   grid-template-columns: var(--post-cols);

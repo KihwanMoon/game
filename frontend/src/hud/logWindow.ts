@@ -152,18 +152,6 @@ export function groupLogRows(rows: readonly LogEntry[]): readonly LogGroup[] {
 }
 
 /**
- * 그 틱의 첫 줄 첨자를 찾는다. 되감기 슬라이더가 창을 옮길 때 쓴다.
- *
- * @param entries 로그 전량.
- * @param tick 찾을 틱.
- * @returns 첫 줄의 첨자. 그 틱에 남은 줄이 없으면 undefined.
- */
-export function findTickIndex(entries: readonly LogEntry[], tick: number): number | undefined {
-  const index = entries.findIndex((entry) => entry.tick === tick)
-  return index < 0 ? undefined : index
-}
-
-/**
  * 마지막 몇 틱의 로그만 남긴다 (파이썬 `filter_recent_entries`).
  *
  * 기준은 마지막 **줄**의 틱이 아니라 로그에 있는 최대 틱이다. 정리(CLEANUP) 단계가 앞

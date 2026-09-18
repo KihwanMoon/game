@@ -51,10 +51,10 @@ const SAMPLE_HP_MAX = 30
 /** 예시 낮은 체력. */
 const SAMPLE_HP_LOW = 6
 
-/** 예시 물약 수. */
+/** 예시 탕약 수. */
 const SAMPLE_POTIONS = 2
 
-/** 예시 물약 최대. */
+/** 예시 탕약 최대. */
 const SAMPLE_POTIONS_MAX = 3
 
 /** 예시 CPU 사용량. */
@@ -118,7 +118,7 @@ const SAMPLE_LOG: readonly LogEntry[] = [
     tick: SAMPLE_TICK,
     entityId: 'player',
     phase: 'RESOLVE',
-    expr: '물약 사용',
+    expr: '탕약 사용',
     outcome: '회복',
     rule: 3,
     delta: 6,
@@ -154,7 +154,7 @@ function BattleSkeleton(): React.JSX.Element {
                 index={2}
                 state="true"
                 condition="체력비율(60) <= 80"
-                action="→ 물약 사용"
+                action="→ 탕약 사용"
                 cpu={{ used: 4, budget: SAMPLE_CPU_BUDGET }}
               />
               <RuleRow
@@ -257,7 +257,7 @@ export function Gallery(): React.JSX.Element {
           <div className="gal__stack">
             <SegmentedGauge value={SAMPLE_CPU_USED} max={SAMPLE_CPU_BUDGET} tone="cpu" label="cpu" readout />
             <SegmentedGauge value={SAMPLE_CPU_OVER} max={SAMPLE_CPU_BUDGET} tone="cpu" label="cpu 초과" readout />
-            <SegmentedGauge value={SAMPLE_POTIONS} max={SAMPLE_POTIONS_MAX} tone="hp" label="물약" readout />
+            <SegmentedGauge value={SAMPLE_POTIONS} max={SAMPLE_POTIONS_MAX} tone="hp" label="탕약" readout />
             <SegmentedGauge value={1} max={SAMPLE_POTIONS_MAX} tone="danger" label="위험" readout />
             <SegmentedGauge value={1} max={SAMPLE_POTIONS_MAX} tone="dim" label="비활성" readout />
           </div>
@@ -275,7 +275,7 @@ export function Gallery(): React.JSX.Element {
           <div className="gal__stack">
             <HpGauge value={SAMPLE_HP} max={SAMPLE_HP_MAX} />
             <HpGauge value={SAMPLE_HP_LOW} max={SAMPLE_HP_MAX} />
-            <ResourceCount label="물약" count={SAMPLE_POTIONS} max={SAMPLE_POTIONS_MAX} glyph="◍" />
+            <ResourceCount label="탕약" count={SAMPLE_POTIONS} max={SAMPLE_POTIONS_MAX} glyph="◍" />
             <ResourceCount label="열쇠" count={0} max={2} />
           </div>
         </Panel>

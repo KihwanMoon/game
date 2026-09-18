@@ -396,7 +396,7 @@ export function DoppelDetailPanel(props: DoppelDetailProps): React.JSX.Element {
             <ValueExpr text={`원본 · ${detail.originHandle || '(알 수 없음)'}`} size="sm" />
           </li>
           <li className="botd__skill">
-            <ValueExpr text={`레벨 ${String(detail.level)}`} size="sm" />
+            <ValueExpr text={`lv ${String(detail.level)}`} size="sm" />
           </li>
           <li className="botd__skill">
             <ValueExpr text={`${String(detail.zoneFloor)}장 · ${detail.entitySlot}`} size="sm" />
@@ -432,7 +432,7 @@ export function DoppelDetailPanel(props: DoppelDetailProps): React.JSX.Element {
   return (
     <DetailShell
       title={`둔갑 · ${detail.originHandle || String(detail.recordId)}`}
-      meta={`${String(detail.zoneFloor)}장 · lv${String(detail.level)}`}
+      meta={`${String(detail.zoneFloor)}장 · lv ${String(detail.level)}`}
       tabs={tabs}
       missing={DOPPEL_MISSING}
     />

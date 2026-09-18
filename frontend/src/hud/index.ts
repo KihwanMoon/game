@@ -19,7 +19,6 @@ export {
   buildRuleStats,
   checkWasted,
   extractDamageHits,
-  findHeatmapPeak,
   findHeatmapPeakCell,
   getWastePercent,
 } from './analysis'
@@ -43,7 +42,6 @@ export {
   DEATH_REPLAY_TICKS,
   DEFAULT_WINDOW_ROWS,
   filterRecentEntries,
-  findTickIndex,
   groupLogRows,
   selectLogWindow,
 } from './logWindow'

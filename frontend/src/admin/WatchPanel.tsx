@@ -149,31 +149,31 @@ export function WatchPanel(props: WatchPanelProps): React.JSX.Element {
                 : '여덟 지표가 모두 괜찮다'
           }
         />
-        {rows.length === 0 ? (
-          <ValueExpr text={EMPTY_ROWS} size="sm" dim />
-        ) : (
-          <>
-            <div className="adminrow adminrow--head" aria-hidden="true">
-              <span className="adminrow__name">지표</span>
-              <span className="adminrow__cell">등급</span>
-              <span className="adminrow__cell">소견</span>
-              <span className="adminrow__cell">실측</span>
-              <span className="adminrow__cell">언제부터 / 마지막</span>
-            </div>
-            {/* **쉰두 줄이 깔린다** (2026-09-17 실측). 지표 이름·등급·소견으로 걸린다 —
-                「무엇이 빨간가」가 이 표의 질문이고, 그것을 눈으로 훑고 있었다. */}
-            <DataList
-              items={rows}
-              rowKey={(row) => row.key}
-              listClass="bots__grid"
-              emptyText="아직 본 것이 없다"
-              filterText={(row) => `${row.key} ${row.level} ${row.text}`}
-              filterLabel="지표·등급으로 찾기"
-              unit="줄"
-              renderRow={(row) => renderRow(row)}
-            />
-          </>
+        {/* **빈 문구는 `DataList` 하나가 적는다.** 바깥에서 0건을 한 번 더 가르면 안쪽
+            `emptyText` 는 영영 안 그려지고, 안 그려지는 문구는 살아 있는 쪽과 말이
+            갈려도 아무도 모른다 (`BotDetail` 의 `BotUpkeep` 과 같은 이유다). 가리는
+            것은 머리줄까지다 — 줄이 없는데 라벨만 선 표는 고장으로 읽힌다. */}
+        {rows.length === 0 ? null : (
+          <div className="adminrow adminrow--head" aria-hidden="true">
+            <span className="adminrow__name">지표</span>
+            <span className="adminrow__cell">등급</span>
+            <span className="adminrow__cell">소견</span>
+            <span className="adminrow__cell">실측</span>
+            <span className="adminrow__cell">언제부터 / 마지막</span>
+          </div>
         )}
+        {/* **쉰두 줄이 깔린다** (2026-09-17 실측). 지표 이름·등급·소견으로 걸린다 —
+            「무엇이 빨간가」가 이 표의 질문이고, 그것을 눈으로 훑고 있었다. */}
+        <DataList
+          items={rows}
+          rowKey={(row) => row.key}
+          listClass="bots__grid"
+          emptyText={EMPTY_ROWS}
+          filterText={(row) => `${row.key} ${row.level} ${row.text}`}
+          filterLabel="지표·등급으로 찾기"
+          unit="줄"
+          renderRow={(row) => renderRow(row)}
+        />
         <Button
           size="sm"
           variant="ghost"

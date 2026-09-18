@@ -221,13 +221,3 @@ export function findHeatmapPeakCell(grid: readonly (readonly number[])[]): HeatP
   })
   return peak
 }
-
-/**
- * 히트맵에서 가장 많이 맞은 칸의 값. 강도 단계를 정하는 기준이다.
- *
- * @param grid buildDamageHeatmap 결과.
- * @returns 최댓값. 피해가 없으면 0.
- */
-export function findHeatmapPeak(grid: readonly (readonly number[])[]): number {
-  return findHeatmapPeakCell(grid)?.amount ?? 0
-}

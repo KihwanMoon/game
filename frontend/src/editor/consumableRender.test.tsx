@@ -157,7 +157,7 @@ describe('소모품 칸의 말', () => {
   })
 
   it('★ 보충 값을 버튼에 적는다 — 누르고 나서 얼마 나갔는지 아는 것은 늦다', () => {
-    expect(formatRefillLabel(buildSlot({ catalogId: 'x', refillCost: 60 }))).toBe('보충 60')
+    expect(formatRefillLabel(buildSlot({ catalogId: 'x', refillCost: 60 }))).toBe('보충 60푼')
   })
 
   it('★ 가득 찬 칸에는 보충을 안 띄운다 — 누를 수 있으면 눌러 보게 된다', () => {
@@ -272,6 +272,21 @@ describe('★ 견줌이 맞는 칸 전부와 붙는다', () => {
   it('★ 쓰임새가 다른 칸은 안 견준다 — 탕약을 부적 칸에 못 끼운다', () => {
     const compares = compareToSlots(pickFromOption(buildOption()), view.slots)
     expect(compares.every((one) => one.slot.useTag === 'POTION')).toBe(true)
+  })
+
+  it('★ 계열이 다른 태그도 제 칸을 찾는다 — 순간이동은 부적 칸에 들어간다', () => {
+    // **여기까지 와야 `SLOT_FAMILY` 를 밟는다.** 위의 사례는 계열과 태그가 같은
+    // `POTION` 뿐이라 `useTag === slotTag` 로 짜도 통과한다 — 부적 넷(`SCROLL`·`BLINK`·
+    // `FLAME`·`FOCUS`)이 한 칸을 나눠 쓴다는 규칙은 그 사례가 안 잡는다.
+    const blink = buildOption({
+      catalogId: 'scroll_blink',
+      labelKo: '순간이동 주문서',
+      useTag: 'BLINK',
+    })
+    const compares = compareToSlots(pickFromOption(blink), view.slots)
+    expect(compares).toHaveLength(1)
+    expect(compares[0]?.slot.useTag).toBe('SCROLL')
+    expect(compares[0]?.slot.slotIndex).toBe(2)
   })
 
   it('★ 스탯별 차이를 낸다 — 점수 하나로 접으면 기준을 코드가 정하게 된다', () => {
@@ -429,7 +444,7 @@ describe('소모품 상세 — 끼운 칸', () => {
     // 옵션은 그대로 선다 — 보충은 능력치를 되찾으려고가 아니라 다시 마시려고 하는 것이다.
     expect(html).toContain('든든함 · 최대체력 +4')
     expect(html).toContain('옵션은 그대로')
-    expect(html).toContain('보충 40')
+    expect(html).toContain('보충 40푼')
   })
 
   it('★ 빼기가 무엇을 버리는지 누르기 전에 말한다', () => {

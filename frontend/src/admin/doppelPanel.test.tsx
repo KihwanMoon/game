@@ -103,7 +103,7 @@ describe('도플갱어 상세 — 봇과 같은 UI, 다른 탭 수', () => {
 
   it('머리에 원본과 층·레벨을 적는다 — 탭을 안 열어도 무엇인지 알아야 한다', () => {
     expect(html).toContain('bot1')
-    expect(html).toContain('3장 · lv6')
+    expect(html).toContain('3장 · lv 6')
   })
 })
 

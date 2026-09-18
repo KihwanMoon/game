@@ -235,7 +235,7 @@ export function runUnseal(sealed: readonly SealedItem[], balance: number): Upgra
   const rest = sealed.reduce((sum, item) => sum + item.left, 0) - opened
   const tail = rest > 0 ? ` · ${String(rest)}칸은 값이 올라 이 어림에서 뺐다` : ''
   return {
-    text: `지금이면 ${String(opened)}칸 해제 (-${String(paid)})${tail}`,
+    text: `지금이면 ${String(opened)}칸 해제 (−${String(paid)})${tail}`,
     money: -paid,
     isActive: true,
     isShort: false,

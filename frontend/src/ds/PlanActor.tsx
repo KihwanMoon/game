@@ -20,9 +20,16 @@ export const ACTOR_GLYPHS: ReadonlyMap<PlanActorKind, string> = new Map([
   ['summon', '■'],
 ])
 
-/** 보조 기술이 읽을 종류 이름. */
+/**
+ * 보조 기술이 읽을 종류 이름.
+ *
+ * **나를 부르는 말은 한 낱말이다** — `battle/logNames.MY_NAME` 이 그 정본이고 여기 값이
+ * 그것과 같아야 한다. 도면은 `나`, 로그는 `플레이어`, 보조 기술은 또 다른 말이면 한 화면을
+ * 눈과 귀로 함께 읽는 사람이 서로 다른 둘을 듣는다. 가져다 쓰지 않고 적어 두는 것은
+ * 의존 방향 때문이다 — 디자인 시스템은 `battle/` 을 모른다.
+ */
 export const ACTOR_NAMES: ReadonlyMap<PlanActorKind, string> = new Map([
-  ['self', '플레이어'],
+  ['self', '나'],
   ['charge', '돌진형'],
   ['shoot', '사격형'],
   ['summon', '소환형'],
@@ -75,7 +82,7 @@ const TIER_CLASSES: ReadonlyMap<string, string> = new Map([
  * @param tier 등급 코드.
  * @returns class 조각. 일반이거나 모르는 등급이면 빈 문자열.
  */
-export function formatTierClass(tier: string | undefined): string {
+function formatTierClass(tier: string | undefined): string {
   return TIER_CLASSES.get(tier ?? '') ?? ''
 }
 

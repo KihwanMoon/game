@@ -35,19 +35,9 @@ import type { RuleRowView } from './ruleRows'
 import type { VitalRow } from './vitalRows'
 import { SpeedBox } from './SpeedBox'
 
-/**
- * 세로 하단바의 체력 막대 폭(px).
- *
- * `HpGauge` 는 폭을 토큰이 아니라 숫자 prop 으로 받는다(design/README.md 컴포넌트 계약).
- * 데스크톱 StatusBar 가 160 을 쓰는 자리이며 세로는 명세가 90 으로 정했다.
- */
-
 /** 시간 조작 두 칸의 이름. 시트 하단에 있던 것이 배속 옆으로 왔다. */
 const STEP_TEXT = '한 틱'
 const RESTART_TEXT = '처음부터'
-
-/** 물약 칸의 글리프와 라벨. ds `StatusBar` 와 같은 것을 쓴다. */
-
 
 /** 틱 표기 앞의 도형. 색은 --chalk-dim 이며 황동 예산에 들지 않는다. */
 const TICK_GLYPH = '◆'

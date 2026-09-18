@@ -79,7 +79,7 @@ export function formatAttributeEffect(key: string, points: number): string {
   if (key === 'int') {
     // 이름은 캐릭터 시트와 같은 말을 쓴다 (`CharacterPanel` 의 「재주 위력」). 화면을
     // 옮길 때마다 같은 스탯이 다른 이름으로 뜨면 그것이 또 모호함이다.
-    return `CPU +${String(bonus.cpuBudget)} · 재주 위력 ${String(bonus.skillPowerPct)}%`
+    return `cpu +${String(bonus.cpuBudget)} · 재주 위력 ${String(bonus.skillPowerPct)}%`
   }
   return ''
 }
@@ -143,7 +143,7 @@ export function GrowthPanel(props: GrowthPanelProps): React.JSX.Element {
                 text={
                   progress.reachedFloor >= progress.floorCap
                     ? '끝까지 왔다'
-                    : `장마다 적이 HP·공격 +${String(FLOOR_MULT_PCT - PERCENT_BASE)}% 로 세진다 — 층마다 곱해지는 복리다`
+                    : `장마다 적이 체력·공격 +${String(FLOOR_MULT_PCT - PERCENT_BASE)}% 로 세진다 — 층마다 곱해지는 복리다`
                 }
                 size="sm"
                 dim
@@ -152,7 +152,7 @@ export function GrowthPanel(props: GrowthPanelProps): React.JSX.Element {
             <div className="wld__row">
               <span className="wld__label">표현력</span>
               <ValueExpr
-                text={`슬롯 +${String(progress.bonusRuleSlots)} · CPU +${String(progress.bonusCpu)}`}
+                text={`슬롯 +${String(progress.bonusRuleSlots)} · cpu +${String(progress.bonusCpu)}`}
                 size="sm"
                 dim
               />

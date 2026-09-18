@@ -72,7 +72,7 @@ export function DoppelPanel(props: DoppelPanelProps): React.JSX.Element {
                     같은 그림자를 세 번 만나되 만날 때마다 약해진다. 남은 수를 안 적으면
                     「왜 아직 서 있지」와 「왜 사라졌지」를 둘 다 설명할 수 없다. */}
                 <span className="botrow__cell">{`목숨 ${String(item.lives)}`}</span>
-                <span className="botrow__cell">{`레벨 ${String(item.level)}`}</span>
+                <span className="botrow__cell">{`lv ${String(item.level)}`}</span>
                 <span className="botrow__cell">{item.entitySlot}</span>
                 <span className="botrow__cell">
                   {item.originHandle === '' ? '주인 없음' : `${item.originHandle} 의 둔갑`}

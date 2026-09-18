@@ -295,10 +295,10 @@ describe('긴 목록', () => {
     expect(render(OVERVIEW)).not.toContain('더 보기')
   })
 
-  it('★ 거르기는 긴 목록 둘에만 선다 — 고정 길이 목록에 내밀면 거를 것이 없다', () => {
+  it('★ 찾기는 긴 목록 둘에만 선다 — 고정 길이 목록에 내밀면 찾을 것이 없다', () => {
     const html = render(OVERVIEW)
-    expect(html).toContain('이름·장으로 거르기')
-    expect(html).toContain('이름·원주인으로 거르기')
+    expect(html).toContain('이름·장으로 찾기')
+    expect(html).toContain('이름·원주인으로 찾기')
     // 지속 몬스터와 보유 장비, 둘뿐이다.
     expect(html.match(/type="search"/g)?.length).toBe(2)
   })

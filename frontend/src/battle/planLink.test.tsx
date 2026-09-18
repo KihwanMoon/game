@@ -257,7 +257,7 @@ describe('연결선 그리기', () => {
             y: 1,
             isGain: true,
             delta: null,
-            label: '방어',
+            label: '방벽',
             from: { x: 1, y: 1 },
             byKindId: 'player',
         byEntityId: 'player',
@@ -269,7 +269,7 @@ describe('연결선 그리기', () => {
       readPlanTheme(readFake),
     )
     expect(fake.calls).toContain('text:-7')
-    expect(fake.calls).toContain('text:방어')
+    expect(fake.calls).toContain('text:방벽')
   })
 
   it('★ 때린 자리에 무기 자국이 지나간다 (설계/10_외형과_모션)', async () => {

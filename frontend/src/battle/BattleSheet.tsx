@@ -21,6 +21,7 @@ import type { ReactNode, Ref } from 'react'
 
 import { Button, LogPanel, RuleRow, RuleTable, SegmentedGauge } from '../ds'
 import type { LogRowProps } from '../ds'
+import { SLOT_LABELS } from '../content/consumableTags'
 import { AdPanel } from './AdSlot'
 import { SHEET_TABS, SHEET_TAB_LABELS, formatRuleCondition, type SheetTab } from './portraitSheet'
 import type { VitalRow } from './vitalRows'
@@ -191,18 +192,20 @@ export interface BattleSheetProps {
 }
 
 /**
- * 시트 한 장(탭 줄 + 본문 + 하단)을 그린다.
- *
- * @param props 탭 상태·규칙 줄·로그 줄·하단 슬롯.
- * @returns 렌더 트리.
+ * 칸 이름의 정본은 `content/consumableTags` 다. 여기 손으로 적어 두었더니 세계관이
+ * 「물약·주문서」를 「탕약·부적」으로 개명한 뒤 이 한 줄만 옛말로 남아, 같은 화면의 상태
+ * 탭(`vitalRows`)과 장비줄이 같은 칸을 다른 이름으로 불렀다 (2026-09-18).
  */
+const POTION_LABEL = SLOT_LABELS.get('POTION') ?? 'POTION'
+const SCROLL_LABEL = SLOT_LABELS.get('SCROLL') ?? 'SCROLL'
+
 /**
  * 로그 위 장비줄 — 소모품 잔량과 도는 쿨타임을 한 줄로 적는다.
  *
  * @param props 시트 props.
  * @returns 화면에 적을 한 줄. 적을 것이 없으면 빈 문자열.
  */
-export function formatGearLine(props: {
+function formatGearLine(props: {
   readonly cooldowns?: string
   readonly potions?: number
   readonly potionsMax?: number
@@ -212,10 +215,10 @@ export function formatGearLine(props: {
 }): string {
   const parts: string[] = []
   if (props.potionsMax !== undefined) {
-    parts.push(`◍ 물약 ${String(props.potions ?? 0)}/${String(props.potionsMax)}`)
+    parts.push(`◍ ${POTION_LABEL} ${String(props.potions ?? 0)}/${String(props.potionsMax)}`)
   }
   if (props.scrollsMax !== undefined) {
-    parts.push(`▤ 주문서 ${String(props.scrolls ?? 0)}/${String(props.scrollsMax)}`)
+    parts.push(`▤ ${SCROLL_LABEL} ${String(props.scrolls ?? 0)}/${String(props.scrollsMax)}`)
   }
   for (const row of props.extras ?? []) {
     parts.push(`▤ ${row.label} ${row.value.replace(/ /g, '')}`)
@@ -226,6 +229,12 @@ export function formatGearLine(props: {
   return parts.join(' · ')
 }
 
+/**
+ * 시트 한 장(탭 줄 + 본문 + 하단)을 그린다.
+ *
+ * @param props 탭 상태·규칙 줄·로그 줄·하단 슬롯.
+ * @returns 렌더 트리.
+ */
 export function BattleSheet(props: BattleSheetProps): React.JSX.Element {
   return (
     <div className="battle__sheet">

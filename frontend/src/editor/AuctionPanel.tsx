@@ -198,7 +198,7 @@ export function AuctionPanel(props: AuctionPanelProps): React.JSX.Element {
   return (
     <Panel
       title="저잣거리"
-      meta={auction === undefined ? '' : `수수료 ${String(auction.feePercent)}% · 잔액 ${String(auction.balance)}`}
+      meta={auction === undefined ? '' : `수수료 ${String(auction.feePercent)}% · 잔액 ${String(auction.balance)}푼`}
       tone="panel"
       padded
       scroll

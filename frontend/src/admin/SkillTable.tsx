@@ -93,7 +93,7 @@ export function SkillTable(props: SkillTableProps): React.JSX.Element {
             items={rows}
             rowKey={(row) => String(row.id)}
             rowClass="skl__row"
-            emptyText="고칠 스킬이 없다"
+            emptyText="고칠 재주가 없다"
             renderRow={(row) => (
               <>
               <span className="cat__name">{String(row.id)}</span>

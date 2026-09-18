@@ -29,9 +29,10 @@ test.describe('세로 모바일 규칙 편집', () => {
     const diagnostics = attachDiagnostics(page)
     await page.goto('/')
 
-    // 세로에서는 데스크톱 세 열이 아니라 규칙표 목록이 선다.
+    // 세로에서는 규칙표 목록이 선다. 데스크톱 세 열이 없는 것을 함께 보던 단언
+    // (`.editor__col--palette` 가 0개)은 걷었다 — 그 열을 붙이는 코드가 저장소에서
+    // 사라진 뒤라 어느 폭에서도 0개이고, 그래서 세로에 대해 아무것도 지키지 못한다.
     await expect(page.locator('.edit-m--list')).toBeVisible()
-    await expect(page.locator('.editor__col--palette')).toHaveCount(0)
     await saveShot(page, '12-edit-list-portrait')
 
     // 규칙 줄을 누르면 그 규칙 하나가 화면 전체를 쓴다.

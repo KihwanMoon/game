@@ -57,9 +57,9 @@ export function buildBestiaryCells(
     // 도감이 유물 색을 쓰게 되고, 그때부터 같은 색이 두 가지를 뜻한다.
     grade: '',
     marks: entry.holdsMine ? [HOLDS_MINE_MARK] : [],
-    countText: `lv${String(entry.level)}`,
+    countText: `lv ${String(entry.level)}`,
     // **등급은 글자로 적는다** — 의미색 셋은 이미 배정됐고, 색은 정보의 유일한 채널이
-    // 될 수 없다. 실측 스탯(hp·공·방)은 칸이 70px 라 잘리므로 상세가 낸다.
+    // 될 수 없다. 실측 스탯(체·공·방)은 칸이 70px 라 잘리므로 상세가 낸다.
     fact: entry.tier,
     isSealedSlot: false,
     entry,

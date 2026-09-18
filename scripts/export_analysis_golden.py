@@ -6,7 +6,7 @@
 
 내보내는 것은 세 가지다.
 
-* `rule_stats` — 규칙별 발동·성공·헛돔. "어느 규칙이 틀렸는가" 에 답한다.
+* `rule_stats` — 규칙별 발동·성공·헛돎. "어느 규칙이 틀렸는가" 에 답한다.
 * `hits` — 피격 한 건마다의 틱·피격자·좌표·피해량. 좌표는 로그에 없고 틱 전후의 세계
   상태에만 있으므로, 한 틱씩 끊어 돌며 받아 적은 값이다(`replay_battle.BattleRecorder`).
 * `heatmap_*` — 그 피격 기록을 격자로 접은 값. 행마다 쉼표로 이은 문자열이다. 정수 배열로
@@ -74,7 +74,7 @@ def build_stat_rows(stats: tuple[RuleStat, ...]) -> list[dict[str, Any]]:
         stats: build_rule_stats 결과.
 
     Returns:
-        우선순위 순서를 유지한 행 목록. 헛돔 비율까지 함께 싣는다.
+        우선순위 순서를 유지한 행 목록. 헛돎 비율까지 함께 싣는다.
     """
     return [
         {

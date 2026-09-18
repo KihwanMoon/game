@@ -119,7 +119,11 @@ test.describe('G3 — 규칙표 하나 짜기', () => {
 
     // 다 짜인 규칙표가 실행 가능해야 한다. 화면이 그럴듯한 것과는 다른 사실이다.
     await expect(page.locator('.rule-row')).toHaveCount(4)
-    await expect(page.locator('.editor__bottom')).toContainText('cpu 7 / 8')
+    // CPU 총합은 규칙표 목록 하단(`.edit-m__foot`)의 게이지가 읽어 준다. 데스크톱 세 열과
+    // 함께 사라진 `.editor__bottom` 을 가리키고 있었다 — 없는 요소를 기다리는 단언이라
+    // 언제나 실패한다. 라벨과 수치가 붙은 형제 span 이라 textContent 에는 사이 공백이
+    // 없다(`cpu6 / 8`). 그래서 수치 쪽만 정확히 본다.
+    await expect(page.locator('.edit-m__foot .ds-readout')).toHaveText('7 / 8')
     await expect(page.getByText('실행 가능한 규칙표다')).toBeVisible()
     await saveShot(page, '06-authoring-kite')
 

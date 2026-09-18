@@ -43,8 +43,8 @@ export const SPEED_LABEL_BY_STEP: ReadonlyMap<number, string> = new Map([
  */
 export const BATCH_INTERVAL_TICK_UNITS = 2
 
-/** 시간 토큰 이름. 값은 `140ms` 형태다. */
-export const TICK_DURATION_TOKEN = '--dur-tick'
+/** 시간 토큰 이름. 값은 `140ms` 형태다. 이 파일 밖에서 읽는 곳이 없어 내보내지 않는다. */
+const TICK_DURATION_TOKEN = '--dur-tick'
 
 /** 토큰을 읽지 못했을 때 쓰는 간격(ms). 토큰이 사라진 화면에서도 시계는 돌아야 한다. */
 const FALLBACK_INTERVAL_MS = 280

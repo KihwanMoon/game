@@ -529,7 +529,7 @@ describe('정비 검증 화면', () => {
         hasRows
       />,
     )
-    expect(html).toContain('잔액 100 → 60')
+    expect(html).toContain('잔액 100 → 60푼')
     expect(html).toContain('−40')
   })
 

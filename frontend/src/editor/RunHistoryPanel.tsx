@@ -75,7 +75,7 @@ export function RunHistoryPanel(props: RunHistoryPanelProps): React.JSX.Element 
                 label={formatRunOutcome(run.outcome)}
               />
               <ValueExpr
-                text={`${String(run.ticks)}틱 · HP ${String(run.playerHp)}`}
+                text={`${String(run.ticks)}틱 · 체력 ${String(run.playerHp)}`}
                 size="sm"
                 dim
               />

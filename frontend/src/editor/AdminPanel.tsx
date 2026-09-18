@@ -52,7 +52,7 @@ const SUMMARY_ROWS: readonly { readonly key: keyof AdminOverview; readonly label
   { key: 'itemsHeldByMonsters', label: '몬스터 보유' },
   { key: 'listingsOpen', label: '열린 매물' },
   { key: 'currencyTotal', label: '풀린 푼' },
-  { key: 'verifiedRuns', label: '검증된 런' },
+  { key: 'verifiedRuns', label: '검증된 판' },
 ]
 
 /** 콘텐츠 수치. 읽기 전용이라 값과 이름만 적는다. */
@@ -276,7 +276,7 @@ export function AdminPanel(props: AdminPanelProps): React.JSX.Element | null {
           // 장과 이름으로 거른다. 「어느 장이 이상한가」가 이 표를 보는 이유이고,
           // 200줄에서 그것을 눈으로 세는 것은 브라우저 찾기와 다르지 않다.
           filterText={(row) => `${row.catalogId} ${String(row.zoneFloor)}장`}
-          filterLabel="이름·장으로 거르기"
+          filterLabel="이름·장으로 찾기"
         />
         <CapNotice shown={overview.monsters.length} cap={MONSTER_CAP} />
 
@@ -335,7 +335,7 @@ export function AdminPanel(props: AdminPanelProps): React.JSX.Element | null {
           showCount
           // 원주인으로 거른다 — "내 장비를 누가 들고 있나" 가 회수 문의의 형태다.
           filterText={(row) => `${row.catalogId} ${row.takenFromHandle}`}
-          filterLabel="이름·원주인으로 거르기"
+          filterLabel="이름·원주인으로 찾기"
         />
         {/* 여기만 전체 수를 안다 — 요약의 `몬스터 보유` 가 상한 없이 센 같은 모집단이다.
             몬스터 목록은 죽은 것까지 실어 오는데 요약은 살아 있는 것만 세므로 그쪽에는

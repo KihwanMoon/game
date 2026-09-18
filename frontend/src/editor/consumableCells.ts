@@ -181,7 +181,7 @@ export function formatRefillLabel(slot: ConsumableSlotView): string {
   if (slot.catalogId === '' || slot.refillCost <= 0) {
     return ''
   }
-  return `보충 ${String(slot.refillCost)}`
+  return `보충 ${String(slot.refillCost)}푼`
 }
 
 /**

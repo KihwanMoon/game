@@ -220,7 +220,7 @@ describe('둔갑 판', () => {
     )
     expect(html).toContain('20판')
     expect(html).toContain('51판')
-    expect(html).not.toContain('lv0')
+    expect(html).not.toContain('lv 0')
   })
 
   it('★ 빈 둔갑 판은 안 편다 — 빈 판이 첫 화면이면 순위표가 비었다로 읽힌다', () => {

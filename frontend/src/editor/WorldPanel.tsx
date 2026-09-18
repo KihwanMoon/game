@@ -172,7 +172,7 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
                         안 말하고, 대신 「몇 판 만에 이룬 것인가」가 승수의 뜻을 정한다 —
                         열 번을 스무 판에 이긴 쪽과 쉰 판에 이긴 쪽은 다르다. */}
                     <span className="wld__rank-lv">
-                      {entry.met < 0 ? `lv${String(entry.level)}` : `${String(entry.met)}판`}
+                      {entry.met < 0 ? `lv ${String(entry.level)}` : `${String(entry.met)}판`}
                     </span>
                     <span className="wld__rank-score">{String(entry.score)}</span>
                     {/* 1등 대비 격차. **색이 아니라 칸 수가 정보이고, 숫자가 정본이다** —

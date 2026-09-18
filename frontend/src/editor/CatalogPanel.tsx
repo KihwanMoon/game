@@ -102,7 +102,7 @@ export function EnemyDetail(props: { readonly row: CatalogEnemyRow }): React.JSX
       <span className="cat__name">{row.labelKo}</span>
       <ValueExpr text={row.type} size="sm" dim />
       <ValueExpr
-        text={`hp ${String(row.hpMax)} · 공 ${String(row.attack)} · 방 ${String(row.defense)} · 사거리 ${String(row.attackRange)}`}
+        text={`체 ${String(row.hpMax)} · 공 ${String(row.attack)} · 방 ${String(row.defense)} · 사거리 ${String(row.attackRange)}`}
         size="sm"
       />
       {/* 몬스터의 정체는 스탯이 아니라 규칙표다 (설계/6_몬스터 §2). */}

@@ -365,8 +365,9 @@ describe('하단 바가 상태줄을 겸한다 (명세 B·D)', () => {
     expect(html).toContain('ds-hp')
     expect(html).toContain('battle-ls__rule-line')
     expect(html).not.toContain('ds-resource')
-    // 장비줄이 물약·주문서를 잇는다 — 하단 바에서 사라진 것이 아니라 옮겨 간 것이다.
-    expect(html).toContain('물약')
+    // 장비줄이 탕약·부적을 잇는다 — 하단 바에서 사라진 것이 아니라 옮겨 간 것이다.
+    // 칸 이름은 `content/consumableTags` 의 `SLOT_LABELS` 가 정본이다 (2026-09-18).
+    expect(html).toContain('탕약')
     expect(html).toContain(formatOutcomeNotice(OUTCOME_ONGOING))
   })
 

@@ -229,7 +229,7 @@ describe('DamageHeatmap', () => {
 describe('TickScrubber', () => {
   it('손잡이 위치만이 아니라 몇 틱인지를 적는다', () => {
     const html = renderToStaticMarkup(
-      <TickScrubber min={0} max={21} value={7} onChange={() => undefined} label="되감기" />,
+      <TickScrubber min={0} max={21} value={7} onChange={() => undefined} label="틱" />,
     )
     expect(html).toContain('T007 / T021')
     expect(html).toContain('type="range"')
@@ -245,7 +245,9 @@ describe('PostMortem', () => {
     expect(html).toContain('규칙별 발동')
     expect(html).toContain('피해 히트맵')
     expect(html).toContain('직전 15틱 리플레이')
-    expect(html).toContain('되감기')
+    // 스크러버는 class 로 본다. 라벨 글자는 `틱` 이라 패널 제목에도 들어 있어, 글자로
+    // 찾으면 스크러버가 빠져도 제목에 걸려 통과한다.
+    expect(html).toContain('hud-scrub')
   })
 
   it('승패와 틱을 머리에 적는다', () => {
@@ -258,7 +260,7 @@ describe('PostMortem', () => {
   it('★ 도면 테마가 없어도 되감기는 선다 — 캔버스만 비운다', () => {
     // 예전에는 테마가 없으면 되감기 영역 통째로 「그 틱의 화면이 없다」였다. 그러면
     // 토큰을 읽기 전에는 스크러버도 규칙표도 없어서, 짚어 볼 수가 없었다.
-    expect(html).toContain('되감기')
+    expect(html).toContain('hud-scrub')
     expect(html).toContain('battle-frame--panel')
     expect(html).not.toContain('그 틱의 화면이 없다')
   })
@@ -307,7 +309,9 @@ describe('HudScreen', () => {
   })
 
   it('사망이 아니면 사후 분석이 저절로 뜨지 않는다', () => {
-    expect(html).not.toContain('사후 분석 — 승리')
+    // 판정 라벨은 `방을 깼다` 다. 여기가 `승리` 로 적혀 있는 동안은 화면에 절대 나올 수
+    // 없는 문자열을 찾는 **늘 참인 빈 검사**였다 — 사후 분석이 떠도 초록이었다.
+    expect(html).not.toContain('사후 분석 — 방을 깼다')
   })
 
   it('사망으로 끝난 판은 마지막 프레임에서 사후 분석이 저절로 뜬다', () => {

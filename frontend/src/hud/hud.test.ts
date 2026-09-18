@@ -200,7 +200,7 @@ describe('규칙 성적표의 계산', () => {
     return createLogEntry({ tick: 1, entityId: 'player', phase, expr: '', outcome, rule })
   }
 
-  it('DECIDE 는 발동으로, ACT 는 성공이나 헛돔으로 센다', () => {
+  it('DECIDE 는 발동으로, ACT 는 성공이나 헛돎으로 센다', () => {
     const stats = buildRuleStats(
       [
         createRow(PHASE_DECIDE, 1, 'MOVE'),
@@ -237,7 +237,7 @@ describe('규칙 성적표의 계산', () => {
     ])
   })
 
-  it('시도가 없으면 헛돔 비율은 0 이다 — 0 으로 나누지 않는다', () => {
+  it('시도가 없으면 헛돎 비율은 0 이다 — 0 으로 나누지 않는다', () => {
     expect(getWastePercent({ label: '[1]', fired: 3, acted: 0, wasted: 0 })).toBe(0)
   })
 

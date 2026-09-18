@@ -77,7 +77,7 @@ describe('도감 격자', () => {
 
   it('칸 구석은 어느 층인가를 말한다 — 되찾으러 갈 수 있는지가 거기서 갈린다', () => {
     expect(buildBestiaryCells(ENTRIES).map((cell) => [cell.code, cell.countText])).toEqual([
-      ['1장', 'lv3'],
+      ['1장', 'lv 3'],
     ])
   })
 

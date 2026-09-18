@@ -418,6 +418,31 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
   const threatText = threat === undefined ? undefined : `${threat.glyph} ${threat.text}`
   const plan =
     theme === undefined ? null : <PlanCanvas scene={scene} theme={theme} lookOf={lookOf} />
+  // **상태 탭 줄은 한 벌뿐이다.** 탭은 가로·세로가 나눠 쓰는 부품이므로 줄을 각 배치에서
+  // 따로 만들면 같은 탭이 배치에 따라 다른 값을 적게 된다. 가로가 아예 안 넘겨 `상태` 탭이
+  // 빈 목록으로 열리던 것이 그 사본이 갈라진 자리였다 (2026-09-18).
+  const vitals = buildVitalRows({
+    hp: player?.hp ?? 0,
+    hpMax: player?.hpMax ?? 1,
+    potions: player === undefined ? 0 : countItem(player, 'POTION'),
+    potionsMax: readCarried(props.setup, 'POTION'),
+    scrolls: player === undefined ? 0 : countItem(player, 'SCROLL'),
+    scrollsMax: readCarried(props.setup, 'SCROLL'),
+    // 주문서가 넷으로 갈린 뒤로 「무엇을 들고 왔는가」가 태그로 갈린다 (2026-09-11).
+    carried: new Map(props.setup.loadout?.consumables ?? []),
+    held: player?.consumables,
+    cpuUsed,
+    cpuBudget,
+    attack: player?.attack ?? 0,
+    defense: player?.defense ?? 0,
+    attackRange: player?.attackRange ?? 0,
+    initiative: player?.initiative ?? 0,
+    cooldowns: player?.cooldowns,
+    statuses: player?.statuses,
+    flags: player?.flags,
+    skills: listRulesetSkills(session.ruleset.rules),
+    totals: buildCooldownTotals(session.engine.config.skills),
+  })
   // **가로 폰만 다르게 선다.** 세로 골격의 고정 높이 합(44+44+270+34+48=440)이
   // 390px 짜리 가로 폰에 안 들어간다. 화면이 커서가 아니라 높이가 모자라서다.
   if (mode === 'landscape') {
@@ -441,6 +466,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         cpuBudget={cpuBudget}
         entries={logRows}
         settlements={props.settlements ?? []}
+        vitals={vitals}
         hp={player?.hp ?? 0}
         hpMax={player?.hpMax ?? 1}
         potions={player === undefined ? 0 : countItem(player, 'POTION')}
@@ -484,28 +510,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
       onToggleRule={toggleRule}
       entries={logRows}
       settlements={props.settlements ?? []}
-      vitals={buildVitalRows({
-        hp: player?.hp ?? 0,
-        hpMax: player?.hpMax ?? 1,
-        potions: player === undefined ? 0 : countItem(player, 'POTION'),
-        potionsMax: readCarried(props.setup, 'POTION'),
-        scrolls: player === undefined ? 0 : countItem(player, 'SCROLL'),
-        scrollsMax: readCarried(props.setup, 'SCROLL'),
-        // 주문서가 넷으로 갈린 뒤로 「무엇을 들고 왔는가」가 태그로 갈린다 (2026-09-11).
-        carried: new Map(props.setup.loadout?.consumables ?? []),
-        held: player?.consumables,
-        cpuUsed,
-        cpuBudget,
-        attack: player?.attack ?? 0,
-        defense: player?.defense ?? 0,
-        attackRange: player?.attackRange ?? 0,
-        initiative: player?.initiative ?? 0,
-        cooldowns: player?.cooldowns,
-        statuses: player?.statuses,
-        flags: player?.flags,
-        skills: listRulesetSkills(session.ruleset.rules),
-        totals: buildCooldownTotals(session.engine.config.skills),
-      })}
+      vitals={vitals}
       tab={tab}
       onTabChange={setTab}
       bodyRef={sheetRef}

@@ -55,11 +55,12 @@ export type { WorldPanelProps } from './WorldPanel'
 export type { BestiaryPanelProps } from './BestiaryPanel'
 export type { MyDoppelPanelProps } from './MyDoppelPanel'
 export type { VolumePanelProps } from './VolumePanel'
-export { ConsumablePanel, findFreeConsumableSlot } from './ConsumablePanel'
+export { ConsumablePanel } from './ConsumablePanel'
 export type { ConsumablePanelProps } from './ConsumablePanel'
 export {
   buildConsumableSlotCells,
   buildConsumableStockCells,
+  findFreeConsumableSlot,
   formatCharges,
   formatClearLabel,
   formatRefillLabel,

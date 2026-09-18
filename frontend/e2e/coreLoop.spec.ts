@@ -45,7 +45,11 @@ test.describe('핵심 루프', () => {
     await expect(page.getByRole('heading', { name: '규칙 에디터' })).toBeVisible()
     await expect(page.getByText('블록 팔레트')).toBeVisible()
     await expect(page.locator('.rule-row')).toHaveCount(4)
-    await expect(page.locator('.editor__bottom')).toContainText('cpu 6 / 8')
+    // CPU 총합은 규칙표 목록 하단(`.edit-m__foot`)의 게이지가 읽어 준다. 데스크톱 세 열과
+    // 함께 사라진 `.editor__bottom` 을 가리키고 있었다 — 없는 요소를 기다리는 단언이라
+    // 언제나 실패한다. 라벨과 수치가 붙은 형제 span 이라 textContent 에는 사이 공백이
+    // 없다(`cpu6 / 8`). 그래서 수치 쪽만 정확히 본다.
+    await expect(page.locator('.edit-m__foot .ds-readout')).toHaveText('6 / 8')
     await saveShot(page, '01-editor')
 
     // (b) 팔레트에서 인지 변수 → 행동 → 셀렉터를 골라 규칙을 한 줄 더 만든다.
@@ -72,7 +76,7 @@ test.describe('핵심 루프', () => {
     // 3항 규칙의 비용은 4 다(항 수 → 비용은 1·2·4). 6 + 4 = 10 으로 예산 8 을 넘긴다.
     await added.getByTitle('조건 항 추가 (Alt+T)').click()
     await added.getByTitle('조건 항 추가 (Alt+T)').click()
-    await expect(page.locator('.editor__bottom')).toContainText('cpu 10 / 8')
+    await expect(page.locator('.edit-m__foot .ds-readout')).toHaveText('10 / 8')
     await expect(added.locator('.rule-row__bar--over')).toHaveCount(1)
     // 넘긴 줄부터다 — 그 위의 줄들은 그대로 남는다.
     await expect(page.locator('.rule-row__bar--over')).toHaveCount(1)
@@ -82,13 +86,13 @@ test.describe('핵심 루프', () => {
     // 넘긴 상태에서 고쳐진다. 이것이 "오류가 아니라 수치" 의 뜻이다.
     await added.getByLabel('규칙 5 행동').selectOption({ label: '후퇴' })
     await expect(added.getByLabel('규칙 5 행동')).toHaveValue('RETREAT')
-    await expect(page.locator('.editor__bottom')).toContainText('cpu 10 / 8')
+    await expect(page.locator('.edit-m__foot .ds-readout')).toHaveText('10 / 8')
 
     // 되돌리기로 예산 안으로 돌아온다.
     await page.getByTitle('되돌리기 (Ctrl+Z)').click()
     await page.getByTitle('되돌리기 (Ctrl+Z)').click()
     await page.getByTitle('되돌리기 (Ctrl+Z)').click()
-    await expect(page.locator('.editor__bottom')).toContainText('cpu 7 / 8')
+    await expect(page.locator('.edit-m__foot .ds-readout')).toHaveText('7 / 8')
     await expect(page.getByRole('button', { name: '출격' })).toBeEnabled()
 
     checkNoBrowserErrors(diagnostics)
@@ -184,7 +188,10 @@ test.describe('핵심 루프', () => {
     await page.keyboard.press('Alt+d')
     await expect(page.locator('.rule-row')).toHaveCount(6)
     // 슬롯이 5개라 6번째는 즉시 위반으로 잡힌다. 편집을 막지는 않는다.
-    await expect(page.locator('.editor__col--check')).toContainText('규칙')
+    // 검사 결과는 데스크톱 검사 열(`.editor__col--check`, 지금은 붙이는 코드가 없다)이
+    // 아니라 규칙표 아래 전역 위반 목록에 선다 — `규칙 6개가 슬롯 5개를 넘는다`
+    // (core/rules/validator).
+    await expect(page.locator('.edit-m__problems--global')).toContainText('규칙')
 
     await page.keyboard.press('Alt+Backspace')
     await page.keyboard.press('Alt+Backspace')

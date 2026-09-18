@@ -22,11 +22,9 @@ import { SlotBoard, usePickedKey } from './SlotBoard'
 import { LinkNoticeLine } from './LinkNoticeLine'
 import { checkLinked, type LinkState } from './linkState'
 
-// **재수출은 하나뿐이다.** 배럴(`editor/index.ts`)은 `formatCharges`·`formatClearLabel`·
-// `formatRefillLabel`·`formatSlotName` 을 `consumableCells` 에서 직접 가져가므로 여기서
-// 또 내보내면 같은 값이 두 경로로 나가고 어느 쪽이 정본인지 흐려진다. 남긴 하나는
-// 배럴이 아직 이 파일에서 가져가는 것이다 — 끼우기의 집이 여기라서다.
-export { findFreeConsumableSlot } from './consumableCells'
+// **재수출이 없다.** 배럴(`editor/index.ts`)은 `findFreeConsumableSlot`·`formatCharges`·
+// `formatClearLabel`·`formatRefillLabel`·`formatSlotName` 을 `consumableCells` 에서 직접
+// 가져간다 — 여기서 또 내보내면 같은 값이 두 경로로 나가고 어느 쪽이 정본인지 흐려진다.
 
 /** 못 닿았을 때 무엇을 못 보는가. 앞머리(`서버에 닿지 못했다`)는 linkState 가 든다. */
 const MISSING_HINT = '소모품 칸은 서버가 안다'

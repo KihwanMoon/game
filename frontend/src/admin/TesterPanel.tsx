@@ -154,29 +154,29 @@ export function TesterPanel(props: TesterPanelProps): React.JSX.Element {
             label={`부른 테스터가 ${String(marked)}명이다 — 로드맵은 ${String(minTesters)}명을 전제한다`}
           />
         ) : null}
-        {rows.length === 0 ? (
-          <ValueExpr text={EMPTY_ROWS} size="sm" dim />
-        ) : (
-          <>
-            <div className="adminrow adminrow--head" aria-hidden="true">
-              <span className="adminrow__name">계정</span>
-              <span className="adminrow__cell">셈</span>
-              <span className="adminrow__cell">제출</span>
-              <span className="adminrow__cell">마지막 접속</span>
-              <span className="adminrow__cell" />
-            </div>
-            <DataList
-              items={rows}
-              rowKey={(row) => String(row.accountId)}
-              listClass="bots__grid"
-              emptyText="아직 표시한 계정이 없다"
-              filterText={(row) => row.handle}
-              filterLabel="이름으로 찾기"
-              unit="명"
-              renderRow={(row) => renderRow(row, props.onMark)}
-            />
-          </>
+        {/* **빈 문구는 `DataList` 하나가 적는다.** 바깥에서 0건을 한 번 더 가르면 안쪽
+            `emptyText` 는 영영 안 그려지고, 안 그려지는 문구는 살아 있는 쪽과 말이
+            갈려도 아무도 모른다 (`BotDetail` 의 `BotUpkeep` 과 같은 이유다). 가리는
+            것은 머리줄까지다 — 줄이 없는데 라벨만 선 표는 고장으로 읽힌다. */}
+        {rows.length === 0 ? null : (
+          <div className="adminrow adminrow--head" aria-hidden="true">
+            <span className="adminrow__name">계정</span>
+            <span className="adminrow__cell">셈</span>
+            <span className="adminrow__cell">제출</span>
+            <span className="adminrow__cell">마지막 접속</span>
+            <span className="adminrow__cell" />
+          </div>
         )}
+        <DataList
+          items={rows}
+          rowKey={(row) => String(row.accountId)}
+          listClass="bots__grid"
+          emptyText={EMPTY_ROWS}
+          filterText={(row) => row.handle}
+          filterLabel="이름으로 찾기"
+          unit="명"
+          renderRow={(row) => renderRow(row, props.onMark)}
+        />
       </Panel>
     </div>
   )

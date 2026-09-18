@@ -220,7 +220,7 @@ describe('경매 격자', () => {
 
   it('수수료와 잔액을 머리에 적는다 — 걸기 전에 얼마가 나가는지 알아야 한다', () => {
     expect(markup).toContain('수수료 5%')
-    expect(markup).toContain('잔액 500')
+    expect(markup).toContain('잔액 500푼')
   })
 
   it('★ 거는 곳이 가방임을 말한다 — 두 집에 두면 어느 쪽이 진짜인지 모른다', () => {

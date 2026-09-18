@@ -558,7 +558,7 @@
   color: var(--text-dim);
 }
 
-/* 값의 출처(`평가값 = 이번 틱`). 수를 읽는 줄이라 자간을 벌리지 않는다. */
+/* 값의 출처(`평가값 = 직전 틱`). 수를 읽는 줄이라 자간을 벌리지 않는다. */
 .edit-card__meta {
   font-family: var(--font-mono);
   font-size: var(--fs-label);

@@ -88,11 +88,11 @@ describe('능력치 미리보기 (결정 #51)', () => {
     expect(formatAttributeEffect('dex', 7)).toBe('선공 +14 · 방어 +7')
   })
 
-  it('★ 지능의 CPU 상한이 화면에도 보인다', () => {
+  it('★ 지능의 cpu 상한이 화면에도 보인다', () => {
     // 상한을 화면이 숨기면 유저는 안 오르는 축에 계속 찍는다.
     // 이름은 캐릭터 시트와 같은 「재주 위력」이다 — 화면마다 다른 말로 부르면 같은
     // 스탯이 둘로 보인다.
-    expect(formatAttributeEffect('int', 40)).toBe('CPU +8 · 재주 위력 180%')
+    expect(formatAttributeEffect('int', 40)).toBe('cpu +8 · 재주 위력 180%')
   })
 
   it('0점이면 아무것도 적지 않는다 — 빈 줄이 세 개 늘면 목록이 읽히지 않는다', () => {
@@ -120,7 +120,7 @@ describe('층 깊이 (설계/6_몬스터 §3)', () => {
     // **숫자는 `balance.json` 에서 온다.** 예전에는 화면이 「HP +25% · 공격 +20%」를
     // 손으로 적었는데 정본에는 `enemy_mult_pct_per_floor: 120` 하나뿐이고 그것이
     // HP·공격에 똑같이 걸린다 — HP 쪽 25 는 어디에도 없는 숫자였다.
-    expect(drawDepth(4, 10)).toContain('HP·공격 +20%')
+    expect(drawDepth(4, 10)).toContain('체력·공격 +20%')
     // 합이 아니라 곱이라는 사실까지 말해야 깊은 장의 벽을 낮게 읽지 않는다.
     expect(drawDepth(4, 10)).toContain('복리')
   })

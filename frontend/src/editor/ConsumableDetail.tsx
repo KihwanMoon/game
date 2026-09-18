@@ -196,9 +196,14 @@ function renderSlotDetail(
       {isEmpty ? (
         <ValueExpr text={formatCharges(slot, view.freeCharges)} size="sm" dim />
       ) : (
-        // **충전을 눈금으로 그린다.** 체력·CPU 와 같은 부품이다 — 숫자를 함께 적으므로
-        // 색을 못 보는 경로도 남는다.
-        <SegmentedGauge value={slot.charges} max={slot.chargeMax} readout />
+        // **충전을 눈금으로 그린다.** 체력·cpu 와 같은 부품이다 — 숫자를 함께 적으므로
+        // 색을 못 보는 경로도 남는다. 읽는 숫자는 `formatCharges` 가 만든다 — 게이지가
+        // 제 몫을 따로 적으면 빈 칸 문구와 찬 칸 문구를 두 곳이 정하게 된다.
+        <SegmentedGauge
+          value={slot.charges}
+          max={slot.chargeMax}
+          readout={formatCharges(slot, view.freeCharges)}
+        />
       )}
       {renderAffixes(slot.affixes)}
       {renderUseEffect(slot.itemTag, isEmpty)}

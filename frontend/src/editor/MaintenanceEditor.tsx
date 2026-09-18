@@ -375,7 +375,7 @@ export function MaintenanceCheck(props: {
         ) : null}
         {/* 잔액이 CPU 의 자리다 — 정비가 재는 예산은 돈이다. */}
         <ValueExpr
-          text={`잔액 ${String(props.preview.balance)} → ${String(props.preview.balanceAfter)} (${formatMoneyDelta(props.preview.moneyDelta)})`}
+          text={`잔액 ${String(props.preview.balance)} → ${String(props.preview.balanceAfter)}푼 (${formatMoneyDelta(props.preview.moneyDelta)})`}
           size="sm"
         />
         {props.preview.isShort ? (

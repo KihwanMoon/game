@@ -92,7 +92,7 @@ def format_rule_stats(stats: tuple[RuleStat, ...]) -> str:
     Returns:
         출력할 문자열.
     """
-    lines = [f"  {'규칙':<8} {'발동':>5} {'성공':>5} {'헛돔':>5}  진단", "  " + "-" * 46]
+    lines = [f"  {'규칙':<8} {'발동':>5} {'성공':>5} {'헛돎':>5}  진단", "  " + "-" * 46]
     for stat in stats:
         note = ""
         if stat.fired and not stat.acted and not stat.wasted:
