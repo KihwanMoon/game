@@ -23,25 +23,30 @@ const IDLE_GLYPH = '·'
 /**
  * 결마다의 글리프. **색과 같은 것을 가리킨다** — 색을 못 보는 화면에서도 이 한 글자가
  * 남으므로, 색이 정보의 유일한 채널이 되지 않는다 (design/README D-1).
+ *
+ * **`Map` 인 것은 게이트 때문이다.** `tests/test_design_contract.py` 가 정본과 대조하는
+ * 표는 `ReadonlyMap` 리터럴 꼴만 읽는다 — `Record` 로 두면 글리프가 갈려도 검사가 조용히
+ * 통과한다(2026-09-03 에 그런 자리가 셋 있었다). 조회에만 쓰므로 순회 불변조건(R5)과는
+ * 무관하다.
  */
-const TONE_GLYPHS: Readonly<Record<string, string>> = {
-  damage: '✦',
-  heal: '✚',
-  death: '✕',
-  waste: '⊘',
-  world: '◇',
-  decide: '·',
-}
+const TONE_GLYPHS: ReadonlyMap<string, string> = new Map([
+  ['damage', '✦'],
+  ['heal', '✚'],
+  ['death', '✕'],
+  ['waste', '⊘'],
+  ['world', '◇'],
+  ['decide', '·'],
+])
 
 /** 결마다의 말. 화면 낭독기가 읽는 것이 이것이다. */
-const TONE_WORDS: Readonly<Record<string, string>> = {
-  damage: '피해',
-  heal: '회복',
-  death: '쓰러짐',
-  waste: '헛돎',
-  world: '세계',
-  decide: '판단',
-}
+const TONE_WORDS: ReadonlyMap<string, string> = new Map([
+  ['damage', '피해'],
+  ['heal', '회복'],
+  ['death', '쓰러짐'],
+  ['waste', '헛돎'],
+  ['world', '세계'],
+  ['decide', '판단'],
+])
 
 /**
  * LogRow 가 받는 props.
@@ -115,9 +120,9 @@ export function LogRow(props: LogRowProps): React.JSX.Element {
     >
       <span className="ds-log-row__tick">T{String(props.tick).padStart(TICK_PAD_WIDTH, '0')}</span>
       <span className="ds-log-row__fired" aria-hidden="true">
-        {TONE_GLYPHS[tone] ?? (fired ? FIRED_GLYPH : IDLE_GLYPH)}
+        {TONE_GLYPHS.get(tone) ?? (fired ? FIRED_GLYPH : IDLE_GLYPH)}
       </span>
-      <span className="ds-sr">{TONE_WORDS[tone] ?? (fired ? '발동' : '미발동')}</span>
+      <span className="ds-sr">{TONE_WORDS.get(tone) ?? (fired ? '발동' : '미발동')}</span>
       {/* **없어도 칸은 그린다** (2026-09-16). 안 그리면 항목 수가 줄마다 달라지고,
           격자는 개수로 칸을 채우므로 **나머지가 한 칸씩 당겨진다** — 행위자가 붙은 줄만
           증감이 둘째 줄로 밀려 줄 높이가 두 배가 됐던 자리다. 빈 칸은 폭 0 이다. */}
