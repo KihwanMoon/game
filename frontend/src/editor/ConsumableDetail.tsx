@@ -211,7 +211,7 @@ function renderSlotDetail(
       {/* 빈 칸은 견줄 것이 없다 — 무엇과 견주는지가 없다. */}
       {isEmpty ? null : renderCompares(pickFromSlot(slot), view.slots)}
       {isEmpty ? null : (
-        <div className="invd__row invd__row--tools">
+        <div className="invd__row">
           {refill === '' ? null : (
             <Button
               size="sm"
@@ -290,7 +290,7 @@ export function ConsumableDetail(props: ConsumableDetailProps): React.JSX.Elemen
       {renderUseEffect(option.useTag, false)}
       {renderTrigger(option.useTag, false)}
       {renderCompares(pickFromOption(option), view.slots)}
-      <div className="invd__row invd__row--tools">
+      <div className="invd__row">
         <Button
           size="sm"
           variant="primary"

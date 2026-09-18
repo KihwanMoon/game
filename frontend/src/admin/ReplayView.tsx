@@ -72,7 +72,7 @@ export function ReplayView(props: ReplayViewProps): React.JSX.Element | null {
       roomsPerFloor: replay.roomsPerFloor,
       snapshots: replay.snapshots,
       ...(replay.loadout === undefined ? {} : { loadout: replay.loadout }),
-      // **앞 방들을 다시 돌린다.** 그래야 인계된 HP 가 그때와 같아진다 — 체인 위치를
+      // **앞 방들을 다시 돌린다.** 그래야 인계된 체력이 그때와 같아진다 — 체인 위치를
       // 넘기면 `BattleView` 가 0..index-1 을 안에서 돌고 이 방을 보여 준다.
       ...(rooms.length === 0 ? {} : { chain: { roomIds: rooms, index } }),
     }
@@ -123,7 +123,7 @@ export function ReplayView(props: ReplayViewProps): React.JSX.Element | null {
         <GlyphState
           state={replay.outcome === 'PLAYER_WIN' ? 'true' : 'false'}
           size="sm"
-          label={`그때: ${formatRunOutcome(replay.outcome)} · ${String(replay.ticks)}틱 · HP ${String(replay.playerHp)}`}
+          label={`그때: ${formatRunOutcome(replay.outcome)} · ${String(replay.ticks)}틱 · 체력 ${String(replay.playerHp)}`}
         />
         <span className="replay__spacer" />
         {/* **다음 방으로 손이 넘긴다.** 타이머로 자동으로 넘기면 보려던 방이 지나가

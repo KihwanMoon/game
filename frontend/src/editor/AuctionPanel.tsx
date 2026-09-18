@@ -145,7 +145,7 @@ export function AuctionDetail(props: {
       {listing.isMine ? null : (
         <ValueExpr text="사면 귀속된다 — 다시 팔 수 없다" size="sm" dim />
       )}
-      <div className="invd__row invd__row--tools">
+      <div className="invd__row">
         {listing.isMine ? (
           <Button
             size="sm"

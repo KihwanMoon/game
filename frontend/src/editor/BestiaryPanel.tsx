@@ -79,7 +79,7 @@ export function BestiaryDetail(props: { readonly entry: BestiaryEntry }): React.
       {/* **얼마나 센가.** 규칙표만으로는 어떻게 싸우는지만 알 수 있고,
           이길 수 있는지는 알 수 없다. */}
       <ValueExpr
-        text={`${String(entry.zoneFloor)}장 · 체 ${String(entry.hpMax)} · 공 ${String(entry.attack)} · 방 ${String(entry.defense)}`}
+        text={`${String(entry.zoneFloor)}장 · 체력 ${String(entry.hpMax)} · 공 ${String(entry.attack)} · 방 ${String(entry.defense)}`}
         size="sm"
         dim
       />

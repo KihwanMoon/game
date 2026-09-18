@@ -117,7 +117,7 @@ describe('첫 화면', () => {
     expect(markup).toContain('edit-m__tabs')
     // 묶음은 「무엇에 대한 것인가」로 가른다. 「나」가 「캐릭터」가 되고 스킬이 가방에서
     // 갈라진 것은, 레벨·능력치가 세계에서 이쪽으로 오면서 탭의 뜻이 분명해져서다.
-    for (const label of ['전투 규칙', '정비 규칙', '배움', '서생', '가방', '재주', '저잣거리', '명부', '기록']) {
+    for (const label of ['전투 내력', '벼림 내력', '배움', '서생', '가방', '재주', '저잣거리', '명부', '기록']) {
       expect(markup).toContain(`>${label}<`)
     }
   })
@@ -178,10 +178,10 @@ describe('표기', () => {
     expect(describeRunResult(undefined)).toBe('')
   })
 
-  it('직전 판은 판정·틱·HP 를 함께 적는다', () => {
+  it('직전 판은 판정·틱·체력을 함께 적는다', () => {
     const text = describeRunResult({ outcome: 'PLAYER_LOSS', ticks: 37, playerHp: 0 })
     expect(text).toContain('37틱')
-    expect(text).toContain('HP 0')
+    expect(text).toContain('체력 0')
   })
 
   it('Error 가 아닌 던짐도 문구로 만든다', () => {

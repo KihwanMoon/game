@@ -79,6 +79,15 @@ type Tab =
   | 'watch'
   | 'content'
 
+/**
+ * 서버 거절 사유를 띄울 자리.
+ *
+ * **조작한 자리에서 한 번만 뜬다.** 패널 안에 표시 자리가 있는데 헤더가 또 그리면 같은
+ * 문장이 두 번 보인다. 표시 자리가 없는 사유 — 봇 조작, 발행 결과, 패널 없는 탭
+ * (밸런스·재주·방·적 내력)의 저장 실패 — 는 헤더가 유일한 자리라 거기 남는다.
+ */
+type DetailAt = 'header' | 'content' | 'catalog'
+
 const TABS: readonly { readonly id: Tab; readonly label: string }[] = [
   { id: 'balance', label: '밸런스' },
   { id: 'enemies', label: '적 내력' },
@@ -145,6 +154,8 @@ export function AdminScreen(): React.JSX.Element {
   const [asset, setAsset] = useState<ContentAssetView | undefined>(undefined)
   const [catalog, setCatalog] = useState<CatalogAdminView | undefined>(undefined)
   const [detail, setDetail] = useState('')
+  // 그 사유가 난 자리. 패널에 표시 자리가 있으면 헤더는 그리지 않는다 (`DetailAt`).
+  const [detailAt, setDetailAt] = useState<DetailAt>('header')
   const [bots, setBots] = useState<BotOverview | undefined>(undefined)
   const [botBag, setBotBag] = useState<InventoryView | undefined>(undefined)
   // 표시할 수 있는 계정들. **탭을 열 때만 읽는다** — 익명 계정이 계속 늘어나므로
@@ -194,6 +205,17 @@ export function AdminScreen(): React.JSX.Element {
   }
 
   /**
+   * 사유 하나를 띄운다.
+   *
+   * @param said 서버가 준 사유. 빈 문자열이면 지운다.
+   * @param at 띄울 자리.
+   */
+  function showDetail(said: string, at: DetailAt): void {
+    setDetail(said)
+    setDetailAt(at)
+  }
+
+  /**
    * 콘텐츠 초안을 저장하거나 버린다.
    *
    * @param path 라우트 경로.
@@ -205,18 +227,21 @@ export function AdminScreen(): React.JSX.Element {
     if (token === undefined) {
       return
     }
+    // **부른 자리에 띄운다.** 원문 탭은 패널 안에 표시 자리가 있고, 다른 탭의 편집기들은
+    // 없어서 헤더가 유일한 자리다.
+    const at: DetailAt = tab === 'content' ? 'content' : 'header'
     let payload: unknown = {}
     if (text !== '') {
       try {
         payload = JSON.parse(text)
       } catch (error) {
-        setDetail(`JSON 이 아니다 — ${String(error)}`)
+        showDetail(`JSON 이 아니다 — ${String(error)}`, at)
         return
       }
     }
-    setDetail('')
+    showDetail('', at)
     void applyContentAdmin(token, path, { asset: name, payload, note }).then((outcome) => {
-      setDetail(outcome.detail)
+      showDetail(outcome.detail, at)
       if (outcome.view !== undefined) {
         setContent(outcome.view)
         void readContentAsset(token, name).then(setAsset)
@@ -238,7 +263,7 @@ export function AdminScreen(): React.JSX.Element {
       return
     }
     void applyCatalogDraft(token, path, body).then((outcome) => {
-      setDetail(outcome.detail)
+      showDetail(outcome.detail, 'catalog')
       if (outcome.view !== undefined) {
         setDrafts(outcome.view)
       }
@@ -293,7 +318,10 @@ export function AdminScreen(): React.JSX.Element {
         </div>
       </header>
 
-      {detail === '' ? null : (
+      {/* **패널에 자리가 있는 사유는 여기서 안 그린다.** 조작한 자리에서 한 번만 떠야
+          한다 — 둘 다 그리면 같은 문장을 두 번 읽게 된다. 여기 남는 것은 패널에 자리가
+          없는 것들이다: 봇 조작, 발행 결과, 패널 없는 탭의 저장 실패. */}
+      {detail === '' || detailAt !== 'header' ? null : (
         <div className="adm__notice">
           <GlyphState state="danger" size="sm" label={detail} />
         </div>
@@ -304,7 +332,7 @@ export function AdminScreen(): React.JSX.Element {
         drafts={content?.drafts.length ?? 0}
         openRuns={content?.openRuns ?? 0}
         onDone={(next, said) => {
-          setDetail(said)
+          showDetail(said, 'header')
           setContent(next)
         }}
       />
@@ -356,21 +384,21 @@ export function AdminScreen(): React.JSX.Element {
             onCoin={(accountId, amount) => {
               void applyBotCoin(token, accountId, amount).then((updated) => {
                 if (updated === undefined) {
-                  setDetail('못 넘겼다 — 잔액이 모자라거나 받는 쪽이 봇이 아니다')
+                  showDetail('못 넘겼다 — 잔액이 모자라거나 받는 쪽이 봇이 아니다', 'header')
                   return
                 }
                 setBots(updated)
-                setDetail(`${String(amount)}푼을 넘겼다 — 돌아오지 않는다`)
+                showDetail(`${String(amount)}푼을 넘겼다 — 돌아오지 않는다`, 'header')
               })
             }}
             onGift={(accountId, itemId) => {
               void applyBotGift(token, accountId, itemId).then((updated) => {
                 if (updated === undefined) {
-                  setDetail('넘기지 못했다 — 내 가방에 없거나, 받는 쪽이 봇이 아니다')
+                  showDetail('넘기지 못했다 — 내 가방에 없거나, 받는 쪽이 봇이 아니다', 'header')
                   return
                 }
                 setBots(updated)
-                setDetail('넘겼다 — 그 아이템은 귀속되어 돌아오지 않는다')
+                showDetail('넘겼다 — 그 아이템은 귀속되어 돌아오지 않는다', 'header')
                 // 두 가방을 다시 읽는다. 안 읽으면 넘긴 물건이 양쪽에 그대로 보인다.
                 void readBotBag(token, accountId).then(setBotBag)
                 void readInventory(token).then(setMyBag)
@@ -379,11 +407,11 @@ export function AdminScreen(): React.JSX.Element {
             onSave={(next) => {
               void applyBotSettings(token, next).then((updated) => {
                 if (updated === undefined) {
-                  setDetail('봇을 고치지 못했다 — 서버에 닿지 못했거나 없는 봇이다')
+                  showDetail('봇을 고치지 못했다 — 서버에 닿지 못했거나 없는 봇이다', 'header')
                   return
                 }
                 setBots(updated)
-                setDetail('')
+                showDetail('', 'header')
               })
             }}
             // **봇 하나를 사람 화면과 같은 눈으로 연다.** 표는 봇 떼를 다루고, 이것은
@@ -435,19 +463,19 @@ export function AdminScreen(): React.JSX.Element {
           />
         ) : tab === 'content' ? (
           <ContentAdminPanel
-              content={content}
-              asset={asset}
-              detail=""
-              onOpen={(name) => {
-                void readContentAsset(token, name).then(setAsset)
-              }}
-              onSave={(name, text, note) => {
-                applyContent('/admin/content/draft', name, text, note)
-              }}
-              onDiscard={(name, note) => {
-                applyContent('/admin/content/discard', name, '', note)
-              }}
-            />
+            content={content}
+            asset={asset}
+            detail={detailAt === 'content' ? detail : ''}
+            onOpen={(name) => {
+              void readContentAsset(token, name).then(setAsset)
+            }}
+            onSave={(name, text, note) => {
+              applyContent('/admin/content/draft', name, text, note)
+            }}
+            onDiscard={(name, note) => {
+              applyContent('/admin/content/discard', name, '', note)
+            }}
+          />
         ) : (
           <>
             {/* **발행이 편집과 갈라져 있다.** 아이템 편집은 이제 초안으로 가고, 내는
@@ -456,7 +484,7 @@ export function AdminScreen(): React.JSX.Element {
               token={token}
               view={drafts}
               onDone={(said) => {
-                setDetail(said)
+                showDetail(said, 'header')
                 // 발행이 끝났으면 카탈로그가 움직였다. 둘을 함께 다시 읽는다.
                 void readCatalogDrafts(token).then(setDrafts)
                 void readAdminItems(token).then(setCatalog)
@@ -464,7 +492,7 @@ export function AdminScreen(): React.JSX.Element {
             />
             <CatalogAdminPanel
               catalog={catalog}
-              detail=""
+              detail={detailAt === 'catalog' ? detail : ''}
               onRetire={(catalogId, isRetired, reason) => {
                 draftCatalog('/admin/catalog/retire', {
                   catalog_id: catalogId,

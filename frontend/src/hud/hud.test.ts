@@ -37,7 +37,7 @@ import {
 } from './analysisText'
 import { recordBattle } from './battleRecorder'
 import type { BattleRecording } from './battleRecorder'
-import { filterRecentEntries, groupLogRows, selectLogWindow } from './logWindow'
+import { filterRecentEntries, selectLogWindow } from './logWindow'
 import { buildReplayTrace, findDecision } from './replayTrace'
 
 /** 기준 문서의 케이스 하나. */
@@ -375,15 +375,7 @@ describe('로그 창 고르기', () => {
     expect(selectLogWindow(rows, { maxRows: 4, anchorIndex: -3 }).startIndex).toBe(0)
   })
 
-  it('틱으로 묶고 틱 안에서는 같은 엔티티의 연속 구간으로 다시 묶는다', () => {
-    const groups = groupLogRows(rows)
-    expect(groups.map((group) => group.tick)).toEqual([1, 2, 3, 4, 5])
-    expect(groups[0]?.count).toBe(2)
-    expect(groups[0]?.runs.map((run) => run.entityId)).toEqual(['player', 'goblin_rusher_0'])
-  })
-
-  it('빈 로그는 묶음도 창도 비어 있다', () => {
-    expect(groupLogRows([])).toEqual([])
+  it('빈 로그는 창도 최근 구간도 비어 있다', () => {
     expect(selectLogWindow([], { maxRows: 4 }).rows).toEqual([])
     expect(filterRecentEntries([], 15)).toEqual([])
   })

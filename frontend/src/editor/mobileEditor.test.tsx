@@ -626,7 +626,7 @@ describe('좁은 화면의 규칙표 탭', () => {
       ),
     )
     expect(html).toContain('edit-m__tabs')
-    expect(html).toContain('전투 규칙')
+    expect(html).toContain('전투 내력')
     expect(html).toContain('정비 규칙')
   })
 

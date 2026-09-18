@@ -42,10 +42,9 @@ export {
   DEATH_REPLAY_TICKS,
   DEFAULT_WINDOW_ROWS,
   filterRecentEntries,
-  groupLogRows,
   selectLogWindow,
 } from './logWindow'
-export type { LogGroup, LogRun, LogWindow, WindowRequest } from './logWindow'
+export type { LogWindow, WindowRequest } from './logWindow'
 
 export { buildReplayTrace, findDecision } from './replayTrace'
 export type { ReplayTraceRow } from './replayTrace'
@@ -59,9 +58,6 @@ export { HudScreen } from './HudScreen'
 export type { HudScreenProps } from './HudScreen'
 
 export { HudCheck } from './HudCheck'
-
-export { LogStream } from './LogStream'
-export type { LogStreamProps } from './LogStream'
 
 export { PostMortem, getReplayStartTick } from './PostMortem'
 export type { PostMortemProps } from './PostMortem'

@@ -158,7 +158,7 @@ export function BotRuns(props: {
             label={formatRunOutcome(run.outcome)}
           />
           <span className="botd__run-num">{`${String(run.ticks)}틱`}</span>
-          <span className="botd__run-num">{`HP ${String(run.playerHp)}`}</span>
+          <span className="botd__run-num">{`체력 ${String(run.playerHp)}`}</span>
           {/* 시드를 적는다 — 이것과 규칙표가 있으면 그 판이 그대로 재현된다. */}
           <span className="botd__run-seed">{`시드 ${String(run.seed)}`}</span>
           <GlyphState

@@ -169,7 +169,7 @@ export function SkillPanel(props: SkillPanelProps): React.JSX.Element {
               같다. 값이 겹쳐도(계수 100% 가 둘) 줄이 안 지워진다 — 키에 자리가 든다. */}
           <AffixList lines={listSkillFacts(picked.skillId).map((line) => ({ text: line }))} />
           {picked.isLocked ? null : (
-            <div className="invd__row invd__row--tools">
+            <div className="invd__row">
               <Button
                 size="sm"
                 variant={picked.isOn ? 'ghost' : 'primary'}

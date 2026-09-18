@@ -172,7 +172,7 @@ describe('고른 개체의 상세', () => {
   })
 
   it('★ 얼마나 센지도 적는다 — 규칙표만으로는 이길 수 있는지 알 수 없다', () => {
-    expect(detail).toContain('체 74')
+    expect(detail).toContain('체력 74')
     expect(detail).toContain('공 14')
   })
 

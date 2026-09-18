@@ -295,13 +295,19 @@ describe('상세와 도구줄', () => {
       'bag',
       buildSlot({
         item: buildItem({
-          requirements: [{ stat: 'attack', actual: 8, minimum: 12, isMet: false }],
+          requirements: [
+            { stat: 'attack', statLabel: '공격력', actual: 8, minimum: 12, isMet: false },
+          ],
         }),
       }),
     )
     // 스탯 이름은 한글이다 — 정본은 `game/schemas/item.py` 의 `STAT_LABELS` 이고,
     // 접사는 「공격력」인데 요구조건만 `attack` 으로 나가면 한 카드 안에서 같은 스탯이
     // 두 이름을 갖는다. 이 테스트가 지키는 것은 이름 표기가 아니라 실측값 병기(8·12)다.
+    //
+    // **이제 그 이름이 서버에서 온다** (2026-09-18). 예전에는 화면이 `STAT_LABELS` 의
+    // 사본을 들고 있었고, 정본이 「최대체력」에서 「최대 체력」으로 바뀌던 날 그 사본만
+    // 옛 이름으로 남았다. 픽스처가 `statLabel` 을 드는 것이 그 배선을 재는 자리다.
     expect(html).toContain('공격력(8) &gt;= 요구(12)')
     expect(html).not.toContain('attack(8)')
   })

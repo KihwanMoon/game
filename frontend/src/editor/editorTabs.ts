@@ -47,5 +47,5 @@ export function checkWideTab(tab: EditorTab): boolean {
   return tab.palette !== undefined || tab.check !== undefined
 }
 
-/** 전투 규칙 탭의 id. 처음 열리는 탭이다 — 이 게임의 규칙표는 여전히 전투가 중심이다. */
+/** 전투 내력 탭의 id. 처음 열리는 탭이다 — 이 게임의 규칙표는 여전히 전투가 중심이다. */
 export const COMBAT_TAB_ID = 'combat'

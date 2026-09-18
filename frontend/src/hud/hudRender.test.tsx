@@ -2,9 +2,9 @@
  * HUD 의 렌더 계약과 토큰 규율.
  *
  * jsdom 없이 `renderToStaticMarkup` 으로 마크업 문자열만 본다(`ds/ds.test.tsx` 와 같은
- * 방식). 확인하는 것은 상호작용이 아니라 **화면에 무엇이 나가는가** 다 — 로그가 틱으로
- * 묶여 나가는가, 실측값이 병기된 조건문이 그대로 실리는가, 사후 분석이 세 가지(성적표·
- * 히트맵·되감기)를 다 내는가.
+ * 방식). 확인하는 것은 상호작용이 아니라 **화면에 무엇이 나가는가** 다 — 성적표가 다섯
+ * 열을 내는가, 되감기 골격이 관전과 같은가, 사후 분석이 세 가지(성적표·히트맵·되감기)를
+ * 다 내는가.
  *
  * 정적 렌더에는 `useEffect` 가 돌지 않으므로 도면 테마가 undefined 다. 그래서 캔버스는
  * 그려지지 않는다 — 여기서 볼 것은 캔버스가 아니라 그 둘레의 골격이다.
@@ -27,7 +27,6 @@ import { buildDamageHeatmap, buildRuleStats } from './analysis'
 import { recordBattle } from './battleRecorder'
 import { DamageHeatmap } from './DamageHeatmap'
 import { HudScreen } from './HudScreen'
-import { LogStream } from './LogStream'
 import { PostMortem } from './PostMortem'
 import { RuleStatsTable } from './RuleStatsTable'
 import { TickScrubber } from './TickScrubber'
@@ -90,81 +89,6 @@ describe('토큰 규율', () => {
   it('황동은 발동 로그 세로바 한 자리에만 쓴다', () => {
     const brass = [...readStrippedCss('hud.css').matchAll(/var\(--(brass|line-accent|state-armed|text-accent)[^)]*\)/g)]
     expect(brass).toHaveLength(1)
-  })
-})
-
-describe('LogStream', () => {
-  it('틱으로 묶고 그 안에서 엔티티 구간을 적는다', () => {
-    const html = renderToStaticMarkup(
-      <LogStream
-        entries={[createRow(7, 'player', 1), createRow(7, 'goblin_rusher_0', 2)]}
-        follow
-        onFollowChange={() => undefined}
-      />,
-    )
-    expect(html).toContain('T007')
-    expect(html).toContain('goblin_rusher_0')
-    expect(html).toContain('hud-log__group')
-  })
-
-  it('실측값이 병기된 조건문을 그대로 싣는다 (P1)', () => {
-    const html = renderToStaticMarkup(
-      <LogStream entries={[createRow(3, 'player', 1)]} follow onFollowChange={() => undefined} />,
-    )
-    expect(html).toContain('적거리')
-    expect(html).toContain('2')
-    expect(html).toContain('사거리')
-  })
-
-  it('황동 세로바는 지금 보고 있는 틱의 발동 줄에만 붙는다', () => {
-    const html = renderToStaticMarkup(
-      <LogStream
-        entries={[createRow(1, 'player', 1), createRow(2, 'player', 1)]}
-        follow
-        currentTick={2}
-        onFollowChange={() => undefined}
-      />,
-    )
-    expect(html.match(/hud-log__row--armed/g)).toHaveLength(1)
-    expect(html.match(/hud-log__row--fired/g)).toHaveLength(1)
-  })
-
-  it('규칙 없이 나온 줄에는 세로바가 붙지 않는다', () => {
-    const html = renderToStaticMarkup(
-      <LogStream entries={[createRow(1, 'player', null)]} follow onFollowChange={() => undefined} />,
-    )
-    expect(html).not.toContain('hud-log__row--fired')
-    expect(html).not.toContain('hud-log__row--armed')
-  })
-
-  it('잘라 낸 줄 수를 화면에 적는다 — 숨기면 로그가 거짓말을 한다', () => {
-    const rows = Array.from({ length: 30 }, (_, index) => createRow(index + 1, 'player', 1))
-    const html = renderToStaticMarkup(
-      <LogStream entries={rows} follow maxRows={5} onFollowChange={() => undefined} />,
-    )
-    expect(html).toContain('앞의 25줄 접힘')
-  })
-
-  it('고정 상태에서는 기준 줄부터 보여 주고 뒤에 남은 줄 수를 적는다', () => {
-    const rows = Array.from({ length: 30 }, (_, index) => createRow(index + 1, 'player', 1))
-    const html = renderToStaticMarkup(
-      <LogStream
-        entries={rows}
-        follow={false}
-        anchorIndex={0}
-        maxRows={5}
-        onFollowChange={() => undefined}
-      />,
-    )
-    expect(html).toContain('T001')
-    expect(html).toContain('뒤의 25줄 접힘')
-  })
-
-  it('빈 로그도 자리를 지킨다', () => {
-    const html = renderToStaticMarkup(
-      <LogStream entries={[]} follow onFollowChange={() => undefined} />,
-    )
-    expect(html).toContain('기록 없음')
   })
 })
 
@@ -347,7 +271,7 @@ describe('사후 분석에서 잘리는 정보가 없다 (2026-09-09, 실제 신
   })
 
   it('★ 머리의 값이 제 줄을 갖는다 — 셋을 한 줄에 이으면 가운데가 접힌다', () => {
-    // `cover_row · T013 · HP 0` 이 석 줄로 접혔다. 방 이름 길이에 따라 접히는 줄 수가
+    // `cover_row · T013 · 체력 0` 이 석 줄로 접혔다. 방 이름 길이에 따라 접히는 줄 수가
     // 달라지고, 접힌 값은 읽히지도 않는다.
     expect(cutRule('.hud-post__title')).toContain('grid-area: 1 / 1')
     expect(cutRule('.hud-post__head > .ds-button')).toContain('grid-area: 1 / 2')

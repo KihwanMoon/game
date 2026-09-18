@@ -22,6 +22,7 @@ import { PHASE_ACT } from '../core/sim/phases'
 
 import { GUARD_STATUS } from '../core/sim/abilities'
 import { checkDoppel, resolveActorKind, resolveActorLabel } from './actorKind'
+import { MY_NAME } from './logNames'
 import { BLOCK_CATALOG, readSkillName } from '../core/resources'
 import { USE_TAG_LABELS } from '../content/consumableTags'
 
@@ -49,7 +50,12 @@ export interface PlanActorView {
    * 설명 없는 것은 버그와 구별되지 않는다 (P1).
    */
   readonly isGuarding: boolean
-  /** 글리프 아래 두 글자 표기. 글리프가 겹치는 자리를 이것이 가른다. */
+  /**
+   * 글리프 아래 두 글자 표기. 글리프가 겹치는 자리를 이것이 가른다.
+   *
+   * **나를 부르는 말은 `logNames.MY_NAME` 하나에서 온다.** 여기에 손으로 박아 두면
+   * 도면만 로그와 다른 말로 한 개체를 부른다.
+   */
   readonly label: string
   /** 남은 체력 백분율. 말 아래 명도 막대가 이 값을 쓴다. */
   readonly hpPercent: number
@@ -190,7 +196,7 @@ function convertEntityToActor(
     x: entity.position.x,
     y: entity.position.y,
     kind: isSelf ? 'self' : resolveActorKind(entity.kindId, kindTypes),
-    label: isSelf ? '자신' : resolveActorLabel(entity.kindId),
+    label: isSelf ? MY_NAME : resolveActorLabel(entity.kindId),
     tier: entity.tier,
     isDoppel: !isSelf && checkDoppel(entity.kindId),
     isGuarding: (entity.statuses.get(GUARD_STATUS) ?? 0) > 0,

@@ -42,7 +42,7 @@ const MISSING_HINT = '장비와 능력치는 서버가 안다'
 
 /** 전투 스탯 한 줄. 화면에 적는 순서가 곧 이 배열의 순서다. */
 const COMBAT_ROWS: readonly { readonly key: string; readonly label: string }[] = [
-  { key: 'hpMax', label: '최대체력' },
+  { key: 'hpMax', label: '최대 체력' },
   { key: 'attack', label: '공격력' },
   { key: 'defense', label: '방어력' },
   { key: 'attackRange', label: '사거리' },

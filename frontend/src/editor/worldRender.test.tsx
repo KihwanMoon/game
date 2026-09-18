@@ -122,7 +122,6 @@ describe('★ 경매가 세계에서 나갔다', () => {
   it('매물도 수수료도 여기서 안 그린다', () => {
     expect(markup).not.toContain('경매장')
     expect(markup).not.toContain('수수료')
-    expect(markup).not.toContain('wld__listing')
   })
 
   it('견줌 표도 여기 없다 — 경매 탭의 것이다', () => {

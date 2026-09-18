@@ -1,5 +1,5 @@
 /**
- * 로그 창 고르기와 틱 묶기 — 그리는 줄 수를 상한으로 묶는다.
+ * 로그 창 고르기 — 그리는 줄 수를 상한으로 묶는다.
  *
  * 한 판이 400틱이면 로그는 수천 줄이 된다. 전부 DOM 에 올리면 틱마다 그 전부가 다시
  * 그려져 관전이 끊기고, 관전이 끊기면 "관찰과 진단" 이 성립하지 않는다 (GDD §8).
@@ -49,19 +49,6 @@ export interface WindowRequest {
   readonly anchorIndex?: number
 }
 
-/** 한 틱 안에서 같은 엔티티가 연속으로 남긴 줄들. */
-export interface LogRun {
-  readonly entityId: string
-  readonly entries: readonly LogEntry[]
-}
-
-/** 틱 하나의 로그 묶음. */
-export interface LogGroup {
-  readonly tick: number
-  readonly runs: readonly LogRun[]
-  readonly count: number
-}
-
 /**
  * 값을 범위 안으로 접는다.
  *
@@ -98,57 +85,6 @@ export function selectLogWindow(
     hiddenBefore: start,
     hiddenAfter: entries.length - (start + rows.length),
   }
-}
-
-/**
- * 로그를 틱 단위로 묶고, 틱 안에서는 같은 엔티티의 연속 구간으로 다시 묶는다.
- *
- * 엔티티 이름을 줄마다 적지 않는 이유는 폭이다. 로그 열은 300px 이고 `LogRow` 의 계약에
- * 엔티티 칸이 없다(tick·rule·expr·outcome·delta·fired). 대신 구간 머리에 한 번 적으면
- * 모노 컬럼이 흐트러지지 않으면서 누구의 판단인지가 남는다.
- *
- * @param rows 그릴 로그 줄들. 코어가 남긴 순서여야 한다.
- * @returns 앞에서부터의 틱 묶음들.
- */
-export function groupLogRows(rows: readonly LogEntry[]): readonly LogGroup[] {
-  const groups: LogGroup[] = []
-  let tick: number | undefined
-  let runs: LogRun[] = []
-  let run: LogEntry[] = []
-  let entityId: string | undefined
-
-  const closeRun = (): void => {
-    if (entityId !== undefined && run.length > 0) {
-      runs.push({ entityId, entries: run })
-    }
-    run = []
-  }
-  const closeGroup = (): void => {
-    closeRun()
-    if (tick !== undefined && runs.length > 0) {
-      groups.push({
-        tick,
-        runs,
-        count: runs.reduce((total, item) => total + item.entries.length, 0),
-      })
-    }
-    runs = []
-  }
-
-  for (const entry of rows) {
-    if (entry.tick !== tick) {
-      closeGroup()
-      tick = entry.tick
-      entityId = undefined
-    }
-    if (entry.entityId !== entityId) {
-      closeRun()
-      entityId = entry.entityId
-    }
-    run.push(entry)
-  }
-  closeGroup()
-  return groups
 }
 
 /**

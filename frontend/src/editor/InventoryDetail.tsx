@@ -175,15 +175,6 @@ function renderRecastButton(
  * **표에 없는 키는 원문을 남긴다.** 빈칸으로 두면 값만 뜬 줄이 되어 무엇이 모자란지가
  * 사라진다 — 파이썬 `format_stat_label` 과 같은 규율이다.
  */
-const REQUIREMENT_STAT_LABELS: ReadonlyMap<string, string> = new Map([
-  ['hp_max', '최대체력'],
-  ['attack', '공격력'],
-  ['defense', '방어력'],
-  ['attack_range', '사거리'],
-  ['initiative', '선공권'],
-  ['cpu_budget', 'CPU'],
-])
-
 /**
  * 요구조건 줄을 그린다. **실측값을 병기한다** — "장착할 수 없습니다" 만 띄우면 무엇이
  * 얼마나 모자란지 알 수 없다 (GDD §8.2, P1).
@@ -202,7 +193,7 @@ function renderRequirements(item: ItemView): React.JSX.Element | null {
           key={need.stat}
           state={need.isMet ? 'true' : 'false'}
           size="sm"
-          label={`${REQUIREMENT_STAT_LABELS.get(need.stat) ?? need.stat}(${String(need.actual)}) >= 요구(${String(need.minimum)})`}
+          label={`${need.statLabel === '' ? need.stat : need.statLabel}(${String(need.actual)}) >= 요구(${String(need.minimum)})`}
         />
       ))}
     </div>
@@ -354,7 +345,7 @@ export function InventoryDetail(props: InventoryDetailProps): React.JSX.Element 
       {/* **가방 칸에서만 견준다.** 장비 칸을 고르면 견줄 상대가 자기 자신이다. */}
       {choice.kind === 'equip' ? null : renderCompare(item, props.worn)}
       {renderRequirements(item)}
-      <div className="invd__row invd__row--tools">
+      <div className="invd__row">
         {choice.kind === 'equip' ? (
           <Button
             size="sm"

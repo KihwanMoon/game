@@ -138,7 +138,7 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
             props.onTab?.(COMBAT_TAB_ID)
           }}
         >
-          전투 규칙
+          전투 내력
         </button>
         {tabs.map((tab) => (
           <button

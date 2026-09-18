@@ -410,7 +410,7 @@ describe('도면 렌더러', () => {
           tier: 'NORMAL',
           isDoppel: false,
           isGuarding: false,
-          label: '자신',
+          label: '나',
           hpPercent: 100,
           isSelf: true,
         },
@@ -504,7 +504,8 @@ describe('장면 만들기', () => {
     const session = buildBattleSession(CHECK_SETUP, G0_RULESETS)
     const text = describeScene(buildPlanScene(session.engine))
     expect(text).toContain('틱 0')
-    expect(text).toContain('자신')
+    // 나를 부르는 말은 `logNames.MY_NAME` 하나에서 온다 — 도면도 그것을 적는다.
+    expect(text).toContain('나')
   })
 })
 

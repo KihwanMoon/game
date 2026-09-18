@@ -350,7 +350,7 @@ export function describeRunResult(result: RunResult | undefined): string {
   if (result === undefined) {
     return ''
   }
-  return `직전 판 ${formatOutcome(result.outcome)} · ${String(result.ticks)}틱 · HP ${String(result.playerHp)}`
+  return `직전 판 ${formatOutcome(result.outcome)} · ${String(result.ticks)}틱 · 체력 ${String(result.playerHp)}`
 }
 
 /**
@@ -1977,7 +1977,7 @@ export function App(): React.JSX.Element {
     const preview = buildMaintenancePreview(rows, inventory, consumables, PLAYER_BASE)
     return {
       id: 'upkeep',
-      label: '정비 규칙',
+      label: '벼림 내력',
       palette: (
         <MaintenancePalette
           disabled={!checkLinked(link) || upkeep === undefined}

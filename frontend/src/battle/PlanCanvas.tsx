@@ -111,11 +111,15 @@ export function describeScene(scene: PlanScene): string {
     .map((actor) => {
       // **나를 부르는 말은 한 곳에서 온다** (`MY_NAME`). 같은 화면의 로그가 `나` 라고
       // 적는데 도면만 손으로 `자신` 을 박아 두어, 한 개체가 두 이름으로 불렸다.
+      // 이제는 말 아래 표기(`label`)도 같은 곳에서 온다.
       const name = actor.isSelf ? MY_NAME : (ACTOR_NAMES.get(actor.kind) ?? actor.kind)
+      // 종류 이름과 표기가 같은 말이면 한 번만 적는다 — 나는 둘 다 `나` 라, 그대로 이으면
+      // 보조 기술이 같은 낱말을 두 번 읽는다.
+      const mark = actor.label === name ? '' : ` ${actor.label}`
       // **캔버스는 읽히지 않는다.** 도면에 붙는 표시는 여기 글로도 남아야 화면을 안 보는
       // 사람에게 남는다 — 색·모양에 이어 세 번째 채널이다.
       const guard = actor.isGuarding ? ' 방어 태세' : ''
-      return `${name} ${actor.label} (${String(actor.x)}, ${String(actor.y)})${guard}`
+      return `${name}${mark} (${String(actor.x)}, ${String(actor.y)})${guard}`
     })
     .join(', ')
   const hazards = scene.hazards
