@@ -13,7 +13,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { WorldPanel } from './WorldPanel'
+import { formatPulseWindow, WorldPanel } from './WorldPanel'
 import type { LeaderboardView, ProgressView } from '../storage'
 
 const noop = () => undefined
@@ -240,9 +240,22 @@ describe('둔갑 판', () => {
 })
 
 describe('세계 접속 현황', () => {
-  // **제3자 계측이 아니라 우리가 이미 가진 수다** (2026-09-17). 처음 들어오면 익명
-  // 계정이 생기므로 계정 수가 곧 「앱을 연 사람 수」에 가깝다.
-  const PULSE = { visitors: 316, joined: 7, freshToday: 12, freshWeek: 120, runs: 5250 }
+  // **두 수가 다른 것을 센다** (2026-09-18). `visitors` 는 출격을 누른 사람이고
+  // (`requireAccount`: "여는 것만으로는 안 만든다"), `windowVisits` 는 열어 본 사람이다
+  // — Cloudflare 가 엣지에서 센 것을 서버가 받아 적는다. 예전 주석이 "계정 수가 곧
+  // 「앱을 연 사람 수」에 가깝다" 고 적어 뒀는데 그 전제가 코드와 어긋나 있었다.
+  const PULSE = {
+    visitors: 316,
+    joined: 7,
+    freshToday: 12,
+    freshWeek: 120,
+    runs: 5250,
+    windowDays: 7,
+    windowVisits: 1200,
+    windowPlayed: 120,
+    conversionPct: 10,
+    trafficSource: 'cloudflare',
+  }
 
   /**
    * 명부를 그린다.
@@ -265,14 +278,34 @@ describe('세계 접속 현황', () => {
     )
   }
 
-  it('★ 다녀간 사람과 오늘을 함께 적는다 — 누계만 적으면 멈춘 세계와 구별이 안 된다', () => {
+  it('★ 이름과 오늘을 함께 적는다 — 누계만 적으면 멈춘 세계와 구별이 안 된다', () => {
     const markup = drawWorld(PULSE)
     expect(markup).toContain('316')
     expect(markup).toContain('12')
     expect(markup).toContain('5250')
   })
 
+  it('★ 들름에서 판으로 가는 깔때기를 한 줄로 잇는다', () => {
+    // **화살표로 잇는 이유.** 두 수를 따로 적으면 관계를 보는 사람이 스스로 계산해야
+    // 하고, 「사람이 오는데 안 한다」와 「아예 안 온다」가 안 갈린다.
+    expect(formatPulseWindow(PULSE)).toBe('이번 주 들름 1200 → 판 120 (10%) · cloudflare 기준')
+  })
+
+  it('★ 계측을 못 받은 것과 아무도 안 온 것을 가른다', () => {
+    // 들름 0 은 「아무도 안 왔다」가 아니라 「아직 못 받았다」일 수 있다. 같은 줄로
+    // 적으면 없는 사실을 단언하게 되므로 깔때기를 접고 판 수만 적는다.
+    expect(formatPulseWindow({ ...PULSE, windowVisits: 0, conversionPct: 0 })).toBe('이번 주 판 120')
+    // 창 자체가 없으면(옛 서버) 줄을 통째로 안 그린다.
+    expect(formatPulseWindow({ ...PULSE, windowDays: 0 })).toBe('')
+  })
+
+  it('★ 기간과 출처를 밝힌다 — 갈아 끼우는 날 수가 뛰는 이유가 화면에 있어야 한다', () => {
+    expect(formatPulseWindow({ ...PULSE, windowDays: 30 })).toContain('30일')
+    // 출처를 모르면 그 칸을 비운다. 없는 출처를 지어내지 않는다.
+    expect(formatPulseWindow({ ...PULSE, trafficSource: '' })).not.toContain('기준')
+  })
+
   it('★ 못 받으면 그 줄을 안 그린다 — 0 을 적으면 「아무도 없다」가 된다', () => {
-    expect(drawWorld()).not.toContain('다녀간 사람')
+    expect(drawWorld()).not.toContain('돈 판')
   })
 })

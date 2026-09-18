@@ -1874,11 +1874,18 @@ export async function readAdminItems(token: string): Promise<CatalogAdminView | 
 
 
 /**
- * 세계에 사람이 얼마나 오는가 (2026-09-17).
+ * 세계에 사람이 얼마나 오는가 (2026-09-17, 2026-09-18 개정).
  *
- * **제3자 계측이 아니라 우리가 이미 가진 수다.** 처음 들어오면 익명 계정이 생기므로
- * 계정 수가 곧 「앱을 연 사람 수」에 가깝다 — 광고망이나 분석 스크립트를 들이지 않고도
- * 셀 수 있는 것이 있었다.
+ * **두 수가 다른 것을 센다.** `visitors` 는 **판을 낸 사람**이다 — 계정 행은 앱을 연
+ * 순간이 아니라 출격에서 생긴다(`requireAccount`: "여는 것만으로는 안 만든다").
+ * `windowVisits` 는 **열어 본 사람**이고, Cloudflare 가 엣지에서 센 것을 서버가 받아
+ * 적은 값이다.
+ *
+ * **여기 적혀 있던 "계정 수가 곧 「앱을 연 사람 수」에 가깝다" 는 틀렸다.** 그 전제 위에
+ * 화면이 이 수를 「다녀간 사람」이라 불렀고, 진짜 방문자는 아무도 재지 않고 있었다.
+ *
+ * **창 값이 0 이면 「아무도 안 왔다」가 아니다.** 계측을 아직 못 받아 온 것일 수 있어,
+ * 화면은 `windowVisits` 로 그 둘을 갈라야 한다.
  */
 export interface WorldPulse {
   readonly visitors: number
@@ -1886,6 +1893,13 @@ export interface WorldPulse {
   readonly freshToday: number
   readonly freshWeek: number
   readonly runs: number
+  readonly windowDays: number
+  readonly windowVisits: number
+  readonly windowPlayed: number
+  /** 0~100 의 정수. 서버가 정수로 낸다 — 부동소수를 피하는 규율이 화면 수치에도 걸린다. */
+  readonly conversionPct: number
+  /** 계측 출처. 화면이 이것을 밝혀야 갈아 끼우는 날 수가 뛴 이유를 사람이 안다. */
+  readonly trafficSource: string
 }
 
 /**
@@ -1904,6 +1918,11 @@ export async function readWorldPulse(): Promise<WorldPulse | undefined> {
     fresh_today: number
     fresh_week: number
     runs: number
+    window_days?: number
+    window_visits?: number
+    window_played?: number
+    conversion_pct?: number
+    traffic_source?: string
   }
   return {
     visitors: body.visitors,
@@ -1911,6 +1930,13 @@ export async function readWorldPulse(): Promise<WorldPulse | undefined> {
     freshToday: body.fresh_today,
     freshWeek: body.fresh_week,
     runs: body.runs,
+    // **옛 서버도 받는다.** 배포가 앞뒤로 갈릴 때 이 칸들이 없는 응답이 오는데,
+    // 그때 화면이 깨지는 대신 깔때기 줄만 안 그리면 된다.
+    windowDays: body.window_days ?? 0,
+    windowVisits: body.window_visits ?? 0,
+    windowPlayed: body.window_played ?? 0,
+    conversionPct: body.conversion_pct ?? 0,
+    trafficSource: body.traffic_source ?? '',
   }
 }
 

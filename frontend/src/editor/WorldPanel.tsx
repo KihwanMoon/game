@@ -29,6 +29,51 @@ import type { LeaderboardView, ProgressView, WorldPulse } from "../storage";
 import { LinkNoticeLine } from './LinkNoticeLine'
 import { checkLinked, type LinkState } from './linkState'
 
+/** 창이 이레면 「이번 주」라 적는다 — 사람이 세는 단위가 그것이다. */
+const WEEK_DAYS = 7
+
+/**
+ * 누적 한 줄. **명부는 이름들이 사는 곳이라 「이름」이라 적는다.**
+ *
+ * 예전에는 이 수를 「다녀간 사람」이라 불렀는데 틀린 말이었다 — 계정 행은 앱을 연
+ * 순간이 아니라 출격에서 생기므로, 세고 있던 것은 **판을 낸 사람**이다.
+ *
+ * @param pulse 서버가 낸 현황.
+ * @returns 적을 한 줄.
+ */
+export function formatPulseTotals(pulse: WorldPulse): string {
+  return `이름 ${String(pulse.visitors)} · 오늘 ${String(pulse.freshToday)} · 돈 판 ${String(pulse.runs)}`
+}
+
+/**
+ * 창 한 줄 — 들름에서 판으로 가는 깔때기.
+ *
+ * **두 수를 나란히 두지 않고 화살표로 잇는다.** 따로 적으면 관계를 보는 사람이 스스로
+ * 계산해야 하고, 「사람이 오는데 안 한다」와 「아예 안 온다」가 안 갈린다.
+ *
+ * **기간과 출처를 함께 적는다.** 누적 절대값은 계측을 갈아 끼우는 순간 점프해 예전 값과
+ * 이어 붙일 수 없다. 기간이 없으면 보는 사람이 그것을 못 알아채고, 출처가 없으면 수가
+ * 뛴 날을 「갑자기 대박」으로 읽는다.
+ *
+ * **들름이 0 이면 깔때기를 안 적는다.** 그 0 은 「아무도 안 왔다」가 아니라 「계측을
+ * 아직 못 받았다」일 수 있고, 둘을 같은 줄로 적으면 없는 사실을 단언하게 된다.
+ *
+ * @param pulse 서버가 낸 현황.
+ * @returns 적을 한 줄. 창 자체가 없으면 빈 문자열이고, 부르는 쪽이 그 줄을 안 그린다.
+ */
+export function formatPulseWindow(pulse: WorldPulse): string {
+  if (pulse.windowDays <= 0) {
+    return ''
+  }
+  const span = pulse.windowDays === WEEK_DAYS ? '이번 주' : `${String(pulse.windowDays)}일`
+  if (pulse.windowVisits <= 0) {
+    return `${span} 판 ${String(pulse.windowPlayed)}`
+  }
+  const rate = `${String(pulse.conversionPct)}%`
+  const source = pulse.trafficSource === '' ? '' : ` · ${pulse.trafficSource} 기준`
+  return `${span} 들름 ${String(pulse.windowVisits)} → 판 ${String(pulse.windowPlayed)} (${rate})${source}`
+}
+
 export interface WorldPanelProps {
   readonly progress: ProgressView | undefined;
   readonly leaderboard: LeaderboardView | undefined;
@@ -115,13 +160,17 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
       <div className="wld">
         {/* **여기 사람이 사는가.** 순위표만 있으면 이름 몇 줄이 전부라, 판이 도는
             세계인지 멈춘 세계인지가 안 보인다. 「오늘」을 함께 적는 이유도 그것이다 —
-            누계만 적으면 옛날에 붐볐던 곳과 구별되지 않는다. */}
+            누계만 적으면 옛날에 붐볐던 곳과 구별되지 않는다.
+
+            **줄이 둘인 이유.** 위는 누적, 아래는 창이다. 누적만 적으면 계측을 갈아
+            끼우는 날 수가 점프하고 예전 값과 이어 붙일 수 없다. */}
         {props.pulse === undefined ? null : (
-          <ValueExpr
-            text={`다녀간 사람 ${String(props.pulse.visitors)} · 오늘 ${String(props.pulse.freshToday)} · 이번 주 ${String(props.pulse.freshWeek)} · 돈 판 ${String(props.pulse.runs)}`}
-            size="sm"
-            dim
-          />
+          <>
+            <ValueExpr text={formatPulseTotals(props.pulse)} size="sm" dim />
+            {formatPulseWindow(props.pulse) === '' ? null : (
+              <ValueExpr text={formatPulseWindow(props.pulse)} size="sm" dim />
+            )}
+          </>
         )}
         {!checkLinked(link) || progress === undefined ? (
           <LinkNoticeLine link={link} missing={MISSING_HINT} />
