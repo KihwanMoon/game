@@ -316,8 +316,12 @@ function BotEditor(props: BotEditorProps): React.JSX.Element {
       {/* **접두어는 안 보여 주고 안 받는다.** `bot_` 은 서버가 지키는 것이고, 고칠 수
           있게 보여 주면 지울 수 있게 된다 — 그 순간 순위표·경매·도감에서 봇이 사람과
           구별되지 않는다. 사람이 고치는 것은 뒷자리뿐이다. */}
+      {/* **「이름」이라고 적는다.** 접두어만 붙여 두었더니 그것이 칸의 이름표가 아니라
+          장식으로 읽혔고, 사람이 이름을 고치러 상세 카드의 제목을 눌렀다 (2026-09-18
+          실제 신고). 이웃 칸들(`실력 %`·`간격 초`)이 전부 무엇인지 적고 있는데 이 칸만
+          안 적고 있었다. */}
       <label className="bots__label" htmlFor={`name-${String(bot.accountId)}`}>
-        {BOT_PREFIX}
+        {`이름 ${BOT_PREFIX}`}
       </label>
       <input
         id={`name-${String(bot.accountId)}`}
