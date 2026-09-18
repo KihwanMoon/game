@@ -10,12 +10,26 @@
  *
  * **세대를 머리에 적는다.** 아이템을 고치는 것은 순위표 시즌을 가르는 일이고, 그
  * 사실이 조작 전에 눈에 있어야 한다.
+ *
+ * **긴 목록의 바깥은 공용 틀이 진다** (2026-09-18). 쉰 종이 찾기도 더 보기도 없이 한
+ * 번에 깔려 있어, 폰에서는 스크롤이 곧 찾기였다. 찾기·개수·한 장씩은 `DataList` 가
+ * 지고 칸의 모양만 여기서 그린다 — 격자는 그대로다. 틀이 `display` 를 안 정하므로
+ * 격자는 `listClass` 로 준다(`ds-cells`).
+ *
+ * **짧고 길이가 고정인 것(분류 셋·자리 여섯·등급·접사 줄)은 목록으로 안 옮긴다.**
+ * 거기에 「더 보기」가 서면 뒤에 뭔가 더 있다는 거짓말이 되고, 접사 줄은 보이는 줄을
+ * 거르거나 자르면 누른 줄과 갈리는 줄이 어긋나 **옆 줄을 갈아 버린다**(`AffixList` 머리말).
  */
 import { useState } from 'react'
 
 import { findItemArt } from '../content/itemArt'
-import { Button, CellGrid, GlyphState, Panel, Thumb, ValueExpr } from '../ds'
+import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import type { CatalogAdminRow, CatalogAdminView, CatalogAffixSpec } from '../storage'
+
+import { DataList } from './DataList'
+// 격자 한 장에 까는 칸 수를 여기서 다시 정하지 않는다. 도감·비각이 이미 이 수로 깐다
+// — 화면마다 다른 수를 쓰면 같은 격자가 화면마다 다른 길이로 끊긴다.
+import { GRID_PAGE } from './SlotBoard'
 
 export interface CatalogAdminPanelProps {
   readonly catalog: CatalogAdminView | undefined
@@ -676,39 +690,65 @@ export function CatalogAdminPanel(props: CatalogAdminPanelProps): React.JSX.Elem
         />
         {props.detail === '' ? null : <ValueExpr text={props.detail} size="sm" />}
 
-        <CellGrid
-          cells={catalog.items.map((item) => ({
-            id: item.catalogId,
-            thumb: (
-              <Thumb
-                kind={item.slot === '' ? item.kind : item.slot}
-                label={item.labelKo}
-                grade={item.grade}
-                state={item.isRetired ? 'locked' : 'known'}
-                // **여기만 그림이 없었다** (2026-09-17 신고). 부품은 `art` 를 받는데
-                // 안 넘겨서 자리 코드(`BD`)만 그려지고 있었다 — 쓰는 사람에게는
-                // 「관리 페이지에는 그림이 없다」로 보인다.
-                //
-                // 줄이 `catalogId`·`hands`·`useTag` 를 이미 들고 있다. 셋을 함께
-                // 넘기는 이유는 접두사만으로 안 갈리는 둘 때문이다: 양손 협도와
-                // 부적 여섯 (`content/itemArt`).
-                {...(() => {
-                  const art = findItemArt(item.catalogId, item.hands, item.useTag)
-                  return art === undefined ? {} : { art }
-                })()}
-              />
-            ),
-            name: item.labelKo,
-            meta: [
-              `${item.grade} · ${String(item.minFloor)}장~`,
-              item.isRetired ? '폐기' : `가중치 ${String(item.dropWeight)}`,
-            ],
-            isSelected: item.catalogId === picked,
-          }))}
-          onSelect={(id) => {
-            setPicked(id)
-          }}
+        <DataList<CatalogAdminRow>
+          items={catalog.items}
+          // id 는 카탈로그에서 유일하다 — 자리를 섞어 넣으면 거를 때마다 키가 바뀐다.
+          rowKey={(item) => item.catalogId}
+          // **격자를 그대로 둔다.** 칸 격자는 좁은 폭에서 두 칸, 넓은 폭에서 예닐곱
+          // 칸으로 폭이 스스로 정한다(`ds-cells`). 틀은 `display` 를 안 정하므로
+          // 여기서 주지 않으면 칸이 세로로 한 줄씩 쌓인다.
+          listClass="ds-cells"
+          rowClass="ds-cell"
+          // **여기만 그림이 없었다** (2026-09-17 신고). 부품은 `art` 를 받는데 안
+          // 넘겨서 자리 코드(`BD`)만 그려지고 있었다 — 쓰는 사람에게는 「관리
+          // 페이지에는 그림이 없다」로 보인다.
+          //
+          // 줄이 `catalogId`·`hands`·`useTag` 를 이미 들고 있다. 셋을 함께 넘기는
+          // 이유는 접두사만으로 안 갈리는 둘 때문이다: 양손 협도와 부적 여섯
+          // (`content/itemArt`). 조건부 전개는 틀이 한 번만 진다.
+          thumb={(item) => ({
+            kind: item.slot === '' ? item.kind : item.slot,
+            label: item.labelKo,
+            grade: item.grade,
+            state: item.isRetired ? 'locked' : 'known',
+            // **칸 그림이라 `md` 다.** 틀의 기본은 줄 앞 그림(`sm`)이고, 그것으로
+            // 두면 옮기는 김에 그림이 작아진다 — 이번 일은 배치이지 크기가 아니다.
+            size: 'md',
+            art: findItemArt(item.catalogId, item.hands, item.useTag),
+          })}
+          renderRow={(item) => (
+            // 이름줄이 버튼이다. 작은 글씨 옆에 작은 버튼을 따로 두면 손가락이 못
+            // 맞춘다. **그림은 틀이 버튼 밖에 얹는다** — 칸 전체를 누르게 잇는 것은
+            // CSS 의 일이고, 그 한 줄은 다음 단계에서 한 사람이 한꺼번에 본다.
+            <button
+              type="button"
+              className={`ds-cell__hit${item.catalogId === picked ? ' cat__cell--on' : ''}`}
+              // 고름은 색·명도만으로 알리지 않는다. 화면을 못 보는 경로에서는 이것이
+              // 유일한 채널이다 — 참/거짓을 3중으로 적는 것과 같은 규칙이다.
+              aria-pressed={item.catalogId === picked}
+              onClick={() => {
+                setPicked(item.catalogId)
+              }}
+            >
+              <span className="ds-cell__name">{item.labelKo}</span>
+              <span className="ds-cell__meta">{`${item.grade} · ${String(item.minFloor)}장~`}</span>
+              <span className="ds-cell__meta">
+                {item.isRetired ? '폐기' : `가중치 ${String(item.dropWeight)}`}
+              </span>
+            </button>
+          )}
           emptyText="카탈로그가 비어 있다"
+          unit="종"
+          // 거른 뒤에도 전체가 몇인지 함께 적는다 — 질의가 가린 것을 「없다」로 읽으면
+          // 사람은 등록된 것이 그것뿐인 줄 안다.
+          showCount
+          // **쉰 종이 한 번에 깔린다.** 전부 깔면 고른 칸의 상세와 등록 폼이 화면
+          // 밖으로 밀린다.
+          pageSize={GRID_PAGE}
+          // 이름과 분류로 건다. id 도 함께 거는 이유는 상세와 원장이 아이템을 id 로
+          // 부르기 때문이다 — 거절 사유에 적힌 `helm_iron` 을 그대로 쳐서 찾는다.
+          filterText={(item) => `${item.labelKo} ${item.catalogId} ${item.kind} ${item.slot}`}
+          filterLabel="이름·분류로 찾기"
         />
 
         <CatalogForm

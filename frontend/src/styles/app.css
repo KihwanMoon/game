@@ -235,7 +235,10 @@ body {
   min-inline-size: var(--sp-0);
 }
 
-/* 몸통 안의 패널도 줄어들 수 있어야 한다 — 하나가 안 줄면 그 하나가 페이지 폭을 정한다. */
+/* 안에 든 것은 전부 줄어들 수 있어야 한다 — 하나가 안 줄면 그 하나가 페이지 폭을 정한다.
+   **몸통만 걸어 두면 모자란다** — 발행 바처럼 `.adm` 바로 밑에 붙는 것도 같은 사고를
+   낸다(입력 칸 둘이 기본 폭 20자를 들고 안 줄어든 것이 그 예다). */
+.adm > *,
 .adm__body > * {
   min-inline-size: var(--sp-0);
 }
@@ -286,6 +289,16 @@ body {
      **미디어쿼리를 안 쓴다** — 이 저장소는 breakpoint 를 토큰 한 곳에만 둔다. 넘칠 때만
      접히므로 조건이 필요 없다(`.launch` 와 같은 규율). */
   grid-template-columns: repeat(auto-fit, minmax(10ch, 1fr));
+  /* **머리줄과 값줄이 같은 폭이어야 같은 수로 접힌다** (2026-09-18, 실제 신고: 라벨은
+     세 칸으로 접혔는데 값은 한 칸으로 접혀 어느 값이 무엇인지 안 맞았다).
+     `auto-fit` 이 세는 것은 **그 격자 자신의 폭**이다. 머리줄은 `div` 라 부모 폭을 다
+     쓰지만 값줄은 `button` 이고, 단추의 `width: auto` 는 블록처럼 부모를 채우는 폭이
+     아니라 **내용에 맞추는 폭**이다 — 둘의 폭이 다르니 접는 답도 달랐다.
+     폭을 못 박아 둘을 같은 답으로 묶는다. 조건이 없으므로 미디어쿼리도 필요 없다. */
+  box-sizing: border-box;
+  inline-size: 100%;
+  /* 안쪽에 안 줄어드는 것(단추·글리프)이 하나 생겨도 줄이 부모보다 넓어지지 않는다. */
+  min-inline-size: var(--sp-0);
   gap: var(--sp-2);
   align-items: center;
   padding: var(--sp-1) var(--sp-2);
@@ -523,7 +536,9 @@ body {
 .replay__bar {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--sp-3);
+  /* 세로 간격을 가로와 갈라 둔다. 폰에서 이 줄이 두세 줄로 접히는데, 12px 이 줄마다
+     붙으면 그만큼 전투 화면의 높이를 먹는다. */
+  gap: var(--sp-1) var(--sp-3);
   align-items: center;
   min-inline-size: var(--sp-0);
   padding: var(--sp-2) var(--sp-3);
@@ -531,14 +546,32 @@ body {
   background: var(--surface-panel);
 }
 
+/* 방·시드·그때의 결과 셋은 **한 덩어리다.** 낱개로 세워 두면 좁은 화면에서 제각기
+   접혀 값이 버튼 사이사이로 끼어 들어간다 — 머리줄이 무엇이 값이고 무엇이 조작인지
+   모를 줄이 된다. 묶어 두면 통째로 아랫줄에 내려간다. */
+.replay__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+  min-inline-size: var(--sp-0);
+}
+
+/* 조작도 한 묶음이다. 오른쪽으로 미는 일을 이 묶음이 맡는다 — 빈 칸(`.replay__spacer`)을
+   세우던 때는 버튼이 셋으로 늘자 하나만 오른쪽 끝에 남고 나머지가 흩어졌다.
+   좁은 화면에서는 밀 자리가 없어 `auto` 가 0 이 되고, 묶음째로 아랫줄에 내려간다. */
+.replay__acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-inline-start: auto;
+}
+
 .replay__title {
   color: var(--text-display);
   font-family: var(--font-display);
   font-size: var(--fs-display-s);
-}
-
-.replay__spacer {
-  flex: 1;
 }
 
 /* 전투 화면이 남는 높이를 다 쓴다. `min-height: 0` 이 없으면 안쪽 스크롤이 접힌다. */

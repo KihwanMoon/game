@@ -1274,6 +1274,43 @@
   flex-wrap: wrap;
   gap: var(--sp-1);
   flex: 0 0 auto;
+  /* **접히는 데 상한을 둔다.** 규칙표가 14벌이라 폰에서 단추가 다섯 줄로 접히고, 고치러
+     온 편집기가 그만큼 화면 아래로 밀려난다. 넓은 화면에서는 한두 줄이라 이 상한에
+     닿지 않는다 — 조건 없이 넘칠 때만 무는 규칙이다. */
+  max-block-size: calc(var(--btn-tap-sm-h) * 3 + var(--sp-1) * 2);
+  overflow-y: auto;
+}
+
+/* ── 카탈로그 칸 격자 (관리자) ────────────────────────────────────────────
+   칸 격자 자체는 `ds/CellGrid` 의 것(`.ds-cells`·`.ds-cell`)을 목록 틀의 `listClass`·
+   `rowClass` 로 그대로 쓴다. 여기 있는 것은 **옮기면서 갈 곳이 없어진 둘**뿐이다. */
+
+/* 고른 칸. 고름이 안쪽 단추로 내려가서 `.ds-cell--on` 이 이 화면에서는 못 붙는다 —
+   목록 틀의 `rowClass` 는 모든 줄이 한 글자열이라 줄마다 다른 클래스를 못 준다.
+   **outline 을 쓰지 않는다** — 초점 테두리와 같은 속성이라 고른 칸에 초점이 오면 둘 중
+   하나가 통째로 사라진다(`.invg__cell--picked` 와 같은 판단). 명도로 적는다.
+   세 번째 채널은 `aria-pressed` 다. */
+.cat__cell--on {
+  background: var(--surface-raised);
+}
+
+/* 옛 모양(`.ds-cell--on` 의 황동 괘선)을 그대로 살린다. 고름이 안쪽에 있으니 바깥 칸은
+   안쪽을 보고 안다 — 명도만으로는 단추 자리에만 표가 나고 칸 전체는 안 바뀐다. */
+.cat .ds-cell:has(.cat__cell--on) {
+  border-color: var(--line-accent);
+}
+
+/* **칸 전체가 다시 눌린다.** 목록 틀은 그림을 단추의 형제로 얹으므로, 옮긴 뒤로는
+   이름·메타 줄만 단추였다 — 그림을 눌러도 아무 일이 없다. 히트 영역을 칸까지 덮는다.
+   `ds.css` 가 아니라 여기인 것은 이 배치가 이 화면의 것이기 때문이다. */
+.cat .ds-cell {
+  position: relative;
+}
+
+.cat .ds-cell__hit::after {
+  content: '';
+  position: absolute;
+  inset: var(--sp-0);
 }
 
 .cat__list {
@@ -1310,6 +1347,26 @@
 /* 인원 막대를 오른쪽 끝에 세로로 정렬한다 — 줄마다 자리가 같아야 분포가 눈에 잡힌다. */
 .cat__row > :last-child {
   margin-left: auto;
+}
+
+/* **발행 바는 그것을 안 물려받는다.** 위 규칙은 도감의 인원 막대를 위한 것인데, 폰에서
+   줄이 접히면 「발행」 단추만 혼자 오른쪽 끝으로 밀려 무엇에 딸린 단추인지 안 읽힌다
+   (실제 신고의 「밀리고」). */
+.adm__publish .cat__row > :last-child {
+  margin-inline-start: var(--sp-0);
+}
+
+/* 칸이 줄어들 수 있어야 한다. `.cat__input` 에 폭이 없어 `size` 기본값 20자가 폭을
+   정하는데, 플렉스 칸의 기본 `min-width: auto` 라 그 폭 밑으로 안 줄어든다 — 폰에 남는
+   폭에 사유 칸과 세대 칸이 함께 못 섰다. */
+.adm__publish .cat__input {
+  flex: 1 1 auto;
+  min-inline-size: var(--sp-0);
+}
+
+/* 세대는 한두 자리 숫자다. 사유 칸과 같은 폭을 먹을 이유가 없다. */
+.adm__publish .cat__input[inputmode='numeric'] {
+  flex: 0 0 var(--sp-12);
 }
 
 /* 도감의 규칙표. 에디터와 같은 등폭 글꼴로 적는다 — 본 것을 그대로 옮겨 적을 수 있어야
@@ -1430,6 +1487,19 @@
 /* 스킬 표. 열 수가 고정이라 격자로 둔다 — 좁으면 가로로 스크롤한다. 줄바꿈하면
    어느 값이 어느 열인지 알 수 없어져 표가 표이기를 그만둔다. */
 .skl {
+  /* **칸 폭을 한 곳에 적고 머리줄과 값줄이 그것만 본다** (2026-09-18, 실제 신고:
+     `HEX_FIREATTACK`·`coef_pct` 가 옆 칸 위로 찍혔다). 40px 고정 칸에 여덟아홉 자가
+     들어가 넘친 것이라 칸을 내용이 들어가는 폭으로 늘렸다.
+
+     **`auto`·`max-content` 는 못 쓴다.** 머리줄은 `.skl` 의 자식이고 값줄은 목록 틀이
+     그리는 `<li>` 라 **두 격자가 따로 계산된다** — 내용 기준 폭은 두 곳에서 다른 값으로
+     풀리고, 그러면 겹침 대신 어긋남이 온다.
+     `ch` 도 안 쓴다: `ch` 는 값을 쓰는 자리의 글꼴을 타는데 머리줄은 등폭 작은 글씨고
+     값줄은 안쪽 칸이 제 글꼴을 따로 든다. 그래서 **내용과도 글꼴과도 무관한** rem 이다.
+
+     값은 제일 긴 글자에서 나왔다 — id `HEX_FIREATTACK`, 라벨 `telegraph`·`coef_pct`.
+     합이 화면보다 넓으면 표가 가로로 스크롤한다: 그것이 의도다. */
+  --skl-cols: 7rem 5rem repeat(4, 5rem);
   display: flex;
   flex-direction: column;
   gap: var(--sp-1);
@@ -1439,9 +1509,16 @@
 .skl__head,
 .skl__row {
   display: grid;
-  grid-template-columns: var(--sp-12) var(--sp-10) repeat(4, var(--sp-10));
+  grid-template-columns: var(--skl-cols);
   align-items: center;
   gap: var(--sp-2);
+  /* 트랙 합만큼은 넓어야 한다 — 눌리면 칸이 다시 겹친다. */
+  min-inline-size: max-content;
+}
+
+/* 값줄은 `<li>` 라 부모(`ul`)의 폭을 따른다. `ul` 이 안 넓어지면 머리줄만 넓어지고
+   값줄은 부모 폭에 눌린다 — 같은 트랙을 줘 놓고 어긋나는 길이 그것이다. */
+.skl__rows {
   min-inline-size: max-content;
 }
 
@@ -1454,7 +1531,11 @@
 }
 
 .skl__cell {
+  /* `100%` 는 칸 폭이 고정일 때만 통한다. padding·border 가 밖으로 더해지면 그만큼
+     옆 칸을 침범하고, 입력 칸의 기본 폭(`size=20`, 약 20자)은 트랙을 통째로 밀어낸다. */
+  box-sizing: border-box;
   inline-size: 100%;
+  min-inline-size: var(--sp-0);
 }
 
 /* 룸 격자. 칸은 정사각이고 고정폭 글자를 담는다 — 지형 문자가 곧 그림이라 폭이 흔들리면
@@ -1527,26 +1608,57 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-1);
-  padding-left: var(--sp-2);
+  /* **들여쓰기는 깊이마다 쌓인다.** 8px 이면 깊이 5 에서 40px 이고, 360px 폰에서는 그
+     40px 이 값 칸의 최소 폭보다 크다. 깊이는 괘선이 말하므로 들여쓰기는 그 괘선을
+     띄우는 최소값이면 된다. */
+  padding-left: var(--sp-1);
   border-left: var(--bw) solid var(--line);
 }
 
+/* **이름과 값이 한 쌍으로 붙어 접힌다** (2026-09-18, 실제 신고). `flex-wrap` 이던 동안
+   둘이 **각자** 접혀서 라벨과 값이 어긋나 읽혔다 — 격자로 두면 한 줄에 한 쌍이 고정된다.
+   이름 칸은 남는 폭을 다 쓰고 줄고, 값 칸은 제 최소 폭을 지킨 채 그 두 배까지 늘어난다.
+   조건이 없으므로 미디어쿼리가 필요 없다. */
 .vtr__leaf {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(var(--sp-0), 1fr) minmax(var(--sp-12), 2fr);
   align-items: center;
   gap: var(--sp-2);
 }
 
 .vtr__key {
   min-inline-size: var(--sp-12);
+  /* 마크업이 밑줄 뒤에 끊을 자리(`<wbr>`)를 심어 두지만, 밑줄 없는 긴 토막은 그것으로도
+     못 끊는다. 안 끊기면 그 한 줄이 절 전체를 옆으로 민다. */
+  overflow-wrap: anywhere;
   color: var(--text-dim);
   font-family: var(--font-mono);
   font-size: var(--fs-mono-s);
 }
 
+/* 값이 드는 칸. 격자의 둘째 트랙이다. */
+.vtr__val {
+  display: flex;
+  align-items: center;
+  min-inline-size: var(--sp-0);
+}
+
+/* 가지 이름. 안 줄어들면 `3 · bomb_slime · 폭탄 슬라임` 같은 긴 이름이 개수 뱃지를
+   화면 밖으로 밀어낸다. */
+.vtr__name {
+  flex: 1 1 auto;
+  min-inline-size: var(--sp-0);
+  overflow-wrap: anywhere;
+}
+
+/* **고정폭을 푼다** (2026-09-18). 48px 이라 등폭으로 네 글자쯤 보였는데, 이 칸에는
+   `(attack * skill_coef_pct * (denominator - defense)) // (100 * denominator)` 같은
+   문자열 잎이 온다 — 읽을 수도 고칠 수도 없었다. 칸이 늘고 줄게 둔다. */
 .vtr__input {
-  inline-size: var(--sp-12);
+  box-sizing: border-box;
+  flex: 1 1 var(--sp-12);
+  inline-size: auto;
+  min-inline-size: var(--sp-0);
 }
 
 /* 찾기 줄. **값 칸보다 넓다** — 키 이름은 `cpu_cost_by_term_count` 처럼 길고, 잘리면
@@ -1561,11 +1673,16 @@
   border-block-end: var(--bw) solid var(--line);
 }
 
+/* 「찾기」 두 글자다. 값 줄의 이름 칸과 달리 최소 폭을 잡아 둘 이유가 없다. */
+.vtr__find .vtr__key {
+  flex: 0 0 auto;
+  min-inline-size: auto;
+}
+
 .vtr__find .vtr__input {
-  /* 값 칸은 고정폭이지만 찾기 칸은 늘어난다. 키 이름은 `cpu_cost_by_term_count` 처럼
-     길어서, 값 칸과 같은 폭이면 무엇을 치고 있는지 안 보인다. */
-  flex: 1 1 auto;
-  inline-size: auto;
+  /* 늘고 주는 것은 이제 `.vtr__input` 본체가 한다. 여기 남는 것은 **찾기 칸은 값 칸보다
+     넓다** 는 의도뿐이다 — 키 이름은 `cpu_cost_by_term_count` 처럼 길어서, 값 칸과 같은
+     폭이면 무엇을 치고 있는지 안 보인다. */
   min-inline-size: var(--sp-12);
 }
 

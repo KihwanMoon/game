@@ -8,16 +8,48 @@
  * 칸을 눌러 다음 지형으로 넘긴다. 종류는 `legend` 가 정한다 — 화면이 목록을 따로 들면
  * 지형을 하나 늘릴 때 두 곳이 갈린다.
  *
+ * **방 고르기는 공용 목록 틀(`DataList`)이 진다** (2026-09-18). 마흔 곳을 손으로 짠 탭
+ * 줄에 한꺼번에 세우고 있었고, 폰에서는 그 줄 하나가 화면을 덮었다 — 찾는 방법은 브라우저
+ * 찾기뿐이었다. 틀이 지는 것은 바깥 넷(거르기·페이지·빈 문구·컨테이너)이고, 줄 안쪽의
+ * 단추는 여기서 그대로 그린다.
+ *
+ * **칸 격자는 손으로 그린 채 둔다.** 그것은 목록이 아니라 판이다 — 거르기도 페이지도
+ * 뜻이 없고, 줄마다 틀을 하나씩 세우면 `.rmg__row` 의 배치가 한 겹 더 깊어진다.
+ *
  * **저장은 초안이다.** 여기서 게임이 바뀌지 않는다.
  */
 import { useState } from 'react'
 
+import { DataList } from '../editor/DataList'
 import { Button, Panel, ValueExpr } from '../ds'
 
 export interface RoomGridProps {
   /** 룸 파일 전체. `templates`·`legend`·`legend_ko` 를 담고 있다. */
   readonly file: Record<string, unknown> | undefined
   readonly onSave: (text: string, note: string) => void
+}
+
+/**
+ * 한 장에 세울 방 수.
+ *
+ * 마흔 곳이다. 한꺼번에 세우면 폰에서 단추 줄만으로 화면이 차고, 고치려던 격자는 그
+ * 아래 어딘가에 있다. 열둘이면 좁은 폭에서도 두어 줄로 접힌다.
+ */
+export const ROOM_PAGE = 12
+
+/**
+ * 방 한 곳을 찾기 칸이 보는 한 줄로 적는다.
+ *
+ * **이름과 장을 함께 넣는다.** id 로만 거르면 「너른 마당」을 찾는 사람이 `open_field` 를
+ * 먼저 떠올려야 하고, 「몇 장짜리 방인가」는 아예 못 묻는다 — 방을 고를 때 사람이 드는
+ * 기준이 그 둘이다.
+ *
+ * @param room 방 한 곳.
+ * @returns 거르기가 볼 글자.
+ */
+export function roomSearchText(room: Record<string, unknown>): string {
+  const floor = room.min_floor === undefined ? '' : `${String(room.min_floor)}장`
+  return `${String(room.id ?? '')} ${String(room.label_ko ?? '')} ${floor}`
 }
 
 /**
@@ -104,20 +136,36 @@ export function RoomGrid(props: RoomGridProps): React.JSX.Element {
           size="sm"
           dim
         />
-        <div className="cat__tabs">
-          {templates.map((item) => (
-            <Button
-              key={String(item.id)}
-              size="sm"
-              variant={String(item.id) === openId ? 'primary' : 'ghost'}
-              onClick={() => {
-                setOpenId(String(item.id))
-              }}
-            >
-              {String(item.id)}
-            </Button>
-          ))}
-        </div>
+        {/* **「아직 안 왔다」를 목록 안에서 적지 않는다.** 틀은 빈 목록 문구 하나만 받으므로
+            파일을 못 읽은 것까지 그리로 넘기면 불러오는 중에 「고칠 방이 없다」가 뜬다 —
+            가진 것이 없다는 말과 아직 못 읽었다는 말은 다른 사실이다. */}
+        {file === undefined ? (
+          <ValueExpr text="방 파일을 불러오는 중이다" size="sm" dim />
+        ) : (
+          <DataList
+            items={templates}
+            rowKey={(item) => String(item.id)}
+            // **틀은 `display` 를 안 정한다.** 탭 줄이 접히는 것은 이 화면의 배치이므로
+            // 여기서 준다.
+            listClass="cat__tabs"
+            emptyText="고칠 방이 없다"
+            pageSize={ROOM_PAGE}
+            unit="곳"
+            filterText={roomSearchText}
+            filterLabel="이름·장으로 찾기"
+            renderRow={(item) => (
+              <Button
+                size="sm"
+                variant={String(item.id) === openId ? 'primary' : 'ghost'}
+                onClick={() => {
+                  setOpenId(String(item.id))
+                }}
+              >
+                {String(item.id)}
+              </Button>
+            )}
+          />
+        )}
 
         {room === undefined ? null : (
           <>

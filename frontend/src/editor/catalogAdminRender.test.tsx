@@ -7,6 +7,9 @@
  * 2. **폐기된 것도 보인다.** 폐기는 「없다」가 아니라 「새로 안 나온다」다.
  * 3. **세대가 눈에 있다.** 고치면 순위표 시즌이 갈린다 — 누르기 전에 알아야 한다.
  * 4. **못 고치는 것을 못 고친다고 적는다.** 서버만 막으면 「왜 안 되지」가 된다.
+ * 5. **긴 목록에 찾기와 한 장이 있다.** 쉰 종이 한 번에 깔리면 폰에서는 스크롤이 곧
+ *    찾기가 된다 — 배치는 검사가 못 보므로 **구조**를 잰다: 틀이 섰는가, 찾기 칸이
+ *    있는가, 줄이 그려지는가, 한 장에서 끊기는가.
  */
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
@@ -20,6 +23,7 @@ import {
   buildRowFromSpec,
   listAffixStats,
 } from './CatalogAdminPanel'
+import { GRID_PAGE } from './SlotBoard'
 import type { CatalogAdminView } from '../storage'
 
 const VIEW: CatalogAdminView = {
@@ -115,6 +119,30 @@ function findRow(catalogId: string) {
   return found
 }
 
+/**
+ * 그려진 줄들의 이름.
+ *
+ * **마크업을 통째로 박지 않는다.** 예전에는 격자가 그리던 `span` 한 줄을 그대로 박아
+ * 두어, 같은 목록을 공용 틀로 옮기는 것만으로 검사가 빨개졌다 — 지키려던 것은 「그 줄이
+ * 목록에 그려진다」이지 그 태그가 아니다.
+ *
+ * @param html 그려진 마크업.
+ * @returns 줄 이름들. 페이지가 자른 것은 안 들어온다.
+ */
+function listRowNames(html: string): readonly string[] {
+  return [...html.matchAll(/class="ds-cell__name">([^<]*)</g)].map((hit) => hit[1] ?? '')
+}
+
+/**
+ * 그려진 줄 수.
+ *
+ * @param html 그려진 마크업.
+ * @returns 줄 수. `ds-cell__hit` 은 안 센다 — 칸 하나에 버튼이 하나다.
+ */
+function countRows(html: string): number {
+  return [...html.matchAll(/class="ds-cell"/g)].length
+}
+
 const noop = () => undefined
 const MARKUP = renderToStaticMarkup(
   <CatalogAdminPanel catalog={VIEW} detail="" onRetire={noop} onEdit={noop}
@@ -127,7 +155,7 @@ describe('카탈로그 관리', () => {
   })
 
   it('★ 폐기된 것도 목록에 남는다 — 되살릴 수 있어야 한다', () => {
-    expect(MARKUP).toContain('<span class="ds-cell__name">옛 검</span>')
+    expect(listRowNames(MARKUP)).toContain('옛 검')
     expect(MARKUP).toContain('폐기')
   })
 
@@ -408,5 +436,70 @@ describe('소모품의 쓰임새 (설계/4_아이템 §4)', () => {
   it('★ 쓰임새가 없으면 그 사실을 말한다 — 조용히 비면 왜 못 쓰는지 알 길이 없다', () => {
     const bare = { ...potion, useTag: '' }
     expect(draw(bare)).toContain('어느 내력도 못 쓴다')
+  })
+})
+
+
+describe('목록 틀 (긴 목록의 바깥은 DataList 가 진다)', () => {
+  // 쉰 종이 실제 크기다. 한 장(24)보다 길어야 「한 장에서 끊기는가」를 잴 수 있다.
+  const HELM = findRow('helm_iron')
+  const LONG: CatalogAdminView = {
+    ...VIEW,
+    items: Array.from({ length: GRID_PAGE + 6 }, (_, at) => ({
+      ...HELM,
+      catalogId: `helm_${String(at)}`,
+      labelKo: `철 투구 ${String(at)}`,
+    })),
+  }
+  const longHtml = renderToStaticMarkup(
+    <CatalogAdminPanel catalog={LONG} detail="" onRetire={noop} onEdit={noop} onCreate={noop} />,
+  )
+
+  it('★ 찾기 칸이 있다 — 쉰 종을 스크롤로 훑고 있었다', () => {
+    expect(MARKUP).toContain('class="dlist__find"')
+    expect(MARKUP).toContain('aria-label="이름·분류로 찾기"')
+  })
+
+  it('★ 줄이 그려진다 — 틀만 서고 칸이 안 그려지면 빈 목록과 같다', () => {
+    expect(listRowNames(MARKUP)).toEqual(VIEW.items.map((item) => item.labelKo))
+  })
+
+  it('★ 격자로 깐다 — 틀은 `display` 를 안 정하므로 안 주면 한 줄씩 쌓인다', () => {
+    expect(MARKUP).toContain('ds-cells')
+    expect(countRows(MARKUP)).toBe(VIEW.items.length)
+  })
+
+  it('★ 고름이 보조 기술에도 간다 — 색·명도만으로 알리지 않는다', () => {
+    expect(MARKUP).toContain('aria-pressed="false"')
+  })
+
+  it('★ 그림이 그대로 뜬다 — 틀로 옮기면서 떨어뜨리면 자리 코드만 남는다', () => {
+    // 「여기 그림 없잖아」(2026-09-17)를 잡던 것은 소스를 훑는 검사였는데, 그것은
+    // `<Thumb` 이 이 파일에 있을 때만 돈다. 틀로 옮긴 뒤에는 이 자리가 그것을 진다.
+    expect(MARKUP).toContain('ds-thumb__art')
+    // 칸 그림이라 `md` 다. 줄 앞 그림(`sm`)으로 떨어지면 옮기는 김에 그림이 작아진다.
+    expect(MARKUP).toContain('ds-thumb--md')
+  })
+
+  it('★ 한 장씩 깐다 — 전부 깔면 고른 칸의 상세와 등록 폼이 화면 밖이다', () => {
+    expect(countRows(longHtml)).toBe(GRID_PAGE)
+    expect(longHtml).toContain('더 보기')
+    expect(longHtml).toContain(`남은 ${String(LONG.items.length - GRID_PAGE)}종`)
+  })
+
+  it('★ 거른 뒤에도 전체가 몇인지 함께 적는다 — 질의가 가린 것을 「없다」로 읽는다', () => {
+    expect(MARKUP).toContain(`${String(VIEW.items.length)}종`)
+  })
+
+  it('★ 짧고 길이가 고정인 목록에는 「더 보기」가 없다 — 뒤에 더 있다는 거짓말이 된다', () => {
+    // 분류 셋 · 자리 여섯 · 등급 셋 · 접사 줄. 접사는 자르면 더 나쁘다 — 보이는 줄을
+    // 페이지가 줄이면 누른 줄과 갈리는 줄이 어긋나 **옆 줄을 갈아 버린다**.
+    const form = renderToStaticMarkup(
+      <CatalogForm grades={VIEW.grades} stats={VIEW.stats} onCreate={noop} />,
+    )
+    expect(form).not.toContain('더 보기')
+    expect(form).not.toContain('class="dlist__find"')
+    // 한 장보다 짧은 카탈로그에도 안 선다.
+    expect(MARKUP).not.toContain('더 보기')
   })
 })

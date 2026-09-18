@@ -98,11 +98,14 @@ export function EnemyRuleEditor(props: EnemyRuleEditorProps): React.JSX.Element 
           size="sm"
           dim
         />
+        {/* **연 것을 색으로만 적지 않는다.** `active` 가 `aria-pressed` 와 명도 한 단을
+            함께 싣는다 — 색·명도·보조기술 셋이라야 참/거짓이 한 채널에 안 걸린다. */}
         <div className="cat__tabs">
           {ids.map((id) => (
             <Button
               key={id}
               size="sm"
+              active={id === openId}
               variant={id === openId ? 'primary' : 'ghost'}
               onClick={() => {
                 setOpenId(id)

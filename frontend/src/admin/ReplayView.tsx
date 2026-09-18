@@ -108,58 +108,71 @@ export function ReplayView(props: ReplayViewProps): React.JSX.Element | null {
     <div className="replay">
       <div className="replay__bar">
         <span className="replay__title">{`리플레이 · #${String(replay.submissionId)}`}</span>
-        <ValueExpr
-          text={
-            rooms.length === 0
-              ? `${roomId} · ${String(floor)}장`
-              : `${findRoomTitle(ROOM_TEMPLATES, roomId)} · ${String(floor)}장 · 방 ${String(index + 1)} / ${String(rooms.length)}`
-          }
-          size="sm"
-          dim
-        />
-        <ValueExpr text={`시드 ${String(replay.seed)}`} size="sm" dim />
-        {/* **서버가 확정한 결과를 함께 적는다.** 재생이 같은 답을 내는지 눈으로 대조할 수
-            있어야 한다 — 어긋나면 재생의 버그가 아니라 두 코어가 갈렸다는 신호다 (G3). */}
-        <GlyphState
-          state={replay.outcome === 'PLAYER_WIN' ? 'true' : 'false'}
-          size="sm"
-          label={`그때: ${formatRunOutcome(replay.outcome)} · ${String(replay.ticks)}틱 · 체력 ${String(replay.playerHp)}`}
-        />
-        <span className="replay__spacer" />
-        {/* **다음 방으로 손이 넘긴다.** 타이머로 자동으로 넘기면 보려던 방이 지나가
-            버린다 — 재생은 관전이 아니라 들여다보는 일이다. */}
-        {cleared && index + 1 < rooms.length ? (
-          <Button
+        {/* **값 셋은 한 묶음이다.** 낱개로 세워 두면 좁은 화면에서 제각기 접혀 방·시드·
+            결과가 버튼 사이사이로 끼어 들어가고, 머리줄이 무엇이 값이고 무엇이 조작인지
+            모를 줄이 된다 — 사후 분석 머리줄(`.hud-post__head`)이 값을 한 칸에 몰아 둔
+            것과 같은 이유다. 묶어 두면 한 덩어리째로 아랫줄에 내려간다.
+            사이의 한 칸은 묶음에 gap 이 서기 전까지 값이 붙어 찍히지 않게 둔 것이고,
+            묶음이 flex 가 되면 공백만 있는 칸은 렌더되지 않는다. */}
+        <span className="replay__meta">
+          <ValueExpr
+            text={
+              rooms.length === 0
+                ? `${roomId} · ${String(floor)}장`
+                : `${findRoomTitle(ROOM_TEMPLATES, roomId)} · ${String(floor)}장 · 방 ${String(index + 1)} / ${String(rooms.length)}`
+            }
             size="sm"
-            variant="primary"
-            glyph="▶"
-            onClick={() => {
-              setIndex(index + 1)
-              setCleared(false)
-            }}
-          >
-            {resolveRoomFloor(replay.floor, index + 1, replay.roomsPerFloor) === floor
-              ? `다음 방 (${String(index + 2)} / ${String(rooms.length)})`
-              : `다음 장 (${String(floor + 1)}장)`}
-          </Button>
-        ) : null}
-        {index === 0 ? null : (
-          <Button
+            dim
+          />{' '}
+          <ValueExpr text={`시드 ${String(replay.seed)}`} size="sm" dim />{' '}
+          {/* **서버가 확정한 결과를 함께 적는다.** 재생이 같은 답을 내는지 눈으로 대조할 수
+              있어야 한다 — 어긋나면 재생의 버그가 아니라 두 코어가 갈렸다는 신호다 (G3). */}
+          <GlyphState
+            state={replay.outcome === 'PLAYER_WIN' ? 'true' : 'false'}
             size="sm"
-            variant="ghost"
-            glyph="↺"
-            title="처음 방부터 다시 본다"
-            onClick={() => {
-              setIndex(0)
-              setCleared(false)
-            }}
-          >
-            처음부터
+            label={`그때: ${formatRunOutcome(replay.outcome)} · ${String(replay.ticks)}틱 · 체력 ${String(replay.playerHp)}`}
+          />
+        </span>
+        {/* **조작도 한 묶음이다.** 버튼이 셋까지 늘어서, 낱개로 서 있으면 「제목 옆 한
+            자리」를 CSS 가 잡아 줄 수 없다 — 하나를 오른쪽 끝에 붙이는 순간 나머지가
+            다른 줄로 흩어진다. 오른쪽으로 미는 것도 이 묶음이 맡으므로 빈 칸을 세우던
+            `.replay__spacer` 는 없앴다. */}
+        <span className="replay__acts">
+          {/* **다음 방으로 손이 넘긴다.** 타이머로 자동으로 넘기면 보려던 방이 지나가
+              버린다 — 재생은 관전이 아니라 들여다보는 일이다. */}
+          {cleared && index + 1 < rooms.length ? (
+            <Button
+              size="sm"
+              variant="primary"
+              glyph="▶"
+              onClick={() => {
+                setIndex(index + 1)
+                setCleared(false)
+              }}
+            >
+              {resolveRoomFloor(replay.floor, index + 1, replay.roomsPerFloor) === floor
+                ? `다음 방 (${String(index + 2)} / ${String(rooms.length)})`
+                : `다음 장 (${String(floor + 1)}장)`}
+            </Button>
+          ) : null}{' '}
+          {index === 0 ? null : (
+            <Button
+              size="sm"
+              variant="ghost"
+              glyph="↺"
+              title="처음 방부터 다시 본다"
+              onClick={() => {
+                setIndex(0)
+                setCleared(false)
+              }}
+            >
+              처음부터
+            </Button>
+          )}{' '}
+          <Button size="sm" variant="ghost" glyph="✕" onClick={props.onClose}>
+            닫기
           </Button>
-        )}
-        <Button size="sm" variant="ghost" glyph="✕" onClick={props.onClose}>
-          닫기
-        </Button>
+        </span>
       </div>
       <div className="replay__body">
         {/* **그 판의 무기로 휘두른다.** 로드아웃이 스탯뿐이던 때는 지나간 판의 무기를
