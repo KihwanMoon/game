@@ -52,37 +52,15 @@ function readRule(selector: string): string {
   return start < 0 ? '' : css.slice(start, css.indexOf('}', start))
 }
 
-describe('가로 — 세 열이 화면 안에 들어온다', () => {
-  it('★ 열 폭의 합이 데스크톱 골격 안이다', () => {
-    // 320 + 1 + (본문) + 1 + 300 이 841px 부터 성립한다는 것이 토큰 주석의 실측이다.
-    const rules = Number.parseInt(readToken('--col-rules'), DECIMAL_RADIX)
-    const log = Number.parseInt(readToken('--col-log'), DECIMAL_RADIX)
-    expect(rules + log).toBeLessThan(841)
-  })
-})
-
-describe('세로 — 열이 없다', () => {
-  it('★ 토큰이 세로에서 열을 100% 로 만든다', () => {
-    // 이 값 자체는 의도된 것이다. 문제는 아래에서 본다.
-    expect(readToken('--col-rules')).toBe('100%')
-    expect(readToken('--col-log')).toBe('100%')
-  })
-
-  it('★ **세로에서 3열 그리드를 세우면 안 된다**', () => {
-    // 열이 100% 씩이므로 `--col-rules 1px 1fr 1px --col-log` 는 화면 폭의 2배가 넘는다.
-    // 그러면 열이 서로 밀려 내용이 겹치고 가로 스크롤이 생긴다.
-    //
-    // 토큰은 「세로에는 열이 없다」고 적어 두었는데 에디터 CSS 가 그 모드를 구현한 적이
-    // 없었다 — 토큰만 있고 그것을 읽는 쪽이 없는 상태였다.
-    //
-    // **고치는 자리는 토큰이다.** 화면 CSS 는 미디어쿼리를 스스로 적지 않는다 —
-    // 브레이크포인트가 한 곳에만 있어야 세 화면이 같은 경계에서 함께 바뀐다.
-    // **기본이 세로다** (2026-09-07). 예전에는 이 값이 미디어쿼리 안에 있었고 :root 가
-    // 3열이었다 — 이제 반대다.
-    expect(readToken('--editor-cols')).toBe('minmax(0, 1fr)')
-    expect(readToken('--editor-cols')).not.toContain('--col-rules')
-  })
-})
+// **데스크톱 3열을 지키던 검사 셋을 걷었다** (2026-09-18). 그 배치는 2026-09-07 에
+// 사라졌고, 그것을 재던 토큰 다섯(`--col-rules`·`--col-log`·`--editor-cols`·
+// `--editor-overflow`·`--bar-hint`)도 이번에 정본에서 걷었다 — `var()` 호출이 저장소
+// 전량에서 0건이었다.
+//
+// 검사들이 스스로 그 사실을 적고 있었다: "토큰만 있고 그것을 읽는 쪽이 없는 상태였다".
+// 없는 것을 지키는 단언은 통과 개수만 늘리고, 「이 축이 아직 산다」는 착각을 준다.
+//
+// 아래 「세로 바 높이의 합」은 남는다 — 그쪽은 지금도 실재하는 값을 잰다.
 
 describe('세로 바 높이의 합', () => {
   it('★ 상·하단 바가 화면 높이를 다 먹지 않는다', () => {
