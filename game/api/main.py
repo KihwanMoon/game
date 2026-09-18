@@ -19,6 +19,7 @@ from game.api.deps import get_pool, init_state
 from game.api.routes import (
     account,
     admin,
+    admin_arrivals,
     admin_bot_detail,
     admin_bots,
     admin_testers,
@@ -186,6 +187,7 @@ def create_app() -> FastAPI:
         discovery,
         admin,
         admin_bots,
+        admin_arrivals,
         admin_testers,
         admin_watch,
         catalog_admin,

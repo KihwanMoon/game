@@ -72,6 +72,9 @@ def test_an_unknown_grade_opens_nothing():
 # 경로가 어느 의존성으로 잠겨 있는가. **넓히려면 여기를 먼저 고쳐야 한다.**
 WANTED = {
     # 읽기. 등급을 안 가린다.
+    # 유입 목록 (U1, 2026-09-18). **읽기다** — 이 문으로는 아무것도 안 바뀐다.
+    # 다만 익명 계정의 생성 시각이 나가므로 운영자 아래로 내리지 않는다.
+    "/api/admin/arrivals": "resolve_admin",
     "/api/admin/overview": "resolve_admin",
     "/api/admin/catalog": "resolve_admin",
     "/api/admin/catalog/items": "resolve_admin",

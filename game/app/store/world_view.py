@@ -12,7 +12,6 @@ from dataclasses import dataclass
 
 from psycopg_pool import ConnectionPool
 
-from game.app.store.accounts import BOT_HANDLE_PREFIX
 from game.app.store.traffic import compute_conversion_pct, read_traffic_window
 
 
@@ -210,7 +209,8 @@ class WorldPulse:
     않고 있었다.
 
     **봇을 뺀다.** 봇 계정도 `account` 행이라 그동안 「다녀간 사람」에 섞여 있었다
-    (10/138 = 7%). 이름 접두어로 가른다 — 봇을 이름에 싣기로 한 것과 같은 규율이다.
+    (10/138 = 7%). `is_bot` 컬럼으로 가른다 — 이름 접두어는 화면에 싣는 표시이고 이쪽이
+    사실이다.
 
     **누적과 창을 함께 든다.** 누적 절대값은 계측을 갈아 끼우는 순간 점프해 예전 값과
     이어 붙일 수 없으므로, 화면이 기간을 밝힐 수 있어야 한다.
@@ -251,8 +251,11 @@ def read_world_pulse(pool: ConnectionPool, window_days: int = 7) -> WorldPulse:
             " (SELECT count(*) FROM run_submission),"
             " count(*) FILTER (WHERE created_at > now() - make_interval(days => %s))"
             " FROM account"
-            " WHERE deactivated_at IS NULL AND handle NOT LIKE %s",
-            (window_days, f"{BOT_HANDLE_PREFIX}%"),
+            # **컬럼으로 가른다.** 이름 접두어(`bot_`)는 화면에 봇임을 싣는 **표시**
+            # 채널이고, `is_bot` 이 사실이다. 관리자가 봇 이름을 고칠 수 있게 된 뒤로
+            # (U3) 이름으로 세면 개명 한 번에 수가 틀어진다.
+            " WHERE deactivated_at IS NULL AND NOT is_bot",
+            (window_days,),
         ).fetchone()
     if row is None:
         return WorldPulse(visitors=0, joined=0, fresh_today=0, fresh_week=0, runs=0)

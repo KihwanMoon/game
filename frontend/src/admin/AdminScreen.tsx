@@ -23,8 +23,10 @@ import { BotDetailPanel } from './BotDetail'
 import { DoppelPanel } from './DoppelPanel'
 import { ReplayView } from './ReplayView'
 import { BotPanel } from './BotPanel'
+import { ArrivalPanel } from './ArrivalPanel'
 import { TesterPanel } from './TesterPanel'
 import { WatchPanel } from './WatchPanel'
+import { readArrivals, type ArrivalList } from '../storage/arrivalAdmin'
 import { readInventory, type InventoryView } from '../storage'
 import {
   applyBotCoin,
@@ -76,6 +78,7 @@ type Tab =
   | 'catalog'
   | 'bots'
   | 'doppel'
+  | 'arrivals'
   | 'testers'
   | 'watch'
   | 'content'
@@ -99,6 +102,10 @@ const TABS: readonly { readonly id: Tab; readonly label: string }[] = [
   // 「몇 마리가 무엇을 하고 있는지」를 DB 로만 알 수 있고, 그러면 아무도 안 본다.
   { id: 'bots', label: '봇' },
   { id: 'doppel', label: '둔갑' },
+  // 새로 들어온 계정 (U1, 2026-09-18). **테스터 앞에 선다** — 유입이 분모의 원천이고,
+  // 테스터 탭은 그 안에서 사람이 골라 표시하는 자리다. 순서가 반대면 「5명 중 3명」의
+  // 5 가 어디서 왔는지가 화면에 없다.
+  { id: 'arrivals', label: '유입' },
   // G1 의 **분모**를 정하는 자리다. 익명으로 시작하는 게임이라 자동으로 세면 한 판
   // 내고 떠난 계정까지 테스터가 되고, 그 숫자는 「재미있었는가」를 안 잰다.
   { id: 'testers', label: '테스터' },
@@ -161,6 +168,7 @@ export function AdminScreen(): React.JSX.Element {
   const [botBag, setBotBag] = useState<InventoryView | undefined>(undefined)
   // 표시할 수 있는 계정들. **탭을 열 때만 읽는다** — 익명 계정이 계속 늘어나므로
   // 첫 화면에서 함께 읽으면 안 볼 목록을 늘 끌고 온다.
+  const [arrivals, setArrivals] = useState<ArrivalList | undefined>(undefined)
   const [testers, setTesters] = useState<TesterList | undefined>(undefined)
   // 쌓인 아이템 초안. **카탈로그와 갈라 둔다** — 올린 것은 아직 아이템이 아니라서,
   // 한 상태에 섞으면 화면이 "반영됐다" 로 보인다 (설계/9_에이전트_운영 §3.2).
@@ -304,6 +312,8 @@ export function AdminScreen(): React.JSX.Element {
                   void readCatalogDrafts(token).then(setDrafts)
                 } else if (item.id === 'watch') {
                   void readWatch(token).then(setWatch)
+                } else if (item.id === 'arrivals') {
+                  void readArrivals(token).then(setArrivals)
                 } else if (item.id === 'testers') {
                   void readTesters(token).then(setTesters)
                 } else if (item.id === 'bots') {
@@ -463,6 +473,8 @@ export function AdminScreen(): React.JSX.Element {
               void readWatch(token).then(setWatch)
             }}
           />
+        ) : tab === 'arrivals' ? (
+          <ArrivalPanel list={arrivals} />
         ) : tab === 'testers' ? (
           <TesterPanel
             list={testers}

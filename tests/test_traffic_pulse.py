@@ -10,6 +10,7 @@
 2. **출처가 값과 함께 남는다.** 계측을 갈아 끼우는 날 같은 날짜에 두 출처가 나란히
    있어야 한다 — 덮어쓰면 그날을 기점으로 선이 점프하고 이유를 아무도 모른다.
 3. **봇은 사람이 아니다.** 봇 계정도 `account` 행이라 그동안 「다녀간 사람」에 섞였다.
+   가르는 것은 `is_bot` 컬럼이다 — 이름은 바뀔 수 있고 컬럼은 사실이다.
 """
 
 import os
@@ -140,18 +141,18 @@ def test_window_cuts_by_date(clean_days):
 def test_pulse_excludes_bots(pool):
     """★ **봇은 「다녀간 사람」이 아니다.**
 
-    봇 계정도 `account` 행이라 그동안 누적 수치에 섞여 있었다(10/138 = 7%). 순위표·
-    경매·도감이 이름만 적으므로 봇을 이름에 싣기로 했고(`BOT_HANDLE_PREFIX`), 세는
-    쪽도 같은 규율을 따라야 한다.
+    봇 계정도 `account` 행이라 그동안 누적 수치에 섞여 있었다(10/138 = 7%).
+
+    **이름이 아니라 컬럼으로 가른다.** 접두어 `bot_` 은 화면에 봇임을 싣는 **표시**
+    채널이고 `is_bot` 이 사실이다 — 관리자가 봇 이름을 고칠 수 있게 된 뒤로(U3) 이름으로
+    세면 개명 한 번에 수가 틀어진다.
     """
-    from game.app.store.accounts import BOT_HANDLE_PREFIX
     from game.app.store.world_view import read_world_pulse
 
     pulse = read_world_pulse(pool)
     with pool.connection() as connection:
         row = connection.execute(
-            "SELECT count(*) FROM account WHERE deactivated_at IS NULL AND handle LIKE %s",
-            (f"{BOT_HANDLE_PREFIX}%",),
+            "SELECT count(*) FROM account WHERE deactivated_at IS NULL AND is_bot"
         ).fetchone()
     bots = int(row[0]) if row is not None else 0
     with pool.connection() as connection:
