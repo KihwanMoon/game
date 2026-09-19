@@ -88,6 +88,26 @@ export interface PlanHazardView {
  *
  * 색은 **방향**이다. 내가 하는 것과 나에게 오는 것은 읽는 사람에게 전혀 다른 사건이다.
  */
+/**
+ * 이번 틱에 **터진** 예고 칸 하나 (2026-09-19).
+ *
+ * **예고와 다른 것을 그린다.** 예고는 「올 것」이고 이것은 「왔다」다 — 같은 붉은 칸을
+ * 쓰면 관전자가 비켜설 수 있었는지를 못 읽는다. 예고는 해칭 + 남은 틱, 터짐은 **채운
+ * 칸 + 중심에서 뻗는 금**이다.
+ *
+ * **맞은 칸인지도 가른다.** 반경 안이 전부 붉으면 「누가 맞았나」가 안 보인다 — 말이
+ * 서 있던 칸만 진하게 남긴다 (색·꼴·명도 3중 표기).
+ */
+export interface PlanBlastView {
+  readonly x: number
+  readonly y: number
+  /** 그 칸에 말이 서 있었는가. 실제로 맞은 자리다. */
+  readonly isHit: boolean
+  /** 터진 예고의 중심. 뻗는 금의 방향이 여기서 나온다. */
+  readonly fromX: number
+  readonly fromY: number
+}
+
 export interface PlanLinkView {
   readonly fromX: number
   readonly fromY: number
@@ -176,6 +196,8 @@ export interface PlanScene {
   readonly links: readonly PlanLinkView[]
   /** 이번 틱에 수치가 움직인 자리들. */
   readonly pulses: readonly PlanPulseView[]
+  /** 이번 틱에 터진 예고 칸들. 없으면 빈 배열이다. */
+  readonly blasts: readonly PlanBlastView[]
 }
 
 /**
@@ -215,6 +237,43 @@ function convertEntityToActor(
  * @param foresightTicks 플레이어의 인지 폭.
  * @returns 행 우선 (y, x) 로 정렬된 예고 칸들.
  */
+/**
+ * 이번 틱에 터진 예고를 칸으로 편다.
+ *
+ * **엔진이 한 틱만 들고 있다** (`lastBlasts`). 판은 발동과 동시에 예고를 버리므로,
+ * 틱이 끝난 뒤에 도는 이 함수는 그것 없이는 무엇이 터졌는지 알 수 없다.
+ *
+ * @param engine 이번 틱을 막 끝낸 엔진.
+ * @returns 좌표 순으로 정렬된 터짐 칸들.
+ */
+function collectBlasts(engine: TickEngine): readonly PlanBlastView[] {
+  const byCell = new Map<string, PlanBlastView>()
+  for (const telegraph of engine.lastBlasts) {
+    // 중심은 칸 목록의 한가운데다. 예고가 중심을 따로 안 들고 있으므로 그것으로 잡는다 —
+    // 반경 0 이면 그 칸 자신이고, 직선이면 가운데 칸이다.
+    const center = telegraph.tiles[Math.floor(telegraph.tiles.length / 2)]
+    for (const tile of telegraph.tiles) {
+      const key = formatPositionKey(tile)
+      const standing = engine.state
+        .listActors()
+        .some((one) => one.position.x === tile.x && one.position.y === tile.y)
+      const seen = byCell.get(key)
+      // 같은 칸에 둘이 터졌으면 **맞은 쪽을 남긴다** — 진한 표시가 사라지면 안 된다.
+      if (seen !== undefined && seen.isHit) {
+        continue
+      }
+      byCell.set(key, {
+        x: tile.x,
+        y: tile.y,
+        isHit: standing,
+        fromX: center?.x ?? tile.x,
+        fromY: center?.y ?? tile.y,
+      })
+    }
+  }
+  return sortByKey([...byCell.values()], (blast) => [blast.y, blast.x])
+}
+
 function collectHazards(engine: TickEngine, foresightTicks: number): readonly PlanHazardView[] {
   const byCell = new Map<string, PlanHazardView>()
   for (const telegraph of engine.telegraphs.listActive()) {
@@ -460,5 +519,6 @@ export function buildPlanScene(engine: TickEngine): PlanScene {
     hazards: collectHazards(engine, foresight),
     links: buildLinksFromLog(engine, actors),
     pulses: buildPulsesFromLog(engine, actors),
+    blasts: collectBlasts(engine),
   }
 }

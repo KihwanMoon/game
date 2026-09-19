@@ -36,6 +36,7 @@ import type { LookTable, WeaponLook } from './weaponLook'
 import { buildSwing } from './weaponSwing'
 import type {
   PlanActorView,
+  PlanBlastView,
   PlanHazardView,
   PlanLinkView,
   PlanPulseView,
@@ -578,6 +579,62 @@ function drawHazard(
   ctx.restore()
 }
 
+/** 터짐 자국이 칸 안에서 차지하는 비율. 괘선과 안 닿게 조금 띄운다. */
+const BLAST_INSET_RATIO = 0.18
+
+/** 중심에서 뻗는 금의 수. 넷이면 도면의 「여기서 터졌다」로 읽히고, 그 이상은 장식이다. */
+const BLAST_RAYS = 4
+
+/** 맞은 칸의 채움 농도. 1 은 불투명이다 — 말 글리프가 그 위에 오므로 진하게 둔다. */
+const BLAST_HIT_ALPHA = 0.5
+
+/** 빈 칸의 채움 농도. 반경 안이 전부 같은 농도면 누가 맞았는지 안 보인다. */
+const BLAST_MISS_ALPHA = 0.16
+
+/**
+ * 터진 예고 칸 하나를 그린다 (2026-09-19).
+ *
+ * **예고와 다른 것을 그린다.** 예고는 역방향 해칭 + 남은 틱이고 이것은 **채운 칸 +
+ * 중심에서 뻗는 금**이다 — 같은 모양이면 관전자가 「올 것」과 「왔다」를 못 가른다.
+ *
+ * **맞은 칸을 진하게 둔다.** 반경 안이 전부 같은 농도면 누가 맞았는지 안 보인다.
+ * 농도(명도)와 금(꼴)과 색 셋으로 적는 것이 이 화면의 규율이다.
+ *
+ * **무작위가 없다.** 금의 방향은 중심과 칸의 관계에서만 나온다 — 같은 리플레이를 두 번
+ * 보면 같아야 한다 (`weaponSwing` 머리말의 계약 C4).
+ *
+ * @param ctx 그릴 문맥.
+ * @param blast 그릴 터짐 칸.
+ * @param theme 토큰 값들.
+ */
+function drawBlast(ctx: CanvasRenderingContext2D, blast: PlanBlastView, theme: PlanTheme): void {
+  const rect = getCellRect(blast.x, blast.y, theme)
+  const inset = rect.size * BLAST_INSET_RATIO
+  ctx.save()
+  ctx.globalAlpha = blast.isHit ? BLAST_HIT_ALPHA : BLAST_MISS_ALPHA
+  ctx.fillStyle = theme.hazard
+  ctx.fillRect(rect.left + inset, rect.top + inset, rect.size - inset * 2, rect.size - inset * 2)
+  ctx.restore()
+
+  // 중심에서 뻗는 금. 터진 칸 자신이 중심이면 네 귀퉁이로 벌어진다.
+  const midX = rect.left + rect.size / 2
+  const midY = rect.top + rect.size / 2
+  const awayX = blast.x - blast.fromX
+  const awayY = blast.y - blast.fromY
+  ctx.save()
+  ctx.strokeStyle = theme.hazard
+  ctx.lineWidth = theme.lineWidth
+  ctx.beginPath()
+  for (let at = 0; at < BLAST_RAYS; at += 1) {
+    const turn = (Math.PI * 2 * at) / BLAST_RAYS + (awayX === 0 && awayY === 0 ? Math.PI / 4 : 0)
+    const reach = rect.size / 2 - inset
+    ctx.moveTo(midX, midY)
+    ctx.lineTo(midX + Math.cos(turn) * reach, midY + Math.sin(turn) * reach)
+  }
+  ctx.stroke()
+  ctx.restore()
+}
+
 /**
  * 말 하나를 그린다.
  *
@@ -729,7 +786,7 @@ function drawActor(ctx: CanvasRenderingContext2D, actor: PlanActorView, theme: P
 /**
  * 장면 한 장을 그린다.
  *
- * 순서가 곧 층위다 — 바탕, 격자, 타일, 예고, 말. 예고가 타일 위에 오는 것은 예고가
+ * 순서가 곧 층위다 — 바탕, 격자, 타일, 예고, 터짐, 선, 말. 예고가 타일 위에 오는 것은 예고가
  * 지형이 아니라 **이번 틱의 사건**이기 때문이고, 말이 예고 위에 오는 것은 "그 칸에 누가
  * 서 있는가" 가 예고의 요점이기 때문이다.
  *
@@ -973,6 +1030,12 @@ export function renderPlan(
 
   for (const hazard of scene.hazards) {
     drawHazard(ctx, hazard, theme)
+  }
+  // **예고 위, 선 아래다.** 터짐은 예고와 같은 층위의 사건이되 「이미 일어난」 쪽이라
+  // 아직 올 것 위에 온다. 선보다 아래인 것은 누가 때렸는가가 무엇이 터졌는가보다
+  // 읽는 순서가 앞이기 때문이다.
+  for (const blast of scene.blasts) {
+    drawBlast(ctx, blast, theme)
   }
   // **말보다 먼저 긋는다.** 선이 글리프를 덮으면 무엇이 서 있는지 못 읽는다.
   for (const link of scene.links) {

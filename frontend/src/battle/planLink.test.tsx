@@ -192,7 +192,17 @@ describe('연결선 그리기', () => {
     const fake = buildFakeContext()
     renderPlan(
       fake.ctx as never,
-      { tick: 1, cols: 6, rows: 6, tiles: [], actors: [PLAYER, FOE], hazards: [], links, pulses: [] },
+      {
+        tick: 1,
+        cols: 6,
+        rows: 6,
+        tiles: [],
+        actors: [PLAYER, FOE],
+        hazards: [],
+        links,
+        pulses: [],
+        blasts: [],
+      },
       readPlanTheme(readFake),
     )
     return fake.calls
@@ -265,6 +275,7 @@ describe('연결선 그리기', () => {
             isStrike: false,
           },
         ],
+        blasts: [],
       },
       readPlanTheme(readFake),
     )
@@ -304,6 +315,7 @@ describe('연결선 그리기', () => {
               isStrike,
             },
           ],
+          blasts: [],
         },
         readPlanTheme(readFake),
         0.5,
@@ -345,6 +357,7 @@ describe('연결선 그리기', () => {
               isStrike: true,
             },
           ],
+          blasts: [],
         },
         readPlanTheme(readFake),
         0.5,
@@ -390,6 +403,7 @@ describe('연결선 그리기', () => {
             isStrike: true,
           },
         ],
+        blasts: [],
       },
       readPlanTheme(readFake),
       0.5,
@@ -479,6 +493,7 @@ describe('연결선 그리기', () => {
               isStrike: true,
             },
           ],
+          blasts: [],
         },
         readPlanTheme(readFake),
         0.5,

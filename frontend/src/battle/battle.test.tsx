@@ -281,6 +281,7 @@ describe('토큰 규율', () => {
       hazards: [],
       links: [],
       pulses: [],
+      blasts: [],
     }
     resizePlanCanvas(canvas as unknown as HTMLCanvasElement, scene, FAKE_THEME, 2)
     // **표시 크기를 인라인으로 박지 않는다.** 인라인은 스타일시트를 이기므로, 박아
@@ -362,6 +363,7 @@ describe('도면 렌더러', () => {
       hazards: [{ x: 0, y: 0, ticks: 2, isSensed: true }],
       links: [],
       pulses: [],
+      blasts: [],
     }
     const { ctx, calls, styles } = createRecordingContext()
     renderPlan(ctx, scene, FAKE_THEME)
@@ -384,6 +386,7 @@ describe('도면 렌더러', () => {
           hazards: [{ x: 0, y: 0, ticks: 3, isSensed }],
           links: [],
           pulses: [],
+          blasts: [],
         },
         FAKE_THEME,
       )
@@ -431,6 +434,7 @@ describe('도면 렌더러', () => {
       hazards: [],
       links: [],
       pulses: [],
+      blasts: [],
     }
     const { ctx, calls, styles } = createRecordingContext()
     renderPlan(ctx, scene, FAKE_THEME)
