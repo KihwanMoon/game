@@ -6,13 +6,18 @@
  * 예전에는 여기만 줄 목록이라 개체 하나가 이름·스탯·접사·전리품·규칙표 버튼으로 다섯
  * 덩이였고, 열 마리가 살아 있으면 표적을 고르는 일이 스크롤이 됐다.
  *
- * **몬스터 그림은 0장이다.** `design/art/items` 에는 아이템 형태만 있으므로 칸은 코드
- * 글자로 떨어진다. 몬스터 id 를 아이템 그림표에 넣지 않는 이유는 이문록 재주 칸과 같다 —
- * 접두사가 겹치는 날 도깨비 칸에 칼이 그려지고, 지금 안 겹치는 것은 우연이지 규칙이 아니다.
+ * **몬스터 그림이 생겼다** (2026-09-19, 23종). `design/art/monsters` 가 제 표를 따로
+ * 들고(`content/monsterArt.ts`) 적 id 를 통째로 쓴다 — 여기 적혀 있던 경고가 그 이유다:
+ * 아이템 그림표는 **접두사**로 고르므로 몬스터 id 를 거기 넣으면 접두사가 겹치는 날
+ * 도깨비 칸에 칼이 그려진다. 표를 나눠 두면 그 날이 안 온다.
+ *
+ * 그림이 없는 종은 `undefined` 로 떨어지고 칸은 지금처럼 코드 글자로 그린다.
  *
  * 순수 값이다. 렌더 검사가 훅 없이 셀 배치를 볼 수 있어야 한다.
  */
 import type { BestiaryEntry } from '../storage'
+
+import { findMonsterArt } from '../content/monsterArt'
 
 import type { CellFace } from './gridCell'
 import { clipCellLabel } from './inventoryCells'
@@ -61,6 +66,9 @@ export function buildBestiaryCells(
     // **등급은 글자로 적는다** — 의미색 셋은 이미 배정됐고, 색은 정보의 유일한 채널이
     // 될 수 없다. 실측 스탯(체·공·방)은 칸이 70px 라 잘리므로 상세가 낸다.
     fact: entry.tier,
+    // **종의 그림이지 개체의 그림이 아니다.** 접사·레벨은 같은 종이라도 개체마다
+    // 다른데 그림은 종이 정한다 — 그래서 `catalogId` 를 보고 `recordId` 를 안 본다.
+    art: findMonsterArt(entry.catalogId),
     isSealedSlot: false,
     entry,
   }))

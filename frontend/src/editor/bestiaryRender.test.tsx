@@ -81,10 +81,22 @@ describe('도감 격자', () => {
     ])
   })
 
-  it('몬스터 그림은 아직 0장이라 칸이 글자로 떨어진다', () => {
-    // 아이템 그림표에 몬스터 id 를 넣지 않는다 — 접두사가 겹치는 날 도깨비 칸에 칼이
-    // 그려진다 (이문록 재주 칸과 같은 이유).
-    expect(buildBestiaryCells(ENTRIES).map((cell) => cell.art)).toEqual([undefined])
+  it('★ 칸이 그 종의 그림을 단다 (2026-09-19, 23종)', () => {
+    // **여기 「그림은 아직 0장」이 박혀 있었다.** 그 시절 근거는 아이템 그림표에 몬스터
+    // id 를 넣으면 접두사가 겹치는 날 도깨비 칸에 칼이 그려진다는 것이었고, 그 근거는
+    // 지금도 맞다 — 답이 「안 그린다」에서 「표를 나눈다」로 바뀌었을 뿐이다
+    // (`content/monsterArt.ts`).
+    const [art] = buildBestiaryCells(ENTRIES).map((cell) => cell.art)
+    expect(art).toBeDefined()
+    expect(art).toContain('goblin_rusher')
+  })
+
+  it('★ 그림은 **종**이 정한다 — 접사·레벨이 달라도 같은 종은 같은 그림이다', () => {
+    const twin = buildBestiaryCells([
+      ENTRIES[0]!,
+      { ...ENTRIES[0]!, recordId: 2, level: 5, labelKo: '굶주린 고블린 돌격병' },
+    ])
+    expect(twin[0]!.art).toBe(twin[1]!.art)
   })
 
   it('★ 아무것도 안 골랐으면 규칙표가 어디서 나오는지 말한다', () => {

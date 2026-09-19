@@ -11,6 +11,10 @@
 **이름이 곧 파일 이름이고 `catalog_id` 의 접두사다.** 별칭 표를 두면 한쪽만
 고쳐지는 날이 온다 (`frontend/src/content/itemArt.ts`).
 
+**이름에 폴더가 붙어 있다.** 둘 다 `_sprites.py` 였는데, mypy 가 저장소 전량을
+평평한 모듈 이름으로 보므로 `Duplicate module named "_sprites"` 로 검사가 통째로
+멈췄다 — 패키지가 아니라 `sys.path` 로 읽는 파일이라 폴더가 이름을 안 갈라 준다.
+
 글자는 `_build.PALETTE` 가 정한다. 새 글자를 쓰려면 그쪽을 먼저 고친다.
 """
 
