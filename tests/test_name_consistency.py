@@ -49,14 +49,15 @@ def test_action_and_skill_agree_on_names(blocks: dict, skills: dict) -> None:
 
 
 def test_skill_param_values_have_definitions(blocks: dict, skills: dict) -> None:
-    """USE_SKILL 이 고르게 하는 재주는 전부 정의가 있다.
+    """USE_SKILL 이 고르게 하는 재주는 **전부** 정의가 있다.
 
-    ``SUMMON`` 만 빠져 있다 — 인자 목록에만 있고 행이 없어 이름을 화면이 손으로 든다.
-    늘어나면 그 화면만 영문 id 로 말하게 되므로, 하나로 묶어 둔다.
+    2026-09-19 까지 ``SUMMON`` 하나가 빠져 있었다 — 인자 목록에만 있고 행이 없어 이름을
+    화면이 손으로 들었다. 행을 채웠으므로 이제 예외가 없고, 예외 자리를 남겨 두지
+    않는다: 하나를 허용해 두면 다음 것이 그 자리에 조용히 들어온다.
     """
     defined = {one["id"] for one in skills["skills"]}
     values = next(one for one in blocks["actions"] if one["id"] == "USE_SKILL")["param"]["values"]
-    assert sorted(set(values) - defined) == ["SUMMON"]
+    assert sorted(set(values) - defined) == []
 
 
 def test_aliases_are_declared(blocks: dict) -> None:
