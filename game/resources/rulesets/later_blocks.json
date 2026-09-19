@@ -888,8 +888,7 @@
                 "cmp": ">",
                 "rhs": {
                   "stat": "initiative"
-                },
-                "lhs_param": "NEAREST"
+                }
               },
               {
                 "lhs": "target_distance",
@@ -924,7 +923,7 @@
         {
           "priority": 4,
           "cpu_cost": 1,
-          "action": "MOVE_TO_ENEMY",
+          "action": "APPROACH",
           "action_param": null,
           "target": "NEAREST",
           "set_flag": null,
