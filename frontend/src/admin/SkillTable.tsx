@@ -1,25 +1,35 @@
 /**
  * 스킬 표 편집기.
  *
- * **고칠 수 있는 것과 없는 것을 가른다.** 계수·쿨·사거리·예고는 수치라 여기서 고치면
- * 되지만, `family`·`shape`·`target_faction` 은 **실행기가 읽는 구조**다 — 그것을 바꾸면
- * 코어 코드가 함께 바뀌어야 하고, 안 바뀌면 그 스킬이 조용히 아무 일도 안 한다.
+ * **잠그는 대신 고를 수 있는 것을 줄였다** (2026-09-19). 예전에는 계수·쿨·사거리·예고
+ * 넷만 열고 `family`·`shape`·`target_faction` 을 잠갔다. 사유는 「실행기가 읽는 구조라
+ * 바꾸면 그 스킬이 조용히 아무 일도 안 한다」였고, **자유 입력이면 그 말이 맞다.**
  *
- * 그래서 구조 필드는 보여만 주고 잠근다. 잠근 이유를 화면에 적는 것이 이 편집기의 절반이다.
+ * 그런데 **고르개는 없는 값을 못 고른다.** 항목을 구현된 것만 담으면 같은 사고를
+ * 막으면서 화면이 쓸 만해진다 — 그래서 잠금을 풀고 `skillFields` 가 항목을 든다.
+ * 왜 이 항목뿐인지도 칸마다 적어 두고 화면이 그대로 보여 준다.
  *
- * **머리줄과 값줄은 칸 수가 같아야 한다** (2026-09-18). 둘은 서로 다른 격자다 — 머리줄은
- * `.skl` 의 자식이고 값줄은 목록 틀이 그리는 `<li>` 라, 칸 수가 어긋나면 어떤 폭을 줘도
- * 라벨과 값이 안 맞는다. 그래서 머리줄을 `SKILL_COLUMNS` 하나에서 그린다.
+ * **머리줄과 값줄은 규격 하나에서 나온다.** 둘은 서로 다른 격자라(머리줄은 `.skl` 의
+ * 자식, 값줄은 목록 틀이 그리는 `<li>`), 칸 수가 어긋나면 어떤 폭을 줘도 라벨과 값이
+ * 안 맞는다. `SKILL_FIELDS` 하나가 양쪽을 그린다.
  *
- * **찾기는 켜고 페이지는 안 켠다** (2026-09-18). 열네 줄이라 고칠 재주 하나를 눈으로
- * 훑고 있었지만, 고치는 표에서 줄이 「더 보기」 뒤로 숨으면 무엇을 고쳤는지 놓친다.
+ * **찾기는 켜고 페이지는 안 켠다.** 고치는 표에서 줄이 「더 보기」 뒤로 숨으면 무엇을
+ * 고쳤는지 놓친다.
  *
- * **저장은 초안이다.** 여기서 게임이 바뀌지 않는다.
+ * **저장은 초안이다.** 여기서 게임이 바뀌지 않는다 — 발행이 사람 손을 타는 것이 설계다.
  */
 import { useState } from 'react'
 
+import {
+  SKILL_COLUMNS,
+  SKILL_FIELDS,
+  buildSkillFile,
+  readFieldText,
+  type SkillField,
+} from './skillFields'
 import { DataList } from '../editor/DataList'
-import { Button, GlyphState, Panel, ValueExpr } from '../ds'
+import { EditField } from '../editor/EditParts'
+import { Button, Panel, ValueExpr } from '../ds'
 
 export interface SkillTableProps {
   /** 스킬 파일 전체. `skills` 배열을 담고 있다. */
@@ -27,22 +37,7 @@ export interface SkillTableProps {
   readonly onSave: (text: string, note: string) => void
 }
 
-/** 여기서 고칠 수 있는 수치. 나머지는 실행기가 읽는 구조라 잠근다. */
-export const EDITABLE_FIELDS: readonly string[] = ['coef_pct', 'cooldown', 'range', 'telegraph']
-
-/** 잠근 필드. 바꾸면 코어 코드가 함께 바뀌어야 한다. */
-export const LOCKED_FIELDS: readonly string[] = ['family', 'shape', 'target_faction']
-
-/**
- * 머리줄 칸. **값줄과 같은 수여야 한다** — 앞의 둘이 id·계열이고 뒤가 고칠 수 있는 수치다.
- *
- * 손으로 두 번 적지 않는 이유가 그것이다. 고칠 수치를 하나 늘리면 값줄에는 입력칸이
- * 하나 더 서는데 머리줄을 따로 적어 두면 거기만 안 따라오고, 그 뒤로는 모든 값이 한 칸씩
- * 밀린 채로 읽힌다.
- */
-export const SKILL_COLUMNS: readonly string[] = ['id', '계열', ...EDITABLE_FIELDS]
-
-const DECIMAL_RADIX = 10
+export { SKILL_COLUMNS, SKILL_FIELDS, buildSkillFile }
 
 /**
  * 재주 하나를 찾기 칸이 보는 한 줄로 적는다.
@@ -57,34 +52,63 @@ export function skillSearchText(skill: Record<string, unknown>): string {
   return `${String(skill.id ?? '')} ${String(skill.label_ko ?? '')}`
 }
 
+/** 칸 하나를 그리는 데 드는 것. */
+interface CellProps {
+  readonly row: Record<string, unknown>
+  readonly field: SkillField
+  readonly onEdit: (field: SkillField, text: string) => void
+}
+
 /**
- * 고친 값을 파일에 다시 넣는다.
+ * 칸 하나를 그 종류대로 그린다.
  *
- * **그 스킬만 바꾸고 나머지는 원본 객체 그대로 둔다.** 통째로 다시 쓰면 `_note` 처럼
- * 아무도 안 읽지만 사람이 적어 둔 것이 사라진다.
- *
- * @param file 스킬 파일.
- * @param skillId 고친 스킬.
- * @param field 고친 필드.
- * @param value 새 값. 빈 문자열은 null 로 넣는다 — `range` 가 null 이면 사거리를 엔티티가 정한다.
- * @returns 새 파일 절.
+ * @param props 줄·규격·변경 콜백.
+ * @returns 렌더 트리.
  */
-export function buildSkillFile(
-  file: Record<string, unknown>,
-  skillId: string,
-  field: string,
-  value: string,
-): Record<string, unknown> {
-  const rows = (file.skills ?? []) as Record<string, unknown>[]
-  const parsed = value.trim() === '' ? null : Number.parseInt(value, DECIMAL_RADIX)
-  return {
-    ...file,
-    skills: rows.map((row) =>
-      String(row.id) === skillId
-        ? { ...row, [field]: Number.isNaN(parsed) ? row[field] : parsed }
-        : row,
-    ),
+function SkillCell(props: CellProps): React.JSX.Element {
+  const { row, field } = props
+  const text = readFieldText(row, field)
+  const id = String(row.id)
+  const label = `${id} ${field.label}`
+
+  if (field.kind === 'select') {
+    return (
+      <EditField
+        label={label}
+        value={text}
+        options={[...(field.options ?? [])]}
+        onChange={(value) => {
+          props.onEdit(field, value)
+        }}
+      />
+    )
   }
+  if (field.kind === 'toggle') {
+    return (
+      <label className="skl__toggle">
+        <input
+          type="checkbox"
+          aria-label={label}
+          checked={text === 'true'}
+          onChange={(event) => {
+            props.onEdit(field, event.target.checked ? 'true' : 'false')
+          }}
+        />
+        <span aria-hidden="true">{text === 'true' ? '✕ 끊김' : '· 버팀'}</span>
+      </label>
+    )
+  }
+  return (
+    <input
+      className="cat__input skl__cell"
+      aria-label={label}
+      inputMode={field.kind === 'number' ? 'numeric' : undefined}
+      value={text}
+      onChange={(event) => {
+        props.onEdit(field, event.target.value)
+      }}
+    />
+  )
 }
 
 /**
@@ -102,11 +126,16 @@ export function SkillTable(props: SkillTableProps): React.JSX.Element {
   return (
     <Panel title="재주" meta={`${String(rows.length)}종`} tone="panel" padded scroll>
       <div className="cat">
-        <GlyphState
-          state="blocked"
-          size="sm"
-          label={`계열·형태·진영은 실행기가 읽는 구조라 못 고친다 (${LOCKED_FIELDS.join(' · ')})`}
-        />
+        {/* **왜 이 항목뿐인지를 표 위에 적는다.** 고르개만 두면 「왜 다른 값은 없나」에
+            답이 없고, 그 답이 곧 잠금을 푼 근거다. */}
+        <dl className="skl__why">
+          {SKILL_FIELDS.filter((one) => one.why !== undefined).map((one) => (
+            <div key={one.path}>
+              <dt>{one.label}</dt>
+              <dd>{one.why}</dd>
+            </div>
+          ))}
+        </dl>
         <div className="skl">
           <div className="skl__head">
             {SKILL_COLUMNS.map((column) => (
@@ -119,14 +148,9 @@ export function SkillTable(props: SkillTableProps): React.JSX.Element {
           {file === undefined ? (
             <ValueExpr text="재주 파일을 불러오는 중이다" size="sm" dim />
           ) : (
-            /* **페이지는 안 켠다.** 고치는 표에서 줄이 「더 보기」 뒤로 숨으면 무엇을
-               고쳤는지 놓친다. 찾기는 켠다 — 거르기는 줄을 가리기만 하고 고친 값은
-               초안에 그대로 남는다. */
             <DataList
               items={rows}
               rowKey={(row) => String(row.id)}
-              // **틀은 `display` 를 안 정한다.** 값줄이 머리줄과 같은 격자를 써야 하는 것은
-              // 이 화면의 배치이므로 여기서 이름만 준다.
               listClass="skl__rows"
               rowClass="skl__row"
               emptyText="고칠 재주가 없다"
@@ -135,20 +159,14 @@ export function SkillTable(props: SkillTableProps): React.JSX.Element {
               renderRow={(row) => (
                 <>
                   <span className="cat__name">{String(row.id)}</span>
-                  {/* 잠근 값은 흐리게 — 못 고친다는 것이 눈에 보여야 한다. */}
-                  <ValueExpr text={String(row.family ?? '')} size="sm" dim />
-                  {EDITABLE_FIELDS.map((field) => (
-                    <input
-                      className="cat__input skl__cell"
-                      key={field}
-                      inputMode="numeric"
-                      aria-label={`${String(row.id)} ${field}`}
-                      value={
-                        row[field] === null || row[field] === undefined ? '' : String(row[field])
-                      }
-                      onChange={(event) => {
+                  {SKILL_FIELDS.map((field) => (
+                    <SkillCell
+                      key={field.path}
+                      row={row}
+                      field={field}
+                      onEdit={(one, text) => {
                         if (file !== undefined) {
-                          setDraft(buildSkillFile(file, String(row.id), field, event.target.value))
+                          setDraft(buildSkillFile(file, String(row.id), one, text))
                         }
                       }}
                     />

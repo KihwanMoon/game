@@ -20,14 +20,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import { ROOM_PAGE, RoomGrid, applyPaint, buildRoomFile, roomSearchText } from './RoomGrid'
-import {
-  EDITABLE_FIELDS,
-  LOCKED_FIELDS,
-  SKILL_COLUMNS,
-  SkillTable,
-  buildSkillFile,
-  skillSearchText,
-} from './SkillTable'
+import { SKILL_COLUMNS, SKILL_FIELDS, SkillTable, skillSearchText } from './SkillTable'
 import roomsRaw from '@resources/rooms/templates.json'
 import skillsRaw from '@resources/balance/skills.json'
 
@@ -81,34 +74,26 @@ function sliceInner(markup: string, open: string, close: string): string {
 }
 
 describe('스킬 표', () => {
-  it('★ 못 고치는 필드를 못 고친다고 적는다', () => {
+  it('★ 왜 이 항목뿐인지를 적는다 — 고르개만 두면 「왜 다른 값은 없나」에 답이 없다', () => {
+    // **잠금을 풀면서 사유가 옮겨 갔다** (2026-09-19). 예전에는 계열·형태·진영을
+    // 통째로 잠그고 「실행기가 읽는 구조라 못 고친다」고 적었는데, 고르개는 없는 값을
+    // 못 고르므로 잠글 이유가 사라졌다 — 대신 **왜 이 항목뿐인지**를 적는다.
     const html = renderToStaticMarkup(<SkillTable file={SKILLS} onSave={noop} />)
-    for (const field of LOCKED_FIELDS) {
-      expect(html).toContain(field)
+    expect(html).toContain('셀렉터 검증이 이것을 본다')
+    expect(html).toContain('사람이 표를 읽는 이름표다')
+  })
+
+  it('★ 고르는 칸은 고르개로 선다 — 자유 입력이면 잠근 이유가 그대로 돌아온다', () => {
+    const html = renderToStaticMarkup(<SkillTable file={SKILLS} onSave={noop} />)
+    // 시전 규율 네 값이 항목으로 서 있다.
+    for (const value of ['LOCK', 'HOLD', 'CANCEL', 'FREE']) {
+      expect(html).toContain(`value="${value}"`)
     }
-    expect(html).toContain('실행기가 읽는 구조')
   })
 
-  it('★ 고친 스킬만 바뀌고 나머지는 원본 객체 그대로다', () => {
-    const rows = SKILLS.skills as Record<string, unknown>[]
-    const next = buildSkillFile(SKILLS, 'SKILL_1', 'coef_pct', '200')
-    const changed = (next.skills as Record<string, unknown>[]).find((row) => row.id === 'SKILL_1')
-    expect(changed?.coef_pct).toBe(200)
-    const other = (next.skills as Record<string, unknown>[]).find((row) => row.id === 'ATTACK')
-    expect(other).toBe(rows.find((row) => row.id === 'ATTACK'))
-  })
-
-  it('★ 빈 칸은 null 이다 — range 가 null 이면 사거리를 엔티티가 정한다', () => {
-    const next = buildSkillFile(SKILLS, 'SKILL_1', 'range', '')
-    const changed = (next.skills as Record<string, unknown>[]).find((row) => row.id === 'SKILL_1')
-    expect(changed?.range).toBeNull()
-  })
-
-  it('숫자가 아니면 값을 안 바꾼다 — 반쯤 친 글자가 값을 지우면 안 된다', () => {
-    const before = (SKILLS.skills as Record<string, unknown>[]).find((row) => row.id === 'SKILL_1')
-    const next = buildSkillFile(SKILLS, 'SKILL_1', 'coef_pct', 'abc')
-    const changed = (next.skills as Record<string, unknown>[]).find((row) => row.id === 'SKILL_1')
-    expect(changed?.coef_pct).toBe(before?.coef_pct)
+  it('★ 한글 이름을 고칠 수 있다 — 판정에 안 닿으므로 잠글 이유가 없다', () => {
+    const html = renderToStaticMarkup(<SkillTable file={SKILLS} onSave={noop} />)
+    expect(html).toContain('METEOR 한글 이름')
   })
 
   it('★ 머리줄과 값줄의 칸 수가 같다 — 다르면 어떤 폭을 줘도 라벨과 값이 어긋난다', () => {
@@ -122,8 +107,8 @@ describe('스킬 표', () => {
     expect(row).toBe(head)
   })
 
-  it('★ 고칠 수치가 늘면 머리줄도 함께 는다 — 칸 이름을 두 곳에 적지 않는다', () => {
-    expect(SKILL_COLUMNS.slice(-EDITABLE_FIELDS.length)).toEqual([...EDITABLE_FIELDS])
+  it('★ 칸이 늘면 머리줄도 함께 는다 — 칸 이름을 두 곳에 적지 않는다', () => {
+    expect(SKILL_COLUMNS.slice(1)).toEqual(SKILL_FIELDS.map((one) => one.label))
   })
 
   it('★ 재주를 이름과 id 둘 다로 거른다 — id 로만 거르면 「불 굿」을 못 찾는다', () => {
@@ -141,7 +126,9 @@ describe('스킬 표', () => {
   it('★ 줄을 하나도 감추지 않는다 — 고치는 표에서 「더 보기」는 고친 것을 숨긴다', () => {
     const html = renderToStaticMarkup(<SkillTable file={SKILLS} onSave={noop} />)
     const total = (SKILLS.skills as Record<string, unknown>[]).length
-    expect(html.match(/<li[\s>]/g)?.length ?? 0).toBe(total)
+    // **표의 줄만 센다.** 예전에는 `<li` 를 통째로 셌는데, 칸마다 사유를 적는 목록이
+    // 표 위에 서면서 그것까지 섞였다 — 세려던 것은 처음부터 `skl__row` 였다.
+    expect(html.match(/class="skl__row"/g)?.length ?? 0).toBe(total)
     expect(html).not.toContain('더 보기')
   })
 

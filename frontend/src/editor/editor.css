@@ -1499,7 +1499,14 @@
 
      값은 제일 긴 글자에서 나왔다 — id `HEX_FIREATTACK`, 라벨 `telegraph`·`coef_pct`.
      합이 화면보다 넓으면 표가 가로로 스크롤한다: 그것이 의도다. */
-  --skl-cols: 7rem 5rem repeat(4, 5rem);
+  /* **칸이 열넷이 됐다** (2026-09-19). 잠가 두었던 성질(주인·계열·형태·진영)을
+     고르개로 열고 한글 이름·시전 규율·피격 취소·분류를 더했다. 고르개 항목은 짧은
+     말만 들어서(사유는 표 위에 한 번 적는다) 칸이 안 넓어진다.
+
+     id · 이름 · 주인 · 계열 · 형태 · 진영 · 맞는 것 · 계수 · 반경 · 쿨 · 사거리 · 예고 ·
+     시전 규율 · 피격 · 거는 상태 · 상태 틱 · 회복% · 감쇠% · 감쇠 틱 · 분류.
+     예고·경직이 선/후 한 쌍이다 (2026-09-19). */
+  --skl-cols: 7rem 6rem 5rem 6rem 5rem 4rem 6rem repeat(6, 4rem) 5rem 5rem 6rem repeat(4, 4rem) 8rem;
   display: flex;
   flex-direction: column;
   gap: var(--sp-1);
@@ -1528,6 +1535,48 @@
   font-size: var(--fs-mono-s);
   border-bottom: var(--bw) solid var(--line);
   padding-bottom: var(--sp-1);
+}
+
+/* 왜 이 항목뿐인가. **표 위에 한 번만 적는다** — 항목마다 달면 고르개가 넓어져
+   표가 가로로 길어지고, 같은 말이 열네 번 되풀이된다. */
+.skl__why {
+  margin: 0 0 var(--sp-2);
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--sp-1);
+  color: var(--text-dim);
+  font-size: var(--fs-s);
+}
+
+.skl__why > div {
+  display: flex;
+  gap: var(--sp-1);
+}
+
+.skl__why dt {
+  color: var(--text-body);
+  font-weight: 500;
+  flex: 0 0 auto;
+}
+
+.skl__why dd {
+  margin: 0;
+}
+
+/* 피격 취소. **색·글리프·말 셋으로 적는다** — 체크박스만 두면 켜짐/꺼짐이 한 채널이다. */
+.skl__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.skl__toggle input:checked + span {
+  color: var(--text-danger);
 }
 
 .skl__cell {
