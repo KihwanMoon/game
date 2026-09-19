@@ -22,6 +22,7 @@ import blocksRaw from '@resources/balance/blocks.json'
 import skillsRaw from '@resources/balance/skills.json'
 import roomsRaw from '@resources/rooms/templates.json'
 import enemiesRaw from '@resources/rulesets/enemies.json'
+import { parseBalance } from '../core/services/runBattle'
 
 const RAW = {
   assets: {
@@ -86,5 +87,40 @@ describe('콘텐츠 팩', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => RAW }))
     expect(await loadContentPack()).toBe(true)
     expect(readActivePack().generation).toBe(7)
+  })
+})
+
+describe('발행된 팩이 전투까지 간다 (2026-09-19)', () => {
+  /**
+   * **한 번도 발행한 적이 없어서 아무도 몰랐다.** 운영 DB 가 `published=0 · drafts=0`
+   * 이라 이 경로가 한 번도 안 돌았고, 그동안 번들 쪽만 맞춰져 있었다.
+   *
+   * 어긋난 자리는 하나였다 — 번들은 `resources.BALANCE` 가 `{...balance.json, skills:
+   * skills.json.skills}` 로 합쳐져 있는데 서버 팩은 두 자산을 **따로** 보내고,
+   * `parseContentPack` 이 스킬에서 버전 숫자만 가져갔다. 그 팩이 `App.tsx` 의
+   * `ACTIVE.balance` 로 그대로 가고 `parseBalance` 의 `readArray(raw, 'skills')` 가
+   * 던진다 — 발행하는 순간 전투 화면이 죽는다.
+   *
+   * **위의 「코어의 로더로 읽는다」가 이것을 못 잡는다.** 그쪽은 팩이 만들어지는 것까지
+   * 보고, 이쪽은 그 팩을 **전투가 받는 것**까지 본다.
+   */
+  it('★ 전투가 그 팩으로 돈다 — 발행하는 순간 화면이 죽으면 안 된다', () => {
+    const pack = parseContentPack(RAW)
+    expect(pack).toBeDefined()
+    // `App.tsx` 가 하는 것과 같다: const BALANCE = ACTIVE.balance
+    expect(() => parseBalance(pack!.balance)).not.toThrow()
+  })
+
+  it('★ 스킬 절이 밸런스에 합쳐진다 — 파이썬 `load_balance` 와 같은 규약', () => {
+    const skills = parseBalance(parseContentPack(RAW)!.balance).skills
+    expect(skills.length).toBe(skillsRaw.skills.length)
+    // 버전만 가져가고 절을 빠뜨리면 여기서 빈 배열이 된다.
+    expect(skills.some((one) => one.id === 'METEOR')).toBe(true)
+  })
+
+  it('★ 번들과 같은 스킬 수를 낸다 — 두 길이 다른 게임을 돌리면 안 된다', () => {
+    expect(parseBalance(parseContentPack(RAW)!.balance).skills.length).toBe(
+      parseBalance(BUNDLED_PACK.balance).skills.length,
+    )
   })
 })

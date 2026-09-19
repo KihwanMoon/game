@@ -31,6 +31,15 @@ import type {
   RuleSet,
 } from '../core/schemas'
 
+/**
+ * 서버가 보내는 스킬 절. **버전만 읽으면 안 된다** — 절 자체가 밸런스로 합쳐져야
+ * 코어가 그 스킬로 돈다 (파이썬 `load_balance` 와 같은 규약).
+ */
+interface RawSkillFile {
+  readonly skill_list_version: number
+  readonly skills: readonly unknown[]
+}
+
 /** 지금 도는 자산 한 벌. */
 export interface ContentPack {
   readonly catalog: BlockCatalog
@@ -82,8 +91,18 @@ export function parseContentPack(raw: RawContentPack): ContentPack | undefined {
   try {
     const assets = raw.assets
     const catalog = loadBlockCatalog(assets.blocks as RawBlockCatalog)
-    const balance = assets.balance as RawBalanceFile
-    const skills = assets.skills as { skill_list_version: number }
+    const skills = assets.skills as RawSkillFile
+    // **스킬을 밸런스에 합친다.** 파이썬 `load_balance` 가 하는 것과 같은 일이고, 번들
+    // 쪽은 `resources.BALANCE` 가 이미 그렇게 만들어져 있다 — 여기만 빠져 있었다.
+    //
+    // **빠져 있으면 발행하는 순간 전투 화면이 죽는다.** `parseBalance` 의
+    // `readArray(raw, 'skills')` 가 던지기 때문이고(`balance.json 의 skills 절이 배열이
+    // 아니다`), 그 팩이 `App.tsx` 의 `ACTIVE.balance` 로 그대로 간다. 한 번도 발행한 적이
+    // 없어서(운영 `published=0`) 아직 안 터졌을 뿐이다 — 2026-09-19 에 재현해서 고쳤다.
+    const balance: RawBalanceFile = {
+      ...(assets.balance as RawBalanceFile),
+      skills: skills.skills,
+    }
     const rooms = assets.rooms as RawRoomFile & { room_list_version: number }
     const enemies = assets.enemies as RawRuleSetFile & { enemy_list_version: number }
     return {
