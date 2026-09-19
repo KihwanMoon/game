@@ -30,26 +30,20 @@ export interface VitalRow {
 }
 
 /**
- * 쿨타임 이름표. 코어의 행동 id 를 사람이 읽는 말로.
- *
- * **재주 이름은 여기 안 적는다** — 정본은 `skills.json` 이고 `readSkillName` 이 읽는다.
- * 그쪽은 **발행된 팩**을 본다: 관리자가 이름을 고쳐 발행하면 이 줄도 따라 바뀐다.
- * 손으로 적어 두면 이름을 고칠 때 이 줄만 옛 이름으로 남는다 (2026-09-15).
- */
-const COOLDOWN_EXTRA: ReadonlyMap<string, string> = new Map([
-  ['SUMMON', '소환'],
-])
-
-/**
  * 그 쿨타임 줄에 적을 이름.
  *
+ * **재주 이름은 여기 안 적는다** — 정본은 `skills.json` 이고 그쪽은 **발행된 팩**을
+ * 본다. 관리자가 이름을 고쳐 발행하면 이 줄도 따라 바뀐다.
+ *
+ * 한때 여기 손으로 적은 표가 있었고, 그것이 정본 **위에** 얹혀 있어서 발행한
+ * 「돌려치기」가 이 줄에서는 「광역」이었다 (2026-09-19). 정본이 셋 다 이름을 갖게
+ * 되면서 표가 비었고, 빈 표는 두지 않는다.
+ *
  * @param id 행동·재주 id.
- * @returns 한글 이름. 모르면 id.
+ * @returns 한글 이름. 정본에 없으면 id 그대로 — 빈 칸보다 낫다.
  */
 export function readCooldownLabel(id: string): string {
-  // **정본이 먼저다.** 예전에는 이 표가 위에 있어서, 정본에 이름이 생긴 뒤에도
-  // 그 줄만 옛 이름으로 남았다 — 발행한 「돌려치기」가 여기서는 「광역」이었다.
-  return findSkillName(id) ?? COOLDOWN_EXTRA.get(id) ?? id
+  return findSkillName(id) ?? id
 }
 
 /** 상태 이름표. 코어의 상태 id 를 사람이 읽는 말로. */
