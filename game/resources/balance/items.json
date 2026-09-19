@@ -1,6 +1,6 @@
 {
   "_comment": "아이템 카탈로그 (docs/설계/4_아이템). 접사 굴림은 아직 없다 — 시드 파생식이 결정 대기(#02)이고, 정하기 전에 굴린 아이템은 나중에 검증할 수 없다. 여기 있는 것은 굴림 없이 값이 고정된 정의뿐이다. 요구조건이 참조하는 능력치는 지금 코어에 실제로 있는 것만 쓴다 — level·str 같은 축은 #10·#11 이 정해진 뒤에 들어온다. grants_skill 은 그 장비가 여는 스킬이다.",
-  "item_list_version": 9,
+  "item_list_version": 10,
   "items": [
     {
       "id": "sword_short",
@@ -1319,6 +1319,530 @@
         "CURSED"
       ],
       "_note": "조준 투구(상급)의 유물. **사거리 접사가 규칙표를 바꾸는 자리다** — 무기를 안 바꿔도 `적거리 <= 사거리` 가 한 칸 더 멀리서 참이 된다(결정 #13 의 반대편). 예지 투구가 CPU 2 를 주고 체력을 올리는 데 견줘, 이쪽은 CPU 3 과 사거리를 주고 체력을 20 깎는다."
+    },
+    {
+      "id": "boots_ward",
+      "kind": "EQUIPMENT",
+      "label_ko": "부적 미투리",
+      "slot": "FEET",
+      "grade": "RELIC",
+      "min_floor": 8,
+      "affixes": [
+        {
+          "stat": "scroll_slots",
+          "flat": 1,
+          "label_ko": "부적 갈피"
+        },
+        {
+          "stat": "initiative",
+          "flat": 7,
+          "label_ko": "미끄러운 삼"
+        },
+        {
+          "stat": "hp_max",
+          "flat": -12,
+          "label_ko": "[헐거움] 얇은 총"
+        }
+      ],
+      "tags": [
+        "POUCH",
+        "CURSED"
+      ],
+      "_note": "**2막이 요구하는 첫 답이 주문서 칸이다.** 붉은 칸(11장)과 옴(13장)에서 빠져나가는 길이 축지부 하나인데, 묶였을 때 그것만은 막히지 않는다 (`simulation/plan.STATUS_ROOT` — 「빠져나갈 길이 하나는 있어야 한다」). 8장에 두는 것은 2막 문턱 앞이라서다: 2막에 들어가서야 없다는 걸 알면 늦는다."
+    },
+    {
+      "id": "bow_sentinel",
+      "kind": "EQUIPMENT",
+      "label_ko": "파수 활",
+      "slot": "WEAPON_MAIN",
+      "hands": "TWO",
+      "grade": "RELIC",
+      "min_floor": 11,
+      "attack_range": 5,
+      "affixes": [
+        {
+          "stat": "attack",
+          "flat": 5,
+          "label_ko": "긴 시위"
+        },
+        {
+          "stat": "initiative",
+          "flat": 3,
+          "label_ko": "선 자리"
+        },
+        {
+          "stat": "cpu_budget",
+          "flat": -2,
+          "label_ko": "[무거움] 겨누는 셈"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "initiative",
+          "min": 60
+        }
+      ],
+      "tags": [
+        "RANGED",
+        "CURSED"
+      ],
+      "_note": "**주술형을 예고가 완성되기 전에 끊는 사거리다.** 굿은 전부 2~3틱 예고이고 맞으면 끊긴다 — 조종만 빼고(`HEX_KNELL`). 사거리 5 면 무당의 사거리 안에 안 들어가고도 끊을 수 있다. 대가는 CPU 2 라, 사거리를 사면 규칙 한 줄을 내준다."
+    },
+    {
+      "id": "armor_talisman",
+      "kind": "EQUIPMENT",
+      "label_ko": "부적 배자",
+      "slot": "BODY",
+      "grade": "RELIC",
+      "min_floor": 11,
+      "affixes": [
+        {
+          "stat": "defense",
+          "flat": 7,
+          "label_ko": "겹친 부적"
+        },
+        {
+          "stat": "hp_max",
+          "flat": 18,
+          "label_ko": "두꺼운 배자"
+        },
+        {
+          "stat": "scroll_slots",
+          "flat": 2,
+          "label_ko": "속 갈피 둘"
+        },
+        {
+          "stat": "initiative",
+          "flat": -7,
+          "label_ko": "[둔중함] 껴입은 무게"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "hp_max",
+          "min": 120
+        }
+      ],
+      "tags": [
+        "POUCH",
+        "CURSED"
+      ],
+      "_note": "주문서 둘 — 호신부와 축지부를 함께 든다. 약방 배자(상급)가 물약 하나·주문서 하나로 나누어 주는 것을 이쪽은 주문서에 몰아준다. **고르는 축이 「무엇을 두 장 들 것인가」가 되는 자리다.**"
+    },
+    {
+      "id": "helm_lead",
+      "kind": "EQUIPMENT",
+      "label_ko": "앞서 읽는 투구",
+      "slot": "HEAD",
+      "grade": "RELIC",
+      "min_floor": 15,
+      "affixes": [
+        {
+          "stat": "cast_lead_cut",
+          "flat": 2,
+          "label_ko": "먼저 읽는 눈"
+        },
+        {
+          "stat": "hp_max",
+          "flat": 16,
+          "label_ko": "덧댄 이마"
+        },
+        {
+          "stat": "defense",
+          "flat": -3,
+          "label_ko": "[허술함] 트인 볼"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "cpu_budget",
+          "min": 10
+        }
+      ],
+      "tags": [
+        "MAGIC",
+        "CURSED"
+      ],
+      "_note": "**예고 단축을 머리 자리에서 처음 판다** — 그전까지 서죽(오프핸드) 하나뿐이라 마법 빌드가 오프핸드를 못 바꿨다. 예고 3틱짜리 메테오는 「적이 뭉쳤을 때」 쏘는 것이고 1틱이면 「다가올 때」 쏜다 (설계/5_스킬 §10.7) — 값이 아니라 규칙표가 바뀌는 축이다."
+    },
+    {
+      "id": "gloves_tally",
+      "kind": "EQUIPMENT",
+      "label_ko": "셈 토시",
+      "slot": "HANDS",
+      "grade": "RELIC",
+      "min_floor": 15,
+      "affixes": [
+        {
+          "stat": "cpu_budget",
+          "flat": 8,
+          "label_ko": "산가지 셈"
+        },
+        {
+          "stat": "attack",
+          "flat": -6,
+          "label_ko": "[둔한 손] 셈에 묶인 손"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "cpu_budget",
+          "min": 12
+        }
+      ],
+      "tags": [
+        "MODULE",
+        "CURSED"
+      ],
+      "_note": "**CPU 를 제일 많이 파는 자리다.** 2막은 한 줄로 안 풀린다 — 「주술형 먼저」 (14장) · 「예고 칸이면 비켜선다」(11장) · 「묶였으면 물러서지 말고 때린다」 (15장) 가 세 줄이고, 기본 예산 8 로는 둘이 한계다. 공격 6 을 내주는 것이 그 값이며, 주자소 토시(유물·공격 -3·CPU +6)보다 더 멀리 간 자리다."
+    },
+    {
+      "id": "dagger_hush",
+      "kind": "EQUIPMENT",
+      "label_ko": "끊는 소도",
+      "slot": "WEAPON_OFF",
+      "hands": "OFFHAND",
+      "grade": "RELIC",
+      "min_floor": 15,
+      "affixes": [
+        {
+          "stat": "attack",
+          "flat": 4,
+          "label_ko": "짧은 날"
+        },
+        {
+          "stat": "initiative",
+          "flat": 6,
+          "label_ko": "먼저 드는 손"
+        },
+        {
+          "stat": "defense",
+          "flat": -3,
+          "label_ko": "[허술함] 막을 것이 없다"
+        }
+      ],
+      "tags": [
+        "MELEE",
+        "CURSED"
+      ],
+      "_note": "**붙어서 끊는 손이다.** 20장의 답이 「넋두리를 예고 2틱 안에 끊는다」인데, 그러려면 붙어 있어야 하고 먼저 움직여야 한다. 방패 셋은 그 반대편을 판다 — 오프핸드에서 방벽을 버리는 선택이 이 아이템이다."
+    },
+    {
+      "id": "sword_silence",
+      "kind": "EQUIPMENT",
+      "label_ko": "함구검",
+      "slot": "WEAPON_MAIN",
+      "hands": "ONE",
+      "grade": "RELIC",
+      "min_floor": 20,
+      "attack_range": 2,
+      "affixes": [
+        {
+          "stat": "attack",
+          "flat": 11,
+          "label_ko": "긴 날"
+        },
+        {
+          "stat": "cpu_budget",
+          "flat": -3,
+          "label_ko": "[무거움] 손이 먼저 간다"
+        },
+        {
+          "stat": "initiative",
+          "flat": -4,
+          "label_ko": "[둔중함] 무거운 날"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "attack",
+          "min": 20
+        }
+      ],
+      "tags": [
+        "MELEE",
+        "CURSED"
+      ],
+      "_note": "사거리 2 의 한손 최대 화력. 사인검(유물·공격 7·사거리 2)의 윗자리이되 **상위 호환이 아니다** — CPU 3 과 선공 4 를 더 내주므로, 규칙표가 짧고 굵은 사람만 든다. 20장에 두는 것은 여기가 카탈로그의 끝이기 때문이다."
+    },
+    {
+      "id": "boots_toll",
+      "kind": "EQUIPMENT",
+      "label_ko": "종소리 신",
+      "slot": "FEET",
+      "grade": "RELIC",
+      "min_floor": 20,
+      "affixes": [
+        {
+          "stat": "initiative",
+          "flat": 18,
+          "label_ko": "울리는 걸음"
+        },
+        {
+          "stat": "scroll_slots",
+          "flat": 1,
+          "label_ko": "신울 갈피"
+        },
+        {
+          "stat": "hp_max",
+          "flat": -22,
+          "label_ko": "[헐거움] 얇은 창"
+        },
+        {
+          "stat": "defense",
+          "flat": -4,
+          "label_ko": "[허술함] 맨 발등"
+        }
+      ],
+      "requirements": [
+        {
+          "stat": "initiative",
+          "min": 70
+        }
+      ],
+      "tags": [
+        "POUCH",
+        "CURSED"
+      ],
+      "_note": "선공권 18 — 카탈로그 최고값이다. **둔화를 상쇄하지는 못한다**: 둔화는 틱의 홀짝으로 행동을 거르므로(`simulation/slow.py`) 선공권과 다른 축이다. 이것이 사는 것은 **같은 틱 안에서 먼저 움직이는 것**이고, 그래서 넋두리 예고 2틱 안에 한 대를 더 넣을 수 있다. 체력 22 를 내주므로 맞으면 그만큼 빨리 죽는다."
+    },
+    {
+      "id": "helm_straw",
+      "kind": "EQUIPMENT",
+      "label_ko": "패랭이",
+      "slot": "HEAD",
+      "affixes": [
+        {
+          "stat": "initiative",
+          "flat": 4,
+          "label_ko": "가벼움"
+        },
+        {
+          "stat": "hp_max",
+          "flat": 3,
+          "label_ko": "그늘"
+        }
+      ],
+      "tags": [],
+      "_note": "쇠투구(체력 8)와 성격이 갈린다 — 머리 자리에서 처음으로 「무엇을 살 것인가」가 생긴다."
+    },
+    {
+      "id": "helm_band",
+      "kind": "EQUIPMENT",
+      "label_ko": "망건",
+      "slot": "HEAD",
+      "min_floor": 2,
+      "affixes": [
+        {
+          "stat": "cpu_budget",
+          "flat": 1,
+          "label_ko": "조인 이마"
+        },
+        {
+          "stat": "hp_max",
+          "flat": 4,
+          "label_ko": "단정함"
+        }
+      ],
+      "tags": [
+        "MODULE"
+      ],
+      "_note": "머리 자리가 CPU 를 파는 첫 자리. 보통 등급에서 CPU 는 식자 토시 하나뿐이었다."
+    },
+    {
+      "id": "gloves_hemp",
+      "kind": "EQUIPMENT",
+      "label_ko": "삼베 토시",
+      "slot": "HANDS",
+      "affixes": [
+        {
+          "stat": "defense",
+          "flat": 2,
+          "label_ko": "덧댐"
+        },
+        {
+          "stat": "initiative",
+          "flat": 2,
+          "label_ko": "가벼운 소매"
+        }
+      ],
+      "tags": [],
+      "_note": "요구조건 없는 장갑. 식자 토시는 CPU 6 을 요구해 초반 배분에 따라 못 끼는 판이 있다."
+    },
+    {
+      "id": "gloves_grip",
+      "kind": "EQUIPMENT",
+      "label_ko": "가죽 토시",
+      "slot": "HANDS",
+      "min_floor": 2,
+      "affixes": [
+        {
+          "stat": "attack",
+          "flat": 2,
+          "label_ko": "잡는 힘"
+        },
+        {
+          "stat": "hp_max",
+          "flat": 4,
+          "label_ko": "두꺼운 소매"
+        }
+      ],
+      "tags": [],
+      "_note": "손 자리에서 공격을 파는 유일한 보통 등급."
+    },
+    {
+      "id": "bow_short",
+      "kind": "EQUIPMENT",
+      "label_ko": "단궁",
+      "slot": "WEAPON_MAIN",
+      "hands": "ONE",
+      "grade": "FINE",
+      "min_floor": 3,
+      "attack_range": 3,
+      "affixes": [
+        {
+          "stat": "attack",
+          "flat": 2,
+          "label_ko": "짧은 시위"
+        },
+        {
+          "stat": "initiative",
+          "flat": 2,
+          "label_ko": "한 손"
+        }
+      ],
+      "tags": [
+        "RANGED"
+      ],
+      "_note": "**오프핸드를 함께 드는 유일한 원거리다.** 각궁·철태궁·풍우궁이 전부 양손이라, 활을 들면 방패도 소도도 등롱도 봉인된다 — 사거리와 보조 칸 중 하나를 고르는 것이 원거리 빌드의 전부였다. 사거리 3 으로 값을 치른다."
+    },
+    {
+      "id": "rod_chant",
+      "kind": "EQUIPMENT",
+      "label_ko": "경 읽는 대",
+      "slot": "WEAPON_MAIN",
+      "hands": "ONE",
+      "grade": "FINE",
+      "min_floor": 3,
+      "attack_range": 2,
+      "affixes": [
+        {
+          "stat": "steady_cast",
+          "flat": 1,
+          "label_ko": "끊기지 않는 입"
+        },
+        {
+          "stat": "cpu_budget",
+          "flat": 1,
+          "label_ko": "외운 구절"
+        },
+        {
+          "stat": "attack",
+          "flat": -2,
+          "label_ko": "[둔한 손] 치는 물건이 아니다"
+        }
+      ],
+      "tags": [
+        "MAGIC",
+        "CURSED"
+      ],
+      "_note": "**흔들림 없는 시전을 주무기에서 처음 판다** — 그전까지 관인(손·유물) 하나라 상급 구간에서는 살 수가 없었다. `cancel_on_act` 를 끄므로 메테오·연쇄 번개· 서리 장판을 시전하면서 움직일 수 있다."
+    },
+    {
+      "id": "lamp_ember",
+      "kind": "EQUIPMENT",
+      "label_ko": "불티 등롱",
+      "slot": "WEAPON_OFF",
+      "hands": "OFFHAND",
+      "grade": "FINE",
+      "min_floor": 4,
+      "affixes": [
+        {
+          "stat": "blast_radius",
+          "flat": 1,
+          "label_ko": "번지는 불티"
+        },
+        {
+          "stat": "cpu_budget",
+          "flat": 1,
+          "label_ko": "등피 각인"
+        },
+        {
+          "stat": "defense",
+          "flat": -2,
+          "label_ko": "[허술함] 든 손"
+        }
+      ],
+      "tags": [
+        "MAGIC",
+        "CURSED"
+      ],
+      "_note": "예고 반경을 오프핸드에서 판다. 번짐 먹(몸·유물)은 반경 2 를 주면서 마법 쿨타임 8 을 얹는데, 이쪽은 반경 1 에 쿨타임을 안 건드린다 — **더 작게 사고 대가도 작다.**"
+    },
+    {
+      "id": "signet_swift",
+      "kind": "EQUIPMENT",
+      "label_ko": "빠른 관인",
+      "slot": "HANDS",
+      "grade": "FINE",
+      "min_floor": 4,
+      "affixes": [
+        {
+          "stat": "steady_cast",
+          "flat": 1,
+          "label_ko": "식은 인장"
+        },
+        {
+          "stat": "initiative",
+          "flat": 4,
+          "label_ko": "가벼운 인장"
+        },
+        {
+          "stat": "cpu_budget",
+          "flat": -1,
+          "label_ko": "[무거움] 새긴 자리"
+        }
+      ],
+      "tags": [
+        "MODULE",
+        "CURSED"
+      ],
+      "_note": "**흔들림 없는 시전을 손 자리에서 판다.** 관인(유물)이 같은 것을 주는데 CPU +2 에 선공 -5 라 무겁고, 이쪽은 선공을 주고 CPU 를 받는 **반대 방향**이다 — 경 읽는 대(주무기)와 합쳐 상급 구간에서 이 축을 사는 길이 셋이 된다. 겹쳐 껴도 이득이 없다: `steady_cast` 는 0 보다 크기만 하면 되는 켜짐/꺼짐이다 (`blast_actions.py` 의 `steady_cast <= 0`).\n\n**마법 쿨타임을 줄이는 물건을 여기 두려다 물렸다.** `cast_cooldown_add` 에 음수를 넣으면 `compute_final_stat` 이 `max(0, …)` 으로 잘라서(`items/stats.py`) 기본값 0 인 이 축은 음수가 통째로 죽는다 — 번짐 먹의 +8 을 함께 낀 사람에게만 상쇄로 작동하는, 조용히 무효인 아이템이 된다. 그 축을 양방향으로 열려면 스탯별 하한이 필요하고 그것은 아이템이 아니라 합산기의 일이다."
+    },
+    {
+      "id": "armor_censer",
+      "kind": "EQUIPMENT",
+      "label_ko": "향로 배자",
+      "slot": "BODY",
+      "grade": "FINE",
+      "min_floor": 4,
+      "affixes": [
+        {
+          "stat": "cast_lead_cut",
+          "flat": 1,
+          "label_ko": "앞서 도는 향"
+        },
+        {
+          "stat": "defense",
+          "flat": 4,
+          "label_ko": "두꺼운 섶"
+        },
+        {
+          "stat": "hp_max",
+          "flat": 8,
+          "label_ko": "덧댄 안감"
+        },
+        {
+          "stat": "initiative",
+          "flat": -4,
+          "label_ko": "[둔중함] 향로의 무게"
+        }
+      ],
+      "tags": [
+        "MAGIC",
+        "CURSED"
+      ],
+      "_note": "예고 단축 1 을 상급 구간에서 판다 — 서죽(유물)까지 못 기다리는 사람의 자리다. 무복(유물·주문서 2)과 달리 몸 자리에서 **마법의 제약**을 사는 쪽이고, 대가는 선공권이다."
     }
   ]
 }
