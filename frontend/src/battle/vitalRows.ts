@@ -12,7 +12,7 @@
  */
 
 import { SLOT_LABELS, USE_TAG_LABELS } from '../content/consumableTags'
-import { readSkillName } from '../core/resources'
+import { readSkillName } from '../content/skills'
 
 /** 상태 한 줄. 이름과 값, 그리고 눈에 띄어야 하는지. */
 export interface VitalRow {
@@ -33,6 +33,7 @@ export interface VitalRow {
  * 쿨타임 이름표. 코어의 행동 id 를 사람이 읽는 말로.
  *
  * **재주 이름은 여기 안 적는다** — 정본은 `skills.json` 이고 `readSkillName` 이 읽는다.
+ * 그쪽은 **발행된 팩**을 본다: 관리자가 이름을 고쳐 발행하면 이 줄도 따라 바뀐다.
  * 손으로 적어 두면 이름을 고칠 때 이 줄만 옛 이름으로 남는다 (2026-09-15).
  */
 const COOLDOWN_EXTRA: ReadonlyMap<string, string> = new Map([

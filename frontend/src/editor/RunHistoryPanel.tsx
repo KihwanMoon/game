@@ -15,7 +15,10 @@ import type { RunHistoryRow } from '../storage'
 
 import { LinkNoticeLine } from './LinkNoticeLine'
 import { checkLinked, type LinkState } from './linkState'
-import { ROOM_TEMPLATES } from '../core/resources'
+// 지금 도는 팩에서 읽는다 (설계/4_아이템 §18). **정적 상수로 들이면 발행한 것이 이
+// 화면에만 안 닿는다** — 편집기는 팩으로, 여기는 번들로 돌아 한 판이 두 데이터로
+// 갈린다. 사연은 `content/packOrder.test.ts` 머리말에 있다.
+import { readActivePack } from '../content/pack'
 import { findRoomTitle } from '../core/schemas/room'
 
 /** 못 닿았을 때 무엇을 못 보는가. 앞머리는 linkState 가 든다. */
@@ -68,7 +71,7 @@ export function RunHistoryPanel(props: RunHistoryPanelProps): React.JSX.Element 
         <ul className="runs">
           {props.runs.map((run) => (
             <li className="runs__row" key={run.submissionId}>
-              <span className="runs__cell">{`${findRoomTitle(ROOM_TEMPLATES, run.roomId)} · ${String(run.floor)}장`}</span>
+              <span className="runs__cell">{`${findRoomTitle(readActivePack().rooms, run.roomId)} · ${String(run.floor)}장`}</span>
               <GlyphState
                 state={run.outcome === 'PLAYER_WIN' ? 'true' : 'false'}
                 size="sm"

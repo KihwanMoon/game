@@ -42,7 +42,6 @@ import {
 import {
   G0_RULESETS,
   ALL_ITEM_TAGS,
-  ALL_SKILL_IDS,
   RULE_TEMPLATES,
   TUTORIAL_STAGES,
 } from './core/resources'
@@ -50,6 +49,7 @@ import {
 // 발행하면 이 값들이 그쪽을 가리킨다. 예시 규칙표·튜토리얼·태그는 화면의 것이라
 // 번들에 남는다 — 발행 대상이 아니다.
 import { readActivePack } from './content/pack'
+import { listAllSkillIds } from './content/skills'
 
 const ACTIVE = readActivePack()
 const BLOCK_CATALOG = ACTIVE.catalog
@@ -2153,7 +2153,7 @@ export function App(): React.JSX.Element {
               <CharacterPanel
                 progress={progress}
                 baseStats={BALANCE.player as Record<string, number>}
-                allSkills={ALL_SKILL_IDS}
+                allSkills={listAllSkillIds()}
                 allItems={ALL_ITEM_TAGS}
                 link={link}
               />

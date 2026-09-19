@@ -22,7 +22,6 @@ import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import { OUTCOME_PLAYER_WIN } from '../core/sim/phases'
 import { resolveRoomFloor } from '../core/services/runChain'
 import type { RuleSet } from '../core/schemas'
-import { ROOM_TEMPLATES } from '../core/resources'
 import { findRoomTitle } from '../core/schemas/room'
 import type { ReplayInput } from '../storage'
 
@@ -119,7 +118,7 @@ export function ReplayView(props: ReplayViewProps): React.JSX.Element | null {
             text={
               rooms.length === 0
                 ? `${roomId} · ${String(floor)}장`
-                : `${findRoomTitle(ROOM_TEMPLATES, roomId)} · ${String(floor)}장 · 방 ${String(index + 1)} / ${String(rooms.length)}`
+                : `${findRoomTitle(readActivePack().rooms, roomId)} · ${String(floor)}장 · 방 ${String(index + 1)} / ${String(rooms.length)}`
             }
             size="sm"
             dim
@@ -182,7 +181,7 @@ export function ReplayView(props: ReplayViewProps): React.JSX.Element | null {
           weaponCatalogId={replay.loadout?.mainWeapon ?? ''}
           setup={setup}
           rulesets={rulesets}
-          location={`${findRoomTitle(ROOM_TEMPLATES, roomId)} · ${String(floor)}장`}
+          location={`${findRoomTitle(readActivePack().rooms, roomId)} · ${String(floor)}장`}
           onOutcome={(outcome) => {
             // 이겼을 때만 다음 방이 있다. 졌으면 그 판은 거기서 끝난 것이다.
             setCleared(outcome === OUTCOME_PLAYER_WIN)

@@ -20,7 +20,7 @@ import type {
   StatBlock,
 } from '../core/schemas'
 import { resolveWantedFaction } from '../core/rules/validator'
-import { ENEMY_ONLY_SKILL_IDS, SKILL_NAMES } from '../core/resources'
+import { listEnemyOnlySkillIds, readSkillNames } from '../content/skills'
 import { readActivePack } from '../content/pack'
 
 /** 카테고리 하나로 묶인 블록들. 팔레트가 이 단위로 접히고 펼쳐진다. */
@@ -232,7 +232,7 @@ const PARAM_LABELS: ReadonlyMap<string, string> = new Map([
   // **적만 쓰는 다섯도 여기 딸려 온다** (2026-09-17). 팔레트에서는 빠지지만
   // (`listParamOptions`) 이름은 있어야 한다 — 이문록이 적의 규칙표를 그대로 펴서 보여
   // 주고, 거기 영문 id 가 뜨면 카운터를 읽으라고 내놓은 표가 그 줄에서 끊긴다.
-  ...SKILL_NAMES,
+  ...readSkillNames(),
   // **정본에 이름이 없는 셋.** `ATTACK`·`AREA_ATTACK` 은 `skills.json` 에 `label_ko` 가
   // 없고 `SUMMON` 은 행 자체가 없다 — 그때 `SKILL_NAMES` 는 id 를 그대로 들고 있으므로
   // 여기서 덮지 않으면 그 칸만 영문이 된다. `battle/vitalRows` 의 `COOLDOWN_EXTRA` 와
@@ -333,6 +333,6 @@ export function listParamOptions(
   action: ActionBlock | undefined,
 ): readonly { readonly value: string; readonly label: string }[] {
   return (action?.param?.values ?? [])
-    .filter((value) => !ENEMY_ONLY_SKILL_IDS.has(value))
+    .filter((value) => !listEnemyOnlySkillIds().has(value))
     .map((value) => ({ value, label: formatParamLabel(value) }))
 }

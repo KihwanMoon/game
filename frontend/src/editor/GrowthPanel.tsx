@@ -14,7 +14,10 @@
 import { useState } from 'react'
 
 import { buildAttributeBonus } from '../core/progression/attributes'
-import { BALANCE } from '../core/resources'
+// 지금 도는 팩에서 읽는다 (설계/4_아이템 §18). **정적 상수로 들이면 발행한 것이 이
+// 화면에만 안 닿는다** — 편집기는 팩으로, 여기는 번들로 돌아 한 판이 두 데이터로
+// 갈린다. 사연은 `content/packOrder.test.ts` 머리말에 있다.
+import { readActivePack } from '../content/pack'
 import { buildFloorScale, type RawFloorScale } from '../core/sim/scaling'
 import { Button, Panel, ValueExpr } from '../ds'
 import type { ProgressView } from '../storage'
@@ -41,9 +44,16 @@ const MISSING_HINT = '레벨과 능력치는 서버가 안다'
  *
  * **합이 아니라 곱이다.** 층마다 곱하고 내림으로 접으므로(e3), 더하기로 읽으면 깊은
  * 장의 벽을 실제보다 훨씬 낮게 잡는다.
+ *
+ * **상수가 아니라 함수다.** 모듈이 도는 시점에 잡으면 팩을 갈아 끼우기 전 값이라,
+ * `floor_scale` 을 고쳐 발행해도 이 화면만 옛 숫자를 적는다.
+ *
+ * @returns 층당 곱 퍼센트.
  */
-const FLOOR_MULT_PCT = buildFloorScale(BALANCE['floor_scale'] as RawFloorScale | undefined)
-  .multPctPerFloor
+function readFloorMultPct(): number {
+  const scale = readActivePack().balance['floor_scale'] as RawFloorScale | undefined
+  return buildFloorScale(scale).multPctPerFloor
+}
 
 /** 퍼센트의 기준값. 120 은 「+20%」다. */
 const PERCENT_BASE = 100
@@ -143,7 +153,7 @@ export function GrowthPanel(props: GrowthPanelProps): React.JSX.Element {
                 text={
                   progress.reachedFloor >= progress.floorCap
                     ? '끝까지 왔다'
-                    : `장마다 적이 체력·공격 +${String(FLOOR_MULT_PCT - PERCENT_BASE)}% 로 세진다 — 층마다 곱해지는 복리다`
+                    : `장마다 적이 체력·공격 +${String(readFloorMultPct() - PERCENT_BASE)}% 로 세진다 — 층마다 곱해지는 복리다`
                 }
                 size="sm"
                 dim

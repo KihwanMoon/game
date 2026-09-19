@@ -7,7 +7,6 @@ import '@design/styles.css'
 import './styles/app.css'
 // ds.css 는 `src/ds` 배럴이 스스로 싣는다. 여기서 또 부르면 같은 규칙이 두 번 들어간다.
 import './editor/editor.css'
-import { App } from './App'
 import { loadContentPack } from './content/pack'
 
 const container = document.getElementById('root')
@@ -26,6 +25,15 @@ if (container === null) {
  */
 async function startApp(): Promise<void> {
   await loadContentPack()
+  // **앱을 여기서 들인다 — 정적 import 면 안 된다.** ESM 은 이 파일의 본문보다 import 한
+  // 모듈의 본문을 먼저 돌린다. `App` 을 위에서 정적으로 들이면 App 의 본문이
+  // `loadContentPack()` 보다 **먼저** 돌고, 거기서 `readActivePack()` 으로 잡아 둔
+  // 카탈로그·방·적·밸런스가 전부 번들로 굳는다 — 발행한 것이 화면에 한 번도 안 닿는다.
+  //
+  // 2026-09-19 에 「재주 이름을 고쳐 발행했는데 그대로다」로 드러났다. 이름만이 아니라
+  // **팩 전체**가 안 닿고 있었고, 한 번도 발행한 적이 없어서(운영 `published=0`) 여태
+  // 안 보였을 뿐이다. 늦게 들이면 App 과 그것이 끌어오는 모듈 전부가 갈아 끼운 뒤에 돈다.
+  const { App } = await import('./App')
   createRoot(container as HTMLElement).render(
     <StrictMode>
       <App />

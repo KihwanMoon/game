@@ -20,7 +20,10 @@ import type { ReactNode } from 'react'
 
 import { BattleFrame, PlanCanvas, buildLookOf } from '../battle'
 import type { SheetTab } from '../battle'
-import { BLOCK_CATALOG } from '../core/resources'
+// 지금 도는 팩에서 읽는다 (설계/4_아이템 §18). **정적 상수로 들이면 발행한 것이 이
+// 화면에만 안 닿는다** — 편집기는 팩으로, 여기는 번들로 돌아 한 판이 두 데이터로
+// 갈린다. 사연은 `content/packOrder.test.ts` 머리말에 있다.
+import { readActivePack } from '../content/pack'
 import { OUTCOME_PLAYER_LOSS } from '../core/sim/phases'
 import { Button, TopBar } from '../ds'
 
@@ -96,7 +99,7 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
   const frame = current
 
   const decision = findDecision(recording.entries, frame.tick, recording.playerId)
-  const trace = buildReplayTrace(recording.ruleset, BLOCK_CATALOG, decision)
+  const trace = buildReplayTrace(recording.ruleset, readActivePack().catalog, decision)
   const cpuTotal = trace.at(-1)?.cpuUsed ?? 0
 
   // 강조만 있고 그 줄이 화면 밖이면 강조가 아무것도 못 한다.

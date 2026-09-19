@@ -23,7 +23,11 @@ import { PHASE_ACT } from '../core/sim/phases'
 import { GUARD_STATUS } from '../core/sim/abilities'
 import { checkDoppel, resolveActorKind, resolveActorLabel } from './actorKind'
 import { MY_NAME } from './logNames'
-import { BLOCK_CATALOG, readSkillName } from '../core/resources'
+// 지금 도는 팩에서 읽는다 (설계/4_아이템 §18). **정적 상수로 들이면 발행한 것이 이
+// 화면에만 안 닿는다** — 편집기는 팩으로, 여기는 번들로 돌아 한 판이 두 데이터로
+// 갈린다. 사연은 `content/packOrder.test.ts` 머리말에 있다.
+import { readActivePack } from '../content/pack'
+import { readSkillName } from '../content/skills'
 import { USE_TAG_LABELS } from '../content/consumableTags'
 
 /** 도면에 그릴 말 하나. */
@@ -313,7 +317,7 @@ function readActionLabel(actionId: string): string {
   if (skillName !== actionId) {
     return skillName
   }
-  return BLOCK_CATALOG.actions.get(actionId)?.labelKo ?? actionId
+  return readActivePack().catalog.actions.get(actionId)?.labelKo ?? actionId
 }
 
 /**

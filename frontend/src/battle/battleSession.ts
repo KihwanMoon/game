@@ -10,7 +10,10 @@
  * 적까지 감싸면 매 틱 여덟 번의 재평가가 화면에 쓰이지도 않고 돈다.
  */
 
-import { BALANCE, BLOCK_CATALOG, ENEMY_RULESETS, ROOM_TEMPLATES } from '../core/resources'
+// 지금 도는 팩에서 읽는다 (설계/4_아이템 §18). **정적 상수로 들이면 발행한 것이 이
+// 화면에만 안 닿는다** — 편집기는 팩으로, 여기는 번들로 돌아 한 판이 두 데이터로
+// 갈린다. 사연은 `content/packOrder.test.ts` 머리말에 있다.
+import { readActivePack } from '../content/pack'
 import {
   assignEnemyPolicies,
   buildEngine,
@@ -117,7 +120,7 @@ const EXTRA_ID_INFIX = '_x'
  * @throws 없는 방 id 인 경우.
  */
 export function findRoomTemplate(roomId: string): RoomTemplate {
-  const template = ROOM_TEMPLATES.find((one) => one.templateId === roomId)
+  const template = readActivePack().rooms.find((one) => one.templateId === roomId)
   if (template === undefined) {
     throw new Error(`없는 방 id 다: ${roomId}`)
   }
@@ -195,7 +198,8 @@ function buildSingleRoom(
   })
   engine.policies.set(PLAYER_ENTITY_ID, buildTracer(engine, ruleset))
   // 개체 전용 규칙표가 스냅샷에 실려 있다 — 안 넘기면 도플갱어가 종의 기본표로 돈다.
-  assignEnemyPolicies(engine, balance, BLOCK_CATALOG, ENEMY_RULESETS, setup.snapshots ?? [])
+  const pack = readActivePack()
+  assignEnemyPolicies(engine, balance, pack.catalog, pack.enemies, setup.snapshots ?? [])
   return engine
 }
 
@@ -223,9 +227,9 @@ function buildChainRoom(
   const cursor = new ChainCursor({
     templates: position.roomIds.map(findRoomTemplate),
     balance,
-    catalog: BLOCK_CATALOG,
+    catalog: readActivePack().catalog,
     playerRuleset: ruleset,
-    enemyRulesets: ENEMY_RULESETS,
+    enemyRulesets: readActivePack().enemies,
     seed: setup.seed,
     snapshots: setup.snapshots ?? [],
     floor: setup.floor ?? 1,
@@ -264,7 +268,7 @@ export function buildBattleSession(
   if (ruleset === undefined) {
     throw new Error(`없는 내력 id 다: ${setup.rulesetId}`)
   }
-  const balance = parseBalance(BALANCE)
+  const balance = parseBalance(readActivePack().balance)
   let tracer: TracingRuleVm | undefined
   /**
    * 플레이어 정책에 추적기를 씌운다. 화면이 규칙 상태를 그리려면 필요하다.
@@ -274,7 +278,8 @@ export function buildBattleSession(
    * @returns 추적기.
    */
   function buildTracer(target: TickEngine, rules: RuleSet): TracingRuleVm {
-    tracer = new TracingRuleVm(buildRuleVm(rules, BLOCK_CATALOG, target.config.kindTypes), BLOCK_CATALOG)
+    const catalog = readActivePack().catalog
+    tracer = new TracingRuleVm(buildRuleVm(rules, catalog, target.config.kindTypes), catalog)
     return tracer
   }
 

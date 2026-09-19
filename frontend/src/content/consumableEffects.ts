@@ -13,7 +13,10 @@
  * 고친 날 화면만 옛말을 하는 것이 이 저장소가 여러 번 겪은 사고다.
  */
 
-import { SKILLS } from '../core/resources'
+// 지금 도는 팩에서 읽는다 (설계/4_아이템 §18). **정적 상수로 들이면 발행한 것이 이
+// 화면에만 안 닿는다** — 편집기는 팩으로, 여기는 번들로 돌아 한 판이 두 데이터로
+// 갈린다. 사연은 `content/packOrder.test.ts` 머리말에 있다.
+import { readActivePack } from './pack'
 import { POTION_HEAL_DIVISOR } from '../core/sim/abilities'
 import { GUARD_SKILL_ID } from '../core/sim/plan'
 import {
@@ -29,7 +32,7 @@ import { findSkill, loadSkillDefs, type RawSkill } from '../core/skills/catalog'
 
 /** 방어 태세의 감소율과 유지 틱. 보호 주문서가 스킬과 같은 값을 쓴다. */
 function readGuard(): { readonly pct: number; readonly ticks: number } {
-  const guard = findSkill(loadSkillDefs(SKILLS.skills as readonly RawSkill[]), GUARD_SKILL_ID)
+  const guard = findSkill(loadSkillDefs(readActivePack().balance.skills as readonly RawSkill[]), GUARD_SKILL_ID)
   return { pct: guard.guardPct, ticks: guard.guardTicks }
 }
 

@@ -16,7 +16,8 @@ import { ValueTree } from './ValueTree'
 import { PublishBar } from './PublishBar'
 import { readActivePack } from '../content/pack'
 import { readReplay } from '../storage/replaySync'
-import { ALL_ITEM_TAGS, ALL_SKILL_IDS } from '../core/resources'
+import { ALL_ITEM_TAGS } from '../core/resources'
+import { listAllSkillIds } from '../content/skills'
 import { BENCHMARK_RULESETS, G0_RULESETS, RULE_TEMPLATES } from '../core/resources'
 import { Button, GlyphState, Panel, ValueExpr } from '../ds'
 import { BotDetailPanel } from './BotDetail'
@@ -457,7 +458,7 @@ export function AdminScreen(): React.JSX.Element {
                 detail={botDetail}
                 bag={botBag}
                 baseStats={PLAYER_BASE}
-                allSkills={ALL_SKILL_IDS}
+                allSkills={listAllSkillIds()}
                 allItems={ALL_ITEM_TAGS}
                 rulesetNames={RULESET_NAMES}
                 onPlay={(submissionId) => {
