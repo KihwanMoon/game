@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest'
 
 import { BALANCE, ROOM_TEMPLATES } from '../resources'
 import { PLAYER_ENTITY_ID, buildEngine, parseBalance } from '../services/runBattle'
+import { CAST_CANCEL, CAST_FREE } from '../skills/catalog'
 import { createPlannedAction } from './plan'
 import { CANCEL_BY_HIT } from './telegraph'
 
@@ -34,7 +35,7 @@ function buildProbe(telegraph: number, switches: Record<string, boolean> = {}) {
     cooldown: 0,
     reach: null,
     telegraph,
-    cancelOnAct: switches.act ?? false,
+    castAct: switches.act === true ? CAST_CANCEL : CAST_FREE,
     cancelOnHit: switches.hit ?? false,
     healPct: 0,
     guardPct: 0,
@@ -76,7 +77,7 @@ describe('스킬 예고 이식', () => {
     expect(engine.telegraphs.listActive().length).toBe(0)
   })
 
-  it('켜 둔 예고만 다른 행동에 끊긴다', () => {
+  it('취소로 적은 예고만 다른 행동에 끊긴다 — 파이썬 `cast_act` 와 같다', () => {
     const on = buildProbe(3, { act: true })
     on.engine.applyActions([castPlan()])
     on.engine.applyActions([

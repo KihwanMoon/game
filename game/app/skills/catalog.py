@@ -57,6 +57,21 @@ class SkillShape:
     hops: int = 0
 
 
+# 시전 중 행동 규율 (§10.3). **기본은 잠금이다** — 스킬이 안 적으면 시전 틱 동안
+# 규칙표가 안 돈다. 모르는 채로 취소되는 것보다 모르는 채로 버티는 쪽이 낫다:
+# 취소는 그 스킬을 **영영 못 쓰게** 만들지만 잠금은 한 번 쓰게 한다.
+#
+# 넷인 이유는 지금 콘텐츠가 이미 둘을 쓰고 있어서다. 적의 굿은 전부 `FREE`(물러서면서도
+# 계속 시전)이고, 셋만 두면 그 행동이 통째로 바뀐다.
+CAST_LOCK = "LOCK"  # 규칙표가 안 돈다. 다른 행동 불가, 시전 유지
+CAST_HOLD = "HOLD"  # 규칙표는 돌되 끊는 행동이 「불가」가 된다. 왜 못 했는지가 로그에 남는다
+CAST_CANCEL = "CANCEL"  # 다른 행동을 고르면 취소된다 (예전 `cancel_on_act: true`)
+CAST_FREE = "FREE"  # 다른 행동을 해도 시전이 유지된다 (예전 `cancel_on_act: false`)
+
+# 아는 값 전부. 모르는 값이 데이터로 들어오면 조용히 자유가 되므로 부르는 쪽이 본다.
+CAST_ACT_MODES: frozenset[str] = frozenset({CAST_LOCK, CAST_HOLD, CAST_CANCEL, CAST_FREE})
+
+
 @dataclass(frozen=True)
 class SkillEffect:
     """스킬이 맞은 대상에게 얹는 것 하나 (설계/5_스킬 §1).
@@ -93,9 +108,13 @@ class SkillDef:
     reach: int | None = None
     # 0 이면 즉시. >0 이면 그 틱만큼 예고를 띄운다 (설계/5_스킬 §10).
     telegraph: int = 0
-    # 시전 중 **다른 행동을 하면** 취소되는가 (§10.3). 취소가 벌이 아니라 선택이 되는
-    # 자리다 — 잠그면 그 틱 동안 규칙표가 안 돈다.
-    cancel_on_act: bool = False
+    # 시전 중 다른 행동을 어떻게 할 것인가 (§10.3, 2026-09-19).
+    #
+    # **불리언 하나로는 모자랐다.** 예전에는 `cancel_on_act` 였고 뜻이 「다른 행동을 하면
+    # 취소」 하나뿐이라 **잠그는 길이 없었다.** 실측으로 예고 3틱인 메테오는 보호 줄이
+    # 없으면 60판 중 60판이 취소됐고, 예고 1틱인 연쇄 번개는 끼어들 틱이 0 이라 같은
+    # 플래그가 한 번도 안 닿았다 — 한 값이 스킬마다 다른 뜻이 되고 있었다.
+    cast_act: str = CAST_FREE
     # 시전 중 **맞으면** 취소되는가. 「안전한 자리에서 쏘는가」를 규칙표에 묻는다.
     cancel_on_hit: bool = False
     # 대상 최대 HP 의 정수 퍼센트. 고정값이 아닌 이유는 회복이 덩치에 비례해야 해서다.
@@ -164,7 +183,7 @@ def build_skill_def(raw: dict) -> SkillDef:
         cooldown=int(raw.get("cooldown", 0)),
         reach=None if raw.get("range") is None else int(raw["range"]),
         telegraph=int(raw.get("telegraph", 0)),
-        cancel_on_act=bool(raw.get("cancel_on_act", False)),
+        cast_act=str(raw.get("cast_act", CAST_LOCK)),
         cancel_on_hit=bool(raw.get("cancel_on_hit", False)),
         heal_pct=int(raw.get("heal_pct", 0)),
         guard_pct=int(raw.get("guard_pct", 0)),

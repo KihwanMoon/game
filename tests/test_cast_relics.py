@@ -19,7 +19,7 @@ import pytest
 from game.app.services.run_battle import build_engine, load_balance
 from game.app.simulation.plan import PlannedAction
 from game.app.simulation.telegraph import MIN_LEAD_TICKS
-from game.app.skills.catalog import SkillDef, SkillShape
+from game.app.skills.catalog import CAST_CANCEL, CAST_LOCK, SkillDef, SkillShape
 from game.config import BALANCE_PATH, ROOM_TEMPLATES_PATH
 from game.schemas.room import load_room_templates
 
@@ -45,7 +45,7 @@ def build_probe(balance, templates, **axes):
     Args:
         balance: 밸런스 절.
         templates: 방 템플릿 표.
-        **axes: 엔티티에 얹을 시전 축들.
+        **axes: 엔티티에 얹을 시전 축들. `cast_act_override` 만 스킬 쪽으로 간다.
 
     Returns:
         (엔진, 플레이어).
@@ -57,7 +57,7 @@ def build_probe(balance, templates, **axes):
         coef_pct=200,
         telegraph=BASE_TELEGRAPH,
         cooldown=BASE_COOLDOWN,
-        cancel_on_act=True,
+        cast_act=axes.pop("cast_act_override", CAST_CANCEL),
         cancel_on_hit=True,
     )
     player = engine.state.entities["player"]
@@ -123,10 +123,37 @@ def test_the_cooldown_cost_does_not_touch_ordinary_actions(balance, templates):
 
 
 def test_the_signet_keeps_the_cast_through_a_move(balance, templates):
-    """★ 쏘고 바로 후퇴. **카이팅과 결합하는 자리다** (§10.7)."""
+    """★ 쏘고 바로 후퇴. **카이팅과 결합하는 자리다** (§10.7).
+
+    **이 검사는 `HOLD` 를 하고 있었다** — 이름은 이동인데 실제로는 아무나 버티면 안
+    끊기는 행동이라, 유물이 없어도 통과하는 검사였다. 2026-09-19 에 시전 규율이
+    넷으로 갈리면서 이 유물이 사는 것도 달라졌다: 예전에는 「행동 취소를 끈다」였고
+    이제는 **「잠금을 푼다」**다. 잠긴 시전은 애초에 안 끊기므로 앞엣것으로는 값을
+    못 한다 — 사는 것은 **시전 중의 발**이다.
+    """
     engine, player = build_probe(balance, templates, steady_cast=1)
+    foe = next(iter(engine.state.list_hostiles(player)))
+    before = player.position
     engine.apply_actions((build_plan(),))
-    engine.apply_actions((PlannedAction(entity_id=player.entity_id, action_id="HOLD"),))
+    engine.apply_actions(
+        (PlannedAction(entity_id=player.entity_id, action_id="APPROACH", target_id=foe.entity_id),)
+    )
+    assert player.position != before, "유물을 끼고도 시전 중에 못 움직였다"
+    assert len(engine.telegraphs.list_active()) == 1
+
+
+def test_without_the_signet_a_lock_pins_the_feet(balance, templates):
+    """★ **유물이 없으면 잠긴 시전 동안 발이 묶인다** — 그것이 이 유물의 값이다.
+
+    잠금은 규칙표를 안 돌리므로 계획이 무엇이든 버티기로 대체된다. 유물을 낀 위 검사와
+    나란히 두면 「무엇을 샀는가」가 한 쌍으로 읽힌다.
+    """
+    engine, player = build_probe(balance, templates, cast_act_override=CAST_LOCK)
+    before = player.position
+    engine.apply_actions((build_plan(),))
+    # 규칙표가 접근을 고르는 상황이어도 잠금이 먼저다 — 한 틱을 통째로 돌려 본다.
+    engine.run_tick()
+    assert player.position == before, "잠겼는데 움직였다"
     assert len(engine.telegraphs.list_active()) == 1
 
 

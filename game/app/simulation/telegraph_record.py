@@ -7,7 +7,7 @@
 
 from dataclasses import dataclass
 
-from game.app.skills.catalog import SkillEffect
+from game.app.skills.catalog import CAST_FREE, SkillEffect
 
 # 기본 인지 폭. 남은 틱이 이 값 이하일 때만 인지 변수가 참이 된다.
 VISIBLE_TICKS = 1
@@ -30,12 +30,13 @@ class Telegraph:
     # 시전자를 먼저 죽이는 것이 예고에 대한 또 하나의 답이다. 보스의 확정
     # 광역기처럼 그 답을 막아야 하는 예고만 False 로 등록한다.
     cancel_on_death: bool = True
-    # 시전자가 **다른 행동을 하면** 취소되는가 (설계/5_스킬 §10.3).
+    # 시전 중 다른 행동을 어떻게 할 것인가 (설계/5_스킬 §10.3).
     #
-    # **기본이 False 인 것이 중요하다.** 전부에 걸면 자폭형 몬스터가 다음 틱에 움직이면서
-    # 스스로 취소해 영영 안 터진다 — 지금 콘텐츠의 뜻이 통째로 바뀐다. 켜는 것은 스킬
-    # 데이터이고, 그것이 「잠그지 않고 취소되게 한다」를 **고른 스킬에만** 적용하는 길이다.
-    cancel_on_act: bool = False
+    # **여기 기본이 `FREE` 인 것이 중요하다.** 스킬 데이터의 기본은 잠금이지만, 이 레코드는
+    # 스킬을 안 거치는 예고도 받는다 — 자폭형 몬스터의 절에는 이 키가 아예 없다. 거기에
+    # 잠금을 걸면 폭탄이 다음 틱에 못 움직여 콘텐츠의 뜻이 통째로 바뀐다. **모르면 지금
+    # 하던 대로 둔다.**
+    cast_act: str = CAST_FREE
     # 시전자가 **맞으면** 취소되는가. 위와 같은 이유로 기본이 False 다.
     cancel_on_hit: bool = False
     # 맞은 대상에게 얹을 것들 (설계/5_스킬 §1). **피해와 별개다** — 피해 0 인 장판이

@@ -33,6 +33,35 @@ export const DEFAULT_COEF_PCT = 100
 export const EFFECT_STATUS = 'STATUS'
 
 /** 스킬이 맞은 대상에게 얹는 것 하나. **평면 필드를 대신하지 않는다.** */
+/**
+ * 시전 중 다른 행동을 어떻게 할 것인가 (설계/5_스킬 §10.3). 파이썬 `CAST_*` 와 같다.
+ *
+ * **불리언 하나로는 모자랐다.** 예전에는 `cancelOnAct` 였고 뜻이 「다른 행동을 하면
+ * 취소」 하나뿐이라 잠그는 길이 없었다.
+ */
+export const CAST_LOCK = 'LOCK'
+export const CAST_HOLD = 'HOLD'
+export const CAST_CANCEL = 'CANCEL'
+export const CAST_FREE = 'FREE'
+
+/** 아는 시전 규율. */
+export type CastAct = typeof CAST_LOCK | typeof CAST_HOLD | typeof CAST_CANCEL | typeof CAST_FREE
+
+export const CAST_ACT_MODES: ReadonlySet<string> = new Set([CAST_LOCK, CAST_HOLD, CAST_CANCEL, CAST_FREE])
+
+/**
+ * 절이 적은 시전 규율을 읽는다.
+ *
+ * **기본이 잠금이다** — 파이썬 `load_skills` 와 같다. 모르는 채로 취소되는 것보다
+ * 모르는 채로 버티는 쪽이 낫다: 취소는 그 스킬을 영영 못 쓰게 만든다.
+ *
+ * @param raw 절이 적은 값.
+ * @returns 아는 값이면 그대로, 아니면 잠금.
+ */
+export function readCastAct(raw: string | undefined): CastAct {
+  return CAST_ACT_MODES.has(raw ?? '') ? (raw as CastAct) : CAST_LOCK
+}
+
 export interface SkillEffect {
   readonly kind: string
   readonly status: string
@@ -63,7 +92,7 @@ export interface SkillDef {
   /** 0 이면 즉시. >0 이면 그 틱만큼 예고를 띄운다 (설계/5_스킬 §10). */
   readonly telegraph: number
   /** 시전 중 다른 행동을 하면 취소되는가 (§10.3). */
-  readonly cancelOnAct: boolean
+  readonly castAct: CastAct
   /** 시전 중 맞으면 취소되는가. */
   readonly cancelOnHit: boolean
   readonly healPct: number
@@ -89,6 +118,7 @@ export interface RawSkill {
   readonly cooldown?: number
   readonly range?: number | null
   readonly telegraph?: number
+  readonly cast_act?: string
   readonly cancel_on_act?: boolean
   readonly cancel_on_hit?: boolean
   readonly heal_pct?: number
@@ -132,7 +162,7 @@ export function buildSkillDef(raw: RawSkill): SkillDef {
     cooldown: raw.cooldown ?? 0,
     reach: raw.range ?? null,
     telegraph: raw.telegraph ?? 0,
-    cancelOnAct: raw.cancel_on_act ?? false,
+    castAct: readCastAct(raw.cast_act),
     cancelOnHit: raw.cancel_on_hit ?? false,
     healPct: raw.heal_pct ?? 0,
     guardPct: raw.guard_pct ?? 0,

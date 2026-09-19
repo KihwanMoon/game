@@ -24,6 +24,8 @@ import {
 } from '../grid/geometry'
 import { WALKABLE_TILES } from '../schemas'
 import { divideFloor } from '../combat/damage'
+import { CAST_ACT_MODES, CAST_FREE } from '../skills/catalog'
+import type { CastAct } from '../skills/catalog'
 import type { EngineConfig, PlannedAction, RawEnemyKind, RawTelegraphSetting } from './plan'
 import { getScaledEnemyStats } from './scaling'
 import { type Entity, type WorldState, countItem, createEntity, isAlive } from './state'
@@ -243,7 +245,12 @@ export function registerBlast(
     visibleTicks: telegraph.visible_ticks,
     cancelOnDeath: telegraph.cancel_on_death,
     // 몬스터 절에는 없다 — 없으면 안 켠다. 켜는 것은 스킬 데이터다 (§10.3).
-    cancelOnAct: telegraph.cancel_on_act ?? false,
+    // **기본이 자유다 — 스킬 카탈로그와 반대다.** 이 자리는 스킬을 안 거치는 예고도
+    // 받는다(자폭형 몬스터의 절에는 이 키가 아예 없다). 거기에 잠금을 걸면 폭탄이 다음
+    // 틱에 못 움직여 콘텐츠의 뜻이 통째로 바뀐다. 파이썬 `telegraph_cast` 와 같다.
+    castAct: CAST_ACT_MODES.has(telegraph.cast_act ?? '')
+      ? (telegraph.cast_act as CastAct)
+      : CAST_FREE,
     cancelOnHit: telegraph.cancel_on_hit ?? false,
     effects: telegraph.effects ?? [],
   })

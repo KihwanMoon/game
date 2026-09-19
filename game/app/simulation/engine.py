@@ -23,6 +23,11 @@ from game.app.simulation.actions import (
     MOVE_ACTIONS,
     ActionExecutor,
 )
+from game.app.simulation.cast_policy import (
+    apply_act_cancel,
+    apply_hold_policy,
+    read_locked_plan,
+)
 from game.app.simulation.perception import PerceptionSnapshot, build_snapshot
 from game.app.simulation.plan import (
     OUTCOME_BLOCKED,
@@ -31,7 +36,6 @@ from game.app.simulation.plan import (
     OUTCOME_PLAYER_WIN,
     OUTCOME_TIMEOUT,
     PHASE_DECIDE,
-    PHASE_TELEGRAPH,
     USE_ITEM_ACTION,
     DecisionPolicy,
     EngineConfig,
@@ -42,7 +46,11 @@ from game.app.simulation.plan import (
 from game.app.simulation.pressure import PressureTracker
 from game.app.simulation.springs import remove_drained_springs
 from game.app.simulation.state import FACTION_PLAYER, Entity, WorldState
-from game.app.simulation.telegraph import Telegraph, TelegraphBoard, apply_act_cancel
+from game.app.simulation.telegraph import (
+    Telegraph,
+    TelegraphBoard,
+)
+from game.app.simulation.telegraph_effects import apply_self_destruct
 from game.app.simulation.upkeep import apply_entity_upkeep
 
 
@@ -60,6 +68,9 @@ class TickEngine:
     policies: dict[str, DecisionPolicy] = field(default_factory=dict)
     # 진행 중인 예고. 방 단위다 — 방을 나가면 남은 예고도 함께 사라진다.
     telegraphs: TelegraphBoard = field(default_factory=TelegraphBoard)
+    # 이번 틱에 터진 예고들. 화면이 타격 자국을 그린다. 로그에 안 싣는 이유는 골든이다 —
+    # 로그 줄은 두 코어가 비트 단위로 대조하는 값이라 연출이 대조 대상을 움직이면 안 된다.
+    last_blasts: tuple[Telegraph, ...] = ()
     # 어뷰징 차단 (GDD §7). **층 단위 객체라 바깥에서 받는다.**
     pressure: PressureTracker = field(default_factory=PressureTracker)
     # 전투 도중 등장한 엔티티(소환물·추격자)에 규칙표를 붙이는 공장.
@@ -120,31 +131,15 @@ class TickEngine:
         PERCEPTION 보다 앞이어야 한다. 카운트다운이 끝난 남은 틱을 그 틱의 인지
         변수가 읽고 규칙표가 회피를 결정한다 — 뒤집으면 항상 1틱 늦게 인지한다.
         """
-        for telegraph in self.telegraphs.run_countdown(self.state, self.log):
-            self._apply_self_destruct(telegraph)
+        # **한 틱만 들고 있는다** (2026-09-19) — 판은 발동과 동시에 예고를 버려서, 틱이
+        # 끝난 뒤 그리는 화면이 무엇이 어디서 터졌는지 알 길이 없었다 (`last_blasts`).
+        self.last_blasts = self.telegraphs.run_countdown(self.state, self.log)
+        for telegraph in self.last_blasts:
+            apply_self_destruct(self.state, self.actions, self.config.enemy_stats, telegraph)
         # 셀렉터 CASTING 과 `대상이 시전 중인가` 가 읽는다. 정렬해 내려야
         # 같은 시드가 같은 대상을 고른다 (R5).
         self.state.casting_ids = tuple(
             sorted({pending.caster_id for pending in self.telegraphs.list_active()})
-        )
-
-    def _apply_self_destruct(self, telegraph: Telegraph) -> None:
-        """자폭형 예고가 터졌으면 시전자도 함께 죽인다 (GDD §5).
-
-        예고판은 (WorldState, EventLog) 만 계약으로 갖고 종류 데이터를 모른다.
-        그래서 '누가 자폭형인가' 는 여기서 본다.
-
-        Args:
-            telegraph: 이번 틱에 발동한 예고.
-        """
-        caster = self.state.entities.get(telegraph.caster_id)
-        if caster is None or not caster.is_alive:
-            return
-        setting = self.config.enemy_stats.get(caster.kind_id, {}).get("telegraph") or {}
-        if not setting.get("self_destruct"):
-            return
-        self.actions.apply_damage(
-            caster, caster.hp, PHASE_TELEGRAPH, f"{telegraph.skill_id} 자폭", caster.entity_id
         )
 
     def build_perceptions(self) -> dict[str, PerceptionSnapshot]:
@@ -170,6 +165,25 @@ class TickEngine:
             for entity in self.state.list_actors()
         }
 
+    def _plan_one(self, entity: Entity, snapshot: PerceptionSnapshot) -> PlannedAction:
+        """한 엔티티의 이번 틱 계획. **시전 규율이 규칙표보다 먼저다** (§10.3).
+
+        판단은 `cast_policy` 가 든다 — 여기서는 순서만 정한다: 잠겼으면 규칙표를 아예
+        안 돌리고, 아니면 돌린 뒤 버팀을 본다.
+
+        Args:
+            entity: 결정 주체.
+            snapshot: 이번 틱의 인지값.
+
+        Returns:
+            실행할 계획.
+        """
+        locked = read_locked_plan(self.telegraphs, entity.entity_id)
+        if locked is not None:
+            return locked
+        plan = self.get_policy(entity.entity_id).plan_action(entity, snapshot, self.state)
+        return apply_hold_policy(self.telegraphs, plan)
+
     def plan_actions(self, snapshots: dict[str, PerceptionSnapshot]) -> tuple[PlannedAction, ...]:
         """각 엔티티의 행동을 결정한다 (페이즈 4). 세계를 바꾸지 않는다.
 
@@ -180,9 +194,7 @@ class TickEngine:
             엔티티별 계획.
         """
         plans = tuple(
-            self.get_policy(entity.entity_id).plan_action(
-                entity, snapshots[entity.entity_id], self.state
-            )
+            self._plan_one(entity, snapshots[entity.entity_id])
             for entity in self.state.list_actors()
         )
         # 결정을 매 틱 남긴다. 피해가 난 틱만 기록하면 "왜 그 규칙이 안 떴는지"를

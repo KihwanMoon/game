@@ -16,7 +16,7 @@ import pytest
 
 from game.app.services.run_battle import build_engine, load_balance
 from game.app.simulation.plan import PlannedAction
-from game.app.skills.catalog import SkillDef, SkillShape
+from game.app.skills.catalog import CAST_CANCEL, SkillDef, SkillShape
 from game.config import BALANCE_PATH, ROOM_TEMPLATES_PATH
 from game.schemas.room import load_room_templates
 
@@ -86,7 +86,7 @@ def test_resting_does_not_cancel_a_cast(balance, templates):
     예고를 끊는 것은 다른 행동을 했다는 사실인데(§10.3), 둔화로 쉰 틱은 아무 행동도
     안 한 틱이다. 여기서 끊으면 둔화 한 번이 마법을 통째로 지운다.
     """
-    engine, player = build_casting(balance, templates, cancel_on_act=True)
+    engine, player = build_casting(balance, templates, cast_act=CAST_CANCEL)
     player.statuses["SLOW"] = 4
     engine.state.tick = 1
     engine.apply_actions((PlannedAction(entity_id=player.entity_id, action_id="APPROACH"),))

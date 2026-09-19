@@ -1,6 +1,6 @@
 {
   "_comment": "스킬 정의. balance.json 에서 갈라 나왔다 — 스킬은 종류가 늘어나는 것이고 밸런스 수치는 조정되는 것이라 수명이 다르다 (docs/설계/5_스킬 §9). family·shape·target_faction·telegraph·tags 는 아직 아무도 읽지 않는 서술 필드이며, 블록 v5 의 USE_SKILL[skill_id] 와 계열별 실행기가 이것을 읽는다. coef_pct·cooldown·range·heal_pct 는 값이 그대로이므로 골든 리플레이가 바뀌지 않는다. v2: GUARD 계열을 더했다(결정 #16) — 방패를 들었는데 막는 행동이 없으면 방패는 그냥 방어력 숫자이고 '양손무기 vs 한손+방패' 선택이 성립하지 않는다 (P3).",
-  "skill_list_version": 10,
+  "skill_list_version": 11,
   "skills": [
     {
       "id": "HEX_FIRE",
@@ -16,14 +16,14 @@
       "cooldown": 12,
       "range": 6,
       "telegraph": 3,
-      "cancel_on_act": false,
+      "cast_act": "FREE",
       "cancel_on_hit": true,
       "tags": [
         "MAGIC",
         "CAST",
         "AOE"
       ],
-      "_note": "**`cancel_on_act` 를 안 켰다** — 다섯 전부 그렇다. 적 예산은 CPU 4 · 3줄 고정인데, 켜면 모든 주술형이 「시전 중에는 버틴다」 한 줄을 써야 하고 3줄에서 그 한 줄이 표를 전부 같은 모양으로 만든다. 1틱짜리는 어차피 상관이 없다(예고가 다음 틱 TELEGRAPH 에서 터지고, 그것은 DECIDE 보다 앞이다). **적이 쓰는 메테오다.** 플레이어의 메테오와 같은 거래를 반대편에서 판다 — 3틱 붉게 서 있고 그동안 비켜설 수 있다. 다른 점은 카운터가 둘이라는 것이다: 비켜서거나, **붙어서 때려 끊는다**(`cancel_on_hit`). 원거리 표는 앞엣것을, 근접 표는 뒤엣것을 쓴다. 계수 190 은 플레이어 메테오(220)보다 낮다 — 적은 여럿이고 플레이어는 하나라, 같은 수를 주면 한 방에 끝난다."
+      "_note": "**`cancel_on_act` 를 안 켰다** — 다섯 전부 그렇다. 적 예산은 CPU 4 · 3줄 고정인데, 켜면 모든 주술형이 「시전 중에는 버틴다」 한 줄을 써야 하고 3줄에서 그 한 줄이 표를 전부 같은 모양으로 만든다. 1틱짜리는 어차피 상관이 없다(예고가 다음 틱 TELEGRAPH 에서 터지고, 그것은 DECIDE 보다 앞이다). **적이 쓰는 메테오다.** 플레이어의 메테오와 같은 거래를 반대편에서 판다 — 3틱 붉게 서 있고 그동안 비켜설 수 있다. 다른 점은 카운터가 둘이라는 것이다: 비켜서거나, **붙어서 때려 끊는다**(`cancel_on_hit`). 원거리 표는 앞엣것을, 근접 표는 뒤엣것을 쓴다. 계수 190 은 플레이어 메테오(220)보다 낮다 — 적은 여럿이고 플레이어는 하나라, 같은 수를 주면 한 방에 끝난다.\n\n**시전 중 행동 규율이 `cast_act` 로 갈렸다 (2026-09-19).** 예전에는 `cancel_on_act` 불리언 하나였고 그 뜻은 「다른 행동을 하면 취소」뿐이었다 — 잠그는 길이 아예 없었다. 실측으로 예고 3틱짜리 메테오는 보호 줄(`내가 시전 중인가 → 대기`)이 없으면 **60판 중 60판이 취소**됐고, 예고 1틱인 연쇄 번개·서리 장판은 끼어들 틱이 0 이라 같은 플래그가 한 번도 안 닿았다. 한 불리언이 스킬마다 다른 뜻이 되고 있었다."
     },
     {
       "id": "HEX_BOLT",
@@ -39,7 +39,7 @@
       "cooldown": 6,
       "range": 6,
       "telegraph": 1,
-      "cancel_on_act": false,
+      "cast_act": "FREE",
       "cancel_on_hit": false,
       "tags": [
         "MAGIC",
@@ -61,7 +61,7 @@
       "cooldown": 7,
       "range": 5,
       "telegraph": 1,
-      "cancel_on_act": false,
+      "cast_act": "FREE",
       "cancel_on_hit": false,
       "effects": [
         {
@@ -91,7 +91,7 @@
       "cooldown": 10,
       "range": 5,
       "telegraph": 2,
-      "cancel_on_act": false,
+      "cast_act": "FREE",
       "cancel_on_hit": false,
       "effects": [
         {
@@ -121,7 +121,7 @@
       "cooldown": 6,
       "range": 6,
       "telegraph": 1,
-      "cancel_on_act": false,
+      "cast_act": "FREE",
       "cancel_on_hit": false,
       "effects": [
         {
@@ -151,7 +151,7 @@
       "cooldown": 8,
       "range": 5,
       "telegraph": 2,
-      "cancel_on_act": false,
+      "cast_act": "FREE",
       "cancel_on_hit": true,
       "effects": [
         {
@@ -181,7 +181,7 @@
       "cooldown": 14,
       "range": 6,
       "telegraph": 3,
-      "cancel_on_act": false,
+      "cast_act": "FREE",
       "cancel_on_hit": false,
       "tags": [
         "MAGIC",
@@ -207,7 +207,8 @@
       "_note": "range null = 엔티티의 attack_range 를 쓴다"
     },
     {
-      "id": "SKILL_1", "label_ko": "일격",
+      "id": "SKILL_1",
+      "label_ko": "일격",
       "family": "ATTACK",
       "shape": {
         "kind": "SINGLE"
@@ -305,7 +306,7 @@
       "cooldown": 16,
       "range": 6,
       "telegraph": 3,
-      "cancel_on_act": true,
+      "cast_act": "LOCK",
       "cancel_on_hit": true,
       "requirements": [
         {
@@ -334,7 +335,7 @@
       "cooldown": 8,
       "range": 5,
       "telegraph": 1,
-      "cancel_on_act": true,
+      "cast_act": "LOCK",
       "cancel_on_hit": false,
       "requirements": [
         {
@@ -361,7 +362,7 @@
       "cooldown": 10,
       "range": 4,
       "telegraph": 1,
-      "cancel_on_act": true,
+      "cast_act": "LOCK",
       "cancel_on_hit": false,
       "effects": [
         {

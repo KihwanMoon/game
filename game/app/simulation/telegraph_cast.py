@@ -17,7 +17,7 @@ from game.app.simulation.telegraph_shape import (
     build_chain_tiles,
     build_line_tiles,
 )
-from game.app.skills.catalog import SHAPE_CHAIN, SHAPE_LINE
+from game.app.skills.catalog import CAST_FREE, SHAPE_CHAIN, SHAPE_LINE
 from game.schemas.room import WALKABLE_TILES
 
 
@@ -96,8 +96,9 @@ def register_blast(
         lead_ticks=telegraph["lead_ticks"],
         visible_ticks=telegraph["visible_ticks"],
         cancel_on_death=telegraph["cancel_on_death"],
-        # 몬스터 절에는 없다 — 없으면 안 켠다. 켜는 것은 스킬 데이터다 (§10.3).
-        cancel_on_act=bool(telegraph.get("cancel_on_act", False)),
+        # 몬스터 절에는 없다 — 없으면 지금 하던 대로 자유다. 잠그는 것은 스킬
+        # 데이터가 정한다 (§10.3).
+        cast_act=str(telegraph.get("cast_act", CAST_FREE)),
         cancel_on_hit=bool(telegraph.get("cancel_on_hit", False)),
         # 몬스터 절에는 없다. 스킬이 정한 것만 실린다.
         effects=tuple(telegraph.get("effects", ())),

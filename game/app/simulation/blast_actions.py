@@ -14,7 +14,7 @@ from game.app.simulation import telegraph_cast
 from game.app.simulation.plan import EngineConfig, PlannedAction
 from game.app.simulation.state import Entity, WorldState
 from game.app.simulation.telegraph import MIN_LEAD_TICKS, TelegraphBoard
-from game.app.skills.catalog import find_skill
+from game.app.skills.catalog import CAST_FREE, find_skill
 
 # 퍼센트 기준. 100 이 1.0배다.
 PERCENT_BASE = 100
@@ -139,9 +139,14 @@ class BlastActionMixin:
             # 플레이어가 거는 것은 적이 확실히 볼 수 있어야 「비켜선다」가 성립한다.
             "visible_ticks": lead,
             "cancel_on_death": True,
-            # 흔들림 없는 시전은 **행동 취소만** 끈다. 피격 취소는 그대로다 —
-            # 둘 다 끄면 「안전한 자리에서 쏘는가」가 사라져 상위 호환이 된다.
-            "cancel_on_act": skill.cancel_on_act and entity.steady_cast <= 0,
+            # **흔들림 없는 시전은 잠금을 푼다** (2026-09-19). 예전에는 행동 취소만
+            # 껐는데, 기본이 잠금이 되면서 그 일이 없어졌다 — 잠긴 시전은 애초에 안
+            # 끊기므로 아이템이 값을 못 한다. 이제 사는 것은 **시전 중의 발**이다:
+            # 잠겨 있어도 움직이고 때리면서 시전을 유지한다.
+            #
+            # 피격 취소는 그대로다. 둘 다 끄면 「안전한 자리에서 쏘는가」가 사라져
+            # 상위 호환이 된다.
+            "cast_act": CAST_FREE if entity.steady_cast > 0 else skill.cast_act,
             "cancel_on_hit": skill.cancel_on_hit,
             # **얹을 것들.** 피해와 별개다 — 피해 0 인 장판이 상태만 거는 자리다.
             "effects": skill.effects,

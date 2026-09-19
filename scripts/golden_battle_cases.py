@@ -161,6 +161,19 @@ NEW_ROOM_CASES = (
     ("g0_kite", "voice_hall", 6358, 20),
 )
 
+# **플레이어 마법** (2026-09-19). 여기 하나도 없었다 — 골든이 쓰는 표가 g0 셋과 벤치마크
+# 뿐이라, 두 코어가 **시전·잠금·취소 경로를 한 번도 대조한 적이 없었다.** 단위 파리티
+# 검사(`telegraphParity.test.ts`)는 예고판만 보고 엔진 전체를 안 태운다.
+#
+# 방마다 골든을 두는 규율과 같은 이유다: 안 태우면 두 코어가 어긋나도 골든이 침묵한다.
+# 셋을 고른 것은 예고 길이가 갈리기 때문이다 — 메테오는 3틱이라 잠기는 틱이 생기고,
+# 연쇄 번개·서리 장판은 1틱이라 끼어들 틱이 없다. 그 차이가 이식에서 제일 어긋나기 쉽다.
+MAGIC_CASES = (
+    ("v10_meteor_patience", "open_field", 6469, 1),
+    ("v10_bolt_line", "corridor", 6506, 2),
+    ("v10_frost_gate", "pillars", 6543, 3),
+)
+
 # 덧붙일 적이 없는 조합이 쓰는 빈 목록.
 NO_EXTRAS: tuple[tuple[str, int, int], ...] = ()
 
@@ -178,6 +191,9 @@ def load_case_resources() -> tuple[dict, dict[str, RoomTemplate], BlockCatalog, 
     catalog = load_block_catalog(BLOCKS_PATH)
     rulesets = dict(load_rulesets(G0_RULESETS_PATH))
     rulesets.update(load_rulesets(BENCHMARK_RULESETS_PATH))
+    # **마법을 쓰는 표는 여기에만 있다** (2026-09-19). 안 읽으면 `MAGIC_CASES` 가
+    # 「모르는 규칙표」로 죽고, 두 코어가 시전 경로를 계속 대조 안 한 채로 남는다.
+    rulesets.update(load_rulesets(G0_RULESETS_PATH.parent / "later_blocks.json"))
     return balance, rooms, catalog, rulesets
 
 
@@ -210,6 +226,7 @@ def list_case_plans() -> list[CasePlan]:
             *ROOM_FLOOR_CASES,
             *DEPTH_CASES,
             *NEW_ROOM_CASES,
+            *MAGIC_CASES,
         )
     )
     return plans

@@ -13,8 +13,8 @@
  * 전술이 된다 — 맞고 버티는 선택지가 성립하면 텔레그래프는 연출로 전락한다.
  */
 
-import { EFFECT_STATUS } from '../skills/catalog'
-import type { SkillEffect } from '../skills/catalog'
+import { CAST_CANCEL, CAST_FREE, CAST_HOLD, CAST_LOCK, EFFECT_STATUS } from '../skills/catalog'
+import type { CastAct, SkillEffect } from '../skills/catalog'
 import { EventLog, createLogEntry } from '../eventLog'
 import {
   type Position,
@@ -44,6 +44,9 @@ export const FORESIGHT_FLAG = 'FORESIGHT'
 export const IMMINENT_TICKS = 1
 
 /** 취소 사유. 어느 스위치를 볼지 이것이 가른다. */
+/** 엄한 순서. `readCastAct` 가 이 순서로 처음 걸리는 것을 돌려준다. */
+const CAST_STRICTNESS: readonly CastAct[] = [CAST_LOCK, CAST_HOLD, CAST_CANCEL, CAST_FREE]
+
 export const CANCEL_BY_HIT = '피격'
 export const CANCEL_BY_ACT = '다른 행동'
 
@@ -90,7 +93,7 @@ export interface Telegraph {
    */
   readonly cancelOnDeath: boolean
   /** 시전자가 다른 행동을 하면 취소되는가 (§10.3). */
-  readonly cancelOnAct: boolean
+  readonly castAct: CastAct
   /** 시전자가 맞으면 취소되는가. */
   readonly cancelOnHit: boolean
   /** 맞은 대상에게 얹을 것들. 피해와 별개다. */
@@ -111,7 +114,7 @@ export interface TelegraphInput {
   readonly visibleTicks?: number
   /** 시전자가 죽으면 취소할 것인가. */
   readonly cancelOnDeath?: boolean
-  readonly cancelOnAct?: boolean
+  readonly castAct?: CastAct
   readonly cancelOnHit?: boolean
   readonly effects?: readonly SkillEffect[]
 }
@@ -209,7 +212,7 @@ export class TelegraphBoard {
       cancelOnDeath: input.cancelOnDeath ?? true,
       // **기본이 false 다.** 전부에 걸면 자폭형이 다음 틱에 움직이면서 스스로 취소해
       // 영영 안 터진다 — 켜는 것은 스킬 데이터다 (설계/5_스킬 §10.3).
-      cancelOnAct: input.cancelOnAct ?? false,
+      castAct: input.castAct ?? CAST_FREE,
       cancelOnHit: input.cancelOnHit ?? false,
       effects: input.effects ?? [],
     }
@@ -268,7 +271,8 @@ export class TelegraphBoard {
     const alive: Telegraph[] = []
     let dropped = 0
     for (const telegraph of this.pending) {
-      const cancels = reason === CANCEL_BY_HIT ? telegraph.cancelOnHit : telegraph.cancelOnAct
+      const cancels =
+        reason === CANCEL_BY_HIT ? telegraph.cancelOnHit : telegraph.castAct === CAST_CANCEL
       if (telegraph.casterId !== casterId || !cancels) {
         alive.push(telegraph)
         continue
@@ -344,6 +348,28 @@ export class TelegraphBoard {
    */
   isCasting(entityId: string): boolean {
     return this.pending.some((telegraph) => telegraph.casterId === entityId)
+  }
+
+  /**
+   * 그 엔티티가 지금 거는 예고의 시전 규율. 파이썬 `read_cast_act` 와 같다.
+   *
+   * **여럿이면 제일 엄한 것을 따른다.** 한 엔티티가 예고 둘을 동시에 걸 수 있고, 그때
+   * 「하나는 잠기고 하나는 자유」는 한 틱에 둘 다 성립하지 못한다 — 느슨한 쪽을 고르면
+   * 잠금으로 지키려던 예고가 끊긴다.
+   *
+   * @param entityId 확인할 엔티티 id.
+   * @returns 시전 규율. 거는 예고가 없으면 자유 — 잠글 것이 없다.
+   */
+  readCastAct(entityId: string): CastAct {
+    const modes = new Set(
+      this.pending.filter((one) => one.casterId === entityId).map((one) => one.castAct),
+    )
+    for (const mode of CAST_STRICTNESS) {
+      if (modes.has(mode)) {
+        return mode
+      }
+    }
+    return CAST_FREE
   }
 
   // ── 내부 ──────────────────────────────────────────────────────────────────

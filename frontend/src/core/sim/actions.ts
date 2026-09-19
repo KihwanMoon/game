@@ -9,7 +9,7 @@
  */
 
 import { CANCEL_BY_HIT, MIN_LEAD_TICKS } from './telegraph'
-import { findSkill } from '../skills/catalog'
+import { findSkill, CAST_FREE } from '../skills/catalog'
 import { EventLog, createLogEntry } from '../eventLog'
 import { calculateDamage } from '../combat/damage'
 import {
@@ -308,7 +308,8 @@ export class ActionExecutor {
       cancel_on_death: true,
       // 흔들림 없는 시전은 **행동 취소만** 끈다. 피격 취소는 그대로다 — 둘 다 끄면
       // 「안전한 자리에서 쏘는가」가 사라져 상위 호환이 된다 (§10.7).
-      cancel_on_act: skill.cancelOnAct && entity.steadyCast <= 0,
+      // **흔들림 없는 시전은 잠금을 푼다** — 파이썬 `blast_actions` 와 같다.
+      cast_act: entity.steadyCast > 0 ? CAST_FREE : skill.castAct,
       cancel_on_hit: skill.cancelOnHit,
     })
     return true

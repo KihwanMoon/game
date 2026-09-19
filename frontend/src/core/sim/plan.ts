@@ -220,6 +220,8 @@ export interface RawSummonRule {
 
 /** balance.json 의 종류별 telegraph 절. */
 export interface RawTelegraphSetting {
+  /** 시전 중 다른 행동을 어떻게 할 것인가. 몬스터 절에는 없다 — 없으면 자유다. */
+  readonly cast_act?: string
   readonly skill: string
   readonly lead_ticks: number
   readonly visible_ticks: number

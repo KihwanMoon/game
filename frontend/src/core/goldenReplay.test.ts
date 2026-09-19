@@ -24,6 +24,7 @@ import {
   BLOCK_CATALOG,
   ENEMY_RULESETS,
   G0_RULESETS,
+  LATER_BLOCK_RULESETS,
   ROOM_TEMPLATES,
 } from './resources'
 import { buildRuleVm } from './rules/ruleVm'
@@ -96,8 +97,18 @@ const CASES = golden.cases as readonly GoldenCase[]
 /** 최소 케이스 수. 방 5개 × 규칙표 3종이 하한이며, 줄어들면 대조 범위가 조용히 좁아진다. */
 const MIN_CASE_COUNT = 12
 
-/** 규칙표를 찾을 곳들. g0 예시가 먼저이고, 없으면 벤치마크에서 찾는다. */
-const RULESET_SOURCES: readonly ReadonlyMap<string, RuleSet>[] = [G0_RULESETS, BENCHMARK_RULESETS]
+/**
+ * 규칙표를 찾을 곳들. g0 예시가 먼저이고, 없으면 벤치마크·후기 블록에서 찾는다.
+ *
+ * **후기 블록이 2026-09-19 에 들어왔다.** 마법을 쓰는 표가 거기에만 있어서, 그전까지
+ * 골든은 **시전·잠금·취소 경로를 한 번도 대조하지 않았다** (파이썬 `load_case_resources`
+ * 와 같은 날 같은 이유로 고쳤다).
+ */
+const RULESET_SOURCES: readonly ReadonlyMap<string, RuleSet>[] = [
+  G0_RULESETS,
+  BENCHMARK_RULESETS,
+  LATER_BLOCK_RULESETS,
+]
 
 const BALANCE_DATA: BalanceData = parseBalance(BALANCE)
 

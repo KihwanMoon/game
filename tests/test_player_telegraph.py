@@ -13,7 +13,7 @@ import pytest
 
 from game.app.services.run_battle import build_engine, load_balance
 from game.app.simulation.plan import PlannedAction
-from game.app.skills.catalog import SkillDef, SkillShape
+from game.app.skills.catalog import CAST_CANCEL, SkillDef, SkillShape
 from game.config import BALANCE_PATH, ROOM_TEMPLATES_PATH
 from game.schemas.room import load_room_templates
 
@@ -127,7 +127,7 @@ def test_another_action_cancels_a_cast(balance, templates):
     잠그면 그 틱 동안 규칙표가 안 도는데, 규칙표가 주인공인 게임에서 무결정 구간은
     그 자체로 손해다. 잠그는 대신 다른 행동이 끊게 하면 무엇을 할지는 규칙표가 정한다.
     """
-    engine, player = build_casting(balance, templates, cancel_on_act=True)
+    engine, player = build_casting(balance, templates, cast_act=CAST_CANCEL)
     engine.apply_actions((PlannedAction(entity_id=player.entity_id, action_id="APPROACH"),))
     assert engine.telegraphs.list_active() == ()
 
@@ -153,14 +153,14 @@ def test_holding_keeps_the_cast(balance, templates):
     행동` 이 매 판 찍혀 있었다. 예고를 쓰는 스킬이 **어느 규칙표에서도 한 번도 안
     터지고 있었다.**
     """
-    engine, player = build_casting(balance, templates, cancel_on_act=True)
+    engine, player = build_casting(balance, templates, cast_act=CAST_CANCEL)
     engine.apply_actions((PlannedAction(entity_id=player.entity_id, action_id="HOLD"),))
     assert len(engine.telegraphs.list_active()) == 1
 
 
 def test_setting_a_flag_keeps_the_cast(balance, templates):
     """★ 깃발은 세계를 안 건드린다. 끊으면 「시전 중에는 기록도 못 한다」가 된다."""
-    engine, player = build_casting(balance, templates, cancel_on_act=True)
+    engine, player = build_casting(balance, templates, cast_act=CAST_CANCEL)
     engine.apply_actions((PlannedAction(entity_id=player.entity_id, action_id="SET_FLAG"),))
     assert len(engine.telegraphs.list_active()) == 1
 
@@ -181,7 +181,7 @@ def test_a_fully_blocked_hit_does_not_cancel(balance, templates):
 
 def test_the_cancel_is_written_down(balance, templates):
     """★ 조용히 사라지면 「내 마법이 어디 갔지」가 된다 (P1)."""
-    engine, player = build_casting(balance, templates, cancel_on_act=True)
+    engine, player = build_casting(balance, templates, cast_act=CAST_CANCEL)
     engine.apply_actions((PlannedAction(entity_id=player.entity_id, action_id="APPROACH"),))
     lines = [
         one for one in engine.log.entries if "예고 취소" in one.expr or "예고 취소" in one.outcome

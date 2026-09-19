@@ -22,6 +22,7 @@ import { EventLog, createLogEntry } from '../eventLog'
 import { VisionCache, VisionGrid } from '../grid/vision'
 import { compareText, sortByKey } from '../ordering'
 import { TILE_LAVA, TILE_SPRING } from '../schemas'
+import { CAST_HOLD, CAST_LOCK } from '../skills/catalog'
 import {  ActionExecutor, MOVE_ACTIONS } from './actions'
 import { type PerceptionSnapshot, buildSnapshot } from './perception'
 import {
@@ -41,6 +42,7 @@ import {
   USE_ITEM_ACTION,
   resolveSkillPlan,
 } from './plan'
+import { createPlannedAction } from './plan'
 import type { DecisionPolicy, EngineConfig, PlannedAction, PolicyFactory } from './plan'
 import { PressureTracker, applySpringDrain, removeDrainedSprings } from './pressure'
 import { FACTION_PLAYER, type Entity, type WorldState, isAlive } from './state'
@@ -64,6 +66,16 @@ export const SPRING_REGEN_PER_TICK = 2
  * 버티기까지 취소 사유면 「마법을 포기하지 않는다」를 적을 칸이 규칙표에 없어, 무엇을
  * 적든 답이 언제나 「포기한다」 하나뿐이 된다. 세계를 안 건드리는 둘만 뺀다.
  */
+/**
+ * 시전 규율이 규칙표를 대신했을 때 로그에 적는 말 (§10.3). 파이썬 `engine.py` 와 같다.
+ *
+ * **왜 그 행동이 아니었는지를 화면이 말해야 한다** — 잠긴 틱이 빈 줄로 지나가면
+ * 사람은 규칙표가 고장 난 줄 안다.
+ */
+export const CAST_LOCKED_EXPR = '시전 중 — 잠김'
+export const CAST_HELD_EXPR = '시전 중 — 버팀'
+export const CAST_HELD_REASON = '시전 중'
+
 export const KEEP_CAST_ACTIONS: ReadonlySet<string> = new Set(['HOLD', 'SET_FLAG'])
 
 /** 전투 중이 아닐 때의 회복 비율. 감쇠가 없다는 뜻이다. */
@@ -109,6 +121,10 @@ export class TickEngine {
   readonly policies: Map<string, DecisionPolicy>
 
   readonly telegraphs: TelegraphBoard
+
+  /** 이번 틱에 터진 예고들. 화면이 타격 자국을 그리는 데 쓴다 — 다음 틱에 덮인다. */
+
+  lastBlasts: readonly Telegraph[] = []
 
   readonly pressure: PressureTracker
 
@@ -209,7 +225,13 @@ export class TickEngine {
    * 규칙표가 회피를 결정한다 — 뒤집으면 항상 1틱 늦게 인지한다.
    */
   runTelegraph(): void {
-    for (const telegraph of this.telegraphs.runCountdown(this.state, this.log)) {
+    // **이번 틱에 터진 것을 한 틱만 들고 있는다** (2026-09-19). 판은 발동과 동시에
+    // 그것을 버리므로, 틱이 끝난 뒤에 그리는 화면은 무엇이 어디서 터졌는지를 알 길이
+    // 없었다 — 붉은 칸이 그냥 사라지고 맞은 말에 고리만 남았다. 파이썬 `last_blasts`
+    // 와 같다. 로그에 안 싣는 이유는 골든이다: 로그 줄은 두 코어가 비트 단위로
+    // 대조하는 값이라, 화면 때문에 칸 목록을 실으면 대조 대상이 연출을 따라 움직인다.
+    this.lastBlasts = this.telegraphs.runCountdown(this.state, this.log)
+    for (const telegraph of this.lastBlasts) {
       this.applySelfDestruct(telegraph)
     }
     // 셀렉터 CASTING 과 `대상이 시전 중인가` 가 읽는다. 정렬해 내려야 같은 시드가 같은
@@ -248,6 +270,45 @@ export class TickEngine {
   }
 
   /**
+   * 한 엔티티의 이번 틱 계획. **시전 규율이 규칙표보다 먼저다** (§10.3).
+   *
+   * 파이썬 `_plan_one` 과 같다. 판단이 엔진에 사는 이유는 규칙표가 그것을 몰라도
+   * 되게 하려는 것이다 — 규칙 VM 에 두면 예고를 모르는 정책이 같은 규율을 각자 다시
+   * 구현해야 한다.
+   *
+   * @param entity 결정 주체.
+   * @param snapshot 이번 틱의 인지값.
+   * @returns 실행할 계획.
+   */
+  private planOne(entity: Entity, snapshot: PerceptionSnapshot): PlannedAction {
+    const mode = this.telegraphs.readCastAct(entity.entityId)
+    if (mode === CAST_LOCK) {
+      return createPlannedAction({
+        entityId: entity.entityId,
+        actionId: 'HOLD',
+        expr: CAST_LOCKED_EXPR,
+      })
+    }
+    const plan = this.getPolicy(entity.entityId).planAction(entity, snapshot, this.state)
+    if (mode === CAST_HOLD && !KEEP_CAST_ACTIONS.has(plan.actionId)) {
+      return {
+        ...plan,
+        actionId: 'HOLD',
+        targetId: null,
+        skillId: null,
+        itemKind: null,
+        expr: CAST_HELD_EXPR,
+        ruleIndex: null,
+        blocked: [
+          ...plan.blocked,
+          { ruleIndex: plan.ruleIndex ?? 0, expr: plan.expr, reason: CAST_HELD_REASON },
+        ],
+      }
+    }
+    return plan
+  }
+
+  /**
    * 각 엔티티의 행동을 결정한다 (페이즈 4). 세계를 바꾸지 않는다.
    *
    * @param snapshots PERCEPTION 이 고정한 스냅샷들.
@@ -260,7 +321,7 @@ export class TickEngine {
       if (snapshot === undefined) {
         throw new Error(`인지 스냅샷이 없는 엔티티다: ${entity.entityId}`)
       }
-      return this.getPolicy(entity.entityId).planAction(entity, snapshot, this.state)
+      return this.planOne(entity, snapshot)
     })
     // 결정을 매 틱 남긴다. 피해가 난 틱만 기록하면 "왜 그 규칙이 안 떴는지" 를 되짚을
     // 수 없고, 그것이 P1(실패는 정보다)의 실현을 막는다.

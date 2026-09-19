@@ -15,6 +15,7 @@
 from typing import Protocol
 
 from game.app.core.event_log import EventLog
+from game.app.simulation.phases import PHASE_TELEGRAPH
 from game.app.simulation.state import Entity, WorldState
 from game.app.simulation.telegraph_record import Telegraph
 from game.app.skills.catalog import EFFECT_STATUS
@@ -78,3 +79,52 @@ def apply_blast_effects(
             None,
             victim.entity_id,
         )
+
+
+class DamageDealer(Protocol):
+    """피해를 입히는 쪽. `ActionExecutor` 가 이것을 만족한다.
+
+    **실행기를 통째로 들이지 않는다.** `actions.py` 가 이 모듈을 거슬러 부르므로
+    순환이 난다 — `BlastRecorder` 를 프로토콜로 둔 것과 같은 자리다.
+    """
+
+    def apply_damage(
+        self,
+        target: Entity,
+        amount: int,
+        phase: str,
+        expr: str,
+        actor_id: str,
+        rule: int | None = None,
+    ) -> None:
+        """피해를 입힌다."""
+        ...
+
+
+def apply_self_destruct(
+    state: WorldState,
+    executor: DamageDealer,
+    enemy_stats: dict[str, dict],
+    telegraph: Telegraph,
+) -> None:
+    """자폭형 예고가 터졌으면 시전자도 함께 죽인다 (GDD §5).
+
+    **여기가 제자리다.** 이 모듈이 「터졌을 때 무엇이 남는가」를 맡고, 자폭은 그중
+    시전자에게 남는 것이다. 예고판은 (WorldState, EventLog) 만 계약으로 갖고 종류
+    데이터를 모르므로 「누가 자폭형인가」는 판 바깥에서 본다.
+
+    Args:
+        state: 세계 상태.
+        executor: 피해를 입히는 실행기.
+        enemy_stats: 종류에서 스탯 절로의 대응표.
+        telegraph: 이번 틱에 발동한 예고.
+    """
+    caster = state.entities.get(telegraph.caster_id)
+    if caster is None or not caster.is_alive:
+        return
+    setting = enemy_stats.get(caster.kind_id, {}).get("telegraph") or {}
+    if not setting.get("self_destruct"):
+        return
+    executor.apply_damage(
+        caster, caster.hp, PHASE_TELEGRAPH, f"{telegraph.skill_id} 자폭", caster.entity_id
+    )
