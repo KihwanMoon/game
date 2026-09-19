@@ -64,10 +64,6 @@ export const PRIORITY_NOTE =
 /** 조건 항 추가 버튼의 글자. 점선 테두리라 「아직 없는 자리」로 읽힌다. */
 const ADD_TERM_TEXT = '＋ 조건 추가'
 
-// 인자를 안 고른 상태. **빈 칸이 아니라 한 줄로 적는다** — 고르개가 빈 채로 있으면
-// 사람은 목록이 덜 실렸다고 읽지, 제가 안 골랐다고 읽지 않는다.
-const UNSET_PARAM_OPTION = { value: '', label: '— 안 골랐다' }
-
 /** ConditionCard 가 받는 props. */
 export interface ConditionCardProps {
   readonly rule: Rule
@@ -98,8 +94,8 @@ function buildPerceptionGroups(catalog: BlockCatalog): readonly EditOptionGroup[
  * @param catalog 블록 카탈로그.
  * @returns 카테고리별 묶음.
  */
-function buildActionGroups(catalog: BlockCatalog): readonly EditOptionGroup[] {
-  return listActionGroups(catalog).map((group) => ({
+function buildActionGroups(catalog: BlockCatalog, keepId: string): readonly EditOptionGroup[] {
+  return listActionGroups(catalog, keepId).map((group) => ({
     label: group.labelKo,
     options: group.blocks.map((block) => ({ value: block.blockId, label: block.labelKo })),
   }))
@@ -328,7 +324,7 @@ export function ActionCard(props: ActionCardProps): React.JSX.Element {
         <EditField
           label={`${label} 행동`}
           value={rule.action}
-          groups={buildActionGroups(catalog)}
+          groups={buildActionGroups(catalog, rule.action)}
           wide={!targeted}
           onChange={(actionId) => {
             actions.changeAction(index, actionId)
@@ -337,20 +333,19 @@ export function ActionCard(props: ActionCardProps): React.JSX.Element {
         {action?.param == null ? null : (
           <EditField
             label={`${label} ${action.param.name === 'item' ? '소모품' : '재주'}`}
-            // **안 고른 것을 안 골랐다고 적는다** (2026-09-19). 예전에는 값이 없으면
+            // **안 고른 것은 안 고른 채로 넘긴다** (2026-09-19). 예전에는 값이 없으면
             // `listParamOptions(action)[0]` 을 띄웠다 — 목록의 **첫 칸**이다. 그래서
             // 저장된 값이 없는 규칙이 화면에서는 「재주 사용 [일격]」으로 멀쩡히 보였고,
             // VM 은 그 줄을 「미장착」으로 걸러 **영영 안 돌렸다.** 저장된 것·보이는 것·
             // 도는 것이 셋 다 달랐다.
             //
-            // 첫 칸을 띄우는 것이 편해 보이지만 그것은 **고르지 않은 것을 골랐다고
-            // 말하는 일**이다. 빈 값을 그대로 두면 검증이 반려하고(`checkActionParam`)
-            // 사람이 다시 고른다 — 실패는 정보다 (P1).
+            // 빈 값을 어떻게 적을지는 `EditField` 가 안다 — 여기서 또 정하면 칸마다
+            // 다른 말이 된다.
             value={rule.actionParam ?? ''}
             // **적만 쓰는 재주는 안 보인다** (2026-09-17). 카탈로그에는 들어 있어야
             // 하고(적 규칙표가 쿨타임을 묻는다) 고르개에는 있으면 안 된다 — 골라 놓고
             // 「불가」가 뜨는 줄이 다섯 개 생긴다.
-            options={[UNSET_PARAM_OPTION, ...listParamOptions(action)]}
+            options={listParamOptions(action)}
             onChange={(actionParam) => {
               actions.changeParam(index, actionParam)
             }}

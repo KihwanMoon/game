@@ -83,9 +83,12 @@ describe('발행한 이름', () => {
   }
 
   it('갈아 끼운 팩의 한글 이름이 화면 쪽으로 나온다', () => {
-    expect(readSkillName('HEAL')).toBe('수복')
-    applyContentPack(buildPack([{ id: 'HEAL', label_ko: '회복', actor: 'BOTH' }]))
-    expect(readSkillName('HEAL')).toBe('회복')
+    // **번들의 이름을 여기 적지 않는다.** 적어 두면 이름을 고칠 때마다 이 검사가
+    // 빨개지고, 그것은 「팩이 이긴다」와 아무 상관이 없다.
+    const bundled = readSkillName('HEAL')
+    applyContentPack(buildPack([{ id: 'HEAL', label_ko: '딴 이름', actor: 'BOTH' }]))
+    expect(readSkillName('HEAL')).toBe('딴 이름')
+    expect(readSkillName('HEAL')).not.toBe(bundled)
   })
 
   it('팩에만 있는 재주도 목록에 선다', () => {

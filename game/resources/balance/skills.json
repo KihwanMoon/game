@@ -199,6 +199,7 @@
     },
     {
       "id": "ATTACK",
+      "label_ko": "공격",
       "family": "ATTACK",
       "shape": {
         "kind": "SINGLE"
@@ -251,6 +252,7 @@
     },
     {
       "id": "AREA_ATTACK",
+      "label_ko": "돌려치기",
       "family": "ATTACK",
       "shape": {
         "kind": "AREA",
@@ -269,7 +271,7 @@
     },
     {
       "id": "HEAL",
-      "label_ko": "수복",
+      "label_ko": "회복",
       "family": "UTILITY",
       "shape": {
         "kind": "SINGLE"
@@ -308,7 +310,7 @@
     },
     {
       "id": "METEOR",
-      "label_ko": "메테오",
+      "label_ko": "유성 낙하",
       "family": "ATTACK",
       "shape": {
         "kind": "AREA",

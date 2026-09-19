@@ -37,8 +37,6 @@ export interface VitalRow {
  * 손으로 적어 두면 이름을 고칠 때 이 줄만 옛 이름으로 남는다 (2026-09-15).
  */
 const COOLDOWN_EXTRA: ReadonlyMap<string, string> = new Map([
-  ['ATTACK', '공격'],
-  ['AREA_ATTACK', '광역'],
   ['SUMMON', '소환'],
 ])
 

@@ -101,8 +101,49 @@ export function listPerceptionGroups(catalog: BlockCatalog): readonly BlockGroup
  * @param catalog 블록 카탈로그.
  * @returns 카테고리 그룹 목록.
  */
-export function listActionGroups(catalog: BlockCatalog): readonly BlockGroup<ActionBlock>[] {
-  return buildGroups(listWritableActions(catalog), (block) => block.category, ACTION_CATEGORY_LABELS)
+export function listActionGroups(
+  catalog: BlockCatalog,
+  keepId?: string,
+): readonly BlockGroup<ActionBlock>[] {
+  const groups = buildGroups(
+    listWritableActions(catalog),
+    (block) => block.category,
+    ACTION_CATEGORY_LABELS,
+  )
+  return [...groups, ...buildLegacyGroup(catalog, keepId, groups)]
+}
+
+/** 팔레트에서 뺀 행동을 지금 쓰고 있을 때 그 행동이 서는 묶음. */
+export const LEGACY_ACTION_GROUP = '예전 방식'
+
+/**
+ * 지금 쓰고 있는 행동이 팔레트에 없으면 그것만 담은 묶음을 하나 낸다.
+ *
+ * **고장이 아니라 옛 방식이다.** `SKILL_1`·`USE_POTION` 로 적힌 규칙은 여전히 읽히고
+ * 제대로 돈다 — 팔레트에서 뺀 것은 **새로 지을 때** 길을 하나로 모으려는 것이지 그
+ * 규칙을 무르려는 것이 아니다. 그래서 이름을 그대로 보여 주되 묶음 이름으로 사정을
+ * 말한다. 그러지 않으면 `EditField` 의 마지막 방어선이 영문 id 를 띄우고, 멀쩡히 도는
+ * 규칙이 깨진 것처럼 보인다.
+ *
+ * @param catalog 블록 카탈로그.
+ * @param keepId 지금 쓰고 있는 행동 id.
+ * @param groups 이미 세운 묶음들.
+ * @returns 묶음 하나이거나 빈 배열.
+ */
+function buildLegacyGroup(
+  catalog: BlockCatalog,
+  keepId: string | undefined,
+  groups: readonly BlockGroup<ActionBlock>[],
+): readonly BlockGroup<ActionBlock>[] {
+  if (keepId === undefined) {
+    return []
+  }
+  const block = catalog.actions.get(keepId)
+  const shown = groups.some((group) => group.blocks.some((one) => one.blockId === keepId))
+  if (block === undefined || shown) {
+    return []
+  }
+  return [{ category: LEGACY_ACTION_GROUP, labelKo: LEGACY_ACTION_GROUP, blocks: [block] }]
 }
 
 /**
@@ -261,10 +302,9 @@ const PARAM_LABELS: ReadonlyMap<string, string> = new Map([
   // 고쳐 발행해도 이 화면만 「광역 공격」이라고 말했고, 같은 재주가 화면 셋에서 세
   // 이름이었다 (2026-09-19). 폴백은 아래에 깔려야 정본이 생기는 날 저절로 물러난다.
   //
-  // 남아 있는 것은 `SUMMON` 뿐이다 — `skills.json` 에 행 자체가 없다. `ATTACK`·
-  // `AREA_ATTACK` 은 정본이 이름을 가졌으므로 이 줄이 더는 안 닿는다.
-  ['ATTACK', '공격'],
-  ['AREA_ATTACK', '광역 공격'],
+  // **남은 것은 `SUMMON` 하나다.** `skills.json` 에 행 자체가 없다 — 인자 목록에만
+  // 있고 실행 갈래는 `engine` 이 들고 있다. 정본에 행이 생기면 이 줄도 지운다.
+  // `ATTACK`·`AREA_ATTACK` 은 정본이 이름을 가져서 먼저 나갔다.
   ['SUMMON', '소환'],
   ...readSkillNames(),
   // `self_has_status` 가 묻는 상태들. GUARD·FOCUS 는 **스스로 거는 것**이라 규칙표가

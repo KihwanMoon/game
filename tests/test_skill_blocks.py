@@ -21,8 +21,19 @@ from game.config import BLOCKS_PATH
 from game.schemas.blocks import ACTION_COUNT, PERCEPTION_COUNT, load_block_catalog
 from game.schemas.ruleset import parse_ruleset
 
-BLOCK_LIST_VERSION = 18  # v18: 2막 후반의 적 전용 마법 둘 — 넋두리·조종 (2026-09-18)
-LEGACY_ACTIONS = ("SKILL_1", "SKILL_2", "AREA_ATTACK", "HEAL", "SUMMON")
+BLOCK_LIST_VERSION = 19  # v19: 행동 이름을 재주 이름에 맞췄다 (2026-09-19)
+# 저장된 규칙표가 쓰고 있어 지울 수 없는 행동들. 기준은 「팔레트에 없지만 데이터에
+# 있다」이고, 2026-09-19 에 팔레트에서 별칭 전부를 빼면서 둘이 늘었다 — 운영 슬롯이
+# 실제로 USE_POTION 과 ATTACK 을 쓰고 있다.
+LEGACY_ACTIONS = (
+    "SKILL_1",
+    "SKILL_2",
+    "AREA_ATTACK",
+    "HEAL",
+    "SUMMON",
+    "USE_POTION",
+    "ATTACK",
+)
 
 
 @pytest.fixture

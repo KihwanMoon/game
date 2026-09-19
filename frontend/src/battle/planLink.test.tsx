@@ -650,6 +650,7 @@ describe('수치 이펙트 (간단한 표시)', () => {
 describe('쿨타임 줄', () => {
   it('★ 잠긴 것만 남은 틱과 함께 적는다 — 0 까지 적으면 무엇이 잠겼는지 안 보인다', async () => {
     const { formatCooldowns, listRulesetSkills } = await import('./BattleView')
+    const { readCooldownLabel } = await import('./vitalRows')
     const totals = new Map([['AREA_ATTACK', 10], ['HEAL', 6], ['SKILL_2', 4], ['SKILL_1', 6]])
     const table = new Map([['AREA_ATTACK', 3]])
     // **규칙표가 부르는 스킬만** — 들고만 있는 스킬은 이 판의 정보가 아니다 (실제 요청).
@@ -667,9 +668,15 @@ describe('쿨타임 줄', () => {
     ])
     expect(skills).toEqual(['AREA_ATTACK', 'SKILL_1', 'SKILL_2'])
     // 남은틱/전체틱 — 0/10 이 곧 「준비됨」이다.
-    expect(formatCooldowns(table, skills, totals)).toBe('쿨 — 광역 3/10틱 · 일격 0/6틱 · 사격 0/4틱')
+    // 이름은 정본에서 읽는다 — 여기 적어 두면 이름을 고칠 때 이 줄만 옛말을 한다.
+    const named = skills.map((id) => readCooldownLabel(id))
+    expect(formatCooldowns(table, skills, totals)).toBe(
+      `쿨 — ${named[0]} 3/10틱 · ${named[1]} 0/6틱 · ${named[2]} 0/4틱`,
+    )
     // **안 쓴 틱에도 줄이 산다** — 사라지면 「정보가 없어졌다」로 읽힌다 (실제 신고).
-    expect(formatCooldowns(undefined, skills, totals)).toBe('쿨 — 광역 0/10틱 · 일격 0/6틱 · 사격 0/4틱')
+    expect(formatCooldowns(undefined, skills, totals)).toBe(
+      `쿨 — ${named[0]} 0/10틱 · ${named[1]} 0/6틱 · ${named[2]} 0/4틱`,
+    )
     expect(formatCooldowns(undefined, [], totals)).toBe('')
   })
 })

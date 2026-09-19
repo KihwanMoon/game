@@ -39,7 +39,15 @@ const DEFAULT_INT_RHS = 1
 const RANGE_HALF = 2
 
 /** 새 규칙의 기본 행동과 셀렉터. 만들자마자 검증을 통과하는 조합이어야 한다. */
-const DEFAULT_ACTION_ID = 'ATTACK'
+//
+// **팔레트에 있는 행동이라야 한다** (2026-09-19). 예전 기본값은 `ATTACK` 이었는데,
+// 별칭을 팔레트에서 빼면서 그것이 **고를 수 없는 값**이 됐다 — 새 규칙을 하나 만들면
+// 실제로는 공격인데 행동 칸에는 목록의 첫 항목인 「대상에게 접근」이 떴다.
+//
+// 같은 것을 `USE_SKILL[ATTACK]` 로 적는다. 공격은 `BASE_SKILLS` 라 늘 장착돼 있어
+// 「미장착」으로 걸리지 않으므로, 도는 결과는 예전과 같다.
+const DEFAULT_ACTION_ID = 'USE_SKILL'
+const DEFAULT_SKILL_ID = 'ATTACK'
 const DEFAULT_SELECTOR_ID = 'NEAREST'
 const DEFAULT_COMPARISON: Comparison = '<'
 
@@ -134,7 +142,7 @@ export function createRule(catalog: BlockCatalog, priority: number, blockId?: st
     conditions: { op: OP_SINGLE, terms },
     action: DEFAULT_ACTION_ID,
     target: targeted ? DEFAULT_SELECTOR_ID : null,
-    actionParam: null,
+    actionParam: DEFAULT_SKILL_ID,
     setFlag: null,
     cpuCost: calculateCpuCost(terms.length),
   }

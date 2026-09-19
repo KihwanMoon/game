@@ -66,6 +66,47 @@ export interface EditFieldProps {
   readonly wide?: boolean
 }
 
+/** 목록에 없는 값에 붙이는 꼬리표. 지금 든 것이 고를 수 없는 것임을 말한다. */
+export const ORPHAN_SUFFIX = ' (목록에 없음)'
+
+/** 아무것도 안 고른 자리에 적는 말. 빈 칸은 「목록이 덜 실렸다」로 읽힌다. */
+export const UNSET_LABEL = '— 안 골랐다'
+
+/**
+ * 지금 든 값이 목록에 없으면 그 값을 항목으로 하나 만들어 낸다.
+ *
+ * **고르개는 거짓말을 하면 안 된다** (2026-09-19). `<select>` 는 value 와 맞는 option 이
+ * 없으면 **첫 항목을 고른 것처럼** 보여 준다. 실측한 것 둘:
+ *
+ * - 실제로는 `ATTACK`(공격)인 새 규칙이 화면에서 「대상에게 접근」으로 떴다.
+ * - 대상을 안 고른 규칙이 셀렉터 목록의 첫 칸을 고른 것처럼 떴다.
+ *
+ * **막는 자리가 여기인 이유.** 부르는 쪽마다 막으면 다음에 생기는 칸이 또 샌다 — 실제로
+ * 행동 칸은 인자 칸의 같은 병을 고친 **바로 그 커밋에서** 새로 샜다. 칸 자체가 못 하게
+ * 한다.
+ *
+ * **값을 지우지 않고 드러낸다.** 옛 규칙표가 팔레트에서 뺀 행동(`SKILL_1` 등)을 쓰고
+ * 있을 수 있고 그것은 여전히 읽히고 돌아야 한다 — 열었다는 이유로 조용히 바뀌면 안 된다.
+ *
+ * @param props 칸의 props.
+ * @returns 앞에 붙일 항목 하나. 값이 목록에 있으면 빈 배열.
+ */
+function buildOrphanOption(props: EditFieldProps): readonly EditOption[] {
+  const known = [
+    ...(props.options ?? []),
+    ...(props.groups ?? []).flatMap((group) => group.options),
+  ]
+  if (known.some((option) => option.value === props.value)) {
+    return []
+  }
+  return [
+    {
+      value: props.value,
+      label: props.value === '' ? UNSET_LABEL : `${props.value}${ORPHAN_SUFFIX}`,
+    },
+  ]
+}
+
 /**
  * 선택 칸 하나를 그린다.
  *
@@ -74,7 +115,7 @@ export interface EditFieldProps {
  */
 export function EditField(props: EditFieldProps): React.JSX.Element {
   const groups = props.groups ?? []
-  const options = props.options ?? []
+  const options = [...buildOrphanOption(props), ...(props.options ?? [])]
   return (
     <span className={`edit-field${props.wide === true ? ' edit-field--wide' : ''}`}>
       <select

@@ -1,6 +1,6 @@
 {
   "_comment": "블록 카탈로그 v5. 스킬을 액션마다 더하지 않고 USE_SKILL[skill_id] 파라미터 하나로 묶었다 — 스킬이 늘어도 액션 종류가 고정이라 랭킹 시즌이 갈리지 않는다 (docs/설계/5_스킬 §4). 기존 SKILL_1·SKILL_2·AREA_ATTACK·HEAL·SUMMON 과 self_cooldown_ready 는 지우지 않고 별칭으로 남긴다: 지우면 저장된 규칙표와 골든 리플레이가 전부 깨진다. 장비 전용 블록은 만들지 않는다 — 장비는 전투 전에 캐릭터 능력치·스킬로 녹고 규칙표는 캐릭터만 읽는다 (결정 #13). v6: USE_ITEM[kind] 를 더했다 (#54). 보호 주문서가 카탈로그에 있는데 그것을 쓸 수 있는 행동이 없어, 얻어도 영영 쓰지 못했다. USE_POTION 은 별칭으로 남는다.",
-  "block_list_version": 18,
+  "block_list_version": 19,
   "perceptions": [
     {
       "id": "self_hp_percent",
@@ -297,7 +297,7 @@
       "category": "attack",
       "targeted": true,
       "target_faction": "enemy",
-      "label_ko": "기본 공격"
+      "label_ko": "공격"
     },
     {
       "id": "SKILL_1",
@@ -319,7 +319,7 @@
       "id": "AREA_ATTACK",
       "category": "attack",
       "targeted": false,
-      "label_ko": "범위 공격",
+      "label_ko": "돌려치기",
       "_alias_of": "USE_SKILL[AREA_ATTACK]"
     },
     {
@@ -364,7 +364,7 @@
       "id": "USE_POTION",
       "category": "control",
       "targeted": false,
-      "label_ko": "포션 사용",
+      "label_ko": "탕약 사용",
       "_alias_of": "USE_ITEM[POTION]",
       "_note": "v6 부터 USE_ITEM[POTION] 의 별칭이다. 지우지 않는 이유는 저장된 규칙표와 골든 리플레이가 이 id 를 쓰기 때문이다."
     },
@@ -387,7 +387,7 @@
       "category": "control",
       "targeted": true,
       "target_faction": "ally",
-      "label_ko": "수복",
+      "label_ko": "회복",
       "_note": "v4 추가. 치유형이 규칙표로 회복을 기술한다 (GDD §5). label_ko 는 「아군 회복」이었다 — 재주 이름의 정본은 skills.json 이고 거기서는 「수복」이라, 규칙 줄의 행동절과 같은 화면의 쿨타임 줄이 한 재주를 두 이름으로 불렀다 (2026-09-18). 열쇠는 그대로다. 주기는 쿨타임[HEAL] 이 맡고, 회복량과 사거리는 balance.json 의 skills 절이 정한다. 직선 시야를 묻지 않는 이유는 대상별 시야를 묻는 인지 변수가 DSL 에 없어서다 — 요구하면 참인데 영영 실패하는 규칙이 만들어진다 (P1).",
       "_alias_of": "USE_SKILL[HEAL]"
     },

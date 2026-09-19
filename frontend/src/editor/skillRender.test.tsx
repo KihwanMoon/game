@@ -6,6 +6,8 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
+import { readSkillName } from '../content/skills'
+
 import type { SkillPrefView } from '../storage'
 
 import { SkillPanel } from './SkillPanel'
@@ -29,11 +31,12 @@ const VIEW: SkillPrefView = {
 describe('재주 세팅', () => {
   it('★ 한글 이름으로 적는다 — id 를 그대로 두면 그 줄만 다른 언어가 된다', () => {
     const html = render(VIEW)
-    expect(html).toContain('공격')
-    expect(html).toContain('일격')
-    // `skills.json` 의 `label_ko` 가 정본이다 — HEAL 은 「수복」이고, 손으로 적은
-    // 사본을 지워 규칙 편집기·쿨타임 줄과 같은 말을 쓰게 했다 (2026-09-18).
-    expect(html).toContain('수복')
+    // **이름을 여기 적지 않는다.** `skills.json` 의 `label_ko` 가 정본이고, 적어 두면
+    // 이름을 고칠 때 이 검사가 빨개진다 — 그러면 사람은 화면이 아니라 검사를 고치게
+    // 되고, 그것이 사본을 만드는 첫걸음이다. 정본을 읽어 대조한다 (2026-09-19).
+    for (const row of VIEW.rows) {
+      expect(html).toContain(readSkillName(row.skillId))
+    }
   })
 
   it('★ 꺼진 칸이 격자에서 갈린다 — 색만이 아니라 「끔」 글자로도', () => {

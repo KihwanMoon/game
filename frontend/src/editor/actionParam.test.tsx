@@ -13,13 +13,16 @@
  *
  * 1 은 이미 막혔다. 여기서는 2 와 3 을 지킨다.
  */
-import { describe, expect, it } from 'vitest'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { describe, expect, it, vi } from 'vitest'
 
 import { readActivePack } from '../content/pack'
 import { validateRuleSet } from '../core/rules/validator'
 import type { Rule, RuleSet } from '../core/schemas'
 import { applyParamChoice, createRule } from './draft'
-import { listWritableActions } from './blockOptions'
+import { LEGACY_ACTION_GROUP, listWritableActions } from './blockOptions'
+import { ORPHAN_SUFFIX, UNSET_LABEL } from './EditParts'
+import { RuleEditMobile } from './RuleEditMobile'
 
 const CATALOG = readActivePack().catalog
 const BUDGET = 99
@@ -31,6 +34,28 @@ function buildSet(patch: Partial<Rule>): RuleSet {
 
 function check(patch: Partial<Rule>): readonly string[] {
   return validateRuleSet(buildSet(patch), CATALOG, BUDGET, BUDGET)
+}
+
+/**
+ * 규칙 하나짜리 편집 화면을 정적 마크업으로 굽는다.
+ *
+ * @param patch 규칙에 덮어쓸 필드들.
+ * @returns 마크업.
+ */
+function renderRule(patch: Partial<Rule>): string {
+  const noop = {
+    update: vi.fn(), changeLhs: vi.fn(), changeTerm: vi.fn(), changeAction: vi.fn(),
+    changeParam: vi.fn(), addTerm: vi.fn(), removeTerm: vi.fn(), addRule: vi.fn(),
+    duplicate: vi.fn(), remove: vi.fn(), move: vi.fn(),
+  }
+  return renderToStaticMarkup(
+    RuleEditMobile({
+      mode: 'portrait', ruleset: buildSet(patch), catalog: CATALOG, cpuBudget: BUDGET,
+      ruleSlots: BUDGET, problems: new Map(), globalProblems: [], editIndex: 0,
+      readings: new Map(), actions: noop, onOpen: vi.fn(), onAdd: vi.fn(),
+      onReorder: vi.fn(), onCancel: vi.fn(), onSave: vi.fn(), backLabel: '내력',
+    }),
+  )
 }
 
 describe('행동 인자 검증', () => {
@@ -83,5 +108,47 @@ describe('별칭을 감춘 것이 없앤 것은 아니다', () => {
 
   it('감춘 것이 실제로 있다 — 검사가 빈 집합을 보고 통과하지 않는다', () => {
     expect(listWritableActions(CATALOG).length).toBeLessThan(CATALOG.actions.size)
+  })
+})
+
+describe('고르개는 든 것을 그대로 보여 준다', () => {
+  /**
+   * 칸 하나를 굽고 `selected` 가 붙은 항목을 읽는다.
+   *
+   * **`value` 만 보면 안 된다.** 문제는 value 가 아니라 **맞는 option 이 없을 때** 생긴다 —
+   * 브라우저가 첫 항목을 고른 것처럼 보여 주기 때문이다.
+   */
+  function readSelected(markup: string, label: string): string | undefined {
+    for (const found of markup.matchAll(/<select[^>]*aria-label="([^"]*)"[\s\S]*?<\/select>/g)) {
+      if (found[1] !== label) {
+        continue
+      }
+      return /<option[^>]*selected[^>]*>([^<]*)</.exec(found[0])?.[1]
+    }
+    return undefined
+  }
+
+  it('★ 새 규칙의 행동이 팔레트 안에 있다 — 기본값이 고를 수 없는 값이면 안 된다', () => {
+    const fresh = createRule(CATALOG, 1)
+    expect(listWritableActions(CATALOG).map((one) => one.blockId)).toContain(fresh.action)
+    expect(check(fresh)).toEqual([])
+  })
+
+  it('★ 팔레트에서 뺀 행동을 쓰는 규칙은 그 이름을 그대로 낸다', () => {
+    const markup = renderRule({ action: 'SKILL_1', actionParam: null, target: 'NEAREST' })
+    // 「일격」이 뜬다. 예전에는 맞는 항목이 없어 목록 첫 칸인 「대상에게 접근」이 떴다.
+    expect(readSelected(markup, '규칙 1 행동')).toBe('일격')
+    expect(markup).toContain(LEGACY_ACTION_GROUP)
+  })
+
+  it('★ 아무것도 안 고른 칸은 안 골랐다고 적는다', () => {
+    const markup = renderRule({ action: 'USE_SKILL', actionParam: null, target: null })
+    expect(readSelected(markup, '규칙 1 재주')).toBe(UNSET_LABEL)
+    expect(readSelected(markup, '규칙 1 대상')).toBe(UNSET_LABEL)
+  })
+
+  it('카탈로그가 모르는 값은 목록에 없다고 적는다 — 마지막 방어선', () => {
+    const markup = renderRule({ action: 'USE_SKILL', actionParam: '없는재주', target: 'NEAREST' })
+    expect(readSelected(markup, '규칙 1 재주')).toBe(`없는재주${ORPHAN_SUFFIX}`)
   })
 })
