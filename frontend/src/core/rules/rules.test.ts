@@ -395,6 +395,10 @@ describe('검증기', () => {
             terms: [{ lhs: 'self_hp_percent', comparison: '=~', rhs: 1, lhsParam: null }],
           },
           action: 'HOLD',
+          // `parseRuleSet` 은 인자가 없으면 **null 로 채운다** — 키가 아예 없는 절은
+          // 파서를 거친 규칙에 존재하지 않는다. 여기를 비워 두면 `undefined` 가 되어
+          // 「인자를 받지 않는다」가 하나 더 붙는다.
+          actionParam: null,
           target: null,
           setFlag: null,
           cpuCost: 1,

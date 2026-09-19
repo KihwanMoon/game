@@ -23,6 +23,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { BLOCK_CATALOG, G0_RULESETS } from '../core/resources'
 import { renderTerm } from '../core/rules/ruleVm'
 import type { Rule, RuleSet, Term } from '../core/schemas'
+import { listWritableActions } from './blockOptions'
 import { PRIORITY_NOTE } from './RuleEditCards'
 import { RuleEditMobile, type RuleEditMobileProps } from './RuleEditMobile'
 import type { RuleRowActions } from './ruleRowActions'
@@ -765,14 +766,27 @@ describe('★ 블록 전량에 손이 닿는다 — 팔레트가 하던 일이�
     }
   })
 
-  it('행동이 전부 행동 목록에 있다 — 별칭 하나만 뺀다', () => {
-    // `USE_POTION` 은 `USE_ITEM[물약]` 과 같은 일이라 고르는 자리에서 일부러 숨긴다.
-    // 저장된 규칙표와 골든이 쓰므로 코어에서는 안 지운다 (`listActionGroups`).
+  it('팔레트에 세운 행동은 전부 화면에 있다', () => {
+    for (const block of listWritableActions(BLOCK_CATALOG)) {
+      expect(markup).toContain(block.labelKo)
+    }
+  })
+
+  it('★ 팔레트에서 뺀 행동도 전부 인자로 닿는다 — 사라진 것은 없다', () => {
+    // 별칭을 숨긴 것이 **없앤 것이 되면 안 된다** (2026-09-19). 「일격」을 고를 길이
+    // 하나도 없으면 그것은 통일이 아니라 기능 삭제다. 숨긴 것은 전부 `USE_SKILL[…]`·
+    // `USE_ITEM[…]` 의 인자로 닿아야 하고, 이 검사가 그 약속을 지킨다.
+    const writable = new Set(listWritableActions(BLOCK_CATALOG).map((one) => one.blockId))
+    const byParam = new Set(
+      [...BLOCK_CATALOG.actions.values()].flatMap((one) => one.param?.values ?? []),
+    )
     for (const block of BLOCK_CATALOG.actions.values()) {
-      if (block.blockId === 'USE_POTION') {
+      if (writable.has(block.blockId)) {
         continue
       }
-      expect(markup).toContain(block.labelKo)
+      // `USE_POTION` 만은 제 id 가 아니라 `USE_ITEM[POTION]` 으로 닿는다. 그래서
+      // 블록이 스스로 어느 길의 별칭인지 적어 두고(`aliasOf`), 그것을 여기서 읽는다.
+      expect(byParam.has(block.blockId) || block.aliasOf !== null).toBe(true)
     }
   })
 

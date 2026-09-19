@@ -256,8 +256,43 @@ function checkAction(rule: Rule, catalog: BlockCatalog, unlocked: ReadonlySet<st
   if (rule.target !== null && !catalog.selectors.has(rule.target)) {
     problems.push(`${label} 목록에 없는 셀렉터 ${rule.target}`)
   }
+  problems.push(...checkActionParam(rule, action, label))
   problems.push(...checkTargetFaction(rule, action, catalog, label))
   return problems
+}
+
+/**
+ * 행동의 인자가 성립하는지 본다 — **조건 항과 같은 규율** (2026-09-19).
+ *
+ * **여기가 비어 있었다.** 조건 항의 인자(`쿨타임[X]`)는 처음부터 봤는데 행동의
+ * 인자(`재주 사용[X]`)는 **아무도 안 봤다.** 그래서 인자가 `null` 이든 `메테오` 든
+ * 있지도 않은 재주든 검증 결과가 글자 하나까지 같았다.
+ *
+ * 그것이 조용한 사고로 이어졌다. 파이썬이 저장할 때 `action_param` 을 버리던 시절이
+ * 있었는데(2026-09-17 수정), **검증이 안 보니 아무도 몰랐다.** 운영 슬롯에 재주 없는
+ * `USE_SKILL` 이 9줄 남아 있다 — 「메테오」라고 이름 붙인 슬롯 안의 규칙에 메테오가
+ * 없다. 화면은 고르개 첫 칸을 띄워 멀쩡해 보이고, VM 은 「미장착」으로 걸러 **그 규칙만
+ * 영영 안 돈다.** 쓰는 사람에게는 「사용 규칙이 저절로 바뀐다」로 보인다.
+ *
+ * @param rule 검사할 규칙.
+ * @param action 행동 블록.
+ * @param label 메시지 앞에 붙일 `[우선순위]`.
+ * @returns 위반 메시지 목록.
+ */
+function checkActionParam(rule: Rule, action: ActionBlock, label: string): string[] {
+  if (action.param === null) {
+    return rule.actionParam === null ? [] : [`${label} ${rule.action} 는 인자를 받지 않는다`]
+  }
+  if (checkParamAllowed(action.param.values, rule.actionParam)) {
+    return []
+  }
+  // **안 고른 것과 잘못 고른 것을 가른다.** 고칠 방법이 다르다 — 앞은 고르면 되고 뒤는
+  // 무엇이 틀렸는지 봐야 한다. `인자 None` 이라고 적으면 쓰는 사람은 자기가 무엇을
+  // 잘못했는지부터 찾는다.
+  if (rule.actionParam === null) {
+    return [`${label} ${rule.action} 의 ${action.param.name === 'item' ? '소모품' : '재주'} 를 안 골랐다`]
+  }
+  return [`${label} ${rule.action} 의 인자 ${rule.actionParam} 는 허용되지 않는다`]
 }
 
 /**

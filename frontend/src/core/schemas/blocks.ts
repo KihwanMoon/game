@@ -64,6 +64,21 @@ export interface ActionBlock {
    * (docs/설계/5_스킬 §4).
    */
   readonly param: BlockParam | null
+  /**
+   * 이 행동이 다른 길의 **별칭**이면 그 길 (`USE_SKILL[SKILL_1]` 꼴).
+   *
+   * **판정에는 안 쓴다 — 팔레트가 읽는다.** 같은 재주를 `SKILL_1` 로도,
+   * `USE_SKILL[SKILL_1]` 로도 적을 수 있어 목록에 같은 것이 두 번 떴다. 실행은
+   * `resolve_skill_plan` 이 `USE_SKILL[X]` 를 `action_id = X` 로 풀어 **결국 한 갈래로
+   * 합치므로** 동작은 처음부터 같았고, 갈린 것은 적는 법뿐이었다.
+   *
+   * **지우지 않고 감추는 이유**는 저장된 규칙표·골든 리플레이가 이 id 를 쓰기
+   * 때문이다. 새로 짓는 규칙만 한 길로 모은다.
+   *
+   * JSON 의 `_alias_of` 를 그대로 읽는다. 2026-09-19 까지 **아무도 안 읽는 주석**이라,
+   * 팔레트는 손으로 적은 사본으로 걸러야 했다.
+   */
+  readonly aliasOf: string | null
 }
 
 /** 타겟 셀렉터 하나. targeted 행동이 대상을 고르는 방식. */
@@ -111,6 +126,8 @@ export interface RawAction {
   readonly label_ko: string
   readonly target_faction?: string
   readonly param?: RawBlockParam
+  /** 이 행동이 별칭이면 그 길. 밑줄로 시작하지만 **주석이 아니다** — `aliasOf` 가 읽는다. */
+  readonly _alias_of?: string
 }
 
 export interface RawNamedBlock {
@@ -257,6 +274,7 @@ export function loadBlockCatalog(raw: RawBlockCatalog): BlockCatalog {
         labelKo: item.label_ko,
         targetFaction: item.target_faction ?? null,
         param: buildBlockParam(item.param),
+        aliasOf: item._alias_of ?? null,
       }),
     ),
     (item) => item.blockId,

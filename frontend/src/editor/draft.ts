@@ -427,11 +427,13 @@ export function applyParamChoice(
   if (rule === undefined || action === undefined) {
     return ruleset
   }
+  // **「안 골랐다」는 빈 문자열이 아니라 null 이다.** 고르개가 그 칸을 `''` 로 보내는데,
+  // 저장 형식에서 「인자 없음」은 키가 없는 것(null)이다 — `''` 로 두면 절에
+  // `action_param: ""` 이 실려 두 코어가 다른 것을 읽는다.
+  const chosen = actionParam === '' ? null : actionParam
   return updateRule(ruleset, ruleIndex, {
-    actionParam,
-    target: action.targeted
-      ? pickSelectorForAction(catalog, action, rule.target, actionParam)
-      : null,
+    actionParam: chosen,
+    target: action.targeted ? pickSelectorForAction(catalog, action, rule.target, chosen) : null,
   })
 }
 

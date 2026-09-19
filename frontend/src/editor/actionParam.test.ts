@@ -1,0 +1,87 @@
+/**
+ * 행동의 인자가 성립하는가 — 그리고 화면이 그것을 정직하게 말하는가.
+ *
+ * **2026-09-19 의 사고.** 운영 슬롯에 재주 없는 `USE_SKILL` 이 9줄 있었다. 「메테오」라고
+ * 이름 붙인 슬롯 안의 규칙에 메테오가 없었다. 세 겹이 겹쳐서 조용했다.
+ *
+ *   1. 파이썬이 저장할 때 `action_param` 을 버렸다 (2026-09-17 수정).
+ *   2. **검증이 행동의 인자를 안 봤다** — 조건 항의 인자는 처음부터 봤는데 이쪽만 비었다.
+ *   3. 고르개가 값이 없으면 **목록의 첫 칸**을 띄웠다.
+ *
+ * 그래서 저장된 것(없음)·보이는 것(일격)·도는 것(미장착으로 걸러 안 돎)이 셋 다 달랐고,
+ * 쓰는 사람에게는 「저장했다 불러오면 사용 규칙이 바뀐다」로 보였다.
+ *
+ * 1 은 이미 막혔다. 여기서는 2 와 3 을 지킨다.
+ */
+import { describe, expect, it } from 'vitest'
+
+import { readActivePack } from '../content/pack'
+import { validateRuleSet } from '../core/rules/validator'
+import type { Rule, RuleSet } from '../core/schemas'
+import { applyParamChoice, createRule } from './draft'
+import { listWritableActions } from './blockOptions'
+
+const CATALOG = readActivePack().catalog
+const BUDGET = 99
+
+function buildSet(patch: Partial<Rule>): RuleSet {
+  const base = createRule(CATALOG, 1)
+  return { rulesetId: 'probe', version: 1, rules: [{ ...base, ...patch }] }
+}
+
+function check(patch: Partial<Rule>): readonly string[] {
+  return validateRuleSet(buildSet(patch), CATALOG, BUDGET, BUDGET)
+}
+
+describe('행동 인자 검증', () => {
+  it('★ 재주를 안 고른 USE_SKILL 을 반려한다', () => {
+    expect(check({ action: 'USE_SKILL', actionParam: null, target: 'NEAREST' })).toContain(
+      '[1] USE_SKILL 의 재주 를 안 골랐다',
+    )
+  })
+
+  it('★ 목록에 없는 재주를 반려한다 — 예전에는 무엇을 적든 통과했다', () => {
+    expect(check({ action: 'USE_SKILL', actionParam: '있지도 않은 재주', target: 'NEAREST' })).toContain(
+      '[1] USE_SKILL 의 인자 있지도 않은 재주 는 허용되지 않는다',
+    )
+  })
+
+  it('제대로 고른 것은 통과한다', () => {
+    expect(check({ action: 'USE_SKILL', actionParam: 'METEOR', target: 'NEAREST' })).toEqual([])
+  })
+
+  it('인자를 안 받는 행동에 인자가 붙어 있으면 반려한다', () => {
+    expect(check({ action: 'HOLD', actionParam: 'METEOR', target: null })).toContain(
+      '[1] HOLD 는 인자를 받지 않는다',
+    )
+  })
+
+  it('인자를 안 받는 행동에 인자가 없는 것은 통과한다', () => {
+    expect(check({ action: 'HOLD', actionParam: null, target: null })).toEqual([])
+  })
+})
+
+describe('안 고른 상태를 그대로 둔다', () => {
+  it('★ 고르개의 빈 칸은 빈 문자열이 아니라 null 로 저장된다', () => {
+    const chosen = applyParamChoice(buildSet({ action: 'USE_SKILL' }), CATALOG, 0, 'METEOR')
+    expect(chosen.rules[0]?.actionParam).toBe('METEOR')
+    const cleared = applyParamChoice(chosen, CATALOG, 0, '')
+    // `''` 로 두면 절에 `action_param: ""` 이 실려 두 코어가 다른 것을 읽는다.
+    expect(cleared.rules[0]?.actionParam).toBeNull()
+  })
+})
+
+describe('별칭을 감춘 것이 없앤 것은 아니다', () => {
+  it('★ 팔레트에서 뺀 행동은 전부 인자로 닿는다', () => {
+    const writable = new Set(listWritableActions(CATALOG).map((one) => one.blockId))
+    const byParam = new Set([...CATALOG.actions.values()].flatMap((one) => one.param?.values ?? []))
+    const lost = [...CATALOG.actions.values()].filter(
+      (one) => !writable.has(one.blockId) && !byParam.has(one.blockId) && one.aliasOf === null,
+    )
+    expect(lost.map((one) => one.blockId)).toEqual([])
+  })
+
+  it('감춘 것이 실제로 있다 — 검사가 빈 집합을 보고 통과하지 않는다', () => {
+    expect(listWritableActions(CATALOG).length).toBeLessThan(CATALOG.actions.size)
+  })
+})

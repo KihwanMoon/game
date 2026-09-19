@@ -49,7 +49,25 @@ export function readSkillName(skillId: string): string {
  * @returns 이름표. 이름이 없는 재주는 id 를 그대로 든다.
  */
 export function readSkillNames(): ReadonlyMap<string, string> {
-  return new Map(listPackSkills().map((one) => [one.id, one.label_ko ?? one.id]))
+  return new Map(
+    listPackSkills().flatMap((one) => (one.label_ko === undefined ? [] : [[one.id, one.label_ko]])),
+  )
+}
+
+/**
+ * 정본이 이 재주에 붙인 한글 이름. **없으면 undefined 다.**
+ *
+ * **`readSkillName` 과 가르는 이유**는 부르는 쪽이 제 폴백을 아래에 깔 수 있어야 하기
+ * 때문이다. `?? id` 를 여기서 해 버리면 「정본에 이름이 없다」와 「정본이 id 를 이름으로
+ * 정했다」가 구별되지 않고, 그래서 화면들이 손으로 적은 이름을 **정본 위에** 얹었다 —
+ * 발행한 「돌려치기」가 편집기에서는 「광역 공격」, 전투 줄에서는 「광역」이었다
+ * (2026-09-19). 폴백은 정본 **아래**에 깔려야 한다.
+ *
+ * @param skillId 재주 id.
+ * @returns 정본의 한글 이름. 정본에 이름이 없으면 undefined.
+ */
+export function findSkillName(skillId: string): string | undefined {
+  return listPackSkills().find((one) => one.id === skillId)?.label_ko
 }
 
 /**

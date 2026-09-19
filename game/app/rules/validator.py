@@ -202,8 +202,41 @@ def _check_action(rule: Rule, catalog: BlockCatalog, unlocked: frozenset[str]) -
         problems.append(f"{label} {rule.action} 는 TARGET 을 받지 않는다")
     if rule.target is not None and rule.target not in catalog.selectors:
         problems.append(f"{label} 목록에 없는 셀렉터 {rule.target}")
+    problems.extend(_check_action_param(rule, action, label))
     problems.extend(_check_target_faction(rule, action, catalog, label))
     return problems
+
+
+def _check_action_param(rule: Rule, action: ActionBlock, label: str) -> list[str]:
+    """행동의 인자가 성립하는지 본다 — 조건 항과 같은 규율 (2026-09-19).
+
+    **여기가 비어 있었다.** 조건 항의 인자(쿨타임[X])는 처음부터 봤는데 행동의
+    인자(재주 사용[X])는 아무도 안 봤다. 인자가 None 이든 METEOR 든 있지도 않은
+    재주든 검증 결과가 글자 하나까지 같았다.
+
+    그것이 조용한 사고로 이어졌다. build_rule_payload 가 action_param 을 버리던
+    시절이 있었는데(2026-09-17 수정), 검증이 안 보니 아무도 몰랐다. 운영 슬롯에 재주
+    없는 USE_SKILL 이 9줄 남아 있다 — 화면은 고르개 첫 칸을 띄워 멀쩡해 보이고 VM 은
+    「미장착」으로 걸러 그 규칙만 영영 안 돈다.
+
+    Args:
+        rule: 검사할 규칙.
+        action: 행동 블록.
+        label: 메시지 앞에 붙일 [우선순위].
+
+    Returns:
+        위반 메시지 목록.
+    """
+    if action.param is None:
+        return [] if rule.action_param is None else [f"{label} {rule.action} 는 인자를 받지 않는다"]
+    if rule.action_param in action.param.values:
+        return []
+    # 안 고른 것과 잘못 고른 것을 가른다. 고칠 방법이 다르다 — 앞은 고르면 되고 뒤는
+    # 무엇이 틀렸는지 봐야 한다.
+    if rule.action_param is None:
+        what = "소모품" if action.param.name == "item" else "재주"
+        return [f"{label} {rule.action} 의 {what} 를 안 골랐다"]
+    return [f"{label} {rule.action} 의 인자 {rule.action_param} 는 허용되지 않는다"]
 
 
 def validate_ruleset(

@@ -66,6 +66,12 @@ class ActionBlock:
     # 이 행동이 받는 인자 (v5). USE_SKILL[skill] 이 이것을 쓴다 — 스킬마다 액션을
     # 더하면 블록 목록 버전이 계속 올라 랭킹 시즌이 갈린다 (docs/설계/5_스킬 §4).
     param: BlockParam | None = None
+    # 이 행동이 다른 길의 별칭이면 그 길 (`USE_SKILL[SKILL_1]` 꼴). **판정에는 안 쓰고
+    # 팔레트가 읽는다** — 같은 재주를 두 가지로 적을 수 있어 목록에 두 번 떴다. 실행은
+    # resolve_skill_plan 이 USE_SKILL[X] 를 action_id = X 로 풀어 한 갈래로 합치므로
+    # 동작은 처음부터 같았다. 지우지 않고 감추는 이유는 저장된 규칙표와 골든이 이 id 를
+    # 쓰기 때문이다. JSON 의 `_alias_of` 를 그대로 읽는다.
+    alias_of: str | None = None
 
 
 @dataclass(frozen=True)
@@ -166,6 +172,7 @@ def load_block_catalog(source_path: Path) -> BlockCatalog:
             label_ko=item["label_ko"],
             target_faction=item.get("target_faction"),
             param=_build_param(item.get("param")),
+            alias_of=item.get("_alias_of"),
         )
         for item in raw["actions"]
     }

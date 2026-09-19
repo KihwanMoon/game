@@ -102,11 +102,34 @@ export function listPerceptionGroups(catalog: BlockCatalog): readonly BlockGroup
  * @returns 카테고리 그룹 목록.
  */
 export function listActionGroups(catalog: BlockCatalog): readonly BlockGroup<ActionBlock>[] {
-  // **별칭은 목록에서 숨긴다.** `USE_POTION` 은 `USE_ITEM[물약]` 과 같은 일이라 둘 다
-  // 보이면 「소모품 사용이 둘인데 뭐가 다르지」가 된다 — 저장된 규칙표와 골든이 쓰므로
-  // 코어에서는 안 지우고, 고르는 자리에서만 뺀다.
-  const visible = [...catalog.actions.values()].filter((block) => block.blockId !== 'USE_POTION')
-  return buildGroups(visible, (block) => block.category, ACTION_CATEGORY_LABELS)
+  return buildGroups(listWritableActions(catalog), (block) => block.category, ACTION_CATEGORY_LABELS)
+}
+
+/**
+ * 새로 규칙을 지을 때 고를 수 있는 행동들.
+ *
+ * **별칭은 뺀다** (2026-09-19). 같은 재주를 `SKILL_1` 로도 `USE_SKILL[일격]` 로도 적을 수
+ * 있어 팔레트에 같은 것이 두 번 떴고, 카테고리까지 갈렸다 — 회복을 `HEAL` 로 적으면
+ * 「제어」, `USE_SKILL[회복]` 로 적으면 「공격」이었다. 실행은 `resolve_skill_plan` 이
+ * `USE_SKILL[X]` 를 `action_id = X` 로 풀어 **원래부터 한 갈래로 합쳤다** — 갈린 것은
+ * 적는 법뿐이었다.
+ *
+ * **지우는 게 아니라 감춘다.** 저장된 규칙표와 골든 리플레이가 이 id 들을 쓰므로
+ * (`USE_POTION` 머리말이 그래서 남긴 것이다) 읽기와 실행은 그대로 두고, **새로 짓는
+ * 규칙만** 한 길로 모은다. 옛 규칙표는 열리고 돌고 화면에도 제 이름으로 뜬다.
+ *
+ * 무엇이 별칭인지는 **데이터가 말한다.** 손으로 목록을 적으면 재주가 늘 때 또 갈린다 —
+ * 이 파일이 재주 이름에서 이미 겪은 병이다.
+ *
+ * @param catalog 블록 카탈로그.
+ * @returns 팔레트에 세울 행동들. 카탈로그 순서를 지킨다.
+ */
+export function listWritableActions(catalog: BlockCatalog): readonly ActionBlock[] {
+  const actions = [...catalog.actions.values()]
+  // 인자로 고를 수 있는 것은 행동으로도 두지 않는다. `USE_SKILL[SKILL_1]` 이 있으므로
+  // `SKILL_1` 행동은 같은 것을 두 번 세우는 셈이다.
+  const reachable = new Set(actions.flatMap((block) => block.param?.values ?? []))
+  return actions.filter((block) => block.aliasOf === null && !reachable.has(block.blockId))
 }
 
 /**
@@ -232,14 +255,18 @@ const PARAM_LABELS: ReadonlyMap<string, string> = new Map([
   // **적만 쓰는 다섯도 여기 딸려 온다** (2026-09-17). 팔레트에서는 빠지지만
   // (`listParamOptions`) 이름은 있어야 한다 — 이문록이 적의 규칙표를 그대로 펴서 보여
   // 주고, 거기 영문 id 가 뜨면 카운터를 읽으라고 내놓은 표가 그 줄에서 끊긴다.
-  ...readSkillNames(),
-  // **정본에 이름이 없는 셋.** `ATTACK`·`AREA_ATTACK` 은 `skills.json` 에 `label_ko` 가
-  // 없고 `SUMMON` 은 행 자체가 없다 — 그때 `SKILL_NAMES` 는 id 를 그대로 들고 있으므로
-  // 여기서 덮지 않으면 그 칸만 영문이 된다. `battle/vitalRows` 의 `COOLDOWN_EXTRA` 와
-  // 같은 자리이며, 정본에 `label_ko` 가 생기면 이 셋을 지운다.
+  // **정본에 이름이 없을 때만 쓰는 폴백이다 — 정본보다 먼저 적는다.**
+  //
+  // 예전에는 `readSkillNames()` **뒤에** 있어서 정본을 덮었다. 그래서 「돌려치기」로
+  // 고쳐 발행해도 이 화면만 「광역 공격」이라고 말했고, 같은 재주가 화면 셋에서 세
+  // 이름이었다 (2026-09-19). 폴백은 아래에 깔려야 정본이 생기는 날 저절로 물러난다.
+  //
+  // 남아 있는 것은 `SUMMON` 뿐이다 — `skills.json` 에 행 자체가 없다. `ATTACK`·
+  // `AREA_ATTACK` 은 정본이 이름을 가졌으므로 이 줄이 더는 안 닿는다.
   ['ATTACK', '공격'],
   ['AREA_ATTACK', '광역 공격'],
   ['SUMMON', '소환'],
+  ...readSkillNames(),
   // `self_has_status` 가 묻는 상태들. GUARD·FOCUS 는 **스스로 거는 것**이라 규칙표가
   // 겹쳐 쓰기를 피하는 데 쓴다 — 이름이 없으면 「내 상태이상[GUARD]」로 적힌다.
   ['POISON', '중독'],

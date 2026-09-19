@@ -12,7 +12,7 @@
  */
 
 import { SLOT_LABELS, USE_TAG_LABELS } from '../content/consumableTags'
-import { readSkillName } from '../content/skills'
+import { findSkillName } from '../content/skills'
 
 /** 상태 한 줄. 이름과 값, 그리고 눈에 띄어야 하는지. */
 export interface VitalRow {
@@ -49,7 +49,9 @@ const COOLDOWN_EXTRA: ReadonlyMap<string, string> = new Map([
  * @returns 한글 이름. 모르면 id.
  */
 export function readCooldownLabel(id: string): string {
-  return COOLDOWN_EXTRA.get(id) ?? readSkillName(id)
+  // **정본이 먼저다.** 예전에는 이 표가 위에 있어서, 정본에 이름이 생긴 뒤에도
+  // 그 줄만 옛 이름으로 남았다 — 발행한 「돌려치기」가 여기서는 「광역」이었다.
+  return findSkillName(id) ?? COOLDOWN_EXTRA.get(id) ?? id
 }
 
 /** 상태 이름표. 코어의 상태 id 를 사람이 읽는 말로. */
