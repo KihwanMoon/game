@@ -50,6 +50,9 @@ def apply_entity_upkeep(
     """
     for skill, remaining in entity.cooldowns.items():
         entity.cooldowns[skill] = max(0, remaining - 1)
+    # **후경직도 쿨타임과 같은 자리에서 줄인다.** 이번 틱의 규칙표가 읽기 전에 줄어야
+    # 「굳은 마지막 틱」이 한 번 더 남아 있는 것으로 안 읽힌다.
+    entity.recover_ticks = max(0, entity.recover_ticks - 1)
     # **깎기 전 값으로 본다.** 깎은 뒤를 보면 `duration` 이 5 인데 네 틱만 아프다 —
     # 데이터에 적은 수와 실제로 아픈 틱 수가 갈리면 밸런스를 잴 수가 없다.
     poisoned = entity.statuses.get(STATUS_POISON, 0)

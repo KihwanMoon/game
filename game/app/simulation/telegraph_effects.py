@@ -18,7 +18,7 @@ from game.app.core.event_log import EventLog
 from game.app.simulation.phases import PHASE_TELEGRAPH
 from game.app.simulation.state import Entity, WorldState
 from game.app.simulation.telegraph_record import Telegraph
-from game.app.skills.catalog import EFFECT_STATUS
+from game.app.skills.catalog import EFFECT_STATUS, SkillEffect
 
 
 class BlastRecorder(Protocol):
@@ -39,6 +39,36 @@ class BlastRecorder(Protocol):
     ) -> None:
         """한 줄 남긴다."""
         ...
+
+
+def apply_status_effects(victim: Entity, effects: tuple[SkillEffect, ...]) -> list[tuple[str, int]]:
+    """맞은 대상에게 상태를 얹는다 — **예고를 모르는 핵** (2026-09-19).
+
+    **예고 레코드에 묶여 있었다.** 그래서 `effects` 가 예고형에만 걸렸고, 즉발 재주에
+    상태를 달면 파싱도 되고 저장도 되고 관리 화면에도 뜨는데 **아무 일도 안 났다** —
+    이 저장소가 `SLOW`·`POISON`·`cast_cooldown_add` 에서 이미 세 번 잡은 「조용히 무효」와
+    같은 자리다. 핵을 떼어 두면 즉발도 예고형도 같은 것을 쓴다.
+
+    **로그는 부르는 쪽이 남긴다.** 예고는 예고판의 형식으로, 즉발은 실행기의 형식으로
+    적어야 해서 여기서 적으면 한쪽이 남의 모양으로 찍힌다.
+
+    Args:
+        victim: 맞은 대상.
+        effects: 얹을 것들.
+
+    Returns:
+        실제로 얹은 (상태, 틱) 들. 순서는 `effects` 가 정한다 (R5).
+    """
+    applied: list[tuple[str, int]] = []
+    for effect in effects:
+        if effect.kind != EFFECT_STATUS or not effect.status:
+            continue
+        # 더 긴 쪽을 남긴다. 겹칠 때 짧은 것으로 덮으면 뒤에 온 약한 장판이 앞의
+        # 강한 것을 지운다.
+        before = victim.statuses.get(effect.status, 0)
+        victim.statuses[effect.status] = max(before, effect.duration)
+        applied.append((effect.status, effect.duration))
+    return applied
 
 
 def apply_blast_effects(
@@ -63,19 +93,13 @@ def apply_blast_effects(
         telegraph: 발동한 예고.
         victim: 맞은 대상.
     """
-    for effect in telegraph.effects:
-        if effect.kind != EFFECT_STATUS or not effect.status:
-            continue
-        # 더 긴 쪽을 남긴다. 겹칠 때 짧은 것으로 덮으면 뒤에 온 약한 장판이 앞의
-        # 강한 것을 지운다.
-        before = victim.statuses.get(effect.status, 0)
-        victim.statuses[effect.status] = max(before, effect.duration)
+    for status, duration in apply_status_effects(victim, telegraph.effects):
         board.record_blast(
             state,
             log,
             telegraph,
-            f"{telegraph.skill_id} {effect.status}",
-            f"{victim.entity_id} {effect.status} {effect.duration}틱",
+            f"{telegraph.skill_id} {status}",
+            f"{victim.entity_id} {status} {duration}틱",
             None,
             victim.entity_id,
         )

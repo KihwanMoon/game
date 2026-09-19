@@ -9,11 +9,12 @@
 거는 길이 그것이다 (설계/5_스킬 §10).
 """
 
-from game.app.grid.geometry import get_manhattan_distance
 from game.app.simulation import telegraph_cast
 from game.app.simulation.plan import EngineConfig, PlannedAction
 from game.app.simulation.state import Entity, WorldState
+from game.app.simulation.targeting import HITS_TILES, list_area_victims, list_tile_victims
 from game.app.simulation.telegraph import MIN_LEAD_TICKS, TelegraphBoard
+from game.app.simulation.telegraph_shape import build_blast_tiles
 from game.app.skills.catalog import CAST_FREE, find_skill
 
 # 퍼센트 기준. 100 이 1.0배다.
@@ -82,12 +83,18 @@ class BlastActionMixin:
             return
         # **반경의 정본은 데이터다** (설계/5_스킬 §9). 예전에는 여기 상수가 있었고
         # `skills.json` 의 `shape` 는 아무도 안 읽어 거짓이었다.
-        radius = find_skill(self.config.skills, plan.action_id).shape.radius
-        victims = [
-            other
-            for other in self.state.list_hostiles(entity)
-            if get_manhattan_distance(entity.position, other.position) <= radius
-        ]
+        # **누가 맞는지는 재주가 적는다** (`hits`). 예전에는 같은 규칙이 여기와 예고판에
+        # 다르게 박혀 있었다 — 둘 다 `AREA` 인데 판정이 정반대였고, 데이터만 봐서는
+        # 구별이 안 됐다. 이제 판정기는 `simulation/targeting` 한 벌이고 어느 것을 쓸지는
+        # 재주가 고른다.
+        skill = find_skill(self.config.skills, plan.action_id)
+        radius = skill.shape.radius
+        if skill.hits == HITS_TILES:
+            victims = list_tile_victims(
+                self.state, frozenset(build_blast_tiles(entity.position, radius))
+            )
+        else:
+            victims = list_area_victims(self.state, entity, radius)
         if not victims:
             self._record(entity.entity_id, plan, "반경 안에 적 없음 — 틱 낭비", None)
             return

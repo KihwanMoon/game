@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from game.app.core.event_log import EventLog, LogEntry
 from game.app.simulation.phases import PHASE_TELEGRAPH
 from game.app.simulation.state import Entity, WorldState
+from game.app.simulation.targeting import list_tile_victims
 from game.app.simulation.telegraph_effects import apply_blast_effects
 from game.app.simulation.telegraph_record import Telegraph
 from game.app.skills.catalog import CAST_CANCEL, CAST_FREE, SkillEffect
@@ -274,9 +275,9 @@ class TelegraphBoard:
             log: 이벤트 로그.
             telegraph: 발동한 예고.
         """
-        # 포함 검사에만 쓴다. 이것을 순회해 상태를 만들면 순서가 흔들린다 (R5).
-        marked = frozenset(telegraph.tiles)
-        victims = [entity for entity in state.list_actors() if entity.position in marked]
+        # **판정기는 한 벌이다** (`simulation/targeting`). 포함 검사에만 쓴다 — 집합을
+        # 순회해 상태를 만들면 순서가 흔들린다 (R5).
+        victims = list_tile_victims(state, frozenset(telegraph.tiles))
         expr = f"{telegraph.skill_id} 예고 발동 ({len(telegraph.tiles)}칸)"
         if not victims:
             # 회피 성공도 남긴다. 아무 일이 없었다는 사실이 규칙표를 고칠 때

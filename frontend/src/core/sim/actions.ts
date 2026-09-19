@@ -9,6 +9,8 @@
  */
 
 import { CANCEL_BY_HIT, MIN_LEAD_TICKS } from './telegraph'
+import { HITS_TILES, listAreaVictims, listTileVictims } from './targeting'
+import { buildBlastTiles } from './telegraph'
 import { findSkill, CAST_FREE } from '../skills/catalog'
 import { EventLog, createLogEntry } from '../eventLog'
 import { calculateDamage } from '../combat/damage'
@@ -323,12 +325,17 @@ export class ActionExecutor {
     }
     // **반경의 정본은 데이터다** (파이썬 `shape.radius` 와 같다). 상수였을 때는 JSON 을
     // 고쳐도 브라우저가 안 달라져 두 코어가 조용히 갈릴 수 있었다.
-    const radius = findSkill(this.config.skills, plan.actionId).shape.radius
-    const victims = this.state
-      .listHostiles(entity)
-      .filter(
-        (other) => getManhattanDistance(entity.position, other.position) <= radius,
-      )
+    // **누가 맞는지는 재주가 적는다** (`hits`). 파이썬 `blast_actions` 와 같다 —
+    // 예전에는 같은 규칙이 여기와 예고판에 다르게 박혀 있었다.
+    const skill = findSkill(this.config.skills, plan.actionId)
+    const radius = skill.shape.radius
+    const victims =
+      skill.hits === HITS_TILES
+        ? listTileVictims(
+            this.state,
+            new Set(buildBlastTiles(entity.position, radius).map(formatPositionKey)),
+          )
+        : listAreaVictims(this.state, entity, radius)
     if (victims.length === 0) {
       this.recordResult(entity.entityId, plan, '반경 안에 적 없음 — 틱 낭비', null)
       return

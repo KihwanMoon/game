@@ -25,7 +25,9 @@ from game.app.simulation.actions import (
 )
 from game.app.simulation.cast_policy import (
     apply_act_cancel,
+    apply_action_recover,
     apply_hold_policy,
+    apply_recover,
     read_locked_plan,
 )
 from game.app.simulation.perception import PerceptionSnapshot, build_snapshot
@@ -52,6 +54,7 @@ from game.app.simulation.telegraph import (
 )
 from game.app.simulation.telegraph_effects import apply_self_destruct
 from game.app.simulation.upkeep import apply_entity_upkeep
+from game.app.skills.catalog import find_skill
 
 
 @dataclass
@@ -136,6 +139,10 @@ class TickEngine:
         self.last_blasts = self.telegraphs.run_countdown(self.state, self.log)
         for telegraph in self.last_blasts:
             apply_self_destruct(self.state, self.actions, self.config.enemy_stats, telegraph)
+            # **터진 틱에 굳기 시작한다.** 예고가 도는 동안은 잠금이 이미 묶고 있다.
+            caster = self.state.entities.get(telegraph.caster_id)
+            if caster is not None:
+                apply_recover(caster, find_skill(self.config.skills, telegraph.skill_id))
         # 셀렉터 CASTING 과 `대상이 시전 중인가` 가 읽는다. 정렬해 내려야
         # 같은 시드가 같은 대상을 고른다 (R5).
         self.state.casting_ids = tuple(
@@ -178,7 +185,7 @@ class TickEngine:
         Returns:
             실행할 계획.
         """
-        locked = read_locked_plan(self.telegraphs, entity.entity_id)
+        locked = read_locked_plan(self.telegraphs, entity)
         if locked is not None:
             return locked
         plan = self.get_policy(entity.entity_id).plan_action(entity, snapshot, self.state)
@@ -278,10 +285,13 @@ class TickEngine:
             plan: 실행할 계획.
         """
         plan = resolve_skill_plan(plan)
+
         # **예고를 먼저 묻는다.** 아래는 전부 `action_id` 로 갈리므로 새 스킬 id 가 안
         # 닿는데, 예고는 그 행동의 성질이지 이름의 성질이 아니다 (설계/5_스킬 §10).
         if executor.apply_cast(entity, plan):
             return
+        # **즉발은 쓴 그 틱에 굳는다.** 예고형은 위에서 일찍 돌아가 여기 안 닿는다.
+        apply_action_recover(entity, self.config.skills, plan)
         apply_act_cancel(self.telegraphs, self.state, self.log, entity.entity_id, plan.action_id)
         if plan.action_id in ATTACK_ACTIONS:
             executor.apply_attack(entity, plan)

@@ -22,7 +22,7 @@ import { EventLog, createLogEntry } from '../eventLog'
 import { VisionCache, VisionGrid } from '../grid/vision'
 import { compareText, sortByKey } from '../ordering'
 import { TILE_LAVA, TILE_SPRING } from '../schemas'
-import { CAST_HOLD, CAST_LOCK } from '../skills/catalog'
+import { CAST_HOLD, CAST_LOCK, findSkill } from '../skills/catalog'
 import {  ActionExecutor, MOVE_ACTIONS } from './actions'
 import { type PerceptionSnapshot, buildSnapshot } from './perception'
 import {
@@ -75,6 +75,29 @@ export const SPRING_REGEN_PER_TICK = 2
 export const CAST_LOCKED_EXPR = '시전 중 — 잠김'
 export const CAST_HELD_EXPR = '시전 중 — 버팀'
 export const CAST_HELD_REASON = '시전 중'
+
+/** 발동하고 나서 굳어 있는 틱에 적는 말. 파이썬 `RECOVER_EXPR` 와 같다. */
+export const RECOVER_EXPR = '굳음 — 후경직'
+
+/** 재주로 치는 행동들. 굳힐지 가르는 데만 쓴다 — 파이썬 `ATTACK_ACTION_IDS` 와 같다. */
+const ATTACK_ACTION_IDS: ReadonlySet<string> = new Set([
+  'ATTACK',
+  'SKILL_1',
+  'SKILL_2',
+  'AREA_ATTACK',
+])
+
+/**
+ * 재주가 발동했으니 그만큼 굳힌다. **더 긴 쪽을 남긴다** — 파이썬 `apply_recover` 와 같다.
+ *
+ * @param entity 쓴 개체.
+ * @param skill 쓴 재주.
+ */
+function applyRecover(entity: Entity, skill: { readonly recover: number }): void {
+  if (skill.recover > 0) {
+    entity.recoverTicks = Math.max(entity.recoverTicks, skill.recover)
+  }
+}
 
 export const KEEP_CAST_ACTIONS: ReadonlySet<string> = new Set(['HOLD', 'SET_FLAG'])
 
@@ -201,6 +224,9 @@ export class TickEngine {
       for (const [skill, remaining] of entity.cooldowns) {
         entity.cooldowns.set(skill, Math.max(0, remaining - 1))
       }
+      // **후경직도 쿨타임과 같은 자리에서 줄인다.** 이번 틱의 규칙표가 읽기 전에 줄어야
+      // 「굳은 마지막 틱」이 한 번 더 남아 있는 것으로 안 읽힌다. 파이썬과 같다.
+      entity.recoverTicks = Math.max(0, entity.recoverTicks - 1)
       // **깎기 전 값으로 본다.** 깎은 뒤를 보면 `duration` 이 5 인데 네 틱만 아프다.
       const poisoned = entity.statuses.get(STATUS_POISON) ?? 0
       for (const [status, remaining] of entity.statuses) {
@@ -233,6 +259,11 @@ export class TickEngine {
     this.lastBlasts = this.telegraphs.runCountdown(this.state, this.log)
     for (const telegraph of this.lastBlasts) {
       this.applySelfDestruct(telegraph)
+      // **터진 틱에 굳기 시작한다.** 예고가 도는 동안은 잠금이 이미 묶고 있다.
+      const caster = this.state.entities.get(telegraph.casterId)
+      if (caster !== undefined) {
+        applyRecover(caster, findSkill(this.config.skills, telegraph.skillId))
+      }
     }
     // 셀렉터 CASTING 과 `대상이 시전 중인가` 가 읽는다. 정렬해 내려야 같은 시드가 같은
     // 대상을 고른다 (R5).
@@ -281,6 +312,15 @@ export class TickEngine {
    * @returns 실행할 계획.
    */
   private planOne(entity: Entity, snapshot: PerceptionSnapshot): PlannedAction {
+    // **두 가지가 굳힌다** — 발동 전의 잠금과 발동 뒤의 후경직이다. 파이썬
+    // `read_locked_plan` 과 같은 순서로 본다.
+    if (entity.recoverTicks > 0) {
+      return createPlannedAction({
+        entityId: entity.entityId,
+        actionId: 'HOLD',
+        expr: RECOVER_EXPR,
+      })
+    }
     const mode = this.telegraphs.readCastAct(entity.entityId)
     if (mode === CAST_LOCK) {
       return createPlannedAction({
@@ -504,6 +544,10 @@ export class TickEngine {
     // 예고는 그 행동의 성질이지 이름의 성질이 아니다 (파이썬 `_apply_settled` 와 같다).
     if (executor.applyCast(entity, plan)) {
       return
+    }
+    // **즉발은 쓴 그 틱에 굳는다.** 예고형은 위에서 일찍 돌아가 여기 안 닿는다.
+    if (plan.skillId !== null || ATTACK_ACTION_IDS.has(plan.actionId)) {
+      applyRecover(entity, findSkill(this.config.skills, plan.actionId))
     }
     // **다른 행동은 시전을 끊는다** — 켜 둔 예고만. 위에서 걸러진 뒤라 「같은 마법을
     // 이어 건다」는 여기 안 온다. 버티기는 그 「다른 행동」이 아니다.

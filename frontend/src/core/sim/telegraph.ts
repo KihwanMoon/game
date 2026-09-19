@@ -14,6 +14,7 @@
  */
 
 import { CAST_CANCEL, CAST_FREE, CAST_HOLD, CAST_LOCK, EFFECT_STATUS } from '../skills/catalog'
+import { listTileVictims } from './targeting'
 import type { CastAct, SkillEffect } from '../skills/catalog'
 import { EventLog, createLogEntry } from '../eventLog'
 import {
@@ -397,11 +398,9 @@ export class TelegraphBoard {
    * @param telegraph 발동한 예고.
    */
   private applyBlast(state: WorldState, log: EventLog, telegraph: Telegraph): void {
-    // 포함 검사에만 쓴다. 이것을 순회해 상태를 만들면 순서가 흔들린다 (R5).
-    const marked = new Set(telegraph.tiles.map(formatPositionKey))
-    const victims = state
-      .listActors()
-      .filter((entity) => marked.has(formatPositionKey(entity.position)))
+    // **판정기는 한 벌이다** (`sim/targeting`). 포함 검사에만 쓴다 — 집합을 순회해
+    // 상태를 만들면 순서가 흔들린다 (R5).
+    const victims = listTileVictims(state, new Set(telegraph.tiles.map(formatPositionKey)))
     const expr = `${telegraph.skillId} 예고 발동 (${telegraph.tiles.length}칸)`
     if (victims.length === 0) {
       // 회피 성공도 남긴다. 아무 일이 없었다는 사실이 규칙표를 고칠 때 가장 필요한

@@ -106,7 +106,8 @@ class SkillDef:
     # 스킬이 자체 사거리를 가지면 그 값. None 이면 엔티티의 `attack_range` 를 쓴다 —
     # 없다고 0 으로 두면 원거리 스킬이 매 틱 「사거리 밖」으로 헛돈다.
     reach: int | None = None
-    # 0 이면 즉시. >0 이면 그 틱만큼 예고를 띄운다 (설계/5_스킬 §10).
+    # **선(先) — 발동까지 몇 틱인가.** 0 이면 즉시. >0 이면 그 틱만큼 예고를 띄운다
+    # (설계/5_스킬 §10). 짝인 후(後)는 아래 `recover` 다.
     telegraph: int = 0
     # 시전 중 다른 행동을 어떻게 할 것인가 (§10.3, 2026-09-19).
     #
@@ -117,6 +118,19 @@ class SkillDef:
     cast_act: str = CAST_FREE
     # 시전 중 **맞으면** 취소되는가. 「안전한 자리에서 쏘는가」를 규칙표에 묻는다.
     cancel_on_hit: bool = False
+    # **후(後) — 발동하고 나서 몇 틱을 굳는가** (2026-09-19).
+    #
+    # 예고(`telegraph`)가 「터지기 전」이라면 이것은 「터진 뒤」다. 예전에는 뒤쪽이 아예
+    # 없었다 — `cooldown` 은 **그 재주를 다시 쓰기까지**이지 그동안 다른 것을 못 한다는
+    # 뜻이 아니라, 큰 것을 쓰고 곧바로 물러서는 일이 공짜였다.
+    #
+    # **모든 재주가 같은 축을 갖는다.** 즉발도 예고형도 이 값을 읽는다 — 축이 마법에만
+    # 있으면 「같은 알고리즘」이 아니라 마법의 예외가 하나 더 생기는 것이다.
+    recover: int = 0
+    # **누가 맞는가** (2026-09-19). 같은 `AREA` 인데 즉발은 적만, 예고형은 진영 없이
+    # 맞히고 있었다 — 규칙이 코드 두 곳에 다르게 박혀 데이터로는 구별이 안 됐다.
+    # 값은 `simulation/targeting` 이 정하고, 안 적으면 대상 하나다.
+    hits: str = "TARGET"
     # 대상 최대 HP 의 정수 퍼센트. 고정값이 아닌 이유는 회복이 덩치에 비례해야 해서다.
     heal_pct: int = 0
     # 받는 피해를 몇 퍼센트 줄이고 몇 틱 유지하는가 (GUARD 계열).
@@ -184,6 +198,8 @@ def build_skill_def(raw: dict) -> SkillDef:
         reach=None if raw.get("range") is None else int(raw["range"]),
         telegraph=int(raw.get("telegraph", 0)),
         cast_act=str(raw.get("cast_act", CAST_LOCK)),
+        recover=int(raw.get("recover", 0)),
+        hits=str(raw.get("hits", "TARGET")),
         cancel_on_hit=bool(raw.get("cancel_on_hit", False)),
         heal_pct=int(raw.get("heal_pct", 0)),
         guard_pct=int(raw.get("guard_pct", 0)),

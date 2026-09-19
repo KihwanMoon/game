@@ -13,9 +13,16 @@ from dataclasses import replace
 
 from game.app.core.event_log import EventLog
 from game.app.simulation.plan import BlockedRule, PlannedAction
-from game.app.simulation.state import WorldState
+from game.app.simulation.state import Entity, WorldState
 from game.app.simulation.telegraph import CANCEL_BY_ACT, TelegraphBoard
-from game.app.skills.catalog import CAST_CANCEL, CAST_FREE, CAST_HOLD, CAST_LOCK
+from game.app.skills.catalog import (
+    CAST_CANCEL,
+    CAST_FREE,
+    CAST_HOLD,
+    CAST_LOCK,
+    SkillDef,
+    find_skill,
+)
 
 # **시전을 안 끊는 행동들** (설계/5_스킬 §10.3).
 #
@@ -32,8 +39,6 @@ from game.app.skills.catalog import CAST_CANCEL, CAST_FREE, CAST_HOLD, CAST_LOCK
 KEEP_CAST_ACTIONS = frozenset({"HOLD", "SET_FLAG"})
 
 # 엄한 순서. `read_cast_act` 가 이 순서로 처음 걸리는 것을 돌려준다.
-
-# 엄한 순서. `read_cast_act` 가 이 순서로 처음 걸리는 것을 돌려준다.
 CAST_STRICTNESS: tuple[str, ...] = (CAST_LOCK, CAST_HOLD, CAST_CANCEL, CAST_FREE)
 
 # 시전 규율이 규칙표를 대신했을 때 로그에 적는 말. **왜 그 행동이 아니었는지를 화면이
@@ -42,23 +47,40 @@ CAST_LOCKED_EXPR = "시전 중 — 잠김"
 CAST_HELD_EXPR = "시전 중 — 버팀"
 CAST_HELD_REASON = "시전 중"
 
+# 발동하고 나서 굳어 있는 틱에 적는 말. 잠금과 가르는 이유는 **사람이 기다리는 것**이
+# 다르기 때문이다 — 잠금은 「아직 안 터졌다」이고 이것은 「이미 터졌다」다.
+RECOVER_EXPR = "굳음 — 후경직"
+
 # 잠기거나 버틸 때 대신 서는 행동. 세계를 안 건드리는 쪽이라야 시전이 남는다.
 HELD_ACTION = "HOLD"
 
+# 재주로 치는 행동들. 굳힐지 가르는 데만 쓴다 — `actions.ATTACK_ACTIONS` 를 들여오면
+# 순환이 난다(저쪽이 이 모듈을 거슬러 부른다).
+ATTACK_ACTION_IDS = frozenset({"ATTACK", "SKILL_1", "SKILL_2", "AREA_ATTACK"})
 
-def read_locked_plan(board: TelegraphBoard, entity_id: str) -> PlannedAction | None:
-    """잠긴 시전이면 규칙표를 안 돌리고 버티는 계획을 낸다.
+
+def read_locked_plan(board: TelegraphBoard, entity: Entity) -> PlannedAction | None:
+    """굳어 있으면 규칙표를 안 돌리고 버티는 계획을 낸다.
+
+    **두 가지가 굳힌다** — 발동 전의 잠금(`CAST_LOCK`)과 발동 뒤의 후경직
+    (`recover_ticks`)이다. 둘 다 「이 틱은 규칙표가 안 돈다」로 같고, 로그에 적는 말만
+    가른다: 사람이 기다리는 것이 다르기 때문이다.
+
+    **후경직을 먼저 본다.** 한 틱에 둘 다 서는 일은 지금 없지만(굳은 동안에는 새 시전을
+    못 건다), 순서를 안 정해 두면 그 조합이 생기는 날 어느 말이 찍힐지 모른다.
 
     Args:
         board: 예고판.
-        entity_id: 결정 주체의 id.
+        entity: 결정 주체.
 
     Returns:
-        버티는 계획. 잠긴 시전이 아니면 None — 그때는 규칙표가 돈다.
+        버티는 계획. 굳어 있지 않으면 None — 그때는 규칙표가 돈다.
     """
-    if read_cast_act(board, entity_id) != CAST_LOCK:
+    if entity.recover_ticks > 0:
+        return PlannedAction(entity_id=entity.entity_id, action_id=HELD_ACTION, expr=RECOVER_EXPR)
+    if read_cast_act(board, entity.entity_id) != CAST_LOCK:
         return None
-    return PlannedAction(entity_id=entity_id, action_id=HELD_ACTION, expr=CAST_LOCKED_EXPR)
+    return PlannedAction(entity_id=entity.entity_id, action_id=HELD_ACTION, expr=CAST_LOCKED_EXPR)
 
 
 def apply_hold_policy(board: TelegraphBoard, plan: PlannedAction) -> PlannedAction:
@@ -130,3 +152,41 @@ def apply_act_cancel(
     """
     if action_id not in KEEP_CAST_ACTIONS:
         board.apply_cancel(state, log, entity_id, CANCEL_BY_ACT)
+
+
+def apply_recover(entity: Entity, skill: SkillDef) -> None:
+    """재주가 발동했으니 그만큼 굳힌다 (§10.3).
+
+    **부르는 자리가 둘이다.** 즉발은 쓴 그 틱에, 예고형은 **터진 틱에** 굳기 시작한다 —
+    예고가 도는 동안은 이미 잠금이 묶고 있어서, 거기에 경직을 더하면 같은 대가를 두 번
+    치른다. 규칙은 여기 하나에 두고 부르는 자리만 둘이다.
+
+    **더 긴 쪽을 남긴다.** 겹칠 때 짧은 것으로 덮으면 앞의 긴 경직이 지워진다 —
+    상태이상을 겹칠 때와 같은 규율이다.
+
+    Args:
+        entity: 쓴 개체.
+        skill: 쓴 재주.
+    """
+    if skill.recover > 0:
+        entity.recover_ticks = max(entity.recover_ticks, skill.recover)
+
+
+def apply_action_recover(entity: Entity, skills: dict[str, SkillDef], plan: PlannedAction) -> None:
+    """이번 행동이 재주였으면 그만큼 굳힌다 (즉발 쪽 자리).
+
+    **판단이 여기 사는 이유.** 「무엇이 재주인가」는 엔진의 디스패치 갈래가 아니라 시전
+    규율의 일이다 — `apply_act_cancel` 을 여기 둔 것과 같은 근거이고, 엔진의 갈래표가
+    그만큼 단순해진다.
+
+    예고형은 여기 안 닿는다. `apply_cast` 가 먼저 받아 일찍 돌아가고, 그쪽은 **터진
+    틱에** 굳는다.
+
+    Args:
+        entity: 행위자.
+        skills: 재주 카탈로그.
+        plan: 이번 틱의 계획.
+    """
+    if plan.skill_id is None and plan.action_id not in ATTACK_ACTION_IDS:
+        return
+    apply_recover(entity, find_skill(skills, plan.action_id))

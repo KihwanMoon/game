@@ -93,6 +93,16 @@ export interface SkillDef {
   readonly telegraph: number
   /** 시전 중 다른 행동을 하면 취소되는가 (§10.3). */
   readonly castAct: CastAct
+  /**
+   * **후(後) — 발동하고 나서 몇 틱을 굳는가** (2026-09-19). 예고(`telegraph`)가
+   * 「터지기 전」이라면 이것은 「터진 뒤」다. 파이썬 `SkillDef.recover` 와 같다.
+   */
+  readonly recover: number
+  /**
+   * **누가 맞는가** (2026-09-19). 파이썬 `SkillDef.hits` 와 같다 —
+   * 값은 `sim/targeting` 이 정하고, 안 적으면 대상 하나다.
+   */
+  readonly hits: string
   /** 시전 중 맞으면 취소되는가. */
   readonly cancelOnHit: boolean
   readonly healPct: number
@@ -119,6 +129,8 @@ export interface RawSkill {
   readonly range?: number | null
   readonly telegraph?: number
   readonly cast_act?: string
+  readonly recover?: number
+  readonly hits?: string
   readonly cancel_on_act?: boolean
   readonly cancel_on_hit?: boolean
   readonly heal_pct?: number
@@ -163,6 +175,8 @@ export function buildSkillDef(raw: RawSkill): SkillDef {
     reach: raw.range ?? null,
     telegraph: raw.telegraph ?? 0,
     castAct: readCastAct(raw.cast_act),
+    recover: raw.recover ?? 0,
+    hits: raw.hits ?? 'TARGET',
     cancelOnHit: raw.cancel_on_hit ?? false,
     healPct: raw.heal_pct ?? 0,
     guardPct: raw.guard_pct ?? 0,

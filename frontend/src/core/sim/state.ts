@@ -72,6 +72,8 @@ export interface Entity {
    * 핵이 상위 호환이 되고, 그것이 §10.7 이 금지한 바로 그 모양이다.
    */
   castCooldownAdd: number
+  /** 후경직으로 남은 틱. 파이썬 `recover_ticks` 와 같다. */
+  recoverTicks: number
   /** 누가 불러냈는가. 소환 상한을 소환사별로 세기 위해 필요하다. */
   summonerId: string | null
   /**
@@ -108,6 +110,7 @@ export interface EntityInput {
   readonly steadyCast?: number
   readonly blastRadius?: number
   readonly castCooldownAdd?: number
+  readonly recoverTicks?: number
   readonly summonerId?: string | null
   readonly skills?: readonly string[] | null
   readonly cooldowns?: ReadonlyMap<string, number>
@@ -142,6 +145,7 @@ export function createEntity(input: EntityInput): Entity {
     steadyCast: input.steadyCast ?? 0,
     blastRadius: input.blastRadius ?? 0,
     castCooldownAdd: input.castCooldownAdd ?? 0,
+    recoverTicks: input.recoverTicks ?? 0,
     summonerId: input.summonerId ?? null,
     skills: input.skills ?? null,
     cooldowns: new Map(input.cooldowns ?? []),

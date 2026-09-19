@@ -28,6 +28,7 @@ from game.app.simulation.slow import check_slowed_this_tick
 from game.app.simulation.state import Entity, WorldState
 from game.app.simulation.support_actions import SupportActionMixin
 from game.app.simulation.telegraph import CANCEL_BY_HIT, TelegraphBoard
+from game.app.simulation.telegraph_effects import apply_status_effects
 
 # **여기서 다시 내보낸다.** 두 상수의 정본은 `plan.py` 로 옮겼지만(규칙 평가와 실행이
 # 같은 목록을 봐야 해서), 「행동이 사는 곳」에서 읽어 온 코드가 이미 여럿이다 — 그쪽을
@@ -266,7 +267,8 @@ class ActionExecutor(SupportActionMixin, BlastActionMixin, MoveActionMixin):
         # 스킬 계수(스킬이 정한다)와 스킬위력(개체가 정한다)은 다른 것이다. 곱해서
         # 넘기는 이유는 수식이 계수 하나만 받기 때문이며, 정수 곱 뒤 내림 나눗셈이라
         # 기본값 100 에서는 결과가 한 톨도 바뀌지 않는다 (결정 #51).
-        coef_pct = find_skill(self.config.skills, plan.action_id).coef_pct
+        skill = find_skill(self.config.skills, plan.action_id)
+        coef_pct = skill.coef_pct
         amount = calculate_damage(
             attack=entity.attack,
             skill_coef_pct=coef_pct * entity.skill_power_pct // PERCENT_BASE,
@@ -283,3 +285,15 @@ class ActionExecutor(SupportActionMixin, BlastActionMixin, MoveActionMixin):
             actor_id=entity.entity_id,
             rule=plan.rule_index,
         )
+        # **즉발도 상태를 얹는다** (2026-09-19). 예전에는 이 절이 예고 레코드에 묶여
+        # 있어서 즉발 재주에 `effects` 를 달면 **조용히 아무 일도 안 났다** — 파싱도
+        # 저장도 되고 관리 화면에도 뜨는데 걸리지 않았다. 「피해를 주면서 둔화도 건다」는
+        # `SkillEffect` 머리말이 이미 약속한 것인데 반쪽만 지켜지고 있었다.
+        for status, duration in apply_status_effects(target, skill.effects):
+            self._record(
+                entity.entity_id,
+                plan,
+                f"{target.entity_id} {status} {duration}틱",
+                None,
+                expr=f"{plan.action_id} {status}",
+            )
