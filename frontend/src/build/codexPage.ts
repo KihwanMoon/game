@@ -67,19 +67,93 @@ export function markStrong(escaped: string): string {
 }
 
 /**
+ * 내부 문서 참조를 알아보는 꼴.
+ *
+ * `설계/5_스킬 §10.6`·`GDD §5`·`결정 #12`·`docs/05`·`R5`·`W6` 같은 것들이다. 자산의
+ * 설명문은 원래 **다음 사람에게 남기는 글**이라 이런 참조가 섞여 있는데, 공개 페이지에서는
+ * 읽는 사람이 따라갈 수 없는 자리를 가리킨다.
+ */
+const DOC_REF =
+  /(?:설계|기획|참고|결정)\/[0-9]+_[^\s)」]*|docs\/[^\s)」]+|(?:GDD|TDD)\s*§\s?[0-9][0-9.]*|§\s?[0-9][0-9.]*|결정\s?#[0-9]+|\b[RGTUWP][0-9]+\b/
+
+/** 괄호에 든 참조. `(GDD §5)` 처럼 통째로 걷어도 문장이 그대로 산다. */
+const PAREN_REF = /\s*\((?:[^()]*)\)/g
+
+/**
+ * 문장 하나에서 괄호에 든 참조만 걷는다.
+ *
+ * **괄호 안에 참조가 있을 때만 걷는다.** 괄호를 다 걷으면 「(1층 60런 46% → 35%)」
+ * 같은 실측값까지 사라진다 — 그쪽은 읽는 사람이 제일 궁금해하는 숫자다.
+ *
+ * @param sentence 문장 하나.
+ * @returns 괄호 참조가 빠진 문장.
+ */
+export function dropParenRefs(sentence: string): string {
+  return sentence
+    .replace(PAREN_REF, (found) => (DOC_REF.test(found) ? '' : found))
+    // 괄호가 빠진 자리에 남는 공백을 접는다 — 「요구한다 .」 가 되면 안 된다.
+    .replace(/\s+([.,:;、。」])/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+/**
+ * 설명문에서 내부 문서 참조를 걷는다.
+ *
+ * **두 단계다.** 괄호에 붙은 참조는 걷고 문장을 살린다. 그러고도 참조가 남으면 그것은
+ * **문장의 주어 자리**에 있다는 뜻이라(「설계/5_스킬 §10.6 이 … 되묻는 자리다」) 걷는
+ * 것만으로는 말이 깨진다 — 그 문장은 통째로 뺀다.
+ *
+ * 성한 문장을 지키려고 이렇게 한다. 통째로 빼기만 하면 「강함의 대가가 희귀도가 아니라
+ * 예고다」 처럼 읽는 사람에게 제일 필요한 줄까지 함께 사라진다.
+ *
+ * @param note 자산의 설명문.
+ * @returns 참조가 빠진 설명문.
+ */
+export function stripDocRefs(note: string): string {
+  return note
+    .split(/\n{2,}/)
+    .map((block) =>
+      block
+        .split(/(?<=다\.)\s+|(?<=\.)\s+(?=[가-힣A-Z*「])/)
+        .map((sentence) => dropParenRefs(sentence))
+        .filter((sentence) => sentence !== '' && !DOC_REF.test(sentence))
+        .join(' '),
+    )
+    .filter((block) => block.trim() !== '')
+    .join('\n\n')
+}
+
+/**
+ * 역따옴표로 감싼 것을 `<code>` 로 옮긴다.
+ *
+ * 설명문은 게임 안의 이름을 `` `CASTER` `` 처럼 적는다. 그대로 두면 따옴표가 글자로
+ * 보인다 — **막은 뒤에 부른다**, `markStrong` 과 같은 이유다.
+ *
+ * @param escaped 이미 막아 둔 문자열.
+ * @returns 코드가 태그로 바뀐 문자열.
+ */
+export function markCode(escaped: string): string {
+  return escaped.replace(/`([^`]+)`/g, '<code>$1</code>')
+}
+
+/**
  * 설명문 한 덩어리를 문단으로 만든다.
+ *
+ * 내부 문서 참조는 여기서 걷는다 — 공개 페이지가 읽는 사람이 못 따라갈 자리를
+ * 가리키면 안 된다.
  *
  * @param note 자산의 설명문. 비어 있으면 빈 문자열.
  * @returns `<p>` 들.
  */
 export function buildNote(note: string): string {
-  const trimmed = note.trim()
+  const trimmed = stripDocRefs(note.trim())
   if (trimmed === '') {
     return ''
   }
   return trimmed
     .split(/\n{2,}/)
-    .map((block) => `<p>${markStrong(escapeHtml(block.trim()))}</p>`)
+    .map((block) => `<p>${markCode(markStrong(escapeHtml(block.trim())))}</p>`)
     .join('\n      ')
 }
 

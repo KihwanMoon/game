@@ -19,7 +19,16 @@ import {
   listRoomsOf,
   listRulesetSkills,
 } from './codex'
-import { attachParticle, checkHasFinal, escapeHtml, markStrong } from './codexPage'
+import {
+  attachParticle,
+  buildNote,
+  checkHasFinal,
+  dropParenRefs,
+  escapeHtml,
+  markCode,
+  markStrong,
+  stripDocRefs,
+} from './codexPage'
 
 const INPUT: CodexInput = {
   enemies: [
@@ -133,5 +142,43 @@ describe('읽을거리 만들기', () => {
 
   it('★ 설명문의 강조를 옮기되 막은 뒤에 옮긴다 — 순서가 뒤집히면 우리 태그가 막힌다', () => {
     expect(markStrong(escapeHtml('**굵게** <b>아님</b>'))).toBe('<strong>굵게</strong> &lt;b&gt;아님&lt;/b&gt;')
+  })
+})
+
+describe('내부 문서 참조 걷기', () => {
+  it('★ 괄호에 붙은 참조는 걷고 문장은 살린다', () => {
+    expect(dropParenRefs('플레이어에게 포위 회피를 요구한다 (GDD §5).')).toBe(
+      '플레이어에게 포위 회피를 요구한다.',
+    )
+    expect(stripDocRefs('**강함의 대가가 예고다** (설계/5_스킬 §10). 3틱 붉게 서 있다.')).toBe(
+      '**강함의 대가가 예고다**. 3틱 붉게 서 있다.',
+    )
+  })
+
+  it('★ 참조가 주어 자리면 그 문장만 뺀다 — 걷는 것만으로는 말이 깨진다', () => {
+    const note = '밟고 선 칸에만 떨어진다. 설계/5_스킬 §10.6 이 물은 것을 되묻는 자리다.'
+    expect(stripDocRefs(note)).toBe('밟고 선 칸에만 떨어진다.')
+  })
+
+  it('★ 참조가 아닌 괄호는 그대로 둔다 — 실측값이 거기 있다', () => {
+    expect(dropParenRefs('무엇을 빼도 손해다 (1층 60런 46% → 35%).')).toBe(
+      '무엇을 빼도 손해다 (1층 60런 46% → 35%).',
+    )
+  })
+
+  it('내부 코드와 결정 번호도 걷는다', () => {
+    expect(stripDocRefs('회복량은 30% 이며 정수 퍼센트다 (R5).')).toBe('회복량은 30% 이며 정수 퍼센트다.')
+    expect(stripDocRefs('전리품을 만들지 않는다 (결정 #02, T11): 통로가 된다.')).toBe(
+      '전리품을 만들지 않는다: 통로가 된다.',
+    )
+  })
+
+  it('참조만 있던 설명문은 통째로 빈다', () => {
+    expect(stripDocRefs('GDD §5 치유형.')).toBe('')
+    expect(buildNote('GDD §5 치유형.')).toBe('')
+  })
+
+  it('역따옴표를 코드로 옮긴다 — 막은 뒤에 부른다', () => {
+    expect(markCode(escapeHtml('`CASTER` 는 <주술형>'))).toBe('<code>CASTER</code> 는 &lt;주술형&gt;')
   })
 })
