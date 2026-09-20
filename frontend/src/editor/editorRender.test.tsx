@@ -132,6 +132,7 @@ function renderLibrary(presets: readonly RulePreset[]): string {
       onImport={() => ''}
       onExport={() => 'v2:code'}
       onExportSlot={() => 'v2:code'}
+      onShareSlot={async () => ({ url: 'https://sealedstacks.com/r/abc', problem: '' })}
     />,
   )
 }

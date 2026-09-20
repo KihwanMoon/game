@@ -39,6 +39,13 @@ export interface RuleLibraryProps {
   readonly onExport: (name: string) => string
   /** 슬롯 하나를 공유 코드로 굽는다. */
   readonly onExportSlot: (index: number) => string
+  /**
+   * 슬롯 하나를 짧은 주소로 만든다. 서버가 없으면 사유를 돌려준다.
+   *
+   * **코드와 나란히 둔다.** 링크는 서버가 있을 때 더 나은 길이지 코드를 대신하는
+   * 것이 아니다 — 서버가 없어도 게임은 돌아야 하고, 그때 표를 건네는 수단은 코드뿐이다.
+   */
+  readonly onShareSlot: (index: number) => Promise<{ readonly url: string; readonly problem: string }>
 }
 
 /** 알림 한 줄. 색만으로 적지 않으므로 글리프 상태를 함께 든다. */
@@ -87,6 +94,27 @@ export function RuleLibrary(props: RuleLibraryProps): React.JSX.Element {
     setCode(text)
     writeClipboard(text)
     setNotice({ kind: 'true', text: '공유 코드를 칸과 클립보드에 넣었다' })
+  }
+
+  /**
+   * 슬롯 하나의 짧은 주소를 만들어 칸과 클립보드에 넣는다.
+   *
+   * **코드 칸을 같이 쓴다.** 칸을 하나 더 두면 「어느 칸이 내가 줄 것인가」가 생긴다 —
+   * 마지막으로 만든 것이 거기 있는 편이 헷갈리지 않는다.
+   *
+   * @param index 슬롯 자리.
+   * @param label 슬롯 이름. 알림에 적는다.
+   */
+  async function handleShare(index: number, label: string): Promise<void> {
+    setNotice({ kind: 'true', text: '주소를 만드는 중…' })
+    const result = await props.onShareSlot(index)
+    if (result.problem !== '') {
+      setNotice({ kind: 'danger', text: result.problem })
+      return
+    }
+    setCode(result.url)
+    writeClipboard(result.url)
+    setNotice({ kind: 'true', text: `${label} 의 주소를 칸과 클립보드에 넣었다` })
   }
 
   /**
@@ -172,6 +200,17 @@ export function RuleLibrary(props: RuleLibraryProps): React.JSX.Element {
                   }}
                 >
                   코드
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  glyph="🔗"
+                  title="이 슬롯의 짧은 주소를 만든다 — 그대로 붙이면 남이 열어 본다"
+                  onClick={() => {
+                    void handleShare(at, preset.name)
+                  }}
+                >
+                  링크
                 </Button>
                 <Button
                   size="sm"

@@ -70,6 +70,7 @@ export {
   writeSave,
 } from './saveStore'
 export type { SaveOutcome, SaveScheduler, StorageLike } from './saveStore'
+export { SHARE_OFFLINE, createShareLink, type ShareResult } from './shareLink'
 export {
   META_FORMAT_TAG,
   META_STORAGE_KEY,

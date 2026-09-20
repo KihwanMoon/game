@@ -138,6 +138,7 @@ import {
   createSession,
   exportSessionCode,
   exportSlotCode,
+  shareSlotLink,
   getSessionRuleSet,
   type EditorSession,
 } from './session'
@@ -1860,6 +1861,12 @@ export function App(): React.JSX.Element {
                 onImport={readSharedCode}
                 onExport={(name) => exportSessionCode(session, name)}
                 onExportSlot={(index) => exportSlotCode(session, index)}
+                // **주소는 지금 열려 있는 곳을 쓴다.** 서버는 경로만 주고 어느
+                // 도메인에 서 있는지 모른다 — 알려면 설정으로 들고 있어야 하고,
+                // 그러면 개발과 운영이 갈릴 때마다 그 설정이 틀린다.
+                onShareSlot={(index) =>
+                  shareSlotLink(session, index, getLocalStorage(), window.location.origin)
+                }
               />
             </>
           }

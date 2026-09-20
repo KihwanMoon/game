@@ -26,6 +26,9 @@ import {
   type EditorSave,
   type RulePreset,
   type RunResult,
+  type ShareResult,
+  type StorageLike,
+  createShareLink,
   exportPresetCode,
   parsePresetCode,
 } from './storage'
@@ -301,6 +304,31 @@ export function applyTutorialStage(
 export function exportSlotCode(session: EditorSession, index: number): string {
   const preset = session.presets[index]
   return preset === undefined ? '' : exportPresetCode(preset)
+}
+
+/**
+ * 슬롯 하나를 짧은 주소로 만든다.
+ *
+ * **코드와 나란히 둔다.** 링크는 서버가 있을 때 더 나은 길이지 코드를 대신하는 것이
+ * 아니다 — 서버가 없어도 게임은 돌아야 하고, 그때 표를 건네는 수단은 코드뿐이다.
+ *
+ * @param session 세션.
+ * @param index 슬롯 자리.
+ * @param storage 토큰이 든 저장소.
+ * @param origin 이 사이트의 주소.
+ * @returns 주소와 실패 사유.
+ */
+export async function shareSlotLink(
+  session: EditorSession,
+  index: number,
+  storage: StorageLike | undefined,
+  origin: string,
+): Promise<ShareResult> {
+  const preset = session.presets[index]
+  if (preset === undefined) {
+    return { url: '', problem: '빈 슬롯이다' }
+  }
+  return createShareLink(preset.ruleset, preset.name, storage, origin)
 }
 
 /**
