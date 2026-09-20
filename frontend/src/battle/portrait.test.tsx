@@ -600,6 +600,20 @@ describe('★ 한정된 화면의 공간 예산', () => {
     expect(block).toContain('max-height: var(--sheet-body-h)')
   })
 
+  it('★ 다이얼로그 안에서도 안 흔들린다 (2026-09-20 요청)', () => {
+    // 위의 뺄셈은 화면 높이 기준이라 다이얼로그에서는 성립하지 않는다. 그래서 제외해
+    // 두었는데, **흔들리는 문제는 거기에도 똑같이 있었다** — 되감으며 로그가 차는
+    // 동안 시트가 10줄에서 14줄로 자라고 그때마다 아래가 밀렸다.
+    //
+    // 기준만 바꾸고 규율은 같게: 하한과 상한이 같은 값이어야 한다.
+    const block = cutRule('.battle-frame--panel .battle__sheet-body')
+    expect(block, '다이얼로그용 규칙을 찾지 못했다').not.toBe('')
+    const min = /min-height:\s*([^;]+);/.exec(block)?.[1]?.trim()
+    const max = /max-height:\s*([^;]+);/.exec(block)?.[1]?.trim()
+    expect(min).toBeDefined()
+    expect(max).toBe(min)
+  })
+
 
 
   it('★ 상단 바가 스크롤에 안 딸려 간다 — 지금 어디의 몇 틱인지가 나가면 안 된다', () => {
