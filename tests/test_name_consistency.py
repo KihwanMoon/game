@@ -10,10 +10,11 @@
 """
 
 import json
+import re
 
 import pytest
 
-from game.config import BLOCKS_PATH, SKILLS_PATH
+from game.config import BALANCE_PATH, BLOCKS_PATH, SKILLS_PATH
 
 
 @pytest.fixture(name="blocks")
@@ -74,3 +75,42 @@ def test_aliases_are_declared(blocks: dict) -> None:
             continue
         # 인자로 안 닿는 것은 스스로 적어야 한다. USE_POTION 이 그 하나다.
         assert action["id"] not in {"USE_POTION"} or action.get("_alias_of")
+
+
+# 설명문에 나오면 안 되는 것 둘. 코드에서만 뜻이 있는 이름들이다.
+FIELD_NAME = re.compile(r"\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b")
+FILE_NAME = re.compile(r"\b[a-z_]+\.(?:py|ts|tsx|json|sh)\b")
+
+
+def list_public_notes(blocks: dict, skills: dict) -> list[tuple[str, str]]:
+    """공개 페이지로 나가는 설명문 전부.
+
+    Args:
+        blocks: 블록 목록 원문. 쓰지 않지만 픽스처를 맞춘다.
+        skills: 재주 목록 원문.
+
+    Returns:
+        (어디, 글) 쌍들.
+    """
+    balance = json.loads(BALANCE_PATH.read_text(encoding="utf-8"))
+    rows = [(f"몬스터 {one['id']}", one.get("_note", "")) for one in balance["enemies"]]
+    rows += [(f"재주 {one['id']}", one.get("_note", "")) for one in skills["skills"]]
+    return [(name, text) for name, text in rows if text]
+
+
+def test_notes_do_not_name_fields(blocks: dict, skills: dict) -> None:
+    """★ 설명문이 필드 이름과 파일 이름을 안 쓴다 (2026-09-20).
+
+    이 글은 **공개 도감 페이지로 그대로 나간다**(`/codex/`). 읽는 사람은 ``guard_ticks``
+    가 얼마인지 모르고 ``apply_damage`` 가 무엇인지도 모른다 — 실제로 「다음 guard_ticks
+    동안 받는 피해를 guard_pct 만큼 줄인다」가 나가고 있었다.
+
+    한글 이름은 **관리 표가 정한 것**을 쓴다(`admin/skillFields`). 화면과 설명이 다른
+    말을 쓰면 고치는 사람이 어느 칸을 만져야 하는지 못 찾는다.
+    """
+    bad: dict[str, list[str]] = {}
+    for name, text in list_public_notes(blocks, skills):
+        found = sorted(set(FIELD_NAME.findall(text)) | set(FILE_NAME.findall(text)))
+        if found:
+            bad[name] = found
+    assert bad == {}
