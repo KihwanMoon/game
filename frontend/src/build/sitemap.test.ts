@@ -38,6 +38,22 @@ describe('robots.txt', () => {
   it('★ 네이버를 따로 부른다 — 국내 유입이 거기서 오고 JS 를 안 돌린다', () => {
     expect(text).toContain('User-agent: Yeti')
   })
+
+  it('★ 두 그룹의 금지 목록이 같다 — 크롤러는 제 그룹 하나만 따른다', () => {
+    // `*` 의 줄이 Yeti 그룹에 없으면 그 경로는 **네이버에만 열린다.** 실제로 안 굽는
+    // 화면 셋이 그렇게 열려 있었다 (2026-09-20) — SPA 폴백이 200 으로 홈과 같은 내용을
+    // 돌려주므로, 긁히면 같은 글이 네 벌이 된다.
+    const listDisallows = (group: string): readonly string[] => {
+      const body = text.slice(text.indexOf(`User-agent: ${group}`))
+      const end = body.indexOf('User-agent:', 1)
+      return (end < 0 ? body : body.slice(0, end))
+        .split('\n')
+        .filter((line) => line.startsWith('Disallow:'))
+        .map((line) => line.trim())
+        .sort()
+    }
+    expect(listDisallows('Yeti')).toEqual(listDisallows('*'))
+  })
 })
 
 describe('사이트맵', () => {

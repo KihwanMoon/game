@@ -15,9 +15,17 @@ Disallow: /hud.html
 
 # 네이버. 국내 유입의 대부분이 여기서 오고, 이 크롤러는 JS 를 거의 안 돌린다 —
 # 정적 페이지를 따로 굽는 이유가 그것이다.
+#
+# **금지 목록이 위와 글자까지 같아야 한다.** 크롤러는 자기 이름의 그룹 **하나만**
+# 따르고 `*` 는 통째로 무시한다 — 여기 한 줄이 빠지면 그 경로는 네이버에만 열린다.
+# 실제로 개발용 화면 셋이 그렇게 열려 있었다(2026-09-20). 셋 다 안 굽는 파일인데
+# SPA 폴백이 200 으로 홈과 같은 내용을 돌려주므로, 긁히면 같은 글이 네 벌이 된다.
 User-agent: Yeti
 Allow: /
 Disallow: /admin.html
 Disallow: /api/
+Disallow: /ds.html
+Disallow: /battle.html
+Disallow: /hud.html
 
 Sitemap: https://sealedstacks.com/sitemap.xml
