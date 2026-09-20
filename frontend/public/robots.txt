@@ -1,0 +1,23 @@
+# 비각 祕閣 — 크롤러 규약
+#
+# **막는 것은 셋뿐이다.** 관리 화면·API·부품 확인용 화면이며, 나머지는 전부 연다.
+# 게임 본체는 SPA 라 크롤러가 읽을 글자가 거의 없고, 읽히라고 만든 것은 `/codex/`
+# 아래의 정적 페이지들이다 — 사이트맵이 그쪽을 가리킨다.
+
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /api/
+# 개발 서버에서만 굽는 화면들. 산출물에 없지만 경로가 알려지면 긁으려 든다.
+Disallow: /ds.html
+Disallow: /battle.html
+Disallow: /hud.html
+
+# 네이버. 국내 유입의 대부분이 여기서 오고, 이 크롤러는 JS 를 거의 안 돌린다 —
+# 정적 페이지를 따로 굽는 이유가 그것이다.
+User-agent: Yeti
+Allow: /
+Disallow: /admin.html
+Disallow: /api/
+
+Sitemap: https://sealedstacks.com/sitemap.xml
