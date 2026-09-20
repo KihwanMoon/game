@@ -24,10 +24,14 @@ import { useState } from 'react'
 
 import { Button, GlyphState, Panel, ValueExpr } from "../ds";
 
-import type { LeaderboardView, ProgressView, WorldPulse } from "../storage";
+import type { DailyBoardView, LeaderboardView, ProgressView, WorldPulse } from "../storage";
+import { formatDailySummary } from "../storage";
 
 import { LinkNoticeLine } from './LinkNoticeLine'
 import { checkLinked, type LinkState } from './linkState'
+
+/** 오늘의 도전에서 보여 주는 줄 수. 순위표(10)보다 짧다 — 하루치라 위쪽만 뜻이 있다. */
+const DAILY_SHOWN = 5
 
 /** 창이 이레면 「이번 주」라 적는다 — 사람이 세는 단위가 그것이다. */
 const WEEK_DAYS = 7
@@ -96,6 +100,16 @@ export interface WorldPanelProps {
   readonly accountId: number | undefined;
   readonly link: LinkState;
   readonly detail: string;
+  /**
+   * 오늘의 도전 판 (2026-09-20).
+   *
+   * **데일리는 이미 돌고 있었는데 결과를 아무도 못 봤다.** 티켓을 하루 한 번 내주고
+   * 시드를 날짜로 고정하는 것까지 서버가 하고 있었지만, 화면에는 「티켓을 받았다」 한
+   * 줄이 전부였다 — 같은 판을 다 같이 돈다는 사실이 안 보이면 내일 올 이유가 없다.
+   *
+   * 못 받으면 그 줄을 안 그린다. 서버가 없어도 게임은 돈다.
+   */
+  readonly daily?: DailyBoardView | undefined;
   readonly onDaily: () => void;
 }
 
@@ -249,6 +263,35 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
               </ul>
             )}
 
+            <div className="wld__head">오늘의 도전</div>
+            {/* **같은 판을 다 같이 돈다는 것이 이 줄의 전부다.** 어제와 다른 한 판이
+                아니라 오늘 모두가 같은 자리에서 시작한다는 사실이 내일 올 이유다. */}
+            <ValueExpr text={formatDailySummary(props.daily)} size="sm" dim />
+            {props.daily === undefined || props.daily.rows.length === 0 ? null : (
+              <ul className="wld__list">
+                {props.daily.rows.slice(0, DAILY_SHOWN).map((row) => (
+                  <li
+                    className={`wld__rank${row.accountId === props.accountId ? " wld__rank--me" : ""}`}
+                    key={row.accountId}
+                  >
+                    <span className="wld__rank-no">{String(row.rank)}</span>
+                    <span className="wld__name">{row.handle}</span>
+                    {/* **0 장은 「받아만 뒀다」다.** 못한 것이 아니라 아직 안 돈
+                        것이므로 층수로 적으면 거짓말이 된다. */}
+                    <span className="wld__rank-score">
+                      {row.floor === 0 ? "받아 둠" : `${String(row.floor)}장`}
+                    </span>
+                    {row.accountId === props.accountId ? (
+                      <span className="wld__me">
+                        <span aria-hidden="true">◉</span>
+                        <span className="ds-sr">이 줄이 나다</span>
+                        나
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
             <div className="wld__actions">
               <Button
                 size="sm"
@@ -256,7 +299,7 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
                 glyph="◷"
                 onClick={props.onDaily}
               >
-                오늘의 도전
+                {props.daily?.hasEntry === true ? "오늘 판 다시 받기" : "오늘의 도전"}
               </Button>
             </div>
           </>

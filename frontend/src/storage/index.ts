@@ -72,6 +72,12 @@ export {
 export type { SaveOutcome, SaveScheduler, StorageLike } from './saveStore'
 export { SHARE_OFFLINE, createShareLink, type ShareResult } from './shareLink'
 export {
+  formatDailySummary,
+  readDailyBoard,
+  type DailyBoardView,
+  type DailyRow,
+} from './dailyBoard'
+export {
   META_FORMAT_TAG,
   META_STORAGE_KEY,
   buildMetaPayload,

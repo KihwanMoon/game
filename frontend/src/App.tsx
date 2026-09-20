@@ -67,7 +67,7 @@ import { findRoomTitle } from './core/schemas/room'
 import { SHADOW, buildCardId, findChapter } from './content/story'
 import { DOPPEL_KIND_ID } from './battle/actorKind'
 import { ReplayView } from './admin/ReplayView'
-import type { ReplayInput, RunHistoryRow, WorldPulse } from './storage'
+import type { DailyBoardView, ReplayInput, RunHistoryRow, WorldPulse } from './storage'
 import { OUTCOME_ONGOING, OUTCOME_PLAYER_WIN } from './core/sim/phases'
 import { Button, GlyphState, Panel, ValueExpr } from './ds'
 import {
@@ -162,6 +162,7 @@ import {
   readAuction,
   readBestiary,
   readDiscovery,
+  readDailyBoard,
   readLeaderboard,
   readWorldPulse,
   MODE_DOPPEL,
@@ -646,6 +647,8 @@ export function App(): React.JSX.Element {
   // 내 내력이 남의 장에서 무엇을 했는지. **성장과 무관한 유일한 눈금이다.**
   const [myDoppels, setMyDoppels] = useState<MyDoppelView | undefined>(undefined)
   const [leaderboard, setLeaderboard] = useState<LeaderboardView | undefined>(undefined)
+  // 오늘의 도전 판. 서버에 못 닿으면 undefined 로 남고 그 줄을 안 그린다.
+  const [daily, setDaily] = useState<DailyBoardView | undefined>(undefined)
   // **둔갑 판은 따로 읽는다.** 재는 것이 다르므로 한 요청에 합치면 어느 수치가 어느
   // 판의 것인지 화면이 다시 갈라야 한다 (2026-09-15).
   const [doppelBoard, setDoppelBoard] = useState<LeaderboardView | undefined>(undefined)
@@ -996,6 +999,7 @@ export function App(): React.JSX.Element {
     void readProgress(account).then(setProgress)
     void readMyDoppels(account).then(setMyDoppels)
     void readLeaderboard(account).then(setLeaderboard)
+    void readDailyBoard(account).then(setDaily)
     void readLeaderboard(account, MODE_DOPPEL).then(setDoppelBoard)
     void readAuction(account).then(setAuction)
     refreshBag(account)
@@ -1076,6 +1080,7 @@ export function App(): React.JSX.Element {
     // 1장 카드가 다시 뜨지 않는다 (2026-09-16).
     seenCards.current = new Set(await readStorySeen(token))
     setLeaderboard(await readLeaderboard(token))
+    setDaily(await readDailyBoard(token))
     // **토큰이 필요 없다.** 그래도 여기서 함께 읽는 이유는 화면이 새로 그려질 때
     // 수치도 같이 따라오게 하기 위해서다 — 따로 두면 한쪽만 낡는다.
     setPulse(await readWorldPulse())
@@ -1358,6 +1363,7 @@ export function App(): React.JSX.Element {
         // 판이 끝나면 경험치와 순위가 올랐다.
         void readProgress(account).then(setProgress)
         void readLeaderboard(account).then(setLeaderboard)
+    void readDailyBoard(account).then(setDaily)
         void readLeaderboard(account, MODE_DOPPEL).then(setDoppelBoard)
         // **서버가 확정한 성취를 받아 온다.** 아래에서 기기가 낙관적으로 먼저 반영하지만
         // 정본은 서버의 재시뮬이다 — 둘이 갈리면 화면에 뜬 해금이 다음 접속에 사라진다.
@@ -2296,6 +2302,7 @@ export function App(): React.JSX.Element {
                 accountId={profile?.accountId}
                 link={link}
                 detail={worldDetail}
+                daily={daily}
                 onDaily={() => {
                   if (account === undefined) {
                     return
@@ -2305,6 +2312,9 @@ export function App(): React.JSX.Element {
                     headers: { 'X-Game-Token': account },
                   }).then(() => {
                     setWorldDetail('오늘의 도전 티켓을 받았다 — 출격하면 그 판이 돈다')
+                    // **받자마자 판을 다시 읽는다.** 안 읽으면 「받았다」고 적힌 옆에
+                    // 「아직 안 잡았다」가 그대로 서 있다.
+                    void readDailyBoard(account).then(setDaily)
                   })
                 }}
               />

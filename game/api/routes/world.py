@@ -22,16 +22,20 @@ from game.api.deps import TOKEN_HEADER, CurrentAccount, get_context, get_core_ve
 from game.api.loadout_service import build_ticket_loadout
 from game.api.schemas import (
     AllocationRequest,
-    LeaderboardResponse,
     ProgressResponse,
     TicketResponse,
-    WorldPulseResponse,
 )
 from game.api.schemas_doppel import (
     DoppelBout,
     DoppelRetirement,
     DoppelStanding,
     MyDoppelResponse,
+)
+from game.api.schemas_world import (
+    DailyBoardResponse,
+    DailyRow,
+    LeaderboardResponse,
+    WorldPulseResponse,
 )
 from game.app.progression.floors import read_floor_cap
 from game.app.progression.levels import (
@@ -42,6 +46,11 @@ from game.app.progression.levels import (
     compute_respec_cost,
 )
 from game.app.store.accounts import find_player_entity
+from game.app.store.daily_board import (
+    count_daily_players,
+    list_daily_board,
+    read_daily_entry,
+)
 from game.app.store.doppel_bouts import (
     MODE_DOPPEL,
     count_bouts,
@@ -259,6 +268,42 @@ def read_my_doppels(account: CurrentAccount) -> MyDoppelResponse:
             for one in list_retired_doppels(pool, account.account_id, BOUT_LIMIT)
         ],
         is_opted_in=check_doppel_opt_in(pool, account.account_id),
+    )
+
+
+@router.get("/api/daily", response_model=DailyBoardResponse)
+def read_daily_board(account: CurrentAccount) -> DailyBoardResponse:
+    """오늘의 도전 상태를 읽는다 — 내 것과 남의 것.
+
+    **데일리는 이미 돌고 있었는데 아무도 결과를 못 봤다** (2026-09-20). 티켓을 하루 한
+    번 내주고 시드를 날짜로 고정하는 것까지 서버가 하고 있었지만, 같은 판을 다 같이
+    돈다는 사실이 화면에 없으면 그것은 그냥 「어제와 다른 한 판」이고 내일 다시 올
+    이유가 되지 못한다.
+
+    **내 자리는 윗자리 밖에서도 찾는다.** 스무 줄 안에 없다고 내 기록을 안 보여 주면,
+    잘 못한 사람에게는 이 표가 남의 것만 적힌 종이가 된다.
+
+    Args:
+        account: 토큰으로 푼 계정.
+
+    Returns:
+        오늘의 순위와 내 자리.
+    """
+    pool = get_pool()
+    today = date.today()
+    rows = list_daily_board(pool, today)
+    mine = read_daily_entry(pool, today, account.account_id)
+    my_rank = 0
+    for row in rows:
+        if row["account_id"] == account.account_id:
+            my_rank = row["rank"]
+    return DailyBoardResponse(
+        day=today.isoformat(),
+        players=count_daily_players(pool, today),
+        rows=[DailyRow(**row) for row in rows],
+        has_entry=mine is not None,
+        my_floor=0 if mine is None else mine["floor"],
+        my_rank=my_rank,
     )
 
 
