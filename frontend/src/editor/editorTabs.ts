@@ -25,8 +25,19 @@ import type { ReactNode } from 'react'
 export interface EditorTab {
   readonly id: string
   readonly label: string
-  /** 가운데 본문. 탭이 반드시 가진 하나다. */
+  /** 가운데 본문. 탭이 반드시 가진 하나다. 편집기 탭은 `null` 이다 — 아래를 본다. */
   readonly main: ReactNode
+  /**
+   * 이 탭이 곧 규칙 편집기인가.
+   *
+   * **본문을 안 받는다.** 편집기는 규칙 목록·카드·팔레트를 스스로 그리므로 밖에서
+   * 넘길 수 있는 조각이 아니다 — 그래서 `main` 이 `null` 이고 이 표시가 대신한다.
+   *
+   * **탭 줄에 박아 두지 않으려고 생겼다** (2026-09-20). 예전에는 전투 버튼이 코드에
+   * 맨 앞으로 박혀 있어서 **순서를 부르는 쪽이 못 정했다** — 무엇을 첫 탭으로 둘지는
+   * 화면 구성의 일이지 이 부품의 일이 아니다.
+   */
+  readonly isEditor?: boolean
   /** 왼쪽 팔레트 열. 없으면 본문이 폭을 쓴다. */
   readonly palette?: ReactNode
   /** 오른쪽 검증 열. 없으면 본문이 폭을 쓴다. */
@@ -47,5 +58,5 @@ export function checkWideTab(tab: EditorTab): boolean {
   return tab.palette !== undefined || tab.check !== undefined
 }
 
-/** 전투 내력 탭의 id. 처음 열리는 탭이다 — 이 게임의 규칙표는 여전히 전투가 중심이다. */
+/** 전투 내력 탭의 id. 편집기 자체인 탭이며, 자리는 부르는 쪽이 정한다. */
 export const COMBAT_TAB_ID = 'combat'

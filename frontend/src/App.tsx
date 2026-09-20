@@ -56,6 +56,36 @@ const BLOCK_CATALOG = ACTIVE.catalog
 const ROOM_TEMPLATES = ACTIVE.rooms
 const ENEMY_RULESETS = ACTIVE.enemies
 const BALANCE = ACTIVE.balance
+/**
+ * 탭 줄의 순서. **여기 한 줄이 화면의 첫인상을 정한다.**
+ *
+ * 맨 앞이 처음 열리는 탭이다 (2026-09-20). 예전에는 전투가 앞이었고 그것이 코드에
+ * 박혀 있었는데, **처음 오는 사람이 먼저 만나야 하는 것은 제 서생**이라 앞으로 옮겼다 —
+ * 이름·레벨·능력치가 거기 있고, 규칙을 짜는 일은 그다음이다.
+ *
+ * 여기 없는 id 는 **뒤에 그대로 붙는다.** 탭을 새로 만든 사람이 이 줄을 깜빡했다고
+ * 그 탭이 사라지면 안 된다 — 안 보이는 것이 잘못 놓인 것보다 나쁘다.
+ */
+/** 처음 열리는 탭. 순서의 맨 앞과 **같은 값이어야 한다** — 아래가 그것을 묶는다. */
+const FIRST_TAB_ID = 'me'
+
+const TAB_ORDER: readonly string[] = [FIRST_TAB_ID, COMBAT_TAB_ID, 'upkeep', 'learn']
+
+/**
+ * 탭들을 정해진 순서로 세운다.
+ *
+ * @param tabs 순서와 무관하게 모은 탭들.
+ * @returns 순서대로 선 탭들. 목록에 없는 것은 뒤에 원래 순서로 붙는다.
+ */
+function orderTabs(tabs: readonly EditorTab[]): EditorTab[] {
+  const rank = (tab: EditorTab): number => {
+    const at = TAB_ORDER.indexOf(tab.id)
+    return at < 0 ? TAB_ORDER.length : at
+  }
+  // 안정 정렬이라 같은 등수끼리는 들어온 순서를 지킨다 (ES2019).
+  return [...tabs].sort((left, right) => rank(left) - rank(right))
+}
+
 /** 퍼센트 접사를 값으로 바꾸는 기준. 정비의 장비 교체 저울이 쓴다. */
 const PLAYER_BASE = BALANCE.player as Record<string, number>
 import type { RawBalanceFile } from './core/resources'
@@ -113,6 +143,7 @@ import {
   checkTextEntry,
   resolveHistoryCommand,
 } from './editor'
+import { COMBAT_TAB_ID } from './editor'
 import type { EditorTab, LinkState } from './editor'
 import { ErrorBoundary, formatCrash } from './ErrorBoundary'
 import { ChapterCard, PostMortem, formatOutcome, recordBattle, usePlanTheme } from './hud'
@@ -1879,7 +1910,14 @@ export function App(): React.JSX.Element {
           // **탭 줄 하나가 화면 전부를 든다.** 앞의 둘은 규칙표(전투·정비)라 팔레트와
           // 검증까지 쓰고, 나머지는 본문 하나짜리 화면이다 — 예전에는 뒤쪽이 「서랍」
           // 이라는 또 하나의 탭 줄 안에 갇혀 있었다.
-          tabs={[buildMaintenanceTab(), ...buildScreenTabs()]}
+          firstTabId={FIRST_TAB_ID}
+          tabs={orderTabs([
+            // **편집기도 목록의 한 줄이다** (2026-09-20). 본문을 안 받는 대신
+            // `isEditor` 로 표시한다 — 그래야 자리를 `TAB_ORDER` 가 정한다.
+            { id: COMBAT_TAB_ID, label: '전투 내력', main: null, isEditor: true },
+            buildMaintenanceTab(),
+            ...buildScreenTabs(),
+          ])}
           // **연결 상태는 모든 탭에서 보인다.** 예전에는 서랍의 첫 칸이 열려 있을 때만
           // 보였는데 그것은 우연이었다 — 다른 탭에 두면 서버가 죽어도 화면이 조용했다.
           // 등급은 패널의 것과 다르다: 여기서 오프라인은 실패가 아니라 **설계된 상태**라

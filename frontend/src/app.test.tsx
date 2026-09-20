@@ -57,11 +57,13 @@ function runAsWatched(setup: BattleSetup): {
 describe('첫 화면', () => {
   const markup = renderToStaticMarkup(<App />)
 
-  it('규칙 에디터가 먼저 뜬다', () => {
+  it('규칙표 화면이 먼저 뜬다 — 탭 줄이 그 안에 있다', () => {
     // 데스크톱 세 열을 지우면서 제목이 「규칙 에디터」에서 「규칙표」로 바뀌었다 —
     // 명세 C 가 그린 화면의 이름이 그것이다.
     expect(markup).toContain('내력')
-    expect(markup).toContain('edit-m__rules')
+    // 전투는 이제 첫 탭이 아니지만 **탭 줄에는 있어야 한다** — 없으면 규칙을 고칠
+    // 길이 사라진다.
+    expect(markup).toContain('전투 내력')
   })
 
   // **첫 페인트가 경보를 띄우면 안 된다.** 앱은 서버에 붙어 보기도 전에
@@ -128,21 +130,23 @@ describe('첫 화면', () => {
     expect(markup.indexOf('launch__field')).toBeLessThan(markup.indexOf('edit-m__tabs'))
   })
 
-  it('★ 처음 열리는 것은 전투 규칙이다 — 이 게임의 규칙표는 전투가 중심이다', () => {
-    expect(markup).toContain('edit-m__rules')
+  it('★ 처음 열리는 것은 서생이다 — 이름·레벨·능력치를 먼저 만난다', () => {
+    // 2026-09-20 에 전투에서 옮겼다. 처음 오는 사람이 먼저 만나야 하는 것은 제 서생이고,
+    // 규칙을 짜는 일은 그다음이다. 순서는 `App` 의 `TAB_ORDER` 한 줄이 정한다.
+    expect(markup).toContain('>성장<')
     // 안 열린 탭의 내용은 안 그려진다 — 그려지면 탭이 갈린 뜻이 없다.
-    expect(markup).not.toContain('>성장<')
+    expect(markup).not.toContain('edit-m__rules')
     expect(markup).not.toContain('장비와 가방')
   })
 
-  it('★ 코드 라이브러리는 규칙을 고치는 열에 있다', () => {
+  it('★ 코드 라이브러리는 탭이 아니다 — 규칙을 고치는 일의 한 부분이다', () => {
     // 이 슬롯이 원래 그것을 위해 만들어졌는데(RuleEditor 의 `library` 주석) 곁다리 탭
     // 하나로 들어가 있었다. 라이브러리는 **개인용**이고, 저장·조회·불러오기는 전부
     // 규칙을 고치는 일의 한 부분이다 — 탭을 고르는 일이 아니다 (2026-09-15).
-    expect(markup).toContain('코드 라이브러리')
+    //
+    // 「규칙 목록 아래에 선다」는 자리 검사는 `mobileEditor.test` 로 옮겼다 (2026-09-20).
+    // 첫 화면이 서생이 되면서 여기서는 편집기가 안 그려진다.
     expect(markup).not.toContain('>서고<')
-    // 규칙 목록과 같은 화면, **그 아래**에 있다. 위는 고치는 자리고 여기는 들르는 자리다.
-    expect(markup.slice(markup.indexOf('edit-m__rules'))).toContain('코드 라이브러리')
   })
 
   it('★ 관리 탭은 관리자에게만 생긴다 — 빈 탭도 경로의 존재를 알려 준다', () => {

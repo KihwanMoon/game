@@ -32,7 +32,7 @@ import { GlyphState, SegmentedGauge, ValueExpr } from '../ds'
 import type { BlockCatalog, RuleSet } from '../core/schemas'
 import { formatActionLabel } from './blockOptions'
 import { calculateTotalCpu } from './draft'
-import { COMBAT_TAB_ID, checkWideTab, type EditorTab } from './editorTabs'
+import { checkWideTab, type EditorTab } from './editorTabs'
 import { ActionCard, ConditionCard, CpuCard, PriorityCard } from './RuleEditCards'
 import type { RuleRowActions } from './ruleRowActions'
 import { formatMeasuredCondition, type TermReadings } from './termMeasure'
@@ -124,22 +124,17 @@ function RuleListScreen(props: RuleListScreenProps): React.JSX.Element {
     props.globalProblems.length + [...props.problems.values()].reduce((sum, one) => sum + one.length, 0)
   const over = props.totalCpu > props.cpuBudget
   const tabs = props.tabs ?? []
-  const openTab = tabs.find((tab) => tab.id === props.tabId)
+  const found = tabs.find((tab) => tab.id === props.tabId)
+  // 편집기 탭은 본문을 안 받는다 — 목록에는 있지만 아래 렌더에서는 「없음」과 같다.
+  const openTab = found?.isEditor === true ? undefined : found
   const tabStrip =
     tabs.length === 0 || props.onTab === undefined ? null : (
       // 자식이 `role="tab"` 이 아니므로 `role="tablist"` 를 쓰지 않는다 — 짝이 안 맞는
       // ARIA 는 없느니만 못하다. 고름은 `aria-pressed` 가 말한다(데스크톱과 같다).
       <nav className="edit-m__tabs" aria-label="화면">
-        <button
-          type="button"
-          className={`edit-m__tab${openTab === undefined ? ' edit-m__tab--on' : ''}`}
-          aria-pressed={openTab === undefined}
-          onClick={() => {
-            props.onTab?.(COMBAT_TAB_ID)
-          }}
-        >
-          전투 내력
-        </button>
+        {/* **순서를 여기서 안 정한다** (2026-09-20). 예전에는 전투 버튼이 맨 앞에 박혀
+            있어서 무엇을 첫 탭으로 둘지를 이 부품이 정하고 있었다 — 그것은 화면 구성의
+            일이다. 이제 목록 순서가 곧 탭 줄 순서다. */}
         {tabs.map((tab) => (
           <button
             type="button"

@@ -610,6 +610,10 @@ describe('토큰 규율', () => {
 describe('좁은 화면의 규칙표 탭', () => {
   // **모바일은 세 열을 못 편다.** 데스크톱처럼 팔레트·본문·검증을 나란히 두지 않고
   // 세로로 쌓는다 (명세 C) — 그래도 **한 번에 한 규칙표**라는 규약은 같다.
+  // **편집기도 목록의 한 줄이다** (2026-09-20). 예전에는 전투 버튼이 부품 안에 박혀
+  // 있어서 탭 하나만 넘겨도 줄에 둘이 섰는데, 그러면 **순서를 부르는 쪽이 못 정한다.**
+  const COMBAT_TAB = { id: 'combat', label: '전투 내력', main: null, isEditor: true }
+
   const UPKEEP_TAB = {
     id: 'upkeep',
     label: '정비 규칙',
@@ -623,12 +627,50 @@ describe('좁은 화면의 규칙표 탭', () => {
   it('★ 탭 줄이 본문에 선다 — 좁은 상단 바에는 자리가 없다', () => {
     const html = renderToStaticMarkup(
       RuleEditMobile(
-        buildProps({ editIndex: -1, tabs: [UPKEEP_TAB], tabId: 'combat', onTab: vi.fn() }),
+        buildProps({
+          editIndex: -1,
+          tabs: [COMBAT_TAB, UPKEEP_TAB],
+          tabId: 'combat',
+          onTab: vi.fn(),
+        }),
       ),
     )
     expect(html).toContain('edit-m__tabs')
     expect(html).toContain('전투 내력')
     expect(html).toContain('정비 규칙')
+  })
+
+  it('★ 편집기 탭은 본문을 안 받는다 — 편집기가 곧 본문이다', () => {
+    const html = renderToStaticMarkup(
+      RuleEditMobile(
+        buildProps({
+          editIndex: -1,
+          tabs: [COMBAT_TAB, UPKEEP_TAB],
+          tabId: 'combat',
+          onTab: vi.fn(),
+          library: <div>코드 라이브러리</div>,
+        }),
+      ),
+    )
+    // 규칙 목록이 그려진다 — 「본문 없음」이 「빈 화면」이 되면 안 된다.
+    expect(html).toContain('edit-m__rules')
+    // **라이브러리는 규칙 목록 아래다.** 위는 고치는 자리고 여기는 들르는 자리다
+    // (`app.test` 에서 옮겨 왔다 — 첫 화면이 서생이 되면서 거기서는 편집기가 안 뜬다).
+    expect(html.slice(html.indexOf('edit-m__rules'))).toContain('코드 라이브러리')
+  })
+
+  it('★ 탭 줄 순서가 넘긴 순서 그대로다 — 부품이 순서를 안 정한다', () => {
+    const html = renderToStaticMarkup(
+      RuleEditMobile(
+        buildProps({
+          editIndex: -1,
+          tabs: [UPKEEP_TAB, COMBAT_TAB],
+          tabId: 'upkeep',
+          onTab: vi.fn(),
+        }),
+      ),
+    )
+    expect(html.indexOf('정비 규칙')).toBeLessThan(html.indexOf('전투 내력'))
   })
 
   it('★ 탭 줄이 출격 조작부 **아래**다 — 접히면 출격 버튼이 그만큼 밀린다', () => {

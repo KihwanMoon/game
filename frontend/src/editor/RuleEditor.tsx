@@ -58,6 +58,15 @@ const BACK_LABEL = '내력'
 
 /** RuleEditor 의 props. */
 export interface RuleEditorProps {
+  /**
+   * 처음 열리는 탭의 id.
+   *
+   * **편집기가 안 정한다** (2026-09-20). 무엇을 먼저 보여 줄지는 화면 구성의 일이고,
+   * 순서를 정하는 자리(`App` 의 `TAB_ORDER`)와 같은 곳에 있어야 둘이 안 갈린다.
+   *
+   * 안 넘기면 전투다 — 이 부품만 떼어 쓰는 자리(검사·확인용 화면)가 그 경우다.
+   */
+  readonly firstTabId?: string
   readonly ruleset: RuleSet
   readonly catalog: BlockCatalog
   readonly cpuBudget: number
@@ -154,8 +163,9 @@ export function RuleEditor(props: RuleEditorProps): React.JSX.Element {
   // 편집 화면을 열었을 때의 규칙표. `취소` 가 이 지점으로 되돌린다. 상태가 아니라 ref 인
   // 이유는 이 값이 화면을 다시 그리지 않기 때문이다 — 되돌릴 때 한 번 읽히고 만다.
   const restoreRef = useRef<RuleSet | undefined>(undefined)
-  // 지금 고치고 있는 규칙표. 전투가 기본이다 — 이 게임의 규칙표는 여전히 전투가 중심이다.
-  const [tabId, setTabId] = useState(COMBAT_TAB_ID)
+  // 처음 열리는 탭. **부르는 쪽이 정한다** (2026-09-20) — 무엇을 먼저 보여 줄지는
+  // 화면 구성의 일이지 편집기의 일이 아니다. 안 넘기면 전투다.
+  const [tabId, setTabId] = useState(props.firstTabId ?? COMBAT_TAB_ID)
   const mode = useViewportMode()
 
   const problems = useMemo(
