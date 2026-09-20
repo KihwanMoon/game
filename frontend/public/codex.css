@@ -1,0 +1,89 @@
+/* 도감 정적 페이지가 쓰는 판.
+ *
+ * **앱 토큰을 안 가져온다.** `legal.css` 와 같은 사정이다 — `public/` 에 그대로
+ * 실려 나가므로 vite 별칭(`@design`)을 못 쓴다. 값을 손으로 옮겨 적었으니 바뀔 일이
+ * 거의 없는 것만 쓴다(먹·판·괘선·본문·흐림·황동).
+ *
+ * 성격은 앱과 같다: 그림자 없음, 1px 괘선, 4px 모듈, 황동은 최소.
+ */
+:root {
+  color-scheme: dark;
+  --ink: #0e131c;
+  --plate: #161d29;
+  --rule-line: #2c3849;
+  --chalk: #c6cfdc;
+  --chalk-dim: #7c889a;
+  --brass: #c89a4e;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 24px 20px 64px;
+  background: var(--ink);
+  color: var(--chalk);
+  font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo',
+    'Noto Sans KR', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+main, .cx__nav, .cx__foot { max-width: 720px; margin: 0 auto; }
+
+.cx__nav {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule-line);
+  color: var(--chalk-dim);
+  font-size: 13px;
+}
+
+a { color: var(--brass); }
+a:hover { color: var(--chalk); }
+
+h1 { margin: 24px 0 4px; font-size: 24px; letter-spacing: -0.01em; }
+h2 {
+  margin: 32px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--rule-line);
+  font-size: 16px;
+  color: var(--chalk-dim);
+  font-weight: 600;
+}
+
+/* 그림은 16×16 도트다. 늘릴 때 뭉개지면 안 되므로 보간을 끈다. */
+.cx__art {
+  width: 128px;
+  height: 128px;
+  padding: 8px;
+  border: 1px solid var(--rule-line);
+  background: var(--plate);
+}
+.cx__art svg { width: 100%; height: 100%; image-rendering: pixelated; }
+
+.cx__kind { margin: 0 0 16px; color: var(--chalk-dim); font-size: 13px; }
+
+.cx__stats { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.cx__stats th, .cx__stats td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--rule-line);
+  text-align: left;
+}
+.cx__stats th { width: 40%; color: var(--chalk-dim); font-weight: 400; }
+/* 수치는 자릿수가 맞아야 훑어진다. */
+.cx__stats td { font-variant-numeric: tabular-nums; }
+
+.cx__note p { margin: 12px 0; }
+.cx__note strong { color: var(--chalk); font-weight: 600; }
+
+.cx__links { margin: 8px 0; padding-left: 20px; }
+.cx__links li { margin: 2px 0; }
+
+.cx__foot {
+  margin-top: 48px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule-line);
+  color: var(--chalk-dim);
+  font-size: 13px;
+}
+.cx__foot p { margin: 4px 0; }

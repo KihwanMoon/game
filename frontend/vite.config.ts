@@ -1,10 +1,12 @@
 /// <reference types="node" />
+import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import type { Plugin } from 'vite'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 import { stripHtmlComments } from './src/build/htmlComments'
+import { type CodexInput, buildCodexPages } from './src/build/codex'
 import { buildSitemapXml, listFixedEntries } from './src/build/sitemap'
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url))
@@ -36,33 +38,82 @@ function buildHtmlCommentStripper() {
 }
 
 /**
- * 사이트맵을 산출물에 굽는 플러그인.
+ * 도감이 읽을 자산을 파일에서 모은다.
+ *
+ * **번들이 정본이다.** 발행된 팩이 아니라 저장소 파일을 읽는다 — 이 페이지들은 빌드
+ * 산출물이라 어차피 배포 시점에 굳고, 팩을 읽으면 「굽는 순간의 DB」에 기대게 된다.
+ *
+ * @returns 도감 입력.
+ */
+function readCodexInput(): CodexInput {
+  const read = (name: string): unknown =>
+    JSON.parse(readFileSync(`${resourcesDir}/${name}`, 'utf8'))
+  const balance = read('balance/balance.json') as { enemies: CodexInput['enemies'] }
+  const skills = read('balance/skills.json') as { skills: CodexInput['skills'] }
+  const rulesets = read('rulesets/enemies.json') as { rulesets: CodexInput['rulesets'] }
+  const rooms = read('rooms/templates.json') as { templates: CodexInput['rooms'] }
+  const items = read('balance/items.json') as { items: CodexInput['items'] }
+  // 그림은 16×16 도트라 한 장이 5KB 안쪽이다. 걸어 두지 않고 **본문에 박는다** —
+  // 해시 붙은 자산 주소를 정적 페이지가 알 길이 없고, 요청도 한 번 준다.
+  const artDir = `${designDir}/art/monsters`
+  const art = new Map(
+    readdirSync(artDir)
+      .filter((name) => name.endsWith('.svg'))
+      .map((name) => [name.replace(/\.svg$/, ''), readFileSync(`${artDir}/${name}`, 'utf8').trim()]),
+  )
+  return {
+    enemies: balance.enemies,
+    skills: skills.skills,
+    rulesets: rulesets.rulesets,
+    rooms: rooms.templates,
+    items: items.items,
+    art,
+  }
+}
+
+/**
+ * 도감 페이지와 사이트맵을 산출물에 굽는 플러그인.
  *
  * **`public/` 에 손으로 둘 수 없다.** 도감 페이지가 자산 개수만큼 생기므로 목록이
  * 사람 손을 타면 반드시 낡는다. 규칙은 `src/build/sitemap` 에 있다 — 검사가 닿는 자리다.
  *
  * @returns vite 플러그인.
  */
-function buildSitemap(): Plugin {
+function buildCodex(): Plugin {
   return {
-    name: 'bake-sitemap',
+    name: 'bake-codex',
     // 개발 서버에서는 안 굽는다. 크롤러가 오지 않는 자리다.
     apply: 'build',
     generateBundle() {
       // 날짜는 여기서 한 번만 읽는다. 규칙 쪽(`buildSitemapXml`)이 시계를 읽으면
       // 검사가 날마다 다른 값을 보게 된다.
       const lastmod = new Date().toISOString().slice(0, 10)
+      const pages = buildCodexPages(readCodexInput())
+      for (const page of pages) {
+        this.emitFile({
+          type: 'asset',
+          // `/codex/` 는 디렉터리라 실제 파일은 그 안의 index.html 이다.
+          fileName: page.path.replace(/^\//, '').replace(/\/$/, '/index.html'),
+          source: page.html,
+        })
+      }
       this.emitFile({
         type: 'asset',
         fileName: 'sitemap.xml',
-        source: buildSitemapXml(listFixedEntries(), lastmod),
+        source: buildSitemapXml(
+          [
+            ...listFixedEntries(),
+            ...pages.map((page) => ({ path: page.path, priority: '0.6', changefreq: 'monthly' })),
+          ],
+          lastmod,
+        ),
       })
     },
   }
 }
 
 export default defineConfig({
-  plugins: [react(), buildHtmlCommentStripper(), buildSitemap()],
+  plugins: [react(), buildHtmlCommentStripper(), buildCodex()],
   resolve: {
     alias: {
       '@design': designDir,
