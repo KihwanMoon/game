@@ -15,8 +15,8 @@
  * 여기가 더하는 것은 "지나간 틱을 다시 볼 수 있게 남긴다" 하나뿐이다.
  */
 
-import { buildBattleSession, buildPlanScene, checkOngoing } from '../battle'
-import type { BattleSetup, PlanScene } from '../battle'
+import { buildActorNames, buildBattleSession, buildPlanScene, checkOngoing } from '../battle'
+import type { ActorName, BattleSetup, PlanScene } from '../battle'
 import type { LogEntry } from '../core/eventLog'
 import type { Position } from '../core/grid/geometry'
 import type { RoomTemplate, RuleSet } from '../core/schemas'
@@ -74,6 +74,14 @@ export interface BattleRecording {
   readonly hits: readonly DamageHit[]
   /** 이 판에서 만난 적과 잡은 적. 결산(GDD §2.3)이 도감에 누적하는 입력이다. */
   readonly tally: EnemyTally
+  /**
+   * 개체 id 에서 이름표로 (2026-09-20 요청).
+   *
+   * **판이 끝나면 상태가 사라진다.** 사후 분석은 기록만 들고 그리는데, 이름표는
+   * 세계 상태에서 만들어지므로(`buildActorNames`) 그때 함께 담아 두지 않으면
+   * 되살릴 방법이 없다 — 그래서 로그가 날것의 id 로 말하고 있었다.
+   */
+  readonly actorNames: ReadonlyMap<string, ActorName>
 }
 
 /**
@@ -157,6 +165,13 @@ export function recordBattle(
     throw new Error(`플레이어 엔티티가 없다: ${PLAYER_ENTITY_ID}`)
   }
   return {
+    // 이름표는 **판이 끝난 상태**에서 만든다. 중간에 만들면 소환물·추격자가 빠진다 —
+    // 그것들은 판이 도는 동안 생기고, 로그에는 처음부터 이름으로 나와야 한다.
+    actorNames: buildActorNames(
+      engine.state,
+      new Map(session.balance.enemies.map((kind) => [kind.id, kind.label_ko ?? kind.id])),
+      setup.ownerNames,
+    ),
     setup,
     template: session.template,
     ruleset: session.ruleset,

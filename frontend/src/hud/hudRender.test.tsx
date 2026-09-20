@@ -195,16 +195,13 @@ describe('PostMortem', () => {
     expect(html).toContain('>상태<')
   })
 
-  it('★ 배너가 전투 화면과 같은 자리·같은 모양이다 (2026-09-20 요청)', () => {
-    // 한때 여기만 상단 인라인이었다 — 읽는 화면이라 구글의 150px 규칙이 안 걸린다는
-    // 판단이었고 그 자체는 맞았다. 그런데 방금 보던 판이 끝나고 뜨는 화면에서 배너만
-    // 다른 자리에 다른 모양으로 서면 **다른 앱으로 읽힌다.**
-    expect(html).toContain('battle__ad')
-    expect(html, '인라인 변형은 괘선도 바탕도 없어 모양이 갈린다').not.toContain(
-      'battle__ad--inline',
-    )
-    // 본문 뒤다 — 전투 화면이 그렇고, 그래야 바닥에 선다.
-    expect(html.indexOf('hud-post__body')).toBeLessThan(html.indexOf('battle__ad'))
+  it('★ 읽는 화면은 **상단**에 배너를 세운다 — 게임 창이 아니다', () => {
+    // 전투 화면이 상단을 못 쓰는 이유는 도면까지 52px 뿐이라 구글의 「게임 가장자리에서
+    // 150px」에 걸리기 때문인데, 여기는 판이 끝난 뒤의 읽는 화면이라 그 규칙이 재는
+    // 대상 자체가 아니다 (2026-09-17 확인).
+    expect(html).toContain('hud-post__ad')
+    expect(html).toContain('battle__ad--inline')
+    expect(html.indexOf('hud-post__ad')).toBeLessThan(html.indexOf('hud-post__body'))
   })
 })
 

@@ -18,7 +18,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
-import { BattleFrame, PlanCanvas, buildLookOf } from '../battle'
+import { BattleFrame, PlanCanvas, buildLogRow, buildLookOf } from '../battle'
 import type { SheetTab } from '../battle'
 // 지금 도는 팩에서 읽는다 (설계/4_아이템 §18). **정적 상수로 들이면 발행한 것이 이
 // 화면에만 안 닿는다** — 편집기는 팩으로, 여기는 번들로 돌아 한 판이 두 데이터로
@@ -26,6 +26,8 @@ import type { SheetTab } from '../battle'
 import { readActivePack } from '../content/pack'
 import { OUTCOME_PLAYER_LOSS } from '../core/sim/phases'
 import { Button, TopBar } from '../ds'
+// 인자를 한글로 바꾸는 함수는 편집기 쪽에 있다. 전투 화면도 같은 것을 쓴다.
+import { formatParamText } from '../editor/blockOptions'
 
 import type { BattleRecording } from './battleRecorder'
 import { useLogAnchor } from './logWindow'
@@ -91,7 +93,18 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
   // 훅보다 앞에 오면 렌더마다 훅 수가 달라진다.
   const current = recording.frames[Math.min(frameIndex, lastIndex)]
   const logEnd = current?.logEnd ?? 0
-  const visible = useMemo(() => recording.entries.slice(0, logEnd), [recording.entries, logEnd])
+  // **전투 화면과 같은 덧칠을 쓴다** (2026-09-20 요청). 날것을 그리면 같은 판을
+  // 이어서 보는데 한쪽은 「큰 도깨비가 일격」이고 여기는 「goblin_rusher_0 이
+  // SKILL_1」이 된다 — 로그가 id 로 말하면 그것은 로그가 아니라 덤프다.
+  const visible = useMemo(
+    () =>
+      recording.entries
+        .slice(0, logEnd)
+        .map((entry) =>
+          buildLogRow(entry, recording.actorNames, readActivePack().catalog, formatParamText),
+        ),
+    [recording.entries, recording.actorNames, logEnd],
+  )
 
   if (current === undefined) {
     throw new Error('프레임이 없는 기록이다')

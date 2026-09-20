@@ -14,7 +14,8 @@
  */
 import { useMemo, useRef, useState } from 'react'
 
-import { BattleFrame, PlanCanvas, buildLookOf } from '../battle'
+import { BattleFrame, PlanCanvas, buildLogRow, buildLookOf } from '../battle'
+import type { ActorName, LogRowView } from '../battle'
 import type { SheetTab } from '../battle'
 // 지금 도는 팩에서 읽는다 (설계/4_아이템 §18). **정적 상수로 들이면 발행한 것이 이
 // 화면에만 안 닿는다** — 편집기는 팩으로, 여기는 번들로 돌아 한 판이 두 데이터로
@@ -23,9 +24,12 @@ import { readActivePack } from '../content/pack'
 import { readRoomTitle } from '../core/schemas/room'
 import type { PlanTheme } from '../battle'
 import { Button, Panel } from '../ds'
+// 인자를 한글로 바꾸는 함수는 편집기 쪽에 있다. 전투 화면도 같은 것을 쓴다.
+import { formatParamText } from '../editor/blockOptions'
 
 import { buildDamageHeatmap, buildRuleStats } from './analysis'
 import { formatOutcome, formatTickLabel } from './analysisText'
+import type { LogEntry } from '../core/eventLog'
 import type { BattleRecording, RecordedFrame } from './battleRecorder'
 import { DamageHeatmap } from './DamageHeatmap'
 import { DEATH_REPLAY_TICKS, useLogAnchor } from './logWindow'
@@ -34,6 +38,28 @@ import { buildReplayTrace, buildSheetRows, findDecision } from './replayTrace'
 import { RuleStatsTable } from './RuleStatsTable'
 import { AdSlot } from '../battle/AdSlot'
 import { TickScrubber } from './TickScrubber'
+
+/**
+ * 로그를 사람이 읽는 모양으로 덧칠한다.
+ *
+ * **전투 화면과 같은 것을 쓴다** (2026-09-20 요청). 날것을 그리면 같은 판을 이어서
+ * 보는데 한쪽은 「큰 도깨비가 일격」이고 여기는 「goblin_rusher_0 이 SKILL_1」이 된다 —
+ * 로그가 id 로 말하면 그것은 로그가 아니라 덤프다.
+ *
+ * 이름표는 기록이 들고 온다. 판이 끝나면 세계 상태가 없어서 여기서는 못 만든다.
+ *
+ * @param entries 코어가 남긴 줄들.
+ * @param names 개체 id 에서 이름표로.
+ * @returns 그릴 수 있는 줄들.
+ */
+function paintLog(
+  entries: readonly LogEntry[],
+  names: ReadonlyMap<string, ActorName>,
+): readonly LogRowView[] {
+  return entries.map((entry) =>
+    buildLogRow(entry, names, readActivePack().catalog, formatParamText),
+  )
+}
 
 /** PostMortem 이 받는 props. */
 export interface PostMortemProps {
@@ -119,6 +145,21 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
         </Button>
       </header>
 
+      {/* **여기는 상단이 된다** (2026-09-17 확인 요청). 전투 화면에서 상단을 못 쓴 이유는
+          도면까지 52px 밖에 없어 구글의 「게임 가장자리에서 150px」에 걸리기 때문인데,
+          **사후 분석은 게임 창이 아니라 읽는 화면이다.** 판은 이미 끝났고 여기 있는 것은
+          성적표·히트맵·되감기다 — 그 규칙이 재는 대상 자체가 아니다.
+
+          바닥에서 올렸다. 아래에 두면 세 열을 다 지나야 닿는데, 스크롤해야 보이는 배너는
+          없는 것과 같다. 판이 끝나고 잠깐 멈추는 자리라 위가 제자리다.
+
+          **광고 탭에서는 물러난다** — 전투 화면과 같은 이유다. 탭이 이미 광고 면이라
+          겹쳐 세우면 같은 배너가 한 화면에 두 번 보인다.
+
+          전투 진입 화면은 안 골랐다. 티켓을 기다리는 1.3초뿐이라 광고 자리로는 약하고,
+          그 1.3초를 위해 화면을 하나 더 만들어 유지해야 한다. */}
+      <div className="hud-post__ad">{tab === 'ads' ? null : <AdSlot inline />}</div>
+
       <div className="hud-post__body">
         <div className="hud-post__col">
           <Panel title="규칙별 발동" meta={recording.ruleset.rulesetId} padded={false} scroll>
@@ -154,7 +195,7 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
                 {...(frame.threat === undefined ? {} : { threat: frame.threat.text })}
                 rows={buildSheetRows(trace, recording.cpuBudget)}
                 onToggleRule={() => undefined}
-                entries={recording.entries.slice(0, frame.logEnd)}
+                entries={paintLog(recording.entries.slice(0, frame.logEnd), recording.actorNames)}
                 tick={tick}
                 vitals={buildVitalRows({
                   hp: frame.playerHp,
@@ -185,16 +226,6 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
           </Panel>
         </div>
       </div>
-
-      {/* **전투 화면과 같은 자리·같은 모양이다** (2026-09-20 요청). 한때 상단에 인라인
-          으로 세웠는데 — 여기는 게임 창이 아니라 읽는 화면이라 「가장자리에서 150px」이
-          안 걸린다는 판단이었다 — **방금 보던 판이 끝나고 뜨는 화면에서 배너만 다른
-          자리에 다른 모양으로 서면 다른 앱으로 읽힌다.** 규칙이 허락하는 것과 같아
-          보이는 것은 다른 문제다.
-
-          **광고 탭에서는 물러난다** — 전투 화면과 같은 이유다. 탭이 이미 광고 면이라
-          겹쳐 세우면 같은 배너가 한 화면에 두 번 보인다. */}
-      {tab === 'ads' ? null : <AdSlot />}
     </div>
   )
 }

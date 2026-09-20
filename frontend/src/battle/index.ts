@@ -157,3 +157,9 @@ export {
   splitRewardNotes,
   type FloorSettlement,
 } from './settlement'
+
+// **로그 이름표는 두 화면이 나눠 쓴다** (2026-09-20). 전투 화면만 덧칠하고 사후 분석은
+// 날것을 그려서, 같은 판을 이어서 보는데 한쪽은 「큰 도깨비가 일격」이고 다른 쪽은
+// 「goblin_rusher_0 이 SKILL_1」이었다.
+export { buildActorNames, buildLogRow, readLogTone } from './logNames'
+export type { ActorName, LogRowView, LogTone } from './logNames'

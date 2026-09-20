@@ -177,3 +177,55 @@ export function readLogTone(entry: LogEntry): LogTone {
   }
   return 'act'
 }
+
+/** 화면이 그리는 로그 한 줄. `ds/LogRow` 가 받는 모양이다. */
+export interface LogRowView {
+  readonly tick: number
+  readonly rule: number | null
+  readonly expr: string
+  readonly outcome: string
+  readonly delta: number | null
+  readonly fired: boolean
+  /** 누가 한 것인가. 이름표가 없으면 id 그대로 — 빈 칸보다 낫다. */
+  readonly actor: string
+  readonly isMine: boolean
+  readonly tone: LogTone
+}
+
+/**
+ * 로그 한 줄을 사람이 읽는 모양으로 덧칠한다.
+ *
+ * **두 화면이 같은 것을 부른다** (2026-09-20 요청). 전투 화면만 이 덧칠을 하고 사후
+ * 분석은 날것을 그렸다 — 같은 판을 이어서 보는데 한쪽은 「큰 도깨비가 일격」이고
+ * 다른 쪽은 「goblin_rusher_0 이 SKILL_1」이었다. **로그가 id 로 말하면 그것은 로그가
+ * 아니라 덤프다.**
+ *
+ * 덧칠은 셋이다 — 개체 id 를 이름표로, 행동 id 를 한글로, 인자를 한글로. 마지막이
+ * 빠지면 블록 이름만 한글이고 그 한 칸만 다른 언어가 된다 (2026-09-16 요청).
+ *
+ * @param entry 코어가 남긴 줄.
+ * @param names 개체 id 에서 이름표로.
+ * @param catalog 행동 이름을 읽을 블록 카탈로그.
+ * @param formatParam 인자를 한글로 바꾸는 함수. 편집기 쪽에 있어 밖에서 받는다 —
+ *     여기서 들여오면 전투 화면이 편집기를 거슬러 부른다.
+ * @returns 그릴 수 있는 한 줄.
+ */
+export function buildLogRow(
+  entry: LogEntry,
+  names: ReadonlyMap<string, ActorName>,
+  catalog: BlockCatalog,
+  formatParam: (text: string) => string,
+): LogRowView {
+  const actor = names.get(entry.entityId)
+  return {
+    tick: entry.tick,
+    rule: entry.rule,
+    expr: formatParam(replaceIds(entry.expr, names)),
+    outcome: formatParam(translateActions(replaceIds(entry.outcome, names), catalog)),
+    delta: entry.delta,
+    fired: entry.fired,
+    actor: actor?.name ?? entry.entityId,
+    isMine: actor?.isMine ?? false,
+    tone: readLogTone(entry),
+  }
+}

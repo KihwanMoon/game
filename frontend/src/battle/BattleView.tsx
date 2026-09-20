@@ -39,7 +39,7 @@ import { useViewportMode, watchViewport } from '../ds'
 import { readActivePack } from '../content/pack'
 import { formatParamText } from '../editor/blockOptions'
 
-import { buildActorNames, readLogTone, replaceIds, translateActions } from './logNames'
+import { buildActorNames, buildLogRow } from './logNames'
 import { readCooldownLabel } from './vitalRows'
 import { PLAYER_ENTITY_ID } from '../core/services/runBattle'
 import { countItem } from '../core/sim/state'
@@ -385,24 +385,11 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
       ),
     [session.engine.state, session.balance, props.setup.ownerNames],
   )
-  const logRows = session.engine.log.entries.slice(-LOG_TAIL).map((entry) => {
-    const actor = actorNames.get(entry.entityId)
-    return {
-      tick: entry.tick,
-      rule: entry.rule,
-      // 인자도 한글로 덧칠한다 (2026-09-16 요청). 블록 이름만 한글이고 인자가 영문이면
-      // 그 한 칸만 다른 언어가 된다 — 로그가 가장 많이 읽히는 자리다.
-      expr: formatParamText(replaceIds(entry.expr, actorNames)),
-      outcome: formatParamText(
-        translateActions(replaceIds(entry.outcome, actorNames), readActivePack().catalog),
-      ),
-      delta: entry.delta,
-      fired: entry.fired,
-      actor: actor?.name ?? entry.entityId,
-      isMine: actor?.isMine ?? false,
-      tone: readLogTone(entry),
-    }
-  })
+  // **덧칠은 사후 분석과 같은 것을 쓴다** (2026-09-20). 여기서만 하면 같은 판을 이어서
+  // 보는데 한쪽은 「큰 도깨비가 일격」이고 다른 쪽은 날것의 id 가 된다.
+  const logRows = session.engine.log.entries
+    .slice(-LOG_TAIL)
+    .map((entry) => buildLogRow(entry, actorNames, readActivePack().catalog, formatParamText))
 
   const rows = buildRuleRows({
     rules: allRules,
