@@ -546,17 +546,21 @@ describe('배너 자리', () => {
     expect(block, '뒤가 비치면 로그 글자와 겹쳐 둘 다 안 읽힌다').toContain('background:')
   })
 
-  it('★ 자리가 둘이다 — 전투 하단과 사후 분석 **상단**', () => {
-    // 사후 분석은 **읽는 화면**이라 게임 창이 아니고, 구글의 150px 규칙이 안 걸린다.
-    // 그래서 여기만 상단을 쓸 수 있다 (2026-09-17 확인). 바닥에 두면 세 열을 다 지나야
-    // 닿는데, 스크롤해야 보이는 배너는 없는 것과 같다.
+  it('★ 두 화면이 배너를 같은 자리에 같은 모양으로 세운다 (2026-09-20 요청)', () => {
+    // 한때 사후 분석만 상단 인라인이었다 — **읽는 화면이라 구글의 150px 규칙이 안
+    // 걸린다**는 판단이었고 그 자체는 맞았다. 그런데 방금 보던 판이 끝나고 뜨는
+    // 화면에서 배너만 다른 자리에 다른 모양으로 서면 **다른 앱으로 읽힌다.**
+    // 규칙이 허락하는 것과 같아 보이는 것은 다른 문제다.
     const post = readFileSync(
       fileURLToPath(new URL('../hud/PostMortem.tsx', import.meta.url)),
       'utf8',
     )
-    expect(post).toContain('<AdSlot inline />')
-    // 머리 바로 다음이다 — 본문(`hud-post__body`) 앞에 서야 상단이다.
-    expect(post.indexOf('hud-post__ad')).toBeLessThan(post.indexOf('hud-post__body'))
+    expect(post, '인라인 변형을 쓰면 괘선도 바탕도 없어 모양이 갈린다').not.toContain(
+      '<AdSlot inline />',
+    )
+    expect(post).toContain('<AdSlot />')
+    // 본문 **뒤**다. 전투 화면이 그렇고, 그래야 바닥에 선다.
+    expect(post.indexOf('hud-post__body')).toBeLessThan(post.lastIndexOf('<AdSlot />'))
   })
 
   it('★ 빈 상자를 안 둔다 — 비어 있으면 고장으로 읽힌다', () => {

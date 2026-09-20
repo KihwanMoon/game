@@ -119,21 +119,6 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
         </Button>
       </header>
 
-      {/* **여기는 상단이 된다** (2026-09-17 확인 요청). 전투 화면에서 상단을 못 쓴 이유는
-          도면까지 52px 밖에 없어 구글의 「게임 가장자리에서 150px」에 걸리기 때문인데,
-          **사후 분석은 게임 창이 아니라 읽는 화면이다.** 판은 이미 끝났고 여기 있는 것은
-          성적표·히트맵·되감기다 — 그 규칙이 재는 대상 자체가 아니다.
-
-          바닥에서 올렸다. 아래에 두면 세 열을 다 지나야 닿는데, 스크롤해야 보이는 배너는
-          없는 것과 같다. 판이 끝나고 잠깐 멈추는 자리라 위가 제자리다.
-
-          **광고 탭에서는 물러난다** — 전투 화면과 같은 이유다. 탭이 이미 광고 면이라
-          겹쳐 세우면 같은 배너가 한 화면에 두 번 보인다.
-
-          전투 진입 화면은 안 골랐다. 티켓을 기다리는 1.3초뿐이라 광고 자리로는 약하고,
-          그 1.3초를 위해 화면을 하나 더 만들어 유지해야 한다. */}
-      <div className="hud-post__ad">{tab === 'ads' ? null : <AdSlot inline />}</div>
-
       <div className="hud-post__body">
         <div className="hud-post__col">
           <Panel title="규칙별 발동" meta={recording.ruleset.rulesetId} padded={false} scroll>
@@ -200,6 +185,16 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
           </Panel>
         </div>
       </div>
+
+      {/* **전투 화면과 같은 자리·같은 모양이다** (2026-09-20 요청). 한때 상단에 인라인
+          으로 세웠는데 — 여기는 게임 창이 아니라 읽는 화면이라 「가장자리에서 150px」이
+          안 걸린다는 판단이었다 — **방금 보던 판이 끝나고 뜨는 화면에서 배너만 다른
+          자리에 다른 모양으로 서면 다른 앱으로 읽힌다.** 규칙이 허락하는 것과 같아
+          보이는 것은 다른 문제다.
+
+          **광고 탭에서는 물러난다** — 전투 화면과 같은 이유다. 탭이 이미 광고 면이라
+          겹쳐 세우면 같은 배너가 한 화면에 두 번 보인다. */}
+      {tab === 'ads' ? null : <AdSlot />}
     </div>
   )
 }
