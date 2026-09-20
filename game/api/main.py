@@ -40,6 +40,7 @@ from game.api.routes import (
     meta,
     replay,
     run,
+    share,
     skills,
     story,
     ticket,
@@ -194,6 +195,7 @@ def create_app() -> FastAPI:
         catalog_draft,
         content_admin,
         content_pack,
+        share,
     ):
         server.include_router(module.router)
     return server

@@ -664,6 +664,32 @@ CREATE TABLE IF NOT EXISTS content_generation (
     CHECK (id = 1)
 );
 
+-- ── 공유된 규칙표 (검색 유입과 되돌아올 이유) ─────────────────────────────
+--
+-- **공유 코드는 이미 있었는데 아무도 안 붙였다.** `v2:H4sIA…` 가 475자라, 커뮤니티에
+-- 그대로 붙이는 사람은 없고 단축 주소를 쓰면 그 링크는 우리 것이 아니게 된다. 짧은
+-- 주소(`/r/<id>`)를 우리가 내줘야 링크가 우리에게 남는다.
+--
+-- **id 가 내용의 해시다.** 세는 번호를 쓰면 같은 표를 두 번 올릴 때 주소가 둘이 되고,
+-- 그러면 같은 것을 가리키는 링크가 갈려 어느 쪽도 힘을 못 받는다. 해시면 같은 표는
+-- 늘 같은 주소이고, 다시 올리는 것이 저장을 늘리지 않는다.
+--
+-- **코어 버전을 함께 적는다.** 규칙 문법은 판올림된다 — 나중에 못 읽는 표가 생겼을 때
+-- "어느 시절의 것인가" 를 모르면 고칠 수도 지울 수도 없다.
+CREATE TABLE IF NOT EXISTS shared_ruleset (
+    id            TEXT        PRIMARY KEY,
+    name          TEXT        NOT NULL,
+    payload       JSONB       NOT NULL,
+    core_version  TEXT        NOT NULL,
+    -- 올린 계정. 지우기 문의에 답하려면 필요하다 — 익명이라도 계정은 있다.
+    account_id    BIGINT      REFERENCES account(id) ON DELETE SET NULL,
+    -- 몇 번 열렸는가. 어느 표가 실제로 도는지 보는 유일한 신호다.
+    view_count    BIGINT      NOT NULL DEFAULT 0,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS shared_ruleset_account_idx ON shared_ruleset(account_id);
+
 -- ── 봇 (가상 유저) ────────────────────────────────────────────────────────
 --
 -- **표시하는 것이 설계다.** `설계/7_변조방지` T11 이 봇 파밍을 위협으로 적고 봇 판정

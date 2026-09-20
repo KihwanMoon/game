@@ -87,3 +87,18 @@ h2 {
   font-size: 13px;
 }
 .cx__foot p { margin: 4px 0; }
+
+/* 공유된 규칙표의 표. 서버가 내는 `/r/<id>` 장이 쓴다 (`app/share/page.py`).
+ *
+ * 도감의 수치표(`.cx__stats`)와 갈라 두는 이유는 읽는 방향이 다르기 때문이다 —
+ * 저쪽은 「이름 다음에 값」 두 칸이고, 이쪽은 한 줄이 규칙 하나라 네 칸이 가로로 선다. */
+.cx__rules { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.cx__rules th, .cx__rules td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--rule-line);
+  text-align: left;
+  vertical-align: top;
+}
+.cx__rules thead th { color: var(--chalk-dim); font-weight: 400; font-size: 13px; }
+/* 순서 칸은 좁고 숫자라 자릿수를 맞춘다. */
+.cx__rules td:first-child { width: 3em; font-variant-numeric: tabular-nums; color: var(--chalk-dim); }
