@@ -15,6 +15,7 @@ import { describe, expect, it } from 'vitest'
 import { SITE_ORIGIN, buildSitemapXml, escapeXml, listFixedEntries } from './sitemap'
 
 const PUBLIC_DIR = fileURLToPath(new URL('../../public/', import.meta.url))
+const ROOT_DIR = fileURLToPath(new URL('../../', import.meta.url))
 const LASTMOD = '2026-09-20'
 
 describe('robots.txt', () => {
@@ -65,5 +66,26 @@ describe('사이트맵', () => {
 
   it('날짜를 밖에서 받는다 — 안에서 시계를 읽으면 검사가 날마다 달라진다', () => {
     expect(buildSitemapXml(listFixedEntries(), '1999-01-01')).toContain('<lastmod>1999-01-01</lastmod>')
+  })
+})
+
+describe('검색엔진 소유확인', () => {
+  /**
+   * 소유확인 메타는 **지우면 등록이 풀린다.**
+   *
+   * 값도 뜻도 없는 한 줄로 보여서 청소할 때 제일 먼저 지워진다. 그런데 네이버는 이
+   * 줄을 읽어 소유를 확인하고, 없어지면 사이트가 조용히 등록에서 빠진다 — 색인이
+   * 멈춘 뒤에야 알게 되는 종류의 사고다.
+   *
+   * 값까지 본다. 다른 값으로 바뀌면 그것도 등록이 풀린 것이다.
+   */
+  it('★ 네이버 소유확인 메타가 제품 화면에 남아 있다', () => {
+    const html = readFileSync(`${ROOT_DIR}index.html`, 'utf8')
+    expect(html).toContain('name="naver-site-verification"')
+    expect(html).toContain('content="3c8658df1e855425ac8072cd73d393f650fae7e3"')
+  })
+
+  it('관리 화면에는 안 붙인다 — robots.txt 가 막는 자리다', () => {
+    expect(readFileSync(`${ROOT_DIR}admin.html`, 'utf8')).not.toContain('naver-site-verification')
   })
 })
