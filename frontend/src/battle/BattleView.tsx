@@ -40,6 +40,7 @@ import { readActivePack } from '../content/pack'
 import { formatParamText } from '../editor/blockOptions'
 
 import { buildActorNames, buildLogRow } from './logNames'
+import { buildPlanHud } from './planHud'
 import { readCooldownLabel } from './vitalRows'
 import { PLAYER_ENTITY_ID } from '../core/services/runBattle'
 import { countItem } from '../core/sim/state'
@@ -411,7 +412,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
   // **상태 탭 줄은 한 벌뿐이다.** 탭은 가로·세로가 나눠 쓰는 부품이므로 줄을 각 배치에서
   // 따로 만들면 같은 탭이 배치에 따라 다른 값을 적게 된다. 가로가 아예 안 넘겨 `상태` 탭이
   // 빈 목록으로 열리던 것이 그 사본이 갈라진 자리였다 (2026-09-18).
-  const vitals = buildVitalRows({
+  const vitalInput = {
     hp: player?.hp ?? 0,
     hpMax: player?.hpMax ?? 1,
     potions: player === undefined ? 0 : countItem(player, 'POTION'),
@@ -432,7 +433,11 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
     flags: player?.flags,
     skills: listRulesetSkills(session.ruleset.rules),
     totals: buildCooldownTotals(session.engine.config.skills),
-  })
+  }
+  // **같은 입력에서 둘을 만든다.** 표(시트)와 게이지(도면)가 다른 값을 보면 같은
+  // 화면에서 체력이 둘로 갈린다.
+  const vitals = buildVitalRows(vitalInput)
+  const hud = buildPlanHud(vitalInput)
   // **가로 폰만 다르게 선다.** 세로 골격의 고정 높이 합(44+44+270+34+48=440)이
   // 390px 짜리 가로 폰에 안 들어간다. 화면이 커서가 아니라 높이가 모자라서다.
   if (mode === 'landscape') {
@@ -457,6 +462,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         entries={logRows}
         settlements={props.settlements ?? []}
         vitals={vitals}
+        hud={hud}
         hp={player?.hp ?? 0}
         hpMax={player?.hpMax ?? 1}
         potions={player === undefined ? 0 : countItem(player, 'POTION')}
@@ -501,6 +507,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
       entries={logRows}
       settlements={props.settlements ?? []}
       vitals={vitals}
+      hud={hud}
       tab={tab}
       onTabChange={setTab}
       bodyRef={sheetRef}

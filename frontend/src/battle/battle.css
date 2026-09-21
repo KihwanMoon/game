@@ -909,3 +909,93 @@
   gap: var(--sp-3);
   min-width: var(--sp-0);
 }
+
+/* ── 도면 위 HUD (2026-09-21 요청) ─────────────────────────────────────────
+ *
+ * **전용 줄을 안 두고 겹친다.** 고정 줄 하나가 곧 시트를 그만큼 밀어내고, 2026-09-08 에
+ * 상태 줄 44px 을 뺀 것이 바로 그 회계다(`--bars-h`). 겹치면 높이 비용이 0 이다.
+ *
+ * **아래 두 귀퉁이는 판정·예고 위에 앉는다.** 저 둘은 판이 끝나거나 예고가 설 때만
+ * 뜨는 말이고 이쪽은 늘 서 있으므로, 같은 줄을 다투면 판이 끝나는 순간 체력이 사라진다.
+ *
+ * 층 전체가 안 눌린다 — 도면의 칸을 가리면 고르는 일이 막힌다. */
+.hud-layer {
+  position: absolute;
+  inset: var(--sp-0);
+  pointer-events: none;
+}
+
+.hud-pin {
+  position: absolute;
+  display: flex;
+  gap: var(--sp-1);
+  /* 도면 위 글자라 바탕이 비친다. 얇게 깔아야 읽힌다 — 그림자는 이 시스템에 없다. */
+  padding: var(--sp-1);
+  background: var(--surface-plan);
+  border: var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+}
+
+.hud-pin--tl {
+  inset-block-start: var(--sp-0);
+  inset-inline-start: var(--sp-0);
+  flex-direction: column;
+}
+
+/* 판정 줄(`battle__over`)보다 위에 앉는다. 그 줄의 높이가 곧 이 값이다. */
+.hud-pin--bl {
+  inset-block-end: var(--bar-top);
+  inset-inline-start: var(--sp-0);
+}
+
+.hud-pin--br {
+  inset-block-end: var(--bar-top);
+  inset-inline-end: var(--sp-0);
+}
+
+/* 체력 — 칸이 정보이고 숫자가 정본이다 (design/README D-1). */
+.hud-hp { display: flex; align-items: center; gap: var(--sp-2); }
+.hud-hp__bar { display: flex; gap: var(--bw); }
+.hud-hp__bar i {
+  inline-size: var(--sp-1);
+  block-size: var(--sp-3);
+  border: var(--bw) solid var(--line);
+}
+.hud-hp__bar i.on { background: var(--text-body); border-color: var(--text-body); }
+.hud-hp__num { font-variant-numeric: tabular-nums; }
+/* 경고는 상태 탭과 **같은 표기**다 — 두 자리가 다른 색으로 말하면 어느 쪽이 맞는지 모른다. */
+.hud-hp--low .hud-hp__num { color: var(--text-false); }
+.hud-hp--low .hud-hp__bar i.on { background: var(--text-false); border-color: var(--text-false); }
+
+.hud-stat { display: flex; flex-wrap: wrap; gap: var(--sp-1); color: var(--text-dim); }
+.hud-stat__one { white-space: nowrap; }
+
+/* 소모품 — 두 글자 도식 코드는 「어느 칸에 들어가는가」를 말한다 (`USE_TAG_CODES`). */
+.hud-item { display: flex; align-items: baseline; gap: var(--bw); }
+.hud-item__code { color: var(--text-dim); }
+.hud-item__num { font-variant-numeric: tabular-nums; }
+/* 다 쓴 칸은 명도로 죽인다. 지우지 않는 이유는 「원래 없었다」로 읽히기 때문이다. */
+.hud-item--empty { opacity: 0.45; }
+
+/* 재주 — 그늘이 위에서 내려와 남은 쿨만큼 덮는다. */
+.hud-skill {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: var(--bw);
+  padding: 0 var(--sp-1);
+  border: var(--bw) solid var(--line);
+  overflow: hidden;
+}
+.hud-skill__shade {
+  position: absolute;
+  inset-inline: var(--sp-0);
+  inset-block-start: var(--sp-0);
+  background: var(--text-false);
+  opacity: 0.3;
+}
+.hud-skill__name { position: relative; }
+/* 남은 틱은 숫자로도 적는다 — 그늘만으로 말하면 「거의 찼다」와 「막 썼다」가 같다. */
+.hud-skill__left { position: relative; font-variant-numeric: tabular-nums; color: var(--text-false); }
+.hud-skill--cooling .hud-skill__name { color: var(--text-dim); }

@@ -32,6 +32,7 @@ import { BattleFrame } from './BattleFrame'
 import type { FloorSettlement } from './settlement'
 import { formatTick, type SheetTab } from './portraitSheet'
 import type { RuleRowView } from './ruleRows'
+import type { PlanHud } from './planHud'
 import type { VitalRow } from './vitalRows'
 import { SpeedBox } from './SpeedBox'
 
@@ -84,6 +85,8 @@ export interface BattlePortraitProps {
   readonly entries: readonly LogRowProps[]
   /** 층별 정산. 상단 알림이 아니라 탭이다 — 알림은 뜰 때마다 아래 전부를 밀었다. */
   readonly settlements?: readonly FloorSettlement[]
+  /** 도면 위에 겹치는 요약 (2026-09-21). 안 넘기면 안 그린다. */
+  readonly hud?: PlanHud
   /**
    * 상태 탭의 줄들 — 체력·소모품·쿨타임·예산.
    *
@@ -142,6 +145,7 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
         tick={props.tick}
         settlements={props.settlements ?? []}
         vitals={props.vitals}
+        {...(props.hud === undefined ? {} : { hud: props.hud })}
         tab={props.tab}
         onTabChange={props.onTabChange}
         {...(props.bodyRef === undefined ? {} : { bodyRef: props.bodyRef })}

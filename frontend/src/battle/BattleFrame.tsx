@@ -36,6 +36,8 @@ import { formatSettlementTabCount, type FloorSettlement } from './settlement'
 import { formatOutcomeNotice, resolveOutcomeTone } from './outcomeText'
 import { formatRulesTabCount, type SheetTab } from './portraitSheet'
 import type { RuleRowView } from './ruleRows'
+import type { PlanHud } from './planHud'
+import { PlanHudLayer } from './PlanHudLayer'
 import type { VitalRow } from './vitalRows'
 
 /** BattleFrame 이 받는 props. */
@@ -58,6 +60,15 @@ export interface BattleFrameProps {
   readonly settlements?: readonly FloorSettlement[]
   /** 상태 탭의 줄들 — 체력·소모품·쿨타임·예산. 한 줄에 하나씩 쌓인다. */
   readonly vitals: readonly VitalRow[]
+  /**
+   * 도면 위에 겹치는 요약 (2026-09-21 요청).
+   *
+   * **상태 탭을 대신하지 않는다.** 귀퉁이에 들어가는 만큼만 올리고 나머지는 탭에
+   * 그대로 있다 — 스탯 넷·깃발·CPU 는 줄이 길어 못 올린다.
+   *
+   * 안 넘기면 안 그린다. 확인용 화면은 이 값을 안 만든다.
+   */
+  readonly hud?: PlanHud
   readonly tab: SheetTab
   readonly onTabChange: (tab: SheetTab) => void
   /** 시트 본문. 로그를 마지막 줄에 붙여 두려고 밖에서 잡는다. */
@@ -94,6 +105,13 @@ export function BattleFrame(props: BattleFrameProps): React.JSX.Element {
     <div className={`battle-frame${props.isPanel === true ? ' battle-frame--panel' : ''}`}>
       <div className="battle__col battle__col--plan">
         <div className="battle__frame">{props.plan}</div>
+        {/* **네 귀퉁이에 겹친다** (2026-09-21 요청). 전용 줄을 두면 고정 줄의 합이
+            늘고 그만큼 시트가 밀린다 — 2026-09-08 에 상태 줄 44px 을 뺀 회계 그대로다.
+            겹치면 높이 비용이 0 이다.
+
+            아래 두 귀퉁이는 판정·예고(`battle__over`) **위에** 앉는다. 둘은 판이 끝나거나
+            예고가 설 때만 뜨는 말이고, 이쪽은 늘 서 있어야 하므로 자리를 다투면 안 된다. */}
+        {props.hud === undefined ? null : <PlanHudLayer hud={props.hud} />}
         {/* **도면에 겹친다.** 둘 다 위치에 대한 말이고, 전용 줄을 두면 예고가 뜨고
             사라질 때마다 아래 전부가 흔들린다. 판정은 판이 끝났을 때만 뜨므로 예고와
             같은 자리를 놓고 다투지 않는다 — 끝난 판에는 예고가 없다. */}

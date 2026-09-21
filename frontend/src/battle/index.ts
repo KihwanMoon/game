@@ -163,3 +163,8 @@ export {
 // 「goblin_rusher_0 이 SKILL_1」이었다.
 export { buildActorNames, buildLogRow, readLogTone } from './logNames'
 export type { ActorName, LogRowView, LogTone } from './logNames'
+
+// 도면 위 HUD (2026-09-21). 값은 상태 탭과 **같은 입력**에서 나온다 — 두 자리가 다른
+// 것을 보면 같은 화면에서 체력이 둘로 갈린다.
+export { buildPlanHud } from './planHud'
+export type { PlanHud } from './planHud'
