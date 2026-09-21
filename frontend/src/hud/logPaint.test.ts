@@ -108,6 +108,16 @@ describe('세 화면이 그 덧칠을 실제로 부른다', () => {
     const source = readFileSync(`${HERE}../battle/BattleView.tsx`, 'utf8')
     expect(source).toContain('buildLogRow')
   })
+
+  it('★ 리플레이는 제 로그를 안 그린다 — 전투 화면에 맡겨야 덧칠이 따라온다', () => {
+    // 재생은 `BattleView` 를 그대로 쓴다. 그래서 로그 덧칠을 여기서 또 하지 않아도
+    // 따라오는데, 언젠가 제 로그를 그리기 시작하면 그 순간 이 화면만 날것이 된다.
+    const source = readFileSync(`${HERE}../admin/ReplayView.tsx`, 'utf8')
+    expect(source).toContain('<BattleView')
+    expect(source, '제 로그를 그리기 시작했다면 덧칠을 함께 가져가야 한다').not.toMatch(
+      /entries=\{/,
+    )
+  })
 })
 
 describe('시트가 전투 화면과 같은 것을 받는다', () => {
