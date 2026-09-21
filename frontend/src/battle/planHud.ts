@@ -16,11 +16,16 @@
  * 수치를 되파내면 그 파싱이 곧 두 번째 정본이 된다.
  */
 import { USE_TAG_CODES, USE_TAG_LABELS } from '../content/consumableTags'
+import { findUseTagArt } from '../content/itemArt'
+import { findSkillArt } from '../content/skillArt'
 import { readCooldownLabel, STATUS_LABELS, type VitalInput } from './vitalRows'
 
 /** 체력이 이 퍼센트 밑이면 경고다. 상태 탭과 같은 값이어야 한다. */
 const LOW_HP_PERCENT = 30
 const PERCENT_BASE = 100
+
+/** 재주 칸에 들어가는 글자 수. 도면 한 칸(`--plan-cell`)에 두 줄로 앉는 만큼이다. */
+const SKILL_MARK_CHARS = 4
 
 /** 좌상단에 서는 상태이상 하나. */
 export interface HudStatus {
@@ -31,9 +36,18 @@ export interface HudStatus {
 
 /** 좌하단에 서는 소모품 칸 하나. */
 export interface HudItem {
+  /** 소모품 태그. 칸의 열쇠다 — 부적 넷이 같은 코드를 쓰므로 코드로는 못 가른다. */
+  readonly tag: string
   /** 두 글자 도식 코드. 「어느 칸에 들어가는가」를 말한다 (`USE_TAG_CODES`). */
   readonly code: string
   readonly label: string
+  /**
+   * 그림 주소. 아직 안 그린 형태면 빈 문자열이고 화면은 코드 글자로 떨어진다.
+   *
+   * **태그로 찾는다.** 부적 넷이 전부 `SC` 라 코드로 그리면 칸 셋이 똑같아진다 —
+   * 숫자를 뗀 뒤로는 그림이 유일한 신원이다 (2026-09-21 요청).
+   */
+  readonly art: string
   /** 지금 남은 수. */
   readonly held: number
   /** 들고 들어온 수. 0 이면 이 칸 자체를 안 세운다. */
@@ -43,6 +57,10 @@ export interface HudItem {
 /** 우하단에 서는 재주 칸 하나. */
 export interface HudSkill {
   readonly label: string
+  /** 그림 주소. 아직 안 그린 재주면 빈 문자열이고 칸은 `mark` 로 떨어진다. */
+  readonly art: string
+  /** 칸 안에 적는 짧은 표기. 정본은 `label` 이고 이것은 한 칸에 들어가는 만큼이다. */
+  readonly mark: string
   /** 남은 쿨타임 틱. 0 이면 준비됨이다. */
   readonly left: number
   /** 전체 쿨타임. 0 이면 쿨이 없는 재주다. */
@@ -87,12 +105,30 @@ export function listHudStatuses(input: VitalInput): readonly HudStatus[] {
 export function listHudItems(input: VitalInput): readonly HudItem[] {
   return [...USE_TAG_LABELS]
     .map(([tag, label]) => ({
+      tag,
       code: USE_TAG_CODES.get(tag) ?? tag.slice(0, 2),
       label,
+      art: findUseTagArt(tag) ?? '',
       held: input.held?.get(tag) ?? 0,
       carried: input.carried?.get(tag) ?? 0,
     }))
     .filter((one) => one.carried > 0)
+}
+
+/**
+ * 칸 안에 적을 짧은 표기.
+ *
+ * **한 칸은 네 글자까지다.** 재주 칸이 도면의 한 칸이 되면서 「유성 낙하」가 들어갈
+ * 자리가 없어졌다 — 띄어쓰기를 걷어 내면 지금 쓰는 재주는 전부 네 글자 안에 들어가고
+ * (`유성낙하`·`연쇄번개`·`돌려치기`), 그보다 긴 이름은 앞쪽만 남는다.
+ *
+ * **잘린 것이 정본이 아니다.** 칸의 `title` 과 보조 기술용 말은 늘 온이름을 싣는다.
+ *
+ * @param label 재주의 온이름.
+ * @returns 네 글자 이하의 표기.
+ */
+export function readSkillMark(label: string): string {
+  return label.replace(/\s+/gu, '').slice(0, SKILL_MARK_CHARS)
 }
 
 /**
@@ -105,11 +141,16 @@ export function listHudItems(input: VitalInput): readonly HudItem[] {
  * @returns 칸들. 규칙표가 쓰는 순서 그대로.
  */
 export function listHudSkills(input: VitalInput): readonly HudSkill[] {
-  return (input.skills ?? []).map((skill) => ({
-    label: readCooldownLabel(skill),
-    left: input.cooldowns?.get(skill) ?? 0,
-    total: input.totals?.get(skill) ?? 0,
-  }))
+  return (input.skills ?? []).map((skill) => {
+    const label = readCooldownLabel(skill)
+    return {
+      label,
+      art: findSkillArt(skill) ?? '',
+      mark: readSkillMark(label),
+      left: input.cooldowns?.get(skill) ?? 0,
+      total: input.totals?.get(skill) ?? 0,
+    }
+  })
 }
 
 /**

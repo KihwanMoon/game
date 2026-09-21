@@ -92,3 +92,26 @@ export function findItemArt(
 export function listArtNames(): readonly string[] {
   return [...BY_NAME.keys()].sort()
 }
+
+/**
+ * 소모품 **태그**의 그림 이름. `BY_USE_TAG` 가 안 덮는 둘을 마저 덮는다.
+ *
+ * `readArtName` 은 카탈로그 id 로 들어가는 문인데, 도면 위 HUD 는 칸을 **태그**로 센다 —
+ * 거기엔 카탈로그 id 가 없다. 그래서 같은 표에 태그 쪽 문을 하나 더 낸다.
+ */
+const USE_TAG_ART: ReadonlyMap<string, string> = new Map<string, string>([
+  ['POTION', 'potion'],
+  ['SCROLL', 'scroll'],
+  ...BY_USE_TAG,
+])
+
+/**
+ * 그 소모품 태그의 그림 주소.
+ *
+ * @param useTag 소모품 태그.
+ * @returns 주소. 모르는 태그나 아직 안 그린 형태면 undefined — **부적 그림으로 안
+ *     떨어진다.** 모르는 것을 아는 것처럼 그리면 그림이 거짓말을 한다.
+ */
+export function findUseTagArt(useTag: string): string | undefined {
+  return BY_NAME.get(USE_TAG_ART.get(useTag) ?? '')
+}

@@ -7,6 +7,7 @@
  *
  * 렌더는 `GridCellView` 가, 배치는 `SlotGrid` 가 한다. 여기 있는 것은 값뿐이다.
  */
+import { findSkillArt } from '../content/skillArt'
 import type { SkillPrefView } from '../storage'
 
 import type { CellFace } from './gridCell'
@@ -34,6 +35,9 @@ function buildSkillCell(
     key: row.skillId,
     code: row.isLocked ? LOCKED_CODE : '',
     label,
+    // **그림이 있으면 그림으로** (2026-09-21 요청). 이름은 그림 아래에 남는다 —
+    // 아직 안 그린 재주가 섞이면 그 칸만 글자가 되고, 그때 이름이 없으면 빈 칸이 된다.
+    art: findSkillArt(row.skillId),
     grade: '',
     marks: row.isOn ? [] : [OFF_MARK],
     countText: '',

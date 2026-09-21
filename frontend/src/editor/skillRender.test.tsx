@@ -6,6 +6,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
+import { findSkillArt } from '../content/skillArt'
 import { readSkillName } from '../content/skills'
 
 import type { SkillPrefView } from '../storage'
@@ -13,6 +14,18 @@ import type { SkillPrefView } from '../storage'
 import { SkillPanel } from './SkillPanel'
 
 const noop = (): undefined => undefined
+
+/**
+ * 칸에 실제로 걸린 그림 주소들. 마크업은 `'` 를 escape 하므로 되돌려 놓고 비교한다.
+ *
+ * @param html 정적 마크업.
+ * @returns 주소들. 칸 순서 그대로.
+ */
+function listArt(html: string): string[] {
+  return [...html.matchAll(/class="invg__art" src="([^"]*)"/gu)].map((hit) =>
+    (hit[1] ?? '').replaceAll('&#x27;', "'"),
+  )
+}
 
 function render(view: SkillPrefView | undefined, detail = ''): string {
   return renderToStaticMarkup(
@@ -37,6 +50,17 @@ describe('재주 세팅', () => {
     for (const row of VIEW.rows) {
       expect(html).toContain(readSkillName(row.skillId))
     }
+  })
+
+  it('★ 칸마다 제 그림이 선다 (2026-09-21 요청) — 이름은 그림 아래에 남는다', () => {
+    // **글자를 안 지운다.** 아직 안 그린 재주가 섞이면 그 칸만 글자가 되는데, 이름을
+    // 지워 두면 그 칸이 빈 칸으로 보인다 (`gridCell.art` 가 적어 둔 규율).
+    const html = render(VIEW)
+    expect(listArt(html)).toEqual(VIEW.rows.map((row) => findSkillArt(row.skillId)))
+    for (const row of VIEW.rows) {
+      expect(html).toContain(readSkillName(row.skillId))
+    }
+    expect(html).toContain('invg__label--under')
   })
 
   it('★ 꺼진 칸이 격자에서 갈린다 — 색만이 아니라 「끔」 글자로도', () => {

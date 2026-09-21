@@ -929,18 +929,31 @@
   position: absolute;
   display: flex;
   gap: var(--sp-1);
-  /* 도면 위 글자라 바탕이 비친다. 얇게 깔아야 읽힌다 — 그림자는 이 시스템에 없다. */
-  padding: var(--sp-1);
-  background: var(--surface-plan);
-  border: var(--border);
   font-family: var(--font-mono);
   font-size: var(--fs-mono-s);
 }
 
+/* 좌상단은 **글줄**이라 바탕을 깐다. 도면 위 글자는 그대로 두면 괘선과 섞여 안 읽힌다 —
+   그림자는 이 시스템에 없으므로 얇게 까는 것이 유일한 수다. 아래 두 귀퉁이는 칸마다
+   제 테두리를 들고 있어 안 깐다. */
 .hud-pin--tl {
   inset-block-start: var(--sp-0);
   inset-inline-start: var(--sp-0);
   flex-direction: column;
+  padding: var(--sp-1);
+  background: var(--surface-plan);
+  border: var(--border);
+}
+
+/* 아래 두 귀퉁이는 **칸을 세로로 쌓는다** (2026-09-21 요청). 가로로 이으면 종류가 늘
+   때마다 도면 폭을 가로지르는데 — 부적 넷을 다 들고 오면 다섯 칸이다 — 세로면 종류가
+   늘어도 도면의 한 열 안에 머문다.
+
+   `column-reverse` 라 첫 칸이 귀퉁이에 붙고 그 위로 쌓인다. 칸마다 제 테두리를 들고
+   있으므로 묶는 바탕은 안 깐다 — 깔면 칸 다섯이 패널 하나로 읽힌다. */
+.hud-pin--bl,
+.hud-pin--br {
+  flex-direction: column-reverse;
 }
 
 /* 판정 줄(`battle__over`)보다 위에 앉는다. 그 줄의 높이가 곧 이 값이다. */
@@ -971,31 +984,64 @@
 .hud-stat { display: flex; flex-wrap: wrap; gap: var(--sp-1); color: var(--text-dim); }
 .hud-stat__one { white-space: nowrap; }
 
-/* 소모품 — 두 글자 도식 코드는 「어느 칸에 들어가는가」를 말한다 (`USE_TAG_CODES`). */
-.hud-item { display: flex; align-items: baseline; gap: var(--bw); }
-.hud-item__code { color: var(--text-dim); }
-.hud-item__num { font-variant-numeric: tabular-nums; }
-/* 다 쓴 칸은 명도로 죽인다. 지우지 않는 이유는 「원래 없었다」로 읽히기 때문이다. */
-.hud-item--empty { opacity: 0.45; }
-
-/* 재주 — 그늘이 위에서 내려와 남은 쿨만큼 덮는다. */
-.hud-skill {
+/* ── 칸 하나 ──────────────────────────────────────────────────────────────
+ *
+ * 소모품과 재주가 **같은 칸**을 쓴다. 둘 다 답하는 질문이 하나이기 때문이다 — 지금
+ * 이것을 쓸 수 있는가, 얼마나 남았는가.
+ *
+ * 크기가 `--plan-cell` 인 이유는 이것이 도면의 한 칸이기 때문이다. 정사각이라 세로로
+ * 쌓아도 도면의 열 하나만 먹는다.
+ *
+ * **못 쓰는 칸은 셋으로 말한다** (design/README D-1): 그늘이 덮고(명도), 그늘 밑동에
+ * 괘선이 서고(선), 구석에 `✕` 가 뜬다(글리프). 숫자를 뗀 뒤로 남은 것이 그늘뿐이면
+ * 「거의 찼다」와 「못 쓴다」가 같은 그림이 된다. */
+.hud-cell {
   position: relative;
   display: flex;
-  align-items: baseline;
-  gap: var(--bw);
-  padding: 0 var(--sp-1);
-  border: var(--bw) solid var(--line);
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--plan-cell);
+  block-size: var(--plan-cell);
   overflow: hidden;
+  background: var(--surface-plan);
+  border: var(--border);
 }
-.hud-skill__shade {
+
+/* 위에서 내려와 못 쓰는 만큼을 덮는다 — **밝은 만큼이 지금 쓸 수 있는 것**이다.
+   도면 바탕색을 덮으므로 밝아지지 않고 잠긴다. 밑동의 1px 괘선이 눈금 노릇을 한다. */
+.hud-cell__shade {
   position: absolute;
   inset-inline: var(--sp-0);
   inset-block-start: var(--sp-0);
-  background: var(--text-false);
-  opacity: 0.3;
+  background: var(--surface-plan);
+  border-bottom: var(--bw) solid var(--line-strong);
+  opacity: 0.78;
 }
-.hud-skill__name { position: relative; }
-/* 남은 틱은 숫자로도 적는다 — 그늘만으로 말하면 「거의 찼다」와 「막 썼다」가 같다. */
-.hud-skill__left { position: relative; font-variant-numeric: tabular-nums; color: var(--text-false); }
-.hud-skill--cooling .hud-skill__name { color: var(--text-dim); }
+
+.hud-cell__art {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: contain;
+}
+
+/* 그림이 **아직 없는** 칸만 글자로 떨어진다 — 정본에 없는 재주 id 가 그렇다.
+   네 글자가 두 줄로 앉는다(`유성낙하`). 그늘 **위**라 잠긴 칸에서도 이름은 읽힌다. */
+.hud-cell__mark {
+  position: relative;
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+  line-height: var(--lh-tight);
+  text-align: center;
+}
+
+/* 세 번째 채널. 그늘(명도)·괘선(선) 위의 글리프다. */
+.hud-cell__x {
+  position: absolute;
+  inset-block-start: var(--sp-0);
+  inset-inline-end: var(--bw);
+  line-height: 1;
+  color: var(--text-false);
+}
+
+.hud-cell--out .hud-cell__mark { color: var(--text-false); }

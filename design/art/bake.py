@@ -13,7 +13,8 @@ mypy 가 그 사본을 먼저 잡았다(`Duplicate module named "bake"`): 패키
 **그림을 더할 때**: 그 식구의 격자 파일에 적고 이것을 돌린다. 이름은 곧 파일 이름이고,
 화면이 그 이름으로 그림을 찾는다 — 아이템은 `catalog_id` 의 접두사
 (`frontend/src/content/itemArt.ts`), 몬스터는 적 id 그대로
-(`frontend/src/content/monsterArt.ts`). 양쪽 다 전수 검사가 있으므로 이름이 어긋나면
+(`frontend/src/content/monsterArt.ts`), 재주는 재주 id 를 소문자로 내린 것
+(`frontend/src/content/skillArt.ts`). 셋 다 전수 검사가 있으므로 이름이 어긋나면
 `npm test` 가 먼저 운다.
 """
 
@@ -25,15 +26,18 @@ ART = pathlib.Path(__file__).parent
 sys.path.insert(0, str(ART))
 sys.path.insert(0, str(ART / "items"))
 sys.path.insert(0, str(ART / "monsters"))
+sys.path.insert(0, str(ART / "skills"))
 
 from _build import build_svg, check_grid  # noqa: E402 — 경로를 세운 뒤에 읽는다
 from _item_sprites import SPRITES as ITEM_SPRITES  # noqa: E402 — 같은 이유
 from _monster_sprites import SPRITES as MONSTER_SPRITES  # noqa: E402 — 같은 이유
+from _skill_sprites import SKILL_SPRITES  # noqa: E402 — 같은 이유
 
 # 식구 이름에서 (격자, 굽는 곳) 으로. 식구가 늘면 여기 한 줄이 는다.
 FAMILIES: dict[str, tuple[dict[str, list[str]], pathlib.Path]] = {
     "items": (ITEM_SPRITES, ART / "items"),
     "monsters": (MONSTER_SPRITES, ART / "monsters"),
+    "skills": (SKILL_SPRITES, ART / "skills"),
 }
 
 
