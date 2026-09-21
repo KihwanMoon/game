@@ -38,6 +38,31 @@ function buildHtmlCommentStripper() {
 }
 
 /**
+ * 도트 한 식구를 id → SVG 원문 표로 읽는다.
+ *
+ * 그림은 16×16 도트라 한 장이 5KB 안쪽이다. 걸어 두지 않고 **본문에 박는다** —
+ * 해시 붙은 자산 주소를 정적 페이지가 알 길이 없고, 요청도 한 번 준다.
+ *
+ * @param family 식구 폴더 이름 (`monsters`·`skills`).
+ * @param readId 파일 이름을 자산 id 로. 재주는 파일이 소문자라 되올린다.
+ * @returns id 에서 SVG 원문으로.
+ */
+function readArtDir(
+  family: string,
+  readId: (name: string) => string = (name) => name,
+): ReadonlyMap<string, string> {
+  const dir = `${designDir}/art/${family}`
+  return new Map(
+    readdirSync(dir)
+      .filter((name) => name.endsWith('.svg'))
+      .map((name) => [
+        readId(name.replace(/\.svg$/, '')),
+        readFileSync(`${dir}/${name}`, 'utf8').trim(),
+      ]),
+  )
+}
+
+/**
  * 도감이 읽을 자산을 파일에서 모은다.
  *
  * **번들이 정본이다.** 발행된 팩이 아니라 저장소 파일을 읽는다 — 이 페이지들은 빌드
@@ -53,21 +78,16 @@ function readCodexInput(): CodexInput {
   const rulesets = read('rulesets/enemies.json') as { rulesets: CodexInput['rulesets'] }
   const rooms = read('rooms/templates.json') as { templates: CodexInput['rooms'] }
   const items = read('balance/items.json') as { items: CodexInput['items'] }
-  // 그림은 16×16 도트라 한 장이 5KB 안쪽이다. 걸어 두지 않고 **본문에 박는다** —
-  // 해시 붙은 자산 주소를 정적 페이지가 알 길이 없고, 요청도 한 번 준다.
-  const artDir = `${designDir}/art/monsters`
-  const art = new Map(
-    readdirSync(artDir)
-      .filter((name) => name.endsWith('.svg'))
-      .map((name) => [name.replace(/\.svg$/, ''), readFileSync(`${artDir}/${name}`, 'utf8').trim()]),
-  )
   return {
     enemies: balance.enemies,
     skills: skills.skills,
     rulesets: rulesets.rulesets,
     rooms: rooms.templates,
     items: items.items,
-    art,
+    monsterArt: readArtDir('monsters'),
+    // **재주 표는 따로 읽는다.** 한 표에 담으면 id 가 겹치는 날 재주 장에 도깨비가
+    // 그려진다 — 화면 쪽이 표를 둘로 나눠 둔 것과 같은 이유다.
+    skillArt: readArtDir('skills', (name) => name.toUpperCase()),
   }
 }
 

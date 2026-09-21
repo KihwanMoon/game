@@ -24,6 +24,7 @@ import {
   buildNote,
   checkHasFinal,
   dropParenRefs,
+  buildDataUri,
   escapeHtml,
   markCode,
   markStrong,
@@ -61,7 +62,8 @@ const INPUT: CodexInput = {
   ],
   rooms: [{ id: 'snare_grove', label_ko: '덫 숲', min_floor: 11, enemy_spawns: [{ kind: 'snare_boy' }] }],
   items: [{ id: 'sword_great', label_ko: '협도', grants_skill: 'SKILL_1' }],
-  art: new Map([['snare_boy', '<svg viewBox="0 0 16 16"></svg>']]),
+  monsterArt: new Map([['snare_boy', '<svg viewBox="0 0 16 16"><!--적--></svg>']]),
+  skillArt: new Map([['HEX_SNARE', '<svg viewBox="0 0 16 16"><!--재주--></svg>']]),
 }
 
 describe('도감 굽기', () => {
@@ -100,7 +102,45 @@ describe('도감 굽기', () => {
 
   it('그림은 막지 않고 그대로 싣는다 — 막으면 도트가 글자로 보인다', () => {
     const monster = pages.find((one) => one.path === buildMonsterPath('snare_boy'))
-    expect(monster?.html).toContain('<svg viewBox="0 0 16 16"></svg>')
+    expect(monster?.html).toContain('<svg viewBox="0 0 16 16"><!--적--></svg>')
+  })
+
+  it('★ 재주 장에도 그림이 선다 — 몬스터만 그림이 있으면 절반이 글자 장이다', () => {
+    const skill = pages.find((one) => one.path === buildSkillPath('HEX_SNARE'))
+    expect(skill?.html).toContain('cx__art')
+    expect(skill?.html).toContain('<svg viewBox="0 0 16 16"><!--재주--></svg>')
+  })
+
+  it('★ 두 표가 안 섞인다 — 한 표였다면 id 가 겹치는 날 재주 장에 도깨비가 그려진다', () => {
+    const skill = pages.find((one) => one.path === buildSkillPath('HEX_SNARE'))
+    expect(skill?.html).not.toContain('<!--적-->')
+    const monster = pages.find((one) => one.path === buildMonsterPath('snare_boy'))
+    expect(monster?.html).not.toContain('<!--재주-->')
+  })
+
+  it('★ 그림이 없는 재주는 그 고리만 글자로 선다 — 빈 네모를 세우지 않는다', () => {
+    // `SKILL_1` 은 이 검사의 그림표에 없다.
+    const plain = pages.find((one) => one.path === buildSkillPath('SKILL_1'))
+    expect(plain?.html).not.toContain('cx__art')
+    expect(plain?.html).toContain('일격')
+  })
+
+  it('★ 첫 장이 그림으로 훑힌다 — 마흔 고리를 글자로만 세우면 안 읽힌다', () => {
+    const index = pages.find((one) => one.path === '/codex/')
+    expect(index?.html).toContain('cx__grid')
+    // 주소로 싸였으므로 꺾쇠가 막혀 있다.
+    expect(index?.html).toContain('%3C!--적--%3E')
+    expect(index?.html).toContain('%3C!--재주--%3E')
+    // 그림이 없는 재주도 고리는 남는다.
+    expect(index?.html).toContain(buildSkillPath('SKILL_1'))
+  })
+
+  it('★ 첫 장은 그림을 `<img>` 로 싣는다 — 마흔 장을 박으면 DOM 이 2500 마디가 된다', () => {
+    const index = pages.find((one) => one.path === '/codex/')
+    expect(index?.html).toContain('src="data:image/svg+xml,')
+    // 낱장은 반대다 — 한 장뿐이라 마크업을 그대로 박는다.
+    expect(index?.html).not.toContain('<svg')
+    expect(pages.find((one) => one.path === buildMonsterPath('snare_boy'))?.html).toContain('<svg')
   })
 
   it('★ 여는 장비를 잇는다 — 설명문이 없는 기본 재주는 이것 말고 적을 것이 없다', () => {
@@ -180,5 +220,20 @@ describe('내부 문서 참조 걷기', () => {
 
   it('역따옴표를 코드로 옮긴다 — 막은 뒤에 부른다', () => {
     expect(markCode(escapeHtml('`CASTER` 는 <주술형>'))).toBe('<code>CASTER</code> 는 &lt;주술형&gt;')
+  })
+})
+
+describe('그림을 주소로 싸기', () => {
+  it('★ `#` 을 막는다 — 안 막으면 첫 색에서 주소가 잘려 그림이 통째로 안 뜬다', () => {
+    // 도트의 색은 전부 `#2C3849` 꼴이다.
+    const uri = buildDataUri(`<svg><rect fill='#2C3849'/></svg>`)
+    expect(uri).toContain('%232C3849')
+    expect(uri.slice('data:image/svg+xml,'.length)).not.toContain('#')
+  })
+
+  it('속성 안에서 안 깨진다 — 큰따옴표로 싸므로 `"` 와 `&` 도 막는다', () => {
+    expect(buildDataUri('<svg a="b"/>')).toContain('%22')
+    expect(buildDataUri('<svg>&amp;</svg>')).toContain('%26')
+    expect(buildDataUri('<svg/>')).toBe('data:image/svg+xml,%3Csvg/%3E')
   })
 })

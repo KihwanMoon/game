@@ -11,6 +11,7 @@
 import {
   type CodexPage,
   attachParticle,
+  buildArtLinkList,
   buildLinkList,
   buildNote,
   buildStatTable,
@@ -81,7 +82,13 @@ export interface CodexInput {
   readonly rooms: readonly RoomRow[]
   readonly items: readonly ItemRow[]
   /** 종 id 에서 그 그림(SVG 원문)으로. 없는 종은 그림 없이 나간다. */
-  readonly art: ReadonlyMap<string, string>
+  readonly monsterArt: ReadonlyMap<string, string>
+  /**
+   * 재주 id 에서 그 그림으로. **몬스터 표와 갈라 둔다** — 한 표에 담으면 id 가 겹치는
+   * 날 재주 장에 도깨비가 그려지고, 지금 안 겹치는 것은 우연이지 규칙이 아니다.
+   * 화면 쪽도 같은 이유로 표가 둘이다 (`content/monsterArt.ts`·`content/skillArt.ts`).
+   */
+  readonly skillArt: ReadonlyMap<string, string>
 }
 
 /** 적 유형의 한글 이름. 자산에 없어 화면이 들고 있던 것을 여기서도 쓴다. */
@@ -172,7 +179,7 @@ export function listRoomsOf(rooms: readonly RoomRow[], kindId: string): readonly
 export function buildMonsterPage(enemy: EnemyRow, input: CodexInput): CodexPage {
   const type = TYPE_LABELS.get(enemy.type) ?? enemy.type
   const tier = TIER_LABELS.get(enemy.tier) ?? enemy.tier
-  const art = input.art.get(enemy.id)
+  const art = input.monsterArt.get(enemy.id)
   const ruleset = input.rulesets.find((one) => one.ruleset_id === enemy.ruleset_id)
   const skillNames = new Map(input.skills.map((one) => [one.id, one.label_ko ?? one.id]))
   const usedSkills = ruleset === undefined ? [] : listRulesetSkills(ruleset)
@@ -251,6 +258,7 @@ export function buildSkillSentence(name: string, skill: SkillRow, hits: string):
  */
 export function buildSkillPage(skill: SkillRow, input: CodexInput): CodexPage {
   const name = skill.label_ko ?? skill.id
+  const art = input.skillArt.get(skill.id)
   const telegraph = skill.telegraph ?? 0
   const reach = skill.range ?? undefined
   const hits = skill.hits ?? 'TARGET'
@@ -265,6 +273,7 @@ export function buildSkillPage(skill: SkillRow, input: CodexInput): CodexPage {
 
   const body = [
     `<article class="cx">`,
+    art === undefined ? '' : `<div class="cx__art">${art}</div>`,
     `<h1>${escapeHtml(name)}</h1>`,
     `<p class="cx__kind">${escapeHtml(skill.actor === 'enemy' ? '적 전용' : '플레이어')}</p>`,
     `<p>${escapeHtml(buildSkillSentence(name, skill, HITS_LABELS.get(hits) ?? hits))}</p>`,
@@ -311,11 +320,21 @@ export function buildSkillPage(skill: SkillRow, input: CodexInput): CodexPage {
  * @returns 구운 페이지.
  */
 export function buildCodexIndex(input: CodexInput): CodexPage {
-  const monsters = buildLinkList(
-    input.enemies.map((one) => [buildMonsterPath(one.id), one.label_ko] as const),
+  // **첫 장은 고리 마흔 개가 서는 자리다.** 글자만 있으면 훑어지지 않으므로 낱장이
+  // 이미 들고 있는 그림을 여기에도 세운다 — 새 자산이 아니라 같은 도트다.
+  const monsters = buildArtLinkList(
+    input.enemies.map((one) => ({
+      path: buildMonsterPath(one.id),
+      name: one.label_ko,
+      art: input.monsterArt.get(one.id),
+    })),
   )
-  const skills = buildLinkList(
-    input.skills.map((one) => [buildSkillPath(one.id), one.label_ko ?? one.id] as const),
+  const skills = buildArtLinkList(
+    input.skills.map((one) => ({
+      path: buildSkillPath(one.id),
+      name: one.label_ko ?? one.id,
+      art: input.skillArt.get(one.id),
+    })),
   )
   const body = [
     `<article class="cx">`,

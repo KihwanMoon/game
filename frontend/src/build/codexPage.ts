@@ -192,6 +192,73 @@ export function buildLinkList(links: readonly (readonly [string, string])[]): st
   return `<ul class="cx__links">\n          ${items}\n        </ul>`
 }
 
+/**
+ * SVG 원문을 `data:` 주소로 싼다.
+ *
+ * **`#` 을 꼭 막는다.** 도트의 색이 전부 `#2C3849` 꼴이라, 안 막으면 주소가 첫 색에서
+ * 조각 참조로 잘리고 그림이 통째로 안 뜬다.
+ *
+ * `<`·`>` 까지 막는 것은 vite 의 인라이너와 같은 꼴을 쓰기 위해서다 — 속성 안의 날
+ * 꺾쇠는 법으로는 되지만, 막아 두면 「본문의 태그인가 주소의 글자인가」를 읽는 쪽이
+ * 안 헷갈린다.
+ *
+ * @param svg 구운 SVG 원문 한 줄.
+ * @returns `data:image/svg+xml,...` 주소.
+ */
+export function buildDataUri(svg: string): string {
+  const packed = svg
+    .replace(/%/g, '%25')
+    .replace(/#/g, '%23')
+    .replace(/"/g, '%22')
+    .replace(/&/g, '%26')
+    .replace(/</g, '%3C')
+    .replace(/>/g, '%3E')
+    .replace(/\s*\n\s*/g, ' ')
+  return `data:image/svg+xml,${packed}`
+}
+
+/** 그림이 붙은 고리 하나. */
+export interface ArtLink {
+  readonly path: string
+  readonly name: string
+  /** 그림(SVG 원문). 아직 안 그린 것은 생략하고, 그 고리만 글자로 선다. */
+  readonly art?: string | undefined
+}
+
+/**
+ * 그림이 붙은 고리 목록. 첫 장이 쓴다.
+ *
+ * **글자만 있는 목록은 마흔 줄에서 훑어지지 않는다.** 도감 첫 장은 몬스터 스물셋과
+ * 재주 열일곱이 한 장에 서는 자리라, 실루엣이 있으면 눈이 이름을 안 읽고도 자리를
+ * 잡는다 — 낱장에 이미 그림이 있으므로 새 자산도 아니다.
+ *
+ * **그림을 받아서 쓴다.** 주소에서 id 를 되파내던 것을 고쳤다 — 그 배선은 주소 꼴을
+ * 바꾸는 날 조용히 그림만 사라지고, 사라진 것은 아무 검사도 안 본다.
+ *
+ * **여기서는 `<img>` 로 싣는다.** 낱장은 그림이 한 장이라 마크업을 그대로 박지만,
+ * 첫 장은 마흔 장이 한꺼번에 서서 `<rect>` 가 2532개가 됐다 — Lighthouse 가 DOM
+ * 1400 마디에서 경고하는 자리다. 바이트는 같고(둘 다 본문에 박힌다) 마디만 마흔으로
+ * 준다.
+ *
+ * @param links 고리들.
+ * @returns 목록 마크업. 고리가 없으면 빈 문자열.
+ */
+export function buildArtLinkList(links: readonly ArtLink[]): string {
+  if (links.length === 0) {
+    return ''
+  }
+  const items = links
+    .map((link) => {
+      const mark =
+        link.art === undefined
+          ? ''
+          : `<img class="cx__ico" src="${buildDataUri(link.art)}" alt="" width="32" height="32" />`
+      return `<li>${mark}<a href="${escapeHtml(link.path)}">${escapeHtml(link.name)}</a></li>`
+    })
+    .join('\n          ')
+  return `<ul class="cx__grid">\n          ${items}\n        </ul>`
+}
+
 /** 한글 음절이 시작하는 코드포인트. 받침 판정에 쓴다. */
 const HANGUL_BASE = 0xac00
 /** 한 초성·중성 묶음이 갖는 종성 가짓수. 나머지가 0 이면 받침이 없다. */
