@@ -2557,6 +2557,8 @@ export function App(): React.JSX.Element {
         {cards[0] === undefined ? null : <ChapterCard {...cards[0]} />}
         {showPost && recording !== undefined ? (
           <PostMortem
+            // 전투 화면과 같은 것을 넘긴다 — 탭이 있는데 비면 고장으로 읽힌다.
+            settlements={settlements}
             recording={recording}
             theme={theme}
             weaponCatalogId={mainWeapon}

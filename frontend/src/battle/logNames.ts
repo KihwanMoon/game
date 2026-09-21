@@ -220,7 +220,10 @@ export function buildLogRow(
   return {
     tick: entry.tick,
     rule: entry.rule,
-    expr: formatParam(replaceIds(entry.expr, names)),
+    // **왼쪽도 행동 코드로 시작할 수 있다** (2026-09-21 신고). 예고가 터진 줄은
+    // `CHAIN_BOLT 예고 발동 (2칸)` 이고, 실행 줄은 `APPROACH @player` 다 — 오른쪽만
+    // 칠하면 같은 낱말이 한 줄 안에서 한쪽은 한글 한쪽은 영문이 된다.
+    expr: formatParam(translateActions(replaceIds(entry.expr, names), catalog)),
     outcome: formatParam(translateActions(replaceIds(entry.outcome, names), catalog)),
     delta: entry.delta,
     fired: entry.fired,

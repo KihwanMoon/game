@@ -68,6 +68,17 @@ describe('로그 덧칠', () => {
     expect(shown).not.toMatch(/\b(MOVE_TO_COVER|APPROACH|RETREAT|SKILL_[12])\b/)
   })
 
+  it('★ 왼쪽도 칠한다 (2026-09-21 신고) — 한 줄 안에서 언어가 갈리면 안 된다', () => {
+    // 예고가 터진 줄은 `CHAIN_BOLT 예고 발동 (2칸)` 이고 실행 줄은 `APPROACH @player` 다.
+    // 오른쪽만 칠하던 때는 같은 낱말이 한 줄 안에서 한쪽만 한글이었다.
+    const raw = RECORDING.entries.map((one) => one.expr).join(' ')
+    expect(raw, '표본 왼쪽에 행동 코드가 없으면 이 검사가 아무것도 안 본다').toMatch(
+      /\b(MOVE_TO_COVER|APPROACH)\b/,
+    )
+    const shown = rows.map((one) => one.expr).join(' ')
+    expect(shown).not.toMatch(/\b(MOVE_TO_COVER|APPROACH|RETREAT|SKILL_[12])\b/)
+  })
+
   it('행위자 칸이 비지 않는다 — 이름표가 없으면 id 라도 적는다', () => {
     for (const row of rows) {
       expect(row.actor).not.toBe('')
@@ -96,5 +107,24 @@ describe('세 화면이 그 덧칠을 실제로 부른다', () => {
   it('전투 화면도 같은 것을 부른다 — 사본을 두면 둘이 갈린다', () => {
     const source = readFileSync(`${HERE}../battle/BattleView.tsx`, 'utf8')
     expect(source).toContain('buildLogRow')
+  })
+})
+
+describe('시트가 전투 화면과 같은 것을 받는다', () => {
+  /**
+   * **탭이 있는데 비면 고장으로 읽힌다** (2026-09-21). 「정산」 탭은 `settlements` 를
+   * 펴는데, 전투 화면만 그것을 넘기고 사후 분석·되감기는 안 넘겼다 — 방금까지 차
+   * 있던 자리가 판이 끝나자 빈 채로 섰다.
+   *
+   * 값이 비는 것과 **넘기지 않는 것**은 다르다. 확인용 페이지처럼 층 개념이 없어
+   * 비는 것은 맞고, 있는데 안 주는 것이 틀린 것이다.
+   */
+  it.each(['PostMortem.tsx', 'HudScreen.tsx'] as const)('%s 가 정산을 넘긴다', (name) => {
+    expect(readFileSync(`${HERE}${name}`, 'utf8')).toMatch(/settlements=\{/)
+  })
+
+  it('App 이 두 화면에 같은 정산을 준다', () => {
+    const source = readFileSync(`${HERE}../App.tsx`, 'utf8')
+    expect(source.match(/settlements=\{settlements\}/g) ?? []).toHaveLength(2)
   })
 })

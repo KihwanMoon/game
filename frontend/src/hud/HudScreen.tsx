@@ -19,7 +19,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { BattleFrame, PlanCanvas, buildLogRow, buildLookOf } from '../battle'
-import type { SheetTab } from '../battle'
+import type { FloorSettlement, SheetTab } from '../battle'
 // 지금 도는 팩에서 읽는다 (설계/4_아이템 §18). **정적 상수로 들이면 발행한 것이 이
 // 화면에만 안 닿는다** — 편집기는 팩으로, 여기는 번들로 돌아 한 판이 두 데이터로
 // 갈린다. 사연은 `content/packOrder.test.ts` 머리말에 있다.
@@ -45,6 +45,8 @@ type PostState = 'auto' | 'open' | 'closed'
 
 /** HudScreen 이 받는 props. */
 export interface HudScreenProps {
+  /** 층별 정산. 확인용 페이지는 층 개념이 없어 안 넘긴다 — 그때는 빈 탭이 맞다. */
+  readonly settlements?: readonly FloorSettlement[]
   readonly recording: BattleRecording
   /** 상단 바의 층·실 표기. */
   readonly location: string
@@ -157,6 +159,7 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
         rows={buildSheetRows(trace, recording.cpuBudget)}
         // 지나간 판이라 끄고 켤 수 없다.
         onToggleRule={() => undefined}
+        settlements={props.settlements ?? []}
         entries={visible}
         tick={frame.tick}
         vitals={buildVitalRows({
@@ -201,6 +204,7 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
 
       {showPost ? (
         <PostMortem
+          {...(props.settlements === undefined ? {} : { settlements: props.settlements })}
           recording={recording}
           theme={theme}
           {...(props.weaponCatalogId === undefined ? {} : { weaponCatalogId: props.weaponCatalogId })}

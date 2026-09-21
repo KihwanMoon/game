@@ -15,7 +15,7 @@
 import { useMemo, useRef, useState } from 'react'
 
 import { BattleFrame, PlanCanvas, buildLogRow, buildLookOf } from '../battle'
-import type { ActorName, LogRowView } from '../battle'
+import type { ActorName, FloorSettlement, LogRowView } from '../battle'
 import type { SheetTab } from '../battle'
 // 지금 도는 팩에서 읽는다 (설계/4_아이템 §18). **정적 상수로 들이면 발행한 것이 이
 // 화면에만 안 닿는다** — 편집기는 팩으로, 여기는 번들로 돌아 한 판이 두 데이터로
@@ -63,6 +63,13 @@ function paintLog(
 
 /** PostMortem 이 받는 props. */
 export interface PostMortemProps {
+  /**
+   * 층별 정산. **전투 화면과 같은 것을 받는다** (2026-09-21).
+   *
+   * 시트의 「정산」 탭이 이것을 편다. 안 넘기면 그 탭만 빈 채로 서는데, 방금까지
+   * 보던 화면에서는 차 있던 자리다 — 탭이 있는데 비어 있으면 고장으로 읽힌다.
+   */
+  readonly settlements?: readonly FloorSettlement[]
   readonly recording: BattleRecording
   /** 도면 테마. 아직 토큰을 읽지 못했으면 undefined 이고 그동안 도면을 그리지 않는다. */
   readonly theme: PlanTheme | undefined
@@ -195,6 +202,7 @@ export function PostMortem(props: PostMortemProps): React.JSX.Element {
                 {...(frame.threat === undefined ? {} : { threat: frame.threat.text })}
                 rows={buildSheetRows(trace, recording.cpuBudget)}
                 onToggleRule={() => undefined}
+                settlements={props.settlements ?? []}
                 entries={paintLog(recording.entries.slice(0, frame.logEnd), recording.actorNames)}
                 tick={tick}
                 vitals={buildVitalRows({
