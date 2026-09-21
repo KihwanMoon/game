@@ -88,6 +88,16 @@ export interface BattlePortraitProps {
   /** 도면 위에 겹치는 요약 (2026-09-21). 안 넘기면 안 그린다. */
   readonly hud?: PlanHud
   /**
+   * 이번 틱에 발동한 내력의 우선순위 (2026-09-21 요청).
+   *
+   * 도면 우상단에 번호로 서고, 같은 번호의 규칙 줄이 황동으로 선다 — **없어진
+   * 지시선을 대신하는 이음**이다.
+   *
+   * `null` 은 「안 돌았다」, 생략은 「이 화면은 모른다」다. 둘을 같은 값으로 두면
+   * 추적 결과가 없는 화면에서 「안 돌았다」가 사실처럼 보인다.
+   */
+  readonly armedRule?: number | null
+  /**
    * 상태 탭의 줄들 — 체력·소모품·쿨타임·예산.
    *
    * **한 줄에 하나씩 쌓는다** (실제 요청). 늘 보이는 한 줄로 이어 두었더니 스킬이 둘만
@@ -146,6 +156,7 @@ export function BattlePortrait(props: BattlePortraitProps): React.JSX.Element {
         settlements={props.settlements ?? []}
         vitals={props.vitals}
         {...(props.hud === undefined ? {} : { hud: props.hud })}
+        {...(props.armedRule === undefined ? {} : { armedRule: props.armedRule })}
         tab={props.tab}
         onTabChange={props.onTabChange}
         {...(props.bodyRef === undefined ? {} : { bodyRef: props.bodyRef })}

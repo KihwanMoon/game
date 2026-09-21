@@ -59,7 +59,7 @@ import type { FloorSettlement } from './settlement'
 import { BattlePortrait } from './BattlePortrait'
 import { buildBattleSession, checkOngoing, type BattleSetup } from './battleSession'
 import { buildRunRulesets, toggleRulePriority, type SheetTab } from './portraitSheet'
-import { buildRuleRows } from './ruleRows'
+import { buildRuleRows, findArmedPriority } from './ruleRows'
 import { PlanCanvas } from './PlanCanvas'
 import { buildLookOf } from './weaponLook'
 import { buildVitalRows, listExtraConsumableRows } from './vitalRows'
@@ -438,6 +438,9 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
   // 화면에서 체력이 둘로 갈린다.
   const vitals = buildVitalRows(vitalInput)
   const hud = buildPlanHud(vitalInput)
+  // **규칙 줄에서 읽는다.** 추적 결과를 다시 훑으면 시트와 귀퉁이가 다른 줄을 가리키는
+  // 틱이 생긴다 — 이 부품의 존재 이유가 그 둘이 같은 줄을 가리키는 것이다.
+  const armedRule = findArmedPriority(rows)
   // **가로 폰만 다르게 선다.** 세로 골격의 고정 높이 합(44+44+270+34+48=440)이
   // 390px 짜리 가로 폰에 안 들어간다. 화면이 커서가 아니라 높이가 모자라서다.
   if (mode === 'landscape') {
@@ -463,6 +466,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
         settlements={props.settlements ?? []}
         vitals={vitals}
         hud={hud}
+        armedRule={armedRule}
         hp={player?.hp ?? 0}
         hpMax={player?.hpMax ?? 1}
         potions={player === undefined ? 0 : countItem(player, 'POTION')}
@@ -508,6 +512,7 @@ export function BattleView(props: BattleViewProps): React.JSX.Element {
       settlements={props.settlements ?? []}
       vitals={vitals}
       hud={hud}
+      armedRule={armedRule}
       tab={tab}
       onTabChange={setTab}
       bodyRef={sheetRef}

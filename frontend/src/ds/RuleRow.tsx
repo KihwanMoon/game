@@ -20,6 +20,20 @@ import { ValueExpr } from './ValueExpr'
 /** 규칙 번호를 0 으로 채울 자릿수. */
 const INDEX_PAD_WIDTH = 2
 
+/**
+ * 규칙 번호를 화면 표기로.
+ *
+ * **밖으로 낸다** (2026-09-21). 도면 위 HUD 의 우상단이 「지금 몇 번이 돌았나」를
+ * 적는데, 한쪽이 `03` 이고 다른 쪽이 `3` 이면 눈이 두 값을 같은 줄로 안 잇는다 —
+ * 그 이음이 없어진 지시선을 대신하는 것이므로 글자가 같아야 한다.
+ *
+ * @param index 우선순위.
+ * @returns 자릿수를 채운 표기.
+ */
+export function formatRuleIndex(index: number): string {
+  return String(index).padStart(INDEX_PAD_WIDTH, '0')
+}
+
 /** 규칙 한 줄의 조건 판정. armed 는 별도 prop 이다. */
 export type RuleRowState = 'true' | 'false' | 'pending'
 
@@ -131,7 +145,7 @@ export function RuleRow(props: RuleRowProps): React.JSX.Element {
         onClick={props.onClick}
       >
         <span className="ds-rule-row__index">
-          {String(props.index).padStart(INDEX_PAD_WIDTH, '0')}
+          {formatRuleIndex(props.index)}
         </span>
         <GlyphState state={resolveGlyphKind(props.state, armed)} size="sm" />
         <span className="ds-rule-row__lines">

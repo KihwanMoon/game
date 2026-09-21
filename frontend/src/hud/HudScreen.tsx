@@ -32,7 +32,7 @@ import { formatParamText } from '../editor/blockOptions'
 import type { BattleRecording } from './battleRecorder'
 import { useLogAnchor } from './logWindow'
 import { PostMortem } from './PostMortem'
-import { buildVitalRows } from '../battle'
+import { buildPlanHud, buildVitalRows, findArmedPriority } from '../battle'
 import { buildReplayTrace, buildSheetRows, findDecision } from './replayTrace'
 import { TickScrubber } from './TickScrubber'
 import { usePlanTheme } from './usePlanTheme'
@@ -116,6 +116,22 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
   const decision = findDecision(recording.entries, frame.tick, recording.playerId)
   const trace = buildReplayTrace(recording.ruleset, readActivePack().catalog, decision)
   const cpuTotal = trace.at(-1)?.cpuUsed ?? 0
+  const sheetRows = buildSheetRows(trace, recording.cpuBudget)
+  // **되감기가 이 번호를 제일 필요로 한다.** 「무엇이 나를 죽였는가」를 묻는 자리라,
+  // 틱을 옮길 때마다 어느 내력이 돌았는지가 도면 옆에 남아야 한다 (2026-09-21 요청).
+  const armedRule = findArmedPriority(sheetRows)
+  // 기록된 프레임은 상태이상·쿨타임을 안 들고 있다. 없는 것을 0 으로 그리면
+  // 「안 걸렸다」가 사실처럼 보이므로, 여기 HUD 는 체력·소모품까지만 선다.
+  const vitalInput = {
+    hp: frame.playerHp,
+    hpMax: frame.playerHpMax,
+    potions: frame.potions,
+    potionsMax: recording.potionsMax,
+    scrolls: frame.scrolls,
+    scrollsMax: recording.potionsMax,
+    cpuUsed: cpuTotal,
+    cpuBudget: recording.cpuBudget,
+  }
 
   // 강조만 있고 그 줄이 화면 밖이면 강조가 아무것도 못 한다.
   useLogAnchor(sheetRef, frame.tick, tab)
@@ -156,22 +172,15 @@ export function HudScreen(props: HudScreenProps): React.JSX.Element {
           : { plan: <PlanCanvas scene={frame.scene} theme={theme} lookOf={lookOf} /> })}
         outcome={frame.outcome}
         {...(frame.threat === undefined ? {} : { threat: frame.threat.text })}
-        rows={buildSheetRows(trace, recording.cpuBudget)}
+        rows={sheetRows}
+        armedRule={armedRule}
         // 지나간 판이라 끄고 켤 수 없다.
         onToggleRule={() => undefined}
         settlements={props.settlements ?? []}
         entries={visible}
         tick={frame.tick}
-        vitals={buildVitalRows({
-          hp: frame.playerHp,
-          hpMax: frame.playerHpMax,
-          potions: frame.potions,
-          potionsMax: recording.potionsMax,
-          scrolls: frame.scrolls,
-          scrollsMax: recording.potionsMax,
-          cpuUsed: cpuTotal,
-          cpuBudget: recording.cpuBudget,
-        })}
+        vitals={buildVitalRows(vitalInput)}
+        hud={buildPlanHud(vitalInput)}
         tab={tab}
         onTabChange={setTab}
         bodyRef={sheetRef}

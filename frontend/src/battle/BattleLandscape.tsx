@@ -71,6 +71,16 @@ export interface BattleLandscapeProps {
   readonly settlements?: readonly FloorSettlement[]
   /** 도면 위에 겹치는 요약 (2026-09-21). 안 넘기면 안 그린다. */
   readonly hud?: PlanHud
+  /**
+   * 이번 틱에 발동한 내력의 우선순위 (2026-09-21 요청).
+   *
+   * 도면 우상단에 번호로 서고, 같은 번호의 규칙 줄이 황동으로 선다 — **없어진
+   * 지시선을 대신하는 이음**이다.
+   *
+   * `null` 은 「안 돌았다」, 생략은 「이 화면은 모른다」다. 둘을 같은 값으로 두면
+   * 추적 결과가 없는 화면에서 「안 돌았다」가 사실처럼 보인다.
+   */
+  readonly armedRule?: number | null
   /** 켜진 규칙들의 누적 CPU. */
   readonly cpuUsed: number
   readonly cpuBudget: number
@@ -144,7 +154,12 @@ export function BattleLandscape(props: BattleLandscapeProps): React.JSX.Element 
           <div className="battle__frame">{props.plan}</div>
           {/* 세로와 같은 층이다 (2026-09-21). 가로는 상태 줄이 원래 없어서
               (`--bar-vitals:0`) 체력을 볼 자리가 하단 바뿐이었다. */}
-          {props.hud === undefined ? null : <PlanHudLayer hud={props.hud} />}
+          {props.hud === undefined ? null : (
+          <PlanHudLayer
+            hud={props.hud}
+            {...(props.armedRule === undefined ? {} : { armed: props.armedRule })}
+          />
+        )}
         </div>
         <div className="battle-ls__panel">
           <BattleSheet

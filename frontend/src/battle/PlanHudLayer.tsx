@@ -8,6 +8,8 @@
  *
  * **눌리지 않는다.** 도면의 칸을 가리면 안 되므로 층 전체가 `pointer-events: none` 이다.
  *
+ * 우상단은 **이번 틱에 발동한 내력의 번호**다 — 없어진 지시선을 대신한다(`HudArmed`).
+ *
  * 아래 두 귀퉁이는 **도면의 칸을 세로로 쌓는다** (2026-09-21 요청). 가로로 이으면 종류가
  * 늘 때마다 줄이 길어져 도면 폭을 가로지르고 판정 줄과 겹쳤다 — 부적 넷을 다 들고 오면
  * 다섯 칸이다. 세로로 쌓으면 종류가 늘어도 도면의 한 열 안에 머문다.
@@ -16,6 +18,7 @@
  * 덮는다 — 칸이 작아 숫자를 넣으면 그림이 설 자리가 없다. 정확한 값은 `title` 과
  * 보조 기술용 말이 늘 싣는다.
  */
+import { formatRuleIndex } from '../ds'
 import type { HudItem, HudSkill, HudStatus, PlanHud } from './planHud'
 
 /** 게이지 칸 수. 4px 모듈에 맞춘 열 칸이다 — 한 칸이 곧 10% 다. */
@@ -228,12 +231,59 @@ function HudSkills(props: { readonly skills: readonly HudSkill[] }): React.JSX.E
 }
 
 /**
+ * 우상단 — 이번 틱에 발동한 내력의 번호.
+ *
+ * **없어진 지시선을 대신한다** (2026-09-21 요청). 데스크톱에는 규칙 줄과 도면 말을 잇는
+ * 황동 지시선이 있었는데, 세로에서는 규칙 줄이 시트 탭 뒤로 숨을 수 있어 선의 한쪽 끝이
+ * 사라져 함께 지웠다(`design/README.md`). 번호는 선이 아니라 **이름**이라 한쪽 끝이
+ * 안 보여도 성립한다 — 로그 탭을 보는 동안에도 「지금 03번이 돌았다」가 남는다.
+ *
+ * 그래서 이 화면의 황동이 다시 셋이다: 도면의 플레이어 말 · 발동한 규칙 줄 · 이 번호.
+ * 셋 중 둘은 **같은 사실의 두 끝**이고, 그 이음이 이 부품의 존재 이유다.
+ *
+ * **글자가 규칙 줄과 같아야 한다.** `formatRuleIndex` 를 함께 쓰는 이유다 — 한쪽이
+ * `03` 이고 다른 쪽이 `3` 이면 눈이 두 값을 안 잇는다.
+ *
+ * @param props 발동한 우선순위. 아무 줄도 안 돌았으면 null.
+ * @returns 렌더 트리.
+ */
+function HudArmed(props: { readonly armed: number | null }): React.JSX.Element {
+  return (
+    <div className="hud-pin hud-pin--tr">
+      {/* **안 돌았어도 자리는 선다.** 사라지면 귀퉁이가 틱마다 깜빡이고, 「없다」와
+          「이 화면에 그런 것이 없다」가 같은 그림이 된다. */}
+      <span className={`hud-rule${props.armed === null ? ' hud-rule--idle' : ''}`}>
+        <span className="hud-rule__tag">내력</span>
+        <span className="hud-rule__num">
+          {props.armed === null ? '——' : formatRuleIndex(props.armed)}
+        </span>
+        <span className="ds-sr">
+          {props.armed === null
+            ? '이번 틱에는 발동한 내력이 없다'
+            : `${formatRuleIndex(props.armed)}번 내력이 발동했다`}
+        </span>
+      </span>
+    </div>
+  )
+}
+
+/**
  * 도면 위 HUD 를 그린다.
  *
  * @param props 겹칠 값 전부.
  * @returns 렌더 트리.
  */
-export function PlanHudLayer(props: { readonly hud: PlanHud }): React.JSX.Element {
+export function PlanHudLayer(props: {
+  readonly hud: PlanHud
+  /**
+   * 이번 틱에 발동한 내력의 우선순위. 아무 줄도 안 돌았으면 null.
+   *
+   * **없으면 귀퉁이를 비운다.** 추적 결과를 안 들고 있는 화면이 있고(확인용 페이지),
+   * 거기서 「——」를 세우면 「안 돌았다」가 사실처럼 보인다 — 모르는 것과 없는 것은
+   * 다른 말이고, 이 저장소는 그 구분으로 여러 번 다쳤다.
+   */
+  readonly armed?: number | null
+}): React.JSX.Element {
   return (
     <div className="hud-layer">
       <HudVitals
@@ -242,6 +292,7 @@ export function PlanHudLayer(props: { readonly hud: PlanHud }): React.JSX.Elemen
         isLow={props.hud.isLow}
         statuses={props.hud.statuses}
       />
+      {props.armed === undefined ? null : <HudArmed armed={props.armed} />}
       <HudItems items={props.hud.items} />
       <HudSkills skills={props.hud.skills} />
     </div>

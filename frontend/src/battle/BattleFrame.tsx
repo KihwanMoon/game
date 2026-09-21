@@ -69,6 +69,16 @@ export interface BattleFrameProps {
    * 안 넘기면 안 그린다. 확인용 화면은 이 값을 안 만든다.
    */
   readonly hud?: PlanHud
+  /**
+   * 이번 틱에 발동한 내력의 우선순위 (2026-09-21 요청).
+   *
+   * 도면 우상단에 번호로 서고, 같은 번호의 규칙 줄이 황동으로 선다 — **없어진
+   * 지시선을 대신하는 이음**이다.
+   *
+   * `null` 은 「안 돌았다」, 생략은 「이 화면은 모른다」다. 둘을 같은 값으로 두면
+   * 추적 결과가 없는 화면에서 「안 돌았다」가 사실처럼 보인다.
+   */
+  readonly armedRule?: number | null
   readonly tab: SheetTab
   readonly onTabChange: (tab: SheetTab) => void
   /** 시트 본문. 로그를 마지막 줄에 붙여 두려고 밖에서 잡는다. */
@@ -111,7 +121,12 @@ export function BattleFrame(props: BattleFrameProps): React.JSX.Element {
 
             아래 두 귀퉁이는 판정·예고(`battle__over`) **위에** 앉는다. 둘은 판이 끝나거나
             예고가 설 때만 뜨는 말이고, 이쪽은 늘 서 있어야 하므로 자리를 다투면 안 된다. */}
-        {props.hud === undefined ? null : <PlanHudLayer hud={props.hud} />}
+        {props.hud === undefined ? null : (
+          <PlanHudLayer
+            hud={props.hud}
+            {...(props.armedRule === undefined ? {} : { armed: props.armedRule })}
+          />
+        )}
         {/* **도면에 겹친다.** 둘 다 위치에 대한 말이고, 전용 줄을 두면 예고가 뜨고
             사라질 때마다 아래 전부가 흔들린다. 판정은 판이 끝났을 때만 뜨므로 예고와
             같은 자리를 놓고 다투지 않는다 — 끝난 판에는 예고가 없다. */}

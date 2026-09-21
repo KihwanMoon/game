@@ -933,17 +933,37 @@
   font-size: var(--fs-mono-s);
 }
 
-/* 좌상단은 **글줄**이라 바탕을 깐다. 도면 위 글자는 그대로 두면 괘선과 섞여 안 읽힌다 —
-   그림자는 이 시스템에 없으므로 얇게 까는 것이 유일한 수다. 아래 두 귀퉁이는 칸마다
-   제 테두리를 들고 있어 안 깐다. */
-.hud-pin--tl {
+/* 위 두 귀퉁이는 **글줄**이라 바탕을 깐다. 도면 위 글자는 그대로 두면 괘선과 섞여 안
+   읽힌다 — 그림자는 이 시스템에 없으므로 얇게 까는 것이 유일한 수다. 아래 두 귀퉁이는
+   칸마다 제 테두리를 들고 있어 안 깐다. */
+.hud-pin--tl,
+.hud-pin--tr {
   inset-block-start: var(--sp-0);
-  inset-inline-start: var(--sp-0);
-  flex-direction: column;
   padding: var(--sp-1);
   background: var(--surface-plan);
   border: var(--border);
 }
+
+.hud-pin--tl {
+  inset-inline-start: var(--sp-0);
+  flex-direction: column;
+}
+
+.hud-pin--tr {
+  inset-inline-end: var(--sp-0);
+}
+
+/* 발동한 내력의 번호 — **없어진 지시선을 대신한다.** 규칙 줄과 도면 말을 잇던 황동
+   선은 세로에서 한쪽 끝이 시트 탭 뒤로 숨어 지웠는데(`design/README.md`), 번호는
+   선이 아니라 이름이라 한쪽 끝이 안 보여도 성립한다.
+
+   그래서 이 화면의 황동이 다시 셋이다 — 플레이어 말 · 발동한 규칙 줄 · 이 번호. */
+.hud-rule { display: flex; align-items: baseline; gap: var(--sp-1); }
+.hud-rule__tag { color: var(--text-dim); }
+/* **황동은 번호에만.** 라벨까지 칠하면 한 곳이 두 곳이 된다. */
+.hud-rule__num { color: var(--text-accent); font-variant-numeric: tabular-nums; }
+/* 안 돌았으면 광원이 아니다 — 황동은 「지금 이것」을 가리킬 때만 켠다. */
+.hud-rule--idle .hud-rule__num { color: var(--text-dim); }
 
 /* 아래 두 귀퉁이는 **칸을 세로로 쌓는다** (2026-09-21 요청). 가로로 이으면 종류가 늘
    때마다 도면 폭을 가로지르는데 — 부적 넷을 다 들고 오면 다섯 칸이다 — 세로면 종류가

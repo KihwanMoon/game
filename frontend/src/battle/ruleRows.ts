@@ -67,3 +67,16 @@ export function buildRuleRows(input: RuleRowsInput): readonly RuleRowView[] {
     }
   })
 }
+
+/**
+ * 이번 틱에 발동한 줄의 우선순위.
+ *
+ * **한 줄만 발동한다.** 규칙표는 위에서 아래로 훑다가 처음 참이 된 줄에서 멈추므로
+ * (`ruleTrace`), 둘이 armed 인 상태는 없다.
+ *
+ * @param rows 규칙 줄들.
+ * @returns 우선순위. 아무 줄도 안 돌았으면 null — 0 은 실제 우선순위라 못 쓴다.
+ */
+export function findArmedPriority(rows: readonly RuleRowView[]): number | null {
+  return rows.find((row) => row.armed)?.priority ?? null
+}

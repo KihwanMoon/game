@@ -113,7 +113,7 @@ export {
 } from './portraitSheet'
 export type { SheetTab } from './portraitSheet'
 
-export { buildRuleRows } from './ruleRows'
+export { buildRuleRows, findArmedPriority } from './ruleRows'
 export type { RuleRowView, RuleRowsInput } from './ruleRows'
 
 export { buildPlanScene } from './planScene'

@@ -14,8 +14,12 @@ import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
+import { renderToStaticMarkup as renderRow } from 'react-dom/server'
+
+import { RuleRow, formatRuleIndex } from '../ds'
 import { findUseTagArt } from '../content/itemArt'
 import { buildPlanHud, readSkillMark } from './planHud'
+import { findArmedPriority, type RuleRowView } from './ruleRows'
 import {
   PlanHudLayer,
   countGaugeCells,
@@ -203,6 +207,85 @@ describe('그리는 법', () => {
     expect(readSpentPercent({ ...one, held: 0, carried: 3 })).toBe(100)
     // 들고 온 적이 없는 칸은 애초에 안 선다 — 0 으로 나눠 NaN 을 그리지 않는다.
     expect(readSpentPercent({ ...one, held: 0, carried: 0 })).toBe(0)
+  })
+})
+
+describe('발동한 내력 번호 — 없어진 지시선을 대신한다 (2026-09-21 요청)', () => {
+  const hud = buildPlanHud(INPUT)
+
+  it('★ 규칙 줄과 **같은 글자**로 적는다 — 한쪽이 `03` 이고 다른 쪽이 `3` 이면 안 이어진다', () => {
+    const corner = renderToStaticMarkup(<PlanHudLayer armed={3} hud={hud} />)
+    const row = renderRow(
+      <RuleRow
+        action="일격"
+        armed
+        condition="적거리(2) <= 사거리(3)"
+        cpu={{ used: 2, budget: 8 }}
+        index={3}
+        state="true"
+      />,
+    )
+    expect(formatRuleIndex(3)).toBe('03')
+    expect(readPin(corner, 'tr')).toContain(formatRuleIndex(3))
+    expect(row).toContain(formatRuleIndex(3))
+  })
+
+  it('★ 두 끝이 같은 광원이다 — 번호는 황동, 그 줄도 황동', () => {
+    const css = readFileSync(fileURLToPath(new URL('./battle.css', import.meta.url)), 'utf8')
+    // 이쪽 끝.
+    expect(css).toContain('.hud-rule__num { color: var(--text-accent);')
+    // 저쪽 끝은 ds 가 칠한다. 규칙 줄이 황동을 잃으면 이음의 한쪽이 없어진다.
+    const ds = readFileSync(fileURLToPath(new URL('../ds/ds.css', import.meta.url)), 'utf8')
+    expect(ds).toContain('.ds-rule-row--armed')
+    expect(/\.ds-rule-row--armed[^}]*border-left-color: var\(--line-accent\)/.test(ds)).toBe(true)
+  })
+
+  it('★ 라벨은 안 칠한다 — 황동은 화면당 세 곳이고 한 곳이 두 곳이 되면 안 된다', () => {
+    const css = readFileSync(fileURLToPath(new URL('./battle.css', import.meta.url)), 'utf8')
+    expect(css).toContain('.hud-rule__tag { color: var(--text-dim); }')
+  })
+
+  it('★ 안 돌았으면 자리는 서되 불은 끈다 — 사라지면 귀퉁이가 틱마다 깜빡인다', () => {
+    const idle = readPin(renderToStaticMarkup(<PlanHudLayer armed={null} hud={hud} />), 'tr')
+    expect(idle).toContain('hud-rule--idle')
+    expect(idle).toContain('이번 틱에는 발동한 내력이 없다')
+  })
+
+  it('★ 모르는 화면은 귀퉁이를 비운다 — 「모른다」를 「안 돌았다」로 그리지 않는다', () => {
+    // 확인용 페이지처럼 추적 결과가 없는 화면이 있다.
+    expect(renderToStaticMarkup(<PlanHudLayer hud={hud} />)).not.toContain('hud-pin--tr')
+  })
+
+  it('★ HUD 를 세우는 자리마다 번호도 함께 넘긴다 — 한 골격만 빠지면 그 배치에서만 없다', () => {
+    // 2026-09-20 에 겪은 자리다. 로그 덧칠 함수는 멀쩡한데 **부르는 쪽이 안 불러서**
+    // 사후 분석만 날것의 id 로 남았고, 그 함수를 보는 검사는 내내 초록이었다.
+    //
+    // 세는 방식은 `editor/itemArtWiring.test.ts` 와 같다: 넘기는 자리가 세우는 자리
+    // 수만큼 있는가. 가로·세로 골격이 둘이라 하나만 빠지는 것이 실제 위험이다.
+    for (const path of ['./BattleView.tsx', '../hud/HudScreen.tsx']) {
+      const source = readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8')
+      const huds = [...source.matchAll(/\bhud=\{/gu)].length
+      const armed = [...source.matchAll(/\barmedRule=\{/gu)].length
+      expect(huds, `${path}: HUD 를 세우는 자리`).toBeGreaterThan(0)
+      expect(armed, `${path}: 번호를 안 넘기는 골격이 남았다`).toBe(huds)
+      expect(source, path).toContain('findArmedPriority')
+    }
+  })
+
+  it('발동한 줄 하나를 고른다 — 규칙표는 처음 참에서 멈추므로 둘일 수 없다', () => {
+    const row = (priority: number, armed: boolean): RuleRowView => ({
+      priority,
+      state: armed ? 'true' : 'false',
+      condition: '',
+      action: '',
+      cpu: { used: 1, budget: 8 },
+      armed,
+      enabled: true,
+    })
+    expect(findArmedPriority([row(1, false), row(2, true), row(3, false)])).toBe(2)
+    expect(findArmedPriority([row(1, false)])).toBeNull()
+    // **0 번도 실제 우선순위다.** `?? null` 이 아니라 `|| null` 이면 0 이 「없음」이 된다.
+    expect(findArmedPriority([row(0, true)])).toBe(0)
   })
 })
 

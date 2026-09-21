@@ -42,7 +42,7 @@ export type { PlanGridProps } from './PlanGrid'
 export { PIP_LIMIT, ResourceCount } from './ResourceCount'
 export type { ResourceCountProps } from './ResourceCount'
 
-export { RuleRow, checkCpuOver, formatCpu, resolveGlyphKind } from './RuleRow'
+export { RuleRow, checkCpuOver, formatCpu, formatRuleIndex, resolveGlyphKind } from './RuleRow'
 export type { CpuReadout, RuleCpu, RuleRowProps, RuleRowState } from './RuleRow'
 
 export { RuleTable } from './RuleTable'
