@@ -601,3 +601,11 @@ describe('여는 것만으로 계정을 만들지 않는다', () => {
     expect(boot.slice(0, boot.indexOf('\n  /**'))).toContain('readWorldPulse()')
   })
 })
+
+describe('처음 실을 규칙표 (2026-09-25)', () => {
+  it('★ 비어 있지 않은 출고 표다 — 못 찾으면 빈 표로 떨어져 첫 출격이 막힌다', () => {
+    const initial = buildInitialRuleSet()
+    expect(initial.rulesetId).toBe('focus_threat_guard')
+    expect(initial.rules.length).toBeGreaterThan(0)
+  })
+})

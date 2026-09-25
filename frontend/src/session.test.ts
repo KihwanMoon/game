@@ -86,8 +86,9 @@ function createReloaded(session: EditorSession): EditorSession {
 }
 
 describe('새로고침', () => {
-  it('저장이 없으면 G0 예시로 시작한다', () => {
-    expect(getSessionRuleSet(createFresh()).rulesetId).toBe('g0_pressure')
+  it('저장이 없으면 처음 실을 출고 표로 시작한다', () => {
+    // 2026-09-25 에 `g0_pressure` → `focus_threat_guard` 로 바꿨다 (App.tsx 의 까닭).
+    expect(getSessionRuleSet(createFresh()).rulesetId).toBe('focus_threat_guard')
   })
 
   it('고친 규칙표가 새 탭에 그대로 있다', () => {

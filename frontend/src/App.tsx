@@ -40,6 +40,7 @@ import {
   type FloorSettlement,
 } from './battle'
 import {
+  BENCHMARK_RULESETS,
   G0_RULESETS,
   ALL_ITEM_TAGS,
   RULE_TEMPLATES,
@@ -279,8 +280,15 @@ interface RunSpec {
 /** 사후 분석 패널의 표시 상태. auto 는 "판이 끝나면 저절로 뜬다" 다. */
 type PostState = 'auto' | 'open' | 'closed'
 
-/** 처음 열었을 때 실을 규칙표. G0 예시 중 근접 압박. */
-const INITIAL_RULESET_ID = 'g0_pressure'
+/**
+ * 처음 열었을 때 실을 규칙표 — 「센 것부터 · 막기」 (2026-09-25).
+ *
+ * **예전 표(`g0_pressure`)는 1장을 한 번도 못 넘었다.** 새 방문자(레벨 1·맨몸) 조건으로
+ * 60시드를 재니 1장 다섯 방 완주 0% — 첫 판이 늘 지는 판이었고, 운영 기록에서도 사람 계정
+ * 전원이 1장을 못 깼다. 이 표는 같은 조건에서 첫 두 방 91% · 1장 완주 46% 다. **중간값을
+ * 골랐다** — 가장 센 표(`g0_kite`, 88%)를 주면 고칠 이유가 없어 「지고 → 고친다」가 안 선다.
+ */
+const INITIAL_RULESET_ID = 'focus_threat_guard'
 
 /** 처음 열었을 때의 방과 시드. 같은 시드는 같은 판을 낸다 (R5). */
 const INITIAL_ROOM_ID = 'open_field'
@@ -357,10 +365,11 @@ export function readPlayerLimits(raw: RawBalanceFile): PlayerLimits {
 /**
  * 처음 실을 규칙표를 집는다.
  *
- * @returns G0 예시 규칙표. 없으면 빈 규칙표.
+ * @returns 출고 규칙표(벤치마크 → G0 순으로 찾는다). 없으면 빈 규칙표.
  */
 export function buildInitialRuleSet(): RuleSet {
   return (
+    BENCHMARK_RULESETS.get(INITIAL_RULESET_ID) ??
     G0_RULESETS.get(INITIAL_RULESET_ID) ?? {
       rulesetId: INITIAL_RULESET_ID,
       version: 1,
