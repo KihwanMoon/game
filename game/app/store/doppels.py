@@ -55,7 +55,16 @@ def count_doppels(pool: ConnectionPool) -> int:
     return int(row[0]) if row else 0
 
 
-def remove_doppel(pool: ConnectionPool, record_id: int) -> bool:
+# 둔갑이 물러나는 까닭 (2026-09-25). **알림에 그대로 나간다** — 「사라졌다」만 오면 내가
+# 진 것인지 밀린 것인지 모른다. 물러나는 길은 이 다섯뿐이고 전부 `remove_doppel` 을 지난다.
+RETIRE_DEFEATED = "목숨을 다 썼다"
+RETIRE_REPLACED = "같은 장에 새 둔갑이 섰다"
+RETIRE_OWN_CAP = "내 둔갑이 정원을 넘어 가장 오래된 것이 물러났다"
+RETIRE_FLOOR_CAP = "그 장이 차서 새 둔갑에 자리를 내줬다"
+RETIRE_WORLD_CAP = "세계가 차서 자리를 내줬다"
+
+
+def remove_doppel(pool: ConnectionPool, record_id: int, reason: str = "") -> bool:
     """그림자 하나를 세계에서 지운다.
 
     **지워도 되는 종이다.** 지속 몬스터를 안 지우는 이유는 되찾기 동기가 함께 사라지기
@@ -66,9 +75,13 @@ def remove_doppel(pool: ConnectionPool, record_id: int) -> bool:
     목숨을 다 썼거나 정원에 밀렸거나. 둘 다 이 함수를 지나므로 여기 하나만 걸면 새는 길이
     없다. 정산을 부르는 쪽에 두었더니 정원 퇴출 경로가 조용히 빠졌었다.
 
+    **주인에게 알린다** (2026-09-25). 활자가 이 순간 들어오고, 그림자는 주인이 없는 동안
+    사라지는 일이 대부분이다 — 목숨을 다 썼거나 남의 새 둔갑에 밀렸거나.
+
     Args:
         pool: 연결 풀.
         record_id: 지울 개체.
+        reason: 물러나는 까닭 (`RETIRE_*`). 알림 본문 첫 줄이 된다. 비우면 까닭을 안 적는다.
 
     Returns:
         지웠으면 참. 이미 없었으면 거짓.
@@ -76,18 +89,19 @@ def remove_doppel(pool: ConnectionPool, record_id: int) -> bool:
     with pool.connection() as connection:
         row = connection.execute(
             "DELETE FROM entity_record WHERE id = %s AND is_doppel"
-            " RETURNING id, coalesce(origin_account_id, 0)",
+            " RETURNING id, coalesce(origin_account_id, 0), coalesce(zone_floor, 0)",
             (record_id,),
         ).fetchone()
     if row is None:
         return False
     owner = int(row[1])
     won = apply_doppel_settlement(pool, record_id, owner)
-    # **물러날 때 한 번 알린다** (2026-09-25). 활자는 이 순간에 들어오므로, 안 알리면
-    # 「이겼는데 활자가 안 늘었다」가 「언제 늘었지」로 바뀔 뿐이다.
     if owner > 0:
-        body = f"이긴 판 {won} · 활자 +{won}" if won > 0 else "이긴 판 없이 물러났다"
-        save_notice(pool, owner, KIND_DOPPEL, "내 둔갑이 물러났다", body)
+        floor = int(row[2])
+        title = f"{floor}장의 내 둔갑이 물러났다" if floor > 0 else "내 둔갑이 물러났다"
+        tally = f"이긴 판 {won} · 활자 +{won}" if won > 0 else "이긴 판 없음"
+        body = f"{reason} · {tally}" if reason else tally
+        save_notice(pool, owner, KIND_DOPPEL, title, body)
     return True
 
 
@@ -117,7 +131,7 @@ def apply_doppel_defeat(pool: ConnectionPool, record_id: int) -> int:
         return -1
     left = max(0, int(row[0]))
     if left <= 0:
-        remove_doppel(pool, record_id)
+        remove_doppel(pool, record_id, RETIRE_DEFEATED)
     return left
 
 
@@ -223,7 +237,7 @@ def create_doppel(
     # 것으로 세어, 같은 사람이 그 장을 둘 다 차지하는 길이 열린다.
     own, own_slot = find_own_doppel_on_floor(pool, origin_account_id, floor)
     if own != 0:
-        remove_doppel(pool, own)
+        remove_doppel(pool, own, RETIRE_REPLACED)
         slot = slot or own_slot
     # **비례는 여기서 걸린다.** 세계 총량에만 상한을 두면 계정 둘이 아홉 장을 하나씩
     # 차지해도 통과한다 — 세계는 안 덮였는데 만나는 빌드는 둘뿐이다. 넘치면 **제 것 중
@@ -233,7 +247,7 @@ def create_doppel(
         retired = find_own_oldest_doppel(pool, origin_account_id)
         if retired == 0:
             return 0
-        remove_doppel(pool, retired)
+        remove_doppel(pool, retired, RETIRE_OWN_CAP)
     # **자리 고갈도 같은 문으로 들어온다** (Z10). 정원이 남았는데 자리가 없는 경우가
     # 있다 — 방 배치의 자리 이름은 여느 지속 몬스터와 나눠 쓰기 때문이다. 예전에는 그때
     # 그냥 0 을 돌려줬고, 그래서 4층 자리 열하나가 찬 뒤 봇이 4층을 115번 깼는데 새
@@ -242,7 +256,7 @@ def create_doppel(
         evicted, evicted_slot = find_oldest_doppel_on_floor(pool, floor)
         if evicted == 0:
             return 0
-        remove_doppel(pool, evicted)
+        remove_doppel(pool, evicted, RETIRE_FLOOR_CAP)
         slot = slot or evicted_slot
     if not slot:
         return 0
@@ -250,7 +264,7 @@ def create_doppel(
         crowded = find_crowded_doppel(pool)
         if crowded == 0:
             return 0
-        remove_doppel(pool, crowded)
+        remove_doppel(pool, crowded, RETIRE_WORLD_CAP)
     level = max(1, floor)
     # **키트도 함께 얼린다** (개정 2026-09-04). 예전에는 스탯 셋만 담아서, 장궁 든 봇의
     # 그림자가 사거리 1 근접으로 싸웠다 — 빌드에서 가장 그 빌드다운 것이 빠진 채 숫자만

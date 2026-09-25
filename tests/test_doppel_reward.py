@@ -194,6 +194,12 @@ def test_being_pushed_out_settles_too(client):
         create_doppel(pool, build_bot_account(client), 6, f"push_slot_{step}", {"hp_max": 10}, {})
 
     assert read_letters(pool, account_id) == 1, "밀려난 그림자의 승리가 사라졌다"
+    # 밀려난 것도 주인에게 알린다 — 까닭은 「그 장이 찼다」다 (2026-09-25).
+    from game.app.store.doppels import RETIRE_FLOOR_CAP
+    from game.app.store.notices import list_notices
+
+    retired = [one for one in list_notices(pool, account_id) if "물러났다" in one.title]
+    assert [one.body.split(" · ")[0] for one in retired] == [RETIRE_FLOOR_CAP]
 
 
 def test_a_retired_shadow_shows_up_with_its_letters(client):
@@ -291,5 +297,25 @@ def test_the_owner_hears_of_wins_and_the_retirement_only(client):
     remove_doppel(pool, record_id)
 
     titles = [one.title for one in reversed(list_notices(pool, account_id))]
-    assert titles == ["내 둔갑이 이겼다", "내 둔갑이 물러났다"]
+    assert titles == ["내 둔갑이 이겼다", "4장의 내 둔갑이 물러났다"]
     assert "활자 +1" in list_notices(pool, account_id)[0].body
+
+
+def test_the_owner_hears_why_it_retired(client):
+    """★ 사라진 까닭이 알림에 적힌다 (2026-09-25).
+
+    「사라졌다」만 오면 내가 진 것인지 남에게 밀린 것인지 모른다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.doppels import RETIRE_DEFEATED, apply_doppel_defeat
+    from game.app.store.notices import list_notices
+
+    pool = get_pool()
+    account_id, record_id = build_shadow(client)
+    while apply_doppel_defeat(pool, record_id) > 0:
+        pass
+
+    notice = list_notices(pool, account_id)[0]
+    assert notice.title == "4장의 내 둔갑이 물러났다"
+    assert notice.body.startswith(RETIRE_DEFEATED)
+    assert "이긴 판 없음" in notice.body
