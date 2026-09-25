@@ -50,6 +50,8 @@ export {
 } from './linkState'
 export type { LinkState } from './linkState'
 export type { DiscoveryPanelProps } from './DiscoveryPanel'
+export { RecordBoardPanel } from './RecordBoardPanel'
+export type { RecordBoardPanelProps } from './RecordBoardPanel'
 export { WorldPanel } from './WorldPanel'
 export type { WorldPanelProps } from './WorldPanel'
 export type { BestiaryPanelProps } from './BestiaryPanel'

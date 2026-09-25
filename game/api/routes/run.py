@@ -26,6 +26,7 @@ from game.api.floor_service import (
 from game.api.loot_service import create_run_drops, list_floor_defeats
 from game.api.maintenance_service import apply_maintenance
 from game.api.monster_service import apply_monster_outcome
+from game.api.record_service import apply_record_outcome
 from game.api.schemas import SubmissionRequest, SubmissionResponse
 from game.app.items.loot import compute_run_currency
 from game.app.progression.levels import add_run_xp
@@ -57,6 +58,7 @@ from game.app.store.tickets import (
 )
 from game.schemas.loadout import parse_loadout
 from game.schemas.meta_save import MetaSave, build_meta_payload, parse_meta_save
+from game.schemas.run_ticket import RunMode
 
 router = APIRouter()
 
@@ -324,6 +326,14 @@ def create_run_submission(
             detail=verified.detail,
         ),
     )
+    # **기록 도전은 세계에 아무것도 안 남긴다** — 시드가 방마다 고정이라, 보상을 주면 그것이
+    # 곧 파밍 고리가 된다. 기록판만 쓴다 (2026-09-25).
+    if ticket.mode == RunMode.RECORD:
+        note = apply_record_outcome(
+            ticket, submission_id, request.ruleset, verified, account.account_id
+        )
+        fields = {key: value for key, value in vars(verified).items() if key != "summary"}
+        return SubmissionResponse(submission_id=submission_id, reward=note, **fields)
     reward = apply_run_rewards(
         account.account_id,
         submission_id,
@@ -336,20 +346,15 @@ def create_run_submission(
         ticket.rooms_per_floor,
     )
     world = build_world_notes(request, ticket, verified, account.account_id, submission_id, claimed)
-    if world:
-        reward = f"{reward} · {world}" if reward else world
     apply_charge_spend(account.account_id, ticket, verified)
     depth = apply_floor_outcome(account.account_id, verified, ticket.floor, ticket.rooms_per_floor)
-    if depth:
-        reward = f"{reward} · {depth}" if reward else depth
     apply_verified_meta(account.account_id, verified)
     # **닫힐 때만 정비한다.** 층 청구마다 돌면 런 중에 가방이 바뀐다 — 죽기 전에 주운
     # 것이 층 정산 한 번에 사라질 수 있다. 보상·전리품이 다 들어온 뒤라야 새로 주운
     # 것까지 버리기 규칙이 본다.
-    if is_run_closed and verified.verdict == VERDICT_VERIFIED:
-        upkeep = apply_maintenance(account.account_id)
-        if upkeep:
-            reward = f"{reward} · {upkeep}" if reward else upkeep
+    is_settled = is_run_closed and verified.verdict == VERDICT_VERIFIED
+    upkeep = apply_maintenance(account.account_id) if is_settled else ""
+    reward = " · ".join(part for part in (reward, world, depth, upkeep) if part)
     # `summary` 는 응답에 싣지 않는다 — 서버가 무엇으로 세이브를 갱신했는지는 클라이언트가
     # 알 필요가 없고, 실으면 그것을 되보내려는 경로가 생긴다.
     fields = {key: value for key, value in vars(verified).items() if key != "summary"}

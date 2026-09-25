@@ -77,6 +77,8 @@ export {
   type DailyBoardView,
   type DailyRow,
 } from './dailyBoard'
+export { formatRecordScore, formatRecordSummary, readRoomRecords } from './roomRecords'
+export type { RoomRecordBoard, RoomRecordRow } from './roomRecords'
 export {
   META_FORMAT_TAG,
   META_STORAGE_KEY,
@@ -128,6 +130,7 @@ export {
   readServerMeta,
   readToken,
   registerAccount,
+  requestRecordTicket,
   requestTicket,
   submitRun,
   writeServerMeta,

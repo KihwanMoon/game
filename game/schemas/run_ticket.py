@@ -77,10 +77,12 @@ class RunMode(StrEnum):
     RANKED = "RANKED"
     # 하루 한 판. 같은 시드를 모두가 받는다.
     DAILY = "DAILY"
+    # 방별 기록 도전 (2026-09-25). 방 하나·서버가 정한 시드·기본 몸. 보상이 없다.
+    RECORD = "RECORD"
 
 
 # 서버가 발급해야만 성립하는 모드. 로컬 발급으로 이 모드의 티켓을 만들 수 없다.
-SERVER_ONLY_MODES: frozenset[RunMode] = frozenset({RunMode.RANKED, RunMode.DAILY})
+SERVER_ONLY_MODES: frozenset[RunMode] = frozenset({RunMode.RANKED, RunMode.DAILY, RunMode.RECORD})
 
 
 @dataclass(frozen=True)

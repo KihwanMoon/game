@@ -190,11 +190,11 @@ def test_maintenance_runs_only_when_the_ticket_closes(client, token):
 
     source = Path("game/api/routes/run.py").read_text(encoding="utf-8")
     call = source.index("apply_maintenance(account.account_id)")
-    guard = source.rindex("if is_run_closed", 0, call)
-    # 호출이 닫힘 가드 안에 있다 — 가드와 호출 사이에 다른 if 블록 경계가 없어야 한다.
-    between = source[guard:call]
-    assert "is_run_closed" in between
-    assert between.count("\n    if ") <= 1, "닫힘 가드 밖에서 정비가 돈다"
+    line = source[source.rindex("\n", 0, call) : source.index("\n", call)]
+    # 호출이 닫힘 가드에 묶여 있다 — 같은 줄의 조건이 「닫혔고 검증됐다」여야 한다
+    # (2026-09-25 에 보상 줄을 한 번에 잇느라 `if` 블록이 조건식이 됐다).
+    assert " if is_settled else " in line, "닫힘 가드 밖에서 정비가 돈다"
+    assert "is_settled = is_run_closed and verified.verdict == VERDICT_VERIFIED" in source
 
 
 def build_bag_item(client, token, grade, is_recovered=False):

@@ -97,7 +97,7 @@ import { findRoomTitle } from './core/schemas/room'
 import { SHADOW, buildCardId, findChapter } from './content/story'
 import { DOPPEL_KIND_ID } from './battle/actorKind'
 import { ReplayView } from './admin/ReplayView'
-import type { DailyBoardView, ReplayInput, RunHistoryRow, WorldPulse } from './storage'
+import type { DailyBoardView, ReplayInput, RoomRecordBoard, RunHistoryRow, WorldPulse } from './storage'
 import { OUTCOME_ONGOING, OUTCOME_PLAYER_WIN } from './core/sim/phases'
 import { Button, GlyphState, Panel, ValueExpr } from './ds'
 import {
@@ -120,6 +120,7 @@ import {
   CharacterPanel,
   TemplatePanel,
   TutorialPanel,
+  RecordBoardPanel,
   WorldPanel,
   ConsumablePanel,
   findFreeConsumableSlot,
@@ -194,6 +195,7 @@ import {
   readBestiary,
   readDiscovery,
   readDailyBoard,
+  readRoomRecords,
   readLeaderboard,
   readWorldPulse,
   MODE_DOPPEL,
@@ -216,6 +218,7 @@ import {
   saveSkillPrefs,
   readGearState,
   registerAccount,
+  requestRecordTicket,
   requestTicket,
   submitRun,
   writeMeta,
@@ -246,7 +249,7 @@ import {
   type MetaSave,
   type TutorialStage,
 } from './core/schemas'
-import { MAX_SEED, createLocalTicket, type RunTicket } from './core/schemas'
+import { MAX_SEED, createLocalTicket, type RunMode, type RunTicket } from './core/schemas'
 import { rollSeed } from './seedRoll'
 import { adoptServerMeta, applyRunSummary } from './core/services/manageMeta'
 import { buildRunSummary, listEncounteredRulesets } from './core/services/runSummary'
@@ -680,6 +683,8 @@ export function App(): React.JSX.Element {
   const [leaderboard, setLeaderboard] = useState<LeaderboardView | undefined>(undefined)
   // 오늘의 도전 판. 서버에 못 닿으면 undefined 로 남고 그 줄을 안 그린다.
   const [daily, setDaily] = useState<DailyBoardView | undefined>(undefined)
+  // 지금 고른 방의 기록판 (2026-09-25). 방을 바꾸면 그 방의 판으로 갈린다.
+  const [records, setRecords] = useState<RoomRecordBoard | undefined>(undefined)
   // **둔갑 판은 따로 읽는다.** 재는 것이 다르므로 한 요청에 합치면 어느 수치가 어느
   // 판의 것인지 화면이 다시 갈라야 한다 (2026-09-15).
   const [doppelBoard, setDoppelBoard] = useState<LeaderboardView | undefined>(undefined)
@@ -1020,6 +1025,24 @@ export function App(): React.JSX.Element {
     })
   }
 
+  // **고른 방의 기록판을 따라 읽는다.** 방을 바꿨는데 앞 방의 판이 남아 있으면 남의 방
+  // 기록을 이 방 것으로 읽게 된다 — 늦게 온 응답이 새 방의 판을 덮지 않게 끊는다.
+  useEffect(() => {
+    if (account === undefined) {
+      setRecords(undefined)
+      return undefined
+    }
+    let isCurrent = true
+    void readRoomRecords(account, session.roomId).then((board) => {
+      if (isCurrent) {
+        setRecords(board)
+      }
+    })
+    return () => {
+      isCurrent = false
+    }
+  }, [account, session.roomId])
+
   /**
    * 세계를 다시 읽는다. 성장·순위·경매장이 함께 바뀌는 일이 많다.
    */
@@ -1280,7 +1303,13 @@ export function App(): React.JSX.Element {
     return token
   }
 
-  function startRun(): void {
+  /**
+   * 판을 건다.
+   *
+   * @param mode `RECORD` 면 기록 도전이다 (2026-09-25) — 방 하나·서버가 정한 시드·기본 몸.
+   *   **서버 없이는 안 건다.** 로컬로 떨어지면 기록이 안 남는 판을 기록 도전처럼 보여 준다.
+   */
+  function startRun(mode: RunMode = 'PRACTICE'): void {
     // **서버 티켓을 기다렸다 건다.** 예전에는 로컬 티켓으로 판을 먼저 걸고 서버 티켓이
     // 오면 갈아 끼웠는데, 그 순간 방과 시드가 바뀌어 **첫 방이 스킵된 것처럼** 보였다 —
     // 실제로 그렇게 신고됐다. 서버가 정본이면 정본이 올 때까지 판을 안 건다.
@@ -1299,11 +1328,19 @@ export function App(): React.JSX.Element {
     void requireAccount().then(async (token) => {
       if (token === undefined) {
         setLaunching(false)
-        applyLocalRun()
+        if (mode !== 'RECORD') {
+          applyLocalRun()
+        }
         return
       }
-      const issued = await requestTicket(token, session.roomId, wanted)
+      const issued =
+        mode === 'RECORD'
+          ? await requestRecordTicket(token, session.roomId)
+          : await requestTicket(token, session.roomId, wanted)
       setLaunching(false)
+      if (issued === undefined && mode === 'RECORD') {
+        return
+      }
       if (issued === undefined) {
         // **서버가 없다고 게임이 멈추지 않는다.** 다만 로컬로 돈 판은 서버에 안 남으므로
         // G1 계측에서도 빠진다.
@@ -1321,7 +1358,7 @@ export function App(): React.JSX.Element {
           seed: issued.seed,
           roomId: issued.roomId,
           floor: issued.floor,
-          mode: 'PRACTICE',
+          mode,
           coreVersion: issued.coreVersion,
         },
       })
@@ -1370,6 +1407,23 @@ export function App(): React.JSX.Element {
     // 실패는 무시한다: 제출이 안 됐다고 판이 무효가 되면 네트워크가 끊긴 사람은
     // 게임을 할 수 없다.
     const ticket = run?.ticket
+    // **기록 도전은 제출만 한다** (2026-09-25). 서버가 세계에 아무것도 안 남기므로, 여기서
+    // 도감·해금을 낙관적으로 먼저 채우면 다음 접속에 사라진다.
+    if (ticket?.mode === 'RECORD') {
+      if (account !== undefined) {
+        void submitRun(
+          account,
+          ticket.ticketId,
+          buildRuleSetPayload(finishedRun.ruleset),
+          ticket.coreVersion,
+          0,
+        ).then((result) => {
+          setVerdict(result)
+          void readRoomRecords(account, ticket.roomId).then(setRecords)
+        })
+      }
+      return
+    }
     if (account !== undefined && ticket !== undefined && !ticket.ticketId.startsWith('local:')) {
       void submitRun(
         account,
@@ -1834,7 +1888,9 @@ export function App(): React.JSX.Element {
         glyph="▶"
         disabled={checkLaunchLocked(blocker, isLaunching)}
         title={blocker === '' ? '이 내력으로 비각에 든다' : blocker}
-        onClick={startRun}
+        onClick={() => {
+          startRun()
+        }}
       >
         {/* **기다리는 중임을 말한다.** 눌렀는데 아무 일도 없으면 사람은 다시 누른다. */}
         {formatLaunchLabel(isLaunching)}
@@ -2356,6 +2412,16 @@ export function App(): React.JSX.Element {
                   })
                 }}
               />
+              <RecordBoardPanel
+                board={records}
+                roomLabel={findRoomTitle(ROOM_TEMPLATES, session.roomId)}
+                accountId={profile?.accountId}
+                link={link}
+                isLocked={checkLaunchLocked(blocker, isLaunching)}
+                onChallenge={() => {
+                  startRun('RECORD')
+                }}
+              />
               <BestiaryPanel entries={bestiary} link={link} />
               <DiscoveryPanel discovery={discovery} link={link} />
           </>
@@ -2466,7 +2532,11 @@ export function App(): React.JSX.Element {
         variant="ghost"
         glyph="↺"
         title="같은 방·같은 시드로 처음부터 다시 돌린다"
-        onClick={startRun}
+        onClick={() => {
+          // **기록 도전은 기록 도전으로 다시 건다.** 일반 판으로 바뀌면 같은 방인데
+          // 시드·몸이 달라져 「다시」가 다른 싸움이 된다.
+          startRun(run?.ticket.mode === 'RECORD' ? 'RECORD' : 'PRACTICE')
+        }}
       >
         <span className="ds-sr">다시</span>
       </Button>

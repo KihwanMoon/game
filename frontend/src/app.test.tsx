@@ -592,7 +592,7 @@ describe('여는 것만으로 계정을 만들지 않는다', () => {
 
   it('★ 그 자리는 출격이 부른다 — 서버가 처음 필요해지는 곳이다', () => {
     expect(SOURCE).toContain('async function requireAccount()')
-    const launch = SOURCE.slice(SOURCE.indexOf('function startRun()'))
+    const launch = SOURCE.slice(SOURCE.indexOf('function startRun('))
     expect(launch.slice(0, launch.indexOf('\n  }'))).toContain('requireAccount()')
   })
 

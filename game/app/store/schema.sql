@@ -991,3 +991,30 @@ CREATE TABLE IF NOT EXISTS traffic_day (
     at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (day, source)
 );
+
+-- 방별 상시 기록 (2026-09-25). **「얼마나 잘 짰는가」를 직접 잰다.**
+--
+-- 순위표는 누적 경험치라 오래 돈 쪽이 앞서고, 장비·레벨이 결과를 가른다. 이 표는 그
+-- 둘을 빼고 **같은 방·같은 시드·같은 몸**에서 누가 가장 적은 CPU 로 이겼는가를 적는다 —
+-- 장비로 못 사는 축이라 20장을 다 돈 뒤에도 끝이 없다.
+--
+-- **값은 전부 서버가 정한다** (설계/7_변조방지 §4). 클라이언트는 규칙표만 보내고, CPU·줄 수는
+-- 검증기를 지난 그 규칙표에서, 틱은 재시뮬에서 나온다. 결과를 받을 칸이 없다.
+--
+-- **한 사람 한 줄이다.** 더 나은 기록이 오면 덮는다 — 순서는 CPU → 틱 → 줄 수.
+-- **코어 버전별로 가른다** (결정 #06) — 밸런스가 바뀌면 같은 규칙표가 다른 틱을 낸다.
+CREATE TABLE IF NOT EXISTS room_record (
+    room_id       TEXT        NOT NULL,
+    core_version  TEXT        NOT NULL,
+    account_id    BIGINT      NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    cpu           INTEGER     NOT NULL,
+    ticks         INTEGER     NOT NULL,
+    rule_count    INTEGER     NOT NULL,
+    share_id      TEXT        NOT NULL,
+    submission_id BIGINT      NOT NULL REFERENCES run_submission(id) ON DELETE CASCADE,
+    recorded_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (room_id, core_version, account_id)
+);
+
+CREATE INDEX IF NOT EXISTS room_record_rank_idx
+    ON room_record (room_id, core_version, cpu, ticks, rule_count, recorded_at);

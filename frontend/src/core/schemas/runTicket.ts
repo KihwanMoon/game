@@ -44,10 +44,10 @@ export const MAX_SEED = Number.MAX_SAFE_INTEGER
 export const LOCAL_TICKET_PREFIX = 'local'
 
 /** 런의 성격. 무엇을 신뢰할 수 있는지가 여기서 갈린다. */
-export type RunMode = 'PRACTICE' | 'RANKED' | 'DAILY'
+export type RunMode = 'PRACTICE' | 'RANKED' | 'DAILY' | 'RECORD'
 
 /** 서버가 발급해야만 성립하는 모드. 로컬 발급으로 만들 수 없다. */
-export const SERVER_ONLY_MODES: readonly RunMode[] = ['RANKED', 'DAILY']
+export const SERVER_ONLY_MODES: readonly RunMode[] = ['RANKED', 'DAILY', 'RECORD']
 
 /**
  * 런 하나를 시작할 권한. 런의 입력 전부가 여기 얼려 있다.

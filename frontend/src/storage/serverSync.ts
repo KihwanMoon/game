@@ -473,18 +473,33 @@ export async function requestTicket(
   if (response === undefined || !response.ok) {
     return undefined
   }
-  const body = (await response.json()) as {
-    ticket_id: string
-    seed: number
-    room_id: string
-    floor: number
-    rooms_per_floor?: number
-    mode: string
-    core_version: string
-    monster_snapshot?: (RawMonsterSnapshot & { owner_name?: string })[]
-    loadout?: RawPlayerLoadout | null
-    room_ids?: string[]
-  }
+  return parseTicketBody((await response.json()) as RawTicketBody)
+}
+
+/** 서버가 보내는 티켓 절. 일반 출격과 기록 도전이 같은 모양이다. */
+interface RawTicketBody {
+  ticket_id: string
+  seed: number
+  room_id: string
+  floor: number
+  rooms_per_floor?: number
+  mode: string
+  core_version: string
+  monster_snapshot?: (RawMonsterSnapshot & { owner_name?: string })[]
+  loadout?: RawPlayerLoadout | null
+  room_ids?: string[]
+}
+
+/**
+ * 티켓 절을 화면이 쓰는 모양으로 옮긴다.
+ *
+ * **두 경로가 한 해석을 쓴다** (2026-09-25). 기록 도전이 제 해석을 따로 두면 한쪽에만
+ * 칸이 더해졌을 때 두 판이 다른 입력으로 돈다.
+ *
+ * @param body 서버가 보낸 절.
+ * @returns 발급된 티켓.
+ */
+function parseTicketBody(body: RawTicketBody): ServerTicket {
   return {
     ticketId: body.ticket_id,
     seed: body.seed,
@@ -506,6 +521,31 @@ export async function requestTicket(
     roomIds: body.room_ids ?? [body.room_id],
     roomsPerFloor: body.rooms_per_floor ?? 0,
   }
+}
+
+/**
+ * 기록 도전 티켓을 받는다 (2026-09-25).
+ *
+ * **방만 보낸다.** 시드·몸·층은 서버가 정한다 — 같은 방은 누구에게나 같은 싸움이어야
+ * 기록이 비교된다.
+ *
+ * @param token 기기 토큰.
+ * @param roomId 방 id.
+ * @returns 방 하나짜리 티켓. 서버에 닿지 못했으면 undefined — 기록은 서버 없이는 없다.
+ */
+export async function requestRecordTicket(
+  token: string,
+  roomId: string,
+): Promise<ServerTicket | undefined> {
+  const response = await sendRequest('/record/ticket', {
+    method: 'POST',
+    headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ room_id: roomId }),
+  })
+  if (response === undefined || !response.ok) {
+    return undefined
+  }
+  return parseTicketBody((await response.json()) as RawTicketBody)
 }
 
 /** 서버가 확정한 판정. 브라우저가 낸 결과와 다르면 두 코어가 갈린 것이다. */
