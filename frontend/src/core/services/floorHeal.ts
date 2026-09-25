@@ -25,6 +25,21 @@ export function readFloorHealPct(raw: { readonly floor_heal_pct?: number } | und
 }
 
 /**
+ * 1층에서 방을 넘을 때 돌려주는 퍼센트를 읽는다 — 파이썬 `read_first_floor_room_heal_pct`.
+ *
+ * **1층에만 있는 회복이다** (2026-09-25). 없으면 새 방문자가 1층 다섯 방을 한 HP 바로
+ * 가야 하고, 실측으로 출고 규칙표 29개 중 28개가 1층을 한 번도 못 넘었다.
+ *
+ * @param raw balance.json 의 floor_scale 절.
+ * @returns 퍼센트. 안 적혀 있으면 0 — **모르면 안 준다.**
+ */
+export function readFirstFloorRoomHealPct(
+  raw: { readonly first_floor_room_heal_pct?: number } | undefined,
+): number {
+  return Math.max(0, Math.trunc(Number(raw?.first_floor_room_heal_pct ?? 0)))
+}
+
+/**
  * 다음 층을 여는 HP.
  *
  * @param hp 층을 끝냈을 때의 HP.

@@ -21,7 +21,7 @@
     "정보는 룸 템플릿의 min_floor 로 옮겼다 — 어느 층에 나오는가는 방 배치가 정한다",
     "(docs/04 P-2)."
   ],
-  "balance_version": 12,
+  "balance_version": 13,
   "damage_formula": {
     "_note": "TDD §8 을 정수 연산으로 옮긴 것. // 는 내림 나눗셈이다.",
     "defense_denominator": "defense + soft_cap_base + soft_cap_per_floor * floor",
@@ -469,6 +469,7 @@
     "max_floor": 20,
     "boss_floor": 20,
     "floor_heal_pct": 30,
+    "first_floor_room_heal_pct": 30,
     "enemy_mult_pct_per_floor": 120,
     "floor_bosses": {
       "10": "boss_hall",

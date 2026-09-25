@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest'
 import { BALANCE, BLOCK_CATALOG, ENEMY_RULESETS, ROOM_TEMPLATES } from '../resources'
 import { ChainCursor } from './runChain'
 import { PLAYER_ENTITY_ID, parseBalance, runBattle } from './runBattle'
-import { readFloorHealPct, resolveFloorHeal } from './floorHeal'
+import { readFirstFloorRoomHealPct, readFloorHealPct, resolveFloorHeal } from './floorHeal'
 
 const SEED = 4242
 /** 방 하나가 곧 한 층이다. 층 경계를 매 방 만들어야 볼 것이 생긴다. */
@@ -30,7 +30,7 @@ interface Seen {
 }
 
 /** 층 경계가 있는 연쇄를 돌리고 방마다 들어설 때·끝낼 때의 HP 를 적어 둔다. */
-function runChain(rooms = 3): readonly Seen[] {
+function runChain(rooms = 3, roomsPerFloor = ROOMS_PER_FLOOR, floor = 1): readonly Seen[] {
   const template = ROOM_TEMPLATES.find((one) => one.templateId === 'open_field')
   if (template === undefined) {
     throw new Error('open_field 템플릿이 없다')
@@ -41,7 +41,8 @@ function runChain(rooms = 3): readonly Seen[] {
     catalog: BLOCK_CATALOG,
     enemyRulesets: ENEMY_RULESETS,
     seed: SEED,
-    roomsPerFloor: ROOMS_PER_FLOOR,
+    roomsPerFloor,
+    floor,
   })
   const seen: Seen[] = []
   for (let index = 0; index < rooms; index += 1) {
@@ -74,6 +75,34 @@ describe('층 회복 이식', () => {
     }
     // **파이썬과 같은 식이다.** 정수 내림이라 마지막 자리까지 같아야 한다 (R5).
     expect(second.opened).toBe(resolveFloorHeal(first.closed, second.hpMax, healPct))
+  })
+
+  it('★ 1층은 방을 넘을 때도 돌려준다 (파이썬과 같은 값)', () => {
+    const roomHealPct = readFirstFloorRoomHealPct(parseBalance(BALANCE).floorScale)
+    expect(roomHealPct, '밸런스에 1층 방 회복 퍼센트가 없다').toBeGreaterThan(0)
+    const [first, second] = runChain(2, 5)
+    if (first === undefined || second === undefined) {
+      throw new Error('두 방을 못 돌았다')
+    }
+    // 파이썬 `test_the_first_floor_heals_between_rooms` 가 같은 시드에서 59 → 89 를 본다.
+    expect([first.closed, second.opened]).toEqual([59, 89])
+    expect(second.opened).toBe(resolveFloorHeal(first.closed, second.hpMax, roomHealPct))
+  })
+
+  it('★ 2층부터는 방 사이 회복이 없다', () => {
+    const [first, second] = runChain(2, 5, 2)
+    if (first === undefined || second === undefined) {
+      throw new Error('두 방을 못 돌았다')
+    }
+    expect(second.opened).toBe(first.closed)
+  })
+
+  it('★ 층 수가 0 인 연쇄(골든)는 회복을 안 받는다', () => {
+    const [first, second] = runChain(2, 0)
+    if (first === undefined || second === undefined) {
+      throw new Error('두 방을 못 돌았다')
+    }
+    expect(second.opened).toBe(first.closed)
   })
 
   it('★ 최대치를 안 넘는다', () => {

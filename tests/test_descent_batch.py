@@ -70,15 +70,15 @@ def test_a_deep_room_never_opens_the_descent():
         assert all(ROOMS[name].min_floor <= 1 for name in first_floor), first_floor
 
 
-def run_probe(runs=2, ruleset=None, start_floor=1):
+def run_probe(runs=2, ruleset=None, base_seed=1):
     """하강을 조금 돌린다.
 
     Args:
         runs: 반복 횟수.
         ruleset: 플레이어 규칙표. None 이면 폴백.
-        start_floor: 시작 층. 「층 중간에 죽는다」를 재는 검사가 깊은 층에서 잰다 —
-            1장은 신규가 들어오는 층이라 일부러 쉽고, 거기서는 죽는 판을 만들기가
-            어렵다 (2026-09-16).
+        base_seed: 시작 시드. **시작 층이 아니다** — 하강 배치는 늘 1층에서 연다.
+            한때 이 자리가 `start_floor` 라는 이름이라 「2층에서 잰다」고 믿은 검사가
+            실제로는 시드 2 로 1층을 재고 있었다 (2026-09-25 에 드러났다).
 
     Returns:
         통계.
@@ -91,7 +91,7 @@ def run_probe(runs=2, ruleset=None, start_floor=1):
         ruleset,
         load_rulesets(ENEMY_RULESETS_PATH),
         runs,
-        start_floor,
+        base_seed,
         "open_field",
         PER_FLOOR,
         BOSS_FLOOR,
@@ -106,7 +106,7 @@ def test_the_floor_histogram_never_grows_downward():
     assert all(counts[i] >= counts[i + 1] for i in range(len(counts) - 1)), counts
 
 
-def test_a_run_that_dies_mid_floor_does_not_clear_it():
+def test_a_run_that_dies_mid_floor_does_not_clear_it(monkeypatch):
     """★ **층의 마지막 방에서 죽었는데 그 층을 깬 것으로 세면, 보상이 나가는 셈과 어긋난다.**
 
     층 단위 보상은 `cleared_rooms // rooms_per_floor` 로 층을 판다 (`floor_service`).
@@ -115,15 +115,27 @@ def test_a_run_that_dies_mid_floor_does_not_clear_it():
     **방을 조금 깨는 규칙표로 잰다.** 폴백은 0방에서 끝나 올림과 내림이 같은 답을 내고,
     그래서 이 검사가 한 번 헛돌았다.
     """
-    from game.config import BENCHMARK_RULESETS_PATH
+    from game.config import G0_RULESETS_PATH
 
-    partial = load_rulesets(BENCHMARK_RULESETS_PATH)["focus_threat_guard"]
-    # **2장에서 잰다** (2026-09-16). 1장은 신규가 들어오는 층이라 일부러 쉽게 두었고
-    # (기둥 숲·네거리를 2장으로 올렸다), 그 뒤로 세 판 중 하나가 1장을 **깨 버려서**
-    # 이 검사가 빨개졌다. 재는 것은 「층 중간에 죽으면 안 센다」이지 1장의 난이도가
-    # 아니므로, 죽는 판이 안정적으로 나오는 층으로 옮긴다 — 1장이 더 쉬워져도 안 깨진다.
-    stats = run_probe(runs=3, ruleset=partial, start_floor=2)
-    # 실측: 세 판 모두 **층 중간**에서 죽는다 — 올림으로 세는 순간 합계가 3 이 되어 어긋난다.
+    partial = load_rulesets(G0_RULESETS_PATH)["g0_pressure"]
+    # **1층에서 방 하나만 깨고 죽는 표로 잰다** (2026-09-25). 예전 표(`focus_threat_guard`)는
+    # 1층에 방 사이 회복이 생기면서 1층을 깨 버렸다. 재는 것은 「층 중간에 죽으면 안
+    # 센다」이지 1층의 난이도가 아니다.
+    import game.app.services.run_descent as descent
+
+    cleared_rooms: list[int] = []
+    original = descent.run_room_chain
+
+    def run_and_count(*args, **kwargs):
+        result = original(*args, **kwargs)
+        cleared_rooms.append(result.cleared_rooms)
+        return result
+
+    monkeypatch.setattr(descent, "run_room_chain", run_and_count)
+    stats = run_probe(runs=3, ruleset=partial)
+    # **방을 깨긴 해야 한다** — 0방이면 올림과 내림이 같아 이 검사가 헛돈다(위 독스트링).
+    # 실측: 세 판 모두 둘째 방에서 죽는다(깬 방 1) — 올림으로 세는 순간 합계가 3 이 된다.
+    assert all(0 < rooms < PER_FLOOR for rooms in cleared_rooms), cleared_rooms
     assert stats.cleared_by_floor[:3] == (0, 0, 0), stats
     assert stats.deepest_floor == 0
     assert stats.finished == 0

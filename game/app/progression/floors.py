@@ -135,6 +135,25 @@ def read_floor_heal_pct(balance: dict) -> int:
     return max(0, int(balance.get("floor_scale", {}).get("floor_heal_pct", 0)))
 
 
+def read_first_floor_room_heal_pct(balance: dict) -> int:
+    """1층에서 방을 넘을 때 돌려주는 최대체력의 퍼센트를 읽는다.
+
+    **1층에만 있는 회복이다** (2026-09-25). 방 사이 회복이 없으면 새 방문자(레벨 1·맨몸)
+    가 1층 다섯 방을 한 HP 바로 가야 하고, 실측으로 출고 규칙표 29개 중 28개가 1층을 한
+    번도 못 넘었다 — 방 하나하나는 90% 넘게 이기는데 소진이 벽이었다. 운영 기록에서도
+    사람 계정 124명 전원이 1층을 못 깼다. 1층을 못 넘으면 층 정산(레벨업·보상)을 한 번도
+    못 본다. 깊은 층까지 주면 결정 #21 이 막으려던 「방 수가 곧 회복량」이 돌아오므로
+    1층으로 묶는다.
+
+    Args:
+        balance: balance.json 을 읽은 딕셔너리.
+
+    Returns:
+        퍼센트. 안 적혀 있으면 0 이다 — **모르면 안 준다.**
+    """
+    return max(0, int(balance.get("floor_scale", {}).get("first_floor_room_heal_pct", 0)))
+
+
 def resolve_floor_heal(hp: int, hp_max: int, heal_pct: int) -> int:
     """층을 깬 직후의 HP 를 정한다.
 

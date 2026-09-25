@@ -45,6 +45,8 @@ export interface RawFloorScale {
   readonly enemy_mult_pct_per_floor?: number
   /** 층을 깰 때 돌려주는 최대체력의 퍼센트. 파이썬 `read_floor_heal_pct` 와 같은 자리다. */
   readonly floor_heal_pct?: number
+  /** 1층에서 방을 넘을 때 돌려주는 퍼센트. 파이썬 `read_first_floor_room_heal_pct` 와 같은 자리다. */
+  readonly first_floor_room_heal_pct?: number
 }
 
 /** 절이 통째로 빠졌을 때의 안전망. 값을 바꿀 자리가 아니다. */

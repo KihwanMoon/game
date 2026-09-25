@@ -20,10 +20,10 @@
 import type { BlockCatalog } from '../schemas/blocks'
 import type { PlayerLoadout } from '../schemas/loadout'
 import type { MonsterSnapshot } from '../schemas/monsterSnapshot'
-import type { RoomTemplate } from '../schemas/room'
+import { FIRST_FLOOR, type RoomTemplate } from '../schemas/room'
 import type { RuleSet } from '../schemas/ruleset'
 import { buildRuleVm } from '../rules/ruleVm'
-import { readFloorHealPct, resolveFloorHeal } from './floorHeal'
+import { readFirstFloorRoomHealPct, readFloorHealPct, resolveFloorHeal } from './floorHeal'
 import type { DecisionPolicy } from '../sim/plan'
 import type { TickEngine } from '../sim/engine'
 import { OUTCOME_PLAYER_WIN } from '../sim/phases'
@@ -238,13 +238,21 @@ export class ChainCursor {
       // 더 아픈 판을 돌고 있었다 (2026-09-11). 골든은 이 자리를 안 덮는다 — 골든 연쇄는
       // `roomsPerFloor` 가 0 이라 층 경계가 한 번도 안 생긴다.
       const isNewFloor = this.index > 0 && thisFloor !== previousFloor
-      player.hp = isNewFloor
-        ? resolveFloorHeal(
-            this.carriedHp,
-            player.hpMax,
-            readFloorHealPct(this.setup.balance.floorScale),
-          )
-        : this.carriedHp
+      // **1층은 방마다도 돌려준다** (2026-09-25). 층이 있는 하강에서만이다 — 층 수가 0 인
+      // 연쇄(골든)는 전부 「1층」으로 읽히고, 거기 얹으면 골든이 통째로 다른 판이 된다.
+      const isFirstFloorRoom = (this.setup.roomsPerFloor ?? 0) > 0 && thisFloor === FIRST_FLOOR
+      const floorScale = this.setup.balance.floorScale
+      if (isNewFloor) {
+        player.hp = resolveFloorHeal(this.carriedHp, player.hpMax, readFloorHealPct(floorScale))
+      } else if (isFirstFloorRoom) {
+        player.hp = resolveFloorHeal(
+          this.carriedHp,
+          player.hpMax,
+          readFirstFloorRoomHealPct(floorScale),
+        )
+      } else {
+        player.hp = this.carriedHp
+      }
       player.consumables = new Map(this.carriedPotions)
     }
     const ruleset = this.setup.playerRuleset
