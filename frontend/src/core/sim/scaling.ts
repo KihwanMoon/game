@@ -75,22 +75,23 @@ export function buildFloorScale(
 }
 
 /**
- * 층 깊이를 복리로 얹은 능력치 (e3).
+ * 층 깊이를 복리로 얹은 능력치 (e3, e15) — 파이썬 `calculate_scaled_stat` 과 같은 식.
  *
- * **층마다 내림으로 접는다** — 파이썬과 같은 줄이다. 거듭제곱을 한 번에 계산하면
- * 부동소수가 끼어 두 코어가 마지막 자리에서 갈린다 (R5).
+ * **한 번에 계산하고 한 번만 내린다** (e15, 2026-09-25). 층마다 내리면 배율이 작을 때 작은
+ * 값이 영영 안 자란다 — 공격 8 에 105% 면 매 층 8 로 되돌아갔다.
+ *
+ * **BigInt 로 계산한다.** `mult^n` 은 금방 2^53 을 넘고, 그 순간 `Number` 는 마지막 자리를
+ * 잃어 파이썬과 갈린다 (R5). 결과는 스탯이라 `Number` 로 돌려도 안전하다.
  *
  * @param base 층 1 기준값.
  * @param multPctPerFloor 한 층 내려갈 때마다 곱할 퍼센트 (110 = ×1.1).
  * @param floor 현재 층.
- * @returns 내림 정수로 접은 능력치.
+ * @returns 내림 정수. 층 1 이하면 기준값 그대로다.
  */
 export function calculateScaledStat(base: number, multPctPerFloor: number, floor: number): number {
-  let value = base
-  for (let step = 0; step < Math.max(0, floor - FIRST_FLOOR); step += 1) {
-    value = Math.floor((value * multPctPerFloor) / PERCENT_BASE)
-  }
-  return value
+  const steps = BigInt(Math.max(0, floor - FIRST_FLOOR))
+  const scaled = (BigInt(base) * BigInt(multPctPerFloor) ** steps) / BigInt(PERCENT_BASE) ** steps
+  return Number(scaled)
 }
 
 /** 조정을 거친 최대 HP · 공격력 · 선공. */

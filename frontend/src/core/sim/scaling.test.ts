@@ -26,6 +26,13 @@ const DEEP_FLOOR = 3
 const STALL_TICKS = 100
 
 const BALANCE_DATA = parseBalance(BALANCE)
+/** 밸런스의 층 배율. **숫자를 박지 않는다** — 박으면 배율을 고칠 때마다 무관하게 빨개진다. */
+const DEPTH_MULT = buildFloorScale(BALANCE_DATA.floorScale).multPctPerFloor
+/** 깊은 층의 몽둥이 도깨비. 파이썬 `build_deep_rusher` 와 같은 계산이다. */
+const DEEP_RUSHER = {
+  hpMax: calculateScaledStat(RUSHER_HP, DEPTH_MULT, DEEP_FLOOR),
+  attack: calculateScaledStat(RUSHER_ATTACK, DEPTH_MULT, DEEP_FLOOR),
+}
 
 /**
  * id 로 룸 템플릿을 찾는다.
@@ -62,11 +69,16 @@ describe('층 깊이 스케일', () => {
     expect(calculateScaledStat(RUSHER_HP, 110, FIRST_FLOOR)).toBe(RUSHER_HP)
   })
 
-  it('정수 내림으로 접는다 (R5)', () => {
-    // 부동소수를 쓰면 플랫폼마다 결과가 갈려 리플레이가 깨진다.
-    // 층마다 내림 — 9→9→9 처럼 작은 값은 안 자랄 수 있다. 그것이 계약이다 (e3).
-    expect(calculateScaledStat(9, 110, DEEP_FLOOR)).toBe(9)
+  it('정수로 계산하고 끝에서 한 번만 내린다 (R5, e15)', () => {
+    // 부동소수를 쓰면 플랫폼마다 결과가 갈려 리플레이가 깨진다. 9 × 1.21 = 10.89 → 10.
+    expect(calculateScaledStat(9, 110, DEEP_FLOOR)).toBe(10)
     expect(Number.isInteger(calculateScaledStat(7, 110, DEEP_FLOOR))).toBe(true)
+    // 파이썬 `test_depth_compounds_per_floor` 와 같은 값이다.
+    expect(calculateScaledStat(100, 110, 10)).toBe(235)
+  })
+
+  it('★ 작은 값도 자란다 (e15) — 층마다 내리면 공격 8 × 105% 가 20장까지 8 이었다', () => {
+    expect(calculateScaledStat(8, 105, 11)).toBe(13)
   })
 
   it('★ 선공은 층이 아니라 플레이어를 따라 옮긴다 (G3)', () => {
@@ -89,7 +101,9 @@ describe('층 깊이 스케일', () => {
     )
     // **선공은 층으로 안 자란다.** 자라는 것은 HP 와 공격력뿐이고, 선공이 움직이는
     // 축은 층이 아니라 플레이어다 (아래 시험).
-    expect(scaled).toEqual({ hpMax: 57, attack: 10, initiative: RUSHER_INITIATIVE })
+    expect(scaled).toEqual({ ...DEEP_RUSHER, initiative: RUSHER_INITIATIVE })
+    expect(scaled.hpMax).toBeGreaterThan(RUSHER_HP)
+    expect(scaled.attack).toBeGreaterThan(RUSHER_ATTACK)
   })
 
   it('방 배치가 층 스케일을 거친다', () => {
@@ -99,7 +113,7 @@ describe('층 깊이 스케일', () => {
     const weak = shallow.state.entities.get('goblin_rusher_0')
     const strong = deep.state.entities.get('goblin_rusher_0')
     expect([weak?.hpMax, weak?.attack]).toEqual([RUSHER_HP, RUSHER_ATTACK])
-    expect([strong?.hpMax, strong?.attack]).toEqual([57, 10])
+    expect([strong?.hpMax, strong?.attack]).toEqual([DEEP_RUSHER.hpMax, DEEP_RUSHER.attack])
     // 스케일은 최대 HP 를 올리는 것이지 다친 채로 시작시키는 것이 아니다.
     expect(strong?.hp).toBe(strong?.hpMax)
   })
@@ -112,7 +126,7 @@ describe('층 깊이 스케일', () => {
       floor: DEEP_FLOOR,
     })
     const hunter = engine.pressure.createHunter(engine.state)
-    expect([hunter?.hpMax, hunter?.attack]).toEqual([57, 10])
+    expect([hunter?.hpMax, hunter?.attack]).toEqual([DEEP_RUSHER.hpMax, DEEP_RUSHER.attack])
   })
 
   it('층 깊이와 층 체류 스케일은 곱해진다', () => {
@@ -125,7 +139,7 @@ describe('층 깊이 스케일', () => {
     })
     engine.pressure.floorTicks = STALL_TICKS
     const bonusPct = engine.pressure.applyScale(engine.state)
-    const depthScaled = calculateScaledStat(RUSHER_ATTACK, 120, DEEP_FLOOR)
+    const depthScaled = calculateScaledStat(RUSHER_ATTACK, DEPTH_MULT, DEEP_FLOOR)
     expect(engine.state.entities.get('goblin_rusher_0')?.attack).toBe(
       calculateScaledAttack(depthScaled, bonusPct),
     )

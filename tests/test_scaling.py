@@ -45,6 +45,22 @@ def templates():
     return {t.template_id: t for t in load_room_templates(ROOM_TEMPLATES_PATH)}
 
 
+def build_deep_rusher(balance):
+    """깊은 층의 몽둥이 도깨비 HP·공격력을 밸런스 배율로 계산한다.
+
+    Args:
+        balance: 밸런스 딕셔너리.
+
+    Returns:
+        (최대 HP, 공격력).
+    """
+    mult = balance["floor_scale"]["enemy_mult_pct_per_floor"]
+    return (
+        calculate_scaled_stat(RUSHER_HP, mult, DEEP_FLOOR),
+        calculate_scaled_stat(RUSHER_ATTACK, mult, DEEP_FLOOR),
+    )
+
+
 def test_balance_declares_floor_scale(balance):
     # 값이 있어도 읽는 코드가 없으면 층이 올라가도 적이 강해지지 않는다.
     scale = build_floor_scale(balance["floor_scale"])
@@ -63,18 +79,26 @@ def test_first_floor_is_the_baseline():
 
 
 def test_depth_compounds_per_floor():
-    # **복리다** (e3). 층마다 곱하고 내림으로 접는다 — 10층이면 1층의 약 2.36배다.
+    # **복리다** (e3). 한 번에 계산하고 한 번 내린다 (e15) — 10층이면 1층의 약 2.36배다.
     assert calculate_scaled_stat(100, 110, 2) == 110
     assert calculate_scaled_stat(100, 110, DEEP_FLOOR) == 121
-    assert calculate_scaled_stat(100, 110, 10) == 233
+    assert calculate_scaled_stat(100, 110, 10) == 235
 
 
 def test_scaling_stays_integer_and_rounds_down():
-    # 부동소수를 쓰면 플랫폼마다 결과가 갈려 리플레이가 깨진다 (R5). **층마다 접는다** —
-    # 한 번에 거듭제곱하면 TS 와 마지막 자리가 갈린다: 9→9(9.9 의 내림)→9 처럼, 작은
-    # 값은 몇 층을 내려가도 안 자랄 수 있다. 그것이 계약이다.
-    assert calculate_scaled_stat(9, 110, DEEP_FLOOR) == 9
+    # 부동소수를 쓰면 플랫폼마다 결과가 갈려 리플레이가 깨진다 (R5). 정수로만 계산하고
+    # **끝에서 한 번만 내린다** (e15): 9 × 1.21 = 10.89 → 10.
+    assert calculate_scaled_stat(9, 110, DEEP_FLOOR) == 10
     assert isinstance(calculate_scaled_stat(9, 110, DEEP_FLOOR), int)
+
+
+def test_small_values_grow_under_a_gentle_multiplier():
+    """★ 작은 값도 자란다 (e15, 2026-09-25).
+
+    층마다 내리던 때는 공격 8 에 105% 면 8.4 → 8 로 매 층 되돌아가 20장까지 8 이었다 —
+    배율을 낮추자 몽둥이 도깨비가 1장의 주먹으로 20장을 돌았다.
+    """
+    assert calculate_scaled_stat(8, 105, 11) == 13
 
 
 def test_enemy_stats_scale_both_axes(balance):
@@ -86,7 +110,13 @@ def test_enemy_stats_scale_both_axes(balance):
         RUSHER_ATTACK,
         base_initiative,
     )
-    assert get_scaled_enemy_stats(rusher, scale, DEEP_FLOOR) == (57, 10, base_initiative)
+    deep_hp, deep_attack, deep_initiative = get_scaled_enemy_stats(rusher, scale, DEEP_FLOOR)
+    # **두 축 다 자란다.** 값은 밸런스 배율에서 계산한다 — 숫자를 박으면 배율을 고칠 때마다
+    # 이 검사가 「무엇을 지키는가」와 무관하게 빨개진다.
+    assert (deep_hp, deep_attack) == build_deep_rusher(balance)
+    assert deep_hp > RUSHER_HP
+    assert deep_attack > RUSHER_ATTACK
+    assert deep_initiative == base_initiative
 
 
 def test_initiative_follows_the_player_not_the_floor(balance):
@@ -121,7 +151,7 @@ def test_room_spawns_carry_the_floor_scale(balance, templates):
     weak = shallow.state.entities["goblin_rusher_0"]
     strong = deep.state.entities["goblin_rusher_0"]
     assert (weak.hp_max, weak.attack) == (RUSHER_HP, RUSHER_ATTACK)
-    assert (strong.hp_max, strong.attack) == (57, 10)
+    assert (strong.hp_max, strong.attack) == build_deep_rusher(balance)
     # 스케일은 최대 HP 를 올리는 것이지 다친 채로 시작시키는 것이 아니다.
     assert strong.hp == strong.hp_max
 
@@ -133,7 +163,7 @@ def test_summoned_minions_carry_the_floor_scale(balance, templates):
     summoner = engine.state.entities["goblin_summoner_1"]
     minion, _ = resolve_summon(engine.state, engine.config, summoner)
     assert minion is not None
-    assert (minion.hp_max, minion.attack) == (57, 10)
+    assert (minion.hp_max, minion.attack) == build_deep_rusher(balance)
 
 
 def test_hunters_carry_the_floor_scale(balance, templates):
@@ -143,7 +173,7 @@ def test_hunters_carry_the_floor_scale(balance, templates):
     )
     hunter = engine.pressure.create_hunter(engine.state)
     assert hunter is not None
-    assert (hunter.hp_max, hunter.attack) == (57, 10)
+    assert (hunter.hp_max, hunter.attack) == build_deep_rusher(balance)
 
 
 def test_depth_and_dwell_scales_multiply(balance, templates):
@@ -156,7 +186,8 @@ def test_depth_and_dwell_scales_multiply(balance, templates):
     tracker.floor_ticks = STALL_TICKS
     bonus_pct = tracker.apply_scale(engine.state)
     rusher = engine.state.entities["goblin_rusher_0"]
-    depth_scaled = calculate_scaled_stat(RUSHER_ATTACK, 120, DEEP_FLOOR)
+    mult = balance["floor_scale"]["enemy_mult_pct_per_floor"]
+    depth_scaled = calculate_scaled_stat(RUSHER_ATTACK, mult, DEEP_FLOOR)
     assert rusher.attack == calculate_scaled_attack(depth_scaled, bonus_pct)
 
 
@@ -203,4 +234,8 @@ def test_extra_entities_can_be_scaled_by_hand():
         attack_range=1,
         initiative=0,
     )
-    assert (entity.hp_max, entity.attack) == (57, 10)
+    default_mult = FloorScale().mult_pct_per_floor
+    assert (entity.hp_max, entity.attack) == (
+        calculate_scaled_stat(RUSHER_HP, default_mult, DEEP_FLOOR),
+        calculate_scaled_stat(RUSHER_ATTACK, default_mult, DEEP_FLOOR),
+    )

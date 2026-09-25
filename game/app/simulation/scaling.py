@@ -71,11 +71,14 @@ def build_floor_scale(floor_scale: dict, initiative_shift: int = 0) -> FloorScal
 
 
 def calculate_scaled_stat(base: int, mult_pct_per_floor: int, floor: int) -> int:
-    """층 깊이를 복리로 얹은 능력치 (e3).
+    """층 깊이를 복리로 얹은 능력치 (e3, e15).
 
-    **층마다 내림으로 접는다.** `base * mult^(floor-1) / 100^(floor-1)` 을 한 번에
-    계산하면 큰 정수가 되고, 부동소수로 하면 두 코어가 마지막 자리에서 갈린다 — 층을
-    한 층씩 내려가며 곱하고 접는 것이 TS 와 비트 단위로 같은 유일한 길이다.
+    **한 번에 계산하고 한 번만 내린다** (e15, 2026-09-25). 예전에는 층마다 곱하고 내렸는데,
+    그러면 배율이 작을 때 작은 값이 영영 안 자란다 — 공격 8 에 105% 면 8.4 → 8 로 매 층
+    되돌아가 20장까지 8 이었다. 배율을 낮추자 몽둥이 도깨비가 1장의 주먹으로 20장을 돌았다.
+
+    **파이썬 정수는 크기 제한이 없어** `base × mult^n // 100^n` 이 정확하다. TS 는 BigInt 로
+    같은 식을 쓴다 — 부동소수를 한 번도 안 거치므로 두 코어가 비트 단위로 같다 (R5).
 
     Args:
         base: balance.json 에 적힌 층 1 기준값.
@@ -83,12 +86,10 @@ def calculate_scaled_stat(base: int, mult_pct_per_floor: int, floor: int) -> int
         floor: 현재 층.
 
     Returns:
-        내림 정수로 접은 능력치.
+        내림 정수. 층 1 이하면 기준값 그대로다.
     """
-    value = base
-    for _step in range(max(0, floor - FIRST_FLOOR)):
-        value = value * mult_pct_per_floor // PERCENT_BASE
-    return value
+    steps = max(0, floor - FIRST_FLOOR)
+    return base * mult_pct_per_floor**steps // PERCENT_BASE**steps
 
 
 def get_scaled_enemy_stats(stats: dict, scale: FloorScale, floor: int) -> tuple[int, int, int]:

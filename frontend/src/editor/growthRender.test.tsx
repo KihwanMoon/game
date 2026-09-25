@@ -8,6 +8,8 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
+import { BALANCE } from '../core/resources'
+import { buildFloorScale, type RawFloorScale } from '../core/sim/scaling'
 import type { ProgressView } from '../storage'
 
 import { GrowthPanel, formatAttributeEffect } from './GrowthPanel'
@@ -120,7 +122,9 @@ describe('층 깊이 (설계/6_몬스터 §3)', () => {
     // **숫자는 `balance.json` 에서 온다.** 예전에는 화면이 「HP +25% · 공격 +20%」를
     // 손으로 적었는데 정본에는 `enemy_mult_pct_per_floor: 120` 하나뿐이고 그것이
     // HP·공격에 똑같이 걸린다 — HP 쪽 25 는 어디에도 없는 숫자였다.
-    expect(drawDepth(4, 10)).toContain('체력·공격 +20%')
+    // 그래서 기대값도 정본에서 계산한다 — 박아 두면 배율을 고칠 때마다 무관하게 빨개진다.
+    const pct = buildFloorScale(BALANCE['floor_scale'] as RawFloorScale).multPctPerFloor - 100
+    expect(drawDepth(4, 10)).toContain(`체력·공격 +${String(pct)}%`)
     // 합이 아니라 곱이라는 사실까지 말해야 깊은 장의 벽을 낮게 읽지 않는다.
     expect(drawDepth(4, 10)).toContain('복리')
   })

@@ -26,7 +26,9 @@ import type { RuleSet } from './ruleset'
 //      규칙표도 갈린다: `self_has_status` 의 목록이 늘어 인지 변수 개수가 바뀌었다.
 // e14: **독이 일을 하고, 인지 변수가 늘었다** — `POISON` 이 매 틱 깎기 시작했고,
 //      주술형 유형·셀렉터 둘·적 전용 마법 다섯이 인지 스냅샷의 키 개수를 바꿨다.
-export const ENGINE_VERSION = 14
+// e15: **층 스케일이 한 번만 내린다** — 층마다 내리던 복리는 배율이 작으면 작은 값을
+//      얼렸다(공격 8 × 105% → 8). 1층은 그대로다.
+export const ENGINE_VERSION = 15
 
 /**
  * 시드 상한. `Number.MAX_SAFE_INTEGER` 이며, 이것은 밸런스가 아니라 **이식 제약**이다.
