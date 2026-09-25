@@ -148,7 +148,15 @@ import {
 import { COMBAT_TAB_ID } from './editor'
 import type { EditorTab, LinkState } from './editor'
 import { ErrorBoundary, formatCrash } from './ErrorBoundary'
-import { ChapterCard, PostMortem, formatOutcome, recordBattle, usePlanTheme } from './hud'
+import {
+  ChapterCard,
+  DOPPEL_INVITE_KEY,
+  DoppelInviteCard,
+  PostMortem,
+  formatOutcome,
+  recordBattle,
+  usePlanTheme,
+} from './hud'
 import type { BattleRecording, ChapterCardProps } from './hud'
 import {
   applyPresetImport,
@@ -360,6 +368,31 @@ export function readPlayerLimits(raw: RawBalanceFile): PlayerLimits {
     throw new TypeError('balance.json 의 player 절에 cpu_budget·rule_slots 가 없다')
   }
   return { cpuBudget, ruleSlots }
+}
+
+/**
+ * 이 기기에서 둔갑 권유를 이미 했는가.
+ *
+ * **못 읽으면 물은 것으로 본다.** 저장이 막힌 창(프라이빗 창)에서 매 장마다 다시 묻는 것이
+ * 한 번도 안 묻는 것보다 나쁘다.
+ *
+ * @returns 이미 물었으면 참.
+ */
+export function checkInviteAsked(): boolean {
+  try {
+    return getLocalStorage()?.getItem(DOPPEL_INVITE_KEY) !== null
+  } catch {
+    return true
+  }
+}
+
+/** 둔갑 권유를 했다고 적는다. 못 적어도 판은 그대로 돈다. */
+function markInviteAsked(): void {
+  try {
+    getLocalStorage()?.setItem(DOPPEL_INVITE_KEY, '1')
+  } catch {
+    // 저장이 막힌 창이다 — 다음에 또 물을 수 있지만 판에는 아무 일도 없다.
+  }
 }
 
 /**
@@ -651,6 +684,8 @@ export function App(): React.JSX.Element {
   // 아직 안 읽은 장 카드들. **줄을 세운다** — 같은 판에서 그림자와 장이 함께 걸릴 수
   // 있고, 둘을 겹쳐 띄우면 뒤엣것이 앞엣것을 가린다.
   const [cards, setCards] = useState<readonly ChapterCardProps[]>([])
+  // 둔갑 권유 카드가 떠 있는가 (2026-09-25). 첫 장을 깬 뒤 한 번만 뜬다.
+  const [isInviteOpen, setInviteOpen] = useState(false)
   // 이미 띄운 것. **다시 안 띄운다** — 되풀이 관전에서 매번 걸리면 글이 방해물이 된다.
   //
   // **계정에 붙는다** (2026-09-16). 세션 안에서만 기억하던 때는 새로고침하거나 다른
@@ -1630,7 +1665,7 @@ export function App(): React.JSX.Element {
       isEnabled: isAutoOn,
       // **읽는 동안은 안 넘어간다.** 카드를 덮기도 전에 다음 방이 시작되면, 글을
       // 읽은 대가로 판 하나를 못 본 셈이 된다.
-      isStopped: isAutoStopped || cards.length > 0,
+      isStopped: isAutoStopped || cards.length > 0 || isInviteOpen,
     })
     if (!isEligible) {
       setAutoLeft(undefined)
@@ -1643,7 +1678,7 @@ export function App(): React.JSX.Element {
     return () => {
       clearInterval(timer)
     }
-  }, [outcome, run, isAutoOn, isAutoStopped, isEditing, cards.length])
+  }, [outcome, run, isAutoOn, isAutoStopped, isEditing, cards.length, isInviteOpen])
 
   // 세다가 0 이 되면 넘어간다. **세는 것과 넘어가는 것을 갈라 둔다** — 한 효과에 두면
   // 넘어가면서 상태가 바뀌고 그 바뀜이 다시 타이머를 세워, 방 하나를 건너뛴다.
@@ -1705,6 +1740,16 @@ export function App(): React.JSX.Element {
         return
       }
       setVerdict(result)
+      // **첫 장을 깬 뒤 한 번 둔갑을 권한다** (2026-09-25). 기본은 꺼 둔 채다 — 대가를 알고
+      // 켜야 하므로(DoppelInviteCard 의 까닭) 묻기만 한다. 층을 깬 판에서만 묻는다: 진 판
+      // 뒤에 「내 내력을 세울까」를 물으면 방금 진 내력을 권하는 셈이다.
+      if (
+        result.outcome === OUTCOME_PLAYER_WIN &&
+        profile?.doppelOptIn === false &&
+        !checkInviteAsked()
+      ) {
+        setInviteOpen(true)
+      }
       setSettlements((current) =>
         appendSettlement(
           current,
@@ -2650,6 +2695,24 @@ export function App(): React.JSX.Element {
         {/* **장 카드가 사후 분석보다 앞선다.** 둘이 겹칠 일은 거의 없지만(카드는 이긴
             판에만, 자동 사후 분석은 진 판에만 뜬다) 겹친다면 먼저 읽을 것은 글이다. */}
         {cards[0] === undefined ? null : <ChapterCard {...cards[0]} />}
+        {/* **장 카드가 먼저다.** 둘이 같이 뜨면 글을 다 읽은 뒤에 묻는다. */}
+        {!isInviteOpen || cards[0] !== undefined ? null : (
+          <DoppelInviteCard
+            onChoose={(isOn) => {
+              setInviteOpen(false)
+              markInviteAsked()
+              const token = readToken(getLocalStorage())
+              if (!isOn || token === undefined) {
+                return
+              }
+              void applyDoppelOptIn(token, true).then((next: AccountState | undefined) => {
+                if (next !== undefined) {
+                  setProfile(next)
+                }
+              })
+            }}
+          />
+        )}
         {showPost && recording !== undefined ? (
           <PostMortem
             // 전투 화면과 같은 것을 넘긴다 — 탭이 있는데 비면 고장으로 읽힌다.
