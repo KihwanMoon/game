@@ -548,6 +548,38 @@ export async function requestRecordTicket(
   return parseTicketBody((await response.json()) as RawTicketBody)
 }
 
+/** 데일리 티켓을 받은 결과. 못 받았으면 왜인지를 함께 든다. */
+export interface DailyTicketOutcome {
+  readonly ticket: ServerTicket | undefined
+  /** 못 받은 까닭. 받았으면 빈 문자열이다. */
+  readonly detail: string
+}
+
+/**
+ * 오늘의 데일리 티켓을 받는다 (2026-09-25).
+ *
+ * **받은 티켓으로 판을 건다.** 예전에는 받아 두기만 하고 출격이 새 연습 티켓을 받아서,
+ * 데일리는 한 번도 돈 적이 없었다.
+ *
+ * @param token 기기 토큰.
+ * @returns 티켓과 못 받은 까닭. 오늘 판을 끝냈으면 서버가 409 로 그 사실을 말한다.
+ */
+export async function requestDailyTicket(token: string): Promise<DailyTicketOutcome> {
+  const response = await sendRequest('/daily', {
+    method: 'POST',
+    headers: { [TOKEN_HEADER]: token },
+  })
+  if (response === undefined) {
+    return { ticket: undefined, detail: '서버에 닿지 못했다 — 데일리는 서버가 연다' }
+  }
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { detail?: unknown }
+    const detail = typeof body.detail === 'string' ? body.detail : '오늘의 판을 못 받았다'
+    return { ticket: undefined, detail }
+  }
+  return { ticket: parseTicketBody((await response.json()) as RawTicketBody), detail: '' }
+}
+
 /** 서버가 확정한 판정. 브라우저가 낸 결과와 다르면 두 코어가 갈린 것이다. */
 export interface RunVerdict {
   readonly verdict: string

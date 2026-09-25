@@ -183,8 +183,73 @@ def test_daily_seed_is_the_same_for_everyone(client, token):
     assert mine["ticket_id"] != theirs["ticket_id"]
 
 
+def test_daily_is_a_real_descent_with_the_same_rooms_for_everyone(client, token):
+    """★ 데일리는 층이 있는 하강이고, 누가 받든 같은 방을 같은 순서로 돈다 (2026-09-25).
+
+    예전에는 방 하나를 다섯 번 잇고 층 수가 0 이라 층 청구가 성립하지 않았다 — 순위표가
+    전원 「받아 둠」이었다. 방을 `secrets` 로 고르면 사람마다 다른 판이 된다.
+    """
+    other = client.post("/api/account").json()["token"]
+    mine = client.post("/api/daily", headers=build_headers(token)).json()
+    theirs = client.post("/api/daily", headers=build_headers(other)).json()
+
+    assert mine["rooms_per_floor"] > 0
+    assert len(mine["room_ids"]) > mine["rooms_per_floor"]
+    assert mine["room_ids"] == theirs["room_ids"]
+    assert mine["monster_snapshot"] == []
+
+
+def test_a_cleared_daily_floor_reaches_the_board(client, token):
+    """★ 1장을 청구해 이기면 오늘의 판에 1장이 남고, 지면 0장이다 — 판이 사실을 적는다.
+
+    예전에는 이겨도 0장이었다(층 수 0 이라 청구가 성립하지 않았다).
+    """
+    import json
+
+    from game.config import G0_RULESETS_PATH
+
+    headers = build_headers(token)
+    ticket = client.post("/api/daily", headers=headers).json()
+    raw = json.loads(G0_RULESETS_PATH.read_text(encoding="utf-8"))["rulesets"]
+    # 1장 완주율이 가장 높은 출고 표다 — 이기는 쪽을 보고 싶지만, 져도 검사는 성립한다.
+    kite = next(one for one in raw if one["ruleset_id"] == "g0_kite")
+    answer = client.post(
+        "/api/run",
+        json={
+            "ticket_id": ticket["ticket_id"],
+            "ruleset": {key: kite[key] for key in ("ruleset_id", "version", "rules")},
+            "core_version": ticket["core_version"],
+            "floor": 1,
+        },
+        headers=headers,
+    ).json()
+
+    board = client.get("/api/daily", headers=headers).json()
+    assert board["my_floor"] == (1 if answer["outcome"] == "PLAYER_WIN" else 0), answer
+
+
+def test_a_finished_daily_is_not_handed_out_again(client, token):
+    """★ 하루 한 판이다 — 끝난 판을 다시 주면 같은 날 두 번 도는 길이 된다."""
+    headers = build_headers(token)
+    ticket = client.post("/api/daily", headers=headers).json()
+    client.post(
+        "/api/run",
+        json={
+            "ticket_id": ticket["ticket_id"],
+            "ruleset": {"ruleset_id": "empty", "version": 1, "rules": []},
+            "core_version": ticket["core_version"],
+            "floor": 1,
+        },
+        headers=headers,
+    )
+
+    again = client.post("/api/daily", headers=headers)
+
+    assert again.status_code == 409
+
+
 def test_daily_seed_is_derived_from_the_day():
-    from game.api.routes.world import build_daily_seed
+    from game.api.routes.daily import build_daily_seed
     from game.schemas.run_ticket import MAX_SEED
 
     seed = build_daily_seed(date(2026, 8, 30), "b5.v2.e1")

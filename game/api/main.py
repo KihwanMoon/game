@@ -32,6 +32,7 @@ from game.api.routes import (
     consumables,
     content_admin,
     content_pack,
+    daily,
     discovery,
     google_auth,
     health,
@@ -198,6 +199,7 @@ def create_app() -> FastAPI:
         content_pack,
         share,
         records,
+        daily,
     ):
         server.include_router(module.router)
     return server

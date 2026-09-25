@@ -299,7 +299,7 @@ export function WorldPanel(props: WorldPanelProps): React.JSX.Element {
                 glyph="◷"
                 onClick={props.onDaily}
               >
-                {props.daily?.hasEntry === true ? "오늘 판 다시 받기" : "오늘의 도전"}
+                {props.daily?.hasEntry === true ? "오늘 판 다시 걸기" : "오늘의 도전"}
               </Button>
             </div>
           </>

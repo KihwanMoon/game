@@ -130,6 +130,7 @@ export {
   readServerMeta,
   readToken,
   registerAccount,
+  requestDailyTicket,
   requestRecordTicket,
   requestTicket,
   submitRun,

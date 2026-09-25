@@ -218,6 +218,7 @@ import {
   saveSkillPrefs,
   readGearState,
   registerAccount,
+  requestDailyTicket,
   requestRecordTicket,
   requestTicket,
   submitRun,
@@ -1304,10 +1305,35 @@ export function App(): React.JSX.Element {
   }
 
   /**
+   * 모드에 맞는 서버 티켓을 받는다.
+   *
+   * @param token 기기 토큰.
+   * @param mode 판의 성격.
+   * @param wanted 연습에서 제안할 시드. 다른 모드는 서버가 정한다.
+   * @returns 티켓. 못 받았으면 undefined — 데일리는 그 까닭을 명부에 적는다.
+   */
+  async function requestModeTicket(
+    token: string,
+    mode: RunMode,
+    wanted: number | undefined,
+  ): Promise<ServerTicket | undefined> {
+    if (mode === 'RECORD') {
+      return requestRecordTicket(token, session.roomId)
+    }
+    if (mode === 'DAILY') {
+      const got = await requestDailyTicket(token)
+      setWorldDetail(got.detail)
+      void readDailyBoard(token).then(setDaily)
+      return got.ticket
+    }
+    return requestTicket(token, session.roomId, wanted)
+  }
+
+  /**
    * 판을 건다.
    *
-   * @param mode `RECORD` 면 기록 도전이다 (2026-09-25) — 방 하나·서버가 정한 시드·기본 몸.
-   *   **서버 없이는 안 건다.** 로컬로 떨어지면 기록이 안 남는 판을 기록 도전처럼 보여 준다.
+   * @param mode `RECORD` 면 기록 도전(방 하나·서버가 정한 시드·기본 몸), `DAILY` 면 오늘의
+   *   도전이다 (2026-09-25). **둘 다 서버 없이는 안 건다.**
    */
   function startRun(mode: RunMode = 'PRACTICE'): void {
     // **서버 티켓을 기다렸다 건다.** 예전에는 로컬 티켓으로 판을 먼저 걸고 서버 티켓이
@@ -1328,17 +1354,16 @@ export function App(): React.JSX.Element {
     void requireAccount().then(async (token) => {
       if (token === undefined) {
         setLaunching(false)
-        if (mode !== 'RECORD') {
+        if (mode === 'PRACTICE') {
           applyLocalRun()
         }
         return
       }
-      const issued =
-        mode === 'RECORD'
-          ? await requestRecordTicket(token, session.roomId)
-          : await requestTicket(token, session.roomId, wanted)
+      const issued = await requestModeTicket(token, mode, wanted)
       setLaunching(false)
-      if (issued === undefined && mode === 'RECORD') {
+      // **서버가 여는 판은 로컬로 떨어지지 않는다.** 기록·데일리는 서버 없이는 남지 않는
+      // 판이라, 로컬로 돌리면 남지 않을 판을 남을 판처럼 보여 준다.
+      if (issued === undefined && mode !== 'PRACTICE') {
         return
       }
       if (issued === undefined) {
@@ -2398,18 +2423,9 @@ export function App(): React.JSX.Element {
                 detail={worldDetail}
                 daily={daily}
                 onDaily={() => {
-                  if (account === undefined) {
-                    return
-                  }
-                  void fetch('/api/daily', {
-                    method: 'POST',
-                    headers: { 'X-Game-Token': account },
-                  }).then(() => {
-                    setWorldDetail('오늘의 도전 티켓을 받았다 — 출격하면 그 판이 돈다')
-                    // **받자마자 판을 다시 읽는다.** 안 읽으면 「받았다」고 적힌 옆에
-                    // 「아직 안 잡았다」가 그대로 서 있다.
-                    void readDailyBoard(account).then(setDaily)
-                  })
+                  // **받은 티켓으로 바로 판을 건다** (2026-09-25). 예전에는 받아 두기만 하고
+                  // 출격이 새 연습 티켓을 받아서, 데일리는 한 번도 돈 적이 없었다.
+                  startRun('DAILY')
                 }}
               />
               <RecordBoardPanel
