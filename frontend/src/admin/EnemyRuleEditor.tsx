@@ -24,7 +24,12 @@ export interface EnemyRuleEditorProps {
   readonly onSave: (text: string, note: string) => void
 }
 
-/** 적 규칙표에 주는 예산. 몬스터는 규칙 3줄·CPU 4 가 기본이다 (balance.json). */
+/**
+ * 적 규칙표의 기준 예산. 몬스터는 규칙 3줄·CPU 4 가 기본이다 (balance.json).
+ *
+ * **CPU 는 넘어도 된다** (2026-09-25 결정). 보스 2페이즈가 CPU 4 를 넘기고, 몬스터의 CPU 는
+ * 런타임에서 아무것도 막지 않는다. 편집기는 넘은 수를 수치로 보여 줄 뿐 저장을 안 막는다.
+ */
 const ENEMY_CPU = 4
 const ENEMY_SLOTS = 3
 

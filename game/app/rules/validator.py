@@ -283,3 +283,23 @@ def validate_ruleset(
     if total_cpu > cpu_budget:
         problems.append(f"CPU {total_cpu} 가 예산 {cpu_budget} 을 넘는다")
     return problems
+
+
+def validate_enemy_ruleset(ruleset: RuleSet, catalog: BlockCatalog, rule_slots: int) -> list[str]:
+    """몬스터 규칙표를 검사한다 — CPU 예산만 빼고 플레이어와 같은 검증이다.
+
+    **몬스터에는 CPU 예산을 안 건다** (2026-09-25 결정). 보스에 2페이즈 한 줄을 얹으려니
+    CPU 4 가 두 굿에서 이미 끝나 있었다. 몬스터의 CPU 는 런타임에서 아무것도 막지 않고
+    (`self_cpu_headroom` 인지 값 하나뿐), 제약이 재미인 쪽은 플레이어다 (P3). 슬롯·문법·
+    항 수 비용은 그대로 본다 — 도감이 읽히려면 줄 수와 문법이 플레이어와 같아야 한다.
+
+    Args:
+        ruleset: 검사할 규칙표.
+        catalog: 동결된 블록 카탈로그.
+        rule_slots: 그 종의 규칙 슬롯 수.
+
+    Returns:
+        위반 메시지 목록. 비어 있으면 실행 가능하다.
+    """
+    unbounded = sum(rule.cpu_cost for rule in ruleset.rules)
+    return validate_ruleset(ruleset, catalog, unbounded, rule_slots)

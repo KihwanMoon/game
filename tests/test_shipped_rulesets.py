@@ -17,7 +17,7 @@ import json
 
 import pytest
 
-from game.app.rules.validator import validate_ruleset
+from game.app.rules.validator import validate_enemy_ruleset, validate_ruleset
 from game.config import (
     BALANCE_PATH,
     BENCHMARK_RULESETS_PATH,
@@ -53,13 +53,13 @@ def fixture_balance() -> dict:
 
 
 def test_enemy_rulesets_fit_their_kind(catalog, balance: dict) -> None:
-    """적 규칙표가 그 종의 예산 안에 든다."""
+    """적 규칙표가 그 종의 슬롯 안에 들고 문법을 지킨다. CPU 는 안 건다 (2026-09-25)."""
     sets = load_rulesets(ENEMY_RULESETS_PATH)
     broken: dict[str, list[str]] = {}
     for row in balance["enemies"]:
         ruleset = sets.get(row["ruleset_id"])
         assert ruleset is not None, f"{row['id']} 가 없는 규칙표 {row['ruleset_id']} 를 가리킨다"
-        problems = validate_ruleset(ruleset, catalog, row["cpu_budget"], row["rule_slots"])
+        problems = validate_enemy_ruleset(ruleset, catalog, row["rule_slots"])
         if problems:
             broken[row["id"]] = problems
     assert broken == {}

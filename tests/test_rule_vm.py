@@ -11,7 +11,7 @@ import pytest
 
 from game.app.rules.condition import evaluate_condition
 from game.app.rules.rule_vm import build_rule_vm, count_cpu_usage
-from game.app.rules.validator import validate_ruleset
+from game.app.rules.validator import validate_enemy_ruleset, validate_ruleset
 from game.app.services.run_battle import (
     build_engine,
     load_balance,
@@ -95,10 +95,11 @@ def test_all_g0_rulesets_load(rulesets):
 def test_enemy_rulesets_pass_validation(catalog, balance):
     # 적도 플레이어와 같은 검증을 통과해야 한다 (GDD §5). 통과하지 못하는 규칙표를
     # 도감이 보여주면 플레이어가 읽고 세운 카운터가 통하지 않는다.
+    # CPU 예산만은 안 건다 (2026-09-25, `validate_enemy_ruleset` 의 까닭).
     by_ruleset = {kind["ruleset_id"]: kind for kind in balance["enemies"]}
     for ruleset_id, ruleset in load_rulesets(ENEMY_RULESETS_PATH).items():
         kind = by_ruleset[ruleset_id]
-        problems = validate_ruleset(ruleset, catalog, kind["cpu_budget"], kind["rule_slots"])
+        problems = validate_enemy_ruleset(ruleset, catalog, kind["rule_slots"])
         assert problems == [], f"{ruleset_id}: {problems}"
 
 

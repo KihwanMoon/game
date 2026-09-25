@@ -1,5 +1,5 @@
 {
-  "enemy_list_version": 3,
+  "enemy_list_version": 4,
   "_comment": [
     "적 규칙표 (로드맵 Phase 1 W3). GDD §5 — 몬스터도 플레이어와 완전히 동일한 DSL 로",
     "기술한다. 도감이 이 규칙표를 그대로 보여주므로, 플레이어는 적의 논리를 읽고",
@@ -366,6 +366,95 @@
           }
         }
       ]
+    },
+    {
+      "ruleset_id": "ai_gatekeeper",
+      "version": 1,
+      "for_kind": "stone_gatekeeper",
+      "strategy_ko": "큰 도깨비의 표에 **반피 이하의 한 줄**을 얹었다 — 반이 깎이면 붙은 자리를 돌려친다. 도감에 그 줄이 그대로 보이므로 「반피부터는 곁에 서지 않는다」가 읽힌다 (2026-09-25).",
+      "cpu_total": 7,
+      "rules": [
+        {
+          "priority": 1,
+          "cpu_cost": 4,
+          "action": "AREA_ATTACK",
+          "target": null,
+          "set_flag": null,
+          "_note": "**2페이즈 (2026-09-25).** 반이 깎이면 붙은 자리를 반경 2 로 돌려친다 — 장승의 사거리가 2 라 우변을 스탯으로 둔다. 몬스터에는 CPU 예산을 안 건다(같은 날 결정).",
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<=",
+                "rhs": 50
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "lhs_param": "AREA_ATTACK",
+                "cmp": "==",
+                "rhs": true
+              },
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": {
+                  "stat": "attack_range"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
+          "cpu_cost": 2,
+          "action": "SKILL_1",
+          "target": "NEAREST",
+          "set_flag": null,
+          "_note": "SKILL_1 은 자체 사거리가 없어 이 적의 attack_range 를 쓴다. 우변을 스탯 참조로 둔 이유가 그것이다 — 리터럴 1 로 박으면 장비가 사거리를 늘렸을 때 조용히 틀린다.",
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_cooldown_ready",
+                "lhs_param": "SKILL_1",
+                "cmp": "==",
+                "rhs": true
+              },
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": {
+                  "stat": "attack_range"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "priority": 3,
+          "cpu_cost": 1,
+          "action": "ATTACK",
+          "target": "NEAREST",
+          "set_flag": null,
+          "conditions": {
+            "op": "SINGLE",
+            "terms": [
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": {
+                  "stat": "attack_range"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "label_ko": "장승"
     },
     {
       "ruleset_id": "ai_longbow",
@@ -894,12 +983,45 @@
     },
     {
       "ruleset_id": "ai_plate_wraith",
-      "version": 1,
+      "version": 2,
       "label_ko": "판각 귀신",
-      "cpu_total": 4,
+      "cpu_total": 8,
       "rules": [
         {
           "priority": 1,
+          "cpu_cost": 4,
+          "action": "USE_SKILL",
+          "target": "NEAREST",
+          "set_flag": null,
+          "action_param": "HEX_BOLT",
+          "_note": "**2페이즈 (2026-09-25).** 반이 깎이면 두 굿 사이에 벼락 줄을 긋는다 — 직선 6 이라 귀신과 한 줄로 서 있으면 맞는다. 묶기·태우기의 순서는 그대로다.",
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<=",
+                "rhs": 50
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "lhs_param": "HEX_BOLT",
+                "cmp": "==",
+                "rhs": true
+              },
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": {
+                  "stat": "attack_range"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
           "cpu_cost": 2,
           "action": "USE_SKILL",
           "target": "NEAREST",
@@ -927,13 +1049,13 @@
           }
         },
         {
-          "priority": 2,
+          "priority": 3,
           "cpu_cost": 2,
           "action": "USE_SKILL",
           "target": "NEAREST",
           "set_flag": null,
           "action_param": "HEX_FIRE",
-          "_note": "**두 줄로 예산을 다 쓴다.** 때리기·접근이 없는 것은 잊어서가 아니라 CPU 4 가 여기서 끝나기 때문이고, 둘 다 쿨타임이면 DEFAULT 가 받는다 — 몽둥이 도깨비 표(`ai_rusher`)가 한 줄뿐인 것과 같은 규율이다. 보스의 무게는 규칙 수가 아니라 수치와 이 두 굿의 순서에 있다.",
+          "_note": "**두 줄로 예산을 다 쓴다** (2026-09-25 까지 — 이제 몬스터에는 CPU 예산을 안 걸고, 반피 이하 2페이즈 한 줄이 맨 위에 얹혔다). 때리기·접근이 없는 것은 잊어서가 아니라 CPU 4 가 여기서 끝나기 때문이고, 둘 다 쿨타임이면 DEFAULT 가 받는다 — 몽둥이 도깨비 표(`ai_rusher`)가 한 줄뿐인 것과 같은 규율이다. 보스의 무게는 규칙 수가 아니라 수치와 이 두 굿의 순서에 있다.",
           "conditions": {
             "op": "AND",
             "terms": [
@@ -1110,12 +1232,43 @@
     },
     {
       "ruleset_id": "ai_mimic_wraith",
-      "version": 1,
+      "version": 2,
       "label_ko": "입내 귀신",
-      "cpu_total": 4,
+      "cpu_total": 8,
       "rules": [
         {
           "priority": 1,
+          "cpu_cost": 4,
+          "action": "USE_SKILL",
+          "target": "NEAREST",
+          "set_flag": null,
+          "action_param": "HEX_PLAGUE",
+          "_note": "**마지막 발악 (2026-09-25).** 체력이 20% 아래로 떨어지면 옴을 건다 — 독은 맞는 것이라 시전을 끊는다. 처음에는 반피에서 걸었는데 출고 규칙표가 레벨 30 으로도 0승이 되어 **답이 없어졌다**(이 보스의 규율은 「답을 안 없앤다」다). 20% 에서는 레벨 30 기준 25% → 30% 로 판이 그대로 서면서 넷 중 셋의 판에서 이 줄이 켜진다. 옴 굿의 사거리가 5 라 우변을 5 로 둔다.",
+          "conditions": {
+            "op": "AND",
+            "terms": [
+              {
+                "lhs": "self_hp_percent",
+                "cmp": "<=",
+                "rhs": 20
+              },
+              {
+                "lhs": "self_cooldown_ready",
+                "lhs_param": "HEX_PLAGUE",
+                "cmp": "==",
+                "rhs": true
+              },
+              {
+                "lhs": "target_distance",
+                "lhs_param": "NEAREST",
+                "cmp": "<=",
+                "rhs": 5
+              }
+            ]
+          }
+        },
+        {
+          "priority": 2,
           "cpu_cost": 2,
           "action": "USE_SKILL",
           "target": "NEAREST",
@@ -1143,7 +1296,7 @@
           "_note": "**늦추는 것이 먼저다.** 느려진 상대는 조종의 반경 3 을 3틱 안에 못 벗어난다 — 순서가 뒤집히면 그냥 걸어 나간다. 판각 귀신이 「묶고 태운다」였다면 이것은 「늦추고 덮는다」이고, 두 보스의 차이가 곧 답의 차이다: 저쪽은 묶이기 전에 붙어야 하고 이쪽은 **넋두리를 예고 중에 끊어야** 한다."
         },
         {
-          "priority": 2,
+          "priority": 3,
           "cpu_cost": 2,
           "action": "USE_SKILL",
           "target": "NEAREST",
@@ -1168,7 +1321,7 @@
               }
             ]
           },
-          "_note": "**두 줄로 예산을 다 쓴다.** 판각 귀신 표와 같은 규율이다 — 때리기·접근이 없는 것은 잊어서가 아니라 CPU 4 가 여기서 끝나기 때문이고, 둘 다 쿨타임이면 DEFAULT 가 받는다. 보스의 무게는 규칙 수가 아니라 수치와 이 두 굿의 순서에 있다."
+          "_note": "**두 줄로 예산을 다 쓴다** (2026-09-25 까지 — 이제 몬스터에는 CPU 예산을 안 걸고, 반피 이하 2페이즈 한 줄이 맨 위에 얹혔다). 판각 귀신 표와 같은 규율이다 — 때리기·접근이 없는 것은 잊어서가 아니라 CPU 4 가 여기서 끝나기 때문이고, 둘 다 쿨타임이면 DEFAULT 가 받는다. 보스의 무게는 규칙 수가 아니라 수치와 이 두 굿의 순서에 있다."
         }
       ]
     }

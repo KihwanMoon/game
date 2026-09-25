@@ -9,7 +9,7 @@ import json
 import pytest
 
 from game.app.bots.doppel import DOPPEL_KIND_ID
-from game.app.rules.validator import validate_ruleset
+from game.app.rules.validator import validate_enemy_ruleset
 from game.app.services.run_battle import load_balance
 from game.config import (
     BALANCE_PATH,
@@ -213,7 +213,7 @@ def test_enemy_rulesets_pass_validation(balance, catalog, enemy_rulesets):
     # W7 의 다섯도 기존 셋과 같은 검증을 통과해야 한다.
     for kind in balance["enemies"]:
         ruleset = enemy_rulesets[kind["ruleset_id"]]
-        problems = validate_ruleset(ruleset, catalog, kind["cpu_budget"], kind["rule_slots"])
+        problems = validate_enemy_ruleset(ruleset, catalog, kind["rule_slots"])
         assert problems == [], f"{kind['id']}: {problems}"
 
 

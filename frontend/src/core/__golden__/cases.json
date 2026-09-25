@@ -126191,7 +126191,7 @@
           "phase": "DECIDE",
           "expr": "내 쿨타임[재주] 완료[SKILL_1](참) == 참 AND 대상 거리[NEAREST](2) <= 사거리(2)",
           "outcome": "SKILL_1 @player",
-          "rule": 1,
+          "rule": 2,
           "delta": null,
           "fired": true,
           "target_id": null
@@ -126213,7 +126213,7 @@
           "phase": "ACT",
           "expr": "SKILL_1 @player",
           "outcome": "player HP 52/100",
-          "rule": 1,
+          "rule": 2,
           "delta": -48,
           "fired": true,
           "target_id": "player"
@@ -126235,7 +126235,7 @@
           "phase": "DECIDE",
           "expr": "대상 거리[NEAREST](1) <= 사거리(2)",
           "outcome": "ATTACK @player",
-          "rule": 2,
+          "rule": 3,
           "delta": null,
           "fired": true,
           "target_id": null
@@ -126257,7 +126257,7 @@
           "phase": "ACT",
           "expr": "ATTACK @player",
           "outcome": "player HP 22/100",
-          "rule": 2,
+          "rule": 3,
           "delta": -30,
           "fired": true,
           "target_id": "player"
@@ -126279,7 +126279,7 @@
           "phase": "DECIDE",
           "expr": "대상 거리[NEAREST](2) <= 사거리(2)",
           "outcome": "ATTACK @player",
-          "rule": 2,
+          "rule": 3,
           "delta": null,
           "fired": true,
           "target_id": null
@@ -126301,7 +126301,7 @@
           "phase": "ACT",
           "expr": "ATTACK @player",
           "outcome": "player HP 42/100",
-          "rule": 2,
+          "rule": 3,
           "delta": -30,
           "fired": true,
           "target_id": "player"
@@ -126323,7 +126323,7 @@
           "phase": "DECIDE",
           "expr": "대상 거리[NEAREST](2) <= 사거리(2)",
           "outcome": "ATTACK @player",
-          "rule": 2,
+          "rule": 3,
           "delta": null,
           "fired": true,
           "target_id": null
@@ -126345,7 +126345,7 @@
           "phase": "ACT",
           "expr": "ATTACK @player",
           "outcome": "player HP 12/100",
-          "rule": 2,
+          "rule": 3,
           "delta": -30,
           "fired": true,
           "target_id": "player"
@@ -126367,7 +126367,7 @@
           "phase": "DECIDE",
           "expr": "대상 거리[NEAREST](2) <= 사거리(2)",
           "outcome": "ATTACK @player",
-          "rule": 2,
+          "rule": 3,
           "delta": null,
           "fired": true,
           "target_id": null
@@ -126389,7 +126389,7 @@
           "phase": "ACT",
           "expr": "ATTACK @player",
           "outcome": "player HP 32/100",
-          "rule": 2,
+          "rule": 3,
           "delta": -30,
           "fired": true,
           "target_id": "player"
@@ -126411,7 +126411,7 @@
           "phase": "DECIDE",
           "expr": "대상 거리[NEAREST](2) <= 사거리(2)",
           "outcome": "ATTACK @player",
-          "rule": 2,
+          "rule": 3,
           "delta": null,
           "fired": true,
           "target_id": null
@@ -126433,7 +126433,7 @@
           "phase": "ACT",
           "expr": "ATTACK @player",
           "outcome": "player HP 2/100",
-          "rule": 2,
+          "rule": 3,
           "delta": -30,
           "fired": true,
           "target_id": "player"
@@ -126466,7 +126466,7 @@
           "phase": "DECIDE",
           "expr": "내 쿨타임[재주] 완료[SKILL_1](참) == 참 AND 대상 거리[NEAREST](2) <= 사거리(2)",
           "outcome": "SKILL_1 @player",
-          "rule": 1,
+          "rule": 2,
           "delta": null,
           "fired": true,
           "target_id": null
@@ -126488,7 +126488,7 @@
           "phase": "ACT",
           "expr": "SKILL_1 @player",
           "outcome": "player HP 0/100 사망",
-          "rule": 1,
+          "rule": 2,
           "delta": -48,
           "fired": true,
           "target_id": "player"
@@ -134671,7 +134671,7 @@
           "phase": "DECIDE",
           "expr": "내 쿨타임[재주] 완료[HEX_SNARE](참) == 참 AND 대상 거리[NEAREST](6) <= 사거리(6)",
           "outcome": "USE_SKILL @player",
-          "rule": 1,
+          "rule": 2,
           "delta": null,
           "fired": true,
           "target_id": null
@@ -134704,7 +134704,7 @@
           "phase": "ACT",
           "expr": "HEX_SNARE @player",
           "outcome": "예고 1칸 — 1틱 뒤 발동",
-          "rule": 1,
+          "rule": 2,
           "delta": null,
           "fired": true,
           "target_id": null
@@ -134737,7 +134737,7 @@
           "phase": "DECIDE",
           "expr": "내 쿨타임[재주] 완료[HEX_FIRE](참) == 참 AND 대상 거리[NEAREST](5) <= 사거리(6)",
           "outcome": "USE_SKILL @player",
-          "rule": 2,
+          "rule": 3,
           "delta": null,
           "fired": true,
           "target_id": null
@@ -134770,7 +134770,7 @@
           "phase": "ACT",
           "expr": "HEX_FIRE @player",
           "outcome": "예고 23칸 — 3틱 뒤 발동",
-          "rule": 2,
+          "rule": 3,
           "delta": null,
           "fired": true,
           "target_id": null
@@ -137206,7 +137206,7 @@
           "phase": "DECIDE",
           "expr": "내 쿨타임[재주] 완료[HEX_DIRGE](참) == 참 AND 대상 거리[NEAREST](5) <= 사거리(6)",
           "outcome": "USE_SKILL @player",
-          "rule": 1,
+          "rule": 2,
           "delta": null,
           "fired": true,
           "target_id": null
@@ -137239,7 +137239,7 @@
           "phase": "ACT",
           "expr": "HEX_DIRGE @player",
           "outcome": "예고 13칸 — 2틱 뒤 발동",
-          "rule": 1,
+          "rule": 2,
           "delta": null,
           "fired": true,
           "target_id": null
@@ -137250,7 +137250,7 @@
           "phase": "DECIDE",
           "expr": "내 쿨타임[재주] 완료[HEX_KNELL](참) == 참 AND 대상 거리[NEAREST](4) <= 사거리(6)",
           "outcome": "USE_SKILL @player",
-          "rule": 2,
+          "rule": 3,
           "delta": null,
           "fired": true,
           "target_id": null
@@ -137272,7 +137272,7 @@
           "phase": "ACT",
           "expr": "HEX_KNELL @player",
           "outcome": "예고 25칸 — 3틱 뒤 발동",
-          "rule": 2,
+          "rule": 3,
           "delta": null,
           "fired": true,
           "target_id": null
