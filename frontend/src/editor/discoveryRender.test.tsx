@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest'
 import { DiscoveryDetail, DiscoveryPanel } from './DiscoveryPanel'
 import { buildDiscoveryCells } from './discoveryCells'
 import { findItemArt } from '../content/itemArt'
+import { findSkillArt } from '../content/skillArt'
 import type { DiscoveryRow, DiscoveryView } from '../storage'
 
 const DISCOVERY: DiscoveryView = {
@@ -134,6 +135,16 @@ describe('도감', () => {
     // `bow_long` 은 그려 둔 형태(`bow`)라, 안 가리면 여기서 그림이 나온다.
     expect(findItemArt('bow_long')).toBeDefined()
     expect(locked.map((cell) => cell.art)).toEqual([undefined])
+  })
+
+  it('★ 밝힌 재주에는 재주 그림이 붙는다 (2026-09-25 실제 신고: 재주만 그림이 없었다)', () => {
+    const skills = buildDiscoveryCells(DISCOVERY.skills.map((row) => ({ ...row, isFound: true })))
+    expect(findSkillArt('HEAL')).toBeDefined()
+    expect(skills.map((cell) => cell.art)).toEqual([findSkillArt('HEAL')])
+  })
+
+  it('★ 안 밝힌 재주는 그림을 안 준다 — 물건과 같은 규율이다', () => {
+    expect(buildDiscoveryCells(DISCOVERY.skills).map((cell) => cell.art)).toEqual([undefined])
   })
 
   it('★ 재주에는 아이템 그림을 안 붙인다 — `ref_id` 가 거기서는 스킬 id 다', () => {

@@ -16,6 +16,7 @@
  * 순수 값이다. 렌더 검사가 훅 없이 셀 배치를 볼 수 있어야 한다.
  */
 import { findItemArt } from '../content/itemArt'
+import { findSkillArt } from '../content/skillArt'
 import type { DiscoveryRow } from '../storage'
 
 import type { CellFace } from './gridCell'
@@ -24,11 +25,34 @@ import { clipCellLabel, EQUIP_CELL_CODES } from './inventoryCells'
 /**
  * 아이템 줄의 `kind`. 서버의 `store.discovery.KIND_ITEM` 과 같은 값이다.
  *
- * **재주 줄에는 그림을 안 붙인다.** `refId` 가 거기서는 스킬 id(`HEAL`)이고, 그것을
- * 아이템 그림표에 넣으면 언젠가 같은 접두사를 가진 아이템이 생긴 날 재주 칸에 칼이
- * 그려진다 — 지금 안 맞는다는 것은 우연이지 규칙이 아니다.
+ * **재주 줄은 재주 그림표만 본다** (2026-09-25, 실제 신고: 「이문록 칸에 재주만 그림이
+ * 없다」). `refId` 가 거기서는 스킬 id(`HEAL`)이고, 그것을 아이템 그림표에 넣으면 언젠가
+ * 같은 접두사를 가진 아이템이 생긴 날 재주 칸에 칼이 그려진다 — 그래서 두 표를 섞지 않고
+ * 계열로 갈라 찾는다. 재주 그림은 전투 화면·공개 도감에 이미 있었는데 이 칸만 못 받았다.
  */
 const KIND_ITEM = 'ITEM'
+
+/** 재주 줄의 `kind`. 서버의 `store.discovery.KIND_SKILL` 과 같은 값이다. */
+const KIND_SKILL = 'SKILL'
+
+/**
+ * 밝힌 줄의 그림을 계열에 맞는 표에서 찾는다.
+ *
+ * @param row 도감 줄.
+ * @returns 그림 주소. 안 밝혔거나 그림이 없으면 undefined.
+ */
+function findDiscoveryArt(row: DiscoveryRow): string | undefined {
+  if (!row.isFound) {
+    return undefined
+  }
+  if (row.kind === KIND_ITEM) {
+    return findItemArt(row.refId, row.hands, row.useTag)
+  }
+  if (row.kind === KIND_SKILL) {
+    return findSkillArt(row.refId)
+  }
+  return undefined
+}
 
 /** 안 밝힌 칸. `ds/Thumb` 의 미해금 해칭과 같은 글리프다 — 뜻이 같으면 표기도 같다. */
 const LOCKED_MARK = '⧅'
@@ -66,10 +90,7 @@ export function buildDiscoveryCells(rows: readonly DiscoveryRow[]): readonly Dis
     // 한동안 여기 「그 둘이 응답에 없다」고 적혀 있었는데 **사실이 아니었다.** 서버는
     // 싣고 있었고(`view_schemas.DiscoveryRow`) 화면의 매핑이 버리고 있었다 — 주석이
     // 코드보다 오래 산 자리다.
-    art:
-      row.kind === KIND_ITEM && row.isFound
-        ? findItemArt(row.refId, row.hands, row.useTag)
-        : undefined,
+    art: findDiscoveryArt(row),
     // 등급은 이 응답에 없다. 없는 것을 칠하지 않는다.
     grade: '',
     marks: row.isFound ? [] : [LOCKED_MARK],
