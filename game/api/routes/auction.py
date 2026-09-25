@@ -30,6 +30,7 @@ from game.app.store.auction import (
 )
 from game.app.store.equipment import read_balance
 from game.app.store.items import find_item
+from game.app.store.notices import KIND_AUCTION, save_notice
 from game.schemas.item import format_stat_label
 
 router = APIRouter()
@@ -175,6 +176,13 @@ def create_auction_purchase(request: ListingAction, account: CurrentAccount) -> 
     # 산 것도 얻은 것이다. 발급만 도감에 남기면 "경매로만 구할 수 있는 것" 이 영영
     # 안 열린다.
     record_item_discovery(account.account_id, sold.catalog_id)
+    # **판 사람에게 알린다** (2026-09-25). 판 사람은 대개 그 자리에 없고, 푼은 이 순간
+    # 들어온다 — 안 알리면 지갑이 왜 늘었는지 모른다.
+    found = find_catalog_item(get_item_catalog(), sold.catalog_id)
+    label = found.label_ko if found is not None else sold.catalog_id
+    save_notice(
+        pool, sold.seller_id, KIND_AUCTION, "경매에서 팔렸다", f"{label} · 푼 +{sold.price}"
+    )
     return build_auction_response(account.account_id)
 
 

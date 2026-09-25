@@ -39,6 +39,7 @@ from game.api.routes import (
     items,
     maintenance,
     meta,
+    notices,
     records,
     replay,
     run,
@@ -200,6 +201,7 @@ def create_app() -> FastAPI:
         share,
         records,
         daily,
+        notices,
     ):
         server.include_router(module.router)
     return server

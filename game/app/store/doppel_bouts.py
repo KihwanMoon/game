@@ -14,7 +14,8 @@
 
 from psycopg_pool import ConnectionPool
 
-from game.app.store.display_name import build_display_name_sql
+from game.app.store.display_name import build_display_name_sql, read_display_name
+from game.app.store.notices import KIND_DOPPEL, save_notice
 
 # 둔갑 승수 판의 이름. `/api/leaderboard?mode=` 가 이 값으로 갈린다.
 MODE_DOPPEL = "doppel"
@@ -66,6 +67,11 @@ def record_bout(
             " VALUES (%s, %s, %s, %s, %s, %s)",
             (record_id, int(row[0]), opponent_account_id, floor, is_doppel_win, core_version),
         )
+    # **이긴 판만 주인에게 알린다** (2026-09-25). 봇이 쉼 없이 싸우는 세계라 진 판까지 적으면
+    # 알림함이 전적표가 된다 — 진 것은 물러날 때 한 번에 정리된다(`remove_doppel`).
+    if is_doppel_win:
+        name = read_display_name(pool, opponent_account_id)
+        save_notice(pool, int(row[0]), KIND_DOPPEL, "내 둔갑이 이겼다", f"{floor}장 · 상대 {name}")
     return True
 
 

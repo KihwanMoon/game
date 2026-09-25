@@ -1018,3 +1018,24 @@ CREATE TABLE IF NOT EXISTS room_record (
 
 CREATE INDEX IF NOT EXISTS room_record_rank_idx
     ON room_record (room_id, core_version, cpu, ticks, rule_count, recorded_at);
+
+-- 알림 (2026-09-25). **판을 넘어 쌓이는 것**을 한 곳에 둔다.
+--
+-- 판이 끝나면 결과가 출격 줄에 한 줄로 끼어들었다가 다음 판에 덮였고, 없는 동안 생긴 일
+-- (둔갑이 이겼다·경매가 팔렸다)은 각 패널에 들어가야 보였다. 알림은 그 둘을 모은다 —
+-- 화면은 새로 온 것을 토스트로 띄우고, 읽을 때까지 안 읽은 수를 적는다.
+--
+-- **문구는 서버가 확정한 것만 적는다.** 보상 줄은 `apply_run_rewards` 가 만든 그대로 넣고
+-- 화면은 `·` 로 끊기만 한다 — 화면이 다시 짜면 실제로 들어온 것과 다른 말을 한다.
+-- **지우지 않고 읽음만 적는다.** 오래된 것은 읽는 쪽이 최근 몇 건만 가져간다.
+CREATE TABLE IF NOT EXISTS notice (
+    id         BIGSERIAL   PRIMARY KEY,
+    account_id BIGINT      NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+    kind       TEXT        NOT NULL,
+    title      TEXT        NOT NULL,
+    body       TEXT        NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    read_at    TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS notice_account_idx ON notice (account_id, id DESC);

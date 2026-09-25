@@ -36,6 +36,7 @@ from game.app.store.doppel_quota import (
     find_own_oldest_doppel,
 )
 from game.app.store.letters import apply_doppel_settlement
+from game.app.store.notices import KIND_DOPPEL, save_notice
 
 
 def count_doppels(pool: ConnectionPool) -> int:
@@ -80,7 +81,13 @@ def remove_doppel(pool: ConnectionPool, record_id: int) -> bool:
         ).fetchone()
     if row is None:
         return False
-    apply_doppel_settlement(pool, record_id, int(row[1]))
+    owner = int(row[1])
+    won = apply_doppel_settlement(pool, record_id, owner)
+    # **물러날 때 한 번 알린다** (2026-09-25). 활자는 이 순간에 들어오므로, 안 알리면
+    # 「이겼는데 활자가 안 늘었다」가 「언제 늘었지」로 바뀔 뿐이다.
+    if owner > 0:
+        body = f"이긴 판 {won} · 활자 +{won}" if won > 0 else "이긴 판 없이 물러났다"
+        save_notice(pool, owner, KIND_DOPPEL, "내 둔갑이 물러났다", body)
     return True
 
 

@@ -78,6 +78,8 @@ export {
   type DailyRow,
 } from './dailyBoard'
 export { formatRecordScore, formatRecordSummary, readRoomRecords } from './roomRecords'
+export { formatUnreadBadge, markNoticesRead, pickFreshNotices, readNotices } from './notices'
+export type { NoticeBoardView, NoticeKind, NoticeView } from './notices'
 export type { RoomRecordBoard, RoomRecordRow } from './roomRecords'
 export {
   META_FORMAT_TAG,

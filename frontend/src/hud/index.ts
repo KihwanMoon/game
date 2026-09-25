@@ -52,6 +52,14 @@ export type { ReplayTraceRow } from './replayTrace'
 export { DamageHeatmap } from './DamageHeatmap'
 export { ChapterCard } from './ChapterCard'
 export { DOPPEL_INVITE_KEY, DoppelInviteCard } from './DoppelInviteCard'
+export {
+  NoticeBell,
+  NoticeInbox,
+  NoticeToasts,
+  checkAutoDismiss,
+  describeNoticeTone,
+  formatNoticeTime,
+} from './NoticeToasts'
 export type { ChapterCardProps } from './ChapterCard'
 export type { DamageHeatmapProps } from './DamageHeatmap'
 

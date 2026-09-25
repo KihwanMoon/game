@@ -24,6 +24,7 @@ from psycopg_pool import ConnectionPool
 from game.app.store.display_name import build_display_name_sql
 from game.app.store.equipment import add_currency
 from game.app.store.items import EVENT_DISCARD, find_empty_slot, record_item_event
+from game.app.store.notices import KIND_AUCTION, save_notice
 
 STATE_OPEN = "OPEN"
 STATE_SOLD = "SOLD"
@@ -245,13 +246,16 @@ def apply_expiry(pool: ConnectionPool) -> int:
     """
     with pool.connection() as connection:
         rows = connection.execute(
-            "SELECT l.id, l.item_id, e.id FROM auction_listing l"
+            "SELECT l.id, l.item_id, e.id, l.seller_id, coalesce(c.label_ko, i.catalog_id)"
+            " FROM auction_listing l"
             " JOIN entity_record e ON e.owner_account_id = l.seller_id"
+            " JOIN item_instance i ON i.id = l.item_id"
+            " LEFT JOIN item_catalog c ON c.catalog_id = i.catalog_id"
             " WHERE l.state = %s AND l.expires_at < now()",
             (STATE_OPEN,),
         ).fetchall()
     count = 0
-    for listing_id, item_id, entity_id in rows:
+    for listing_id, item_id, entity_id, seller_id, label in rows:
         index = find_empty_slot(pool, int(entity_id))
         if index is None:
             continue
@@ -264,6 +268,10 @@ def apply_expiry(pool: ConnectionPool) -> int:
                 "INSERT INTO inventory_slot (entity_id, slot_index, item_id) VALUES (%s, %s, %s)",
                 (int(entity_id), index, int(item_id)),
             )
+        # 판 사람은 대개 그 자리에 없다 — 경매장을 누가 열 때 만료가 도므로 (2026-09-25).
+        save_notice(
+            pool, int(seller_id), KIND_AUCTION, "경매 기한이 지났다", f"{label} · 가방으로 돌아옴"
+        )
         count += 1
     return count
 

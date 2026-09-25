@@ -464,3 +464,90 @@
   padding-block: var(--sp-2);
   border-bottom: var(--border);
 }
+
+/* ── 알림 토스트 · 종 · 알림함 (2026-09-25) ─────────────────────────────
+   화면을 밀지 않는다 — 떠 있고 사라지며, 알림함에 남는다. 그림자를 안 쓰므로(디자인
+   규율) 불투명 바탕과 1px 괘선으로 가르고, 이김·짐·반려는 왼쪽 세로바·글리프·보조 기술
+   이름 세 채널로 적는다. 황동은 안 쓴다. */
+
+.notice-toasts {
+  position: fixed;
+  /* 세로 배치는 아래에 탭 줄이 있다 — 그 높이(44px)를 넘겨 띄운다. 이 프로젝트는 폭으로
+     배치를 가르지 않으므로(`--layout-mode`) 한 값으로 둔다. */
+  inset-block-end: var(--sp-12);
+  inset-inline-end: var(--sp-4);
+  z-index: 10;
+  display: grid;
+  gap: var(--sp-2);
+  inline-size: min(40ch, calc(100vw - 2 * var(--sp-4)));
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  list-style: none;
+}
+
+.notice-toast,
+.notice-inbox__row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface-panel);
+  border: var(--border-strong);
+  border-inline-start-width: var(--sp-1);
+}
+
+.notice-toast--win { border-inline-start-color: var(--state-true); }
+.notice-toast--loss { border-inline-start-color: var(--state-false); }
+.notice-toast--danger { border-inline-start-color: var(--state-damage); }
+.notice-toast--info { border-inline-start-color: var(--text-dim); }
+
+.notice-toast__glyph {
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+}
+.notice-toast--win .notice-toast__glyph { color: var(--text-true); }
+.notice-toast--danger .notice-toast__glyph { color: var(--text-danger); }
+
+.notice-toast__text {
+  display: grid;
+  gap: var(--sp-1);
+  min-inline-size: 0;
+}
+
+.notice-toast__title {
+  font-size: var(--fs-body);
+  color: var(--text-body);
+}
+
+.notice-toast__lines {
+  font-size: var(--fs-body-s);
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+
+.notice-badge {
+  min-inline-size: 2ch;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  color: var(--text-value);
+}
+
+.notice-inbox {
+  display: grid;
+  gap: var(--sp-2);
+  margin: var(--sp-0);
+  padding: var(--sp-0);
+  list-style: none;
+}
+
+/* 안 읽었던 줄은 명도로 한 번 더 가른다 — 점(●)과 보조 기술 이름에 더해 셋째 채널이다. */
+.notice-inbox__row:not(.notice-inbox__row--new) {
+  opacity: 0.72;
+}
+
+.notice-inbox__time,
+.notice-inbox__empty {
+  font-size: var(--fs-body-s);
+  color: var(--text-dim);
+}

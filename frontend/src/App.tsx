@@ -98,7 +98,15 @@ import { findRoomTitle } from './core/schemas/room'
 import { SHADOW, buildCardId, findChapter } from './content/story'
 import { DOPPEL_KIND_ID } from './battle/actorKind'
 import { ReplayView } from './admin/ReplayView'
-import type { DailyBoardView, ReplayInput, RoomRecordBoard, RunHistoryRow, WorldPulse } from './storage'
+import type {
+  DailyBoardView,
+  NoticeBoardView,
+  NoticeView,
+  ReplayInput,
+  RoomRecordBoard,
+  RunHistoryRow,
+  WorldPulse,
+} from './storage'
 import { OUTCOME_ONGOING, OUTCOME_PLAYER_WIN } from './core/sim/phases'
 import { Button, GlyphState, Panel, ValueExpr } from './ds'
 import {
@@ -152,6 +160,9 @@ import {
   ChapterCard,
   DOPPEL_INVITE_KEY,
   DoppelInviteCard,
+  NoticeBell,
+  NoticeInbox,
+  NoticeToasts,
   PostMortem,
   formatOutcome,
   recordBattle,
@@ -205,6 +216,9 @@ import {
   readDiscovery,
   readDailyBoard,
   readRoomRecords,
+  readNotices,
+  markNoticesRead,
+  pickFreshNotices,
   readLeaderboard,
   readWorldPulse,
   MODE_DOPPEL,
@@ -248,7 +262,6 @@ import {
   type InventoryView,
   type ItemView,
   type RunResult,
-  type RunVerdict,
   type AdminOverview,
   type ServerTicket,
   type StorageLike,
@@ -297,6 +310,9 @@ type PostState = 'auto' | 'open' | 'closed'
  * 골랐다** — 가장 센 표(`g0_kite`, 88%)를 주면 고칠 이유가 없어 「지고 → 고친다」가 안 선다.
  */
 const INITIAL_RULESET_ID = 'focus_threat_guard'
+
+/** 알림을 다시 읽는 간격. 없는 동안 생긴 일은 남이 일으키므로 기다려야 온다. */
+const NOTICE_POLL_MS = 60_000
 
 /** 처음 열었을 때의 방과 시드. 같은 시드는 같은 판을 낸다 (R5). */
 const INITIAL_ROOM_ID = 'open_field'
@@ -686,6 +702,13 @@ export function App(): React.JSX.Element {
   const [cards, setCards] = useState<readonly ChapterCardProps[]>([])
   // 둔갑 권유 카드가 떠 있는가 (2026-09-25). 첫 장을 깬 뒤 한 번만 뜬다.
   const [isInviteOpen, setInviteOpen] = useState(false)
+  // 알림함 (2026-09-25). 판 결과와 없는 동안 생긴 일이 쌓인다.
+  const [noticeBoard, setNoticeBoard] = useState<NoticeBoardView | undefined>(undefined)
+  const [toasts, setToasts] = useState<readonly NoticeView[]>([])
+  // 알림함을 열었을 때 안 읽었던 id. 열자마자 읽음이 되므로 표시는 이 값으로 한다.
+  const [inboxUnread, setInboxUnread] = useState<ReadonlySet<number> | undefined>(undefined)
+  // 지난번에 본 가장 새 알림 id. **처음 읽을 때는 undefined** — 그때는 토스트를 안 쏟는다.
+  const noticeSeen = useRef<number | undefined>(undefined)
   // 이미 띄운 것. **다시 안 띄운다** — 되풀이 관전에서 매번 걸리면 글이 방해물이 된다.
   //
   // **계정에 붙는다** (2026-09-16). 세션 안에서만 기억하던 때는 새로고침하거나 다른
@@ -705,8 +728,6 @@ export function App(): React.JSX.Element {
   // **연결 상태는 셋이다.** 「확인 중」을 「못 닿았다」로 적으면 앱이 서버에 붙어 보기도
   // 전에 ◈ 위험을 띄운다 — 매번 뜨는 경보는 아무도 안 읽는 경보가 된다.
   const [link, setLink] = useState<LinkState>('probing')
-  // 서버가 확정한 판정. 브라우저가 낸 결과와 다르면 두 코어가 갈린 것이다 (G3).
-  const [verdict, setVerdict] = useState<RunVerdict | undefined>(undefined)
   // 아이템은 **서버가 발급한다** (결정 #02). 화면은 받아서 보여줄 뿐이다.
   const [inventory, setInventory] = useState<InventoryView | undefined>(undefined)
   const [consumables, setConsumables] = useState<ConsumableView | undefined>(undefined)
@@ -1070,6 +1091,74 @@ export function App(): React.JSX.Element {
     })
   }
 
+  /**
+   * 알림함을 다시 읽고, 새로 온 것을 토스트로 띄운다.
+   *
+   * **처음 읽을 때는 안 쏟는다.** 들어오자마자 지난 알림이 쏟아지면 토스트가 아니라 벽이다 —
+   * 안 읽은 것이 있으면 「없는 동안 N건」 한 장으로 접는다.
+   *
+   * @param token 기기 토큰.
+   */
+  async function refreshNotices(token: string): Promise<void> {
+    const board = await readNotices(token)
+    if (board === undefined) {
+      return
+    }
+    const isFirst = noticeSeen.current === undefined
+    const picked = pickFreshNotices(board, noticeSeen.current)
+    noticeSeen.current = picked.seenId
+    setNoticeBoard(board)
+    if (isFirst && board.unread > 0) {
+      setToasts([
+        {
+          id: -1,
+          kind: 'other',
+          title: `없는 동안 알림 ${String(board.unread)}건`,
+          lines: ['◔ 를 누르면 알림함에서 본다'],
+          createdAt: '',
+          isRead: false,
+        },
+      ])
+      return
+    }
+    if (picked.fresh.length > 0) {
+      setToasts((current) => [...current, ...picked.fresh])
+    }
+  }
+
+  /** 알림함을 연다. **본 것까지만** 읽음으로 적는다 — 여는 사이 온 것은 안 읽은 채다. */
+  function openInbox(): void {
+    const notices = noticeBoard?.notices ?? []
+    setInboxUnread(new Set(notices.filter((one) => !one.isRead).map((one) => one.id)))
+    setToasts([])
+    const newest = notices.reduce((top, one) => Math.max(top, one.id), 0)
+    if (account !== undefined && newest > 0) {
+      void markNoticesRead(account, newest).then((board) => {
+        if (board !== undefined) {
+          setNoticeBoard(board)
+        }
+      })
+    }
+  }
+
+  // **알림은 계정이 서면 읽고, 그 뒤로 1분마다 다시 읽는다.** 판 결과는 제출 직후에 바로
+  // 읽지만, 없는 동안 생긴 일(둔갑이 이김·경매가 팔림)은 남이 일으키므로 기다려야 온다.
+  useEffect(() => {
+    if (account === undefined) {
+      setNoticeBoard(undefined)
+      noticeSeen.current = undefined
+      return undefined
+    }
+    void refreshNotices(account)
+    const timer = setInterval(() => {
+      void refreshNotices(account)
+    }, NOTICE_POLL_MS)
+    return () => {
+      clearInterval(timer)
+    }
+    // refreshNotices 는 렌더마다 새로 만들어지지만 읽는 상태가 ref·setter 뿐이라 계정만 본다.
+  }, [account])
+
   // **고른 방의 기록판을 따라 읽는다.** 방을 바꿨는데 앞 방의 판이 남아 있으면 남의 방
   // 기록을 이 방 것으로 읽게 된다 — 늦게 온 응답이 새 방의 판을 덮지 않게 끊는다.
   useEffect(() => {
@@ -1383,7 +1472,6 @@ export function App(): React.JSX.Element {
     // **서버 티켓을 기다렸다 건다.** 예전에는 로컬 티켓으로 판을 먼저 걸고 서버 티켓이
     // 오면 갈아 끼웠는데, 그 순간 방과 시드가 바뀌어 **첫 방이 스킵된 것처럼** 보였다 —
     // 실제로 그렇게 신고됐다. 서버가 정본이면 정본이 올 때까지 판을 안 건다.
-    setVerdict(undefined)
     setOutcome(OUTCOME_ONGOING)
     setPostState('auto')
     setEditing(false)
@@ -1486,9 +1574,9 @@ export function App(): React.JSX.Element {
           buildRuleSetPayload(finishedRun.ruleset),
           ticket.coreVersion,
           0,
-        ).then((result) => {
-          setVerdict(result)
+        ).then(() => {
           void readRoomRecords(account, ticket.roomId).then(setRecords)
+          void refreshNotices(account)
         })
       }
       return
@@ -1506,8 +1594,8 @@ export function App(): React.JSX.Element {
           run?.setup.chain?.index ?? 0,
           run?.setup.roomsPerFloor ?? 0,
         ),
-      ).then((result) => {
-        setVerdict(result)
+      ).then(() => {
+        void refreshNotices(account)
         // 전리품과 푼이 여기서 들어온다. 다시 읽어야 화면이 그것을 안다.
         refreshBag(account)
         // 판이 끝나면 몬스터가 컸거나 내 장비를 가져갔을 수 있다.
@@ -1739,7 +1827,7 @@ export function App(): React.JSX.Element {
       if (result === undefined) {
         return
       }
-      setVerdict(result)
+      void refreshNotices(account)
       // **첫 장을 깬 뒤 한 번 둔갑을 권한다** (2026-09-25). 기본은 꺼 둔 채다 — 대가를 알고
       // 켜야 하므로(DoppelInviteCard 의 까닭) 묻기만 한다. 층을 깬 판에서만 묻는다: 진 판
       // 뒤에 「내 내력을 세울까」를 물으면 방금 진 내력을 권하는 셈이다.
@@ -1821,17 +1909,6 @@ export function App(): React.JSX.Element {
   // 검증기에 안 넣은 이유는 그쪽이 두 코어가 함께 얼린 문구 표이기 때문이다 (G3).
   const blocker = ruleset.rules.length === 0 ? EMPTY_RULESET_BLOCKER : findLaunchBlocker(problems)
   const resultText = describeRunResult(session.lastResult)
-  // 서버 판정이 다르면 그것을 숨기지 않는다. mismatch 는 치트의 증거가 아니라
-  // 두 코어가 갈렸다는 신호이고, 대개 우리 쪽 버그다 (docs/설계/7_변조방지 §8).
-  const verdictText =
-    verdict === undefined || verdict.verdict === 'verified'
-      ? ''
-      : `서버 판정 ${verdict.verdict}${verdict.detail === '' ? '' : ` — ${verdict.detail}`}`
-  // **얻은 것을 말한다.** 서버는 처음부터 보내고 있었는데 화면이 버리고 있었다. 아이템은
-  // 이겨도 60% 로만 나오므로, 나왔다는 말이 없으면 안 나온 것과 구별되지 않는다 — 가방
-  // 20칸에서 새 것을 찾아내는 사람은 없다.
-  const rewardText = verdict?.reward ?? ''
-
   const launchControls = (
     <div className="launch">
       <EvictionNotice isEvicted={isEvicted} />
@@ -1879,9 +1956,11 @@ export function App(): React.JSX.Element {
           }
         />
       )}
-      {resultText === '' ? null : <ValueExpr text={resultText} size="sm" dim />}
-      {verdictText === '' ? null : <ValueExpr text={verdictText} size="sm" />}
-      {rewardText === '' ? null : <GlyphState state="true" size="sm" label={rewardText} />}
+      {/* **판 결과는 알림으로 옮겼다** (2026-09-25). 이 줄에 끼어들면 아래가 통째로 밀리고
+          다음 판에 덮였다. 서버 없이 돈 판만 여기 남긴다 — 그 판은 알림을 안 남긴다. */}
+      {account !== undefined || resultText === '' ? null : (
+        <ValueExpr text={resultText} size="sm" dim />
+      )}
       <Button
         size="sm"
         variant="ghost"
@@ -1992,6 +2071,32 @@ export function App(): React.JSX.Element {
           run.setup.roomsPerFloor ?? 0,
         )
 
+  // **토스트는 대화 카드가 없을 때만 뜬다.** 장 카드·둔갑 권유·알림함이 떠 있는 동안에는
+  // 기다렸다가 닫힌 뒤에 뜬다 — 타이머도 그때 돈다(뜨기 전에는 안 세므로 못 보고 지나가지 않는다).
+  const isDialogOpen = cards.length > 0 || isInviteOpen || inboxUnread !== undefined
+  const noticeLayer = (
+    <>
+      {isDialogOpen ? null : (
+        <NoticeToasts
+          toasts={toasts}
+          onDismiss={(id) => {
+            setToasts((current) => current.filter((one) => one.id !== id))
+          }}
+          onOpen={openInbox}
+        />
+      )}
+      {inboxUnread === undefined ? null : (
+        <NoticeInbox
+          notices={noticeBoard?.notices ?? []}
+          unreadIds={inboxUnread}
+          onClose={() => {
+            setInboxUnread(undefined)
+          }}
+        />
+      )}
+    </>
+  )
+
   if (run === undefined || isEditing) {
     return (
       <div className="app">
@@ -2057,11 +2162,20 @@ export function App(): React.JSX.Element {
           // 보였는데 그것은 우연이었다 — 다른 탭에 두면 서버가 죽어도 화면이 조용했다.
           // 등급은 패널의 것과 다르다: 여기서 오프라인은 실패가 아니라 **설계된 상태**라
           // ◈ 를 안 쓴다 (`describeGlobalLink`).
-          {...(globalLink === undefined
+          // **알림 종도 모든 탭에서 보인다** (2026-09-25). 안 읽은 수가 한 탭에만 있으면
+          // 그 탭에 있을 때만 알림이 있는 것이 된다.
+          {...(globalLink === undefined && account === undefined
             ? {}
             : {
                 status: (
-                  <GlyphState state={globalLink.state} size="sm" label={globalLink.text} />
+                  <>
+                    {globalLink === undefined ? null : (
+                      <GlyphState state={globalLink.state} size="sm" label={globalLink.text} />
+                    )}
+                    {account === undefined ? null : (
+                      <NoticeBell unread={noticeBoard?.unread ?? 0} onOpen={openInbox} />
+                    )}
+                  </>
                 ),
               })}
         />
@@ -2069,6 +2183,7 @@ export function App(): React.JSX.Element {
             둔 것은 React 가 붙는 순간 갈아 끼워지고, 수집기가 보는 것은 그 뒤다 —
             실측해 보니 렌더된 홈페이지에 링크가 한 개도 없었다. 사유는 `LegalLine`. */}
         <LegalLine />
+        {noticeLayer}
       </div>
     )
   }
@@ -2662,9 +2777,14 @@ export function App(): React.JSX.Element {
   // 거기서는 글자를 단 채로 한 줄에 산다. 「고쳐서 다시 도전한다」가 이 게임의 유일한
   // 동사다 (GDD §2.1).
   const battleHistoryAct = (
-    <Button size="sm" variant="ghost" glyph="↰" title="내력을 고치러 간다" onClick={goToEditor}>
-      내력
-    </Button>
+    <>
+      <Button size="sm" variant="ghost" glyph="↰" title="내력을 고치러 간다" onClick={goToEditor}>
+        내력
+      </Button>
+      {account === undefined ? null : (
+        <NoticeBell unread={noticeBoard?.unread ?? 0} onOpen={openInbox} />
+      )}
+    </>
   )
 
   // 저절로 뜨는 것은 **이기지 못했을 때**다. 이긴 판까지 덮어 버리면 승리 화면을 볼 수
@@ -2695,6 +2815,7 @@ export function App(): React.JSX.Element {
         {/* **장 카드가 사후 분석보다 앞선다.** 둘이 겹칠 일은 거의 없지만(카드는 이긴
             판에만, 자동 사후 분석은 진 판에만 뜬다) 겹친다면 먼저 읽을 것은 글이다. */}
         {cards[0] === undefined ? null : <ChapterCard {...cards[0]} />}
+        {noticeLayer}
         {/* **장 카드가 먼저다.** 둘이 같이 뜨면 글을 다 읽은 뒤에 묻는다. */}
         {!isInviteOpen || cards[0] !== undefined ? null : (
           <DoppelInviteCard

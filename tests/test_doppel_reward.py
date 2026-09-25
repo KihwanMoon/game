@@ -271,3 +271,25 @@ def test_a_board_without_a_win_stays_empty(client):
     record_bout(pool, record_id, build_bot_account(client), 3, False, "b3.zero")
 
     assert account_id not in [row["account_id"] for row in list_doppel_leaderboard(pool, "b3.zero")]
+
+
+def test_the_owner_hears_of_wins_and_the_retirement_only(client):
+    """★ 주인에게는 이긴 판과 물러남만 간다 (2026-09-25).
+
+    봇이 쉼 없이 싸우는 세계라 진 판까지 알리면 알림함이 전적표가 된다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.doppel_bouts import record_bout
+    from game.app.store.doppels import remove_doppel
+    from game.app.store.notices import list_notices
+
+    pool = get_pool()
+    account_id, record_id = build_shadow(client)
+    rival = build_bot_account(client)
+    record_bout(pool, record_id, rival, 4, True)
+    record_bout(pool, record_id, rival, 4, False)
+    remove_doppel(pool, record_id)
+
+    titles = [one.title for one in reversed(list_notices(pool, account_id))]
+    assert titles == ["내 둔갑이 이겼다", "내 둔갑이 물러났다"]
+    assert "활자 +1" in list_notices(pool, account_id)[0].body

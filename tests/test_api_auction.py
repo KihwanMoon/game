@@ -365,3 +365,21 @@ def test_a_listing_says_how_much_of_the_fee_is_gone(client, token):
     view = find_listing_row(client, token, item_id)
     assert view.fee == compute_fee(700)
     assert view.fee > 0
+
+
+def test_the_seller_hears_of_the_sale(client, token):
+    """★ 판 사람은 대개 그 자리에 없다 — 푼이 들어온 까닭이 알림으로 남는다 (2026-09-25)."""
+    headers = build_headers(token)
+    grant_currency(client, token, 5000)
+    item_id = grant_item(client, token)
+    client.post("/api/auction/list", json={"item_id": item_id, "price": 300}, headers=headers)
+    listing_id = find_listing_id(client, token, item_id)
+    buyer = client.post("/api/account").json()["token"]
+    grant_currency(client, buyer, 1000)
+    client.post("/api/auction/buy", json={"listing_id": listing_id}, headers=build_headers(buyer))
+
+    notice = client.get("/api/notices", headers=headers).json()["notices"][0]
+
+    assert notice["kind"] == "auction"
+    assert notice["title"] == "경매에서 팔렸다"
+    assert "푼 +300" in notice["body"]

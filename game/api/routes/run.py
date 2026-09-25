@@ -26,10 +26,11 @@ from game.api.floor_service import (
 from game.api.loot_service import create_run_drops, list_floor_defeats
 from game.api.maintenance_service import apply_maintenance
 from game.api.monster_service import apply_monster_outcome
+from game.api.notice_service import apply_run_notice
 from game.api.record_service import apply_record_outcome
 from game.api.schemas import SubmissionRequest, SubmissionResponse
 from game.app.items.loot import compute_run_currency
-from game.app.progression.levels import add_run_xp
+from game.app.progression.levels import STAT_POINTS_PER_LEVEL, add_run_xp
 from game.app.services.manage_meta import apply_run_result
 from game.app.services.verify_run import VerifiedRun, check_submission_version, evaluate_submission
 from game.app.store.accounts import find_player_entity
@@ -154,8 +155,13 @@ def apply_run_rewards(
     pool = get_pool()
     entity_id = find_player_entity(pool, account_id)
     gained = add_run_xp(is_cleared)
+    before = read_progress(pool, entity_id).level
     level = add_player_xp(pool, entity_id, gained)
     notes.append(f"경험치 +{gained}")
+    # **레벨이 오른 것을 말한다** (2026-09-25). 오르면 능력치 3점이 생기는데, 안 적으면
+    # 서생 탭을 열어 보기 전까지 아무도 모른다.
+    if level > before:
+        notes.append(f"레벨 {level} — 능력치 +{STAT_POINTS_PER_LEVEL * (level - before)}")
     progress = read_progress(pool, entity_id)
     save_leaderboard(pool, str(mode), core_version, account_id, progress.total_xp, level)
 
@@ -332,6 +338,7 @@ def create_run_submission(
         note = apply_record_outcome(
             ticket, submission_id, request.ruleset, verified, account.account_id
         )
+        apply_run_notice(account.account_id, ticket, verified, note, claimed)
         fields = {key: value for key, value in vars(verified).items() if key != "summary"}
         return SubmissionResponse(submission_id=submission_id, reward=note, **fields)
     reward = apply_run_rewards(
@@ -355,6 +362,9 @@ def create_run_submission(
     is_settled = is_run_closed and verified.verdict == VERDICT_VERIFIED
     upkeep = apply_maintenance(account.account_id) if is_settled else ""
     reward = " · ".join(part for part in (reward, world, depth, upkeep) if part)
+    # **알림함에도 남긴다** (2026-09-25). 응답의 보상 줄은 다음 판에 덮이지만 알림은 읽을
+    # 때까지 남는다.
+    apply_run_notice(account.account_id, ticket, verified, reward, claimed)
     # `summary` 는 응답에 싣지 않는다 — 서버가 무엇으로 세이브를 갱신했는지는 클라이언트가
     # 알 필요가 없고, 실으면 그것을 되보내려는 경로가 생긴다.
     fields = {key: value for key, value in vars(verified).items() if key != "summary"}
