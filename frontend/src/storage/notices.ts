@@ -26,10 +26,17 @@ export interface NoticeView {
   readonly isRead: boolean
 }
 
-/** 알림함. */
+/** 한 쪽의 알림 수 (2026-09-25 요청: 「10개 단위로」). 서버의 `NOTICE_PAGE` 와 같은 값이다. */
+export const NOTICE_PAGE_SIZE = 10
+
+/** 알림함 한 쪽. */
 export interface NoticeBoardView {
-  /** 안 읽은 수. **실린 쉰 건 밖의 것도 센다.** */
+  /** 안 읽은 수. **이 쪽 밖의 것도 센다.** */
   readonly unread: number
+  /** 전체 건수. 쪽 수를 이것으로 센다. */
+  readonly total: number
+  /** 이 쪽이 건너뛴 건수. */
+  readonly offset: number
   /** 새것부터. */
   readonly notices: readonly NoticeView[]
 }
@@ -45,9 +52,19 @@ interface RawNotice {
   is_read: boolean
 }
 
-function parseBoard(body: { unread: number; notices: RawNotice[] }): NoticeBoardView {
+interface RawBoard {
+  unread: number
+  total?: number
+  offset?: number
+  notices: RawNotice[]
+}
+
+function parseBoard(body: RawBoard): NoticeBoardView {
   return {
     unread: body.unread,
+    // 구버전 서버는 전체 수를 안 준다 — 그때는 받은 만큼이 전부다.
+    total: body.total ?? body.notices.length,
+    offset: body.offset ?? 0,
     notices: body.notices.map((raw) => ({
       id: raw.id,
       // **모르는 종류는 「기타」로 받는다.** 서버가 먼저 새 종류를 보내도 화면이 죽지 않는다.
@@ -61,17 +78,34 @@ function parseBoard(body: { unread: number; notices: RawNotice[] }): NoticeBoard
 }
 
 /**
- * 알림함을 읽는다. **읽기만으로는 읽음이 안 된다.**
+ * 알림함 한 쪽을 읽는다. **읽기만으로는 읽음이 안 된다.**
  *
  * @param token 기기 토큰.
- * @returns 알림함. 서버에 못 닿으면 undefined.
+ * @param page 쪽 번호. 0 이 가장 새 쪽이다.
+ * @returns 그 쪽. 서버에 못 닿으면 undefined.
  */
-export async function readNotices(token: string): Promise<NoticeBoardView | undefined> {
-  const response = await sendRequest('/notices', { headers: { [TOKEN_HEADER]: token } })
+export async function readNotices(token: string, page = 0): Promise<NoticeBoardView | undefined> {
+  const query = new URLSearchParams({
+    offset: String(Math.max(0, page) * NOTICE_PAGE_SIZE),
+    limit: String(NOTICE_PAGE_SIZE),
+  })
+  const response = await sendRequest(`/notices?${query.toString()}`, {
+    headers: { [TOKEN_HEADER]: token },
+  })
   if (response === undefined || !response.ok) {
     return undefined
   }
-  return parseBoard((await response.json()) as { unread: number; notices: RawNotice[] })
+  return parseBoard((await response.json()) as RawBoard)
+}
+
+/**
+ * 쪽 수. **알림이 없어도 한 쪽이다** — 「0 / 0」은 읽을 수 없는 말이다.
+ *
+ * @param total 전체 건수.
+ * @returns 쪽 수.
+ */
+export function countNoticePages(total: number): number {
+  return Math.max(1, Math.ceil(total / NOTICE_PAGE_SIZE))
 }
 
 /**
@@ -95,7 +129,7 @@ export async function markNoticesRead(
   if (response === undefined || !response.ok) {
     return undefined
   }
-  return parseBoard((await response.json()) as { unread: number; notices: RawNotice[] })
+  return parseBoard((await response.json()) as RawBoard)
 }
 
 /**

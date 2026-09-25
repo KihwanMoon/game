@@ -551,3 +551,17 @@
   font-size: var(--fs-body-s);
   color: var(--text-dim);
 }
+
+/* 알림함 쪽 넘김 (2026-09-25). 목록 위에 둔다 — 아래에 두면 마지막 쪽에서 단추 자리가 뜬다. */
+.notice-inbox__pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.notice-inbox__page {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-s);
+  color: var(--text-dim);
+}

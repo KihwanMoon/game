@@ -219,6 +219,7 @@ import {
   readNotices,
   markNoticesRead,
   pickFreshNotices,
+  countNoticePages,
   readLeaderboard,
   readWorldPulse,
   MODE_DOPPEL,
@@ -705,8 +706,11 @@ export function App(): React.JSX.Element {
   // 알림함 (2026-09-25). 판 결과와 없는 동안 생긴 일이 쌓인다.
   const [noticeBoard, setNoticeBoard] = useState<NoticeBoardView | undefined>(undefined)
   const [toasts, setToasts] = useState<readonly NoticeView[]>([])
-  // 알림함을 열었을 때 안 읽었던 id. 열자마자 읽음이 되므로 표시는 이 값으로 한다.
-  const [inboxUnread, setInboxUnread] = useState<ReadonlySet<number> | undefined>(undefined)
+  // 열린 알림함 — 지금 쪽과, 열었을 때 안 읽었던 수. 열자마자 읽음이 되므로 「새것」 표시는
+  // 이 수로 한다(안 읽은 것은 늘 가장 새 N 건이다). 닫혀 있으면 undefined.
+  const [inbox, setInbox] = useState<
+    { readonly board: NoticeBoardView; readonly page: number; readonly newCount: number } | undefined
+  >(undefined)
   // 지난번에 본 가장 새 알림 id. **처음 읽을 때는 undefined** — 그때는 토스트를 안 쏟는다.
   const noticeSeen = useRef<number | undefined>(undefined)
   // 이미 띄운 것. **다시 안 띄운다** — 되풀이 관전에서 매번 걸리면 글이 방해물이 된다.
@@ -1128,10 +1132,13 @@ export function App(): React.JSX.Element {
 
   /** 알림함을 연다. **본 것까지만** 읽음으로 적는다 — 여는 사이 온 것은 안 읽은 채다. */
   function openInbox(): void {
-    const notices = noticeBoard?.notices ?? []
-    setInboxUnread(new Set(notices.filter((one) => !one.isRead).map((one) => one.id)))
+    const board = noticeBoard
+    if (board === undefined) {
+      return
+    }
+    setInbox({ board, page: 0, newCount: board.unread })
     setToasts([])
-    const newest = notices.reduce((top, one) => Math.max(top, one.id), 0)
+    const newest = board.notices.reduce((top, one) => Math.max(top, one.id), 0)
     if (account !== undefined && newest > 0) {
       void markNoticesRead(account, newest).then((board) => {
         if (board !== undefined) {
@@ -2071,9 +2078,25 @@ export function App(): React.JSX.Element {
           run.setup.roomsPerFloor ?? 0,
         )
 
+  /**
+   * 알림함의 쪽을 넘긴다. 쪽은 서버에서 읽는다 — 가장 새 쪽만 들고 있으므로.
+   *
+   * @param page 갈 쪽.
+   */
+  function turnInboxPage(page: number): void {
+    if (account === undefined) {
+      return
+    }
+    void readNotices(account, page).then((board) => {
+      if (board !== undefined) {
+        setInbox((current) => (current === undefined ? current : { ...current, board, page }))
+      }
+    })
+  }
+
   // **토스트는 대화 카드가 없을 때만 뜬다.** 장 카드·둔갑 권유·알림함이 떠 있는 동안에는
   // 기다렸다가 닫힌 뒤에 뜬다 — 타이머도 그때 돈다(뜨기 전에는 안 세므로 못 보고 지나가지 않는다).
-  const isDialogOpen = cards.length > 0 || isInviteOpen || inboxUnread !== undefined
+  const isDialogOpen = cards.length > 0 || isInviteOpen || inbox !== undefined
   const noticeLayer = (
     <>
       {isDialogOpen ? null : (
@@ -2085,12 +2108,15 @@ export function App(): React.JSX.Element {
           onOpen={openInbox}
         />
       )}
-      {inboxUnread === undefined ? null : (
+      {inbox === undefined ? null : (
         <NoticeInbox
-          notices={noticeBoard?.notices ?? []}
-          unreadIds={inboxUnread}
+          notices={inbox.board.notices}
+          page={inbox.page}
+          pageCount={countNoticePages(inbox.board.total)}
+          newCount={inbox.newCount}
+          onPage={turnInboxPage}
           onClose={() => {
-            setInboxUnread(undefined)
+            setInbox(undefined)
           }}
         />
       )}

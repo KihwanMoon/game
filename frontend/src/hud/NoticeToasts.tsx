@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '../ds'
 import type { NoticeView } from '../storage'
-import { formatUnreadBadge } from '../storage'
+import { NOTICE_PAGE_SIZE, formatUnreadBadge } from '../storage'
 
 /** 토스트가 떠 있는 시간. 보상 한두 줄을 읽기에 넉넉하고, 다음 층이 오기 전에 비킨다. */
 export const TOAST_MS = 5000
@@ -198,9 +198,18 @@ export function NoticeBell(props: NoticeBellProps): React.JSX.Element {
 }
 
 export interface NoticeInboxProps {
+  /** 지금 쪽의 알림. 새것부터. */
   readonly notices: readonly NoticeView[]
-  /** 열었을 때 안 읽었던 id 들. 열자마자 읽음이 되므로 표시는 이 목록으로 한다. */
-  readonly unreadIds: ReadonlySet<number>
+  /** 지금 쪽 번호. 0 이 가장 새 쪽이다. */
+  readonly page: number
+  readonly pageCount: number
+  /**
+   * 열었을 때 안 읽었던 수. **열자마자 읽음이 되므로 표시는 이 수로 한다.** 읽음은 늘
+   * 「이 id 까지 전부」로 적히므로, 안 읽은 것은 언제나 가장 새 N 건이다 — 뒷쪽에서도
+   * 자리만으로 어느 줄이 새것이었는지 안다.
+   */
+  readonly newCount: number
+  readonly onPage: (page: number) => void
   readonly onClose: () => void
 }
 
@@ -235,13 +244,42 @@ export function NoticeInbox(props: NoticeInboxProps): React.JSX.Element {
           <span className="ds-label">알림함</span>
           <h2 className="story-card__title">판 결과와 없는 동안 생긴 일</h2>
         </header>
+        {props.pageCount <= 1 ? null : (
+          // **쪽 넘김은 목록 위에 둔다.** 아래에 두면 줄 수가 다른 마지막 쪽에서 단추가
+          // 올라와, 누르던 자리에 다른 것이 선다.
+          <nav className="notice-inbox__pager" aria-label="알림 쪽">
+            <Button
+              size="sm"
+              variant="ghost"
+              glyph="‹"
+              disabled={props.page <= 0}
+              onClick={() => {
+                props.onPage(props.page - 1)
+              }}
+            >
+              더 새 것
+            </Button>
+            <span className="notice-inbox__page">{`${String(props.page + 1)} / ${String(props.pageCount)}`}</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              glyph="›"
+              disabled={props.page >= props.pageCount - 1}
+              onClick={() => {
+                props.onPage(props.page + 1)
+              }}
+            >
+              지난 것
+            </Button>
+          </nav>
+        )}
         {props.notices.length === 0 ? (
           <p className="notice-inbox__empty">아직 알림이 없다 — 층을 깨거나 판이 끝나면 여기 남는다</p>
         ) : (
           <ol className="notice-inbox">
-            {props.notices.map((notice) => {
+            {props.notices.map((notice, index) => {
               const tone = describeNoticeTone(notice)
-              const isNew = props.unreadIds.has(notice.id)
+              const isNew = props.page * NOTICE_PAGE_SIZE + index < props.newCount
               return (
                 <li
                   key={notice.id}

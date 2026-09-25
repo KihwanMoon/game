@@ -8,8 +8,11 @@ from datetime import datetime
 
 from psycopg_pool import ConnectionPool
 
-# 한 번에 싣는 알림 수. 알림함은 기록장이 아니라 「요즘 무슨 일이 있었나」다 — 쉰 건이면
-# 며칠치가 들어가고, 그보다 오래된 것은 각 패널(지나간 판·내 둔갑·경매)에 남아 있다.
+# 한 쪽의 알림 수 (2026-09-25 요청: 「길어지면 보기가 힘들다 — 10개 단위로」). 오래된 것은
+# 쪽을 넘겨 본다.
+NOTICE_PAGE = 10
+
+# 한 번에 달라고 할 수 있는 최대 수. 쪽 크기를 부르는 쪽이 정하되 이것을 못 넘는다.
 NOTICE_LIMIT = 50
 
 # 알림 종류. 화면이 글리프·색을 고르는 열쇠이고, 문구를 짜는 데는 안 쓴다.
@@ -56,14 +59,15 @@ def save_notice(pool: ConnectionPool, account_id: int, kind: str, title: str, bo
 
 
 def list_notices(
-    pool: ConnectionPool, account_id: int, limit: int = NOTICE_LIMIT
+    pool: ConnectionPool, account_id: int, limit: int = NOTICE_PAGE, offset: int = 0
 ) -> tuple[Notice, ...]:
-    """최근 알림을 새것부터 읽는다.
+    """알림 한 쪽을 새것부터 읽는다.
 
     Args:
         pool: 연결 풀.
         account_id: 대상 계정.
         limit: 최대 건수.
+        offset: 건너뛸 건수. 쪽 번호 × 쪽 크기다.
 
     Returns:
         알림들. id 내림차순이다 — 시각은 같을 수 있지만 id 는 안 겹친다 (R5 와 같은 규율).
@@ -71,8 +75,8 @@ def list_notices(
     with pool.connection() as connection:
         rows = connection.execute(
             "SELECT id, kind, title, body, created_at, read_at IS NOT NULL FROM notice"
-            " WHERE account_id = %s ORDER BY id DESC LIMIT %s",
-            (account_id, limit),
+            " WHERE account_id = %s ORDER BY id DESC LIMIT %s OFFSET %s",
+            (account_id, limit, offset),
         ).fetchall()
     return tuple(
         Notice(
@@ -87,8 +91,25 @@ def list_notices(
     )
 
 
+def count_notices(pool: ConnectionPool, account_id: int) -> int:
+    """그 계정의 알림 전체 수. 쪽이 몇 장인지 이것으로 센다.
+
+    Args:
+        pool: 연결 풀.
+        account_id: 대상 계정.
+
+    Returns:
+        건수.
+    """
+    with pool.connection() as connection:
+        row = connection.execute(
+            "SELECT count(*) FROM notice WHERE account_id = %s", (account_id,)
+        ).fetchone()
+    return int(row[0]) if row is not None else 0
+
+
 def count_unread_notices(pool: ConnectionPool, account_id: int) -> int:
-    """안 읽은 알림 수. **싣는 쉰 건 밖의 것도 센다** — 숫자가 목록보다 작으면 거짓말이다.
+    """안 읽은 알림 수. **싣는 한 쪽 밖의 것도 센다** — 숫자가 목록보다 작으면 거짓말이다.
 
     Args:
         pool: 연결 풀.

@@ -7,7 +7,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { formatUnreadBadge, pickFreshNotices, type NoticeView } from '../storage'
+import { countNoticePages, formatUnreadBadge, pickFreshNotices, type NoticeView } from '../storage'
 import { NoticeBell, NoticeInbox, NoticeToasts, checkAutoDismiss, describeNoticeTone } from './NoticeToasts'
 
 function build(id: number, kind: NoticeView['kind'], title: string, isRead = false): NoticeView {
@@ -15,7 +15,7 @@ function build(id: number, kind: NoticeView['kind'], title: string, isRead = fal
 }
 
 describe('새 알림 고르기', () => {
-  const board = { unread: 2, notices: [build(3, 'floor', '2장 돌파'), build(2, 'run', '1장에서 쓰러졌다'), build(1, 'floor', '1장 돌파', true)] }
+  const board = { unread: 2, total: 3, offset: 0, notices: [build(3, 'floor', '2장 돌파'), build(2, 'run', '1장에서 쓰러졌다'), build(1, 'floor', '1장 돌파', true)] }
 
   it('★ 처음 읽을 때는 아무것도 안 띄우고 기준만 세운다 — 쏟으면 토스트가 아니라 벽이다', () => {
     expect(pickFreshNotices(board, undefined)).toEqual({ fresh: [], seenId: 3 })
@@ -26,7 +26,7 @@ describe('새 알림 고르기', () => {
   })
 
   it('★ 이미 읽은 것은 다시 안 띄운다', () => {
-    const read = { unread: 0, notices: [build(4, 'floor', '3장 돌파', true)] }
+    const read = { unread: 0, total: 1, offset: 0, notices: [build(4, 'floor', '3장 돌파', true)] }
     expect(pickFreshNotices(read, 3).fresh).toEqual([])
   })
 })
@@ -74,16 +74,39 @@ describe('토스트 더미', () => {
 })
 
 describe('알림함', () => {
-  it('★ 열었을 때 안 읽었던 줄에 표시가 붙는다 — 열자마자 읽음이 되므로 그 목록으로 가른다', () => {
-    const html = renderToStaticMarkup(
-      <NoticeInbox notices={[build(2, 'floor', '2장 돌파'), build(1, 'floor', '1장 돌파')]} unreadIds={new Set([2])} onClose={() => undefined} />,
+  const page = (from: number, count: number): NoticeView[] =>
+    Array.from({ length: count }, (_, at) => build(from - at, 'floor', `${String(from - at)}장 돌파`))
+  const draw = (notices: NoticeView[], at: number, pages: number, newCount: number): string =>
+    renderToStaticMarkup(
+      <NoticeInbox notices={notices} page={at} pageCount={pages} newCount={newCount} onPage={() => undefined} onClose={() => undefined} />,
     )
-    expect(html.match(/notice-inbox__row--new/g)?.length).toBe(1)
+
+  it('★ 열 건이 한 쪽이다 — 쪽 수는 전체에서 센다, 없어도 한 쪽', () => {
+    expect(countNoticePages(0)).toBe(1)
+    expect(countNoticePages(10)).toBe(1)
+    expect(countNoticePages(11)).toBe(2)
+  })
+
+  it('★ 열었을 때 안 읽었던 수만큼 가장 새 줄에 표시가 붙는다', () => {
+    const html = draw(page(12, 10), 0, 2, 3)
+    expect(html.match(/notice-inbox__row--new/g)?.length).toBe(3)
     expect(html).toContain('새 알림')
   })
 
+  it('★ 뒷쪽에서도 자리로 새것을 안다 — 안 읽은 것은 늘 가장 새 N 건이다', () => {
+    // 안 읽은 것 12건: 첫 쪽 10건 전부, 둘째 쪽 앞 2건.
+    const html = draw(page(15, 5), 1, 2, 12)
+    expect(html.match(/notice-inbox__row--new/g)?.length).toBe(2)
+  })
+
+  it('★ 쪽 넘김은 쪽이 둘 이상일 때만 서고, 끝에서는 그쪽 단추가 꺼진다', () => {
+    expect(draw(page(3, 3), 0, 1, 0)).not.toContain('notice-inbox__pager')
+    const first = draw(page(12, 10), 0, 2, 0)
+    expect(first).toContain('1 / 2')
+    expect(first).toMatch(/<button[^>]*disabled[^>]*>.*?더 새 것/)
+  })
+
   it('★ 비어 있어도 무엇이 여기 올지 말한다', () => {
-    const html = renderToStaticMarkup(<NoticeInbox notices={[]} unreadIds={new Set()} onClose={() => undefined} />)
-    expect(html).toContain('아직 알림이 없다')
+    expect(draw([], 0, 1, 0)).toContain('아직 알림이 없다')
   })
 })

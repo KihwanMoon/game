@@ -103,7 +103,7 @@ def test_notices_are_mine_only(client, token):
 
     board = client.get("/api/notices", headers=build_headers(other)).json()
 
-    assert board == {"unread": 0, "notices": []}
+    assert board == {"unread": 0, "total": 0, "offset": 0, "notices": []}
 
 
 def test_reading_someone_elses_ids_touches_nothing(client, token):
@@ -114,3 +114,24 @@ def test_reading_someone_elses_ids_touches_nothing(client, token):
     client.post("/api/notices/read", json={"up_to_id": 10**9}, headers=build_headers(other))
 
     assert client.get("/api/notices", headers=build_headers(token)).json()["unread"] == 1
+
+
+def test_notices_come_ten_to_a_page(client, token):
+    """★ 한 쪽에 열 건이고, 쪽을 넘기면 그다음 것이 온다 (2026-09-25 요청).
+
+    안 읽은 수와 전체 수는 쪽과 무관하게 전체를 센다 — 쪽 수를 화면이 이것으로 센다.
+    """
+    from game.api.deps import get_pool
+    from game.app.store.notices import KIND_FLOOR, save_notice
+
+    account_id = client.get("/api/account", headers=build_headers(token)).json()["account_id"]
+    for step in range(12):
+        save_notice(get_pool(), account_id, KIND_FLOOR, f"{step + 1}장 돌파", "")
+
+    first = client.get("/api/notices", headers=build_headers(token)).json()
+    second = client.get("/api/notices", params={"offset": 10}, headers=build_headers(token)).json()
+
+    assert [len(first["notices"]), len(second["notices"])] == [10, 2]
+    assert first["notices"][0]["title"] == "12장 돌파"
+    assert second["notices"][-1]["title"] == "1장 돌파"
+    assert (first["total"], first["unread"], second["offset"]) == (12, 12, 10)
